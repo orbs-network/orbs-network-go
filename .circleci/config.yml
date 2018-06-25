@@ -5,3 +5,9 @@ jobs:
     steps:
       - checkout
       - run: ./docker-build.sh
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
