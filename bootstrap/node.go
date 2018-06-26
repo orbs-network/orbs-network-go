@@ -16,7 +16,6 @@ type Node interface {
 type node struct {
 	isLeader               bool
 	gossip                 gossip.Gossip
-	blockPersistence       blockstorage.BlockPersistence
 	ledger                 ledger.Ledger
 	pendingTransactionPool chan *types.Transaction
 }
@@ -25,8 +24,7 @@ func NewNode(gossip gossip.Gossip, bp blockstorage.BlockPersistence, isLeader bo
 	n := &node{
 		isLeader:               isLeader,
 		gossip:                 gossip,
-		blockPersistence:       bp,
-		ledger:                 ledger.NewLedger(),
+		ledger:                 ledger.NewLedger(bp),
 		pendingTransactionPool: make(chan *types.Transaction, 10),
 	}
 

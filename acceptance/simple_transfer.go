@@ -7,14 +7,15 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/types"
+	"github.com/orbs-network/orbs-network-go/blockstorage"
 )
 
 var _ = Describe("a leader node", func() {
 
 	It("commits transactions to all nodes", func() {
 		inMemoryGossip := gossip.NewPausableGossip()
-		node1 := bootstrap.NewNode(inMemoryGossip, true)
-		node2 := bootstrap.NewNode(inMemoryGossip, false)
+		node1 := bootstrap.NewNode(inMemoryGossip, blockstorage.NewInMemoryBlockPersistence(), true)
+		node2 := bootstrap.NewNode(inMemoryGossip, blockstorage.NewInMemoryBlockPersistence(), false)
 		inMemoryGossip.RegisterAll([]gossip.Listener{node1, node2})
 
 		inMemoryGossip.PauseForwards()
@@ -31,8 +32,8 @@ var _ = Describe("a non-leader node", func() {
 
 	It("propagates transactions to leader but does not commit them itself", func() {
 		inMemoryGossip := gossip.NewPausableGossip()
-		node1 := bootstrap.NewNode(inMemoryGossip, true)
-		node2 := bootstrap.NewNode(inMemoryGossip, false)
+		node1 := bootstrap.NewNode(inMemoryGossip, blockstorage.NewInMemoryBlockPersistence(), true)
+		node2 := bootstrap.NewNode(inMemoryGossip, blockstorage.NewInMemoryBlockPersistence(), false)
 		inMemoryGossip.RegisterAll([]gossip.Listener{node1, node2})
 
 		inMemoryGossip.PauseForwards()

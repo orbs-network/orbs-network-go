@@ -29,9 +29,9 @@ var _ = Describe("a leader node", func() {
 		Expect(node2.CallMethod()).To(Equal(0))
 
 		inMemoryGossip.ResumeConsensus()
-		bp1.WaitForBlocks(3)
+		bp1.WaitForBlocks(2)
 		Expect(node1.CallMethod()).To(Equal(39))
-		bp2.WaitForBlocks(3)
+		bp2.WaitForBlocks(2)
 		Expect(node2.CallMethod()).To(Equal(39))
 	})
 })
