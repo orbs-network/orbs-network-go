@@ -13,26 +13,31 @@ type Node interface {
 }
 
 type node struct {
-	gossip gossip.Gossip
-	ledger ledger.Ledger
+	isLeader bool
+	gossip   gossip.Gossip
+	ledger   ledger.Ledger
 }
 
-func NewNode(gossip gossip.Gossip) Node {
+func NewNode(gossip gossip.Gossip, isLeader bool) Node {
 	return &node{
-		gossip: gossip,
-		ledger: ledger.NewLedger(),
+		isLeader: isLeader,
+		gossip:   gossip,
+		ledger:   ledger.NewLedger(),
 	}
 }
 
 func (n *node) SendTransaction(transaction *types.Transaction) {
-	n.gossip.ForwardTransaction(transaction)
+	if !n.isLeader {
+		return
+	}
+	n.gossip.CommitTransaction(transaction)
 }
 
 func (n *node) CallMethod() int {
 	return n.ledger.GetState()
 }
 
-func (n *node) OnForwardedTransaction(transaction *types.Transaction) error {
+func (n *node) OnCommitTransaction(transaction *types.Transaction) error {
 	n.ledger.AddTransaction(transaction)
 	return nil
 }

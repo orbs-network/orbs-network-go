@@ -16,6 +16,9 @@ func NewLedger() Ledger {
 }
 
 func (l *ledger) AddTransaction(transaction *types.Transaction) {
+	if transaction.Invalid {
+		return
+	}
 	l.transactions = append(l.transactions, *transaction)
 }
 

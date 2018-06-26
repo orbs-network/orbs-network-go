@@ -1,5 +1,6 @@
 package types
 
 type Transaction struct {
-	Value int
+	Value   int
+	Invalid bool
 }
