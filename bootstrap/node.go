@@ -3,11 +3,12 @@ package bootstrap
 import (
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/ledger"
+	"github.com/orbs-network/orbs-network-go/types"
 )
 
 type Node interface {
 	gossip.Listener
-	SendTransaction(value int)
+	SendTransaction(transaction *types.Transaction)
 	CallMethod() int
 }
 
@@ -23,15 +24,15 @@ func NewNode(gossip gossip.Gossip) Node {
 	}
 }
 
-func (n *node) SendTransaction(value int) {
-	n.gossip.ForwardTransaction(value)
+func (n *node) SendTransaction(transaction *types.Transaction) {
+	n.gossip.ForwardTransaction(transaction)
 }
 
 func (n *node) CallMethod() int {
 	return n.ledger.GetState()
 }
 
-func (n *node) OnForwardedTransaction(value int) error {
-	n.ledger.AddTransaction(value)
+func (n *node) OnForwardedTransaction(transaction *types.Transaction) error {
+	n.ledger.AddTransaction(transaction)
 	return nil
 }

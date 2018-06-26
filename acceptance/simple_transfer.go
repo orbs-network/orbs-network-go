@@ -6,6 +6,7 @@ import (
 
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/gossip"
+	"github.com/orbs-network/orbs-network-go/types"
 )
 
 var _ = Describe("a node", func() {
@@ -16,8 +17,8 @@ var _ = Describe("a node", func() {
 		node2 := bootstrap.NewNode(inMemoryGossip)
 		inMemoryGossip.RegisterAll([]gossip.Listener{node1, node2})
 
-		node1.SendTransaction(17)
-		node1.SendTransaction(22)
+		node1.SendTransaction(&types.Transaction{17})
+		node1.SendTransaction(&types.Transaction{22})
 
 		storedValue := node2.CallMethod()
 		Expect(storedValue).To(Equal(39))

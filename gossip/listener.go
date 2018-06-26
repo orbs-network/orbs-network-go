@@ -1,5 +1,7 @@
 package gossip
 
+import "github.com/orbs-network/orbs-network-go/types"
+
 type Listener interface {
-	OnForwardedTransaction(value int) error
+	OnForwardedTransaction(transaction *types.Transaction) error
 }
