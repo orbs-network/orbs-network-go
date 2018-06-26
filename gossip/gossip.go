@@ -6,4 +6,5 @@ type Gossip interface {
 	RegisterAll(listeners []Listener)
 	ForwardTransaction(transaction *types.Transaction)
 	CommitTransaction(transaction *types.Transaction)
+	HasConsensusFor(transaction *types.Transaction) bool
 }
