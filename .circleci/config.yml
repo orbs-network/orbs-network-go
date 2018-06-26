@@ -1,0 +1,13 @@
+version: 2
+jobs:
+  build:
+    machine: true
+    steps:
+      - checkout
+      - run: ./docker-build.sh
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
