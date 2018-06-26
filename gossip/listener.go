@@ -3,5 +3,6 @@ package gossip
 import "github.com/orbs-network/orbs-network-go/types"
 
 type Listener interface {
-	OnCommitTransaction(transaction *types.Transaction) error
+	OnForwardTransaction(transaction *types.Transaction)
+	OnCommitTransaction(transaction *types.Transaction)
 }

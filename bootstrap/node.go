@@ -27,17 +27,23 @@ func NewNode(gossip gossip.Gossip, isLeader bool) Node {
 }
 
 func (n *node) SendTransaction(transaction *types.Transaction) {
-	if !n.isLeader {
-		return
+	if n.isLeader {
+		n.gossip.CommitTransaction(transaction)
+	} else {
+		n.gossip.ForwardTransaction(transaction)
 	}
-	n.gossip.CommitTransaction(transaction)
 }
 
 func (n *node) CallMethod() int {
 	return n.ledger.GetState()
 }
 
-func (n *node) OnCommitTransaction(transaction *types.Transaction) error {
+func (n *node) OnForwardTransaction(transaction *types.Transaction) {
+	if n.isLeader {
+		n.gossip.CommitTransaction(transaction)
+	}
+}
+
+func (n *node) OnCommitTransaction(transaction *types.Transaction) {
 	n.ledger.AddTransaction(transaction)
-	return nil
 }

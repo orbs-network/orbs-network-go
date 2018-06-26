@@ -9,10 +9,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/types"
 )
 
-var _ = Describe("a node", func() {
+var _ = Describe("a leader node", func() {
 
-	It("commits transactions if it is the leader", func() {
-		inMemoryGossip := gossip.NewGossip()
+	It("commits transactions to all nodes", func() {
+		inMemoryGossip := gossip.NewPausableGossip()
 		node1 := bootstrap.NewNode(inMemoryGossip, true)
 		node2 := bootstrap.NewNode(inMemoryGossip, false)
 		inMemoryGossip.RegisterAll([]gossip.Listener{node1, node2})
@@ -24,9 +24,13 @@ var _ = Describe("a node", func() {
 		Expect(node1.CallMethod()).To(Equal(39))
 		Expect(node2.CallMethod()).To(Equal(39))
 	})
+})
 
-	It("does not commit transactions if it is not the leader", func() {
-		inMemoryGossip := gossip.NewGossip()
+var _ = Describe("a non-leader node", func() {
+
+	It("propagates transactions to leader but does not commit them itself", func() {
+		inMemoryGossip := gossip.NewPausableGossip()
+		inMemoryGossip.Pause()
 		node1 := bootstrap.NewNode(inMemoryGossip, true)
 		node2 := bootstrap.NewNode(inMemoryGossip, false)
 		inMemoryGossip.RegisterAll([]gossip.Listener{node1, node2})
@@ -35,6 +39,11 @@ var _ = Describe("a node", func() {
 
 		Expect(node1.CallMethod()).To(Equal(0))
 		Expect(node2.CallMethod()).To(Equal(0))
+
+		inMemoryGossip.Resume()
+
+		Expect(node1.CallMethod()).To(Equal(17))
+		Expect(node2.CallMethod()).To(Equal(17))
 	})
 
 })
