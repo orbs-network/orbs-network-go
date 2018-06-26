@@ -10,18 +10,17 @@ import (
 
 var _ = Describe("a node", func() {
 
-	It("shows the value that was set when calling get", func() {
+	It("accumulates the state of multiple transactions", func() {
 		inMemoryGossip := gossip.NewGossip()
 		node1 := bootstrap.NewNode(inMemoryGossip)
 		node2 := bootstrap.NewNode(inMemoryGossip)
 		inMemoryGossip.RegisterAll([]gossip.Listener{node1, node2})
 
-		_, err := node1.SendTransaction(50)
-		Expect(err).ToNot(HaveOccurred())
+		node1.SendTransaction(17)
+		node1.SendTransaction(22)
 
-		storedValue, err := node2.CallMethod()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(storedValue).To(Equal(50))
+		storedValue := node2.CallMethod()
+		Expect(storedValue).To(Equal(39))
 	})
 
 })
