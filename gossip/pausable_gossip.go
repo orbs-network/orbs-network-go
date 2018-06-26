@@ -4,8 +4,8 @@ import "github.com/orbs-network/orbs-network-go/types"
 
 type PausableGossip interface {
 	Gossip
-	Pause()
-	Resume()
+	PauseForwards()
+	ResumeForwards()
 }
 
 type pausableGossip struct {
@@ -42,11 +42,11 @@ func (g *pausableGossip) forwardToAllListeners(transaction *types.Transaction) {
 	}
 }
 
-func (g *pausableGossip) Pause() {
+func (g *pausableGossip) PauseForwards() {
 	g.paused = true
 }
 
-func (g *pausableGossip) Resume() {
+func (g *pausableGossip) ResumeForwards() {
 	g.paused = false
 	for _, pendingTransaction := range g.pendingTransactions {
 		g.forwardToAllListeners(&pendingTransaction)
