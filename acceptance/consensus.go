@@ -4,37 +4,29 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/types"
-	"github.com/orbs-network/orbs-network-go/blockstorage"
-	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/testharness"
 )
 
 var _ = Describe("a leader node", func() {
 
-	It("must get validations by all nodes to commit a transaction", func() {
-		leaderEvents := events.NewEvents()
-		inMemoryGossip := gossip.NewPausableGossip()
-		leaderBp := blockstorage.NewInMemoryBlockPersistence("leaderBp")
-		validatorBp := blockstorage.NewInMemoryBlockPersistence("validatorBp")
+	It("must get validations by all nodes to commit a transaction", func(done Done) {
+		network := testharness.CreateTestNetwork()
 
-		leader := bootstrap.NewNode(inMemoryGossip, leaderBp, leaderEvents, true)
-		validator := bootstrap.NewNode(inMemoryGossip, validatorBp, events.NewEvents(), false)
-		inMemoryGossip.RegisterAll([]gossip.Listener{leader, validator})
+		network.Gossip.FailConsensusRequests()
+		network.Leader.SendTransaction(&types.Transaction{Value: 17})
 
-		inMemoryGossip.FailConsensusRequests()
-		leader.SendTransaction(&types.Transaction{Value: 17})
+		network.LeaderEvents.WaitForConsensusRounds(1)
 
-		leaderEvents.WaitForConsensusRounds(1)
+		Expect(network.Leader.CallMethod()).To(Equal(0))
+		Expect(network.Validator.CallMethod()).To(Equal(0))
 
-		Expect(leader.CallMethod()).To(Equal(0))
-		Expect(validator.CallMethod()).To(Equal(0))
+		network.Gossip.PassConsensusRequests()
+		network.LeaderBp.WaitForBlocks(1)
+		Expect(network.Leader.CallMethod()).To(Equal(17))
+		network.ValidatorBp.WaitForBlocks(1)
+		Expect(network.Validator.CallMethod()).To(Equal(17))
 
-		inMemoryGossip.PassConsensusRequests()
-		leaderBp.WaitForBlocks(1)
-		Expect(leader.CallMethod()).To(Equal(17))
-		validatorBp.WaitForBlocks(1)
-		Expect(validator.CallMethod()).To(Equal(17))
-	})
+		close(done)
+	}, 1)
 })
