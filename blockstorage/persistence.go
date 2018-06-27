@@ -6,6 +6,7 @@ import (
 
 type BlockPersistence interface {
 	WriteBlock(transaction *types.Transaction)
+	ReadAllBlocks() []types.Transaction
 }
 
 type InMemoryBlockPersistence interface {
@@ -16,6 +17,7 @@ type InMemoryBlockPersistence interface {
 type inMemoryBlockPersistence struct {
 	blockWritten chan bool
 	name         string
+	transactions []types.Transaction
 }
 
 func NewInMemoryBlockPersistence(name string) InMemoryBlockPersistence {
@@ -32,5 +34,10 @@ func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {
 }
 
 func (bp *inMemoryBlockPersistence) WriteBlock(transaction *types.Transaction) {
+	bp.transactions = append(bp.transactions, *transaction)
 	bp.blockWritten <- true
+}
+
+func (bp *inMemoryBlockPersistence) ReadAllBlocks() []types.Transaction {
+	return bp.transactions
 }

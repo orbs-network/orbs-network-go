@@ -11,7 +11,6 @@ type Ledger interface {
 }
 
 type ledger struct {
-	transactions     []types.Transaction
 	blockPersistence blockstorage.BlockPersistence
 }
 
@@ -23,13 +22,12 @@ func (l *ledger) AddTransaction(transaction *types.Transaction) {
 	if transaction.Invalid {
 		return
 	}
-	l.transactions = append(l.transactions, *transaction)
 	l.blockPersistence.WriteBlock(transaction)
 }
 
 func (l *ledger) GetState() int {
 	sum := 0
-	for _, t := range l.transactions {
+	for _, t := range l.blockPersistence.ReadAllBlocks() {
 		sum += t.Value
 	}
 	return sum
