@@ -2,26 +2,25 @@ package gossip
 
 import (
 	"github.com/orbs-network/orbs-network-go/types"
-	"sync"
 )
 
 type PausableGossip interface {
 	Gossip
 	PauseForwards()
 	ResumeForwards()
-	PauseConsensus()
-	ResumeConsensus()
+	FailConsensusRequests()
+	PassConsensusRequests()
 }
 
 type pausableGossip struct {
-	listeners           []Listener
-	pausedForwards      bool
-	pendingTransactions []types.Transaction
-	consensusLock       *sync.Mutex
+	listeners                []Listener
+	pausedForwards           bool
+	pendingTransactions      []types.Transaction
+	failNextConsensusRequest bool
 }
 
 func NewPausableGossip() PausableGossip {
-	return &pausableGossip{consensusLock: &sync.Mutex{}}
+	return &pausableGossip{}
 }
 
 func (g *pausableGossip) RegisterAll(listeners []Listener) {
@@ -60,22 +59,23 @@ func (g *pausableGossip) ResumeForwards() {
 	g.pendingTransactions = nil
 }
 
-func (g *pausableGossip) PauseConsensus() {
-	g.consensusLock.Lock()
+func (g *pausableGossip) FailConsensusRequests() {
+	g.failNextConsensusRequest = true
 }
 
-func (g *pausableGossip) ResumeConsensus() {
-	g.consensusLock.Unlock()
+func (g *pausableGossip) PassConsensusRequests() {
+	g.failNextConsensusRequest = false
 }
 
-func (g *pausableGossip) HasConsensusFor(transaction *types.Transaction) bool {
-	g.consensusLock.Lock()
-	defer g.consensusLock.Unlock()
+func (g *pausableGossip) HasConsensusFor(transaction *types.Transaction) (bool, error) {
+	if g.failNextConsensusRequest {
+		return true, &ErrGossipRequestFailed{}
+	}
 
 	for _, l := range g.listeners {
 		if !l.ValidateConsensusFor(transaction) {
-			return false
+			return false, nil
 		}
 	}
-	return true
+	return true, nil
 }

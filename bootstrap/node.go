@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
+	"github.com/orbs-network/orbs-network-go/events"
 )
 
 type Node interface {
@@ -18,13 +19,19 @@ type node struct {
 	gossip                 gossip.Gossip
 	ledger                 ledger.Ledger
 	pendingTransactionPool chan *types.Transaction
+	events                 events.Events
 }
 
-func NewNode(gossip gossip.Gossip, bp blockstorage.BlockPersistence, isLeader bool) Node {
+func NewNode(gossip gossip.Gossip,
+	bp blockstorage.BlockPersistence,
+	e events.Events,
+	isLeader bool) Node {
+
 	n := &node{
 		isLeader:               isLeader,
 		gossip:                 gossip,
 		ledger:                 ledger.NewLedger(bp),
+		events:                 e,
 		pendingTransactionPool: make(chan *types.Transaction, 10),
 	}
 
@@ -58,13 +65,31 @@ func (n *node) ValidateConsensusFor(transaction *types.Transaction) bool {
 	return true
 }
 
-func (n *node) buildNextBlock(transaction *types.Transaction) {
-	if n.gossip.HasConsensusFor(transaction) {
+func (n *node) buildNextBlock(transaction *types.Transaction) bool {
+	gotConsensus, err := n.gossip.HasConsensusFor(transaction)
+
+	if err != nil {
+		return false
+	}
+
+	if gotConsensus {
 		n.gossip.CommitTransaction(transaction)
 	}
+
+	return gotConsensus
+
 }
 
 func (n *node) buildBlocksEventLoop() {
-	t := <-n.pendingTransactionPool
-	n.buildNextBlock(t)
+	var t *types.Transaction
+	for {
+		if t == nil {
+			t = <- n.pendingTransactionPool
+		}
+
+		if n.buildNextBlock(t) {
+			t = nil
+		}
+		n.events.FinishedConsensusRound()
+	}
 }

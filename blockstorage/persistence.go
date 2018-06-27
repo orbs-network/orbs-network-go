@@ -1,6 +1,8 @@
 package blockstorage
 
-import "github.com/orbs-network/orbs-network-go/types"
+import (
+	"github.com/orbs-network/orbs-network-go/types"
+)
 
 type BlockPersistence interface {
 	WriteBlock(transaction *types.Transaction)
@@ -13,10 +15,14 @@ type InMemoryBlockPersistence interface {
 
 type inMemoryBlockPersistence struct {
 	blockWritten chan bool
+	name         string
 }
 
-func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
-	return &inMemoryBlockPersistence{make(chan bool, 10)}
+func NewInMemoryBlockPersistence(name string) InMemoryBlockPersistence {
+	return &inMemoryBlockPersistence{
+		name:         name,
+		blockWritten: make(chan bool, 10),
+	}
 }
 
 func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {
