@@ -31,7 +31,6 @@ func CreateTestNetwork() TestNetwork {
 
 	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, leaderEvents, true)
 	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, events.NewEvents(), false)
-	inMemoryGossip.RegisterAll([]gossip.Listener{leader, validator})
 
 	return TestNetwork{
 		Leader:       leader,

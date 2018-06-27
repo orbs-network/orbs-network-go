@@ -25,7 +25,7 @@ var _ = Describe("a leader node", func() {
 	})
 })
 
-var _ = Describe("a non-leader node", func() {
+var _ = Describe("a non-leader (validator) node", func() {
 
 	It("propagates transactions to leader but does not commit them itself", func() {
 		network := testharness.CreateTestNetwork()

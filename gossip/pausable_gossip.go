@@ -13,7 +13,8 @@ type PausableGossip interface {
 }
 
 type pausableGossip struct {
-	listeners                []Listener
+	transactionListeners     []TransactionListener
+	consensusListeners       []ConsensusListener
 	pausedForwards           bool
 	pendingTransactions      []types.Transaction
 	failNextConsensusRequest bool
@@ -23,12 +24,16 @@ func NewPausableGossip() PausableGossip {
 	return &pausableGossip{}
 }
 
-func (g *pausableGossip) RegisterAll(listeners []Listener) {
-	g.listeners = listeners
+func (g *pausableGossip) RegisterTransactionListener(listener TransactionListener) {
+	g.transactionListeners = append(g.transactionListeners, listener)
+}
+
+func (g *pausableGossip) RegisterConsensusListener(listener ConsensusListener) {
+	g.consensusListeners = append(g.consensusListeners, listener)
 }
 
 func (g *pausableGossip) CommitTransaction(transaction *types.Transaction) {
-	for _, l := range g.listeners {
+	for _, l := range g.consensusListeners {
 		l.OnCommitTransaction(transaction)
 	}
 }
@@ -42,7 +47,7 @@ func (g *pausableGossip) ForwardTransaction(transaction *types.Transaction) {
 }
 
 func (g *pausableGossip) forwardToAllListeners(transaction *types.Transaction) {
-	for _, l := range g.listeners {
+	for _, l := range g.transactionListeners {
 		l.OnForwardTransaction(transaction)
 	}
 }
@@ -72,7 +77,7 @@ func (g *pausableGossip) HasConsensusFor(transaction *types.Transaction) (bool, 
 		return true, &ErrGossipRequestFailed{}
 	}
 
-	for _, l := range g.listeners {
+	for _, l := range g.consensusListeners {
 		if !l.ValidateConsensusFor(transaction) {
 			return false, nil
 		}
