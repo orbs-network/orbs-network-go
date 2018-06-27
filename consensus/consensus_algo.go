@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/transactionpool"
 )
 
 type ConsensusAlgo interface {
@@ -12,25 +13,30 @@ type ConsensusAlgo interface {
 }
 
 type consensusAlgo struct {
-	gossip                 gossip.Gossip
-	ledger                 ledger.Ledger
-	pendingTransactionPool chan *types.Transaction
-	events                 events.Events
+	gossip          gossip.Gossip
+	ledger          ledger.Ledger
+	transactionPool transactionpool.TransactionPool
+	events          events.Events
 }
 
 func NewConsensusAlgo(gossip gossip.Gossip,
 											ledger ledger.Ledger,
-											pendingTransactionPool chan *types.Transaction,
-	                    events events.Events) ConsensusAlgo {
+											transactionPool transactionpool.TransactionPool,
+	                    events events.Events,
+	                    isLeader bool) ConsensusAlgo {
+
 	c := &consensusAlgo{
-		gossip: gossip,
-		ledger: ledger,
-		pendingTransactionPool: pendingTransactionPool,
-		events: events,
+		gossip:          gossip,
+		ledger:          ledger,
+		transactionPool: transactionPool,
+		events:          events,
 	}
 
 	gossip.RegisterConsensusListener(c)
-	go c.buildBlocksEventLoop()
+
+	if isLeader {
+		go c.buildBlocksEventLoop()
+	}
 
 	return c
 }
@@ -62,7 +68,7 @@ func (c *consensusAlgo) buildBlocksEventLoop() {
 	var t *types.Transaction
 	for {
 		if t == nil {
-			t = <- c.pendingTransactionPool
+			t = c.transactionPool.Next()
 		}
 
 		if c.buildNextBlock(t) {
