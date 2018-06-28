@@ -6,6 +6,7 @@ import (
 
 	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/testharness"
+	"github.com/orbs-network/orbs-network-go/events"
 )
 
 var _ = Describe("a leader node", func() {
@@ -17,7 +18,7 @@ var _ = Describe("a leader node", func() {
 		network.Gossip.FailConsensusRequests()
 		network.Leader.GetPublicApi().SendTransaction(&types.Transaction{Value: 17})
 
-		network.LeaderLatch.WaitForConsensusRound()
+		network.LeaderLatch.WaitFor(events.FinishedConsensusRound)
 
 		Expect(network.Leader.GetPublicApi().CallMethod()).To(Equal(0))
 		Expect(network.Validator.GetPublicApi().CallMethod()).To(Equal(0))

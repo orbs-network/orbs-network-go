@@ -7,80 +7,71 @@ import (
 )
 
 type Events interface {
-	FinishedConsensusRound()
-	ConsensusError(err error)
+	Report(message string)
 }
 
-type ObservableEvents interface {
-	Events
-
-	WaitForConsensusRounds(roundsToWait int)
-}
+const FinishedConsensusRound = "finished_consensus_round"
+const ConsensusError = "consensus_error"
 
 type Latch interface {
 	Events
 
-	WaitForConsensusRound()
+	WaitFor(message string)
 }
 
 type latch struct {
-	cond *sync.Cond
+	cond       *sync.Cond
+	waitingFor string
 }
 
 func NewLatch() Latch {
 	return &latch{}
 }
 
-func (l *latch) WaitForConsensusRound() {
+func (l *latch) WaitFor(message string) {
+	l.waitingFor = message
 	mutex := &sync.Mutex{}
 	mutex.Lock()
 	l.cond = sync.NewCond(mutex)
 	l.cond.Wait()
 }
 
-
-func (l *latch) FinishedConsensusRound() {
-	if l.cond != nil {
+func (l *latch) Report(message string) () {
+	if l.waitingFor == message && l.cond != nil {
 		l.cond.Broadcast()
 		l.cond = nil
+		l.waitingFor = ""
 	}
 }
 
-func (l *latch) ConsensusError(err error) () {
-}
-
-type BufferingEvents interface {
+type BufferedLog interface {
 	Events
 
 	Flush()
 }
 
-type bufferingEvents struct {
+type bufferedLog struct {
 	loggedEvents []string
 	name         string
 }
 
-func NewBufferingEvents(name string) BufferingEvents {
-	e := bufferingEvents{name: name}
+func NewBufferedLog(name string) BufferedLog {
+	e := bufferedLog{name: name}
 	e.log("Start of log")
 	return &e
 }
 
-func (e *bufferingEvents) Flush() {
+func (e *bufferedLog) Flush() {
 	for _, line := range e.loggedEvents {
 		println(line)
 	}
 }
 
-func (e *bufferingEvents) FinishedConsensusRound() {
-	e.log("Finished consensus round")
+func (e *bufferedLog) Report(message string) () {
+	e.log(message)
 }
 
-func (e *bufferingEvents) ConsensusError(err error) () {
-	e.log(fmt.Sprintf("Error during consensus: %s", err))
-}
-
-func (e *bufferingEvents) log(message string) {
+func (e *bufferedLog) log(message string) {
 	e.loggedEvents = append(e.loggedEvents, fmt.Sprintf("[%s] [%s]: %s", e.name, time.Now().Format("15:04:05.99999999"), message))
 }
 
@@ -92,14 +83,8 @@ func NewCompositeEvents(children []Events) Events {
 	return &compositeEvents{children: children}
 }
 
-func (e *compositeEvents) FinishedConsensusRound() {
+func (e *compositeEvents) Report(message string) () {
 	for _, child := range e.children {
-		child.FinishedConsensusRound()
-	}
-}
-
-func (e *compositeEvents) ConsensusError(err error) () {
-	for _, child := range e.children {
-		child.ConsensusError(err)
+		child.Report(message)
 	}
 }

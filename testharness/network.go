@@ -22,13 +22,13 @@ type TestNetwork struct {
 	ValidatorBp blockstorage.InMemoryBlockPersistence
 	Gossip      gossip.PausableGossip
 
-	log []events.BufferingEvents
+	log []events.BufferedLog
 }
 
 func CreateTestNetwork() TestNetwork {
-	leaderLog := events.NewBufferingEvents("leader")
+	leaderLog := events.NewBufferedLog("leader")
 	leaderLatch := events.NewLatch()
-	validatorLog := events.NewBufferingEvents("validator")
+	validatorLog := events.NewBufferedLog("validator")
 
 	inMemoryGossip := gossip.NewPausableGossip()
 	leaderBp := blockstorage.NewInMemoryBlockPersistence("leaderBp")
@@ -45,12 +45,11 @@ func CreateTestNetwork() TestNetwork {
 		ValidatorBp: validatorBp,
 		Gossip:      inMemoryGossip,
 
-		log: []events.BufferingEvents{leaderLog, validatorLog},
+		log: []events.BufferedLog{leaderLog, validatorLog},
 	}
 }
 
 func (n *TestNetwork) FlushLog() {
-	println("Flushing all BufferedEvents log entries")
 	for _, l := range n.log {
 		l.Flush()
 	}
