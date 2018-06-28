@@ -12,17 +12,17 @@ var _ = Describe("a leader node", func() {
 
 	It("must get validations by all nodes to commit a transaction", func(done Done) {
 		network := testharness.CreateTestNetwork()
+		defer network.FlushLog()
 
 		network.Gossip.FailConsensusRequests()
 		network.Leader.GetPublicApi().SendTransaction(&types.Transaction{Value: 17})
 
-		network.LeaderEvents.WaitForConsensusRounds(1)
+		network.LeaderLatch.WaitForConsensusRound()
 
 		Expect(network.Leader.GetPublicApi().CallMethod()).To(Equal(0))
 		Expect(network.Validator.GetPublicApi().CallMethod()).To(Equal(0))
 
 		network.Gossip.PassConsensusRequests()
-		network.LeaderEvents.WaitForConsensusRounds(1) //TODO i'm not sure why adding this call makes the deadlock go away, need to investigate (shai)
 
 		network.LeaderBp.WaitForBlocks(1)
 		Expect(network.Leader.GetPublicApi().CallMethod()).To(Equal(17))

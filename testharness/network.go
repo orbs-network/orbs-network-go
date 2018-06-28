@@ -15,30 +15,43 @@ import (
 //}
 //
 type TestNetwork struct {
-	Leader       bootstrap.Node
-	Validator    bootstrap.Node
-	LeaderEvents events.Events
-	LeaderBp     blockstorage.InMemoryBlockPersistence
-	ValidatorBp  blockstorage.InMemoryBlockPersistence
-	Gossip       gossip.PausableGossip
+	Leader      bootstrap.Node
+	Validator   bootstrap.Node
+	LeaderLatch events.Latch
+	LeaderBp    blockstorage.InMemoryBlockPersistence
+	ValidatorBp blockstorage.InMemoryBlockPersistence
+	Gossip      gossip.PausableGossip
+
+	log []events.BufferingEvents
 }
 
 func CreateTestNetwork() TestNetwork {
-	leaderEvents := events.NewEvents()
+	leaderLog := events.NewBufferingEvents("leader")
+	leaderLatch := events.NewLatch()
+	validatorLog := events.NewBufferingEvents("validator")
+
 	inMemoryGossip := gossip.NewPausableGossip()
 	leaderBp := blockstorage.NewInMemoryBlockPersistence("leaderBp")
 	validatorBp := blockstorage.NewInMemoryBlockPersistence("validatorBp")
 
-	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, leaderEvents, true)
-	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, events.NewEvents(), false)
+	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, events.NewCompositeEvents([]events.Events{leaderLog, leaderLatch}), true)
+	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, validatorLog, false)
 
 	return TestNetwork{
-		Leader:       leader,
-		Validator:    validator,
-		LeaderEvents: leaderEvents,
-		LeaderBp:     leaderBp,
-		ValidatorBp:  validatorBp,
-		Gossip:       inMemoryGossip,
+		Leader:      leader,
+		Validator:   validator,
+		LeaderLatch: leaderLatch,
+		LeaderBp:    leaderBp,
+		ValidatorBp: validatorBp,
+		Gossip:      inMemoryGossip,
+
+		log: []events.BufferingEvents{leaderLog, validatorLog},
 	}
 }
 
+func (n *TestNetwork) FlushLog() {
+	println("Flushing all BufferedEvents log entries")
+	for _, l := range n.log {
+		l.Flush()
+	}
+}

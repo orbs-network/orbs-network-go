@@ -1,33 +1,105 @@
 package events
 
+import (
+	"fmt"
+	"time"
+	"sync"
+)
+
 type Events interface {
-	WaitForConsensusRounds(roundsToWait int)
 	FinishedConsensusRound()
 	ConsensusError(err error)
-
 }
 
-type events struct {
-	consensusRoundsFinished chan bool
+type ObservableEvents interface {
+	Events
+
+	WaitForConsensusRounds(roundsToWait int)
 }
 
-func NewEvents() Events {
-	return &events{make(chan bool, 1000)}
+type Latch interface {
+	Events
+
+	WaitForConsensusRound()
 }
 
-func (e *events) WaitForConsensusRounds(roundsToWait int) {
-	for i := 0; i < roundsToWait; i++ {
-		<- e.consensusRoundsFinished
+type latch struct {
+	cond *sync.Cond
+}
+
+func NewLatch() Latch {
+	return &latch{}
+}
+
+func (l *latch) WaitForConsensusRound() {
+	mutex := &sync.Mutex{}
+	mutex.Lock()
+	l.cond = sync.NewCond(mutex)
+	l.cond.Wait()
+}
+
+
+func (l *latch) FinishedConsensusRound() {
+	if l.cond != nil {
+		l.cond.Broadcast()
+		l.cond = nil
 	}
 }
 
-
-func (e *events) FinishedConsensusRound() {
-	//println("Finished consensus round")
-	e.consensusRoundsFinished <- true
+func (l *latch) ConsensusError(err error) () {
 }
 
-func (e *events) ConsensusError(err error)() {
-	//println(fmt.Sprintf("Error during consensus: %s", err))
-	e.consensusRoundsFinished <- true
+type BufferingEvents interface {
+	Events
+
+	Flush()
+}
+
+type bufferingEvents struct {
+	loggedEvents []string
+	name         string
+}
+
+func NewBufferingEvents(name string) BufferingEvents {
+	e := bufferingEvents{name: name}
+	e.log("Start of log")
+	return &e
+}
+
+func (e *bufferingEvents) Flush() {
+	for _, line := range e.loggedEvents {
+		println(line)
+	}
+}
+
+func (e *bufferingEvents) FinishedConsensusRound() {
+	e.log("Finished consensus round")
+}
+
+func (e *bufferingEvents) ConsensusError(err error) () {
+	e.log(fmt.Sprintf("Error during consensus: %s", err))
+}
+
+func (e *bufferingEvents) log(message string) {
+	e.loggedEvents = append(e.loggedEvents, fmt.Sprintf("[%s] [%s]: %s", e.name, time.Now().Format("15:04:05.99999999"), message))
+}
+
+type compositeEvents struct {
+	children []Events
+}
+
+func NewCompositeEvents(children []Events) Events {
+	return &compositeEvents{children: children}
+}
+
+func (e *compositeEvents) FinishedConsensusRound() {
+	for _, child := range e.children {
+		child.FinishedConsensusRound()
+	}
+}
+
+func (e *compositeEvents) ConsensusError(err error) () {
+	for _, child := range e.children {
+		child.ConsensusError(err)
+	}
 }
