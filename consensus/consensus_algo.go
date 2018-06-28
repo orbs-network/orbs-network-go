@@ -53,6 +53,7 @@ func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 	gotConsensus, err := c.gossip.HasConsensusFor(transaction)
 
 	if err != nil {
+		c.events.ConsensusError(err)
 		return false
 	}
 
@@ -65,14 +66,14 @@ func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 }
 
 func (c *consensusAlgo) buildBlocksEventLoop() {
-	var t *types.Transaction
+	var currentBlock *types.Transaction
 	for {
-		if t == nil {
-			t = c.transactionPool.Next()
+		if currentBlock == nil {
+			currentBlock = c.transactionPool.Next()
 		}
 
-		if c.buildNextBlock(t) {
-			t = nil
+		if c.buildNextBlock(currentBlock) {
+			currentBlock = nil
 		}
 		c.events.FinishedConsensusRound()
 	}

@@ -1,9 +1,9 @@
 package events
 
-
 type Events interface {
 	WaitForConsensusRounds(roundsToWait int)
 	FinishedConsensusRound()
+	ConsensusError(err error)
 
 }
 
@@ -23,5 +23,11 @@ func (e *events) WaitForConsensusRounds(roundsToWait int) {
 
 
 func (e *events) FinishedConsensusRound() {
+	//println("Finished consensus round")
+	e.consensusRoundsFinished <- true
+}
+
+func (e *events) ConsensusError(err error)() {
+	//println(fmt.Sprintf("Error during consensus: %s", err))
 	e.consensusRoundsFinished <- true
 }
