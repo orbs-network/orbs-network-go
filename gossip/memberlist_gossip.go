@@ -1,11 +1,7 @@
-package main
+package gossip
 
 import (
-	"os"
-	"strings"
 	"fmt"
-	"strconv"
-	"time"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -15,7 +11,7 @@ type MemberlistGossipConfig struct {
 	Peers []string
 }
 
-func NewList(config MemberlistGossipConfig) *memberlist.Memberlist {
+func NewGossip(config MemberlistGossipConfig) *memberlist.Memberlist {
 	fmt.Println("Creating memberlist with config", config)
 
 	listConfig := memberlist.DefaultLocalConfig()
@@ -43,19 +39,5 @@ func PrintPeers(list *memberlist.Memberlist) {
 	// Ask for members of the cluster
 	for _, member := range list.Members() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
-	}
-}
-
-func main() {
-	port, _ := strconv.ParseInt(os.Getenv("GOSSIP_PORT"), 10, 0)
-	nodeName := os.Getenv("NODE_NAME")
-	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
-
-	config := MemberlistGossipConfig{nodeName, int(port), peers}
-	list := NewList(config)
-
-	for {
-		go PrintPeers(list)
-		time.Sleep(3 * time.Second)
 	}
 }

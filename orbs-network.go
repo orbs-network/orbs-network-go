@@ -1,18 +1,24 @@
 package main
 
 import (
-  "fmt"
-  "encoding/json"
+  "os"
+  "strings"
+  "strconv"
+  "time"
+  . "github.com/orbs-network/orbs-network-go/gossip"
 )
 
-func main () {
-  var result = map[string]string{
-    "hello": "world",
-  }
+func main() {
+	port, _ := strconv.ParseInt(os.Getenv("GOSSIP_PORT"), 10, 0)
+	nodeName := os.Getenv("NODE_NAME")
+	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
 
-  fmt.Println(result)
+	config := MemberlistGossipConfig{nodeName, int(port), peers}
+	list := NewGossip(config)
 
-  jsonAsBytes, _ := json.Marshal(result)
-
-  fmt.Println(string(jsonAsBytes))
+	for {
+		go PrintPeers(list)
+		time.Sleep(3 * time.Second)
+	}
 }
+
