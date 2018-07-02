@@ -9,7 +9,19 @@ type LoopControl interface {
 	NewLoop(name string, tickFunc func())
 }
 
-type BreakingLoopContext interface {
+func NewSimpleLoop() LoopControl {
+	return &simpleLoop{}
+}
+
+type simpleLoop struct {}
+
+func (l *simpleLoop) NewLoop(name string, tickFunc func()) {
+	for {
+		tickFunc()
+	}
+}
+
+type BrakingLoopContext interface {
 	Brake()
 	Tick()
 	Release()
@@ -17,7 +29,7 @@ type BreakingLoopContext interface {
 
 type BrakingLoop interface {
 	LoopControl
-	LatchFor(name string) BreakingLoopContext
+	LatchFor(name string) BrakingLoopContext
 }
 
 type brakingLoop struct {
@@ -59,7 +71,7 @@ func (l *brakingLoop) NewLoop(name string, tickFunc func()) {
 	}
 }
 
-func (l *brakingLoop) LatchFor(name string) BreakingLoopContext {
+func (l *brakingLoop) LatchFor(name string) BrakingLoopContext {
 	return l.createOrGetContext(name)
 }
 
