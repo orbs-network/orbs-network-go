@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/memberlist"
-	"github.com/orbs-network/orbs-network-go/types"
 )
 
 type MemberlistGossipConfig struct {
@@ -14,74 +13,50 @@ type MemberlistGossipConfig struct {
 }
 
 type MemberlistGossip struct {
-	list                     *memberlist.Memberlist
-	listConfig               MemberlistGossipConfig
-	transactionListeners     []TransactionListener
-	consensusListeners       []ConsensusListener
-	pausedForwards           bool
-	pendingTransactions      []types.Transaction
-	failNextConsensusRequest bool
+	list       *memberlist.Memberlist
+	listConfig *MemberlistGossipConfig
+	delegate   *GossipDelegate
 }
 
-func (g *MemberlistGossip) RegisterTransactionListener(listener TransactionListener) {
-	g.transactionListeners = append(g.transactionListeners, listener)
+type GossipDelegate struct {
+	Name             string
+	IncomingMessages []string
+	OutgoingMessages []string
 }
 
-func (g *MemberlistGossip) RegisterConsensusListener(listener ConsensusListener) {
-	g.consensusListeners = append(g.consensusListeners, listener)
+func (d GossipDelegate) NodeMeta(limit int) []byte {
+	return []byte{}
 }
 
-func (g *MemberlistGossip) CommitTransaction(transaction *types.Transaction) {
-	for _, l := range g.consensusListeners {
-		l.OnCommitTransaction(transaction)
-	}
+func (d GossipDelegate) NotifyMsg(message []byte) {
+	fmt.Println("Message received", string(message))
+	d.IncomingMessages = append(d.IncomingMessages, string(message))
 }
 
-func (g *MemberlistGossip) ForwardTransaction(transaction *types.Transaction) {
-	if g.pausedForwards {
-		g.pendingTransactions = append(g.pendingTransactions, *transaction)
-	} else {
-		g.forwardToAllListeners(transaction)
-	}
-}
+func (d GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+	var result [][]byte
 
-func (g *MemberlistGossip) forwardToAllListeners(transaction *types.Transaction) {
-	for _, l := range g.transactionListeners {
-		l.OnForwardTransaction(transaction)
-	}
-}
+	fmt.Println("Outgoing messages", d.OutgoingMessages)
 
-func (g *MemberlistGossip) PauseForwards() {
-	g.pausedForwards = true
-}
-
-func (g *MemberlistGossip) ResumeForwards() {
-	g.pausedForwards = false
-	for _, pendingTransaction := range g.pendingTransactions {
-		g.forwardToAllListeners(&pendingTransaction)
-	}
-	g.pendingTransactions = nil
-}
-
-func (g *MemberlistGossip) FailConsensusRequests() {
-	g.failNextConsensusRequest = true
-}
-
-func (g *MemberlistGossip) PassConsensusRequests() {
-	g.failNextConsensusRequest = false
-}
-
-func (g *MemberlistGossip) HasConsensusFor(transaction *types.Transaction) (bool, error) {
-	if g.failNextConsensusRequest {
-		return true, &ErrGossipRequestFailed{}
+	for _, message := range d.OutgoingMessages {
+		result = append(result, []byte(message))
 	}
 
-	for _, l := range g.consensusListeners {
-		if !l.ValidateConsensusFor(transaction) {
-			return false, nil
-		}
-	}
-	return true, nil
+	return result
+
+	// return [][]byte{}
+}
+
+func (d GossipDelegate) LocalState(join bool) []byte {
+	return []byte{}
+}
+
+func (d GossipDelegate) MergeRemoteState(buf []byte, join bool) {
+
+}
+
+func NewGossipDelegate(nodeName string) GossipDelegate {
+	return GossipDelegate{Name: nodeName}
 }
 
 func NewGossip(config MemberlistGossipConfig) *MemberlistGossip {
@@ -90,6 +65,9 @@ func NewGossip(config MemberlistGossipConfig) *MemberlistGossip {
 	listConfig := memberlist.DefaultLocalConfig()
 	listConfig.BindPort = config.Port
 	listConfig.Name = config.Name
+
+	delegate := NewGossipDelegate(config.Name)
+	listConfig.Delegate = &delegate
 
 	list, err := memberlist.Create(listConfig)
 	if err != nil {
@@ -107,7 +85,8 @@ func NewGossip(config MemberlistGossipConfig) *MemberlistGossip {
 
 	returnObject := MemberlistGossip{}
 	returnObject.list = list
-	returnObject.listConfig = config
+	returnObject.listConfig = &config
+	returnObject.delegate = &delegate
 
 	return &returnObject
 }
@@ -124,4 +103,9 @@ func (g *MemberlistGossip) PrintPeers() {
 	for _, member := range g.list.Members() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
 	}
+}
+
+func (g *MemberlistGossip) SendMessage(message string) {
+	fmt.Println("Sending a message", message)
+	g.delegate.OutgoingMessages = append(g.delegate.OutgoingMessages, message)
 }
