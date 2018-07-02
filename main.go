@@ -1,8 +1,13 @@
 package main
 
-import "github.com/orbs-network/orbs-network-go/bootstrap"
+import (
+	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"os"
+)
 
 func main() {
-	bootstrap.NewHttpServer(":8080", "node1", true)
+	port := os.Getenv("PORT")
+	nodeId := os.Getenv("NODE_ID")
 
+	bootstrap.NewHttpServer(":" +port, nodeId, true)
 }
