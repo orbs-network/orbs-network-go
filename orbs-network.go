@@ -1,11 +1,12 @@
 package main
 
 import (
-  "os"
-  "strings"
-  "strconv"
-  "time"
-  . "github.com/orbs-network/orbs-network-go/gossip"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	. "github.com/orbs-network/orbs-network-go/gossip"
 )
 
 func main() {
@@ -21,4 +22,3 @@ func main() {
 		time.Sleep(3 * time.Second)
 	}
 }
-
