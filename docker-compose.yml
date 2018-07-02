@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  orbs-network-node_1:
+    image: orbs:export
+    environment:
+      NODE_NAME: node1
+      GOSSIP_PORT: 4400
+      GOSSIP_PEERS: 192.168.199.3,192.168.199.4
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.2
+
+  orbs-network-node_2:
+    image: orbs:export
+    environment:
+      NODE_NAME: node2
+      GOSSIP_PORT: 4400
+      GOSSIP_PEERS: 192.168.199.2,192.168.199.4
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.3
+
+  orbs-network-node_3:
+    image: orbs:export
+    environment:
+      NODE_NAME: node3
+      GOSSIP_PORT: 4400
+      GOSSIP_PEERS: 192.168.199.2,192.168.199.3
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.4
+
+networks:
+  orbs-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 192.168.199.0/24

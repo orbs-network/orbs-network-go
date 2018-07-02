@@ -6,7 +6,7 @@ docker build -f Dockerfile.build -t orbs:build .
 
 docker run --name orbs_build orbs:build sleep 1
 
-docker cp orbs_build:/opt/orbs/orbs-network .
+docker cp orbs_build:/go/src/github.com/orbs-network/orbs-network-go/orbs-network .
 
 docker build -f Dockerfile.export -t orbs:export .
 
