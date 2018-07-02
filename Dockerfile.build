@@ -1,0 +1,8 @@
+FROM golang:1.10
+
+ADD . /opt/orbs
+
+WORKDIR /opt/orbs
+
+RUN go build orbs-network.go
+

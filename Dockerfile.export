@@ -1,0 +1,8 @@
+FROM busybox
+
+ADD ./orbs-network /opt/orbs/
+
+WORKDIR /opt/orbs
+
+CMD ./orbs-network
+
