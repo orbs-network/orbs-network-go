@@ -9,16 +9,21 @@ import (
 	. "github.com/orbs-network/orbs-network-go/gossip"
 )
 
+func simulateConversation() {
+
+}
+
 func main() {
 	port, _ := strconv.ParseInt(os.Getenv("GOSSIP_PORT"), 10, 0)
 	nodeName := os.Getenv("NODE_NAME")
 	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
 
 	config := MemberlistGossipConfig{nodeName, int(port), peers}
-	list := NewGossip(config)
+	gossip := NewGossip(config)
 
 	for {
-		go PrintPeers(list)
+		go gossip.Join()
+		go gossip.PrintPeers()
 		time.Sleep(3 * time.Second)
 	}
 }

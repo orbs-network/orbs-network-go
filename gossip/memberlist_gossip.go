@@ -15,6 +15,7 @@ type MemberlistGossipConfig struct {
 
 type MemberlistGossip struct {
 	list                     *memberlist.Memberlist
+	listConfig               MemberlistGossipConfig
 	transactionListeners     []TransactionListener
 	consensusListeners       []ConsensusListener
 	pausedForwards           bool
@@ -106,11 +107,19 @@ func NewGossip(config MemberlistGossipConfig) *MemberlistGossip {
 
 	returnObject := MemberlistGossip{}
 	returnObject.list = list
+	returnObject.listConfig = config
 
 	return &returnObject
 }
 
-func PrintPeers(g *MemberlistGossip) {
+func (g *MemberlistGossip) Join() {
+	if len(g.list.Members()) < 2 {
+		fmt.Println("Node does not have any peers, trying to join the cluster...", g.listConfig.Peers)
+		g.list.Join(g.listConfig.Peers)
+	}
+}
+
+func (g *MemberlistGossip) PrintPeers() {
 	// Ask for members of the cluster
 	for _, member := range g.list.Members() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
