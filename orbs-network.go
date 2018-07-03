@@ -20,7 +20,7 @@ func main() {
 	for {
 		go gossip.Join()
 		go gossip.PrintPeers()
-		go gossip.SendMessage("hello from " + nodeName)
+		go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
 		time.Sleep(3 * time.Second)
 	}
 }

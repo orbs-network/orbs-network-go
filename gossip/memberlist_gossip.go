@@ -20,8 +20,7 @@ type MemberlistGossip struct {
 
 type GossipDelegate struct {
 	Name             string
-	IncomingMessages []string
-	OutgoingMessages []string
+	OutgoingMessages *memberlist.TransmitLimitedQueue
 }
 
 func (d GossipDelegate) NodeMeta(limit int) []byte {
@@ -30,21 +29,17 @@ func (d GossipDelegate) NodeMeta(limit int) []byte {
 
 func (d GossipDelegate) NotifyMsg(message []byte) {
 	fmt.Println("Message received", string(message))
-	d.IncomingMessages = append(d.IncomingMessages, string(message))
+	// No need to queue, we can dispatch right here
 }
 
 func (d GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
-	var result [][]byte
+	broadcasts := d.OutgoingMessages.GetBroadcasts(overhead, limit)
 
-	fmt.Println("Outgoing messages", d.OutgoingMessages)
-
-	for _, message := range d.OutgoingMessages {
-		result = append(result, []byte(message))
+	for _, message := range broadcasts {
+		fmt.Println(string(message))
 	}
 
-	return result
-
-	// return [][]byte{}
+	return broadcasts
 }
 
 func (d GossipDelegate) LocalState(join bool) []byte {
@@ -67,6 +62,13 @@ func NewGossip(config MemberlistGossipConfig) *MemberlistGossip {
 	listConfig.Name = config.Name
 
 	delegate := NewGossipDelegate(config.Name)
+	delegate.OutgoingMessages = &memberlist.TransmitLimitedQueue{
+		NumNodes: func() int {
+			return len(config.Peers) - 1
+		},
+		RetransmitMult: listConfig.RetransmitMult,
+	}
+
 	listConfig.Delegate = &delegate
 
 	list, err := memberlist.Create(listConfig)
@@ -107,5 +109,24 @@ func (g *MemberlistGossip) PrintPeers() {
 
 func (g *MemberlistGossip) SendMessage(message string) {
 	fmt.Println("Sending a message", message)
-	g.delegate.OutgoingMessages = append(g.delegate.OutgoingMessages, message)
+	g.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: []byte(message)})
+}
+
+type broadcast struct {
+	msg    []byte
+	notify chan<- struct{}
+}
+
+func (b *broadcast) Invalidates(other memberlist.Broadcast) bool {
+	return false
+}
+
+func (b *broadcast) Message() []byte {
+	return b.msg
+}
+
+func (b *broadcast) Finished() {
+	if b.notify != nil {
+		close(b.notify)
+	}
 }
