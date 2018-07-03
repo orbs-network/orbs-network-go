@@ -63,10 +63,6 @@ func (c *consensusAlgo) OnVoteRequest(transaction *types.Transaction) {
 	c.gossip.BroadcastVote(true)
 }
 
-func (c *consensusAlgo) ValidateConsensusFor(transaction *types.Transaction) bool {
-	return true
-}
-
 func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 	votes, err := c.requestConsensusFor(transaction)
 	if err != nil {

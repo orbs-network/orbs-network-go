@@ -8,16 +8,16 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/events"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
-	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/loopcontrol"
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/types"
+	"github.com/orbs-network/orbs-network-go/testharness/gossip"
 )
 
 type AcceptanceTestNetwork interface {
 	FlushLog()
 	LeaderLoopControl() loopcontrol.BrakingLoop
-	Gossip() gossip.PausableGossip
+	Gossip() gossip.PausableTransport
 	Leader() publicapi.PublicApi
 	Validator() publicapi.PublicApi
 	LeaderBp() blockstorage.InMemoryBlockPersistence
@@ -33,7 +33,7 @@ type acceptanceTestNetwork struct {
 	leaderLatch       events.Latch
 	leaderBp          blockstorage.InMemoryBlockPersistence
 	validatorBp       blockstorage.InMemoryBlockPersistence
-	gossip            gossip.PausableGossip
+	gossip            gossip.PausableTransport
 	leaderLoopControl loopcontrol.BrakingLoop
 
 	log []events.BufferedLog
@@ -76,7 +76,7 @@ func (n *acceptanceTestNetwork) LeaderLoopControl() loopcontrol.BrakingLoop {
 	return n.leaderLoopControl
 }
 
-func (n *acceptanceTestNetwork) Gossip() gossip.PausableGossip {
+func (n *acceptanceTestNetwork) Gossip() gossip.PausableTransport {
 	return n.gossip
 }
 

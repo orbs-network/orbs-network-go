@@ -5,12 +5,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/types"
 	"strconv"
-	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/events"
 	"github.com/orbs-network/orbs-network-go/loopcontrol"
 	"fmt"
 	"context"
+	"github.com/orbs-network/orbs-network-go/testharness/gossip"
 )
 
 type HttpServer interface {
@@ -45,6 +45,7 @@ func NewHttpServer(address string, nodeId string, isLeader bool) HttpServer {
 	return server
 
 }
+
 func createRouter(publicApi publicapi.PublicApi) http.Handler {
 	sendTransactionHandler := func(w http.ResponseWriter, r *http.Request) {
 		amountParam := r.URL.Query()["amount"][0]

@@ -25,12 +25,13 @@ type node struct {
 	publicApi       publicapi.PublicApi
 }
 
-func NewNode(gossip gossip.Gossip,
+func NewNode(gossipTransport gossip.Transport,
 	bp blockstorage.BlockPersistence,
 	events events.Events,
 	loopControl loopcontrol.LoopControl,
 	isLeader bool) Node {
 
+	gossip := gossip.NewGossip(gossipTransport)
 	tp := transactionpool.NewTransactionPool(gossip)
 	ledger := ledger.NewLedger(bp)
 	consensusAlgo := consensus.NewConsensusAlgo(gossip, ledger, tp, events, loopControl, isLeader)
