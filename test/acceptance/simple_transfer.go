@@ -5,13 +5,13 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/orbs-network/orbs-network-go/types"
-	"github.com/orbs-network/orbs-network-go/testharness"
+	"github.com/orbs-network/orbs-network-go/test/harness"
 )
 
 var _ = Describe("a leader node", func() {
 
 	It("commits transactions to all nodes", func() {
-		network := testharness.CreateTestNetwork()
+		network := harness.CreateTestNetwork()
 
 		network.SendTransaction(network.Leader(), &types.Transaction{Value: 17})
 		network.SendTransaction(network.Leader(), &types.Transaction{Value: 97, Invalid: true})
@@ -29,7 +29,7 @@ var _ = Describe("a leader node", func() {
 var _ = Describe("a non-leader (validator) node", func() {
 
 	It("propagates transactions to leader but does not commit them itself", func() {
-		network := testharness.CreateTestNetwork()
+		network := harness.CreateTestNetwork()
 
 		network.Gossip().PauseForwards()
 		network.SendTransaction(network.Leader(), &types.Transaction{Value: 17})

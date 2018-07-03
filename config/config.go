@@ -6,6 +6,7 @@ type NodeConfig interface {
 	consensus.Config
 }
 
+//TODO introduce FileSystemConfig
 type hardcodedConfig struct {
 	networkSize uint32
 }

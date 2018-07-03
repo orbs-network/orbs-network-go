@@ -1,25 +1,9 @@
-package loopcontrol
+package instrumentation
 
 import (
 	"sync"
-	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
-
-type LoopControl interface {
-	NewLoop(name string, tickFunc func())
-}
-
-func NewSimpleLoop() LoopControl {
-	return &simpleLoop{}
-}
-
-type simpleLoop struct {}
-
-func (l *simpleLoop) NewLoop(name string, tickFunc func()) {
-	for {
-		tickFunc()
-	}
-}
 
 type BrakingLoopContext interface {
 	Brake()
@@ -28,13 +12,13 @@ type BrakingLoopContext interface {
 }
 
 type BrakingLoop interface {
-	LoopControl
+	instrumentation.LoopControl
 	LatchFor(name string) BrakingLoopContext
 }
 
 type brakingLoop struct {
 	context *breakingLoopContext
-	events  events.Events
+	events  instrumentation.Reporting
 
 	loops sync.Map
 }
@@ -44,10 +28,10 @@ type breakingLoopContext struct {
 	loopCond     *sync.Cond
 	brakeCond    *sync.Cond
 	brakeEnabled bool
-	events       events.Events
+	events       instrumentation.Reporting
 }
 
-func NewBrakingLoop(events events.Events) BrakingLoop {
+func NewBrakingLoop(events instrumentation.Reporting) BrakingLoop {
 	return &brakingLoop{events: events}
 }
 
@@ -61,13 +45,13 @@ func (l *brakingLoop) NewLoop(name string, tickFunc func()) {
 			c.loopCond.Wait()
 		}
 
-		c.events.Report("enter_" + name)
+		c.events.Info("enter_" + name)
 
 		tickFunc()
 
 		c.tickCond.Signal()
 
-		c.events.Report("exit_" + name)
+		c.events.Info("exit_" + name)
 	}
 }
 

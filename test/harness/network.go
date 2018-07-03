@@ -1,4 +1,4 @@
-package testharness
+package harness
 
 /*
 Objects here are only for testing purposes, not to be used in real code
@@ -6,18 +6,18 @@ Objects here are only for testing purposes, not to be used in real code
 
 import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
-	"github.com/orbs-network/orbs-network-go/loopcontrol"
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/types"
-	"github.com/orbs-network/orbs-network-go/testharness/gossip"
+	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
 	"github.com/orbs-network/orbs-network-go/config"
+	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 )
 
 type AcceptanceTestNetwork interface {
 	FlushLog()
-	LeaderLoopControl() loopcontrol.BrakingLoop
+	LeaderLoopControl() testinstrumentation.BrakingLoop
 	Gossip() gossip.PausableTransport
 	Leader() publicapi.PublicApi
 	Validator() publicapi.PublicApi
@@ -31,29 +31,29 @@ type AcceptanceTestNetwork interface {
 type acceptanceTestNetwork struct {
 	leader            bootstrap.Node
 	validator         bootstrap.Node
-	leaderLatch       events.Latch
+	leaderLatch       testinstrumentation.Latch
 	leaderBp          blockstorage.InMemoryBlockPersistence
 	validatorBp       blockstorage.InMemoryBlockPersistence
 	gossip            gossip.PausableTransport
-	leaderLoopControl loopcontrol.BrakingLoop
+	leaderLoopControl testinstrumentation.BrakingLoop
 
-	log []events.BufferedLog
+	log []testinstrumentation.BufferedLog
 }
 
 func CreateTestNetwork() AcceptanceTestNetwork {
-	leaderLog := events.NewBufferedLog("leader")
-	leaderLatch := events.NewLatch()
-	validatorLog := events.NewBufferedLog("validator")
+	leaderLog := testinstrumentation.NewBufferedLog("leader")
+	leaderLatch := testinstrumentation.NewLatch()
+	validatorLog := testinstrumentation.NewBufferedLog("validator")
 
-	leaderLoopControl := loopcontrol.NewBrakingLoop(leaderLog)
+	leaderLoopControl := testinstrumentation.NewBrakingLoop(leaderLog)
 
 	inMemoryGossip := gossip.NewPausableTransport()
 	leaderBp := blockstorage.NewInMemoryBlockPersistence("leaderBp")
 	validatorBp := blockstorage.NewInMemoryBlockPersistence("validatorBp")
 	nodeConfig := config.NewHardCodedConfig(2)
 
-	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, events.NewCompositeEvents([]events.Events{leaderLog, leaderLatch}), leaderLoopControl, nodeConfig,true)
-	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, validatorLog, loopcontrol.NewBrakingLoop(validatorLog), nodeConfig,false)
+	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, nodeConfig,true)
+	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), nodeConfig,false)
 
 	return &acceptanceTestNetwork{
 		leader:            leader,
@@ -64,7 +64,7 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 		gossip:            inMemoryGossip,
 		leaderLoopControl: leaderLoopControl,
 
-		log: []events.BufferedLog{leaderLog, validatorLog},
+		log: []testinstrumentation.BufferedLog{leaderLog, validatorLog},
 	}
 }
 
@@ -74,7 +74,7 @@ func (n *acceptanceTestNetwork) FlushLog() {
 	}
 }
 
-func (n *acceptanceTestNetwork) LeaderLoopControl() loopcontrol.BrakingLoop {
+func (n *acceptanceTestNetwork) LeaderLoopControl() testinstrumentation.BrakingLoop {
 	return n.leaderLoopControl
 }
 

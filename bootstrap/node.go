@@ -4,11 +4,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
-	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/consensus"
 	"github.com/orbs-network/orbs-network-go/transactionpool"
 	"github.com/orbs-network/orbs-network-go/publicapi"
-	"github.com/orbs-network/orbs-network-go/loopcontrol"
 	"github.com/orbs-network/orbs-network-go/config"
 )
 
@@ -20,7 +19,7 @@ type node struct {
 	isLeader        bool
 	gossip          gossip.Gossip
 	ledger          ledger.Ledger
-	events          events.Events
+	events          instrumentation.Reporting
 	consensusAlgo   consensus.ConsensusAlgo
 	transactionPool transactionpool.TransactionPool
 	publicApi       publicapi.PublicApi
@@ -28,8 +27,8 @@ type node struct {
 
 func NewNode(gossipTransport gossip.Transport,
 	bp blockstorage.BlockPersistence,
-	events events.Events,
-	loopControl loopcontrol.LoopControl,
+	events instrumentation.Reporting,
+	loopControl instrumentation.LoopControl,
 	nodeConfig config.NodeConfig,
 	isLeader bool) Node {
 

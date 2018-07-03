@@ -6,11 +6,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/types"
 	"strconv"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
-	"github.com/orbs-network/orbs-network-go/events"
-	"github.com/orbs-network/orbs-network-go/loopcontrol"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"fmt"
 	"context"
-	"github.com/orbs-network/orbs-network-go/testharness/gossip"
+	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
 	"github.com/orbs-network/orbs-network-go/config"
 )
 
@@ -25,8 +24,8 @@ type httpServer struct {
 func NewHttpServer(address string, nodeId string, isLeader bool, networkSize uint32) HttpServer {
 	transport := gossip.NewPausableTransport()
 	storage := blockstorage.NewInMemoryBlockPersistence(nodeId)
-	logger := events.NewStdoutLog()
-	lc := loopcontrol.NewSimpleLoop()
+	logger := instrumentation.NewStdoutLog()
+	lc := instrumentation.NewSimpleLoop(logger)
 	nodeConfig := config.NewHardCodedConfig(networkSize)
 
 	node := NewNode(transport, storage, logger, lc, nodeConfig, isLeader)
@@ -42,7 +41,7 @@ func NewHttpServer(address string, nodeId string, isLeader bool, networkSize uin
 		server.httpServer.ListenAndServe() //TODO error on failed startup
 	}()
 
-	logger.Report(fmt.Sprintf("server started on address %s", address))
+	logger.Info(fmt.Sprintf("server started on address %s", address))
 
 	return server
 

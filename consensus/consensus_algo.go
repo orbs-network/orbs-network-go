@@ -4,9 +4,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/types"
-	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/transactionpool"
-	"github.com/orbs-network/orbs-network-go/loopcontrol"
 )
 
 type Config interface {
@@ -21,8 +20,8 @@ type consensusAlgo struct {
 	gossip          gossip.Gossip
 	ledger          ledger.Ledger
 	transactionPool transactionpool.TransactionPool
-	events          events.Events
-	loopControl     loopcontrol.LoopControl
+	events          instrumentation.Reporting
+	loopControl     instrumentation.LoopControl
 
 	votesForCurrentRound chan bool
 	config               Config
@@ -31,8 +30,8 @@ type consensusAlgo struct {
 func NewConsensusAlgo(gossip gossip.Gossip,
 	ledger ledger.Ledger,
 	transactionPool transactionpool.TransactionPool,
-	events events.Events,
-	loopControl loopcontrol.LoopControl,
+	events instrumentation.Reporting,
+	loopControl instrumentation.LoopControl,
 	config Config,
 	isLeader bool) ConsensusAlgo {
 
@@ -71,7 +70,7 @@ func (c *consensusAlgo) OnVoteRequest(transaction *types.Transaction) {
 func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 	votes, err := c.requestConsensusFor(transaction)
 	if err != nil {
-		c.events.Report(events.ConsensusError)
+		c.events.Info(instrumentation.ConsensusError)
 		return false
 	}
 
