@@ -9,5 +9,5 @@ func main() {
 	port := os.Getenv("PORT")
 	nodeId := os.Getenv("NODE_ID")
 
-	bootstrap.NewHttpServer(":" +port, nodeId, true, 1)
+	bootstrap.NewOuterHexagon(":" +port, nodeId, true, 1)
 }

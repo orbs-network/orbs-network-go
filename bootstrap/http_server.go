@@ -13,7 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 )
 
-type HttpServer interface {
+type Stoppable interface {
 	Stop()
 }
 
@@ -21,7 +21,7 @@ type httpServer struct {
 	httpServer *http.Server
 }
 
-func NewHttpServer(address string, nodeId string, isLeader bool, networkSize uint32) HttpServer {
+func NewOuterHexagon(address string, nodeId string, isLeader bool, networkSize uint32) Stoppable {
 	transport := gossip.NewPausableTransport()
 	storage := blockstorage.NewInMemoryBlockPersistence(nodeId)
 	logger := instrumentation.NewStdoutLog()
@@ -30,10 +30,15 @@ func NewHttpServer(address string, nodeId string, isLeader bool, networkSize uin
 
 	node := NewNode(transport, storage, logger, lc, nodeConfig, isLeader)
 
+	return NewHttpServer(address, logger, node.GetPublicApi())
+}
+
+func NewHttpServer(address string, logger instrumentation.Reporting, publicApi publicapi.PublicApi) Stoppable {
+
 	server := &httpServer{
 		httpServer: &http.Server {
 			Addr:    address,
-			Handler: createRouter(node.GetPublicApi()),
+			Handler: createRouter(publicApi),
 		},
 	}
 
