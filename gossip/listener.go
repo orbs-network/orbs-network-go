@@ -9,4 +9,6 @@ type TransactionListener interface {
 type ConsensusListener interface {
 	OnCommitTransaction(transaction *types.Transaction)
 	ValidateConsensusFor(transaction *types.Transaction) bool
+	OnVote(yay bool)
+	OnVoteRequest(transaction *types.Transaction)
 }

@@ -84,3 +84,22 @@ func (g *pausableGossip) HasConsensusFor(transaction *types.Transaction) (bool, 
 	}
 	return true, nil
 }
+
+func (g *pausableGossip) RequestConsensusFor(transaction *types.Transaction) error {
+	if g.failNextConsensusRequest {
+		return &ErrGossipRequestFailed{}
+	} else {
+		for _, l := range g.consensusListeners {
+			go l.OnVoteRequest(transaction)
+		}
+
+		return nil
+	}
+
+}
+
+func (g *pausableGossip) BroadcastVote(yay bool) {
+	for _, l := range g.consensusListeners {
+		go l.OnVote(yay)
+	}
+}
