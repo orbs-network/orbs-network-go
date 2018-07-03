@@ -9,7 +9,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/loopcontrol"
 )
 
-const numOfRequiredVotes = 2
+type Config interface {
+	GetNetworkSize(asOfBlock uint64) uint32
+}
 
 type ConsensusAlgo interface {
 	gossip.ConsensusListener
@@ -23,6 +25,7 @@ type consensusAlgo struct {
 	loopControl     loopcontrol.LoopControl
 
 	votesForCurrentRound chan bool
+	config               Config
 }
 
 func NewConsensusAlgo(gossip gossip.Gossip,
@@ -30,6 +33,7 @@ func NewConsensusAlgo(gossip gossip.Gossip,
 	transactionPool transactionpool.TransactionPool,
 	events events.Events,
 	loopControl loopcontrol.LoopControl,
+	config Config,
 	isLeader bool) ConsensusAlgo {
 
 	c := &consensusAlgo{
@@ -38,6 +42,7 @@ func NewConsensusAlgo(gossip gossip.Gossip,
 		transactionPool: transactionPool,
 		events:          events,
 		loopControl:     loopControl,
+		config:          config,
 	}
 
 	gossip.RegisterConsensusListener(c)
@@ -54,7 +59,7 @@ func (c *consensusAlgo) OnCommitTransaction(transaction *types.Transaction) {
 }
 
 func (c *consensusAlgo) OnVote(yay bool) {
-	if c.votesForCurrentRound != nil { //TODO remove if
+	if c.votesForCurrentRound != nil { //TODO remove if when unicasting vote rather than broadcasting it as we currently do
 		c.votesForCurrentRound <- yay
 	}
 }
@@ -71,8 +76,8 @@ func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 	}
 
 	gotConsensus := true
-	for i := 0 ; i < numOfRequiredVotes; i++ {
-		gotConsensus = gotConsensus && <- votes
+	for i := uint32(0); i < c.config.GetNetworkSize(0); i++ {
+		gotConsensus = gotConsensus && <-votes
 	}
 
 	close(c.votesForCurrentRound)
@@ -111,6 +116,5 @@ func (c *consensusAlgo) requestConsensusFor(transaction *types.Transaction) (cha
 	}
 
 	return c.votesForCurrentRound, error
-
 
 }

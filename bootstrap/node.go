@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/transactionpool"
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/loopcontrol"
+	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type Node interface {
@@ -29,12 +30,13 @@ func NewNode(gossipTransport gossip.Transport,
 	bp blockstorage.BlockPersistence,
 	events events.Events,
 	loopControl loopcontrol.LoopControl,
+	nodeConfig config.NodeConfig,
 	isLeader bool) Node {
 
 	gossip := gossip.NewGossip(gossipTransport)
 	tp := transactionpool.NewTransactionPool(gossip)
 	ledger := ledger.NewLedger(bp)
-	consensusAlgo := consensus.NewConsensusAlgo(gossip, ledger, tp, events, loopControl, isLeader)
+	consensusAlgo := consensus.NewConsensusAlgo(gossip, ledger, tp, events, loopControl, nodeConfig, isLeader)
 	publicApi := publicapi.NewPublicApi(gossip, tp, ledger, events, isLeader)
 
 	n := &node{

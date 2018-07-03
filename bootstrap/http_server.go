@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"context"
 	"github.com/orbs-network/orbs-network-go/testharness/gossip"
+	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type HttpServer interface {
@@ -21,13 +22,14 @@ type httpServer struct {
 	httpServer *http.Server
 }
 
-func NewHttpServer(address string, nodeId string, isLeader bool) HttpServer {
-	pauseableGossip := gossip.NewPausableGossip()
+func NewHttpServer(address string, nodeId string, isLeader bool, networkSize uint32) HttpServer {
+	transport := gossip.NewPausableTransport()
 	storage := blockstorage.NewInMemoryBlockPersistence(nodeId)
 	logger := events.NewStdoutLog()
 	lc := loopcontrol.NewSimpleLoop()
+	nodeConfig := config.NewHardCodedConfig(networkSize)
 
-	node := NewNode(pauseableGossip, storage, logger, lc, isLeader)
+	node := NewNode(transport, storage, logger, lc, nodeConfig, isLeader)
 
 	server := &httpServer{
 		httpServer: &http.Server {

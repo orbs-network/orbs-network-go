@@ -19,7 +19,7 @@ type pausableTransport struct {
 	failNextConsensusRequest bool
 }
 
-func NewPausableGossip() PausableTransport {
+func NewPausableTransport() PausableTransport {
 	return &pausableTransport{}
 }
 

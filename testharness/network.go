@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/testharness/gossip"
+	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type AcceptanceTestNetwork interface {
@@ -46,12 +47,13 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 
 	leaderLoopControl := loopcontrol.NewBrakingLoop(leaderLog)
 
-	inMemoryGossip := gossip.NewPausableGossip()
+	inMemoryGossip := gossip.NewPausableTransport()
 	leaderBp := blockstorage.NewInMemoryBlockPersistence("leaderBp")
 	validatorBp := blockstorage.NewInMemoryBlockPersistence("validatorBp")
+	nodeConfig := config.NewHardCodedConfig(2)
 
-	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, events.NewCompositeEvents([]events.Events{leaderLog, leaderLatch}), leaderLoopControl, true)
-	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, validatorLog, loopcontrol.NewBrakingLoop(validatorLog), false)
+	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, events.NewCompositeEvents([]events.Events{leaderLog, leaderLatch}), leaderLoopControl, nodeConfig,true)
+	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, validatorLog, loopcontrol.NewBrakingLoop(validatorLog), nodeConfig,false)
 
 	return &acceptanceTestNetwork{
 		leader:            leader,
