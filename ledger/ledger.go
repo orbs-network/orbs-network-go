@@ -1,8 +1,10 @@
 package ledger
 
 import (
-	"github.com/orbs-network/orbs-network-go/types"
+	"fmt"
+
 	"github.com/orbs-network/orbs-network-go/blockstorage"
+	"github.com/orbs-network/orbs-network-go/types"
 )
 
 type Ledger interface {
@@ -19,6 +21,7 @@ func NewLedger(bp blockstorage.BlockPersistence) Ledger {
 }
 
 func (l *ledger) AddTransaction(transaction *types.Transaction) {
+	fmt.Println("Adding transaction", transaction)
 	if transaction.Invalid {
 		return
 	}

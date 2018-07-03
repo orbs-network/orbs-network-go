@@ -1,9 +1,11 @@
 package gossip
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/orbs-network/orbs-network-go/types"
 )
 
 type MemberlistGossipConfig struct {
@@ -16,11 +18,16 @@ type MemberlistGossip struct {
 	list       *memberlist.Memberlist
 	listConfig *MemberlistGossipConfig
 	delegate   *GossipDelegate
+
+	transactionListeners []TransactionListener
+	consensusListeners   []ConsensusListener
+	pendingTransactions  []types.Transaction
 }
 
 type GossipDelegate struct {
 	Name             string
 	OutgoingMessages *memberlist.TransmitLimitedQueue
+	parent           *MemberlistGossip
 }
 
 func (d GossipDelegate) NodeMeta(limit int) []byte {
@@ -30,10 +37,38 @@ func (d GossipDelegate) NodeMeta(limit int) []byte {
 func (d GossipDelegate) NotifyMsg(message []byte) {
 	fmt.Println("Message received", string(message))
 	// No need to queue, we can dispatch right here
+
+	var jsonValue interface{}
+	err := json.Unmarshal(message, &jsonValue)
+
+	m := jsonValue.(map[string]interface{})
+
+	if err == nil {
+		switch m["type"] {
+		case "CommitTransaction":
+			fmt.Println("TX", m["payload"])
+
+			txContainer := m["payload"].(map[string]interface{})
+
+			tx := &types.Transaction{
+				Value:   int(txContainer["Value"].(float64)),
+				Invalid: txContainer["Invalid"].(bool),
+			}
+
+			for _, l := range d.parent.consensusListeners {
+				l.OnCommitTransaction(tx)
+			}
+		}
+	}
+	fmt.Println("Unmarshalled json", jsonValue)
 }
 
 func (d GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 	broadcasts := d.OutgoingMessages.GetBroadcasts(overhead, limit)
+
+	if len(broadcasts) > 0 {
+		fmt.Println("Outgoing messages")
+	}
 
 	for _, message := range broadcasts {
 		fmt.Println(string(message))
@@ -90,6 +125,9 @@ func NewGossip(config MemberlistGossipConfig) *MemberlistGossip {
 	returnObject.listConfig = &config
 	returnObject.delegate = &delegate
 
+	// this is terrible and should be purged
+	delegate.parent = &returnObject
+
 	return &returnObject
 }
 
@@ -110,6 +148,46 @@ func (g *MemberlistGossip) PrintPeers() {
 func (g *MemberlistGossip) SendMessage(message string) {
 	fmt.Println("Sending a message", message)
 	g.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: []byte(message)})
+}
+
+func (g *MemberlistGossip) ForwardTransaction(transaction *types.Transaction) {
+	fmt.Println("ForwardTransaction is not implemented")
+}
+
+func (g *MemberlistGossip) CommitTransaction(transaction *types.Transaction) {
+	fmt.Println("Committing transaction")
+	for _, l := range g.consensusListeners {
+		l.OnCommitTransaction(transaction)
+	}
+
+	wrapper := map[string]interface{}{
+		"type":    "CommitTransaction",
+		"payload": transaction,
+	}
+
+	jsonValue, _ := json.Marshal(wrapper)
+	g.SendMessage(string(jsonValue))
+}
+
+func (g *MemberlistGossip) HasConsensusFor(transaction *types.Transaction) (bool, error) {
+	fmt.Println("Checking consensus for transaction", transaction)
+
+	for _, l := range g.consensusListeners {
+		if !l.ValidateConsensusFor(transaction) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (g *MemberlistGossip) RegisterTransactionListener(listener TransactionListener) {
+	fmt.Println("Registering transaction listener")
+	g.transactionListeners = append(g.transactionListeners, listener)
+}
+
+func (g *MemberlistGossip) RegisterConsensusListener(listener ConsensusListener) {
+	fmt.Println("Registering consensus listener")
+	g.consensusListeners = append(g.consensusListeners, listener)
 }
 
 type broadcast struct {

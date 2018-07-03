@@ -1,16 +1,17 @@
 package bootstrap
 
 import (
+	"context"
+	"fmt"
 	"net/http"
-	"github.com/orbs-network/orbs-network-go/publicapi"
-	"github.com/orbs-network/orbs-network-go/types"
 	"strconv"
-	"github.com/orbs-network/orbs-network-go/gossip"
+
 	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/loopcontrol"
-	"fmt"
-	"context"
+	"github.com/orbs-network/orbs-network-go/publicapi"
+	"github.com/orbs-network/orbs-network-go/types"
 )
 
 type HttpServer interface {
@@ -21,8 +22,7 @@ type httpServer struct {
 	httpServer *http.Server
 }
 
-func NewHttpServer(address string, nodeId string, isLeader bool) HttpServer {
-	pauseableGossip := gossip.NewPausableGossip()
+func NewHttpServer(address string, nodeId string, pauseableGossip gossip.Gossip, isLeader bool) HttpServer {
 	storage := blockstorage.NewInMemoryBlockPersistence(nodeId)
 	logger := events.NewStdoutLog()
 	lc := loopcontrol.NewSimpleLoop()
@@ -30,7 +30,7 @@ func NewHttpServer(address string, nodeId string, isLeader bool) HttpServer {
 	node := NewNode(pauseableGossip, storage, logger, lc, isLeader)
 
 	server := &httpServer{
-		httpServer: &http.Server {
+		httpServer: &http.Server{
 			Addr:    address,
 			Handler: createRouter(node.GetPublicApi()),
 		},
