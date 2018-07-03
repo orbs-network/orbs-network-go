@@ -10,24 +10,36 @@ import (
 	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/loopcontrol"
+	"github.com/orbs-network/orbs-network-go/publicapi"
+	"github.com/orbs-network/orbs-network-go/types"
 )
 
-//type TestNetwork interface {
-//}
-//
-type TestNetwork struct {
-	Leader            bootstrap.Node
-	Validator         bootstrap.Node
-	LeaderLatch       events.Latch
-	LeaderBp          blockstorage.InMemoryBlockPersistence
-	ValidatorBp       blockstorage.InMemoryBlockPersistence
-	Gossip            gossip.PausableGossip
-	LeaderLoopControl loopcontrol.BrakingLoop
+type AcceptanceTestNetwork interface {
+	FlushLog()
+	LeaderLoopControl() loopcontrol.BrakingLoop
+	Gossip() gossip.PausableGossip
+	Leader() publicapi.PublicApi
+	Validator() publicapi.PublicApi
+	LeaderBp() blockstorage.InMemoryBlockPersistence
+	ValidatorBp() blockstorage.InMemoryBlockPersistence
+
+	SendTransaction(gatewayNode publicapi.PublicApi, transaction *types.Transaction) chan interface{}
+	CallMethod(node publicapi.PublicApi) chan int
+}
+
+type acceptanceTestNetwork struct {
+	leader            bootstrap.Node
+	validator         bootstrap.Node
+	leaderLatch       events.Latch
+	leaderBp          blockstorage.InMemoryBlockPersistence
+	validatorBp       blockstorage.InMemoryBlockPersistence
+	gossip            gossip.PausableGossip
+	leaderLoopControl loopcontrol.BrakingLoop
 
 	log []events.BufferedLog
 }
 
-func CreateTestNetwork() TestNetwork {
+func CreateTestNetwork() AcceptanceTestNetwork {
 	leaderLog := events.NewBufferedLog("leader")
 	leaderLatch := events.NewLatch()
 	validatorLog := events.NewBufferedLog("validator")
@@ -41,21 +53,65 @@ func CreateTestNetwork() TestNetwork {
 	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, events.NewCompositeEvents([]events.Events{leaderLog, leaderLatch}), leaderLoopControl, true)
 	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, validatorLog, loopcontrol.NewBrakingLoop(validatorLog), false)
 
-	return TestNetwork{
-		Leader:            leader,
-		Validator:         validator,
-		LeaderLatch:       leaderLatch,
-		LeaderBp:          leaderBp,
-		ValidatorBp:       validatorBp,
-		Gossip:            inMemoryGossip,
-		LeaderLoopControl: leaderLoopControl,
+	return &acceptanceTestNetwork{
+		leader:            leader,
+		validator:         validator,
+		leaderLatch:       leaderLatch,
+		leaderBp:          leaderBp,
+		validatorBp:       validatorBp,
+		gossip:            inMemoryGossip,
+		leaderLoopControl: leaderLoopControl,
 
 		log: []events.BufferedLog{leaderLog, validatorLog},
 	}
 }
 
-func (n *TestNetwork) FlushLog() {
+func (n *acceptanceTestNetwork) FlushLog() {
 	for _, l := range n.log {
 		l.Flush()
 	}
 }
+
+func (n *acceptanceTestNetwork) LeaderLoopControl() loopcontrol.BrakingLoop {
+	return n.leaderLoopControl
+}
+
+func (n *acceptanceTestNetwork) Gossip() gossip.PausableGossip {
+	return n.gossip
+}
+
+func (n *acceptanceTestNetwork) Leader() publicapi.PublicApi {
+	return n.leader.GetPublicApi()
+}
+
+func (n *acceptanceTestNetwork) Validator() publicapi.PublicApi {
+	return n.validator.GetPublicApi()
+}
+
+func (n *acceptanceTestNetwork) LeaderBp() blockstorage.InMemoryBlockPersistence {
+	return n.leaderBp
+}
+
+func (n *acceptanceTestNetwork) ValidatorBp() blockstorage.InMemoryBlockPersistence {
+	return n.validatorBp
+}
+
+func (n *acceptanceTestNetwork) SendTransaction(gatewayNode publicapi.PublicApi, transaction *types.Transaction) chan interface{} {
+	ch := make(chan interface{})
+	go func() {
+		gatewayNode.SendTransaction(transaction)
+		ch <- nil
+	}()
+	return ch
+}
+
+func (n *acceptanceTestNetwork) CallMethod(node publicapi.PublicApi) chan int {
+	ch := make(chan int)
+	go func() {
+		ch <- node.CallMethod()
+	}()
+	return ch
+}
+
+
+

@@ -13,15 +13,16 @@ var _ = Describe("a leader node", func() {
 	It("commits transactions to all nodes", func() {
 		network := testharness.CreateTestNetwork()
 
-		network.Leader.GetPublicApi().SendTransaction(&types.Transaction{Value: 17})
-		network.Leader.GetPublicApi().SendTransaction(&types.Transaction{Value: 97, Invalid: true})
-		network.Leader.GetPublicApi().SendTransaction(&types.Transaction{Value: 22})
+		network.SendTransaction(network.Leader(), &types.Transaction{Value: 17})
+		network.SendTransaction(network.Leader(), &types.Transaction{Value: 97, Invalid: true})
+		network.SendTransaction(network.Leader(), &types.Transaction{Value: 22})
 
-		network.LeaderBp.WaitForBlocks(2)
-		Expect(network.Leader.GetPublicApi().CallMethod()).To(Equal(39))
+		network.LeaderBp().WaitForBlocks(2)
+		Expect(<- network.CallMethod(network.Leader())).To(Equal(39))
 
-		network.ValidatorBp.WaitForBlocks(2)
-		Expect(network.Validator.GetPublicApi().CallMethod()).To(Equal(39))
+		network.ValidatorBp().WaitForBlocks(2)
+		Expect(<- network.CallMethod(network.Validator())).To(Equal(39))
+
 	})
 })
 
@@ -30,17 +31,17 @@ var _ = Describe("a non-leader (validator) node", func() {
 	It("propagates transactions to leader but does not commit them itself", func() {
 		network := testharness.CreateTestNetwork()
 
-		network.Gossip.PauseForwards()
-		network.Validator.GetPublicApi().SendTransaction(&types.Transaction{Value: 17})
+		network.Gossip().PauseForwards()
+		network.SendTransaction(network.Leader(), &types.Transaction{Value: 17})
 
-		Expect(network.Leader.GetPublicApi().CallMethod()).To(Equal(0))
-		Expect(network.Validator.GetPublicApi().CallMethod()).To(Equal(0))
+		Expect(<- network.CallMethod(network.Leader())).To(Equal(0))
+		Expect(<- network.CallMethod(network.Validator())).To(Equal(0))
 
-		network.Gossip.ResumeForwards()
-		network.LeaderBp.WaitForBlocks(1)
-		Expect(network.Leader.GetPublicApi().CallMethod()).To(Equal(17))
-		network.ValidatorBp.WaitForBlocks(1)
-		Expect(network.Validator.GetPublicApi().CallMethod()).To(Equal(17))
+		network.Gossip().ResumeForwards()
+		network.LeaderBp().WaitForBlocks(1)
+		Expect(<- network.CallMethod(network.Leader())).To(Equal(17))
+		network.ValidatorBp().WaitForBlocks(1)
+		Expect(<- network.CallMethod(network.Validator())).To(Equal(17))
 	})
 
 })
