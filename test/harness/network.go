@@ -29,8 +29,8 @@ type AcceptanceTestNetwork interface {
 }
 
 type acceptanceTestNetwork struct {
-	leader            bootstrap.Node
-	validator         bootstrap.Node
+	leader            bootstrap.NodeLogic
+	validator         bootstrap.NodeLogic
 	leaderLatch       testinstrumentation.Latch
 	leaderBp          blockstorage.InMemoryBlockPersistence
 	validatorBp       blockstorage.InMemoryBlockPersistence
@@ -52,8 +52,8 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 	validatorBp := blockstorage.NewInMemoryBlockPersistence("validatorBp")
 	nodeConfig := config.NewHardCodedConfig(2)
 
-	leader := bootstrap.NewNode(inMemoryGossip, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, nodeConfig,true)
-	validator := bootstrap.NewNode(inMemoryGossip, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), nodeConfig,false)
+	leader := bootstrap.NewNodeLogic(inMemoryGossip, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, nodeConfig,true)
+	validator := bootstrap.NewNodeLogic(inMemoryGossip, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), nodeConfig,false)
 
 	return &acceptanceTestNetwork{
 		leader:            leader,

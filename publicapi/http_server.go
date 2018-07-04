@@ -1,19 +1,15 @@
-package bootstrap
+package publicapi
 
 import (
-	"net/http"
-	"github.com/orbs-network/orbs-network-go/publicapi"
-	"github.com/orbs-network/orbs-network-go/types"
-	"strconv"
-	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"net/http"
 	"fmt"
+	"strconv"
+	"github.com/orbs-network/orbs-network-go/types"
 	"context"
-	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
-	"github.com/orbs-network/orbs-network-go/config"
 )
 
-type Stoppable interface {
+type HttpServer interface {
 	Stop()
 }
 
@@ -21,19 +17,7 @@ type httpServer struct {
 	httpServer *http.Server
 }
 
-func NewOuterHexagon(address string, nodeId string, isLeader bool, networkSize uint32) Stoppable {
-	transport := gossip.NewPausableTransport()
-	storage := blockstorage.NewInMemoryBlockPersistence(nodeId)
-	logger := instrumentation.NewStdoutLog()
-	lc := instrumentation.NewSimpleLoop(logger)
-	nodeConfig := config.NewHardCodedConfig(networkSize)
-
-	node := NewNode(transport, storage, logger, lc, nodeConfig, isLeader)
-
-	return NewHttpServer(address, logger, node.GetPublicApi())
-}
-
-func NewHttpServer(address string, logger instrumentation.Reporting, publicApi publicapi.PublicApi) Stoppable {
+func NewHttpServer(address string, logger instrumentation.Reporting, publicApi PublicApi) HttpServer {
 
 	server := &httpServer{
 		httpServer: &http.Server {
@@ -52,7 +36,7 @@ func NewHttpServer(address string, logger instrumentation.Reporting, publicApi p
 
 }
 
-func createRouter(publicApi publicapi.PublicApi) http.Handler {
+func createRouter(publicApi PublicApi) http.Handler {
 	sendTransactionHandler := func(w http.ResponseWriter, r *http.Request) {
 		amountParam := r.URL.Query()["amount"][0]
 		amount, _ := strconv.ParseInt(amountParam, 10, 32)
@@ -75,3 +59,4 @@ func createRouter(publicApi publicapi.PublicApi) http.Handler {
 func (s *httpServer) Stop() {
 	s.httpServer.Shutdown(context.TODO()) //TODO context
 }
+
