@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 )
 
+type Config interface {
+	NodeId() string
+}
+
 type Gossip interface {
 	ForwardTransaction(transaction *types.Transaction)
 	CommitTransaction(transaction *types.Transaction)
@@ -21,7 +25,7 @@ type gossip struct {
 	transactionListeners     []TransactionListener
 	consensusListeners       []ConsensusListener
 
-	nodeId string
+	config Config
 }
 
 type TransactionListener interface {
@@ -34,10 +38,9 @@ type ConsensusListener interface {
 	OnVoteRequest(originator string, transaction *types.Transaction)
 }
 
-
-func NewGossip(transport Transport, nodeId string) Gossip {
-	g := &gossip{transport: transport, nodeId: nodeId}
-	transport.RegisterListener(g, g.nodeId)
+func NewGossip(transport Transport, config Config) Gossip {
+	g := &gossip{transport: transport, config: config}
+	transport.RegisterListener(g, g.config.NodeId())
 	return g
 }
 
@@ -50,19 +53,19 @@ func (g *gossip) RegisterConsensusListener(listener ConsensusListener) {
 }
 
 func (g *gossip) CommitTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(g.nodeId, CommitMessage, g.serialize(transaction))
+	g.transport.Broadcast(g.config.NodeId(), CommitMessage, g.serialize(transaction))
 }
 
 func (g *gossip) ForwardTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(g.nodeId, ForwardTransactionMessage, g.serialize(transaction))
+	g.transport.Broadcast(g.config.NodeId(), ForwardTransactionMessage, g.serialize(transaction))
 }
 
 func (g *gossip) RequestConsensusFor(transaction *types.Transaction) error {
-	return g.transport.Broadcast(g.nodeId, PrePrepareMessage, g.serialize(transaction))
+	return g.transport.Broadcast(g.config.NodeId(), PrePrepareMessage, g.serialize(transaction))
 }
 
 func (g *gossip) SendVote(candidate string, yay bool) {
-	g.transport.Unicast(g.nodeId, candidate, PrepareMessage, g.serialize(yay))
+	g.transport.Unicast(g.config.NodeId(), candidate, PrepareMessage, g.serialize(yay))
 }
 
 func (g *gossip) OnMessageReceived(sender string, messageType string, bytes []byte) {

@@ -10,7 +10,7 @@ import (
 )
 
 type Config interface {
-	GetNetworkSize(asOfBlock uint64) uint32
+	NetworkSize(asOfBlock uint64) uint32
 }
 
 type ConsensusAlgo interface {
@@ -77,7 +77,7 @@ func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 	}
 
 	gotConsensus := true
-	for i := uint32(0); i < c.config.GetNetworkSize(0); i++ {
+	for i := uint32(0); i < c.config.NetworkSize(0); i++ {
 		gotConsensus = gotConsensus && <-votes
 	}
 

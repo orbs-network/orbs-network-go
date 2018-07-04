@@ -67,7 +67,7 @@ func (g *pausableTransport) Broadcast(senderId string, messageType string, bytes
 }
 
 //TODO pause unicasts as well as broadcasts
-func (g *pausableTransport) Unicast(senderId string, recipientId, messageType string, bytes []byte) error {
+func (g *pausableTransport) Unicast(senderId string, recipientId string, messageType string, bytes []byte) error {
 	g.listeners[recipientId].OnMessageReceived(senderId, messageType, bytes)
 
 	return nil

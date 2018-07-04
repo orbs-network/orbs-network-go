@@ -21,13 +21,14 @@ type node struct {
 
 
 func NewNode(address string, nodeId string, isLeader bool, networkSize uint32) Node {
+	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
+
 	transport := gossip.NewPausableTransport()
-	storage := blockstorage.NewInMemoryBlockPersistence(nodeId)
+	storage := blockstorage.NewInMemoryBlockPersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	lc := instrumentation.NewSimpleLoop(logger)
-	nodeConfig := config.NewHardCodedConfig(networkSize)
 
-	logic := NewNodeLogic(transport, storage, logger, lc, nodeConfig, nodeId, isLeader)
+	logic := NewNodeLogic(transport, storage, logger, lc, nodeConfig, isLeader)
 
 	httpServer := publicapi.NewHttpServer(address, logger, logic.GetPublicApi())
 

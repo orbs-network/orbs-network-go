@@ -41,6 +41,9 @@ type acceptanceTestNetwork struct {
 }
 
 func CreateTestNetwork() AcceptanceTestNetwork {
+	leaderConfig := config.NewHardCodedConfig(2, "leader")
+	validatorConfig := config.NewHardCodedConfig(2, "validator")
+
 	leaderLog := testinstrumentation.NewBufferedLog("leader")
 	leaderLatch := testinstrumentation.NewLatch()
 	validatorLog := testinstrumentation.NewBufferedLog("validator")
@@ -48,12 +51,11 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 	leaderLoopControl := testinstrumentation.NewBrakingLoop(leaderLog)
 
 	inMemoryGossip := gossip.NewPausableTransport()
-	leaderBp := blockstorage.NewInMemoryBlockPersistence("leaderBp")
-	validatorBp := blockstorage.NewInMemoryBlockPersistence("validatorBp")
-	nodeConfig := config.NewHardCodedConfig(2)
+	leaderBp := blockstorage.NewInMemoryBlockPersistence(leaderConfig)
+	validatorBp := blockstorage.NewInMemoryBlockPersistence(validatorConfig)
 
-	leader := bootstrap.NewNodeLogic(inMemoryGossip, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, nodeConfig, "leader", true)
-	validator := bootstrap.NewNodeLogic(inMemoryGossip, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), nodeConfig, "validator", false)
+	leader := bootstrap.NewNodeLogic(inMemoryGossip, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
+	validator := bootstrap.NewNodeLogic(inMemoryGossip, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
 
 	return &acceptanceTestNetwork{
 		leader:            leader,
