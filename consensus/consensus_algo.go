@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/transactionpool"
+	"fmt"
 )
 
 type Config interface {
@@ -57,14 +58,15 @@ func (c *consensusAlgo) OnCommitTransaction(transaction *types.Transaction) {
 	c.ledger.AddTransaction(transaction)
 }
 
-func (c *consensusAlgo) OnVote(yay bool) {
+func (c *consensusAlgo) OnVote(voter string, yay bool) {
 	if c.votesForCurrentRound != nil { //TODO remove if when unicasting vote rather than broadcasting it as we currently do
+		c.events.Info(fmt.Sprintf("received vote %v from %s", yay, voter))
 		c.votesForCurrentRound <- yay
 	}
 }
 
-func (c *consensusAlgo) OnVoteRequest(transaction *types.Transaction) {
-	c.gossip.BroadcastVote(true)
+func (c *consensusAlgo) OnVoteRequest(originator string, transaction *types.Transaction) {
+	c.gossip.SendVote(originator, true)
 }
 
 func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {

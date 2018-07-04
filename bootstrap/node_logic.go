@@ -30,9 +30,10 @@ func NewNodeLogic(gossipTransport gossip.Transport,
 	events instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
 	nodeConfig config.NodeConfig,
+	nodeId string,
 	isLeader bool) NodeLogic {
 
-	gossip := gossip.NewGossip(gossipTransport)
+	gossip := gossip.NewGossip(gossipTransport, nodeId)
 	tp := transactionpool.NewTransactionPool(gossip)
 	ledger := ledger.NewLedger(bp)
 	consensusAlgo := consensus.NewConsensusAlgo(gossip, ledger, tp, events, loopControl, nodeConfig, isLeader)

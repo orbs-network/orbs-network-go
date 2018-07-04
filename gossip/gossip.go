@@ -9,7 +9,7 @@ type Gossip interface {
 	ForwardTransaction(transaction *types.Transaction)
 	CommitTransaction(transaction *types.Transaction)
 	RequestConsensusFor(transaction *types.Transaction) error
-	BroadcastVote(yay bool)
+	SendVote(candidate string, yay bool)
 
 	RegisterTransactionListener(listener TransactionListener)
 	RegisterConsensusListener(listener ConsensusListener)
@@ -20,6 +20,8 @@ type gossip struct {
 
 	transactionListeners     []TransactionListener
 	consensusListeners       []ConsensusListener
+
+	nodeId string
 }
 
 type TransactionListener interface {
@@ -28,14 +30,14 @@ type TransactionListener interface {
 
 type ConsensusListener interface {
 	OnCommitTransaction(transaction *types.Transaction)
-	OnVote(yay bool)
-	OnVoteRequest(transaction *types.Transaction)
+	OnVote(voter string, yay bool)
+	OnVoteRequest(originator string, transaction *types.Transaction)
 }
 
 
-func NewGossip(transport Transport) Gossip {
-	g := &gossip{transport: transport}
-	transport.RegisterListener(g)
+func NewGossip(transport Transport, nodeId string) Gossip {
+	g := &gossip{transport: transport, nodeId: nodeId}
+	transport.RegisterListener(g, g.nodeId)
 	return g
 }
 
@@ -48,22 +50,22 @@ func (g *gossip) RegisterConsensusListener(listener ConsensusListener) {
 }
 
 func (g *gossip) CommitTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(CommitMessage, g.serialize(transaction))
+	g.transport.Broadcast(g.nodeId, CommitMessage, g.serialize(transaction))
 }
 
 func (g *gossip) ForwardTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(ForwardTransactionMessage, g.serialize(transaction))
+	g.transport.Broadcast(g.nodeId, ForwardTransactionMessage, g.serialize(transaction))
 }
 
 func (g *gossip) RequestConsensusFor(transaction *types.Transaction) error {
-	return g.transport.Broadcast(PrePrepareMessage, g.serialize(transaction))
+	return g.transport.Broadcast(g.nodeId, PrePrepareMessage, g.serialize(transaction))
 }
 
-func (g *gossip) BroadcastVote(yay bool) {
-	g.transport.Broadcast(PrepareMessage, g.serialize(yay))
+func (g *gossip) SendVote(candidate string, yay bool) {
+	g.transport.Unicast(g.nodeId, candidate, PrepareMessage, g.serialize(yay))
 }
 
-func (g *gossip) OnMessageReceived(messageType string, bytes []byte) {
+func (g *gossip) OnMessageReceived(sender string, messageType string, bytes []byte) {
 	switch messageType {
 	case CommitMessage:
 		tx := &types.Transaction{}
@@ -86,7 +88,7 @@ func (g *gossip) OnMessageReceived(messageType string, bytes []byte) {
 		json.Unmarshal(bytes, tx)
 
 		for _, l := range g.consensusListeners {
-			l.OnVoteRequest(tx)
+			l.OnVoteRequest(sender, tx)
 		}
 
 	case PrepareMessage:
@@ -94,7 +96,7 @@ func (g *gossip) OnMessageReceived(messageType string, bytes []byte) {
 		json.Unmarshal(bytes, &yay)
 
 		for _, l := range g.consensusListeners {
-			l.OnVote(yay)
+			l.OnVote(sender, yay)
 		}
 	}
 }

@@ -43,7 +43,7 @@ var _ = Describe("The Orbs Network", func() {
 
 		Expect(ResponseBodyAsString(res)).To(Equal("17"))
 
-		node.Stop()
+		node.GracefulShutdown(1 * time.Second)
 
 		close(done)
 	}, 10)

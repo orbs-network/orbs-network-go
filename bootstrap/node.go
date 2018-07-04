@@ -6,11 +6,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/publicapi"
+	"time"
 )
 
 
 type Node interface {
-	Stop()
+	GracefulShutdown(timeout time.Duration)
 }
 
 type node struct {
@@ -26,7 +27,7 @@ func NewNode(address string, nodeId string, isLeader bool, networkSize uint32) N
 	lc := instrumentation.NewSimpleLoop(logger)
 	nodeConfig := config.NewHardCodedConfig(networkSize)
 
-	logic := NewNodeLogic(transport, storage, logger, lc, nodeConfig, isLeader)
+	logic := NewNodeLogic(transport, storage, logger, lc, nodeConfig, nodeId, isLeader)
 
 	httpServer := publicapi.NewHttpServer(address, logger, logic.GetPublicApi())
 
@@ -36,6 +37,6 @@ func NewNode(address string, nodeId string, isLeader bool, networkSize uint32) N
 	}
 }
 
-func (n *node) Stop() {
-	n.httpServer.Stop()
+func (n *node) GracefulShutdown(timeout time.Duration) {
+	n.httpServer.GracefulShutdown(timeout)
 }

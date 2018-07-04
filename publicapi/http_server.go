@@ -7,10 +7,11 @@ import (
 	"strconv"
 	"github.com/orbs-network/orbs-network-go/types"
 	"context"
+	"time"
 )
 
 type HttpServer interface {
-	Stop()
+	GracefulShutdown(timeout time.Duration)
 }
 
 type httpServer struct {
@@ -56,7 +57,7 @@ func createRouter(publicApi PublicApi) http.Handler {
 	return router
 }
 
-func (s *httpServer) Stop() {
-	s.httpServer.Shutdown(context.TODO()) //TODO context
+func (s *httpServer) GracefulShutdown(timeout time.Duration) {
+	s.httpServer.Shutdown(context.TODO()) //TODO timeout context
 }
 
