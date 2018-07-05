@@ -9,14 +9,6 @@ import (
 	. "github.com/orbs-network/orbs-network-go/test"
 )
 
-type mockListener struct {
-	mock.Mock
-}
-
-func (l *mockListener) OnMessageReceived(message *gossip.Message) {
-	l.Called(message)
-}
-
 func TestContract(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Gossip Transport Contract")
@@ -61,6 +53,14 @@ func assertContractOf(makeContext func() transportContractContext) {
 			c.verify()
 		})
 	})
+}
+
+type mockListener struct {
+	mock.Mock
+}
+
+func (l *mockListener) OnMessageReceived(message *gossip.Message) {
+	l.Called(message)
 }
 
 func listenTo(transport gossip.Transport, name string) *mockListener {
