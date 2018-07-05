@@ -37,14 +37,15 @@ var _ = Describe("The Orbs Network", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res.StatusCode).To(Equal(http.StatusOK))
 
-		time.Sleep(1 * time.Second)
-
-		res, _ = http.Get("http://localhost:8080/api/call_method")
-
-		Expect(ResponseBodyAsString(res)).To(Equal("17"))
+		Eventually(callMethod()).Should(Equal("17"))
 
 		node.GracefulShutdown(1 * time.Second)
 
 		close(done)
 	}, 10)
 })
+
+func callMethod() string {
+	res, _ := http.Get("http://localhost:8080/api/call_method")
+	return ResponseBodyAsString(res)
+}
