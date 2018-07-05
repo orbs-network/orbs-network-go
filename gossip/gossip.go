@@ -53,26 +53,26 @@ func (g *gossip) RegisterConsensusListener(listener ConsensusListener) {
 }
 
 func (g *gossip) CommitTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(g.config.NodeId(), CommitMessage, g.serialize(transaction))
+	g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: CommitMessage, payload: g.serialize(transaction)})
 }
 
 func (g *gossip) ForwardTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(g.config.NodeId(), ForwardTransactionMessage, g.serialize(transaction))
+	g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: ForwardTransactionMessage, payload: g.serialize(transaction)})
 }
 
 func (g *gossip) RequestConsensusFor(transaction *types.Transaction) error {
-	return g.transport.Broadcast(g.config.NodeId(), PrePrepareMessage, g.serialize(transaction))
+	return g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: PrePrepareMessage, payload: g.serialize(transaction)})
 }
 
 func (g *gossip) SendVote(candidate string, yay bool) {
-	g.transport.Unicast(g.config.NodeId(), candidate, PrepareMessage, g.serialize(yay))
+	g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: PrepareMessage, payload: g.serialize(yay)})
 }
 
-func (g *gossip) OnMessageReceived(sender string, messageType string, bytes []byte) {
-	switch messageType {
+func (g *gossip) OnMessageReceived(message Message) {
+	switch message.Type {
 	case CommitMessage:
 		tx := &types.Transaction{}
-		json.Unmarshal(bytes, tx)
+		json.Unmarshal(message.payload, tx)
 
 		for _, l := range g.consensusListeners {
 			l.OnCommitTransaction(tx)
@@ -80,7 +80,7 @@ func (g *gossip) OnMessageReceived(sender string, messageType string, bytes []by
 
 	case ForwardTransactionMessage:
 		tx := &types.Transaction{}
-		json.Unmarshal(bytes, tx)
+		json.Unmarshal(message.payload, tx)
 
 		for _, l := range g.transactionListeners {
 			l.OnForwardTransaction(tx)
@@ -88,18 +88,18 @@ func (g *gossip) OnMessageReceived(sender string, messageType string, bytes []by
 
 	case PrePrepareMessage:
 		tx := &types.Transaction{}
-		json.Unmarshal(bytes, tx)
+		json.Unmarshal(message.payload, tx)
 
 		for _, l := range g.consensusListeners {
-			l.OnVoteRequest(sender, tx)
+			l.OnVoteRequest(message.sender, tx)
 		}
 
 	case PrepareMessage:
 		yay := false
-		json.Unmarshal(bytes, &yay)
+		json.Unmarshal(message.payload, &yay)
 
 		for _, l := range g.consensusListeners {
-			l.OnVote(sender, yay)
+			l.OnVote(message.sender, yay)
 		}
 	}
 }

@@ -5,13 +5,19 @@ const ForwardTransactionMessage = "ForwardTx"
 const PrePrepareMessage = "PrePrepare"
 const PrepareMessage = "Prepare"
 
+type Message struct {
+	sender  string
+	Type    string
+	payload []byte
+}
+
 type MessageReceivedListener interface {
-	OnMessageReceived(sender string, messageType string, bytes []byte)
+	OnMessageReceived(message Message)
 }
 
 type Transport interface {
-	Broadcast(senderId string, messageType string, payload []byte) error
-	Unicast(senderId string, recipientId string, messageType string, payload []byte) error
+	Broadcast(message Message) error
+	Unicast(recipientId string, message Message) error
 	RegisterListener(listener MessageReceivedListener, myNodeId string)
 }
 

@@ -15,14 +15,8 @@ type pausableTransport struct {
 	listeners map[string]gossip.MessageReceivedListener
 
 	pausedForwards           bool
-	pendingMessages          []message
+	pendingMessages          []gossip.Message
 	failNextConsensusRequest bool
-}
-
-type message struct {
-	senderId string
-	messageType string
-	payload []byte
 }
 
 func NewPausableTransport() PausableTransport {
@@ -40,7 +34,7 @@ func (g *pausableTransport) PauseForwards() {
 func (g *pausableTransport) ResumeForwards() {
 	g.pausedForwards = false
 	for _, pending := range g.pendingMessages {
-		g.Broadcast(pending.senderId, pending.messageType, pending.payload)
+		g.Broadcast(pending)
 	}
 	g.pendingMessages = nil
 }
@@ -53,29 +47,29 @@ func (g *pausableTransport) PassConsensusRequests() {
 	g.failNextConsensusRequest = false
 }
 
-func (g *pausableTransport) Broadcast(senderId string, messageType string, bytes []byte) error {
+func (g *pausableTransport) Broadcast(message gossip.Message) error {
 	//TODO generalize pause / fail mechanism per message type
-	if messageType == gossip.ForwardTransactionMessage && g.pausedForwards {
-		g.pendingMessages = append(g.pendingMessages, message {senderId, messageType, bytes})
-	} else if messageType == gossip.PrePrepareMessage && g.failNextConsensusRequest {
+	if message.Type == gossip.ForwardTransactionMessage && g.pausedForwards {
+		g.pendingMessages = append(g.pendingMessages, message)
+	} else if message.Type == gossip.PrePrepareMessage && g.failNextConsensusRequest {
 		return &gossip.ErrGossipRequestFailed{}
 	} else {
-		go g.receive(senderId, messageType, bytes)
+		go g.receive(message)
 	}
 
 	return nil
 }
 
 //TODO pause unicasts as well as broadcasts
-func (g *pausableTransport) Unicast(senderId string, recipientId string, messageType string, bytes []byte) error {
-	g.listeners[recipientId].OnMessageReceived(senderId, messageType, bytes)
+func (g *pausableTransport) Unicast(recipientId string, message gossip.Message) error {
+	g.listeners[recipientId].OnMessageReceived(message)
 
 	return nil
 }
 
-func (g *pausableTransport) receive(sender string, messageType string, bytes []byte) {
+func (g *pausableTransport) receive(message gossip.Message) {
 	for _, l := range g.listeners {
-		l.OnMessageReceived(sender, messageType, bytes)
+		l.OnMessageReceived(message)
 	}
 }
 
