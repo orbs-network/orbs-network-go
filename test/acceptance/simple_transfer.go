@@ -6,6 +6,7 @@ import (
 
 	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/test/harness"
+	"github.com/orbs-network/orbs-network-go/gossip"
 )
 
 var _ = Describe("a leader node", func() {
@@ -31,13 +32,13 @@ var _ = Describe("a non-leader (validator) node", func() {
 	It("propagates transactions to leader but does not commit them itself", func() {
 		network := harness.CreateTestNetwork()
 
-		network.Gossip().PauseForwards()
+		network.Gossip().Pause(gossip.ForwardTransactionMessage)
 		network.SendTransaction(network.Leader(), &types.Transaction{Value: 17})
 
 		Expect(<- network.CallMethod(network.Leader())).To(Equal(0))
 		Expect(<- network.CallMethod(network.Validator())).To(Equal(0))
 
-		network.Gossip().ResumeForwards()
+		network.Gossip().Resume(gossip.ForwardTransactionMessage)
 		network.LeaderBp().WaitForBlocks(1)
 		Expect(<- network.CallMethod(network.Leader())).To(Equal(17))
 		network.ValidatorBp().WaitForBlocks(1)

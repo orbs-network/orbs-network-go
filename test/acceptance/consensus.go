@@ -6,6 +6,7 @@ import (
 
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/types"
+	"github.com/orbs-network/orbs-network-go/gossip"
 )
 
 var _ = Describe("a leader node", func() {
@@ -16,7 +17,7 @@ var _ = Describe("a leader node", func() {
 		consensusRound := network.LeaderLoopControl().LatchFor("consensus_round")
 
 		consensusRound.Brake()
-		network.Gossip().FailConsensusRequests()
+		network.Gossip().Fail(gossip.PrePrepareMessage)
 
 		<- network.SendTransaction(network.Leader(), &types.Transaction{Value: 17})
 
@@ -25,7 +26,7 @@ var _ = Describe("a leader node", func() {
 		Expect(<- network.CallMethod(network.Leader())).To(Equal(0))
 		Expect(<- network.CallMethod(network.Validator())).To(Equal(0))
 
-		network.Gossip().PassConsensusRequests()
+		network.Gossip().Pass(gossip.PrePrepareMessage)
 
 		consensusRound.Release()
 

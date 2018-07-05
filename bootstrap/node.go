@@ -23,7 +23,7 @@ type node struct {
 func NewNode(address string, nodeId string, isLeader bool, networkSize uint32) Node {
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
 
-	transport := gossip.NewPausableTransport()
+	transport := gossip.NewTemperingTransport()
 	storage := blockstorage.NewInMemoryBlockPersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	lc := instrumentation.NewSimpleLoop(logger)

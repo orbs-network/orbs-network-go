@@ -18,7 +18,7 @@ import (
 type AcceptanceTestNetwork interface {
 	FlushLog()
 	LeaderLoopControl() testinstrumentation.BrakingLoop
-	Gossip() gossip.PausableTransport
+	Gossip() gossip.TemperingTransport
 	Leader() publicapi.PublicApi
 	Validator() publicapi.PublicApi
 	LeaderBp() blockstorage.InMemoryBlockPersistence
@@ -34,7 +34,7 @@ type acceptanceTestNetwork struct {
 	leaderLatch       testinstrumentation.Latch
 	leaderBp          blockstorage.InMemoryBlockPersistence
 	validatorBp       blockstorage.InMemoryBlockPersistence
-	gossip            gossip.PausableTransport
+	gossip            gossip.TemperingTransport
 	leaderLoopControl testinstrumentation.BrakingLoop
 
 	log []testinstrumentation.BufferedLog
@@ -50,7 +50,7 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 
 	leaderLoopControl := testinstrumentation.NewBrakingLoop(leaderLog)
 
-	inMemoryGossip := gossip.NewPausableTransport()
+	inMemoryGossip := gossip.NewTemperingTransport()
 	leaderBp := blockstorage.NewInMemoryBlockPersistence(leaderConfig)
 	validatorBp := blockstorage.NewInMemoryBlockPersistence(validatorConfig)
 
@@ -80,7 +80,7 @@ func (n *acceptanceTestNetwork) LeaderLoopControl() testinstrumentation.BrakingL
 	return n.leaderLoopControl
 }
 
-func (n *acceptanceTestNetwork) Gossip() gossip.PausableTransport {
+func (n *acceptanceTestNetwork) Gossip() gossip.TemperingTransport {
 	return n.gossip
 }
 
