@@ -14,12 +14,12 @@ type Message struct {
 }
 
 type MessageReceivedListener interface {
-	OnMessageReceived(message Message)
+	OnMessageReceived(message *Message)
 }
 
 type Transport interface {
-	Broadcast(message Message) error
-	Unicast(recipientId string, message Message) error
+	Broadcast(message *Message) error
+	Unicast(recipientId string, message *Message) error
 
 	RegisterListener(listener MessageReceivedListener, myNodeId string)
 }

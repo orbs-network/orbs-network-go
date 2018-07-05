@@ -53,22 +53,22 @@ func (g *gossip) RegisterConsensusListener(listener ConsensusListener) {
 }
 
 func (g *gossip) CommitTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: CommitMessage, payload: g.serialize(transaction)})
+	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: CommitMessage, payload: g.serialize(transaction)})
 }
 
 func (g *gossip) ForwardTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: ForwardTransactionMessage, payload: g.serialize(transaction)})
+	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: ForwardTransactionMessage, payload: g.serialize(transaction)})
 }
 
 func (g *gossip) RequestConsensusFor(transaction *types.Transaction) error {
-	return g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: PrePrepareMessage, payload: g.serialize(transaction)})
+	return g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: PrePrepareMessage, payload: g.serialize(transaction)})
 }
 
 func (g *gossip) SendVote(candidate string, yay bool) {
-	g.transport.Broadcast(Message{sender: g.config.NodeId(), Type: PrepareMessage, payload: g.serialize(yay)})
+	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: PrepareMessage, payload: g.serialize(yay)})
 }
 
-func (g *gossip) OnMessageReceived(message Message) {
+func (g *gossip) OnMessageReceived(message *Message) {
 	switch message.Type {
 	case CommitMessage:
 		tx := &types.Transaction{}

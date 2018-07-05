@@ -14,14 +14,14 @@ type TemperingTransport interface {
 type temperingTransport struct {
 	listeners map[string]gossip.MessageReceivedListener
 
-	pausedMessages map[string][]gossip.Message
+	pausedMessages map[string][]*gossip.Message
 	failMessages   map[string]struct{}
 }
 
 func NewTemperingTransport() TemperingTransport {
 	return &temperingTransport{
 		listeners:      make(map[string]gossip.MessageReceivedListener),
-		pausedMessages: make(map[string][]gossip.Message),
+		pausedMessages: make(map[string][]*gossip.Message),
 		failMessages:   make(map[string]struct{}),
 	}
 }
@@ -52,28 +52,28 @@ func (g *temperingTransport) Pass(messagesOfType string) {
 	delete(g.failMessages, messagesOfType)
 }
 
-func (g *temperingTransport) Broadcast(message gossip.Message) error {
+func (g *temperingTransport) Broadcast(message *gossip.Message) error {
 	if g.paused(message.Type) {
 		g.pausedMessages[message.Type] = append(g.pausedMessages[message.Type], message)
 	} else if g.fail(message.Type) {
-		return &gossip.ErrGossipRequestFailed{Message: message}
+		return &gossip.ErrGossipRequestFailed{Message: *message}
 	} else {
-		go g.receive(message)
+		go g.receive(*message)
 	}
 
 	return nil
 }
 
 //TODO pause/resume unicasts as well as broadcasts
-func (g *temperingTransport) Unicast(recipientId string, message gossip.Message) error {
-	g.listeners[recipientId].OnMessageReceived(message)
+func (g *temperingTransport) Unicast(recipientId string, message *gossip.Message) error {
+	go g.listeners[recipientId].OnMessageReceived(message)
 
 	return nil
 }
 
 func (g *temperingTransport) receive(message gossip.Message) {
 	for _, l := range g.listeners {
-		l.OnMessageReceived(message)
+		l.OnMessageReceived(&message)
 	}
 }
 
