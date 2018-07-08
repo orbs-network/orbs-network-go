@@ -8,9 +8,9 @@ const PrePrepareMessage = "PrePrepare"
 const PrepareMessage = "Prepare"
 
 type Message struct {
-	sender  string
+	Sender  string
 	Type    string // this is intentionally exported as pausable transport needs to be able to pause certain message types
-	payload []byte
+	Payload []byte
 }
 
 type MessageReceivedListener interface {
@@ -27,7 +27,7 @@ type Transport interface {
 type ErrGossipRequestFailed struct {
 	Message Message
 }
-func (e *ErrGossipRequestFailed) Error() string {
-	return fmt.Sprintf("gossip message [%s] to [%s] has failed to send", e.Message.Type, e.Message.sender)
-}
 
+func (e *ErrGossipRequestFailed) Error() string {
+	return fmt.Sprintf("gossip message [%s] to [%s] has failed to send", e.Message.Type, e.Message.Sender)
+}

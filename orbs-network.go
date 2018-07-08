@@ -18,14 +18,14 @@ func main() {
 	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
 
 	config := MemberlistGossipConfig{nodeName, int(gossipPort), peers}
-	gossip := NewGossip(config)
+	gossipTransport := NewMemberlistTransport(config)
 
 	fmt.Println("PORT", port)
 
-	bootstrap.NewHttpServer(":"+strconv.FormatInt(port, 10), nodeName, gossip, true)
+	bootstrap.NewNode(":"+strconv.FormatInt(port, 10), nodeName, gossipTransport, true, 3)
 
 	for {
-		go gossip.Join()
+		go gossipTransport.Join()
 		// go gossip.PrintPeers()
 		// go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
 		time.Sleep(3 * time.Second)

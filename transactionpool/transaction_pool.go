@@ -1,6 +1,8 @@
 package transactionpool
 
 import (
+	"fmt"
+
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/types"
 )
@@ -23,11 +25,12 @@ func NewTransactionPool(gossip gossip.Gossip) TransactionPool {
 }
 
 func (p *inMemoryTransactionPool) Add(tx *types.Transaction) {
+	fmt.Println("ADDING TRANSACTION", tx)
 	p.pendingTransactions <- tx
 }
 
 func (p *inMemoryTransactionPool) Next() *types.Transaction {
-	return <- p.pendingTransactions
+	return <-p.pendingTransactions
 }
 
 func (p *inMemoryTransactionPool) OnForwardTransaction(tx *types.Transaction) {

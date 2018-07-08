@@ -1,12 +1,13 @@
 package consensus
 
 import (
-	"github.com/orbs-network/orbs-network-go/gossip"
-	"github.com/orbs-network/orbs-network-go/ledger"
-	"github.com/orbs-network/orbs-network-go/types"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/transactionpool"
 	"fmt"
+
+	"github.com/orbs-network/orbs-network-go/gossip"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/ledger"
+	"github.com/orbs-network/orbs-network-go/transactionpool"
+	"github.com/orbs-network/orbs-network-go/types"
 )
 
 type Config interface {
@@ -81,7 +82,8 @@ func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 		gotConsensus = gotConsensus && <-votes
 	}
 
-	close(c.votesForCurrentRound)
+	// FIXME: related to gossip
+	// close(c.votesForCurrentRound)
 
 	if gotConsensus {
 		c.gossip.CommitTransaction(transaction)

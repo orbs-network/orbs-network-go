@@ -1,10 +1,10 @@
 package gossip
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
-	"github.com/maraino/go-mock"
 	"github.com/orbs-network/orbs-network-go/gossip"
 	. "github.com/orbs-network/orbs-network-go/test"
 )
@@ -75,7 +75,7 @@ func (l *mockListener) expect(m *gossip.Message) {
 
 type transportContractContext struct {
 	l1, l2, l3 *mockListener
-	transport gossip.Transport
+	transport  gossip.Transport
 }
 
 func aTemperingTransport() transportContractContext {

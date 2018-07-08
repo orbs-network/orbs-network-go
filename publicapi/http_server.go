@@ -42,6 +42,7 @@ func createRouter(publicApi PublicApi) http.Handler {
 	sendTransactionHandler := func(w http.ResponseWriter, r *http.Request) {
 		amountParam := r.URL.Query()["amount"][0]
 		amount, _ := strconv.ParseInt(amountParam, 10, 32)
+		fmt.Println("SendTransaction maybe?")
 		publicApi.SendTransaction(&types.Transaction{
 			Value: int(amount),
 		})

@@ -1,14 +1,15 @@
 package bootstrap
 
 import (
-	"github.com/orbs-network/orbs-network-go/blockstorage"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
-	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/publicapi"
+	"fmt"
 	"time"
-)
 
+	"github.com/orbs-network/orbs-network-go/blockstorage"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/gossip"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/publicapi"
+)
 
 type Node interface {
 	GracefulShutdown(timeout time.Duration)
@@ -16,14 +17,13 @@ type Node interface {
 
 type node struct {
 	httpServer publicapi.HttpServer
-	logic NodeLogic
+	logic      NodeLogic
 }
 
-
-func NewNode(address string, nodeId string, isLeader bool, networkSize uint32) Node {
+func NewNode(address string, nodeId string, transport gossip.Transport, isLeader bool, networkSize uint32) Node {
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
+	fmt.Println("Node config", nodeConfig)
 
-	transport := gossip.NewTemperingTransport()
 	storage := blockstorage.NewInMemoryBlockPersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	lc := instrumentation.NewSimpleLoop(logger)
@@ -32,8 +32,8 @@ func NewNode(address string, nodeId string, isLeader bool, networkSize uint32) N
 
 	httpServer := publicapi.NewHttpServer(address, logger, logic.GetPublicApi())
 
-	return &node {
-		logic: logic,
+	return &node{
+		logic:      logic,
 		httpServer: httpServer,
 	}
 }
