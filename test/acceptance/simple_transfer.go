@@ -33,7 +33,7 @@ var _ = Describe("a non-leader (validator) node", func() {
 		network := harness.CreateTestNetwork()
 
 		network.Gossip().Pause(gossip.ForwardTransactionMessage)
-		network.SendTransaction(network.Leader(), &types.Transaction{Value: 17})
+		network.SendTransaction(network.Validator(), &types.Transaction{Value: 17})
 
 		Expect(<- network.CallMethod(network.Leader())).To(Equal(0))
 		Expect(<- network.CallMethod(network.Validator())).To(Equal(0))

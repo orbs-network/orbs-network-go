@@ -4,10 +4,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"net/http"
 	"fmt"
-	"strconv"
-	"github.com/orbs-network/orbs-network-go/types"
 	"context"
 	"time"
+	"io/ioutil"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type HttpServer interface {
@@ -39,21 +39,44 @@ func NewHttpServer(address string, logger instrumentation.Reporting, publicApi P
 
 func createRouter(publicApi PublicApi) http.Handler {
 	sendTransactionHandler := func(w http.ResponseWriter, r *http.Request) {
-		amountParam := r.URL.Query()["amount"][0]
-		amount, _ := strconv.ParseInt(amountParam, 10, 32)
-		publicApi.SendTransaction(&types.Transaction{
-			Value: int(amount),
-		})
+		bytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		} else {
+			input := services.SendTransactionInputReader(bytes)
+			if !input.IsValid() {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("Transaction input is invalid"))
+			} else {
+				result := publicApi.SendTransaction(input)
+				w.Header().Set("Content-Type", "application/octet-stream")
+				w.Write(result.Raw())
+			}
+		}
 	}
 
 	callMethodHandler := func(w http.ResponseWriter, r *http.Request) {
-		amount := publicApi.CallMethod()
-		w.Write([]byte(fmt.Sprintf("%v", amount)))
+		bytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		} else {
+			input := services.CallMethodInputReader(bytes)
+			if !input.IsValid() {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("Call Method input is invalid"))
+			} else {
+				result := publicApi.CallMethod(input)
+				w.Header().Set("Content-Type", "application/octet-stream")
+				w.Write(result.Raw())
+			}
+		}
 	}
 
 	router := http.NewServeMux()
-	router.HandleFunc("/api/send_transaction", sendTransactionHandler)
-	router.HandleFunc("/api/call_method", callMethodHandler)
+	router.HandleFunc("/api/send-transaction", sendTransactionHandler)
+	router.HandleFunc("/api/call-method", callMethodHandler)
 	return router
 }
 
