@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/publicapi"
 )
 
 type publicApi struct {
@@ -38,27 +39,28 @@ func (p *publicApi) SendTransaction(input *services.SendTransactionInput) (*serv
 	defer p.events.Info("exit_send_transaction")
 	//TODO leader should also propagate transactions to other nodes
 	if p.isLeader {
-		p.transactionPool.Add(input.SignedTransaction())
+		p.transactionPool.Add(input.ClientInput.SignedTransaction())
 	} else {
-		p.gossip.ForwardTransaction(input.SignedTransaction())
+		p.gossip.ForwardTransaction(input.ClientInput.SignedTransaction())
 	}
 
-	output := services.SendTransactionOutputBuilder{}
+	output := &services.SendTransactionOutput{}
 
-	return output.Build(), nil
+	return output, nil
 }
 
 func (p *publicApi) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
 	p.events.Info("enter_call_method")
 	defer p.events.Info("exit_call_method")
 
-	output := services.CallMethodOutputBuilder{
+	output := &services.CallMethodOutput{ClientOutput: (&publicapi.CallMethodOutputBuilder{
 		OutputArgument: []*protocol.MethodArgumentBuilder{
 			{Name: "balance", Type: protocol.MethodArgumentTypeUint64, Uint64: uint64(p.ledger.GetState())},
 		},
-	}
+	}).Build()}
 
-	return output.Build(), nil
+
+	return output, nil
 }
 
 func (p *publicApi) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {

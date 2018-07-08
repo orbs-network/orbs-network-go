@@ -8,6 +8,7 @@ import (
 	"time"
 	"io/ioutil"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/publicapi"
 )
 
 type HttpServer interface {
@@ -45,15 +46,16 @@ func createRouter(publicApi services.PublicApi) http.Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		} else {
-			input := services.SendTransactionInputReader(bytes)
+			input := publicapi.SendTransactionInputReader(bytes)
 			if !input.IsValid() {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte("Transaction input is invalid"))
 			} else {
 				//TODO handle errors
-				result, _ := publicApi.SendTransaction(input)
+				publicApi.SendTransaction(&services.SendTransactionInput{ClientInput:input})
 				w.Header().Set("Content-Type", "application/octet-stream")
-				w.Write(result.Raw())
+				//TODO return actual result once sendTranscation returns result.ClientOutput
+				//w.Write()
 			}
 		}
 	}
@@ -64,15 +66,15 @@ func createRouter(publicApi services.PublicApi) http.Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		} else {
-			input := services.CallMethodInputReader(bytes)
+			input := publicapi.CallMethodInputReader(bytes)
 			if !input.IsValid() {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte("Call Method input is invalid"))
 			} else {
 				//TODO handle errors
-				result, _ := publicApi.CallMethod(input)
+				result, _ := publicApi.CallMethod(&services.CallMethodInput{ClientInput:input})
 				w.Header().Set("Content-Type", "application/octet-stream")
-				w.Write(result.Raw())
+				w.Write(result.ClientOutput.Raw())
 			}
 		}
 	}
