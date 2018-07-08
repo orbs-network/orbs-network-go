@@ -4,6 +4,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/types"
 )
 
+type Config interface {
+	NodeId() string
+}
+
 type BlockPersistence interface {
 	WriteBlock(transaction *types.Transaction)
 	ReadAllBlocks() []types.Transaction
@@ -16,13 +20,13 @@ type InMemoryBlockPersistence interface {
 
 type inMemoryBlockPersistence struct {
 	blockWritten chan bool
-	name         string
 	transactions []types.Transaction
+	config       Config
 }
 
-func NewInMemoryBlockPersistence(name string) InMemoryBlockPersistence {
+func NewInMemoryBlockPersistence(config Config) InMemoryBlockPersistence {
 	return &inMemoryBlockPersistence{
-		name:         name,
+		config:         config,
 		blockWritten: make(chan bool, 10),
 	}
 }

@@ -4,10 +4,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/types"
-	"github.com/orbs-network/orbs-network-go/events"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/transactionpool"
-	"github.com/orbs-network/orbs-network-go/loopcontrol"
+	"fmt"
 )
+
+type Config interface {
+	NetworkSize(asOfBlock uint64) uint32
+}
 
 type ConsensusAlgo interface {
 	gossip.ConsensusListener
@@ -17,15 +21,19 @@ type consensusAlgo struct {
 	gossip          gossip.Gossip
 	ledger          ledger.Ledger
 	transactionPool transactionpool.TransactionPool
-	events          events.Events
-	loopControl     loopcontrol.LoopControl
+	events          instrumentation.Reporting
+	loopControl     instrumentation.LoopControl
+
+	votesForCurrentRound chan bool
+	config               Config
 }
 
 func NewConsensusAlgo(gossip gossip.Gossip,
 	ledger ledger.Ledger,
 	transactionPool transactionpool.TransactionPool,
-	events events.Events,
-	loopControl loopcontrol.LoopControl,
+	events instrumentation.Reporting,
+	loopControl instrumentation.LoopControl,
+	config Config,
 	isLeader bool) ConsensusAlgo {
 
 	c := &consensusAlgo{
@@ -33,7 +41,8 @@ func NewConsensusAlgo(gossip gossip.Gossip,
 		ledger:          ledger,
 		transactionPool: transactionPool,
 		events:          events,
-		loopControl: 	 loopControl,
+		loopControl:     loopControl,
+		config:          config,
 	}
 
 	gossip.RegisterConsensusListener(c)
@@ -49,17 +58,30 @@ func (c *consensusAlgo) OnCommitTransaction(transaction *types.Transaction) {
 	c.ledger.AddTransaction(transaction)
 }
 
-func (c *consensusAlgo) ValidateConsensusFor(transaction *types.Transaction) bool {
-	return true
+func (c *consensusAlgo) OnVote(voter string, yay bool) {
+	if c.votesForCurrentRound != nil { //TODO remove if when unicasting vote rather than broadcasting it as we currently do
+		c.events.Info(fmt.Sprintf("received vote %v from %s", yay, voter))
+		c.votesForCurrentRound <- yay
+	}
+}
+
+func (c *consensusAlgo) OnVoteRequest(originator string, transaction *types.Transaction) {
+	c.gossip.SendVote(originator, true)
 }
 
 func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
-	gotConsensus, err := c.gossip.HasConsensusFor(transaction)
-
+	votes, err := c.requestConsensusFor(transaction)
 	if err != nil {
-		c.events.Report(events.ConsensusError)
+		c.events.Info(instrumentation.ConsensusError)
 		return false
 	}
+
+	gotConsensus := true
+	for i := uint32(0); i < c.config.NetworkSize(0); i++ {
+		gotConsensus = gotConsensus && <-votes
+	}
+
+	close(c.votesForCurrentRound)
 
 	if gotConsensus {
 		c.gossip.CommitTransaction(transaction)
@@ -82,5 +104,18 @@ func (c *consensusAlgo) buildBlocksEventLoop() {
 			currentBlock = nil
 		}
 	})
+}
+
+func (c *consensusAlgo) requestConsensusFor(transaction *types.Transaction) (chan bool, error) {
+	error := c.gossip.RequestConsensusFor(transaction)
+
+	if error == nil {
+		c.votesForCurrentRound = make(chan bool)
+
+	} else {
+		c.votesForCurrentRound = nil
+	}
+
+	return c.votesForCurrentRound, error
 
 }

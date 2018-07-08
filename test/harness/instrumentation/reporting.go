@@ -1,22 +1,14 @@
-package events
+package instrumentation
 
 import (
+	"sync"
 	"fmt"
 	"time"
-	"sync"
-	"log"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
-type Events interface {
-	Report(message string)
-	Error(err error)
-}
-
-const FinishedConsensusRound = "finished_consensus_round"
-const ConsensusError = "consensus_error"
-
 type Latch interface {
-	Events
+	instrumentation.Reporting
 
 	WaitFor(message string)
 }
@@ -38,7 +30,7 @@ func (l *latch) WaitFor(message string) {
 	l.cond.Wait()
 }
 
-func (l *latch) Report(message string) () {
+func (l *latch) Info(message string) () {
 	if l.waitingFor == message && l.cond != nil {
 		l.cond.Broadcast()
 		l.cond = nil
@@ -47,11 +39,11 @@ func (l *latch) Report(message string) () {
 }
 
 func (l *latch) Error(err error) () {
-	l.Report(err.Error())
+	l.Info(err.Error())
 }
 
 type BufferedLog interface {
-	Events
+	instrumentation.Reporting
 
 	Flush()
 }
@@ -73,7 +65,7 @@ func (e *bufferedLog) Flush() {
 	}
 }
 
-func (e *bufferedLog) Report(message string) () {
+func (e *bufferedLog) Info(message string) () {
 	e.log(message)
 }
 
@@ -83,45 +75,4 @@ func (e *bufferedLog) Error(err error) () {
 
 func (e *bufferedLog) log(message string) {
 	e.loggedEvents = append(e.loggedEvents, fmt.Sprintf("[%s] [%s]: %s", e.name, time.Now().Format("15:04:05.99999999"), message))
-}
-
-type compositeEvents struct {
-	children []Events
-}
-
-func NewCompositeEvents(children []Events) Events {
-	return &compositeEvents{children: children}
-}
-
-func (e *compositeEvents) Report(message string) () {
-	for _, child := range e.children {
-		child.Report(message)
-	}
-}
-
-func (e *compositeEvents) Error(err error) () {
-	for _, child := range e.children {
-		child.Error(err)
-	}
-}
-
-
-type StdoutLog interface {
-	Events
-}
-
-type stdoutLog struct {
-
-}
-
-func NewStdoutLog() Events {
-	return &stdoutLog{}
-}
-
-func (e *stdoutLog) Report(message string) () {
-	log.Print(message)
-}
-
-func (e *stdoutLog) Error(err error) () {
-	log.Fatal(err)
 }
