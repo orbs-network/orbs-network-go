@@ -1,8 +1,8 @@
 package gossip
 
 import (
-	"github.com/orbs-network/orbs-network-go/types"
 	"encoding/json"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type Config interface {
@@ -10,9 +10,9 @@ type Config interface {
 }
 
 type Gossip interface {
-	ForwardTransaction(transaction *types.Transaction)
-	CommitTransaction(transaction *types.Transaction)
-	RequestConsensusFor(transaction *types.Transaction) error
+	ForwardTransaction(transaction *protocol.SignedTransaction)
+	CommitTransaction(transaction *protocol.SignedTransaction)
+	RequestConsensusFor(transaction *protocol.SignedTransaction) error
 	SendVote(candidate string, yay bool)
 
 	RegisterTransactionListener(listener TransactionListener)
@@ -29,13 +29,13 @@ type gossip struct {
 }
 
 type TransactionListener interface {
-	OnForwardTransaction(transaction *types.Transaction)
+	OnForwardTransaction(transaction *protocol.SignedTransaction)
 }
 
 type ConsensusListener interface {
-	OnCommitTransaction(transaction *types.Transaction)
+	OnCommitTransaction(transaction *protocol.SignedTransaction)
 	OnVote(voter string, yay bool)
-	OnVoteRequest(originator string, transaction *types.Transaction)
+	OnVoteRequest(originator string, transaction *protocol.SignedTransaction)
 }
 
 func NewGossip(transport Transport, config Config) Gossip {
@@ -52,43 +52,54 @@ func (g *gossip) RegisterConsensusListener(listener ConsensusListener) {
 	g.consensusListeners = append(g.consensusListeners, listener)
 }
 
-func (g *gossip) CommitTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: CommitMessage, payload: g.serialize(transaction)})
+func (g *gossip) CommitTransaction(transaction *protocol.SignedTransaction) {
+	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: CommitMessage, payload: transaction.Raw()})
 }
 
-func (g *gossip) ForwardTransaction(transaction *types.Transaction) {
-	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: ForwardTransactionMessage, payload: g.serialize(transaction)})
+func (g *gossip) ForwardTransaction(transaction *protocol.SignedTransaction) {
+	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: ForwardTransactionMessage, payload: transaction.Raw()})
 }
 
-func (g *gossip) RequestConsensusFor(transaction *types.Transaction) error {
-	return g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: PrePrepareMessage, payload: g.serialize(transaction)})
+func (g *gossip) RequestConsensusFor(transaction *protocol.SignedTransaction) error {
+	return g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: PrePrepareMessage, payload: transaction.Raw()})
 }
 
 func (g *gossip) SendVote(candidate string, yay bool) {
-	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: PrepareMessage, payload: g.serialize(yay)})
+	bytes, _ := json.Marshal(yay)
+
+	g.transport.Broadcast(&Message{sender: g.config.NodeId(), Type: PrepareMessage, payload: bytes})
 }
 
 func (g *gossip) OnMessageReceived(message *Message) {
 	switch message.Type {
 	case CommitMessage:
-		tx := &types.Transaction{}
-		json.Unmarshal(message.payload, tx)
+		//TODO validate
+		tx := protocol.SignedTransactionReader(message.payload)
+		if !tx.IsValid() {
+			panic("invalid transaction!")
+		}
 
 		for _, l := range g.consensusListeners {
 			l.OnCommitTransaction(tx)
 		}
 
 	case ForwardTransactionMessage:
-		tx := &types.Transaction{}
-		json.Unmarshal(message.payload, tx)
+		//TODO validate
+		tx := protocol.SignedTransactionReader(message.payload)
+		if !tx.IsValid() {
+			panic("invalid transaction!")
+		}
 
 		for _, l := range g.transactionListeners {
 			l.OnForwardTransaction(tx)
 		}
 
 	case PrePrepareMessage:
-		tx := &types.Transaction{}
-		json.Unmarshal(message.payload, tx)
+		//TODO validate
+		tx := protocol.SignedTransactionReader(message.payload)
+		if !tx.IsValid() {
+			panic("invalid transaction!")
+		}
 
 		for _, l := range g.consensusListeners {
 			l.OnVoteRequest(message.sender, tx)
@@ -102,9 +113,4 @@ func (g *gossip) OnMessageReceived(message *Message) {
 			l.OnVote(message.sender, yay)
 		}
 	}
-}
-
-func (g *gossip) serialize(value interface{}) []byte {
-	bytes, _ := json.Marshal(value)
-	return bytes
 }

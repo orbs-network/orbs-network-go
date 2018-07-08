@@ -1,13 +1,13 @@
 package ledger
 
 import (
-	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type Ledger interface {
-	AddTransaction(transaction *types.Transaction)
-	GetState() int
+	AddTransaction(transaction *protocol.SignedTransaction)
+	GetState() uint64
 }
 
 type ledger struct {
@@ -18,17 +18,17 @@ func NewLedger(bp blockstorage.BlockPersistence) Ledger {
 	return &ledger{blockPersistence: bp}
 }
 
-func (l *ledger) AddTransaction(transaction *types.Transaction) {
-	if transaction.Invalid {
+func (l *ledger) AddTransaction(transaction *protocol.SignedTransaction) {
+	if transaction.TransactionContent().InputArgumentIterator().NextInputArgument().TypeUint64() > 1000 {
 		return
 	}
 	l.blockPersistence.WriteBlock(transaction)
 }
 
-func (l *ledger) GetState() int {
-	sum := 0
+func (l *ledger) GetState() uint64 {
+	sum := uint64(0)
 	for _, t := range l.blockPersistence.ReadAllBlocks() {
-		sum += t.Value
+		sum += t.TransactionContent().InputArgumentIterator().NextInputArgument().TypeUint64()
 	}
 	return sum
 

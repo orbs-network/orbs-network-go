@@ -18,7 +18,7 @@ type httpServer struct {
 	httpServer *http.Server
 }
 
-func NewHttpServer(address string, logger instrumentation.Reporting, publicApi PublicApi) HttpServer {
+func NewHttpServer(address string, logger instrumentation.Reporting, publicApi services.PublicApi) HttpServer {
 
 	server := &httpServer{
 		httpServer: &http.Server {
@@ -37,7 +37,7 @@ func NewHttpServer(address string, logger instrumentation.Reporting, publicApi P
 
 }
 
-func createRouter(publicApi PublicApi) http.Handler {
+func createRouter(publicApi services.PublicApi) http.Handler {
 	sendTransactionHandler := func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -49,7 +49,8 @@ func createRouter(publicApi PublicApi) http.Handler {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte("Transaction input is invalid"))
 			} else {
-				result := publicApi.SendTransaction(input)
+				//TODO handle errors
+				result, _ := publicApi.SendTransaction(input)
 				w.Header().Set("Content-Type", "application/octet-stream")
 				w.Write(result.Raw())
 			}
@@ -67,7 +68,8 @@ func createRouter(publicApi PublicApi) http.Handler {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte("Call Method input is invalid"))
 			} else {
-				result := publicApi.CallMethod(input)
+				//TODO handle errors
+				result, _ := publicApi.CallMethod(input)
 				w.Header().Set("Content-Type", "application/octet-stream")
 				w.Write(result.Raw())
 			}

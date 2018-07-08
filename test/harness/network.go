@@ -8,24 +8,24 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
-	"github.com/orbs-network/orbs-network-go/publicapi"
-	"github.com/orbs-network/orbs-network-go/types"
 	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
 	"github.com/orbs-network/orbs-network-go/config"
 	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type AcceptanceTestNetwork interface {
 	FlushLog()
 	LeaderLoopControl() testinstrumentation.BrakingLoop
 	Gossip() gossip.TemperingTransport
-	Leader() publicapi.PublicApi
-	Validator() publicapi.PublicApi
+	Leader() services.PublicApi
+	Validator() services.PublicApi
 	LeaderBp() blockstorage.InMemoryBlockPersistence
 	ValidatorBp() blockstorage.InMemoryBlockPersistence
 
-	SendTransaction(gatewayNode publicapi.PublicApi, transaction *types.Transaction) chan interface{}
-	CallMethod(node publicapi.PublicApi) chan int
+	Transfer(gatewayNode services.PublicApi, amount uint64) chan interface{}
+	GetBalance(node services.PublicApi) chan uint64
 }
 
 type acceptanceTestNetwork struct {
@@ -84,11 +84,11 @@ func (n *acceptanceTestNetwork) Gossip() gossip.TemperingTransport {
 	return n.gossip
 }
 
-func (n *acceptanceTestNetwork) Leader() publicapi.PublicApi {
+func (n *acceptanceTestNetwork) Leader() services.PublicApi {
 	return n.leader.GetPublicApi()
 }
 
-func (n *acceptanceTestNetwork) Validator() publicapi.PublicApi {
+func (n *acceptanceTestNetwork) Validator() services.PublicApi {
 	return n.validator.GetPublicApi()
 }
 
@@ -100,19 +100,34 @@ func (n *acceptanceTestNetwork) ValidatorBp() blockstorage.InMemoryBlockPersiste
 	return n.validatorBp
 }
 
-func (n *acceptanceTestNetwork) SendTransaction(gatewayNode publicapi.PublicApi, transaction *types.Transaction) chan interface{} {
+func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount uint64) chan interface{} {
 	ch := make(chan interface{})
 	go func() {
-		gatewayNode.SendTransaction(transaction)
+
+		tx := &protocol.SignedTransactionBuilder{TransactionContent: &protocol.TransactionBuilder{
+			ContractName: "MelangeToken",
+			MethodName:   "transfer",
+			InputArgument: []*protocol.MethodArgumentBuilder{
+				{Name: "amount", Type: protocol.MethodArgumentTypeUint64, Uint64: amount},
+			},
+		}}
+		input := &services.SendTransactionInputBuilder{SignedTransaction: tx}
+		gatewayNode.SendTransaction(input.Build())
 		ch <- nil
 	}()
 	return ch
 }
 
-func (n *acceptanceTestNetwork) CallMethod(node publicapi.PublicApi) chan int {
-	ch := make(chan int)
+func (n *acceptanceTestNetwork) GetBalance(node services.PublicApi) chan uint64 {
+	ch := make(chan uint64)
 	go func() {
-		ch <- node.CallMethod()
+		cm := &protocol.TransactionBuilder{
+			ContractName: "MelangeToken",
+			MethodName:   "getBalance",
+		}
+		input := services.CallMethodInputBuilder{Transaction:cm}
+		output, _ := node.CallMethod(input.Build())
+		ch <- output.OutputArgumentIterator().NextOutputArgument().TypeUint64()
 	}()
 	return ch
 }

@@ -52,7 +52,7 @@ var _ = Describe("The Orbs Network", func() {
 
 		Eventually(func() uint64 {
 			return callMethod(m).OutputArgumentIterator().NextOutputArgument().TypeUint64()
-		}).Should(Equal(17))
+		}).Should(BeEquivalentTo(17))
 
 		node.GracefulShutdown(1 * time.Second)
 
