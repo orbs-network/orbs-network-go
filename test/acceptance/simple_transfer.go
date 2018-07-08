@@ -10,11 +10,11 @@ import (
 
 var _ = Describe("a leader node", func() {
 
-	It("commits transactions to all nodes", func() {
+	It("commits transactions to all nodes, skipping invalid transactions", func() {
 		network := harness.CreateTestNetwork()
 
 		network.Transfer(network.Leader(), 17)
-		network.Transfer(network.Leader(), 1000000)
+		network.Transfer(network.Leader(), 1000000) //this is invalid because currently we don't allow (temporarily) values over 1000 just so that we can create invalid transactions
 		network.Transfer(network.Leader(), 22)
 
 		network.LeaderBp().WaitForBlocks(2)

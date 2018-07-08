@@ -37,6 +37,7 @@ func NewHttpServer(address string, logger instrumentation.Reporting, publicApi s
 
 }
 
+//TODO extract commonalities between handlers
 func createRouter(publicApi services.PublicApi) http.Handler {
 	sendTransactionHandler := func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := ioutil.ReadAll(r.Body)

@@ -5,30 +5,17 @@ import (
 . "github.com/onsi/gomega"
 "testing"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"net/http"
-	"github.com/onsi/gomega/gbytes"
 	"time"
 	"io/ioutil"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"bytes"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"net/http"
 )
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "E2E Suite")
-}
-
-func ResponseBodyAsString(resp *http.Response) string {
-	defer resp.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(gbytes.TimeoutReader(resp.Body, 10 * time.Second))
-	if err == gbytes.ErrTimeout {
-		return "<timeout>"
-	}
-	if err != nil {
-		return "<error>"
-	}
-	return string(bodyBytes)
 }
 
 var _ = Describe("The Orbs Network", func() {
@@ -61,23 +48,17 @@ var _ = Describe("The Orbs Network", func() {
 })
 
 func sendTransaction(txBuilder *protocol.TransactionBuilder) *services.SendTransactionOutput {
-	reader := bytes.NewReader((&services.SendTransactionInputBuilder{SignedTransaction: &protocol.SignedTransactionBuilder{TransactionContent: txBuilder}}).Build().Raw())
+	input := (&services.SendTransactionInputBuilder{SignedTransaction: &protocol.SignedTransactionBuilder{TransactionContent: txBuilder}}).Build()
 
-	res, err := http.Post("http://localhost:8080/api/send-transaction", "application/octet-stream", reader)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(res.StatusCode).To(Equal(http.StatusOK))
-
-	bytes, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	Expect(err).ToNot(HaveOccurred())
-
-	return services.SendTransactionOutputReader(bytes)
+	return services.SendTransactionOutputReader(httpPost(input, "send-transaction"))
 }
 
 func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutput {
-	reader := bytes.NewReader((&services.CallMethodInputBuilder{Transaction: txBuilder}).Build().Raw())
+	return services.CallMethodOutputReader(httpPost((&services.CallMethodInputBuilder{Transaction: txBuilder}).Build(), "call-method"))
+}
 
-	res, err := http.Post("http://localhost:8080/api/call-method", "application/octet-stream", reader)
+func httpPost(input Rawer, method string) []byte {
+	res, err := http.Post("http://localhost:8080/api/" + method, "application/octet-stream", bytes.NewReader(input.Raw()))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(res.StatusCode).To(Equal(http.StatusOK))
 
@@ -85,4 +66,9 @@ func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutp
 	defer res.Body.Close()
 	Expect(err).ToNot(HaveOccurred())
 
-	return services.CallMethodOutputReader(bytes)}
+	return bytes
+}
+
+type Rawer interface {
+	Raw() []byte
+}
