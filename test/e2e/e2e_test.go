@@ -1,18 +1,20 @@
 package e2e
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
+	"testing"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"time"
-	"io/ioutil"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"bytes"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"net/http"
 	"github.com/orbs-network/membuffers/go"
+	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 func TestE2E(t *testing.T) {
@@ -22,7 +24,8 @@ func TestE2E(t *testing.T) {
 
 var _ = Describe("The Orbs Network", func() {
 	It("accepts a transaction and reflects the state change after it is committed", func(done Done) {
-		node := bootstrap.NewNode(":8080", "node1", true, 1)
+		gossipTransport := gossip.NewTemperingTransport()
+		node := bootstrap.NewNode(":8080", "node1", gossipTransport, true, 1)
 
 		tx := &protocol.TransactionBuilder{
 			ContractName: "MelangeToken",
@@ -55,7 +58,7 @@ func sendTransaction(txBuilder *protocol.TransactionBuilder) *services.SendTrans
 			TransactionContent: txBuilder,
 		}}).Build()
 
-	return &services.SendTransactionOutput{ClientResponse: client.SendTransactionResponseReader(httpPost(input,"send-transaction"))}
+	return &services.SendTransactionOutput{ClientResponse: client.SendTransactionResponseReader(httpPost(input, "send-transaction"))}
 }
 
 func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutput {
@@ -63,12 +66,12 @@ func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutp
 		Transaction: txBuilder,
 	}).Build()
 
-	return &services.CallMethodOutput{ClientResponse: client.CallMethodResponseReader(httpPost(input,"call-method"))}
+	return &services.CallMethodOutput{ClientResponse: client.CallMethodResponseReader(httpPost(input, "call-method"))}
 
 }
 
 func httpPost(input membuffers.Message, method string) []byte {
-	res, err := http.Post("http://localhost:8080/api/" + method, "application/octet-stream", bytes.NewReader(input.Raw()))
+	res, err := http.Post("http://localhost:8080/api/"+method, "application/octet-stream", bytes.NewReader(input.Raw()))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(res.StatusCode).To(Equal(http.StatusOK))
 
@@ -78,4 +81,3 @@ func httpPost(input membuffers.Message, method string) []byte {
 
 	return bytes
 }
-
