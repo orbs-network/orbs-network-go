@@ -1,6 +1,8 @@
 package transactionpool
 
 import (
+	"fmt"
+
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -18,6 +20,7 @@ func NewTransactionPool(gossip gossip.Gossip) services.TransactionPool {
 }
 
 func (p *inMemoryTransactionPool) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+	fmt.Println("Adding new transaction to the pool", input.SignedTransaction)
 	p.pendingTransactions <- input.SignedTransaction
 	return &services.AddNewTransactionOutput{}, nil
 }

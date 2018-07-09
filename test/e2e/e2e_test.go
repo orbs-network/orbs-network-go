@@ -68,7 +68,7 @@ var _ = Describe("The Orbs Network", func() {
 
 		Eventually(func() uint64 {
 			return callMethod(m).ClientResponse.OutputArgumentIterator().NextOutputArgument().TypeUint64()
-		}).Should(BeEquivalentTo(17))
+		}, 5*time.Second).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {
 			node.GracefulShutdown(1 * time.Second)
@@ -91,8 +91,6 @@ func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutp
 	input := (&client.CallMethodRequestBuilder{
 		Transaction: txBuilder,
 	}).Build()
-
-	time.Sleep(time.Second)
 
 	return &services.CallMethodOutput{ClientResponse: client.CallMethodResponseReader(httpPost(input, "call-method"))}
 

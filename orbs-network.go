@@ -16,13 +16,14 @@ func main() {
 	gossipPort, _ := strconv.ParseInt(os.Getenv("GOSSIP_PORT"), 10, 0)
 	nodeName := os.Getenv("NODE_NAME")
 	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
+	isLeader := os.Getenv("LEADER") == "true"
 
 	config := MemberlistGossipConfig{nodeName, int(gossipPort), peers}
 	gossipTransport := NewMemberlistTransport(config)
 
 	fmt.Println("PORT", port)
 
-	bootstrap.NewNode(":"+strconv.FormatInt(port, 10), nodeName, gossipTransport, true, 3)
+	bootstrap.NewNode(":"+strconv.FormatInt(port, 10), nodeName, gossipTransport, isLeader, 3)
 
 	for {
 		go gossipTransport.Join()
