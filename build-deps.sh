@@ -17,7 +17,6 @@ if [ "$HAS_MEMBUFS" == "" ]; then
     packr build
 
     export PATH=$PATH:`pwd`
-    ls
 fi
 
 cd $TYPES_PATH
