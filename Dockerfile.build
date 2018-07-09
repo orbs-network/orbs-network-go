@@ -1,12 +1,6 @@
 FROM golang:1.10
 
-RUN go get -u github.com/golang/dep/cmd/dep
-
-ADD Gopkg* /go/src/github.com/orbs-network/orbs-network-go/
-
 WORKDIR /go/src/github.com/orbs-network/orbs-network-go/
-
-RUN dep ensure --vendor-only
 
 ADD . /go/src/github.com/orbs-network/orbs-network-go/
 

@@ -8,6 +8,7 @@ services:
       PORT: 8080
       GOSSIP_PORT: 4400
       GOSSIP_PEERS: 192.168.199.3,192.168.199.4
+      LEADER: 'true'
     ports:
       - 8080:8080
     networks:
@@ -21,6 +22,7 @@ services:
       PORT: 8080
       GOSSIP_PORT: 4400
       GOSSIP_PEERS: 192.168.199.2,192.168.199.4
+      LEADER: 'false'
     ports:
       - 8081:8080
     networks:
@@ -34,6 +36,7 @@ services:
       PORT: 8080
       GOSSIP_PORT: 4400
       GOSSIP_PEERS: 192.168.199.2,192.168.199.3
+      LEADER: 'false'
     ports:
       - 8082:8080
     networks:

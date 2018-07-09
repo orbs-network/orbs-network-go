@@ -1,6 +1,6 @@
 FROM busybox
 
-ADD ./orbs-network /opt/orbs/
+ADD ./main /opt/orbs/
 
 WORKDIR /opt/orbs
 

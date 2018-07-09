@@ -1,0 +1,57 @@
+[submodule "vendor/github.com/hashicorp/memberlist"]
+	path = vendor/github.com/hashicorp/memberlist
+	url = https://github.com/hashicorp/memberlist
+[submodule "vendor/github.com/maraino/go-mock"]
+	path = vendor/github.com/maraino/go-mock
+	url = https://github.com/maraino/go-mock
+[submodule "vendor/github.com/onsi/ginkgo"]
+	path = vendor/github.com/onsi/ginkgo
+	url = https://github.com/onsi/ginkgo
+[submodule "vendor/github.com/orbs-network/orbs-spec"]
+	path = vendor/github.com/orbs-network/orbs-spec
+	url = https://github.com/orbs-network/orbs-spec
+[submodule "vendor/github.com/onsi/gomega"]
+	path = vendor/github.com/onsi/gomega
+	url = https://github.com/onsi/gomega
+[submodule "vendor/github.com/armon/go-metrics"]
+	path = vendor/github.com/armon/go-metrics
+	url = https://github.com/armon/go-metrics
+[submodule "vendor/github.com/hashicorp/go-immutable-radix"]
+	path = vendor/github.com/hashicorp/go-immutable-radix
+	url = https://github.com/hashicorp/go-immutable-radix
+[submodule "vendor/github.com/hashicorp/go-msgpack"]
+	path = vendor/github.com/hashicorp/go-msgpack
+	url = https://github.com/hashicorp/go-msgpack
+[submodule "vendor/github.com/hashicorp/go-multierror"]
+	path = vendor/github.com/hashicorp/go-multierror
+	url = https://github.com/hashicorp/go-multierror
+[submodule "vendor/github.com/hashicorp/go-sockaddr"]
+	path = vendor/github.com/hashicorp/go-sockaddr
+	url = https://github.com/hashicorp/go-sockaddr
+[submodule "vendor/github.com/hashicorp/golang-lru"]
+	path = vendor/github.com/hashicorp/golang-lru
+	url = https://github.com/hashicorp/golang-lru
+[submodule "vendor/github.com/kr/pretty"]
+	path = vendor/github.com/kr/pretty
+	url = https://github.com/kr/pretty
+[submodule "vendor/github.com/kr/text"]
+	path = vendor/github.com/kr/text
+	url = https://github.com/kr/text
+[submodule "vendor/github.com/miekg/dns"]
+	path = vendor/github.com/miekg/dns
+	url = https://github.com/miekg/dns
+[submodule "vendor/github.com/orbs-network/membuffers"]
+	path = vendor/github.com/orbs-network/membuffers
+	url = https://github.com/orbs-network/membuffers
+[submodule "vendor/github.com/sean-/seed"]
+	path = vendor/github.com/sean-/seed
+	url = https://github.com/sean-/seed
+[submodule "vendor/golang.org/x/net"]
+	path = vendor/golang.org/x/net
+	url = https://go.googlesource.com/net
+[submodule "vendor/golang.org/x/text"]
+	path = vendor/golang.org/x/text
+	url = https://go.googlesource.com/text
+[submodule "vendor/gopkg.in/yaml.v2"]
+	path = vendor/gopkg.in/yaml.v2
+	url = https://gopkg.in/yaml.v2
