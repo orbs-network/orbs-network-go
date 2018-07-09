@@ -4,7 +4,10 @@ jobs:
     machine: true
     steps:
       - checkout
+      - run: git init --recursive
       - run: ./docker-build.sh
+      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker-tag.sh)
+      - run: docker push $DOCKER_IMAGE
 
 workflows:
   version: 2
