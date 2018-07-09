@@ -10,5 +10,5 @@ RUN dep ensure --vendor-only
 
 ADD . /go/src/github.com/orbs-network/orbs-network-go/
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' orbs-network.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' main.go
 
