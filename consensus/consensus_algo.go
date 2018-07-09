@@ -6,8 +6,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/ledger"
-	"github.com/orbs-network/orbs-network-go/transactionpool"
-	"github.com/orbs-network/orbs-network-go/types"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type Config interface {
@@ -21,7 +21,7 @@ type ConsensusAlgo interface {
 type consensusAlgo struct {
 	gossip          gossip.Gossip
 	ledger          ledger.Ledger
-	transactionPool transactionpool.TransactionPool
+	transactionPool services.TransactionPool
 	events          instrumentation.Reporting
 	loopControl     instrumentation.LoopControl
 
@@ -31,7 +31,7 @@ type consensusAlgo struct {
 
 func NewConsensusAlgo(gossip gossip.Gossip,
 	ledger ledger.Ledger,
-	transactionPool transactionpool.TransactionPool,
+	transactionPool services.TransactionPool,
 	events instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
 	config Config,
@@ -55,7 +55,7 @@ func NewConsensusAlgo(gossip gossip.Gossip,
 	return c
 }
 
-func (c *consensusAlgo) OnCommitTransaction(transaction *types.Transaction) {
+func (c *consensusAlgo) OnCommitTransaction(transaction *protocol.SignedTransaction) {
 	c.ledger.AddTransaction(transaction)
 }
 
@@ -66,11 +66,11 @@ func (c *consensusAlgo) OnVote(voter string, yay bool) {
 	}
 }
 
-func (c *consensusAlgo) OnVoteRequest(originator string, transaction *types.Transaction) {
+func (c *consensusAlgo) OnVoteRequest(originator string, transaction *protocol.SignedTransaction) {
 	c.gossip.SendVote(originator, true)
 }
 
-func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
+func (c *consensusAlgo) buildNextBlock(transaction *protocol.SignedTransaction) bool {
 	votes, err := c.requestConsensusFor(transaction)
 	if err != nil {
 		c.events.Info(instrumentation.ConsensusError)
@@ -94,12 +94,13 @@ func (c *consensusAlgo) buildNextBlock(transaction *types.Transaction) bool {
 }
 
 func (c *consensusAlgo) buildBlocksEventLoop() {
-	var currentBlock *types.Transaction
+	var currentBlock *protocol.SignedTransaction
 
 	c.loopControl.NewLoop("consensus_round", func() {
 
 		if currentBlock == nil {
-			currentBlock = c.transactionPool.Next()
+			res, _ := c.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{MaxNumberOfTransactions: 1})
+			currentBlock = res.SignedTransaction[0]
 		}
 
 		if c.buildNextBlock(currentBlock) {
@@ -108,7 +109,7 @@ func (c *consensusAlgo) buildBlocksEventLoop() {
 	})
 }
 
-func (c *consensusAlgo) requestConsensusFor(transaction *types.Transaction) (chan bool, error) {
+func (c *consensusAlgo) requestConsensusFor(transaction *protocol.SignedTransaction) (chan bool, error) {
 	error := c.gossip.RequestConsensusFor(transaction)
 
 	if error == nil {

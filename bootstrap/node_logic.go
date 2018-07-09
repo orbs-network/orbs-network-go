@@ -9,10 +9,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/transactionpool"
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type NodeLogic interface {
-	GetPublicApi() publicapi.PublicApi
+	GetPublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
@@ -21,8 +22,8 @@ type nodeLogic struct {
 	ledger          ledger.Ledger
 	events          instrumentation.Reporting
 	consensusAlgo   consensus.ConsensusAlgo
-	transactionPool transactionpool.TransactionPool
-	publicApi       publicapi.PublicApi
+	transactionPool services.TransactionPool
+	publicApi       services.PublicApi
 }
 
 func NewNodeLogic(gossipTransport gossip.Transport,
@@ -47,6 +48,6 @@ func NewNodeLogic(gossipTransport gossip.Transport,
 	return n
 }
 
-func (n *nodeLogic) GetPublicApi() publicapi.PublicApi {
+func (n *nodeLogic) GetPublicApi() services.PublicApi {
 	return n.publicApi
 }

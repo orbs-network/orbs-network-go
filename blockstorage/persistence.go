@@ -1,7 +1,7 @@
 package blockstorage
 
 import (
-	"github.com/orbs-network/orbs-network-go/types"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type Config interface {
@@ -9,8 +9,8 @@ type Config interface {
 }
 
 type BlockPersistence interface {
-	WriteBlock(transaction *types.Transaction)
-	ReadAllBlocks() []types.Transaction
+	WriteBlock(transaction *protocol.SignedTransaction)
+	ReadAllBlocks() []protocol.SignedTransaction
 }
 
 type InMemoryBlockPersistence interface {
@@ -20,7 +20,7 @@ type InMemoryBlockPersistence interface {
 
 type inMemoryBlockPersistence struct {
 	blockWritten chan bool
-	transactions []types.Transaction
+	transactions []protocol.SignedTransaction
 	config       Config
 }
 
@@ -37,11 +37,11 @@ func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {
 	}
 }
 
-func (bp *inMemoryBlockPersistence) WriteBlock(transaction *types.Transaction) {
+func (bp *inMemoryBlockPersistence) WriteBlock(transaction *protocol.SignedTransaction) {
 	bp.transactions = append(bp.transactions, *transaction)
 	bp.blockWritten <- true
 }
 
-func (bp *inMemoryBlockPersistence) ReadAllBlocks() []types.Transaction {
+func (bp *inMemoryBlockPersistence) ReadAllBlocks() []protocol.SignedTransaction {
 	return bp.transactions
 }
