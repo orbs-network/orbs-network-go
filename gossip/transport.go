@@ -10,7 +10,7 @@ const PrepareMessage = "Prepare"
 type Message struct {
 	sender  string
 	Type    string // this is intentionally exported as pausable transport needs to be able to pause certain message types
-	payload []byte
+	payload []byte // use io.Writer / Reader?
 }
 
 type MessageReceivedListener interface {

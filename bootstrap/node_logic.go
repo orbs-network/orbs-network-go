@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -10,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-network-go/gossip"
 )
 
 type NodeLogic interface {
@@ -18,7 +18,7 @@ type NodeLogic interface {
 
 type nodeLogic struct {
 	isLeader        bool
-	gossip          gossip.Gossip
+	gossip          services.Gossip
 	ledger          ledger.Ledger
 	events          instrumentation.Reporting
 	consensusAlgo   consensus.ConsensusAlgo
