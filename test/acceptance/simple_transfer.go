@@ -33,7 +33,7 @@ var _ = Describe("a non-leader (validator) node", func() {
 		network := harness.CreateTestNetwork()
 
 		network.Gossip().Pause(gossip.ForwardTransactionMessage)
-		network.Transfer(network.Leader(), 17)
+		network.Transfer(network.Validator(), 17)
 
 		Expect(<- network.GetBalance(network.Leader())).To(BeEquivalentTo(0))
 		Expect(<- network.GetBalance(network.Validator())).To(BeEquivalentTo(0))
