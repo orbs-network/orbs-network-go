@@ -22,7 +22,7 @@ type nodeLogic struct {
 	ledger          ledger.Ledger
 	events          instrumentation.Reporting
 	consensusAlgo   consensus.ConsensusAlgo
-	transactionPool transactionpool.TransactionPool
+	transactionPool services.TransactionPool
 	publicApi       services.PublicApi
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"net/http"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/publicapi"
+	"github.com/orbs-network/membuffers/go"
 )
 
 func TestE2E(t *testing.T) {
@@ -66,7 +67,7 @@ func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutp
 
 }
 
-func httpPost(input Rawer, method string) []byte {
+func httpPost(input membuffers.Message, method string) []byte {
 	res, err := http.Post("http://localhost:8080/api/" + method, "application/octet-stream", bytes.NewReader(input.Raw()))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(res.StatusCode).To(Equal(http.StatusOK))
@@ -78,6 +79,3 @@ func httpPost(input Rawer, method string) []byte {
 	return bytes
 }
 
-type Rawer interface {
-	Raw() []byte
-}
