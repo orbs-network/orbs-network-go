@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -17,15 +18,38 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+type E2EConfig struct {
+	Bootstrap   bool
+	ApiEndpoint string
+}
+
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "E2E Suite")
 }
 
+func getConfig() E2EConfig {
+	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
+	ApiEndpoint := "http://localhost:8080/api/"
+
+	if !Bootstrap {
+		ApiEndpoint = os.Getenv("API_ENDPOINT")
+	}
+
+	return E2EConfig{
+		Bootstrap,
+		ApiEndpoint,
+	}
+}
+
 var _ = Describe("The Orbs Network", func() {
 	It("accepts a transaction and reflects the state change after it is committed", func(done Done) {
-		gossipTransport := gossip.NewTemperingTransport()
-		node := bootstrap.NewNode(":8080", "node1", gossipTransport, true, 1)
+		var node bootstrap.Node
+
+		if getConfig().Bootstrap {
+			gossipTransport := gossip.NewTemperingTransport()
+			node = bootstrap.NewNode(":8080", "node1", gossipTransport, true, 1)
+		}
 
 		tx := &protocol.TransactionBuilder{
 			ContractName: "MelangeToken",
@@ -46,7 +70,9 @@ var _ = Describe("The Orbs Network", func() {
 			return callMethod(m).ClientResponse.OutputArgumentIterator().NextOutputArgument().TypeUint64()
 		}).Should(BeEquivalentTo(17))
 
-		node.GracefulShutdown(1 * time.Second)
+		if getConfig().Bootstrap {
+			node.GracefulShutdown(1 * time.Second)
+		}
 
 		close(done)
 	}, 10)
@@ -66,12 +92,14 @@ func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutp
 		Transaction: txBuilder,
 	}).Build()
 
+	time.Sleep(time.Second)
+
 	return &services.CallMethodOutput{ClientResponse: client.CallMethodResponseReader(httpPost(input, "call-method"))}
 
 }
 
 func httpPost(input membuffers.Message, method string) []byte {
-	res, err := http.Post("http://localhost:8080/api/"+method, "application/octet-stream", bytes.NewReader(input.Raw()))
+	res, err := http.Post(getConfig().ApiEndpoint+method, "application/octet-stream", bytes.NewReader(input.Raw()))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(res.StatusCode).To(Equal(http.StatusOK))
 
