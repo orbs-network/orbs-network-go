@@ -1,8 +1,12 @@
 FROM golang:1.10
 
+ARG SKIP_BUILD_DEPS=false
+
 WORKDIR /go/src/github.com/orbs-network/orbs-network-go/
 
 ADD . /go/src/github.com/orbs-network/orbs-network-go/
+
+RUN ./build-deps.sh
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' main.go
 

@@ -1,6 +1,8 @@
 #!/bin/bash -xe
 
-docker build -f Dockerfile.build -t orbs:build .
+export SKIP_BUILD_DEPS=${SKIP_BUILD_DEPS-false}
+
+docker build --build-arg SKIP_BUILD_DEPS=$SKIP_BUILD_DEPS -f Dockerfile.build -t orbs:build .
 
 [ "$(docker ps -a | grep orbs_build)" ] && docker rm -f orbs_build
 
