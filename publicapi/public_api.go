@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/publicapi"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 )
 
 type publicApi struct {
@@ -38,9 +38,9 @@ func (p *publicApi) SendTransaction(input *services.SendTransactionInput) (*serv
 	defer p.events.Info("exit_send_transaction")
 	//TODO leader should also propagate transactions to other nodes
 	if p.isLeader {
-		p.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{input.ClientInput.SignedTransaction()})
+		p.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{input.ClientRequest.SignedTransaction()})
 	} else {
-		p.gossip.ForwardTransaction(input.ClientInput.SignedTransaction())
+		p.gossip.ForwardTransaction(input.ClientRequest.SignedTransaction())
 	}
 
 	output := &services.SendTransactionOutput{}
@@ -52,7 +52,7 @@ func (p *publicApi) CallMethod(input *services.CallMethodInput) (*services.CallM
 	p.events.Info("enter_call_method")
 	defer p.events.Info("exit_call_method")
 
-	output := &services.CallMethodOutput{ClientOutput: (&publicapi.CallMethodOutputBuilder{
+	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{
 		OutputArgument: []*protocol.MethodArgumentBuilder{
 			{Name: "balance", Type: protocol.MethodArgumentTypeUint64, Uint64: uint64(p.ledger.GetState())},
 		},

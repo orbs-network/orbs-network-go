@@ -33,6 +33,7 @@ func (p *inMemoryTransactionPool) GetTransactionsForOrdering(input *services.Get
 	return out, nil
 }
 
+// Deprecated: TransactionListener is going away in favor of TransactionRelayGossipHandler
 func (p *inMemoryTransactionPool) OnForwardTransaction(tx *protocol.SignedTransaction) {
 	p.pendingTransactions <- tx
 }

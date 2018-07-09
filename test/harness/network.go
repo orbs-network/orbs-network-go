@@ -13,7 +13,7 @@ import (
 	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/publicapi"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 )
 
 type AcceptanceTestNetwork interface {
@@ -112,7 +112,7 @@ func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount 
 				{Name: "amount", Type: protocol.MethodArgumentTypeUint64, Uint64: amount},
 			},
 		}}
-		input := &services.SendTransactionInput{ClientInput: (&publicapi.SendTransactionInputBuilder{SignedTransaction: tx}).Build()}
+		input := &services.SendTransactionInput{ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()}
 		gatewayNode.SendTransaction(input)
 		ch <- nil
 	}()
@@ -126,9 +126,9 @@ func (n *acceptanceTestNetwork) GetBalance(node services.PublicApi) chan uint64 
 			ContractName: "MelangeToken",
 			MethodName:   "getBalance",
 		}
-		input := &services.CallMethodInput{ClientInput: (&publicapi.CallMethodInputBuilder{Transaction:cm}).Build()}
+		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction:cm}).Build()}
 		output, _ := node.CallMethod(input)
-		ch <- output.ClientOutput.OutputArgumentIterator().NextOutputArgument().TypeUint64()
+		ch <- output.ClientResponse.OutputArgumentIterator().NextOutputArgument().TypeUint64()
 	}()
 	return ch
 }

@@ -11,8 +11,8 @@ import (
 	"bytes"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"net/http"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/publicapi"
 	"github.com/orbs-network/membuffers/go"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 )
 
 func TestE2E(t *testing.T) {
@@ -40,7 +40,7 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientOutput.OutputArgumentIterator().NextOutputArgument().TypeUint64()
+			return callMethod(m).ClientResponse.OutputArgumentIterator().NextOutputArgument().TypeUint64()
 		}).Should(BeEquivalentTo(17))
 
 		node.GracefulShutdown(1 * time.Second)
@@ -50,20 +50,20 @@ var _ = Describe("The Orbs Network", func() {
 })
 
 func sendTransaction(txBuilder *protocol.TransactionBuilder) *services.SendTransactionOutput {
-	input := (&publicapi.SendTransactionInputBuilder{
+	input := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: &protocol.SignedTransactionBuilder{
 			TransactionContent: txBuilder,
 		}}).Build()
 
-	return &services.SendTransactionOutput{ClientOutput: publicapi.SendTransactionOutputReader(httpPost(input,"send-transaction"))}
+	return &services.SendTransactionOutput{ClientResponse: client.SendTransactionResponseReader(httpPost(input,"send-transaction"))}
 }
 
 func callMethod(txBuilder *protocol.TransactionBuilder) *services.CallMethodOutput {
-	input := (&publicapi.CallMethodInputBuilder{
+	input := (&client.CallMethodRequestBuilder{
 		Transaction: txBuilder,
 	}).Build()
 
-	return &services.CallMethodOutput{ClientOutput: publicapi.CallMethodOutputReader(httpPost(input,"call-method"))}
+	return &services.CallMethodOutput{ClientResponse: client.CallMethodResponseReader(httpPost(input,"call-method"))}
 
 }
 
