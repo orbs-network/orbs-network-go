@@ -140,6 +140,7 @@ func (g *MemberlistGossip) Broadcast(message *Message) error {
 	jsonValue, _ := json.Marshal(message)
 
 	g.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: jsonValue})
+	g.receive(Message{message.Sender, message.Type, message.Payload})
 
 	// add proper error handling
 

@@ -78,9 +78,14 @@ func (c *consensusAlgo) buildNextBlock(transaction *protocol.SignedTransaction) 
 	}
 
 	gotConsensus := true
-	for i := uint32(0); i < c.config.NetworkSize(0); i++ {
+	// asking for 2/3 or the votes because, strangely enough, we fail to vote for ourselves
+	for i := uint32(0); i < c.config.NetworkSize(0)*2/3; i++ {
+		fmt.Println("Waiting for vote #", i+1, "out of", c.config.NetworkSize(0))
 		gotConsensus = gotConsensus && <-votes
+		fmt.Println("Collected vote #", i+1, "out of", c.config.NetworkSize(0))
 	}
+
+	fmt.Println("Collected all votes")
 
 	// FIXME: related to gossip
 	// close(c.votesForCurrentRound)
