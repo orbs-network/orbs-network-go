@@ -25,9 +25,9 @@ func (p *inMemoryTransactionPool) AddNewTransaction(input *services.AddNewTransa
 func (p *inMemoryTransactionPool) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	out := &services.GetTransactionsForOrderingOutput{}
 
-	out.SignedTransaction = make([]*protocol.SignedTransaction, input.MaxNumberOfTransactions)
+	out.SignedTransactions = make([]*protocol.SignedTransaction, input.MaxNumberOfTransactions)
 	for i := uint32(0); i < input.MaxNumberOfTransactions; i++ {
-		out.SignedTransaction[i] = <- p.pendingTransactions
+		out.SignedTransactions[i] = <- p.pendingTransactions
 	}
 
 	return out, nil

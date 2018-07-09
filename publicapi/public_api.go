@@ -53,7 +53,7 @@ func (p *publicApi) CallMethod(input *services.CallMethodInput) (*services.CallM
 	defer p.events.Info("exit_call_method")
 
 	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{
-		OutputArgument: []*protocol.MethodArgumentBuilder{
+		OutputArguments: []*protocol.MethodArgumentBuilder{
 			{Name: "balance", Type: protocol.MethodArgumentTypeUint64, Uint64: uint64(p.ledger.GetState())},
 		},
 	}).Build()}

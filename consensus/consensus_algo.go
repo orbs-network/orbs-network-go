@@ -126,7 +126,7 @@ func (c *consensusAlgo) buildBlocksEventLoop() {
 
 		if currentBlock == nil {
 			res, _ := c.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{MaxNumberOfTransactions: 1})
-			currentBlock = res.SignedTransaction[0]
+			currentBlock = res.SignedTransactions[0]
 		}
 
 		fmt.Printf("%s waiting for consensus\n", c.config.NodeId())
