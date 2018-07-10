@@ -6,8 +6,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/publicapi"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 )
 
 type Node interface {
@@ -15,7 +15,7 @@ type Node interface {
 }
 
 type node struct {
-	httpServer publicapi.HttpServer
+	httpServer httpserver.HttpServer
 	logic      NodeLogic
 }
 
@@ -26,14 +26,14 @@ func NewNode(
 	isLeader bool,
 	networkSize uint32,
 ) Node {
-	
+
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
 	fmt.Println("Node config", nodeConfig)
 	storage := blockStorageAdapter.NewBlockPersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	lc := instrumentation.NewSimpleLoop(logger)
 	logic := NewNodeLogic(transport, storage, logger, lc, nodeConfig, isLeader)
-	httpServer := publicapi.NewHttpServer(address, logger, logic.GetPublicApi())
+	httpServer := httpserver.NewHttpServer(address, logger, logic.GetPublicApi())
 	return &node{
 		logic:      logic,
 		httpServer: httpServer,

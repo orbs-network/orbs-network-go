@@ -1,4 +1,4 @@
-package publicapi
+package httpserver
 
 import (
 	"context"
@@ -16,27 +16,22 @@ type HttpServer interface {
 	GracefulShutdown(timeout time.Duration)
 }
 
-type httpServer struct {
+type server struct {
 	httpServer *http.Server
 }
 
 func NewHttpServer(address string, logger instrumentation.Reporting, publicApi services.PublicApi) HttpServer {
-
-	server := &httpServer{
+	server := &server{
 		httpServer: &http.Server{
 			Addr:    address,
 			Handler: createRouter(publicApi),
 		},
 	}
-
 	go func() {
 		server.httpServer.ListenAndServe() //TODO error on failed startup
 	}()
-
 	logger.Info(fmt.Sprintf("server started on address %s", address))
-
 	return server
-
 }
 
 //TODO extract commonalities between handlers
@@ -86,6 +81,6 @@ func createRouter(publicApi services.PublicApi) http.Handler {
 	return router
 }
 
-func (s *httpServer) GracefulShutdown(timeout time.Duration) {
+func (s *server) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown(context.TODO()) //TODO timeout context
 }

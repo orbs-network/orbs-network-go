@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
-	"github.com/orbs-network/orbs-network-go/publicapi"
+	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-network-go/gossip"

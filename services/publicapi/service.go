@@ -10,7 +10,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossip"
 )
 
-type publicApi struct {
+type service struct {
+	services.PublicApi
 	txRelay         gossip.TransactionRelay
 	transactionPool services.TransactionPool
 	ledger          ledger.Ledger
@@ -18,12 +19,15 @@ type publicApi struct {
 	isLeader        bool
 }
 
-func NewPublicApi(txRelay gossip.TransactionRelay,
+func NewPublicApi(
+	txRelay gossip.TransactionRelay,
 	transactionPool services.TransactionPool,
 	ledger ledger.Ledger,
 	events instrumentation.Reporting,
-	isLeader bool) services.PublicApi {
-	return &publicApi{
+	isLeader bool,
+) services.PublicApi {
+
+	return &service{
 		txRelay:         txRelay,
 		transactionPool: transactionPool,
 		ledger:          ledger,
@@ -32,39 +36,35 @@ func NewPublicApi(txRelay gossip.TransactionRelay,
 	}
 }
 
-func (p *publicApi) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
-	p.events.Info("enter_send_transaction")
-	defer p.events.Info("exit_send_transaction")
+func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
+	s.events.Info("enter_send_transaction")
+	defer s.events.Info("exit_send_transaction")
 	//TODO leader should also propagate transactions to other nodes
 	tx := input.ClientRequest.SignedTransaction()
-	if p.isLeader {
-		p.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{tx})
+	if s.isLeader {
+		s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{tx})
 	} else {
-		p.txRelay.BroadcastForwardedTransactions(&gossip.ForwardedTransactionsInput{Transactions:[]*protocol.SignedTransaction{tx}})
+		s.txRelay.BroadcastForwardedTransactions(&gossip.ForwardedTransactionsInput{Transactions:[]*protocol.SignedTransaction{tx}})
 	}
-
 	output := &services.SendTransactionOutput{}
-
 	return output, nil
 }
 
-func (p *publicApi) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
-	p.events.Info("enter_call_method")
-	defer p.events.Info("exit_call_method")
-
+func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
+	s.events.Info("enter_call_method")
+	defer s.events.Info("exit_call_method")
 	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{
 		OutputArguments: []*protocol.MethodArgumentBuilder{
-			{Name: "balance", Type: protocol.MethodArgumentTypeUint64, Uint64: uint64(p.ledger.GetState())},
+			{Name: "balance", Type: protocol.MethodArgumentTypeUint64, Uint64: uint64(s.ledger.GetState())},
 		},
 	}).Build()}
-
 	return output, nil
 }
 
-func (p *publicApi) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
+func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
 	panic("Not implemented")
 }
 
-func (p *publicApi) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
+func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
 	panic("Not implemented")
 }
