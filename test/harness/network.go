@@ -105,10 +105,10 @@ func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount 
 	ch := make(chan interface{})
 	go func() {
 
-		tx := &protocol.SignedTransactionBuilder{TransactionContent: &protocol.TransactionBuilder{
+		tx := &protocol.SignedTransactionBuilder{Transaction: &protocol.TransactionBuilder{
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
-			InputArgument: []*protocol.MethodArgumentBuilder{
+			InputArguments: []*protocol.MethodArgumentBuilder{
 				{Name: "amount", Type: protocol.MethodArgumentTypeUint64, Uint64: amount},
 			},
 		}}
@@ -128,7 +128,7 @@ func (n *acceptanceTestNetwork) GetBalance(node services.PublicApi) chan uint64 
 		}
 		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction:cm}).Build()}
 		output, _ := node.CallMethod(input)
-		ch <- output.ClientResponse.OutputArgumentIterator().NextOutputArgument().TypeUint64()
+		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64()
 	}()
 	return ch
 }

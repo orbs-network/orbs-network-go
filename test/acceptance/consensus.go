@@ -12,7 +12,6 @@ var _ = Describe("a leader node", func() {
 
 	It("must get validations by all nodes to commit a transaction", func(done Done) {
 
-
 		network := harness.CreateTestNetwork()
 		defer network.FlushLog()
 		consensusRound := network.LeaderLoopControl().LatchFor("consensus_round")
@@ -36,7 +35,6 @@ var _ = Describe("a leader node", func() {
 
 		network.ValidatorBp().WaitForBlocks(1)
 		Expect(<- network.GetBalance(network.Validator())).To(BeEquivalentTo(17))
-
 
 		close(done)
 	}, 1)

@@ -12,8 +12,10 @@ var _ = Describe("a leader node", func() {
 
 	It("commits transactions to all nodes, skipping invalid transactions", func() {
 		network := harness.CreateTestNetwork()
+		defer network.FlushLog()
 
 		network.Transfer(network.Leader(), 17)
+		//time.Sleep(1 * time.Second)
 		network.Transfer(network.Leader(), 1000000) //this is invalid because currently we don't allow (temporarily) values over 1000 just so that we can create invalid transactions
 		network.Transfer(network.Leader(), 22)
 
@@ -33,7 +35,7 @@ var _ = Describe("a non-leader (validator) node", func() {
 		network := harness.CreateTestNetwork()
 
 		network.Gossip().Pause(gossip.ForwardTransactionMessage)
-		network.Transfer(network.Leader(), 17)
+		network.Transfer(network.Validator(), 17)
 
 		Expect(<- network.GetBalance(network.Leader())).To(BeEquivalentTo(0))
 		Expect(<- network.GetBalance(network.Validator())).To(BeEquivalentTo(0))

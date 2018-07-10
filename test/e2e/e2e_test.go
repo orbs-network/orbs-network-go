@@ -54,7 +54,7 @@ var _ = Describe("The Orbs Network", func() {
 		tx := &protocol.TransactionBuilder{
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
-			InputArgument: []*protocol.MethodArgumentBuilder{
+			InputArguments: []*protocol.MethodArgumentBuilder{
 				{Name: "amount", Type: protocol.MethodArgumentTypeUint64, Uint64: 17},
 			},
 		}
@@ -67,8 +67,8 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentIterator().NextOutputArgument().TypeUint64()
-		}, 2*time.Second).Should(BeEquivalentTo(17))
+			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64()
+		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {
 			node.GracefulShutdown(1 * time.Second)
@@ -81,7 +81,7 @@ var _ = Describe("The Orbs Network", func() {
 func sendTransaction(txBuilder *protocol.TransactionBuilder) *services.SendTransactionOutput {
 	input := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: &protocol.SignedTransactionBuilder{
-			TransactionContent: txBuilder,
+			Transaction: txBuilder,
 		}}).Build()
 
 	return &services.SendTransactionOutput{ClientResponse: client.SendTransactionResponseReader(httpPost(input, "send-transaction"))}

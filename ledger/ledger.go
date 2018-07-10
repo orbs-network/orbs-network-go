@@ -19,7 +19,7 @@ func NewLedger(bp blockstorage.BlockPersistence) Ledger {
 }
 
 func (l *ledger) AddTransaction(transaction *protocol.SignedTransaction) {
-	if transaction.TransactionContent().InputArgumentIterator().NextInputArgument().TypeUint64() > 1000 {
+	if transaction.Transaction().InputArgumentsIterator().NextInputArguments().Uint64() > 1000 {
 		return
 	}
 	l.blockPersistence.WriteBlock(transaction)
@@ -28,7 +28,7 @@ func (l *ledger) AddTransaction(transaction *protocol.SignedTransaction) {
 func (l *ledger) GetState() uint64 {
 	sum := uint64(0)
 	for _, t := range l.blockPersistence.ReadAllBlocks() {
-		sum += t.TransactionContent().InputArgumentIterator().NextInputArgument().TypeUint64()
+		sum += t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64()
 	}
 	return sum
 

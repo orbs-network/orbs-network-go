@@ -3,9 +3,9 @@ package transactionpool
 import (
 	"fmt"
 
-	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	gossip2 "github.com/orbs-network/orbs-spec/types/go/services/gossip"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
@@ -13,9 +13,9 @@ type inMemoryTransactionPool struct {
 	pendingTransactions chan *protocol.SignedTransaction
 }
 
-func NewTransactionPool(gossip gossip.Gossip) services.TransactionPool {
+func NewTransactionPool(relay gossip2.TransactionRelay) services.TransactionPool {
 	pool := &inMemoryTransactionPool{make(chan *protocol.SignedTransaction, 10)}
-	gossip.RegisterTransactionListener(pool)
+	relay.RegisterTransactionRelayHandler(pool)
 	return pool
 }
 
@@ -28,9 +28,9 @@ func (p *inMemoryTransactionPool) AddNewTransaction(input *services.AddNewTransa
 func (p *inMemoryTransactionPool) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	out := &services.GetTransactionsForOrderingOutput{}
 
-	out.SignedTransaction = make([]*protocol.SignedTransaction, input.MaxNumberOfTransactions)
+	out.SignedTransactions = make([]*protocol.SignedTransaction, input.MaxNumberOfTransactions)
 	for i := uint32(0); i < input.MaxNumberOfTransactions; i++ {
-		out.SignedTransaction[i] = <-p.pendingTransactions
+		out.SignedTransactions[i] = <-p.pendingTransactions
 	}
 
 	return out, nil
@@ -41,10 +41,10 @@ func (p *inMemoryTransactionPool) OnForwardTransaction(tx *protocol.SignedTransa
 	p.pendingTransactions <- tx
 }
 
-func (p *inMemoryTransactionPool) HandleForwardedTransactions(input *handlers.HandleForwardedTransactionsInput) (*handlers.GossipMessageHandlerOutput, error) {
-	txs := input.Message.Body().TransactionIterator()
-	for txs.HasNext() {
-		p.pendingTransactions <- txs.NextTransaction()
+func (p *inMemoryTransactionPool) HandleForwardedTransactions(input *gossip2.ForwardedTransactionsInput) (*gossip2.TransactionRelayOutput, error) {
+	txs := input.Transactions
+	for _, tx := range txs {
+		p.pendingTransactions <- tx
 	}
 
 	return nil, nil
