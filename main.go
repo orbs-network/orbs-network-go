@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/orbs-network/orbs-network-go/bootstrap"
-	. "github.com/orbs-network/orbs-network-go/gossip"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 )
 
 func main() {
@@ -18,8 +17,8 @@ func main() {
 	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
 	isLeader := os.Getenv("LEADER") == "true"
 
-	config := MemberlistGossipConfig{nodeName, int(gossipPort), peers}
-	gossipTransport := NewMemberlistTransport(config)
+	config := gossipAdapter.MemberlistGossipConfig{nodeName, int(gossipPort), peers}
+	gossipTransport := gossipAdapter.NewMemberlistTransport(config)
 
 	fmt.Println("PORT", port)
 

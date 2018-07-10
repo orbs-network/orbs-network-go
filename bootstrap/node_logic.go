@@ -8,8 +8,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-network-go/gossip"
+	"github.com/orbs-network/orbs-network-go/services/gossip"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 )
 
 type NodeLogic interface {
@@ -27,7 +28,7 @@ type nodeLogic struct {
 }
 
 func NewNodeLogic(
-	gossipTransport gossip.Transport,
+	gossipTransport gossipAdapter.Transport,
 	bp blockStorageAdapter.BlockPersistence,
 	events instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,

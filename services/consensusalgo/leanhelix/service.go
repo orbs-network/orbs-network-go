@@ -2,14 +2,12 @@ package leanhelix
 
 import (
 	"fmt"
-
 	"sync"
-
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossip"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 type Config interface {
@@ -19,7 +17,7 @@ type Config interface {
 
 type service struct {
 	services.ConsensusAlgoLeanHelix
-	gossip               gossip.LeanHelixConsensus
+	gossip               gossiptopics.LeanHelixConsensus
 	ledger               ledger.Ledger
 	transactionPool      services.TransactionPool
 	events               instrumentation.Reporting
@@ -31,7 +29,7 @@ type service struct {
 }
 
 func NewConsensusAlgoLeanHelix(
-	gossip gossip.LeanHelixConsensus,
+	gossip gossiptopics.LeanHelixConsensus,
 	ledger ledger.Ledger,
 	transactionPool services.TransactionPool,
 	events instrumentation.Reporting,
@@ -56,12 +54,12 @@ func NewConsensusAlgoLeanHelix(
 	return s
 }
 
-func (s *service) HandleLeanHelixPrePrepare(input *gossip.LeanHelixPrePrepareInput) (*gossip.LeanHelixOutput, error) {
+func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.LeanHelixOutput, error) {
 	s.preparedBlock = input.Block // each node will save this block
-	return s.gossip.SendLeanHelixPrepare(&gossip.LeanHelixPrepareInput{})
+	return s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 }
 
-func (s *service) HandleLeanHelixPrepare(input *gossip.LeanHelixPrepareInput) (*gossip.LeanHelixOutput, error) {
+func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.LeanHelixOutput, error) {
 	// currently only leader should handle prepare
 	if s.votesForCurrentRound != nil {
 		s.events.Info(fmt.Sprintf("received vote"))
@@ -70,18 +68,18 @@ func (s *service) HandleLeanHelixPrepare(input *gossip.LeanHelixPrepareInput) (*
 	return nil, nil
 }
 
-func (s *service) HandleLeanHelixCommit(input *gossip.LeanHelixCommitInput) (*gossip.LeanHelixOutput, error) {
+func (s *service) HandleLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.LeanHelixOutput, error) {
 	s.ledger.AddTransaction(protocol.SignedTransactionReader(s.preparedBlock))
 	s.preparedBlock = nil
 	s.commitCond.Signal()
 	return nil, nil
 }
 
-func (s *service) HandleLeanHelixViewChange(input *gossip.LeanHelixViewChangeInput) (*gossip.LeanHelixOutput, error) {
+func (s *service) HandleLeanHelixViewChange(input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.LeanHelixOutput, error) {
 	panic("Not implemented")
 }
 
-func (s *service) HandleLeanHelixNewView(input *gossip.LeanHelixNewViewInput) (*gossip.LeanHelixOutput, error) {
+func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInput) (*gossiptopics.LeanHelixOutput, error) {
 	panic("Not implemented")
 }
 
@@ -104,7 +102,7 @@ func (s *service) buildNextBlock(transaction *protocol.SignedTransaction) bool {
 		if s.preparedBlock == nil {
 			panic(fmt.Sprintf("Node [%s] is trying to commit a block that wasn't prepared", s.config.NodeId()))
 		}
-		s.gossip.SendLeanHelixCommit(&gossip.LeanHelixCommitInput{})
+		s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 	}
 	s.commitCond.Wait()
 	close(s.votesForCurrentRound)
@@ -126,7 +124,7 @@ func (s *service) buildBlocksEventLoop() {
 }
 
 func (s *service) requestConsensusFor(transaction *protocol.SignedTransaction) (chan bool, error) {
-	message := &gossip.LeanHelixPrePrepareInput{Block: transaction.Raw()}
+	message := &gossiptopics.LeanHelixPrePrepareInput{Block: transaction.Raw()}
 	_, error := s.gossip.SendLeanHelixPrePrepare(message) //TODO send the actual input, not just a single tx bytes
 	if error == nil {
 		s.votesForCurrentRound = make(chan bool)

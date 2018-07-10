@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	gossip2 "github.com/orbs-network/orbs-spec/types/go/services/gossip"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
@@ -13,7 +13,7 @@ type service struct {
 	pendingTransactions chan *protocol.SignedTransaction
 }
 
-func NewTransactionPool(relay gossip2.TransactionRelay) services.TransactionPool {
+func NewTransactionPool(relay gossiptopics.TransactionRelay) services.TransactionPool {
 	s := &service{
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 	}
@@ -41,7 +41,7 @@ func (s *service) OnForwardTransaction(tx *protocol.SignedTransaction) {
 	s.pendingTransactions <- tx
 }
 
-func (s *service) HandleForwardedTransactions(input *gossip2.ForwardedTransactionsInput) (*gossip2.TransactionRelayOutput, error) {
+func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
 	txs := input.Transactions
 	for _, tx := range txs {
 		s.pendingTransactions <- tx

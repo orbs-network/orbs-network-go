@@ -7,12 +7,11 @@ import (
 	"os"
 	"testing"
 	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -47,7 +46,7 @@ var _ = Describe("The Orbs Network", func() {
 		var node bootstrap.Node
 
 		if getConfig().Bootstrap {
-			gossipTransport := gossip.NewTemperingTransport()
+			gossipTransport := gossipAdapter.NewTemperingTransport()
 			node = bootstrap.NewNode(":8080", "node1", gossipTransport, true, 1)
 		}
 

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 )
 
 type Node interface {
@@ -22,7 +22,7 @@ type node struct {
 func NewNode(
 	address string,
 	nodeId string,
-	transport gossip.Transport,
+	transport gossipAdapter.Transport,
 	isLeader bool,
 	networkSize uint32,
 ) Node {

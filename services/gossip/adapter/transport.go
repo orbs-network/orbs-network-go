@@ -1,4 +1,4 @@
-package gossip
+package adapter
 
 import "fmt"
 
@@ -13,15 +13,14 @@ type Message struct {
 	Payload []byte // use io.Writer / Reader?
 }
 
-type MessageReceivedListener interface {
-	OnMessageReceived(message *Message)
+type TransportListener interface {
+	OnTransportMessageReceived(message *Message)
 }
 
 type Transport interface {
 	Broadcast(message *Message) error
 	Unicast(recipientId string, message *Message) error
-
-	RegisterListener(listener MessageReceivedListener, myNodeId string)
+	RegisterListener(listener TransportListener, myNodeId string)
 }
 
 type ErrGossipRequestFailed struct {
@@ -29,5 +28,5 @@ type ErrGossipRequestFailed struct {
 }
 
 func (e *ErrGossipRequestFailed) Error() string {
-	return fmt.Sprintf("gossip message [%s] to [%s] has failed to send", e.Message.Type, e.Message.Sender)
+	return fmt.Sprintf("service message [%s] to [%s] has failed to send", e.Message.Type, e.Message.Sender)
 }

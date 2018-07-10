@@ -1,4 +1,4 @@
-package gossip
+package adapter
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ type MemberlistGossip struct {
 
 	pendingTransactions []types.Transaction
 
-	listeners map[string]MessageReceivedListener
+	listeners map[string]TransportListener
 }
 
 type GossipDelegate struct {
@@ -111,7 +111,7 @@ func NewMemberlistTransport(config MemberlistGossipConfig) *MemberlistGossip {
 		list:       list,
 		listConfig: &config,
 		delegate:   &delegate,
-		listeners:  make(map[string]MessageReceivedListener),
+		listeners:  make(map[string]TransportListener),
 	}
 
 	// this is terrible and should be purged
@@ -156,11 +156,11 @@ func (g *MemberlistGossip) Unicast(recipientId string, message *Message) error {
 func (g *MemberlistGossip) receive(message Message) {
 	fmt.Println("Gossip: triggering listeners")
 	for _, l := range g.listeners {
-		l.OnMessageReceived(&message)
+		l.OnTransportMessageReceived(&message)
 	}
 }
 
-func (g *MemberlistGossip) RegisterListener(listener MessageReceivedListener, myNodeId string) {
+func (g *MemberlistGossip) RegisterListener(listener TransportListener, myNodeId string) {
 	g.listeners[myNodeId] = listener
 }
 

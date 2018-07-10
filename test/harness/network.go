@@ -1,13 +1,9 @@
 package harness
 
-/*
-Objects here are only for testing purposes, not to be used in real code
- */
-
 import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/config"
 	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -19,7 +15,7 @@ import (
 type AcceptanceTestNetwork interface {
 	FlushLog()
 	LeaderLoopControl() testinstrumentation.BrakingLoop
-	Gossip() gossip.TemperingTransport
+	Gossip() gossipAdapter.TemperingTransport
 	Leader() services.PublicApi
 	Validator() services.PublicApi
 	LeaderBp() blockStorageAdapter.InMemoryBlockPersistence
@@ -35,7 +31,7 @@ type acceptanceTestNetwork struct {
 	leaderLatch       testinstrumentation.Latch
 	leaderBp          blockStorageAdapter.InMemoryBlockPersistence
 	validatorBp       blockStorageAdapter.InMemoryBlockPersistence
-	gossip            gossip.TemperingTransport
+	gossip            gossipAdapter.TemperingTransport
 	leaderLoopControl testinstrumentation.BrakingLoop
 
 	log []testinstrumentation.BufferedLog
@@ -51,12 +47,12 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 
 	leaderLoopControl := testinstrumentation.NewBrakingLoop(leaderLog)
 
-	inMemoryGossip := gossip.NewTemperingTransport()
+	temperingTransport := gossipAdapter.NewTemperingTransport()
 	leaderBp := blockStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
 	validatorBp := blockStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
 
-	leader := bootstrap.NewNodeLogic(inMemoryGossip, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
-	validator := bootstrap.NewNodeLogic(inMemoryGossip, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
+	leader := bootstrap.NewNodeLogic(temperingTransport, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
+	validator := bootstrap.NewNodeLogic(temperingTransport, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
 
 	return &acceptanceTestNetwork{
 		leader:            leader,
@@ -64,7 +60,7 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 		leaderLatch:       leaderLatch,
 		leaderBp:          leaderBp,
 		validatorBp:       validatorBp,
-		gossip:            inMemoryGossip,
+		gossip:            temperingTransport,
 		leaderLoopControl: leaderLoopControl,
 
 		log: []testinstrumentation.BufferedLog{leaderLog, validatorLog},
@@ -81,7 +77,7 @@ func (n *acceptanceTestNetwork) LeaderLoopControl() testinstrumentation.BrakingL
 	return n.leaderLoopControl
 }
 
-func (n *acceptanceTestNetwork) Gossip() gossip.TemperingTransport {
+func (n *acceptanceTestNetwork) Gossip() gossipAdapter.TemperingTransport {
 	return n.gossip
 }
 

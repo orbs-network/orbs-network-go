@@ -1,10 +1,11 @@
-package gossip
+package adapter
 
-import "github.com/orbs-network/orbs-network-go/gossip"
+import (
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+)
 
 type TemperingTransport interface {
-	gossip.Transport
-
+	adapter.Transport
 	Pause(messagesOfType string)
 	Resume(messagesOfType string)
 	Fail(messagesOfType string)
@@ -12,21 +13,20 @@ type TemperingTransport interface {
 }
 
 type temperingTransport struct {
-	listeners map[string]gossip.MessageReceivedListener
-
-	pausedMessages map[string][]*gossip.Message
+	listeners map[string]adapter.TransportListener
+	pausedMessages map[string][]*adapter.Message
 	failMessages   map[string]struct{}
 }
 
 func NewTemperingTransport() TemperingTransport {
 	return &temperingTransport{
-		listeners:      make(map[string]gossip.MessageReceivedListener),
-		pausedMessages: make(map[string][]*gossip.Message),
+		listeners:      make(map[string]adapter.TransportListener),
+		pausedMessages: make(map[string][]*adapter.Message),
 		failMessages:   make(map[string]struct{}),
 	}
 }
 
-func (t *temperingTransport) RegisterListener(listener gossip.MessageReceivedListener, myNodeId string) {
+func (t *temperingTransport) RegisterListener(listener adapter.TransportListener, myNodeId string) {
 	t.listeners[myNodeId] = listener
 }
 
@@ -52,11 +52,11 @@ func (g *temperingTransport) Pass(messagesOfType string) {
 	delete(g.failMessages, messagesOfType)
 }
 
-func (g *temperingTransport) Broadcast(message *gossip.Message) error {
+func (g *temperingTransport) Broadcast(message *adapter.Message) error {
 	if g.paused(message.Type) {
 		g.pausedMessages[message.Type] = append(g.pausedMessages[message.Type], message)
 	} else if g.fail(message.Type) {
-		return &gossip.ErrGossipRequestFailed{Message: *message}
+		return &adapter.ErrGossipRequestFailed{Message: *message}
 	} else {
 		go g.receive(*message)
 	}
@@ -65,15 +65,15 @@ func (g *temperingTransport) Broadcast(message *gossip.Message) error {
 }
 
 //TODO pause/resume unicasts as well as broadcasts
-func (g *temperingTransport) Unicast(recipientId string, message *gossip.Message) error {
-	go g.listeners[recipientId].OnMessageReceived(message)
+func (g *temperingTransport) Unicast(recipientId string, message *adapter.Message) error {
+	go g.listeners[recipientId].OnTransportMessageReceived(message)
 
 	return nil
 }
 
-func (g *temperingTransport) receive(message gossip.Message) {
+func (g *temperingTransport) receive(message adapter.Message) {
 	for _, l := range g.listeners {
-		l.OnMessageReceived(&message)
+		l.OnTransportMessageReceived(&message)
 	}
 }
 
