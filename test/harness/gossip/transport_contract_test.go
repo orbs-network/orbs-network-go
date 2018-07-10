@@ -2,11 +2,11 @@ package gossip
 
 import (
 	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/gossip"
 	. "github.com/orbs-network/orbs-network-go/test"
+	"github.com/maraino/go-mock"
 )
 
 func TestContract(t *testing.T) {

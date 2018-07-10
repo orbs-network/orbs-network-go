@@ -19,9 +19,7 @@ type MemberlistGossip struct {
 	listConfig *MemberlistGossipConfig
 	delegate   *GossipDelegate
 
-	transactionListeners []TransactionListener
-	consensusListeners   []ConsensusListener
-	pendingTransactions  []types.Transaction
+	pendingTransactions []types.Transaction
 
 	listeners map[string]MessageReceivedListener
 }
