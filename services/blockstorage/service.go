@@ -7,12 +7,15 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 )
 
-func NewBlockStorage(persistence adapter.BlockPersistence) services.BlockStorage {
-	return &service{persistence:persistence}
+type service struct {
+	services.BlockStorage
+	persistence adapter.BlockPersistence
 }
 
-type service struct {
-	persistence adapter.BlockPersistence
+func NewBlockStorage(persistence adapter.BlockPersistence) services.BlockStorage {
+	return &service{
+		persistence: persistence,
+	}
 }
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {

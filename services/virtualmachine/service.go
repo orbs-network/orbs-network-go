@@ -5,11 +5,11 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
-func NewVirtualMachine() services.VirtualMachine {
-	return &service{}
+type service struct {
 }
 
-type service struct {
+func NewVirtualMachine() services.VirtualMachine {
+	return &service{}
 }
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {

@@ -2,7 +2,6 @@ package transactionpool
 
 import (
 	"fmt"
-
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	gossip2 "github.com/orbs-network/orbs-spec/types/go/services/gossip"
@@ -10,11 +9,14 @@ import (
 )
 
 type service struct {
+	services.TransactionPool
 	pendingTransactions chan *protocol.SignedTransaction
 }
 
 func NewTransactionPool(relay gossip2.TransactionRelay) services.TransactionPool {
-	s := &service{make(chan *protocol.SignedTransaction, 10)}
+	s := &service{
+		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
+	}
 	relay.RegisterTransactionRelayHandler(s)
 	return s
 }
@@ -27,12 +29,10 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	out := &services.GetTransactionsForOrderingOutput{}
-
 	out.SignedTransactions = make([]*protocol.SignedTransaction, input.MaxNumberOfTransactions)
 	for i := uint32(0); i < input.MaxNumberOfTransactions; i++ {
 		out.SignedTransactions[i] = <-s.pendingTransactions
 	}
-
 	return out, nil
 }
 
@@ -46,7 +46,6 @@ func (s *service) HandleForwardedTransactions(input *gossip2.ForwardedTransactio
 	for _, tx := range txs {
 		s.pendingTransactions <- tx
 	}
-
 	return nil, nil
 }
 
