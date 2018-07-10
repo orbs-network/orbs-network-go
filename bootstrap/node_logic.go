@@ -2,14 +2,14 @@ package bootstrap
 
 import (
 	"github.com/orbs-network/orbs-network-go/ledger"
-	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/consensus"
-	"github.com/orbs-network/orbs-network-go/transactionpool"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/publicapi"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-network-go/gossip"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 )
 
 type NodeLogic interface {
@@ -27,7 +27,7 @@ type nodeLogic struct {
 }
 
 func NewNodeLogic(gossipTransport gossip.Transport,
-	bp blockstorage.BlockPersistence,
+	bp blockStorageAdapter.BlockPersistence,
 	events instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
 	nodeConfig config.NodeConfig,

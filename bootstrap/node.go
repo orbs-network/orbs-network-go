@@ -3,12 +3,11 @@ package bootstrap
 import (
 	"fmt"
 	"time"
-
-	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/gossip"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/publicapi"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 )
 
 type Node interface {
@@ -24,7 +23,7 @@ func NewNode(address string, nodeId string, transport gossip.Transport, isLeader
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
 	fmt.Println("Node config", nodeConfig)
 
-	storage := blockstorage.NewInMemoryBlockPersistence(nodeConfig)
+	storage := blockStorageAdapter.NewBlockPersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	lc := instrumentation.NewSimpleLoop(logger)
 

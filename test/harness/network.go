@@ -7,13 +7,13 @@ Objects here are only for testing purposes, not to be used in real code
 import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-network-go/test/harness/gossip"
 	"github.com/orbs-network/orbs-network-go/config"
 	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 )
 
 type AcceptanceTestNetwork interface {
@@ -22,8 +22,8 @@ type AcceptanceTestNetwork interface {
 	Gossip() gossip.TemperingTransport
 	Leader() services.PublicApi
 	Validator() services.PublicApi
-	LeaderBp() blockstorage.InMemoryBlockPersistence
-	ValidatorBp() blockstorage.InMemoryBlockPersistence
+	LeaderBp() blockStorageAdapter.InMemoryBlockPersistence
+	ValidatorBp() blockStorageAdapter.InMemoryBlockPersistence
 
 	Transfer(gatewayNode services.PublicApi, amount uint64) chan interface{}
 	GetBalance(node services.PublicApi) chan uint64
@@ -33,8 +33,8 @@ type acceptanceTestNetwork struct {
 	leader            bootstrap.NodeLogic
 	validator         bootstrap.NodeLogic
 	leaderLatch       testinstrumentation.Latch
-	leaderBp          blockstorage.InMemoryBlockPersistence
-	validatorBp       blockstorage.InMemoryBlockPersistence
+	leaderBp          blockStorageAdapter.InMemoryBlockPersistence
+	validatorBp       blockStorageAdapter.InMemoryBlockPersistence
 	gossip            gossip.TemperingTransport
 	leaderLoopControl testinstrumentation.BrakingLoop
 
@@ -52,8 +52,8 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 	leaderLoopControl := testinstrumentation.NewBrakingLoop(leaderLog)
 
 	inMemoryGossip := gossip.NewTemperingTransport()
-	leaderBp := blockstorage.NewInMemoryBlockPersistence(leaderConfig)
-	validatorBp := blockstorage.NewInMemoryBlockPersistence(validatorConfig)
+	leaderBp := blockStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
+	validatorBp := blockStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
 
 	leader := bootstrap.NewNodeLogic(inMemoryGossip, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
 	validator := bootstrap.NewNodeLogic(inMemoryGossip, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
@@ -93,11 +93,11 @@ func (n *acceptanceTestNetwork) Validator() services.PublicApi {
 	return n.validator.GetPublicApi()
 }
 
-func (n *acceptanceTestNetwork) LeaderBp() blockstorage.InMemoryBlockPersistence {
+func (n *acceptanceTestNetwork) LeaderBp() blockStorageAdapter.InMemoryBlockPersistence {
 	return n.leaderBp
 }
 
-func (n *acceptanceTestNetwork) ValidatorBp() blockstorage.InMemoryBlockPersistence {
+func (n *acceptanceTestNetwork) ValidatorBp() blockStorageAdapter.InMemoryBlockPersistence {
 	return n.validatorBp
 }
 

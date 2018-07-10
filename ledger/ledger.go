@@ -1,8 +1,8 @@
 package ledger
 
 import (
-	"github.com/orbs-network/orbs-network-go/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 )
 
 type Ledger interface {
@@ -11,10 +11,10 @@ type Ledger interface {
 }
 
 type ledger struct {
-	blockPersistence blockstorage.BlockPersistence
+	blockPersistence adapter.BlockPersistence
 }
 
-func NewLedger(bp blockstorage.BlockPersistence) Ledger {
+func NewLedger(bp adapter.BlockPersistence) Ledger {
 	return &ledger{blockPersistence: bp}
 }
 
