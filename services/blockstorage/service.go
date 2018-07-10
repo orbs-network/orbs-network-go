@@ -3,7 +3,7 @@ package blockstorage
 import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossip"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 )
 
@@ -46,15 +46,15 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 	panic("Not implemented")
 }
 
-func (s *service) HandleBlockAvailabilityRequest(input *gossip.BlockSyncAvailabilityRequestInput) (*gossip.BlockSyncOutput, error) {
+func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockSyncAvailabilityRequestInput) (*gossiptopics.BlockSyncOutput, error) {
 	panic("Not implemented")
 }
-func (s *service) HandleBlockAvailabilityResponse(input *gossip.BlockSyncAvailabilityResponseInput) (*gossip.BlockSyncOutput, error) {
+func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockSyncAvailabilityResponseInput) (*gossiptopics.BlockSyncOutput, error) {
 	panic("Not implemented")
 }
-func (s *service) HandleBlockSyncRequest(input *gossip.BlockSyncRequestInput) (*gossip.BlockSyncOutput, error) {
+func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.BlockSyncOutput, error) {
 	panic("Not implemented")
 }
-func (s *service) HandleBlockSyncResponse(input *gossip.BlockSyncResponseInput) (*gossip.BlockSyncOutput, error) {
+func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.BlockSyncOutput, error) {
 	panic("Not implemented")
 }
