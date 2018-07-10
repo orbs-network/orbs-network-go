@@ -7,12 +7,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 type service struct {
 	services.PublicApi
-	txRelay         gossiptopics.TransactionRelay
 	transactionPool services.TransactionPool
 	ledger          ledger.Ledger
 	events          instrumentation.Reporting
@@ -20,7 +18,6 @@ type service struct {
 }
 
 func NewPublicApi(
-	txRelay gossiptopics.TransactionRelay,
 	transactionPool services.TransactionPool,
 	ledger ledger.Ledger,
 	events instrumentation.Reporting,
@@ -28,7 +25,6 @@ func NewPublicApi(
 ) services.PublicApi {
 
 	return &service{
-		txRelay:         txRelay,
 		transactionPool: transactionPool,
 		ledger:          ledger,
 		events:          events,
@@ -41,11 +37,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	defer s.events.Info("exit_send_transaction")
 	//TODO leader should also propagate transactions to other nodes
 	tx := input.ClientRequest.SignedTransaction()
-	if s.isLeader {
-		s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{tx})
-	} else {
-		s.txRelay.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{Transactions:[]*protocol.SignedTransaction{tx}})
-	}
+	s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{tx})
 	output := &services.SendTransactionOutput{}
 	return output, nil
 }

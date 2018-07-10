@@ -40,7 +40,7 @@ func NewNodeLogic(
 	tp := transactionpool.NewTransactionPool(gossip)
 	ledger := ledger.NewLedger(bp)
 	consensusAlgo := leanhelix.NewConsensusAlgoLeanHelix(gossip, ledger, tp, events, loopControl, nodeConfig, isLeader)
-	publicApi := publicapi.NewPublicApi(gossip, tp, ledger, events, isLeader)
+	publicApi := publicapi.NewPublicApi(tp, ledger, events, isLeader)
 	return &nodeLogic{
 		publicApi:       publicApi,
 		transactionPool: tp,
