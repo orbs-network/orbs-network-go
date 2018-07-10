@@ -5,43 +5,56 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 )
 
-func (s *service) OnTransportMessageReceived(message *adapter.Message) {
+func (s *service) OnTransportMessageReceived(message *protocol.GossipMessageHeader, payloads [][]byte) {
 	fmt.Println("Gossip: OnMessageReceived", message)
-	fmt.Println("Gossip: Message.Payload", message.Payload)
+	switch message.Topic() {
+	case protocol.GossipMessageHeaderTopicTransactionRelayType:
+		s.receivedTransactionRelayMessage(message, payloads)
+	case protocol.GossipMessageHeaderTopicLeanHelixConsensusType:
+		s.receivedLeanHelixConsensus(message, payloads)
+	}
+}
 
-	switch message.Type {
-	case adapter.CommitMessage:
+func (s *service) receivedTransactionRelayMessage(message *protocol.GossipMessageHeader, payloads [][]byte) {
+	switch message.TransactionRelayType() {
+
+	case gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS:
+		txs := make([]*protocol.SignedTransaction, 0, len(payloads))
+		for _, payload := range payloads {
+			tx := protocol.SignedTransactionReader(payload)
+			txs = append(txs, tx)
+		}
+		for _, l := range s.transactionHandlers {
+			l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+				Transactions: txs,
+			})
+		}
+
+	}
+}
+
+func (s *service) receivedLeanHelixConsensus(message *protocol.GossipMessageHeader, payloads [][]byte) {
+	switch message.LeanHelixConsensusType() {
+
+	case gossipmessages.LEAN_HELIX_CONSENSUS_PRE_PREPARE:
+		for _, l := range s.consensusHandlers {
+			//l.OnVoteRequest(message.Sender, tx)
+			l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
+				Block:  payloads[0],
+			})
+		}
+
+	case gossipmessages.LEAN_HELIX_CONSENSUS_PREPARE:
+		for _, l := range s.consensusHandlers {
+			l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+		}
+
+	case gossipmessages.LEAN_HELIX_CONSENSUS_COMMIT:
 		for _, l := range s.consensusHandlers {
 			l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 		}
 
-	case adapter.ForwardTransactionMessage:
-		//TODO validate
-		tx := protocol.SignedTransactionReader(message.Payload)
-		if !tx.IsValid() {
-			panic("invalid transaction!")
-		}
-
-		for _, l := range s.transactionHandlers {
-			l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{Transactions: []*protocol.SignedTransaction{tx}})
-		}
-
-	case adapter.PrePrepareMessage:
-		for _, l := range s.consensusHandlers {
-			//l.OnVoteRequest(message.Sender, tx)
-			prePrepareMessage := &gossiptopics.LeanHelixPrePrepareInput{
-				Block:  message.Payload,
-				Header: (&gossipmessages.LeanHelixPrePrepareHeaderBuilder{SenderPublicKey: []byte(message.Sender)}).Build(),
-			}
-			l.HandleLeanHelixPrePrepare(prePrepareMessage)
-		}
-
-	case adapter.PrepareMessage:
-		for _, l := range s.consensusHandlers {
-			l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
-		}
 	}
 }

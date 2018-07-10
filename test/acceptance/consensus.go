@@ -4,7 +4,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/harness"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 var _ = Describe("a leader node", func() {
@@ -16,7 +17,7 @@ var _ = Describe("a leader node", func() {
 		consensusRound := network.LeaderLoopControl().LatchFor("consensus_round")
 
 		consensusRound.Brake()
-		network.Gossip().Fail(gossipAdapter.PrePrepareMessage)
+		network.Gossip().Fail(protocol.GossipMessageHeaderTopicLeanHelixConsensusType, uint16(gossipmessages.LEAN_HELIX_CONSENSUS_PRE_PREPARE))
 
 		<- network.Transfer(network.Leader(), 17)
 
@@ -25,7 +26,7 @@ var _ = Describe("a leader node", func() {
 		Expect(<- network.GetBalance(network.Leader())).To(BeEquivalentTo(0))
 		Expect(<- network.GetBalance(network.Validator())).To(BeEquivalentTo(0))
 
-		network.Gossip().Pass(gossipAdapter.PrePrepareMessage)
+		network.Gossip().Pass(protocol.GossipMessageHeaderTopicLeanHelixConsensusType, uint16(gossipmessages.LEAN_HELIX_CONSENSUS_PRE_PREPARE))
 
 		consensusRound.Release()
 

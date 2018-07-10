@@ -4,6 +4,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 type Config interface {
@@ -27,13 +29,22 @@ func NewGossip(transport adapter.Transport, config Config) services.Gossip {
 	return s
 }
 
-func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
-	s.transport.Broadcast(&adapter.Message{Sender: s.config.NodeId(), Type: adapter.ForwardTransactionMessage, Payload: input.Transactions[0].Raw()}) //TODO serialize full input
-	return nil, nil
-}
-
 func (s *service) RegisterTransactionRelayHandler(handler gossiptopics.TransactionRelayHandler) {
 	s.transactionHandlers = append(s.transactionHandlers, handler)
+}
+
+func (s *service) RegisterLeanHelixConsensusHandler(handler gossiptopics.LeanHelixConsensusHandler) {
+	s.consensusHandlers = append(s.consensusHandlers, handler)
+}
+
+func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
+	gmh := (&protocol.GossipMessageHeaderBuilder{
+		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: protocol.GossipMessageHeaderTopicTransactionRelayType,
+		TransactionRelayType: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
+		NumPayloads: 1,
+	}).Build()
+	return nil, s.transport.Send(gmh, [][]byte{input.Transactions[0].Raw()})
 }
 
 func (s *service) BroadcastBlockSyncAvailabilityRequest(input *gossiptopics.BlockSyncAvailabilityRequestInput) (*gossiptopics.BlockSyncOutput, error) {
@@ -53,24 +64,39 @@ func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 }
 
 func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.LeanHelixOutput, error) {
-	//TODO write entire input to transport
-	return nil, s.transport.Broadcast(&adapter.Message{Sender: s.config.NodeId(), Type: adapter.PrePrepareMessage, Payload: input.Block})
+	gmh := (&protocol.GossipMessageHeaderBuilder{
+		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: protocol.GossipMessageHeaderTopicLeanHelixConsensusType,
+		LeanHelixConsensusType: gossipmessages.LEAN_HELIX_CONSENSUS_PRE_PREPARE,
+		NumPayloads: 1,
+	}).Build()
+	return nil, s.transport.Send(gmh, [][]byte{input.Block})
 }
 
 func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.LeanHelixOutput, error) {
-	return nil, s.transport.Broadcast(&adapter.Message{Sender: s.config.NodeId(), Type: adapter.PrepareMessage, Payload: nil})
+	gmh := (&protocol.GossipMessageHeaderBuilder{
+		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: protocol.GossipMessageHeaderTopicLeanHelixConsensusType,
+		LeanHelixConsensusType: gossipmessages.LEAN_HELIX_CONSENSUS_PREPARE,
+		NumPayloads: 0,
+	}).Build()
+	return nil, s.transport.Send(gmh, [][]byte{})
 }
 
 func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.LeanHelixOutput, error) {
-	return nil, s.transport.Broadcast(&adapter.Message{Sender: s.config.NodeId(), Type: adapter.CommitMessage, Payload: nil})
+	gmh := (&protocol.GossipMessageHeaderBuilder{
+		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: protocol.GossipMessageHeaderTopicLeanHelixConsensusType,
+		LeanHelixConsensusType: gossipmessages.LEAN_HELIX_CONSENSUS_COMMIT,
+		NumPayloads: 0,
+	}).Build()
+	return nil, s.transport.Send(gmh, [][]byte{})
 }
 
 func (s *service) SendLeanHelixViewChange(input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.LeanHelixOutput, error) {
 	panic("Not implemented")
 }
+
 func (s *service) SendLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInput) (*gossiptopics.LeanHelixOutput, error) {
 	panic("Not implemented")
-}
-func (s *service) RegisterLeanHelixConsensusHandler(handler gossiptopics.LeanHelixConsensusHandler) {
-	s.consensusHandlers = append(s.consensusHandlers, handler)
 }
