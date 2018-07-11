@@ -1,0 +1,6 @@
+#!/bin/bash -xe
+
+go test ./test/acceptance/...
+
+# e2e is flaky, beware!
+# go test ./test/e2e/...
