@@ -79,15 +79,15 @@ go run *.go
 
 > End-to-end tests check the entire system in a real life scenario mimicking real production. It runs on docker with several nodes connected in a cluster. Due to their nature, E2E tests are slow to run.
 
-* The tests are found in [`/test/e2e`](test/e2e)
-* Run the suite from project root with `ginkgo -v ./test/e2e`
+  * The tests are found in [`/test/e2e`](test/e2e)
+  * Run the suite from project root with `ginkgo -v ./test/e2e`
 
 ##### Acceptance tests
 
 > Acceptance tests check the internal hexagon of the system (it's logic with all microservices) with faster adapters that allow the suite to run extremely fast.  
 
-* The tests are found in [`/test/acceptance`](test/acceptance)
-* Run the suite from project root with `ginkgo -v ./test/acceptance`
+  * The tests are found in [`/test/acceptance`](test/acceptance)
+  * Run the suite from project root with `ginkgo -v ./test/acceptance`
 
 ## Developer experience
 
