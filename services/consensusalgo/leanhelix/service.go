@@ -17,7 +17,7 @@ type Config interface {
 
 type service struct {
 	services.ConsensusAlgoLeanHelix
-	gossip               gossiptopics.LeanHelixConsensus
+	gossip               gossiptopics.LeanHelix
 	ledger               ledger.Ledger
 	transactionPool      services.TransactionPool
 	events               instrumentation.Reporting
@@ -29,7 +29,7 @@ type service struct {
 }
 
 func NewConsensusAlgoLeanHelix(
-	gossip gossiptopics.LeanHelixConsensus,
+	gossip gossiptopics.LeanHelix,
 	ledger ledger.Ledger,
 	transactionPool services.TransactionPool,
 	events instrumentation.Reporting,
@@ -47,7 +47,7 @@ func NewConsensusAlgoLeanHelix(
 		config:          config,
 		commitCond:      sync.NewCond(&sync.Mutex{}),
 	}
-	gossip.RegisterLeanHelixConsensusHandler(s)
+	gossip.RegisterLeanHelixHandler(s)
 	if isLeader {
 		go s.buildBlocksEventLoop()
 	}

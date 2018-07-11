@@ -2,21 +2,21 @@ package adapter
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"fmt"
 	"sync"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 type TemperingTransport interface {
 	adapter.Transport
-	Pause(topic protocol.GossipMessageHeaderTopic, messageType uint16)
-	Resume(topic protocol.GossipMessageHeaderTopic, messageType uint16)
-	Fail(topic protocol.GossipMessageHeaderTopic, messageType uint16)
-	Pass(topic protocol.GossipMessageHeaderTopic, messageType uint16)
+	Pause(topic gossipmessages.HeaderTopic, messageType uint16)
+	Resume(topic gossipmessages.HeaderTopic, messageType uint16)
+	Fail(topic gossipmessages.HeaderTopic, messageType uint16)
+	Pass(topic gossipmessages.HeaderTopic, messageType uint16)
 }
 
 type messageWithPayloads struct {
-	message  *protocol.GossipMessageHeader
+	message  *gossipmessages.Header
 	payloads [][]byte
 }
 
@@ -40,7 +40,7 @@ func (t *temperingTransport) RegisterListener(listener adapter.TransportListener
 	t.transportListeners[myNodeId] = listener
 }
 
-func (t *temperingTransport) Send(message *protocol.GossipMessageHeader, payloads [][]byte) error {
+func (t *temperingTransport) Send(message *gossipmessages.Header, payloads [][]byte) error {
 	msgTypeStr := gossipMessageHeaderToTypeString(message)
 	if t.fail(msgTypeStr) {
 		return &adapter.ErrGossipRequestFailed{message}
@@ -55,35 +55,35 @@ func (t *temperingTransport) Send(message *protocol.GossipMessageHeader, payload
 	return nil
 }
 
-func topicMessageToTypeString(topic protocol.GossipMessageHeaderTopic, messageType uint16) string {
+func topicMessageToTypeString(topic gossipmessages.HeaderTopic, messageType uint16) string {
 	return fmt.Sprintf("%d.%d", uint16(topic), messageType)
 }
 
-func gossipMessageHeaderMessageType(message *protocol.GossipMessageHeader) uint16 {
+func gossipMessageHeaderMessageType(message *gossipmessages.Header) uint16 {
 	switch (message.Topic()) {
-	case protocol.GossipMessageHeaderTopicTransactionRelayType:
-		return uint16(message.TransactionRelayType())
-	case protocol.GossipMessageHeaderTopicBlockSyncType:
-		return uint16(message.BlockSyncType())
-	case protocol.GossipMessageHeaderTopicLeanHelixConsensusType:
-		return uint16(message.LeanHelixConsensusType())
+	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
+		return uint16(message.TransactionRelay())
+	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
+		return uint16(message.BlockSync())
+	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
+		return uint16(message.LeanHelix())
 	}
 	return 0
 }
 
-func gossipMessageHeaderToTypeString(message *protocol.GossipMessageHeader) string {
+func gossipMessageHeaderToTypeString(message *gossipmessages.Header) string {
 	messageType := gossipMessageHeaderMessageType(message)
 	return fmt.Sprintf("%d.%d", uint16(message.Topic()), messageType)
 }
 
-func (t *temperingTransport) Pause(topic protocol.GossipMessageHeaderTopic, messageType uint16) {
+func (t *temperingTransport) Pause(topic gossipmessages.HeaderTopic, messageType uint16) {
 	msgTypeStr := topicMessageToTypeString(topic, messageType)
 	t.mutex.Lock()
 	t.pausedMessages[msgTypeStr] = nil
 	t.mutex.Unlock()
 }
 
-func (t *temperingTransport) Resume(topic protocol.GossipMessageHeaderTopic, messageType uint16) {
+func (t *temperingTransport) Resume(topic gossipmessages.HeaderTopic, messageType uint16) {
 	msgTypeStr := topicMessageToTypeString(topic, messageType)
 	t.mutex.Lock()
 	messages, found := t.pausedMessages[msgTypeStr]
@@ -96,29 +96,29 @@ func (t *temperingTransport) Resume(topic protocol.GossipMessageHeaderTopic, mes
 	}
 }
 
-func (t *temperingTransport) Fail(topic protocol.GossipMessageHeaderTopic, messageType uint16) {
+func (t *temperingTransport) Fail(topic gossipmessages.HeaderTopic, messageType uint16) {
 	messagesOfType := topicMessageToTypeString(topic, messageType)
 	t.failMessages[messagesOfType] = true
 }
 
-func (t *temperingTransport) Pass(topic protocol.GossipMessageHeaderTopic, messageType uint16) {
+func (t *temperingTransport) Pass(topic gossipmessages.HeaderTopic, messageType uint16) {
 	messagesOfType := topicMessageToTypeString(topic, messageType)
 	delete(t.failMessages, messagesOfType)
 }
 
-func (t *temperingTransport) receive(message *protocol.GossipMessageHeader, payloads [][]byte) {
+func (t *temperingTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
 	switch message.RecipientMode() {
-	case protocol.RECIPIENT_LIST_MODE_BROADCAST:
+	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, l := range t.transportListeners {
 			// TODO: this is broadcasting to self
 			l.OnTransportMessageReceived(message, payloads)
 		}
-	case protocol.RECIPIENT_LIST_MODE_SEND_TO_LIST:
+	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for i := message.RecipientPublicKeysIterator(); i.HasNext(); {
 			nodeId := string(i.NextRecipientPublicKeys())
 			t.transportListeners[nodeId].OnTransportMessageReceived(message, payloads)
 		}
-	case protocol.RECIPIENT_LIST_MODE_SEND_TO_ALL_BUT_LIST:
+	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
 		panic("Not implemented")
 	}
 }

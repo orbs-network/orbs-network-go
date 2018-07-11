@@ -54,7 +54,7 @@ var _ = Describe("The Orbs Network", func() {
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
 			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.MethodArgumentTypeUint64, Uint64: 17},
+				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: 17},
 			},
 		}
 

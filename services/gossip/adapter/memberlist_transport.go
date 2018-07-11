@@ -3,9 +3,9 @@ package adapter
 import (
 	"fmt"
 	"github.com/hashicorp/memberlist"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"encoding/gob"
 	"bytes"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 type memberlistGossipConfig struct {
@@ -35,7 +35,7 @@ func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
 	fmt.Println("Message received", string(rawMessage))
 	// No need to queue, we can dispatch right here
 	messageWithPayloads := decodeByteArray(rawMessage)
-	message := protocol.GossipMessageHeaderReader(messageWithPayloads[0])
+	message := gossipmessages.HeaderReader(messageWithPayloads[0])
 	payloads := messageWithPayloads[1:]
 	fmt.Println("Unmarshalled message as", message)
 	d.parent.receive(message, payloads)
@@ -112,7 +112,7 @@ func (t *memberlistTransport) PrintPeers() {
 	}
 }
 
-func (t *memberlistTransport) Send(message *protocol.GossipMessageHeader, payloads [][]byte) error {
+func (t *memberlistTransport) Send(message *gossipmessages.Header, payloads [][]byte) error {
 	data := encodeByteArray(append([][]byte{message.Raw()}, payloads...))
 	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: data})
 	t.receive(message, payloads)
@@ -120,7 +120,7 @@ func (t *memberlistTransport) Send(message *protocol.GossipMessageHeader, payloa
 	return nil
 }
 
-func (t *memberlistTransport) receive(message *protocol.GossipMessageHeader, payloads [][]byte) {
+func (t *memberlistTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
 	fmt.Println("Gossip: triggering listeners")
 	for _, l := range t.listeners {
 		l.OnTransportMessageReceived(message, payloads)

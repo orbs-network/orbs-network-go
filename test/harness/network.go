@@ -105,7 +105,7 @@ func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount 
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
 			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.MethodArgumentTypeUint64, Uint64: amount},
+				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: amount},
 			},
 		}}
 		input := &services.SendTransactionInput{ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()}

@@ -2,20 +2,20 @@ package adapter
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 type TransportListener interface {
-	OnTransportMessageReceived(message *protocol.GossipMessageHeader, payloads [][]byte)
+	OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte)
 }
 
 type Transport interface {
 	RegisterListener(listener TransportListener, myNodeId string)
-	Send(message *protocol.GossipMessageHeader, payloads [][]byte) error
+	Send(message *gossipmessages.Header, payloads [][]byte) error
 }
 
 type ErrGossipRequestFailed struct {
-	Message *protocol.GossipMessageHeader
+	Message *gossipmessages.Header
 }
 
 func (e *ErrGossipRequestFailed) Error() string {

@@ -7,18 +7,18 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-func (s *service) OnTransportMessageReceived(message *protocol.GossipMessageHeader, payloads [][]byte) {
+func (s *service) OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte) {
 	fmt.Println("Gossip: OnMessageReceived", message)
 	switch message.Topic() {
-	case protocol.GossipMessageHeaderTopicTransactionRelayType:
+	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		s.receivedTransactionRelayMessage(message, payloads)
-	case protocol.GossipMessageHeaderTopicLeanHelixConsensusType:
-		s.receivedLeanHelixConsensus(message, payloads)
+	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
+		s.receivedLeanHelixMessage(message, payloads)
 	}
 }
 
-func (s *service) receivedTransactionRelayMessage(message *protocol.GossipMessageHeader, payloads [][]byte) {
-	switch message.TransactionRelayType() {
+func (s *service) receivedTransactionRelayMessage(message *gossipmessages.Header, payloads [][]byte) {
+	switch message.TransactionRelay() {
 
 	case gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS:
 		txs := make([]*protocol.SignedTransaction, 0, len(payloads))
@@ -35,10 +35,10 @@ func (s *service) receivedTransactionRelayMessage(message *protocol.GossipMessag
 	}
 }
 
-func (s *service) receivedLeanHelixConsensus(message *protocol.GossipMessageHeader, payloads [][]byte) {
-	switch message.LeanHelixConsensusType() {
+func (s *service) receivedLeanHelixMessage(message *gossipmessages.Header, payloads [][]byte) {
+	switch message.LeanHelix() {
 
-	case gossipmessages.LEAN_HELIX_CONSENSUS_PRE_PREPARE:
+	case gossipmessages.LEAN_HELIX_PRE_PREPARE:
 		for _, l := range s.consensusHandlers {
 			//l.OnVoteRequest(message.Sender, tx)
 			l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
@@ -46,12 +46,12 @@ func (s *service) receivedLeanHelixConsensus(message *protocol.GossipMessageHead
 			})
 		}
 
-	case gossipmessages.LEAN_HELIX_CONSENSUS_PREPARE:
+	case gossipmessages.LEAN_HELIX_PREPARE:
 		for _, l := range s.consensusHandlers {
 			l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 		}
 
-	case gossipmessages.LEAN_HELIX_CONSENSUS_COMMIT:
+	case gossipmessages.LEAN_HELIX_COMMIT:
 		for _, l := range s.consensusHandlers {
 			l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 		}

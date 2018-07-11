@@ -4,7 +4,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
@@ -16,7 +15,7 @@ type service struct {
 	services.Gossip
 	transport           adapter.Transport
 	transactionHandlers []gossiptopics.TransactionRelayHandler
-	consensusHandlers   []gossiptopics.LeanHelixConsensusHandler
+	consensusHandlers   []gossiptopics.LeanHelixHandler
 	config              Config
 }
 
@@ -33,15 +32,15 @@ func (s *service) RegisterTransactionRelayHandler(handler gossiptopics.Transacti
 	s.transactionHandlers = append(s.transactionHandlers, handler)
 }
 
-func (s *service) RegisterLeanHelixConsensusHandler(handler gossiptopics.LeanHelixConsensusHandler) {
+func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler) {
 	s.consensusHandlers = append(s.consensusHandlers, handler)
 }
 
 func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
-	gmh := (&protocol.GossipMessageHeaderBuilder{
-		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: protocol.GossipMessageHeaderTopicTransactionRelayType,
-		TransactionRelayType: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
+	gmh := (&gossipmessages.HeaderBuilder{
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
+		TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
 		NumPayloads: 1,
 	}).Build()
 	return nil, s.transport.Send(gmh, [][]byte{input.Transactions[0].Raw()})
@@ -64,30 +63,30 @@ func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 }
 
 func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.LeanHelixOutput, error) {
-	gmh := (&protocol.GossipMessageHeaderBuilder{
-		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: protocol.GossipMessageHeaderTopicLeanHelixConsensusType,
-		LeanHelixConsensusType: gossipmessages.LEAN_HELIX_CONSENSUS_PRE_PREPARE,
+	gmh := (&gossipmessages.HeaderBuilder{
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix: gossipmessages.LEAN_HELIX_PRE_PREPARE,
 		NumPayloads: 1,
 	}).Build()
 	return nil, s.transport.Send(gmh, [][]byte{input.Block})
 }
 
 func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.LeanHelixOutput, error) {
-	gmh := (&protocol.GossipMessageHeaderBuilder{
-		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: protocol.GossipMessageHeaderTopicLeanHelixConsensusType,
-		LeanHelixConsensusType: gossipmessages.LEAN_HELIX_CONSENSUS_PREPARE,
+	gmh := (&gossipmessages.HeaderBuilder{
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix: gossipmessages.LEAN_HELIX_PREPARE,
 		NumPayloads: 0,
 	}).Build()
 	return nil, s.transport.Send(gmh, [][]byte{})
 }
 
 func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.LeanHelixOutput, error) {
-	gmh := (&protocol.GossipMessageHeaderBuilder{
-		RecipientMode: protocol.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: protocol.GossipMessageHeaderTopicLeanHelixConsensusType,
-		LeanHelixConsensusType: gossipmessages.LEAN_HELIX_CONSENSUS_COMMIT,
+	gmh := (&gossipmessages.HeaderBuilder{
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix: gossipmessages.LEAN_HELIX_COMMIT,
 		NumPayloads: 0,
 	}).Build()
 	return nil, s.transport.Send(gmh, [][]byte{})

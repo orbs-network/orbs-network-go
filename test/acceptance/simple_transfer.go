@@ -4,7 +4,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/harness"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
@@ -35,13 +34,13 @@ var _ = Describe("a non-leader (validator) node", func() {
 		network := harness.CreateTestNetwork()
 
 
-		network.Gossip().Pause(protocol.GossipMessageHeaderTopicTransactionRelayType, uint16(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
+		network.Gossip().Pause(gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, uint16(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		network.Transfer(network.Validator(), 17)
 
 		Expect(<- network.GetBalance(network.Leader())).To(BeEquivalentTo(0))
 		Expect(<- network.GetBalance(network.Validator())).To(BeEquivalentTo(0))
 
-		network.Gossip().Resume(protocol.GossipMessageHeaderTopicTransactionRelayType, uint16(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
+		network.Gossip().Resume(gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, uint16(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		network.LeaderBp().WaitForBlocks(1)
 		Expect(<- network.GetBalance(network.Leader())).To(BeEquivalentTo(17))
 		network.ValidatorBp().WaitForBlocks(1)
