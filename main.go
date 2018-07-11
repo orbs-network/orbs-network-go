@@ -17,7 +17,7 @@ func main() {
 	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
 	isLeader := os.Getenv("LEADER") == "true"
 
-	config := gossipAdapter.memberlistGossipConfig{nodeName, int(gossipPort), peers}
+	config := gossipAdapter.MemberlistGossipConfig{nodeName, int(gossipPort), peers}
 	gossipTransport := gossipAdapter.NewMemberlistTransport(config)
 
 	fmt.Println("PORT", port)

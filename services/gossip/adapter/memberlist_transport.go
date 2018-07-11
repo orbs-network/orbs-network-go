@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-type memberlistGossipConfig struct {
+type MemberlistGossipConfig struct {
 	Name  string
 	Port  int
 	Peers []string
@@ -16,7 +16,7 @@ type memberlistGossipConfig struct {
 
 type memberlistTransport struct {
 	list       *memberlist.Memberlist
-	listConfig *memberlistGossipConfig
+	listConfig *MemberlistGossipConfig
 	delegate   *gossipDelegate
 	listeners  map[string]TransportListener
 }
@@ -63,7 +63,7 @@ func NewGossipDelegate(nodeName string) gossipDelegate {
 	return gossipDelegate{Name: nodeName}
 }
 
-func NewMemberlistTransport(config memberlistGossipConfig) Transport {
+func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	fmt.Println("Creating memberlist with config", config)
 	listConfig := memberlist.DefaultLocalConfig()
 	listConfig.BindPort = config.Port

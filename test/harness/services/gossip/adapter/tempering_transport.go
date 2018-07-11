@@ -134,3 +134,7 @@ func (t *temperingTransport) fail(msgTypeStr string) bool {
 	_, found := t.failMessages[msgTypeStr]
 	return found
 }
+
+func (t *temperingTransport) Join() {
+	// not implemented because tempering transport is in memory and therefore does not need any network initialization
+}
