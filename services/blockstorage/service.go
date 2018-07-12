@@ -1,22 +1,22 @@
 package blockstorage
 
 import (
+	"encoding/binary"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"encoding/binary"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 type service struct {
-	persistence adapter.BlockPersistence
+	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 }
 
 func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage) services.BlockStorage {
 	return &service{
-		persistence: persistence,
+		persistence:  persistence,
 		stateStorage: stateStorage,
 	}
 }
@@ -37,7 +37,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 		}
 		state = append(state, transactionStateDiff)
 	}
-	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs:state}).Build()}
+	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state}).Build()}
 	s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{ContractStateDiffs: csdi})
 	s.persistence.WriteBlock(input.BlockPair)
 	return nil, nil

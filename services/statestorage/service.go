@@ -1,16 +1,15 @@
 package statestorage
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type service struct {
 	services.StateStorage
 	persistence adapter.StatePersistence
 }
-
 
 func NewStateStorage(persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
@@ -24,13 +23,14 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 			s.persistence.WriteState(i.NextStateDiffs())
 		}
 	}
+
 	return nil, nil
 }
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
 	var state []*protocol.StateRecord
 	for _, stateDiff := range s.persistence.ReadState() {
-		state = append(state, &stateDiff)
+		state = append(state, stateDiff)
 
 	}
 	output := &services.ReadKeysOutput{StateRecords: state}

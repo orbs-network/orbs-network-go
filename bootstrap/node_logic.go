@@ -12,10 +12,10 @@ import (
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
-	"github.com/orbs-network/orbs-network-go/services/transactionpool"
-	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -43,7 +43,7 @@ func NewNodeLogic(
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig)
 	transactionPool := transactionpool.NewTransactionPool(gossip)
 	stateStorage := statestorage.NewStateStorage(statePersistence)
-	blockStorage := blockstorage.NewBlockStorage(blockPersistence,stateStorage)
+	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage)
 	nativeProcessor := native.NewNativeProcessor()
 	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)

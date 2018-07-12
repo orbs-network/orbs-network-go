@@ -1,19 +1,18 @@
 package virtualmachine
 
 import (
+	"encoding/binary"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"encoding/binary"
 )
 
 type service struct {
-	blockStorage services.BlockStorage
-	stateStorage services.StateStorage
+	blockStorage        services.BlockStorage
+	stateStorage        services.StateStorage
 	processor           services.Processor           // TODO: change to a map
 	crosschainConnector services.CrosschainConnector // TODO: change to a map
 }
-
 
 func NewVirtualMachine(
 	blockStorage services.BlockStorage,
@@ -35,7 +34,6 @@ func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInp
 }
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
-
 	results, _ := s.stateStorage.ReadKeys(nil)
 	sum := uint64(0)
 	for _, t := range results.StateRecords {
