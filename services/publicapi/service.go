@@ -47,7 +47,7 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	defer s.events.Info("exit_call_method")
 	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{
 		OutputArguments: []*protocol.MethodArgumentBuilder{
-			{Name: "balance", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: uint64(s.ledger.GetState())},
+			{Name: "balance", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: uint64(s.ledger.GetState())},
 		},
 	}).Build()}
 	return output, nil

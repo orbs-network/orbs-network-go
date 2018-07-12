@@ -54,7 +54,7 @@ var _ = Describe("The Orbs Network", func() {
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
 			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: 17},
+				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 17},
 			},
 		}
 
@@ -66,7 +66,7 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64()
+			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {
