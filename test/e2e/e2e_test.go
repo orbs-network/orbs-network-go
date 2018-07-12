@@ -23,6 +23,9 @@ type E2EConfig struct {
 }
 
 func TestE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "E2E Suite")
 }
