@@ -2,14 +2,14 @@ package harness
 
 import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/services"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type AcceptanceTestNetwork interface {
@@ -100,7 +100,6 @@ func (n *acceptanceTestNetwork) ValidatorBp() blockStorageAdapter.InMemoryBlockP
 func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount uint64) chan interface{} {
 	ch := make(chan interface{})
 	go func() {
-
 		tx := &protocol.SignedTransactionBuilder{Transaction: &protocol.TransactionBuilder{
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
@@ -122,12 +121,9 @@ func (n *acceptanceTestNetwork) GetBalance(node services.PublicApi) chan uint64 
 			ContractName: "MelangeToken",
 			MethodName:   "getBalance",
 		}
-		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction:cm}).Build()}
+		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction: cm}).Build()}
 		output, _ := node.CallMethod(input)
 		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()
 	return ch
 }
-
-
-

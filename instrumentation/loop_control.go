@@ -15,9 +15,7 @@ type simpleLoop struct {
 func (l *simpleLoop) NewLoop(name string, tickFunc func()) {
 	for {
 		l.events.Info("enter_" + name)
-
 		tickFunc()
-
 		l.events.Info("exit_" + name)
 	}
 }
