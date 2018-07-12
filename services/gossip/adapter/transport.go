@@ -19,5 +19,5 @@ type ErrGossipRequestFailed struct {
 }
 
 func (e *ErrGossipRequestFailed) Error() string {
-	return fmt.Sprintf("service message topic %v to %v has failed to send", e.Message.Topic(), e.Message.RecipientMode())
+	return fmt.Sprintf("gossip message failed to send: %v", e.Message)
 }
