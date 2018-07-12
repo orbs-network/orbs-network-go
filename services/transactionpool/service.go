@@ -44,14 +44,6 @@ func (s *service) OnForwardTransaction(tx *protocol.SignedTransaction) {
 	s.pendingTransactions <- tx
 }
 
-func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
-	txs := input.Transactions
-	for _, tx := range txs {
-		s.pendingTransactions <- tx
-	}
-	return nil, nil
-}
-
 func (s *service) GetCommittedTransactionReceipt(input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
 	panic("Not implemented")
 }
@@ -66,4 +58,12 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 
 func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
 	panic("Not implemented")
+}
+
+func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
+	txs := input.Transactions
+	for _, tx := range txs {
+		s.pendingTransactions <- tx
+	}
+	return nil, nil
 }

@@ -57,6 +57,14 @@ func (s *service) OnNewConsensusRound(input *services.OnNewConsensusRoundInput) 
 	panic("Not implemented")
 }
 
+func (s *service) HandleTransactionsBlock(input *handlers.HandleTransactionsBlockInput) (*handlers.HandleTransactionsBlockOutput, error) {
+	panic("Not implemented")
+}
+
+func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*handlers.HandleResultsBlockOutput, error) {
+	panic("Not implemented")
+}
+
 func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.LeanHelixOutput, error) {
 	s.preparedBlock = input.Block // each node will save this block
 	return s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
@@ -83,14 +91,6 @@ func (s *service) HandleLeanHelixViewChange(input *gossiptopics.LeanHelixViewCha
 }
 
 func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInput) (*gossiptopics.LeanHelixOutput, error) {
-	panic("Not implemented")
-}
-
-func (s *service) HandleTransactionsBlock(input *handlers.HandleTransactionsBlockInput) (*handlers.HandleTransactionsBlockOutput, error) {
-	panic("Not implemented")
-}
-
-func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*handlers.HandleResultsBlockOutput, error) {
 	panic("Not implemented")
 }
 
