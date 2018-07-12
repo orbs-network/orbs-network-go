@@ -19,6 +19,7 @@ type service struct {
 	gossip               gossiptopics.LeanHelix
 	blockStorage         services.BlockStorage
 	transactionPool      services.TransactionPool
+	consensusContext     services.ConsensusContext
 	events               instrumentation.Reporting
 	loopControl          instrumentation.LoopControl
 	votesForCurrentRound chan bool
@@ -27,10 +28,11 @@ type service struct {
 	commitCond           *sync.Cond
 }
 
-func NewConsensusAlgoLeanHelix(
+func NewLeanHelixConsensusAlgo(
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
+	consensusContext services.ConsensusContext,
 	events instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
 	config Config,
@@ -38,14 +40,16 @@ func NewConsensusAlgoLeanHelix(
 ) services.ConsensusAlgoLeanHelix {
 
 	s := &service{
-		gossip:          gossip,
-		blockStorage:    blockStorage,
-		transactionPool: transactionPool,
-		events:          events,
-		loopControl:     loopControl,
-		config:          config,
-		commitCond:      sync.NewCond(&sync.Mutex{}),
+		gossip:           gossip,
+		blockStorage:     blockStorage,
+		transactionPool:  transactionPool,
+		consensusContext: consensusContext,
+		events:           events,
+		loopControl:      loopControl,
+		config:           config,
+		commitCond:       sync.NewCond(&sync.Mutex{}),
 	}
+
 	gossip.RegisterLeanHelixHandler(s)
 	if isLeader {
 		go s.buildBlocksEventLoop()

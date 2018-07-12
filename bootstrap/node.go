@@ -29,13 +29,14 @@ func NewNode(
 
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
 	fmt.Println("Node config", nodeConfig)
-	storage := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
+	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
-	lc := instrumentation.NewSimpleLoop(logger)
-	logic := NewNodeLogic(transport, storage, logger, lc, nodeConfig, isLeader)
-	httpServer := httpserver.NewHttpServer(address, logger, logic.GetPublicApi())
+	loopControl := instrumentation.NewSimpleLoop(logger)
+	nodeLogic := NewNodeLogic(transport, blockPersistence, logger, loopControl, nodeConfig, isLeader)
+	httpServer := httpserver.NewHttpServer(address, logger, nodeLogic.GetPublicApi())
+
 	return &node{
-		logic:      logic,
+		logic:      nodeLogic,
 		httpServer: httpServer,
 	}
 }
