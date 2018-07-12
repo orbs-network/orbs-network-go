@@ -3,6 +3,7 @@ package transactionpool
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -24,7 +25,11 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay) services.Transacti
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	fmt.Println("Adding new transaction to the pool", input.SignedTransaction)
-	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{Transactions: []*protocol.SignedTransaction{input.SignedTransaction}})
+	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+		Message: &gossipmessages.ForwardedTransactionsMessage{
+			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
+		},
+	})
 	//This is commented out because currently transport broadcast will also broadcast to myself. So HandleForwardedTransactions will be the on to add this transaction.
 	//s.pendingTransactions <- input.SignedTransaction
 	return &services.AddNewTransactionOutput{}, nil
@@ -60,9 +65,8 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 	panic("Not implemented")
 }
 
-func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
-	txs := input.Transactions
-	for _, tx := range txs {
+func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+	for _, tx := range input.Message.SignedTransactions {
 		s.pendingTransactions <- tx
 	}
 	return nil, nil

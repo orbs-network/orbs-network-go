@@ -22,10 +22,10 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	isLeader      bool
-	events        instrumentation.Reporting
-	consensusAlgo services.ConsensusAlgo // TODO: change this to a map
-	publicApi     services.PublicApi
+	isLeader  bool
+	events    instrumentation.Reporting
+	leanHelix services.ConsensusAlgo // TODO: change this to a map
+	publicApi services.PublicApi
 }
 
 func NewNodeLogic(
@@ -45,11 +45,11 @@ func NewNodeLogic(
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, nativeProcessor, ethereumCrosschainConnector, blockPersistence)
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, events, isLeader)
 	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
-	consensusAlgo := leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, events, loopControl, nodeConfig, isLeader)
+	leanHelixConsensusAlgo := leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, events, loopControl, nodeConfig, isLeader)
 
 	return &nodeLogic{
-		publicApi:     publicApi,
-		consensusAlgo: consensusAlgo,
+		publicApi: publicApi,
+		leanHelix: leanHelixConsensusAlgo,
 	}
 }
 

@@ -35,15 +35,19 @@ func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInp
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
 	sum := uint64(0)
-	for _, t := range s.blockPersistence.ReadAllBlocks() {
-		for i := t.TransactionsBlock().SignedTransactionsOpaqueIterator(); i.HasNext(); {
-			t := protocol.SignedTransactionReader(i.NextSignedTransactionsOpaque())
+	for _, blockPair := range s.blockPersistence.ReadAllBlocks() {
+		for _, t := range blockPair.TransactionsBlock.SignedTransactions {
 			sum += t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()
 		}
 	}
-	arg := &protocol.MethodArgumentBuilder{Name: "balance", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: sum}
-	output := &services.RunLocalMethodOutput{OutputArguments: []*protocol.MethodArgument{arg.Build()}}
-	return output, nil
+	arg := (&protocol.MethodArgumentBuilder{
+		Name:        "balance",
+		Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE,
+		Uint64Value: sum,
+	}).Build()
+	return &services.RunLocalMethodOutput{
+		OutputArguments: []*protocol.MethodArgument{arg},
+	}, nil
 }
 
 func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {

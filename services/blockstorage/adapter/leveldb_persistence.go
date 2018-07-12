@@ -10,7 +10,7 @@ type Config interface {
 
 type levelDbBlockPersistence struct {
 	blockWritten chan bool
-	blockPairs   []protocol.BlockPair
+	blockPairs   []*protocol.BlockPairContainer
 	config       Config
 }
 
@@ -21,11 +21,11 @@ func NewLevelDbBlockPersistence(config Config) BlockPersistence {
 	}
 }
 
-func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPair) {
-	bp.blockPairs = append(bp.blockPairs, *blockPair)
+func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
+	bp.blockPairs = append(bp.blockPairs, blockPair)
 	bp.blockWritten <- true
 }
 
-func (bp *levelDbBlockPersistence) ReadAllBlocks() []protocol.BlockPair {
+func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
 	return bp.blockPairs
 }

@@ -12,7 +12,7 @@ type InMemoryBlockPersistence interface {
 
 type inMemoryBlockPersistence struct {
 	blockWritten chan bool
-	blockPairs   []protocol.BlockPair
+	blockPairs   []*protocol.BlockPairContainer
 	config       adapter.Config
 }
 
@@ -29,11 +29,11 @@ func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {
 	}
 }
 
-func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPair) {
-	bp.blockPairs = append(bp.blockPairs, *blockPair)
+func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
+	bp.blockPairs = append(bp.blockPairs, blockPair)
 	bp.blockWritten <- true
 }
 
-func (bp *inMemoryBlockPersistence) ReadAllBlocks() []protocol.BlockPair {
+func (bp *inMemoryBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
 	return bp.blockPairs
 }
