@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/bootstrap"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 )
 
 func main() {

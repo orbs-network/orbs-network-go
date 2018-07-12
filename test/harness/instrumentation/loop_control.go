@@ -1,8 +1,8 @@
 package instrumentation
 
 import (
-	"sync"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"sync"
 )
 
 type BrakingLoopContext interface {
@@ -84,10 +84,10 @@ func (c *breakingLoopContext) Release() {
 
 func (l *brakingLoop) createOrGetContext(name string) *breakingLoopContext {
 	context, _ := l.loops.LoadOrStore(name, &breakingLoopContext{
-		tickCond: sync.NewCond(&sync.Mutex{}),
-		loopCond: sync.NewCond(&sync.Mutex{}),
+		tickCond:  sync.NewCond(&sync.Mutex{}),
+		loopCond:  sync.NewCond(&sync.Mutex{}),
 		brakeCond: sync.NewCond(&sync.Mutex{}),
-		events: l.events,
+		events:    l.events,
 	})
 
 	c := context.(*breakingLoopContext) // casting because no generics :-(

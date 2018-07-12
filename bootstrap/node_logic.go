@@ -1,19 +1,22 @@
 package bootstrap
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
-	"github.com/orbs-network/orbs-network-go/services/transactionpool"
-	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-network-go/services/gossip"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
+	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
+	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
+	"github.com/orbs-network/orbs-network-go/services/gossip"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/services/publicapi"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
-	stateAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type NodeLogic interface {
@@ -21,21 +24,16 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	isLeader        bool
-	gossip          services.Gossip
-	blockStorage    services.BlockStorage
-	stateStorage    services.StateStorage
-	virtualMachine  services.VirtualMachine
-	events          instrumentation.Reporting
-	consensusAlgo   services.ConsensusAlgo
-	transactionPool services.TransactionPool
-	publicApi       services.PublicApi
+	isLeader  bool
+	events    instrumentation.Reporting
+	leanHelix services.ConsensusAlgo // TODO: change this to a map
+	publicApi services.PublicApi
 }
 
 func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
-	bp blockStorageAdapter.BlockPersistence,
-	sp stateAdapter.StatePersistence,
+	blockPersistence blockStorageAdapter.BlockPersistence,
+	statePersistence stateStorageAdapter.StatePersistence,
 	events instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
 	nodeConfig config.NodeConfig,
@@ -43,16 +41,18 @@ func NewNodeLogic(
 ) NodeLogic {
 
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig)
-	tp := transactionpool.NewTransactionPool(gossip)
-	stateStorage := statestorage.NewStateStorage(sp)
-	blockStorage := blockstorage.NewBlockStorage(bp,stateStorage)
-	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage)
-	consensusAlgo := leanhelix.NewConsensusAlgoLeanHelix(gossip, blockStorage, tp, events, loopControl, nodeConfig, isLeader)
-	publicApi := publicapi.NewPublicApi(tp, virtualMachine, events, isLeader)
+	transactionPool := transactionpool.NewTransactionPool(gossip)
+	stateStorage := statestorage.NewStateStorage(statePersistence)
+	blockStorage := blockstorage.NewBlockStorage(blockPersistence,stateStorage)
+	nativeProcessor := native.NewNativeProcessor()
+	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
+	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)
+	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, events, isLeader)
+	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
+	leanHelixConsensusAlgo := leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, events, loopControl, nodeConfig, isLeader)
 	return &nodeLogic{
-		publicApi:       publicApi,
-		transactionPool: tp,
-		consensusAlgo:   consensusAlgo,
+		publicApi: publicApi,
+		leanHelix: leanHelixConsensusAlgo,
 	}
 }
 

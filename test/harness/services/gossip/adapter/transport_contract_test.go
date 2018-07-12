@@ -1,13 +1,13 @@
 package adapter
 
 import (
-	"testing"
+	"github.com/maraino/go-mock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/orbs-network/orbs-network-go/test"
-	"github.com/maraino/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	. "github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"testing"
 )
 
 func TestContract(t *testing.T) {
@@ -16,7 +16,7 @@ func TestContract(t *testing.T) {
 }
 
 var _ = Describe("Tempering Transport", func() {
-	assertContractOf(aTemperingTransport)
+	assertContractOf(aTamperingTransport)
 })
 
 func assertContractOf(makeContext func() *transportContractContext) {
@@ -38,16 +38,16 @@ func assertContractOf(makeContext func() *transportContractContext) {
 			c.verify()
 		})
 	})
-*/
+	*/
 
 	When("broadcasting a message", func() {
 		It("reaches all recipients", func() {
 			c := makeContext()
 			header := (&gossipmessages.HeaderBuilder{
-				RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-				Topic: gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
+				RecipientMode:    gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+				Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
 				TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
-				NumPayloads: 0,
+				NumPayloads:      0,
 			}).Build()
 			payloads := [][]byte{}
 			c.l1.expect(header, payloads)
@@ -82,8 +82,8 @@ type transportContractContext struct {
 	transport  adapter.Transport
 }
 
-func aTemperingTransport() *transportContractContext {
-	transport := NewTemperingTransport()
+func aTamperingTransport() *transportContractContext {
+	transport := NewTamperingTransport()
 	l1 := listenTo(transport, "l1")
 	l2 := listenTo(transport, "l2")
 	l3 := listenTo(transport, "l3")

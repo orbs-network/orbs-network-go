@@ -28,12 +28,12 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 }
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
-	var state []*protocol.StateDiff
+	var state []*protocol.StateRecord
 	for _, stateDiff := range s.persistence.ReadState() {
 		state = append(state, &stateDiff)
 
 	}
-	output := &services.ReadKeysOutput{StateDiffs: state}
+	output := &services.ReadKeysOutput{StateRecords: state}
 	return output, nil
 }
 

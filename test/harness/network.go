@@ -2,21 +2,21 @@ package harness
 
 import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/services"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type AcceptanceTestNetwork interface {
 	FlushLog()
 	LeaderLoopControl() testinstrumentation.BrakingLoop
-	Gossip() gossipAdapter.TemperingTransport
+	Gossip() gossipAdapter.TamperingTransport
 	Leader() services.PublicApi
 	Validator() services.PublicApi
 	LeaderBp() blockStorageAdapter.InMemoryBlockPersistence
@@ -32,7 +32,7 @@ type acceptanceTestNetwork struct {
 	leaderLatch       testinstrumentation.Latch
 	leaderBp          blockStorageAdapter.InMemoryBlockPersistence
 	validatorBp       blockStorageAdapter.InMemoryBlockPersistence
-	gossip            gossipAdapter.TemperingTransport
+	gossip            gossipAdapter.TamperingTransport
 	leaderLoopControl testinstrumentation.BrakingLoop
 
 	log []testinstrumentation.BufferedLog
@@ -48,12 +48,12 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 
 	leaderLoopControl := testinstrumentation.NewBrakingLoop(leaderLog)
 
-	temperingTransport := gossipAdapter.NewTemperingTransport()
+	temperingTransport := gossipAdapter.NewTamperingTransport()
 	leaderBp := blockStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
 	validatorBp := blockStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
 
-	leaderSp := stateStorageAdapter.NewStatePersistence(leaderConfig)
-	validatorSp := stateStorageAdapter.NewStatePersistence(validatorConfig)
+	leaderSp := stateStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
+	validatorSp := stateStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
 
 	leader := bootstrap.NewNodeLogic(temperingTransport, leaderBp, leaderSp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
 	validator := bootstrap.NewNodeLogic(temperingTransport, validatorBp, validatorSp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
@@ -81,7 +81,7 @@ func (n *acceptanceTestNetwork) LeaderLoopControl() testinstrumentation.BrakingL
 	return n.leaderLoopControl
 }
 
-func (n *acceptanceTestNetwork) Gossip() gossipAdapter.TemperingTransport {
+func (n *acceptanceTestNetwork) Gossip() gossipAdapter.TamperingTransport {
 	return n.gossip
 }
 
@@ -104,7 +104,6 @@ func (n *acceptanceTestNetwork) ValidatorBp() blockStorageAdapter.InMemoryBlockP
 func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount uint64) chan interface{} {
 	ch := make(chan interface{})
 	go func() {
-
 		tx := &protocol.SignedTransactionBuilder{Transaction: &protocol.TransactionBuilder{
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
@@ -126,12 +125,9 @@ func (n *acceptanceTestNetwork) GetBalance(node services.PublicApi) chan uint64 
 			ContractName: "MelangeToken",
 			MethodName:   "getBalance",
 		}
-		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction:cm}).Build()}
+		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction: cm}).Build()}
 		output, _ := node.CallMethod(input)
 		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()
 	return ch
 }
-
-
-

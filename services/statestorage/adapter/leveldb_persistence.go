@@ -10,23 +10,23 @@ type Config interface {
 
 type statePersistence struct {
 	stateWritten chan bool
-	stateDiffs   []protocol.StateDiff
+	stateDiffs   []protocol.StateRecord
 	config       Config
 }
 
-func NewStatePersistence(config Config) StatePersistence {
+func NewLevelDStatePersistence(config Config) StatePersistence {
 	return &statePersistence{
 		config:         config,
 		stateWritten: make(chan bool, 10),
 	}
 }
 
-func (sp *statePersistence) WriteState(stateDiff *protocol.StateDiff) {
+func (sp *statePersistence) WriteState(stateDiff *protocol.StateRecord) {
 	sp.stateDiffs = append(sp.stateDiffs, *stateDiff)
 	sp.stateWritten <- true
 }
 
-func (sp *statePersistence) ReadState() []protocol.StateDiff {
+func (sp *statePersistence) ReadState() []protocol.StateRecord {
 	return sp.stateDiffs
 }
 

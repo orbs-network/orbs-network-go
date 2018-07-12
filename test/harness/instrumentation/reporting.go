@@ -1,10 +1,10 @@
 package instrumentation
 
 import (
-	"sync"
 	"fmt"
-	"time"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"sync"
+	"time"
 )
 
 type Latch interface {
@@ -30,7 +30,7 @@ func (l *latch) WaitFor(message string) {
 	l.cond.Wait()
 }
 
-func (l *latch) Info(message string) () {
+func (l *latch) Info(message string) {
 	if l.waitingFor == message && l.cond != nil {
 		l.cond.Broadcast()
 		l.cond = nil
@@ -38,7 +38,7 @@ func (l *latch) Info(message string) () {
 	}
 }
 
-func (l *latch) Error(err error) () {
+func (l *latch) Error(err error) {
 	l.Info(err.Error())
 }
 
@@ -65,11 +65,11 @@ func (e *bufferedLog) Flush() {
 	}
 }
 
-func (e *bufferedLog) Info(message string) () {
+func (e *bufferedLog) Info(message string) {
 	e.log(message)
 }
 
-func (e *bufferedLog) Error(err error) () {
+func (e *bufferedLog) Error(err error) {
 	e.log(err.Error())
 }
 

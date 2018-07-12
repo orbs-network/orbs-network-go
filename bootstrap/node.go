@@ -2,13 +2,13 @@ package bootstrap
 
 import (
 	"fmt"
-	"time"
+	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"time"
 )
 
 type Node interface {
@@ -30,14 +30,16 @@ func NewNode(
 
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
 	fmt.Println("Node config", nodeConfig)
-	blockStorageAdapter := blockStorageAdapter.NewBlockPersistence(nodeConfig)
-	stateStorageAdapter := stateStorageAdapter.NewStatePersistence(nodeConfig)
+
+	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewLevelDStatePersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
-	lc := instrumentation.NewSimpleLoop(logger)
-	logic := NewNodeLogic(transport, blockStorageAdapter, stateStorageAdapter, logger, lc, nodeConfig, isLeader)
-	httpServer := httpserver.NewHttpServer(address, logger, logic.GetPublicApi())
+	loopControl := instrumentation.NewSimpleLoop(logger)
+	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, loopControl, nodeConfig, isLeader)
+	httpServer := httpserver.NewHttpServer(address, logger, nodeLogic.GetPublicApi())
+
 	return &node{
-		logic:      logic,
+		logic:      nodeLogic,
 		httpServer: httpServer,
 	}
 }

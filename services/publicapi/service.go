@@ -2,14 +2,13 @@ package publicapi
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 type service struct {
-	services.PublicApi
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	events          instrumentation.Reporting
@@ -18,7 +17,7 @@ type service struct {
 
 func NewPublicApi(
 	transactionPool services.TransactionPool,
-	virtualMachine  services.VirtualMachine,
+	virtualMachine services.VirtualMachine,
 	events instrumentation.Reporting,
 	isLeader bool,
 ) services.PublicApi {
@@ -45,19 +44,19 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	s.events.Info("enter_call_method")
 	defer s.events.Info("exit_call_method")
 	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{Transaction: input.ClientRequest.Transaction()})
-	if err != nil{
+	if err != nil {
 		//TODO: Return graceful output on error
-		return nil,nil
+		return nil, nil
 	}
 	var oa []*protocol.MethodArgumentBuilder
 	for _, arg := range rlm.OutputArguments {
-		switch arg.Type(){
+		switch arg.Type() {
 		case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
 			oa = []*protocol.MethodArgumentBuilder{{Name: arg.Name(), Type: arg.Type(), Uint64Value: arg.Uint64Value()}}
 		}
 	}
 	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{
-		OutputArguments:oa,
+		OutputArguments: oa,
 	}).Build()}
 	return output, nil
 }

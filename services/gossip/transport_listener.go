@@ -3,8 +3,8 @@ package gossip
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 func (s *service) OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte) {
@@ -28,7 +28,9 @@ func (s *service) receivedTransactionRelayMessage(message *gossipmessages.Header
 		}
 		for _, l := range s.transactionHandlers {
 			l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
-				Transactions: txs,
+				Message: &gossipmessages.ForwardedTransactionsMessage{
+					SignedTransactions: txs,
+				},
 			})
 		}
 
@@ -42,7 +44,13 @@ func (s *service) receivedLeanHelixMessage(message *gossipmessages.Header, paylo
 		for _, l := range s.consensusHandlers {
 			//l.OnVoteRequest(message.Sender, tx)
 			l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
-				Block:  payloads[0],
+				Message: &gossipmessages.LeanHelixPrePrepareMessage{
+					BlockPair: &protocol.BlockPairContainer{
+						TransactionsBlock: &protocol.TransactionsBlockContainer{
+							SignedTransactions: []*protocol.SignedTransaction{protocol.SignedTransactionReader(payloads[0])},
+						},
+					},
+				},
 			})
 		}
 

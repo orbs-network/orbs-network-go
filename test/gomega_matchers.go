@@ -1,9 +1,9 @@
 package test
 
 import (
-	"github.com/onsi/gomega/types"
-	"github.com/maraino/go-mock"
 	"fmt"
+	"github.com/maraino/go-mock"
+	"github.com/onsi/gomega/types"
 )
 
 func ExecuteAsPlanned() types.GomegaMatcher {
