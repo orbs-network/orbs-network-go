@@ -11,7 +11,7 @@ type TransportListener interface {
 
 type Transport interface {
 	RegisterListener(listener TransportListener, myNodeId string)
-	Send(message *gossipmessages.Header, payloads [][]byte) error
+	Send(header *gossipmessages.Header, payloads [][]byte) error
 }
 
 type ErrGossipRequestFailed struct {

@@ -8,15 +8,17 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-type memberlistGossipConfig struct {
+// TODO: move this to regular config model
+type MemberlistGossipConfig struct {
 	Name  string
 	Port  int
 	Peers []string
 }
 
-type memberlistTransport struct {
+// TODO: this needs to be private but had to be this way because it exports Join in main
+type MemberlistTransport struct {
 	list       *memberlist.Memberlist
-	listConfig *memberlistGossipConfig
+	listConfig *MemberlistGossipConfig
 	delegate   *gossipDelegate
 	listeners  map[string]TransportListener
 }
@@ -24,7 +26,7 @@ type memberlistTransport struct {
 type gossipDelegate struct {
 	Name             string
 	OutgoingMessages *memberlist.TransmitLimitedQueue
-	parent           *memberlistTransport
+	parent           *MemberlistTransport
 }
 
 func (d gossipDelegate) NodeMeta(limit int) []byte {
@@ -63,7 +65,7 @@ func NewGossipDelegate(nodeName string) gossipDelegate {
 	return gossipDelegate{Name: nodeName}
 }
 
-func NewMemberlistTransport(config memberlistGossipConfig) Transport {
+func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	fmt.Println("Creating memberlist with config", config)
 	listConfig := memberlist.DefaultLocalConfig()
 	listConfig.BindPort = config.Port
@@ -87,7 +89,7 @@ func NewMemberlistTransport(config memberlistGossipConfig) Transport {
 	} else {
 		fmt.Println("Connected to", n, "hosts")
 	}
-	returnObject := memberlistTransport{
+	returnObject := MemberlistTransport{
 		list:       list,
 		listConfig: &config,
 		delegate:   &delegate,
@@ -98,36 +100,36 @@ func NewMemberlistTransport(config memberlistGossipConfig) Transport {
 	return &returnObject
 }
 
-func (t *memberlistTransport) Join() {
+func (t *MemberlistTransport) Join() {
 	if len(t.list.Members()) < 2 {
 		fmt.Println("Node does not have any peers, trying to join the cluster...", t.listConfig.Peers)
 		t.list.Join(t.listConfig.Peers)
 	}
 }
 
-func (t *memberlistTransport) PrintPeers() {
+func (t *MemberlistTransport) PrintPeers() {
 	// Ask for members of the cluster
 	for _, member := range t.list.Members() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
 	}
 }
 
-func (t *memberlistTransport) Send(message *gossipmessages.Header, payloads [][]byte) error {
-	data := encodeByteArray(append([][]byte{message.Raw()}, payloads...))
+func (t *MemberlistTransport) Send(header *gossipmessages.Header, payloads [][]byte) error {
+	data := encodeByteArray(append([][]byte{header.Raw()}, payloads...))
 	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: data})
-	t.receive(message, payloads)
+	t.receive(header, payloads)
 	// TODO: add proper error handling
 	return nil
 }
 
-func (t *memberlistTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
+func (t *MemberlistTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
 	fmt.Println("Gossip: triggering listeners")
 	for _, l := range t.listeners {
 		l.OnTransportMessageReceived(message, payloads)
 	}
 }
 
-func (t *memberlistTransport) RegisterListener(listener TransportListener, myNodeId string) {
+func (t *MemberlistTransport) RegisterListener(listener TransportListener, myNodeId string) {
 	t.listeners[myNodeId] = listener
 }
 
