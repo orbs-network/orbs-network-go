@@ -1,8 +1,8 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type InMemoryBlockPersistence interface {
@@ -18,7 +18,7 @@ type inMemoryBlockPersistence struct {
 
 func NewInMemoryBlockPersistence(config adapter.Config) InMemoryBlockPersistence {
 	return &inMemoryBlockPersistence{
-		config:         config,
+		config:       config,
 		blockWritten: make(chan bool, 10),
 	}
 }

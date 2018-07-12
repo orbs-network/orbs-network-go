@@ -1,20 +1,20 @@
 package virtualmachine
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 type service struct {
-	blockStorage services.BlockStorage
+	blockStorage     services.BlockStorage
 	blockPersistence adapter.BlockPersistence
 }
 
-func NewVirtualMachine(blockStorage services.BlockStorage,blockPersistence adapter.BlockPersistence) services.VirtualMachine {
+func NewVirtualMachine(blockStorage services.BlockStorage, blockPersistence adapter.BlockPersistence) services.VirtualMachine {
 	return &service{
-		blockStorage: blockStorage,
+		blockStorage:     blockStorage,
 		blockPersistence: blockPersistence,
 	}
 }

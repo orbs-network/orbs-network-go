@@ -9,15 +9,14 @@ import (
 )
 
 type service struct {
-	services.TransactionPool
 	pendingTransactions chan *protocol.SignedTransaction
-	gossip gossiptopics.TransactionRelay
+	gossip              gossiptopics.TransactionRelay
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay) services.TransactionPool {
 	s := &service{
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
-		gossip : gossip,
+		gossip:              gossip,
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s
@@ -25,7 +24,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay) services.Transacti
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	fmt.Println("Adding new transaction to the pool", input.SignedTransaction)
-	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{Transactions:[]*protocol.SignedTransaction{input.SignedTransaction}})
+	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{Transactions: []*protocol.SignedTransaction{input.SignedTransaction}})
 	//This is commented out because currently transport broadcast will also broadcast to myself. So HandleForwardedTransactions will be the on to add this transaction.
 	//s.pendingTransactions <- input.SignedTransaction
 	return &services.AddNewTransactionOutput{}, nil

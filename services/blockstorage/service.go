@@ -1,15 +1,14 @@
 package blockstorage
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 type service struct {
-	services.BlockStorage
 	persistence adapter.BlockPersistence
 }
 
@@ -22,10 +21,10 @@ func NewBlockStorage(persistence adapter.BlockPersistence) services.BlockStorage
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	for i := input.BlockPair.TransactionsBlock().SignedTransactionsOpaqueIterator(); i.HasNext(); {
 		t := protocol.SignedTransactionReader(i.NextSignedTransactionsOpaque())
-		if t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value() > 1000{
-				//TODO: handle invalid transaction gracefully
-				return nil, nil
-			}
+		if t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value() > 1000 {
+			//TODO: handle invalid transaction gracefully
+			return nil, nil
+		}
 	}
 	s.persistence.WriteBlock(input.BlockPair)
 	return nil, nil

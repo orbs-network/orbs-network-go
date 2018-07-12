@@ -1,10 +1,10 @@
 package adapter
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"github.com/hashicorp/memberlist"
-	"encoding/gob"
-	"bytes"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 

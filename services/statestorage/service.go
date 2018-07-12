@@ -3,7 +3,6 @@ package statestorage
 import "github.com/orbs-network/orbs-spec/types/go/services"
 
 type service struct {
-	services.StateStorage
 }
 
 func NewStateStorage() services.StateStorage {

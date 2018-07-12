@@ -1,10 +1,10 @@
 package gossip
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 type Config interface {
@@ -12,7 +12,6 @@ type Config interface {
 }
 
 type service struct {
-	services.Gossip
 	transport           adapter.Transport
 	transactionHandlers []gossiptopics.TransactionRelayHandler
 	consensusHandlers   []gossiptopics.LeanHelixHandler
@@ -38,10 +37,10 @@ func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler
 
 func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.TransactionRelayOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
+		RecipientMode:    gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
 		TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
-		NumPayloads: 1,
+		NumPayloads:      1,
 	}).Build()
 	return nil, s.transport.Send(header, [][]byte{input.Transactions[0].Raw()})
 }
@@ -65,9 +64,9 @@ func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.LeanHelixOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix: gossipmessages.LEAN_HELIX_PRE_PREPARE,
-		NumPayloads: 1,
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix:     gossipmessages.LEAN_HELIX_PRE_PREPARE,
+		NumPayloads:   1,
 	}).Build()
 	return nil, s.transport.Send(header, [][]byte{input.Block})
 }
@@ -75,9 +74,9 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.LeanHelixOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix: gossipmessages.LEAN_HELIX_PREPARE,
-		NumPayloads: 0,
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix:     gossipmessages.LEAN_HELIX_PREPARE,
+		NumPayloads:   0,
 	}).Build()
 	return nil, s.transport.Send(header, [][]byte{})
 }
@@ -85,9 +84,9 @@ func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput
 func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.LeanHelixOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix: gossipmessages.LEAN_HELIX_COMMIT,
-		NumPayloads: 0,
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix:     gossipmessages.LEAN_HELIX_COMMIT,
+		NumPayloads:   0,
 	}).Build()
 	return nil, s.transport.Send(header, [][]byte{})
 }

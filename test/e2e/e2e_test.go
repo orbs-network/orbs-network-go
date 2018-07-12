@@ -2,11 +2,6 @@ package e2e
 
 import (
 	"bytes"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"testing"
-	"time"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/membuffers/go"
@@ -15,6 +10,11 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"testing"
+	"time"
 )
 
 type E2EConfig struct {
@@ -49,7 +49,7 @@ var _ = Describe("The Orbs Network", func() {
 		var node bootstrap.Node
 
 		if getConfig().Bootstrap {
-			gossipTransport := gossipAdapter.NewTemperingTransport()
+			gossipTransport := gossipAdapter.NewTamperingTransport()
 			node = bootstrap.NewNode(":8080", "node1", gossipTransport, true, 1)
 		}
 
