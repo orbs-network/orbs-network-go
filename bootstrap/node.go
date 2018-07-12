@@ -8,6 +8,7 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 )
 
 type Node interface {
@@ -29,10 +30,11 @@ func NewNode(
 
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
 	fmt.Println("Node config", nodeConfig)
-	storage := blockStorageAdapter.NewBlockPersistence(nodeConfig)
+	blockStorageAdapter := blockStorageAdapter.NewBlockPersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewStatePersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	lc := instrumentation.NewSimpleLoop(logger)
-	logic := NewNodeLogic(transport, storage, logger, lc, nodeConfig, isLeader)
+	logic := NewNodeLogic(transport, blockStorageAdapter, stateStorageAdapter, logger, lc, nodeConfig, isLeader)
 	httpServer := httpserver.NewHttpServer(address, logger, logic.GetPublicApi())
 	return &node{
 		logic:      logic,

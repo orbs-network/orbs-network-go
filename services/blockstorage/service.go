@@ -6,16 +6,19 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"encoding/binary"
 )
 
 type service struct {
 	services.BlockStorage
 	persistence adapter.BlockPersistence
+	stateStorage services.StateStorage
 }
 
-func NewBlockStorage(persistence adapter.BlockPersistence) services.BlockStorage {
+func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage) services.BlockStorage {
 	return &service{
 		persistence: persistence,
+		stateStorage: stateStorage,
 	}
 }
 
@@ -27,6 +30,18 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 				return nil, nil
 			}
 	}
+	var state []*protocol.StateDiffBuilder
+	for i := input.BlockPair.TransactionsBlock().SignedTransactionsOpaqueIterator(); i.HasNext(); {
+		t := protocol.SignedTransactionReader(i.NextSignedTransactionsOpaque())
+		byteArray := make([]byte, 8)
+		binary.LittleEndian.PutUint64(byteArray, uint64(t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
+		transactionStateDiff := &protocol.StateDiffBuilder{
+			Value: byteArray,
+		}
+		state = append(state, transactionStateDiff)
+	}
+	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs:state}).Build()}
+	s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{ContractStateDiffs: csdi})
 	s.persistence.WriteBlock(input.BlockPair)
 	return nil, nil
 }

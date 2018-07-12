@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 )
 
 type AcceptanceTestNetwork interface {
@@ -51,8 +52,11 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 	leaderBp := blockStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
 	validatorBp := blockStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
 
-	leader := bootstrap.NewNodeLogic(temperingTransport, leaderBp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
-	validator := bootstrap.NewNodeLogic(temperingTransport, validatorBp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
+	leaderSp := stateStorageAdapter.NewStatePersistence(leaderConfig)
+	validatorSp := stateStorageAdapter.NewStatePersistence(validatorConfig)
+
+	leader := bootstrap.NewNodeLogic(temperingTransport, leaderBp, leaderSp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
+	validator := bootstrap.NewNodeLogic(temperingTransport, validatorBp, validatorSp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
 
 	return &acceptanceTestNetwork{
 		leader:            leader,

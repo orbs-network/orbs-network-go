@@ -1,11 +1,11 @@
 package transactionpool
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"fmt"
 )
 
 type service struct {
