@@ -20,7 +20,7 @@ import (
 )
 
 type NodeLogic interface {
-	GetPublicApi() services.PublicApi
+	PublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
@@ -56,6 +56,6 @@ func NewNodeLogic(
 	}
 }
 
-func (n *nodeLogic) GetPublicApi() services.PublicApi {
+func (n *nodeLogic) PublicApi() services.PublicApi {
 	return n.publicApi
 }

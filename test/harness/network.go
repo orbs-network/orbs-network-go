@@ -86,11 +86,11 @@ func (n *acceptanceTestNetwork) Gossip() gossipAdapter.TamperingTransport {
 }
 
 func (n *acceptanceTestNetwork) Leader() services.PublicApi {
-	return n.leader.GetPublicApi()
+	return n.leader.PublicApi()
 }
 
 func (n *acceptanceTestNetwork) Validator() services.PublicApi {
-	return n.validator.GetPublicApi()
+	return n.validator.PublicApi()
 }
 
 func (n *acceptanceTestNetwork) LeaderBp() blockStorageAdapter.InMemoryBlockPersistence {

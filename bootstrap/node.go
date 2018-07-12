@@ -36,7 +36,7 @@ func NewNode(
 	logger := instrumentation.NewStdoutLog()
 	loopControl := instrumentation.NewSimpleLoop(logger)
 	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, loopControl, nodeConfig, isLeader)
-	httpServer := httpserver.NewHttpServer(address, logger, nodeLogic.GetPublicApi())
+	httpServer := httpserver.NewHttpServer(address, logger, nodeLogic.PublicApi())
 
 	return &node{
 		logic:      nodeLogic,

@@ -5,13 +5,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-type TransportListener interface {
-	OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte)
-}
-
 type Transport interface {
 	RegisterListener(listener TransportListener, myNodeId string)
 	Send(header *gossipmessages.Header, payloads [][]byte) error
+}
+
+type TransportListener interface {
+	OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte)
 }
 
 type ErrGossipRequestFailed struct {

@@ -35,15 +35,18 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	defer s.events.Info("exit_send_transaction")
 	//TODO leader should also propagate transactions to other nodes
 	tx := input.ClientRequest.SignedTransaction()
-	s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{tx})
-	output := &services.SendTransactionOutput{}
-	return output, nil
+	s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
+		SignedTransaction: tx,
+	})
+	return &services.SendTransactionOutput{}, nil
 }
 
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
 	s.events.Info("enter_call_method")
 	defer s.events.Info("exit_call_method")
-	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{Transaction: input.ClientRequest.Transaction()})
+	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
+		Transaction: input.ClientRequest.Transaction(),
+	})
 	if err != nil {
 		//TODO: Return graceful output on error
 		return nil, nil
@@ -52,13 +55,16 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	for _, arg := range rlm.OutputArguments {
 		switch arg.Type() {
 		case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
-			oa = []*protocol.MethodArgumentBuilder{{Name: arg.Name(), Type: arg.Type(), Uint64Value: arg.Uint64Value()}}
+			oa = []*protocol.MethodArgumentBuilder{
+				{Name: arg.Name(), Type: arg.Type(), Uint64Value: arg.Uint64Value()},
+			}
 		}
 	}
-	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{
-		OutputArguments: oa,
-	}).Build()}
-	return output, nil
+	return &services.CallMethodOutput{
+		ClientResponse: (&client.CallMethodResponseBuilder{
+			OutputArguments: oa,
+		}).Build(),
+	}, nil
 }
 
 func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
