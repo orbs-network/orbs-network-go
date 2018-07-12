@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
@@ -11,6 +10,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 )
 
 type NodeLogic interface {
@@ -20,7 +21,8 @@ type NodeLogic interface {
 type nodeLogic struct {
 	isLeader        bool
 	gossip          services.Gossip
-	ledger          ledger.Ledger
+	blockStorage    services.BlockStorage
+	virtualMachine  services.VirtualMachine
 	events          instrumentation.Reporting
 	consensusAlgo   services.ConsensusAlgo
 	transactionPool services.TransactionPool
@@ -38,9 +40,10 @@ func NewNodeLogic(
 
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig)
 	tp := transactionpool.NewTransactionPool(gossip)
-	ledger := ledger.NewLedger(bp)
-	consensusAlgo := leanhelix.NewConsensusAlgoLeanHelix(gossip, ledger, tp, events, loopControl, nodeConfig, isLeader)
-	publicApi := publicapi.NewPublicApi(tp, ledger, events, isLeader)
+	blockStorage := blockstorage.NewBlockStorage(bp)
+	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, bp)
+	consensusAlgo := leanhelix.NewConsensusAlgoLeanHelix(gossip, blockStorage, tp, events, loopControl, nodeConfig, isLeader)
+	publicApi := publicapi.NewPublicApi(tp, virtualMachine, events, isLeader)
 	return &nodeLogic{
 		publicApi:       publicApi,
 		transactionPool: tp,

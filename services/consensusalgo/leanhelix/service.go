@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -18,7 +17,7 @@ type Config interface {
 type service struct {
 	services.ConsensusAlgoLeanHelix
 	gossip               gossiptopics.LeanHelix
-	ledger               ledger.Ledger
+	blockStorage         services.BlockStorage
 	transactionPool      services.TransactionPool
 	events               instrumentation.Reporting
 	loopControl          instrumentation.LoopControl
@@ -30,7 +29,7 @@ type service struct {
 
 func NewConsensusAlgoLeanHelix(
 	gossip gossiptopics.LeanHelix,
-	ledger ledger.Ledger,
+	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
 	events instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
@@ -40,7 +39,7 @@ func NewConsensusAlgoLeanHelix(
 
 	s := &service{
 		gossip:          gossip,
-		ledger:          ledger,
+		blockStorage:    blockStorage,
 		transactionPool: transactionPool,
 		events:          events,
 		loopControl:     loopControl,
@@ -69,7 +68,7 @@ func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInp
 }
 
 func (s *service) HandleLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.LeanHelixOutput, error) {
-	s.ledger.AddTransaction(protocol.SignedTransactionReader(s.preparedBlock))
+	s.blockStorage.CommitBlock(&services.CommitBlockInput{BlockPair: protocol.BlockPairReader(s.preparedBlock)})
 	s.preparedBlock = nil
 	s.commitCond.Signal()
 	return nil, nil
@@ -124,7 +123,9 @@ func (s *service) buildBlocksEventLoop() {
 }
 
 func (s *service) requestConsensusFor(transaction *protocol.SignedTransaction) (chan bool, error) {
-	message := &gossiptopics.LeanHelixPrePrepareInput{Block: transaction.Raw()}
+	bpb := protocol.BlockPairBuilder{TransactionsBlock: &protocol.TransactionsBlockBuilder{SignedTransactionsOpaque: [][]byte{transaction.Raw()}}}
+	message := &gossiptopics.LeanHelixPrePrepareInput{Block: bpb.Build().Raw()}
+
 	_, error := s.gossip.SendLeanHelixPrePrepare(message) //TODO send the actual input, not just a single tx bytes
 	if error == nil {
 		s.votesForCurrentRound = make(chan bool)

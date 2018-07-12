@@ -1,7 +1,6 @@
 package publicapi
 
 import (
-	"github.com/orbs-network/orbs-network-go/ledger"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -12,21 +11,21 @@ import (
 type service struct {
 	services.PublicApi
 	transactionPool services.TransactionPool
-	ledger          ledger.Ledger
+	virtualMachine  services.VirtualMachine
 	events          instrumentation.Reporting
 	isLeader        bool
 }
 
 func NewPublicApi(
 	transactionPool services.TransactionPool,
-	ledger ledger.Ledger,
+	virtualMachine  services.VirtualMachine,
 	events instrumentation.Reporting,
 	isLeader bool,
 ) services.PublicApi {
 
 	return &service{
 		transactionPool: transactionPool,
-		ledger:          ledger,
+		virtualMachine:  virtualMachine,
 		events:          events,
 		isLeader:        isLeader,
 	}
@@ -45,10 +44,20 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
 	s.events.Info("enter_call_method")
 	defer s.events.Info("exit_call_method")
+	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{Transaction: input.ClientRequest.Transaction()})
+	if err != nil{
+		//TODO: Return graceful output on error
+		return nil,nil
+	}
+	var oa []*protocol.MethodArgumentBuilder
+	for _, arg := range rlm.OutputArguments {
+		switch arg.Type(){
+		case protocol.METHOD_ARGUMENT_TYPE_UINT_64:
+			oa = []*protocol.MethodArgumentBuilder{{Name: arg.Name(), Type: arg.Type(), Uint64: arg.Uint64()}}
+		}
+	}
 	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{
-		OutputArguments: []*protocol.MethodArgumentBuilder{
-			{Name: "balance", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: uint64(s.ledger.GetState())},
-		},
+		OutputArguments:oa,
 	}).Build()}
 	return output, nil
 }

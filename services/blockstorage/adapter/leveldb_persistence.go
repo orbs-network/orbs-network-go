@@ -10,7 +10,7 @@ type Config interface {
 
 type blockPersistence struct {
 	blockWritten chan bool
-	transactions []protocol.SignedTransaction
+	blockPairs []protocol.BlockPair
 	config       Config
 }
 
@@ -21,11 +21,11 @@ func NewBlockPersistence(config Config) BlockPersistence {
 	}
 }
 
-func (bp *blockPersistence) WriteBlock(signedTransaction *protocol.SignedTransaction) {
-	bp.transactions = append(bp.transactions, *signedTransaction)
+func (bp *blockPersistence) WriteBlock(blockPair *protocol.BlockPair) {
+	bp.blockPairs = append(bp.blockPairs, *blockPair)
 	bp.blockWritten <- true
 }
 
-func (bp *blockPersistence) ReadAllBlocks() []protocol.SignedTransaction {
-	return bp.transactions
+func (bp *blockPersistence) ReadAllBlocks() []protocol.BlockPair {
+	return bp.blockPairs
 }
