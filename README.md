@@ -21,7 +21,7 @@ The project is thoroughly tested with unit tests, component tests per microservi
   > Verify with `echo $PATH`
 
 * Make sure Git is installed (version 2 or later).
-  
+
   > Verify with `git --version`
 
 ### Build
@@ -125,12 +125,19 @@ go run *.go
 
 ### IDE
 
-* We recommend working on the project with [GoLand](https://www.jetbrains.com/go/) IDE.
+* We recommend working on the project with [GoLand](https://www.jetbrains.com/go/) IDE. Recommended settings:
+  * Under `Preferences | Editor | Code Style | Go` make sure `Use tab character` is checked
 
-* For easy testing, under `Run - Edit Configurations` add these `Go Test` configurations:
-  * "Fast" with `Directory` set to project root (`your-path-to/orbs-network-go/`) and `-short` flag added to `Go tool arguments`
-  * "All" with `Directory` set to project root (`your-path-to/orbs-network-go/`)
+* For easy testing, under `Run | Edit Configurations` add these `Go Test` configurations:
+  * "Fast" with `Directory` set to project root and `-short` flag added to `Go tool arguments`
+  * "All" with `Directory` set to project root
   * It's also recommended to hide ignored tests in the test panel after running the configuration
+
+* You may enable the following automatic tools that run on file changes:
+  * "go fmt" in `Preferences | Tools | File Watchers`, add with `+` the `go fmt` watcher
+  * "go test" in `Preferences | Tools | File Watchers`, add with `+` a `custom` watcher:
+    * Name: `go test`, File type: `Go`, Scope: `Project Files`
+    * Program: `$GoExecPath$`, Arguments: `test -short ./...`, Working directory: `$ProjectFileDir$`
 
 ## License
 

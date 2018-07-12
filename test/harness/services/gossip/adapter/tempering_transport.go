@@ -1,10 +1,10 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"fmt"
-	"sync"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"sync"
 )
 
 type TemperingTransport interface {
@@ -60,7 +60,7 @@ func topicMessageToTypeString(topic gossipmessages.HeaderTopic, messageType uint
 }
 
 func gossipMessageHeaderMessageType(message *gossipmessages.Header) uint16 {
-	switch (message.Topic()) {
+	switch message.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		return uint16(message.TransactionRelay())
 	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
