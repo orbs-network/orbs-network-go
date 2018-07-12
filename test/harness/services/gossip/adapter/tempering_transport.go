@@ -1,10 +1,10 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"fmt"
-	"sync"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"sync"
 )
 
 type TemperingTransport interface {
@@ -40,18 +40,18 @@ func (t *temperingTransport) RegisterListener(listener adapter.TransportListener
 	t.transportListeners[myNodeId] = listener
 }
 
-func (t *temperingTransport) Send(message *gossipmessages.Header, payloads [][]byte) error {
-	msgTypeStr := gossipMessageHeaderToTypeString(message)
+func (t *temperingTransport) Send(header *gossipmessages.Header, payloads [][]byte) error {
+	msgTypeStr := gossipMessageHeaderToTypeString(header)
 	if t.fail(msgTypeStr) {
-		return &adapter.ErrGossipRequestFailed{message}
+		return &adapter.ErrGossipRequestFailed{header}
 	}
 	if t.paused(msgTypeStr) {
 		t.mutex.Lock()
-		t.pausedMessages[msgTypeStr] = append(t.pausedMessages[msgTypeStr], messageWithPayloads{message, payloads})
+		t.pausedMessages[msgTypeStr] = append(t.pausedMessages[msgTypeStr], messageWithPayloads{header, payloads})
 		t.mutex.Unlock()
 		return nil
 	}
-	go t.receive(message, payloads)
+	go t.receive(header, payloads)
 	return nil
 }
 
@@ -60,7 +60,7 @@ func topicMessageToTypeString(topic gossipmessages.HeaderTopic, messageType uint
 }
 
 func gossipMessageHeaderMessageType(message *gossipmessages.Header) uint16 {
-	switch (message.Topic()) {
+	switch message.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		return uint16(message.TransactionRelay())
 	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:

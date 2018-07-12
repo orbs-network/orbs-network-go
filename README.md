@@ -21,7 +21,7 @@ The project is thoroughly tested with unit tests, component tests per microservi
   > Verify with `echo $PATH`
 
 * Make sure Git is installed (version 2 or later).
-  
+
   > Verify with `git --version`
 
 ### Build
@@ -62,42 +62,82 @@ go run *.go
   
   > Verify with `ginkgo version`
 
+### Available test runners
+
+* The custom ginkgo test runner `ginkgo` (tailored to the testing framework we use)
+
+* The official go test runner `go test` (has minimal UI and result caching)
+
 ### Test
 
-* Run **all** tests from project root with `ginkgo ./...`
+* Run **all** tests from project root:
+ 
+  * Using ginkgo test runner with `ginkgo ./...`
+  * Using go test with `go test ./...`
 
-* Another alternative runner with minimal UI and result caching:
-
-  * Run **all** tests with `go test ./...`
+* Run only **fast** tests (no E2E and similar):
   
-* Check unit test coverage with:
-    ```
-    go test -cover `go list ./...`
-    ```
+  * Using go test with `go test -short ./...`
+  
+* Check unit test coverage:
 
-##### E2E tests
+  * Using go test with ``go test -cover `go list ./...` ``
 
-> End-to-end tests check the entire system in a real life scenario mimicking real production. It runs on docker with several nodes connected in a cluster. Due to their nature, E2E tests are slow to run.
+### Test types
+
+* Slow tests:
+
+  ##### E2E tests
+
+  > End-to-end tests check the entire system in a real life scenario mimicking real production with multiple nodes. It runs on docker with several nodes connected in a cluster. Due to their nature, E2E tests are slow to run.
 
   * The tests are found in [`/test/e2e`](test/e2e)
-  * Run the suite from project root with `ginkgo -v ./test/e2e`
+  * Run the suite from project root with `ginkgo -v ./test/e2e` or `go test ./test/e2e`
+  
+  ##### Integration tests
+  
+  > Integration tests check the system adapters and make sure they meet the interface contract they implement. For example connection to a database or network sockets.
 
-##### Acceptance tests
+  * The tests are found per adapter (per service), eg. [`/services/gossip/adapter`](/services/gossip/adapter)
 
-> Acceptance tests check the internal hexagon of the system (it's logic with all microservices) with faster adapters that allow the suite to run extremely fast.  
+* Fast tests:
+
+  ##### Acceptance tests
+
+  > Acceptance tests check the internal hexagon of the system (it's logic with all microservices) with faster adapters that allow the suite to run extremely fast.  
 
   * The tests are found in [`/test/acceptance`](test/acceptance)
-  * Run the suite from project root with `ginkgo -v ./test/acceptance`
+  * Run the suite from project root with `ginkgo -v ./test/acceptance` or `go test ./test/acceptance`
+
+  ##### Component tests
+
+  > Component tests check that a single service meets its specification while mocking the other services around it. They allow development of a service in isolation. 
+
+  * The tests are found per service in the `test` directory, eg. [`/services/transactionpool/test`](/services/transactionpool/test)
+
+  ##### Unit tests
+  
+  > Unit tests are very specific tests that check a single unit or two. They test the unit in isolation and stub/mock everything around it. 
+
+  * The tests are found next to the actual unit in a file with `_test.go` suffix, eg. `sha256_test.go` sitting next to `sha256.go`
 
 ## Developer experience
 
 ### IDE
 
-* We recommend working on the project with [GoLand](https://www.jetbrains.com/go/) IDE.
+* We recommend working on the project with [GoLand](https://www.jetbrains.com/go/) IDE. Recommended settings:
+  * Under `Preferences | Editor | Code Style | Go` make sure `Use tab character` is checked
 
-* For easy testing, under `Run - Edit Configurations` add these `Go Test` configurations:
-  * "Acceptance" with `File` set to `your-path-to/orbs-network-go/test/acceptance/acceptance_test.go`
-  * "E2E" with `File` set to `your-path-to/orbs-network-go/test/e2e/e2e_test.go`
+* For easy testing, under `Run | Edit Configurations` add these `Go Test` configurations:
+  * "Fast" with `Directory` set to project root and `-short` flag added to `Go tool arguments`
+  * "All" with `Directory` set to project root
+  * It's also recommended to hide ignored tests in the test panel after running the configuration
+
+* You may enable the following automatic tools that run on file changes:
+  * "go fmt" in `Preferences | Tools | File Watchers`, add with `+` the `go fmt` watcher
+  * "go test" in `Preferences | Tools | File Watchers`, add with `+` a `custom` watcher:
+    * Name: `go test`, File type: `Go`, Scope: `Project Files`
+    * Program: `$GoExecPath$`, Arguments: `test -short ./...`, Working directory: `$ProjectFileDir$`
 
 ## License
 

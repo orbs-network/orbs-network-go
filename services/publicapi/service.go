@@ -52,8 +52,8 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	var oa []*protocol.MethodArgumentBuilder
 	for _, arg := range rlm.OutputArguments {
 		switch arg.Type(){
-		case protocol.METHOD_ARGUMENT_TYPE_UINT_64:
-			oa = []*protocol.MethodArgumentBuilder{{Name: arg.Name(), Type: arg.Type(), Uint64: arg.Uint64()}}
+		case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
+			oa = []*protocol.MethodArgumentBuilder{{Name: arg.Name(), Type: arg.Type(), Uint64Value: arg.Uint64Value()}}
 		}
 	}
 	output := &services.CallMethodOutput{ClientResponse: (&client.CallMethodResponseBuilder{

@@ -28,10 +28,10 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 	for _, t := range s.blockPersistence.ReadAllBlocks() {
 		for i := t.TransactionsBlock().SignedTransactionsOpaqueIterator(); i.HasNext(); {
 			t := protocol.SignedTransactionReader(i.NextSignedTransactionsOpaque())
-			sum += t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64()
+			sum += t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()
 		}
 	}
-	arg := &protocol.MethodArgumentBuilder{Name: "balance", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: sum}
+	arg := &protocol.MethodArgumentBuilder{Name: "balance", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: sum}
 	output := &services.RunLocalMethodOutput{OutputArguments: []*protocol.MethodArgument{arg.Build()}}
 	return output, nil
 }

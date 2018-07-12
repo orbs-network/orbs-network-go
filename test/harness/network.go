@@ -105,7 +105,7 @@ func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount 
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
 			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: amount},
+				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
 			},
 		}}
 		input := &services.SendTransactionInput{ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()}
@@ -124,7 +124,7 @@ func (n *acceptanceTestNetwork) GetBalance(node services.PublicApi) chan uint64 
 		}
 		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction:cm}).Build()}
 		output, _ := node.CallMethod(input)
-		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64()
+		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()
 	return ch
 }

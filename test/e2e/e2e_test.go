@@ -23,6 +23,9 @@ type E2EConfig struct {
 }
 
 func TestE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "E2E Suite")
 }
@@ -54,7 +57,7 @@ var _ = Describe("The Orbs Network", func() {
 			ContractName: "MelangeToken",
 			MethodName:   "transfer",
 			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: 17},
+				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 17},
 			},
 		}
 
@@ -66,7 +69,7 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64()
+			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {

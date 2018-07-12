@@ -17,7 +17,8 @@ func main() {
 	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
 	isLeader := os.Getenv("LEADER") == "true"
 
-	config := gossipAdapter.memberlistGossipConfig{nodeName, int(gossipPort), peers}
+	// TODO: change this to new config mechanism
+	config := gossipAdapter.MemberlistGossipConfig{nodeName, int(gossipPort), peers}
 	gossipTransport := gossipAdapter.NewMemberlistTransport(config)
 
 	fmt.Println("PORT", port)
@@ -25,7 +26,8 @@ func main() {
 	bootstrap.NewNode(":"+strconv.FormatInt(port, 10), nodeName, gossipTransport, isLeader, 3)
 
 	for {
-		go gossipTransport.Join()
+		// TODO: Join is not a part of the transport interface
+		go gossipTransport.(*gossipAdapter.MemberlistTransport).Join()
 		// go gossip.PrintPeers()
 		// go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
 		time.Sleep(3 * time.Second)

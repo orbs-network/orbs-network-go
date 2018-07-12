@@ -18,22 +18,22 @@ var _ = Describe("a leader node", func() {
 		consensusRound.Brake()
 		network.Gossip().Fail(gossipmessages.HEADER_TOPIC_LEAN_HELIX, uint16(gossipmessages.LEAN_HELIX_PRE_PREPARE))
 
-		<- network.Transfer(network.Leader(), 17)
+		<-network.Transfer(network.Leader(), 17)
 
 		consensusRound.Tick()
 
-		Expect(<- network.GetBalance(network.Leader())).To(BeEquivalentTo(0))
-		Expect(<- network.GetBalance(network.Validator())).To(BeEquivalentTo(0))
+		Expect(<-network.GetBalance(network.Leader())).To(BeEquivalentTo(0))
+		Expect(<-network.GetBalance(network.Validator())).To(BeEquivalentTo(0))
 
 		network.Gossip().Pass(gossipmessages.HEADER_TOPIC_LEAN_HELIX, uint16(gossipmessages.LEAN_HELIX_PRE_PREPARE))
 
 		consensusRound.Release()
 
 		network.LeaderBp().WaitForBlocks(1)
-		Expect(<- network.GetBalance(network.Leader())).To(BeEquivalentTo(17))
+		Expect(<-network.GetBalance(network.Leader())).To(BeEquivalentTo(17))
 
 		network.ValidatorBp().WaitForBlocks(1)
-		Expect(<- network.GetBalance(network.Validator())).To(BeEquivalentTo(17))
+		Expect(<-network.GetBalance(network.Validator())).To(BeEquivalentTo(17))
 
 		close(done)
 	}, 1)

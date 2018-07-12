@@ -22,7 +22,7 @@ func NewBlockStorage(persistence adapter.BlockPersistence) services.BlockStorage
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	for i := input.BlockPair.TransactionsBlock().SignedTransactionsOpaqueIterator(); i.HasNext(); {
 		t := protocol.SignedTransactionReader(i.NextSignedTransactionsOpaque())
-		if t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64() > 1000{
+		if t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value() > 1000{
 				//TODO: handle invalid transaction gracefully
 				return nil, nil
 			}
