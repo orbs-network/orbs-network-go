@@ -54,7 +54,7 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		tx := &protocol.TransactionBuilder{
-			ContractName: "MelangeToken",
+			ContractName: "BenchmarkToken",
 			MethodName:   "transfer",
 			InputArguments: []*protocol.MethodArgumentBuilder{
 				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 17},
@@ -64,7 +64,7 @@ var _ = Describe("The Orbs Network", func() {
 		_ = sendTransaction(tx)
 
 		m := &protocol.TransactionBuilder{
-			ContractName: "MelangeToken",
+			ContractName: "BenchmarkToken",
 			MethodName:   "getBalance",
 		}
 

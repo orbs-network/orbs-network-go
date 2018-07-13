@@ -1,10 +1,11 @@
 package harness
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
+	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
@@ -15,118 +16,118 @@ import (
 
 type AcceptanceTestNetwork interface {
 	FlushLog()
-	LeaderLoopControl() testinstrumentation.BrakingLoop
-	Gossip() gossipAdapter.TamperingTransport
-	Leader() services.PublicApi
-	Validator() services.PublicApi
-	LeaderBp() blockStorageAdapter.InMemoryBlockPersistence
-	ValidatorBp() blockStorageAdapter.InMemoryBlockPersistence
-
-	Transfer(gatewayNode services.PublicApi, amount uint64) chan interface{}
-	GetBalance(node services.PublicApi) chan uint64
+	GossipTransport() gossipAdapter.TamperingTransport
+	LoopControl(nodeIndex int) harnessInstrumentation.BrakingLoop
+	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
+	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	CallGetBalance(nodeIndex int) chan uint64
 }
 
 type acceptanceTestNetwork struct {
-	leader            bootstrap.NodeLogic
-	validator         bootstrap.NodeLogic
-	leaderLatch       testinstrumentation.Latch
-	leaderBp          blockStorageAdapter.InMemoryBlockPersistence
-	validatorBp       blockStorageAdapter.InMemoryBlockPersistence
-	gossip            gossipAdapter.TamperingTransport
-	leaderLoopControl testinstrumentation.BrakingLoop
-
-	log []testinstrumentation.BufferedLog
+	nodes           []networkNode
+	gossipTransport gossipAdapter.TamperingTransport
 }
 
-func CreateTestNetwork() AcceptanceTestNetwork {
-	leaderConfig := config.NewHardCodedConfig(2, "leader")
-	validatorConfig := config.NewHardCodedConfig(2, "validator")
+type networkNode struct {
+	index            int
+	config           config.NodeConfig
+	log              harnessInstrumentation.BufferedLog
+	latch            harnessInstrumentation.Latch
+	loopControl      harnessInstrumentation.BrakingLoop
+	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence stateStorageAdapter.InMemoryStatePersistence
+	nodeLogic        bootstrap.NodeLogic
+}
 
-	leaderLog := testinstrumentation.NewBufferedLog("leader")
-	leaderLatch := testinstrumentation.NewLatch()
-	validatorLog := testinstrumentation.NewBufferedLog("validator")
-
-	leaderLoopControl := testinstrumentation.NewBrakingLoop(leaderLog)
-
-	temperingTransport := gossipAdapter.NewTamperingTransport()
-	leaderBp := blockStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
-	validatorBp := blockStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
-
-	leaderSp := stateStorageAdapter.NewInMemoryStatePersistence(leaderConfig)
-	validatorSp := stateStorageAdapter.NewInMemoryStatePersistence(validatorConfig)
-
-	leader := bootstrap.NewNodeLogic(temperingTransport, leaderBp, leaderSp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
-	validator := bootstrap.NewNodeLogic(temperingTransport, validatorBp, validatorSp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)
-
+func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
+	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
+	nodes := make([]networkNode, numNodes)
+	for i, _ := range nodes {
+		nodes[i].index = i
+		nodeId := fmt.Sprintf("node%d", i+1)
+		isLeader := (i == 0)                                          // TODO: remove the concept of leadership
+		nodes[i].config = config.NewHardCodedConfig(numNodes, nodeId) // TODO: change nodeId to public key
+		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeId)
+		nodes[i].latch = harnessInstrumentation.NewLatch()
+		nodes[i].loopControl = harnessInstrumentation.NewBrakingLoop(nodes[i].log)
+		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
+		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence(nodes[i].config)
+		nodes[i].nodeLogic = bootstrap.NewNodeLogic(
+			sharedTamperingTransport,
+			nodes[i].blockPersistence,
+			nodes[i].statePersistence,
+			instrumentation.NewCompositeReporting([]instrumentation.Reporting{nodes[i].log, nodes[i].latch}),
+			nodes[i].loopControl,
+			nodes[i].config,
+			isLeader,
+		)
+	}
 	return &acceptanceTestNetwork{
-		leader:            leader,
-		validator:         validator,
-		leaderLatch:       leaderLatch,
-		leaderBp:          leaderBp,
-		validatorBp:       validatorBp,
-		gossip:            temperingTransport,
-		leaderLoopControl: leaderLoopControl,
-
-		log: []testinstrumentation.BufferedLog{leaderLog, validatorLog},
+		nodes:           nodes,
+		gossipTransport: sharedTamperingTransport,
 	}
 }
 
 func (n *acceptanceTestNetwork) FlushLog() {
-	for _, l := range n.log {
-		l.Flush()
+	for i, _ := range n.nodes {
+		n.nodes[i].log.Flush()
 	}
 }
 
-func (n *acceptanceTestNetwork) LeaderLoopControl() testinstrumentation.BrakingLoop {
-	return n.leaderLoopControl
+func (n *acceptanceTestNetwork) LoopControl(nodeIndex int) harnessInstrumentation.BrakingLoop {
+	return n.nodes[nodeIndex].loopControl
 }
 
-func (n *acceptanceTestNetwork) Gossip() gossipAdapter.TamperingTransport {
-	return n.gossip
+func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {
+	return n.gossipTransport
 }
 
-func (n *acceptanceTestNetwork) Leader() services.PublicApi {
-	return n.leader.PublicApi()
+func (n *acceptanceTestNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
+	return n.nodes[nodeIndex].blockPersistence
 }
 
-func (n *acceptanceTestNetwork) Validator() services.PublicApi {
-	return n.validator.PublicApi()
-}
-
-func (n *acceptanceTestNetwork) LeaderBp() blockStorageAdapter.InMemoryBlockPersistence {
-	return n.leaderBp
-}
-
-func (n *acceptanceTestNetwork) ValidatorBp() blockStorageAdapter.InMemoryBlockPersistence {
-	return n.validatorBp
-}
-
-func (n *acceptanceTestNetwork) Transfer(gatewayNode services.PublicApi, amount uint64) chan interface{} {
-	ch := make(chan interface{})
+func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
+	ch := make(chan *client.SendTransactionResponse)
 	go func() {
-		tx := &protocol.SignedTransactionBuilder{Transaction: &protocol.TransactionBuilder{
-			ContractName: "MelangeToken",
-			MethodName:   "transfer",
-			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
+		request := (&client.SendTransactionRequestBuilder{
+			SignedTransaction: &protocol.SignedTransactionBuilder{
+				Transaction: &protocol.TransactionBuilder{
+					ContractName: "BenchmarkToken",
+					MethodName:   "transfer",
+					InputArguments: []*protocol.MethodArgumentBuilder{
+						{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
+					},
+				},
 			},
-		}}
-		input := &services.SendTransactionInput{ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()}
-		gatewayNode.SendTransaction(input)
-		ch <- nil
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			// TODO: handle error
+		}
+		ch <- output.ClientResponse
 	}()
 	return ch
 }
 
-func (n *acceptanceTestNetwork) GetBalance(node services.PublicApi) chan uint64 {
+func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 	ch := make(chan uint64)
 	go func() {
-		cm := &protocol.TransactionBuilder{
-			ContractName: "MelangeToken",
-			MethodName:   "getBalance",
+		request := (&client.CallMethodRequestBuilder{
+			Transaction: &protocol.TransactionBuilder{
+				ContractName: "BenchmarkToken",
+				MethodName:   "getBalance",
+			},
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.CallMethod(&services.CallMethodInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			// TODO: handle error
 		}
-		input := &services.CallMethodInput{ClientRequest: (&client.CallMethodRequestBuilder{Transaction: cm}).Build()}
-		output, _ := node.CallMethod(input)
 		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()
 	return ch

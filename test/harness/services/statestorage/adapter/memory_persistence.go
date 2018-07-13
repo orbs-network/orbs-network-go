@@ -5,6 +5,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
+type InMemoryStatePersistence interface {
+	adapter.StatePersistence
+}
+
 type inMemoryStatePersistence struct {
 	stateWritten chan bool
 	stateDiffs   []*protocol.StateRecord
