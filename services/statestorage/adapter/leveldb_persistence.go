@@ -8,24 +8,24 @@ type Config interface {
 	NodeId() string
 }
 
-type statePersistence struct {
+type levelDbStatePersistence struct {
 	stateWritten chan bool
 	stateDiffs   []*protocol.StateRecord
 	config       Config
 }
 
-func NewLevelDStatePersistence(config Config) StatePersistence {
-	return &statePersistence{
+func NewLevelDbStatePersistence(config Config) StatePersistence {
+	return &levelDbStatePersistence{
 		config:       config,
 		stateWritten: make(chan bool, 10),
 	}
 }
 
-func (sp *statePersistence) WriteState(stateDiff *protocol.StateRecord) {
+func (sp *levelDbStatePersistence) WriteState(stateDiff *protocol.StateRecord) {
 	sp.stateDiffs = append(sp.stateDiffs, stateDiff)
 	sp.stateWritten <- true
 }
 
-func (sp *statePersistence) ReadState() []*protocol.StateRecord {
+func (sp *levelDbStatePersistence) ReadState() []*protocol.StateRecord {
 	return sp.stateDiffs
 }

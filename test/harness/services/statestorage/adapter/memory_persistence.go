@@ -5,28 +5,24 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-type Config interface {
-	NodeId() string
-}
-
-type statePersistence struct {
+type inMemoryStatePersistence struct {
 	stateWritten chan bool
 	stateDiffs   []*protocol.StateRecord
-	config       Config
+	config       adapter.Config
 }
 
-func NewInMemoryBlockPersistence(config Config) adapter.StatePersistence {
-	return &statePersistence{
+func NewInMemoryStatePersistence(config adapter.Config) adapter.StatePersistence {
+	return &inMemoryStatePersistence{
 		config:       config,
 		stateWritten: make(chan bool, 10),
 	}
 }
 
-func (sp *statePersistence) WriteState(stateDiff *protocol.StateRecord) {
+func (sp *inMemoryStatePersistence) WriteState(stateDiff *protocol.StateRecord) {
 	sp.stateDiffs = append(sp.stateDiffs, stateDiff)
 	sp.stateWritten <- true
 }
 
-func (sp *statePersistence) ReadState() []*protocol.StateRecord {
+func (sp *inMemoryStatePersistence) ReadState() []*protocol.StateRecord {
 	return sp.stateDiffs
 }

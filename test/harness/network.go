@@ -7,9 +7,9 @@ import (
 	testinstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -52,8 +52,8 @@ func CreateTestNetwork() AcceptanceTestNetwork {
 	leaderBp := blockStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
 	validatorBp := blockStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
 
-	leaderSp := stateStorageAdapter.NewInMemoryBlockPersistence(leaderConfig)
-	validatorSp := stateStorageAdapter.NewInMemoryBlockPersistence(validatorConfig)
+	leaderSp := stateStorageAdapter.NewInMemoryStatePersistence(leaderConfig)
+	validatorSp := stateStorageAdapter.NewInMemoryStatePersistence(validatorConfig)
 
 	leader := bootstrap.NewNodeLogic(temperingTransport, leaderBp, leaderSp, instrumentation.NewCompositeReporting([]instrumentation.Reporting{leaderLog, leaderLatch}), leaderLoopControl, leaderConfig, true)
 	validator := bootstrap.NewNodeLogic(temperingTransport, validatorBp, validatorSp, validatorLog, testinstrumentation.NewBrakingLoop(validatorLog), validatorConfig, false)

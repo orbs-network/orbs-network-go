@@ -32,7 +32,7 @@ func NewNode(
 	fmt.Println("Node config", nodeConfig)
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
-	stateStorageAdapter := stateStorageAdapter.NewLevelDStatePersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	loopControl := instrumentation.NewSimpleLoop(logger)
 	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, loopControl, nodeConfig, isLeader)
