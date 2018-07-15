@@ -57,6 +57,7 @@ func assertContractOf(makeContext func() *transportContractContext) {
 			c.l1.expect(header, payloads)
 			c.l2.expect(header, payloads)
 			c.l3.expect(header, payloads)
+
 			c.transport.Send(header, payloads)
 			c.verify()
 		})
@@ -95,24 +96,24 @@ func aTamperingTransport() *transportContractContext {
 }
 
 func aMemberlistTransport() *transportContractContext {
-	config1 := adapter.MemberlistGossipConfig{"node1", 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003"}}
+	config1 := adapter.MemberlistGossipConfig{"node1", 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003", "127.0.0.1:60004"}}
 	transport1 := adapter.NewMemberlistTransport(config1)
 
 
-	config2 := adapter.MemberlistGossipConfig{"node2", 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003"}}
+	config2 := adapter.MemberlistGossipConfig{"node2", 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003", "127.0.0.1:60004"}}
 	transport2 := adapter.NewMemberlistTransport(config2)
 
 
-	config3 := adapter.MemberlistGossipConfig{"node3", 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002"}}
+	config3 := adapter.MemberlistGossipConfig{"node3", 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60004"}}
 	transport3 := adapter.NewMemberlistTransport(config3)
+
+	//config4 := adapter.MemberlistGossipConfig{"node4", 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}}
+	//transport4 := adapter.NewMemberlistTransport(config4)
 
 	l1 := listenTo(transport1, "l1")
 	l2 := listenTo(transport2, "l2")
 	l3 := listenTo(transport3, "l3")
-
-	go transport1.(*adapter.MemberlistTransport).Join()
-	go transport2.(*adapter.MemberlistTransport).Join()
-	go transport3.(*adapter.MemberlistTransport).Join()
+	//l4 := listenTo(transport4, "l4")
 
 	return &transportContractContext{l1, l2, l3, transport3}
 }

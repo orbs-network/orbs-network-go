@@ -75,7 +75,7 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	delegate := NewGossipDelegate(config.Name)
 	delegate.OutgoingMessages = &memberlist.TransmitLimitedQueue{
 		NumNodes: func() int {
-			return len(config.Peers) - 1
+			return len(config.Peers)
 		},
 		RetransmitMult: listConfig.RetransmitMult,
 	}
@@ -172,8 +172,8 @@ func encodeByteArray(payloads [][]byte) []byte {
 }
 
 func decodeByteArray(data []byte) (res [][]byte) {
-	var buffer bytes.Buffer
-	dec := gob.NewDecoder(&buffer)
+	buffer := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buffer)
 	dec.Decode(&res)
 	return
 }
