@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/test"
 	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -90,15 +91,7 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: &protocol.SignedTransactionBuilder{
-				Transaction: &protocol.TransactionBuilder{
-					ContractName: "BenchmarkToken",
-					MethodName:   "transfer",
-					InputArguments: []*protocol.MethodArgumentBuilder{
-						{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
-					},
-				},
-			},
+			SignedTransaction: test.TransferTransaction().WithAmount(amount).Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
