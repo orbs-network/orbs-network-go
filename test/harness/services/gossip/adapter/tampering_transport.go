@@ -1,13 +1,13 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"fmt"
-	"sync"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"sync"
 )
 
-type TemperingTransport interface {
+type TamperingTransport interface {
 	adapter.Transport
 	Pause(topic gossipmessages.HeaderTopic, messageType uint16)
 	Resume(topic gossipmessages.HeaderTopic, messageType uint16)
@@ -20,15 +20,15 @@ type messageWithPayloads struct {
 	payloads [][]byte
 }
 
-type temperingTransport struct {
+type tamperingTransport struct {
 	transportListeners map[string]adapter.TransportListener
 	pausedMessages     map[string][]messageWithPayloads // TODO: this all needs to be synchronized
 	failMessages       map[string]bool                  // TODO: this all needs to be synchronized
 	mutex              *sync.Mutex
 }
 
-func NewTemperingTransport() TemperingTransport {
-	return &temperingTransport{
+func NewTamperingTransport() TamperingTransport {
+	return &tamperingTransport{
 		transportListeners: make(map[string]adapter.TransportListener),
 		pausedMessages:     make(map[string][]messageWithPayloads),
 		failMessages:       make(map[string]bool),
@@ -36,22 +36,22 @@ func NewTemperingTransport() TemperingTransport {
 	}
 }
 
-func (t *temperingTransport) RegisterListener(listener adapter.TransportListener, myNodeId string) {
+func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, myNodeId string) {
 	t.transportListeners[myNodeId] = listener
 }
 
-func (t *temperingTransport) Send(message *gossipmessages.Header, payloads [][]byte) error {
-	msgTypeStr := gossipMessageHeaderToTypeString(message)
+func (t *tamperingTransport) Send(header *gossipmessages.Header, payloads [][]byte) error {
+	msgTypeStr := gossipMessageHeaderToTypeString(header)
 	if t.fail(msgTypeStr) {
-		return &adapter.ErrGossipRequestFailed{message}
+		return &adapter.ErrGossipRequestFailed{header}
 	}
 	if t.paused(msgTypeStr) {
 		t.mutex.Lock()
-		t.pausedMessages[msgTypeStr] = append(t.pausedMessages[msgTypeStr], messageWithPayloads{message, payloads})
+		t.pausedMessages[msgTypeStr] = append(t.pausedMessages[msgTypeStr], messageWithPayloads{header, payloads})
 		t.mutex.Unlock()
 		return nil
 	}
-	go t.receive(message, payloads)
+	go t.receive(header, payloads)
 	return nil
 }
 
@@ -60,7 +60,7 @@ func topicMessageToTypeString(topic gossipmessages.HeaderTopic, messageType uint
 }
 
 func gossipMessageHeaderMessageType(message *gossipmessages.Header) uint16 {
-	switch (message.Topic()) {
+	switch message.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		return uint16(message.TransactionRelay())
 	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
@@ -76,14 +76,14 @@ func gossipMessageHeaderToTypeString(message *gossipmessages.Header) string {
 	return fmt.Sprintf("%d.%d", uint16(message.Topic()), messageType)
 }
 
-func (t *temperingTransport) Pause(topic gossipmessages.HeaderTopic, messageType uint16) {
+func (t *tamperingTransport) Pause(topic gossipmessages.HeaderTopic, messageType uint16) {
 	msgTypeStr := topicMessageToTypeString(topic, messageType)
 	t.mutex.Lock()
 	t.pausedMessages[msgTypeStr] = nil
 	t.mutex.Unlock()
 }
 
-func (t *temperingTransport) Resume(topic gossipmessages.HeaderTopic, messageType uint16) {
+func (t *tamperingTransport) Resume(topic gossipmessages.HeaderTopic, messageType uint16) {
 	msgTypeStr := topicMessageToTypeString(topic, messageType)
 	t.mutex.Lock()
 	messages, found := t.pausedMessages[msgTypeStr]
@@ -96,17 +96,17 @@ func (t *temperingTransport) Resume(topic gossipmessages.HeaderTopic, messageTyp
 	}
 }
 
-func (t *temperingTransport) Fail(topic gossipmessages.HeaderTopic, messageType uint16) {
+func (t *tamperingTransport) Fail(topic gossipmessages.HeaderTopic, messageType uint16) {
 	messagesOfType := topicMessageToTypeString(topic, messageType)
 	t.failMessages[messagesOfType] = true
 }
 
-func (t *temperingTransport) Pass(topic gossipmessages.HeaderTopic, messageType uint16) {
+func (t *tamperingTransport) Pass(topic gossipmessages.HeaderTopic, messageType uint16) {
 	messagesOfType := topicMessageToTypeString(topic, messageType)
 	delete(t.failMessages, messagesOfType)
 }
 
-func (t *temperingTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
+func (t *tamperingTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
 	switch message.RecipientMode() {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, l := range t.transportListeners {
@@ -123,18 +123,18 @@ func (t *temperingTransport) receive(message *gossipmessages.Header, payloads []
 	}
 }
 
-func (t *temperingTransport) paused(msgTypeStr string) bool {
+func (t *tamperingTransport) paused(msgTypeStr string) bool {
 	t.mutex.Lock()
 	_, found := t.pausedMessages[msgTypeStr]
 	t.mutex.Unlock()
 	return found
 }
 
-func (t *temperingTransport) fail(msgTypeStr string) bool {
+func (t *tamperingTransport) fail(msgTypeStr string) bool {
 	_, found := t.failMessages[msgTypeStr]
 	return found
 }
 
-func (t *temperingTransport) Join() {
+func (t *tamperingTransport) Join() {
 	// not implemented because tempering transport is in memory and therefore does not need any network initialization
 }

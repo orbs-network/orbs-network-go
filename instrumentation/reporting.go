@@ -6,6 +6,7 @@ import (
 
 type Reporting interface {
 	Info(message string)
+	Infof(message string, parmams ...interface{})
 	Error(err error)
 }
 
@@ -17,21 +18,23 @@ type StdoutLog interface {
 }
 
 type stdoutLog struct {
-
 }
 
 func NewStdoutLog() Reporting {
 	return &stdoutLog{}
 }
 
-func (e *stdoutLog) Info(message string) () {
+func (e *stdoutLog) Info(message string) {
 	log.Print(message)
 }
 
-func (e *stdoutLog) Error(err error) () {
-	log.Fatal(err)
+func (e *stdoutLog) Infof(message string, params ...interface{}) {
+	log.Printf(message, params...)
 }
 
+func (e *stdoutLog) Error(err error) {
+	log.Fatal(err)
+}
 
 type compositeReporting struct {
 	children []Reporting
@@ -41,13 +44,19 @@ func NewCompositeReporting(children []Reporting) Reporting {
 	return &compositeReporting{children: children}
 }
 
-func (e *compositeReporting) Info(message string) () {
+func (e *compositeReporting) Info(message string) {
 	for _, child := range e.children {
 		child.Info(message)
 	}
 }
 
-func (e *compositeReporting) Error(err error) () {
+func (e *compositeReporting) Infof(message string, params ...interface{}) {
+	for _, child := range e.children {
+		child.Infof(message, params...)
+	}
+}
+
+func (e *compositeReporting) Error(err error) {
 	for _, child := range e.children {
 		child.Error(err)
 	}

@@ -1,53 +1,61 @@
 package bootstrap
 
 import (
-	"github.com/orbs-network/orbs-network-go/ledger"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
-	"github.com/orbs-network/orbs-network-go/services/transactionpool"
-	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-network-go/services/gossip"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
+	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
+	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
+	"github.com/orbs-network/orbs-network-go/services/gossip"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/services/publicapi"
+	"github.com/orbs-network/orbs-network-go/services/statestorage"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type NodeLogic interface {
-	GetPublicApi() services.PublicApi
+	PublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
-	isLeader        bool
-	gossip          services.Gossip
-	ledger          ledger.Ledger
-	events          instrumentation.Reporting
-	consensusAlgo   services.ConsensusAlgo
-	transactionPool services.TransactionPool
-	publicApi       services.PublicApi
+	isLeader  bool
+	events    instrumentation.Reporting
+	leanHelix services.ConsensusAlgo // TODO: change this to a map
+	publicApi services.PublicApi
 }
 
 func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
-	bp blockStorageAdapter.BlockPersistence,
-	events instrumentation.Reporting,
+	blockPersistence blockStorageAdapter.BlockPersistence,
+	statePersistence stateStorageAdapter.StatePersistence,
+	reporting instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
 	nodeConfig config.NodeConfig,
 	isLeader bool,
 ) NodeLogic {
 
-	gossip := gossip.NewGossip(gossipTransport, nodeConfig)
-	tp := transactionpool.NewTransactionPool(gossip)
-	ledger := ledger.NewLedger(bp)
-	consensusAlgo := leanhelix.NewConsensusAlgoLeanHelix(gossip, ledger, tp, events, loopControl, nodeConfig, isLeader)
-	publicApi := publicapi.NewPublicApi(tp, ledger, events, isLeader)
+	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
+	transactionPool := transactionpool.NewTransactionPool(gossip, reporting)
+	stateStorage := statestorage.NewStateStorage(statePersistence)
+	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage)
+	nativeProcessor := native.NewNativeProcessor()
+	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
+	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)
+	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting, isLeader)
+	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
+	leanHelixConsensusAlgo := leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, loopControl, nodeConfig, isLeader)
 	return &nodeLogic{
-		publicApi:       publicApi,
-		transactionPool: tp,
-		consensusAlgo:   consensusAlgo,
+		publicApi: publicApi,
+		leanHelix: leanHelixConsensusAlgo,
 	}
 }
 
-func (n *nodeLogic) GetPublicApi() services.PublicApi {
+func (n *nodeLogic) PublicApi() services.PublicApi {
 	return n.publicApi
 }

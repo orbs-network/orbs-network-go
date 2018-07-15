@@ -8,7 +8,7 @@ type NodeConfig interface {
 //TODO introduce FileSystemConfig
 type hardcodedConfig struct {
 	networkSize uint32
-	nodeId string
+	nodeId      string
 }
 
 func NewHardCodedConfig(networkSize uint32, nodeId string) NodeConfig {

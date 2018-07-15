@@ -18,25 +18,27 @@ type HttpServer interface {
 
 type server struct {
 	httpServer *http.Server
+	reporting  instrumentation.Reporting
 }
 
-func NewHttpServer(address string, logger instrumentation.Reporting, publicApi services.PublicApi) HttpServer {
+func NewHttpServer(address string, reporting instrumentation.Reporting, publicApi services.PublicApi) HttpServer {
 	server := &server{
 		httpServer: &http.Server{
 			Addr:    address,
-			Handler: createRouter(publicApi),
+			Handler: createRouter(publicApi, reporting),
 		},
+		reporting: reporting,
 	}
 	go func() {
 		server.httpServer.ListenAndServe() //TODO error on failed startup
 	}()
-	logger.Info(fmt.Sprintf("server started on address %s", address))
+	reporting.Info(fmt.Sprintf("server started on address %s", address))
 	return server
 }
 
 //TODO extract commonalities between handlers
-func createRouter(publicApi services.PublicApi) http.Handler {
-	sendTransactionHandler := func(w http.ResponseWriter, r *http.Request) {
+func createRouter(publicApi services.PublicApi, reporting instrumentation.Reporting) http.Handler {
+	sendTransactionHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -54,9 +56,9 @@ func createRouter(publicApi services.PublicApi) http.Handler {
 				//w.Write()
 			}
 		}
-	}
+	})
 
-	callMethodHandler := func(w http.ResponseWriter, r *http.Request) {
+	callMethodHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -73,14 +75,25 @@ func createRouter(publicApi services.PublicApi) http.Handler {
 				w.Write(result.ClientResponse.Raw())
 			}
 		}
-	}
+	})
 
 	router := http.NewServeMux()
-	router.HandleFunc("/api/send-transaction", sendTransactionHandler)
-	router.HandleFunc("/api/call-method", callMethodHandler)
+	router.Handle("/api/send-transaction", report(reporting, sendTransactionHandler))
+	router.Handle("/api/call-method", report(reporting, callMethodHandler))
 	return router
 }
 
 func (s *server) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown(context.TODO()) //TODO timeout context
+}
+
+func report(reporting instrumentation.Reporting, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		reporting.Infof("before %s", r.URL)
+		defer func() {
+			reporting.Infof("after %s, took %s", r.URL, time.Since(start))
+		}()
+		h.ServeHTTP(w, r)
+	})
 }

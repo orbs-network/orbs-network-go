@@ -8,24 +8,24 @@ type Config interface {
 	NodeId() string
 }
 
-type blockPersistence struct {
+type levelDbBlockPersistence struct {
 	blockWritten chan bool
-	transactions []protocol.SignedTransaction
+	blockPairs   []*protocol.BlockPairContainer
 	config       Config
 }
 
-func NewBlockPersistence(config Config) BlockPersistence {
-	return &blockPersistence{
-		config:         config,
+func NewLevelDbBlockPersistence(config Config) BlockPersistence {
+	return &levelDbBlockPersistence{
+		config:       config,
 		blockWritten: make(chan bool, 10),
 	}
 }
 
-func (bp *blockPersistence) WriteBlock(signedTransaction *protocol.SignedTransaction) {
-	bp.transactions = append(bp.transactions, *signedTransaction)
+func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
+	bp.blockPairs = append(bp.blockPairs, blockPair)
 	bp.blockWritten <- true
 }
 
-func (bp *blockPersistence) ReadAllBlocks() []protocol.SignedTransaction {
-	return bp.transactions
+func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
+	return bp.blockPairs
 }

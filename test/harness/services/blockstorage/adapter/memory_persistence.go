@@ -1,8 +1,8 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type InMemoryBlockPersistence interface {
@@ -12,13 +12,13 @@ type InMemoryBlockPersistence interface {
 
 type inMemoryBlockPersistence struct {
 	blockWritten chan bool
-	transactions []protocol.SignedTransaction
+	blockPairs   []*protocol.BlockPairContainer
 	config       adapter.Config
 }
 
 func NewInMemoryBlockPersistence(config adapter.Config) InMemoryBlockPersistence {
 	return &inMemoryBlockPersistence{
-		config:         config,
+		config:       config,
 		blockWritten: make(chan bool, 10),
 	}
 }
@@ -29,11 +29,11 @@ func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {
 	}
 }
 
-func (bp *inMemoryBlockPersistence) WriteBlock(transaction *protocol.SignedTransaction) {
-	bp.transactions = append(bp.transactions, *transaction)
+func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
+	bp.blockPairs = append(bp.blockPairs, blockPair)
 	bp.blockWritten <- true
 }
 
-func (bp *inMemoryBlockPersistence) ReadAllBlocks() []protocol.SignedTransaction {
-	return bp.transactions
+func (bp *inMemoryBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
+	return bp.blockPairs
 }

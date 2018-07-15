@@ -2,11 +2,6 @@ package e2e
 
 import (
 	"bytes"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"testing"
-	"time"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/membuffers/go"
@@ -15,6 +10,11 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"testing"
+	"time"
 )
 
 type E2EConfig struct {
@@ -23,6 +23,9 @@ type E2EConfig struct {
 }
 
 func TestE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "E2E Suite")
 }
@@ -46,27 +49,27 @@ var _ = Describe("The Orbs Network", func() {
 		var node bootstrap.Node
 
 		if getConfig().Bootstrap {
-			gossipTransport := gossipAdapter.NewTemperingTransport()
+			gossipTransport := gossipAdapter.NewTamperingTransport()
 			node = bootstrap.NewNode(":8080", "node1", gossipTransport, true, 1)
 		}
 
 		tx := &protocol.TransactionBuilder{
-			ContractName: "MelangeToken",
+			ContractName: "BenchmarkToken",
 			MethodName:   "transfer",
 			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64, Uint64: 17},
+				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 17},
 			},
 		}
 
 		_ = sendTransaction(tx)
 
 		m := &protocol.TransactionBuilder{
-			ContractName: "MelangeToken",
+			ContractName: "BenchmarkToken",
 			MethodName:   "getBalance",
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64()
+			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {
