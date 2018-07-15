@@ -19,6 +19,10 @@ var _ = Describe("Tempering Transport", func() {
 	assertContractOf(aTamperingTransport)
 })
 
+var _ = Describe("Memberlist Transport", func () {
+	assertContractOf(aMemberlistTransport)
+})
+
 func assertContractOf(makeContext func() *transportContractContext) {
 
 	/* // TODO: add me
@@ -88,6 +92,29 @@ func aTamperingTransport() *transportContractContext {
 	l2 := listenTo(transport, "l2")
 	l3 := listenTo(transport, "l3")
 	return &transportContractContext{l1, l2, l3, transport}
+}
+
+func aMemberlistTransport() *transportContractContext {
+	config1 := adapter.MemberlistGossipConfig{"node1", 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003"}}
+	transport1 := adapter.NewMemberlistTransport(config1)
+
+
+	config2 := adapter.MemberlistGossipConfig{"node2", 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003"}}
+	transport2 := adapter.NewMemberlistTransport(config2)
+
+
+	config3 := adapter.MemberlistGossipConfig{"node3", 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002"}}
+	transport3 := adapter.NewMemberlistTransport(config3)
+
+	l1 := listenTo(transport1, "l1")
+	l2 := listenTo(transport2, "l2")
+	l3 := listenTo(transport3, "l3")
+
+	go transport1.(*adapter.MemberlistTransport).Join()
+	go transport2.(*adapter.MemberlistTransport).Join()
+	go transport3.(*adapter.MemberlistTransport).Join()
+
+	return &transportContractContext{l1, l2, l3, transport3}
 }
 
 func (c *transportContractContext) verify() {

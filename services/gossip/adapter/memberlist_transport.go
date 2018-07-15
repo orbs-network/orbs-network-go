@@ -37,6 +37,7 @@ func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
 	fmt.Println("Message received", string(rawMessage))
 	// No need to queue, we can dispatch right here
 	messageWithPayloads := decodeByteArray(rawMessage)
+	fmt.Println("MessageWithPayloads", messageWithPayloads)
 	message := gossipmessages.HeaderReader(messageWithPayloads[0])
 	payloads := messageWithPayloads[1:]
 	fmt.Println("Unmarshalled message as", message)
