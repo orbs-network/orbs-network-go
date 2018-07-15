@@ -38,6 +38,11 @@ func (l *latch) Info(message string) {
 	}
 }
 
+func (l *latch) Infof(message string, params ...interface{}) {
+	l.Info(fmt.Sprintf(message, params...))
+}
+
+
 func (l *latch) Error(err error) {
 	l.Info(err.Error())
 }
@@ -68,6 +73,11 @@ func (e *bufferedLog) Flush() {
 func (e *bufferedLog) Info(message string) {
 	e.log(message)
 }
+
+func (e *bufferedLog) Infof(message string, params ...interface{}) {
+	e.Info(fmt.Sprintf(message, params...))
+}
+
 
 func (e *bufferedLog) Error(err error) {
 	e.log(err.Error())

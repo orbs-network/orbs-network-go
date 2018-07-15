@@ -89,8 +89,11 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 
 func report(reporting instrumentation.Reporting, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reporting.Info(fmt.Sprintf("before %s", r.URL))
-		defer reporting.Info(fmt.Sprintf("after %s", r.URL))
+		start := time.Now()
+		reporting.Infof("before %s", r.URL)
+		defer func() {
+			reporting.Infof("after %s, took %s", r.URL, time.Since(start))
+		}()
 		h.ServeHTTP(w, r)
 	})
 }
