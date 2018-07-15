@@ -2,12 +2,12 @@ package transactionpool
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 type service struct {
@@ -45,11 +45,6 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 		out.SignedTransactions[i] = <-s.pendingTransactions
 	}
 	return out, nil
-}
-
-// Deprecated: TransactionListener is going away in favor of TransactionRelayGossipHandler
-func (s *service) OnForwardTransaction(tx *protocol.SignedTransaction) {
-	s.pendingTransactions <- tx
 }
 
 func (s *service) GetCommittedTransactionReceipt(input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
