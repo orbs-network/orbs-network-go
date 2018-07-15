@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/memberlist"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"time"
 )
 
 // TODO: move this to regular config model
@@ -90,18 +91,28 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	} else {
 		fmt.Println("Connected to", n, "hosts")
 	}
-	returnObject := MemberlistTransport{
+	t := MemberlistTransport{
 		list:       list,
 		listConfig: &config,
 		delegate:   &delegate,
 		listeners:  make(map[string]TransportListener),
 	}
 	// this is terrible and should be purged
-	delegate.parent = &returnObject
-	return &returnObject
+	delegate.parent = &t
+	go t.remainConnectedLoop()
+	return &t
 }
 
-func (t *MemberlistTransport) Join() {
+func (t *MemberlistTransport) remainConnectedLoop() {
+	for {
+		t.join()
+		// go gossip.PrintPeers()
+		// go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func (t *MemberlistTransport) join() {
 	if len(t.list.Members()) < 2 {
 		fmt.Println("Node does not have any peers, trying to join the cluster...", t.listConfig.Peers)
 		t.list.Join(t.listConfig.Peers)

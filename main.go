@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -23,13 +22,5 @@ func main() {
 
 	fmt.Println("PORT", port)
 
-	bootstrap.NewNode(":"+strconv.FormatInt(port, 10), nodeName, gossipTransport, isLeader, 3)
-
-	for {
-		// TODO: Join is not a part of the transport interface
-		go gossipTransport.(*gossipAdapter.MemberlistTransport).Join()
-		// go gossip.PrintPeers()
-		// go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
-		time.Sleep(3 * time.Second)
-	}
+	bootstrap.NewNode(":"+strconv.FormatInt(port, 10), nodeName, gossipTransport, isLeader, 3).WaitUntilShutdown()
 }
