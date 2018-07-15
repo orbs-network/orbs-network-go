@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -29,7 +28,6 @@ func NewNode(
 ) Node {
 
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodeId)
-	fmt.Println("Node config", nodeConfig)
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)

@@ -1,14 +1,14 @@
 package gossip
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"fmt"
 )
 
 func (s *service) OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte) {
-	fmt.Println("Gossip: OnMessageReceived", message)
+	s.reporting.Info(fmt.Sprintf("Gossip: OnMessageReceived [%s]", message))
 	switch message.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		s.receivedTransactionRelayMessage(message, payloads)

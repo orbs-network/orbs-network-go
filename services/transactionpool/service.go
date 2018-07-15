@@ -7,24 +7,27 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 type service struct {
 	pendingTransactions chan *protocol.SignedTransaction
 	gossip              gossiptopics.TransactionRelay
+	reporting           instrumentation.Reporting
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay) services.TransactionPool {
+func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrumentation.Reporting) services.TransactionPool {
 	s := &service{
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 		gossip:              gossip,
+		reporting:           reporting,
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s
 }
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
-	fmt.Println("Adding new transaction to the pool", input.SignedTransaction)
+	s.reporting.Info(fmt.Sprintf("Adding new transaction [%v] to the pool", input.SignedTransaction))
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},

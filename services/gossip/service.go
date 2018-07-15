@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 type Config interface {
@@ -16,12 +17,14 @@ type service struct {
 	transactionHandlers []gossiptopics.TransactionRelayHandler
 	consensusHandlers   []gossiptopics.LeanHelixHandler
 	config              Config
+	reporting           instrumentation.Reporting
 }
 
-func NewGossip(transport adapter.Transport, config Config) services.Gossip {
+func NewGossip(transport adapter.Transport, config Config, reporting instrumentation.Reporting) services.Gossip {
 	s := &service{
 		transport: transport,
 		config:    config,
+		reporting: reporting,
 	}
 	transport.RegisterListener(s, s.config.NodeId())
 	return s
