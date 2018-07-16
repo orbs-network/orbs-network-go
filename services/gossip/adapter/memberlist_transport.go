@@ -37,10 +37,9 @@ func (d gossipDelegate) NodeMeta(limit int) []byte {
 func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
 	// No need to queue, we can dispatch right here
 	messageWithPayloads := decodeByteArray(rawMessage)
-	fmt.Println("Gossip: message received", messageWithPayloads)
 	message := gossipmessages.HeaderReader(messageWithPayloads[0])
 	payloads := messageWithPayloads[1:]
-	fmt.Println("Unmarshalled message as", message)
+	fmt.Printf("Gossip: message received %v %v\n", message, payloads)
 	d.parent.receive(message, payloads)
 }
 

@@ -8,7 +8,6 @@ import (
 	. "github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"testing"
-	"fmt"
 )
 
 func TestContract(t *testing.T) {
@@ -54,6 +53,8 @@ func assertContractOf(makeContext func() *transportContractContext) {
 				TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
 				NumPayloads:      0,
 			}).Build()
+			header.IsValid()
+
 			payloads := [][]byte{}
 			c.l1.expect(header, payloads)
 			c.l2.expect(header, payloads)
@@ -81,8 +82,6 @@ func listenTo(transport adapter.Transport, name string) *mockListener {
 }
 
 func (m *mockListener) expect(header *gossipmessages.Header, payloads [][]byte) {
-	// If I remove this line, tests fails
-	fmt.Printf("Expected %v %v\n", header, payloads)
 	m.When("OnTransportMessageReceived", header, payloads).Return().Times(1)
 }
 
