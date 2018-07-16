@@ -2,7 +2,7 @@ package test
 
 import (
 	"fmt"
-	"github.com/maraino/go-mock"
+	"github.com/orbs-network/go-mock"
 	"github.com/onsi/gomega/types"
 )
 
