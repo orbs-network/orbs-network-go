@@ -14,6 +14,18 @@ type levelDbBlockPersistence struct {
 	config       Config
 }
 
+type config struct {
+	name string
+}
+
+func (c *config) NodeId() string {
+	return c.name
+}
+
+func NewLevelDbBlockPersistenceConfig(name string) Config {
+	return &config{name: name}
+}
+
 func NewLevelDbBlockPersistence(config Config) BlockPersistence {
 	return &levelDbBlockPersistence{
 		config:       config,
