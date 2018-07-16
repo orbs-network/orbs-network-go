@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/maraino/go-mock"
+	"github.com/orbs-network/go-mock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
