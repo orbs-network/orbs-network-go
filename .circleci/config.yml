@@ -4,7 +4,11 @@ jobs:
     machine: true
     steps:
       - checkout
+      - run: git submodule init && git submodule update --init --recursive
       - run: ./docker-build.sh
+      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker-tag.sh)
+      - run: $(aws ecr get-login --no-include-email --region us-west-2)
+      - run: docker push $DOCKER_IMAGE
 
 workflows:
   version: 2
