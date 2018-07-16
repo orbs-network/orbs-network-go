@@ -8,6 +8,7 @@ import (
 	. "github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"testing"
+	"fmt"
 )
 
 func TestContract(t *testing.T) {
@@ -66,6 +67,7 @@ func assertContractOf(makeContext func() *transportContractContext) {
 
 type mockListener struct {
 	mock.Mock
+	name string
 }
 
 func (m *mockListener) OnTransportMessageReceived(header *gossipmessages.Header, payloads [][]byte) {
@@ -73,12 +75,14 @@ func (m *mockListener) OnTransportMessageReceived(header *gossipmessages.Header,
 }
 
 func listenTo(transport adapter.Transport, name string) *mockListener {
-	l := &mockListener{}
+	l := &mockListener{name: name}
 	transport.RegisterListener(l, name)
 	return l
 }
 
 func (m *mockListener) expect(header *gossipmessages.Header, payloads [][]byte) {
+	// If I remove this line, tests fails
+	fmt.Printf("Expected %v %v\n", header, payloads)
 	m.When("OnTransportMessageReceived", header, payloads).Return().Times(1)
 }
 
@@ -107,15 +111,14 @@ func aMemberlistTransport() *transportContractContext {
 	config3 := adapter.MemberlistGossipConfig{"node3", 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60004"}}
 	transport3 := adapter.NewMemberlistTransport(config3)
 
-	//config4 := adapter.MemberlistGossipConfig{"node4", 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}}
-	//transport4 := adapter.NewMemberlistTransport(config4)
+	config4 := adapter.MemberlistGossipConfig{"node4", 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}}
+	transport4 := adapter.NewMemberlistTransport(config4)
 
 	l1 := listenTo(transport1, "l1")
 	l2 := listenTo(transport2, "l2")
 	l3 := listenTo(transport3, "l3")
-	//l4 := listenTo(transport4, "l4")
 
-	return &transportContractContext{l1, l2, l3, transport3}
+	return &transportContractContext{l1, l2, l3, transport4}
 }
 
 func (c *transportContractContext) verify() {
