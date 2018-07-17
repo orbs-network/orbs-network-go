@@ -36,11 +36,9 @@ func (d gossipDelegate) NodeMeta(limit int) []byte {
 
 func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
 	// No need to queue, we can dispatch right here
-	messageWithPayloads := decodeByteArray(rawMessage)
-	message := gossipmessages.HeaderReader(messageWithPayloads[0])
-	payloads := messageWithPayloads[1:]
-	fmt.Printf("Gossip: message received %v %v\n", message, payloads)
-	d.parent.receive(message, payloads)
+	payloads := decodeByteArray(rawMessage)
+	fmt.Printf("Gossip: message received %v\n", payloads)
+	d.parent.receive(payloads)
 }
 
 func (d gossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
@@ -85,7 +83,7 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	// Join an existing cluster by specifying at least one known member.
 	n, err := list.Join(config.Peers)
 	if err != nil {
-		fmt.Println(config.Name, "failed to join the cluster: " + err.Error())
+		fmt.Println(config.Name, "failed to join the cluster: "+err.Error())
 	} else {
 		fmt.Println(config.Name, "connected to", n, "hosts")
 	}
@@ -124,18 +122,21 @@ func (t *MemberlistTransport) PrintPeers() {
 	}
 }
 
-func (t *MemberlistTransport) Send(header *gossipmessages.Header, payloads [][]byte) error {
-	data := encodeByteArray(append([][]byte{header.Raw()}, payloads...))
-	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: data})
-	t.receive(header, payloads)
+func (t *MemberlistTransport) Send(data *TransportData) error {
+	if data.RecipientMode != gossipmessages.RECIPIENT_LIST_MODE_BROADCAST {
+		panic("Not implemented")
+	}
+	rawMessage := encodeByteArray(data.Payloads)
+	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: rawMessage})
+	t.receive(data.Payloads) // TODO: this needs to be removed because broadcast shouldn't send to self
 	// TODO: add proper error handling
 	return nil
 }
 
-func (t *MemberlistTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
+func (t *MemberlistTransport) receive(payloads [][]byte) {
 	fmt.Println("Gossip: triggering listeners")
 	for _, l := range t.listeners {
-		l.OnTransportMessageReceived(message, payloads)
+		l.OnTransportMessageReceived(payloads)
 	}
 }
 
