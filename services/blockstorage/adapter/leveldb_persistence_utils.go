@@ -12,6 +12,7 @@ func copyByteArray(data []byte) []byte {
 	return result
 }
 
+// FIXME needs testing
 func copyArrayOfByteArrays(data [][]byte) [][]byte {
 	result := make([][]byte, len(data))
 	copy(result, data)
