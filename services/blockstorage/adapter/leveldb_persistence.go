@@ -9,6 +9,19 @@ import (
 	"strings"
 )
 
+const (
+	TX_BLOCK_HEADER = "transaction-block-header-"
+	TX_BLOCK_PROOF = "transaction-block-proof-"
+	TX_BLOCK_METADATA = "transaction-block-metadata-"
+	TX_BLOCK_SIGNED_TRANSACTION = "transaction-block-signed-transaction-"
+
+	RS_BLOCK_HEADER = "results-block-header-"
+	RS_BLOCK_PROOF = "results-block-proof-"
+	RS_BLOCK_CONTRACT_STATE_DIFFS = "results-block-contract-state-diffs-"
+	RS_BLOCK_TRANSACTION_RECEIPTS = "results-block-transaction-receipts-"
+)
+
+
 type Config interface {
 	NodeId() string
 }
@@ -61,6 +74,18 @@ func (bp *levelDbBlockPersistence) retrieve(key string) []byte {
 	return result
 }
 
+func (bp *levelDbBlockPersistence) retrieveByPrefix(prefix string) (results [][]byte) {
+	iter := bp.db.NewIterator(util.BytesPrefix([]byte(prefix)), nil)
+
+	for iter.Next() {
+		println("Retrieving key", string(iter.Key()))
+		results = append(results, copyByteArray(iter.Value()))
+	}
+
+	iter.Release()
+
+	return results
+}
 
 func (bp *levelDbBlockPersistence) revert(key string) error {
 	fmt.Println("Removing key", key)
@@ -75,6 +100,74 @@ func copyByteArray(data []byte) []byte {
 	return result
 }
 
+func copyArrayOfByteArrays(data [][]byte) [][]byte {
+	result := make([][]byte, len(data))
+	copy(result, data)
+
+	return result
+}
+
+func formatInt(i int) string {
+	return strconv.FormatInt(int64(i), 10)
+}
+
+func (bp *levelDbBlockPersistence) putTxBlock(txBlock *protocol.TransactionsBlockContainer) (errors []error, keys []string) {
+	blockHeight := strconv.FormatUint(uint64(txBlock.Header.BlockHeight()), 10)
+
+	txBlockHeaderKey := TX_BLOCK_HEADER + blockHeight
+	txBlockProofKey := TX_BLOCK_PROOF + blockHeight
+	txBlockMetadataKey := TX_BLOCK_METADATA + blockHeight
+
+	txBlockHeaderError := bp.put(txBlockHeaderKey, txBlock.Header.Raw())
+	txBlockProofError := bp.put(txBlockProofKey, txBlock.BlockProof.Raw())
+	txBlockMetadataError := bp.put(txBlockMetadataKey, txBlock.Metadata.Raw())
+
+	keys = append(keys, txBlockHeaderKey, txBlockProofKey, txBlockMetadataKey)
+	errors = append(errors, txBlockHeaderError, txBlockProofError, txBlockMetadataError)
+
+	for i, tx := range txBlock.SignedTransactions {
+		txBlockSignedTransactionKey := TX_BLOCK_SIGNED_TRANSACTION + blockHeight + "-" + formatInt(i)
+		txBlockSignedTransactionError := bp.put(txBlockSignedTransactionKey, tx.Raw())
+
+		keys = append(keys, txBlockSignedTransactionKey)
+		errors = append(errors, txBlockSignedTransactionError)
+	}
+
+	return errors, keys
+}
+
+func (bp *levelDbBlockPersistence) putResultsBlock(rsBlock *protocol.ResultsBlockContainer) (errors []error, keys []string) {
+	blockHeight := strconv.FormatUint(uint64(rsBlock.Header.BlockHeight()), 10)
+
+	rsBlockHeaderKey := RS_BLOCK_HEADER + blockHeight
+	rsBlockProofKey := RS_BLOCK_PROOF + blockHeight
+
+	rsBlockHeaderError := bp.put(rsBlockHeaderKey, rsBlock.Header.Raw())
+	rsBlockProofError := bp.put(rsBlockProofKey, rsBlock.BlockProof.Raw())
+
+	keys = append(keys, rsBlockHeaderKey, rsBlockProofKey)
+	errors = append(errors, rsBlockHeaderError, rsBlockProofError)
+
+
+	for i, sd := range rsBlock.ContractStateDiffs {
+		rsBlockContractStatesDiffsKey := RS_BLOCK_CONTRACT_STATE_DIFFS + blockHeight + "-" + formatInt(i)
+		rsBlockContractStatesDiffsError := bp.put(rsBlockContractStatesDiffsKey, sd.Raw())
+
+		keys = append(keys, rsBlockContractStatesDiffsKey)
+		errors = append(errors, rsBlockContractStatesDiffsError)
+	}
+
+	for i, tr := range rsBlock.TransactionReceipts {
+		rsBlockTransactionReceiptsKey := RS_BLOCK_TRANSACTION_RECEIPTS + blockHeight + "-" + formatInt(i)
+		rsBlockTransactionReceiptsError := bp.put(rsBlockTransactionReceiptsKey, tr.Raw())
+
+		keys = append(keys, rsBlockTransactionReceiptsKey)
+		errors = append(errors, rsBlockTransactionReceiptsError)
+	}
+
+	return errors, keys
+}
+
 func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
 	var errors []error
 	var keys []string
@@ -84,26 +177,14 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 		return
 	}
 
-	blockHeight := strconv.FormatUint(uint64(blockPair.TransactionsBlock.Header.BlockHeight()), 10)
+	txErrors, txKeys := bp.putTxBlock(blockPair.TransactionsBlock)
+	rsErrors, rsKeys := bp.putResultsBlock(blockPair.ResultsBlock)
 
-	txBlockHeaderKey := "transaction-block-header-" + blockHeight
-	txBlockProofKey := "transaction-block-proof-" + blockHeight
-	txBlockMetadataKey := "transaction-block-metadata-" + blockHeight
+	errors = append(errors, txErrors...)
+	errors = append(errors, rsErrors...)
 
-	txBlockHeaderError := bp.put(txBlockHeaderKey, blockPair.TransactionsBlock.Header.Raw())
-	txBlockProofError := bp.put(txBlockProofKey, blockPair.TransactionsBlock.BlockProof.Raw())
-	txBlockMetadataError := bp.put(txBlockMetadataKey, blockPair.TransactionsBlock.Metadata.Raw())
-
-	for i, tx := range blockPair.TransactionsBlock.SignedTransactions {
-		txBlockSignedTransactionKey := "transaction-block-signed-transaction-" + blockHeight + "-" + strconv.FormatInt(int64(i), 10)
-		txBlockSignedTransactionError := bp.put(txBlockSignedTransactionKey, tx.Raw())
-
-		keys = append(keys, txBlockSignedTransactionKey)
-		errors = append(errors, txBlockSignedTransactionError)
-	}
-
-	keys = append(keys, txBlockHeaderKey, txBlockProofKey, txBlockMetadataKey)
-	errors = append(errors, txBlockHeaderError, txBlockProofError, txBlockMetadataError)
+	keys = append(keys, txKeys...)
+	keys = append(keys, rsKeys...)
 
 	if anyErrors(errors) {
 		fmt.Println("Failed to write block")
@@ -118,8 +199,8 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 	bp.blockWritten <- true
 }
 
-func constructBlockFromStorage(txBlockHeaderRaw []byte, txBlockProofRaw []byte, txBlockMetadataRaw []byte,
-	txBlockSignedTransactionsRaw [][]byte) *protocol.BlockPairContainer {
+func constructTxBlockFromStorage(txBlockHeaderRaw []byte, txBlockProofRaw []byte, txBlockMetadataRaw []byte,
+	txBlockSignedTransactionsRaw [][]byte) *protocol.TransactionsBlockContainer {
 	var signedTransactions []*protocol.SignedTransaction
 
 	for _, txRaw := range txBlockSignedTransactionsRaw {
@@ -133,20 +214,35 @@ func constructBlockFromStorage(txBlockHeaderRaw []byte, txBlockProofRaw []byte, 
 		SignedTransactions: signedTransactions,
 	}
 
-	resultsBlock := &protocol.ResultsBlockContainer{}
+	return transactionsBlock
+}
 
-	container := &protocol.BlockPairContainer{
-		TransactionsBlock: transactionsBlock,
-		ResultsBlock: resultsBlock,
+func constructResultsBlockFromStorage(rsBlockHeaderRaw []byte, rsBlockProofRaw []byte, rsBlockStateDiffsRaw [][]byte, rsTransactionReceiptsRaw [][]byte) *protocol.ResultsBlockContainer {
+	var transactionReceipts []*protocol.TransactionReceipt
+	var stateDiffs []*protocol.ContractStateDiff
+
+	for _, trRaw := range rsTransactionReceiptsRaw {
+		transactionReceipts = append(transactionReceipts, protocol.TransactionReceiptReader(trRaw))
 	}
 
-	return container
+	for _, sdRaw := range rsBlockStateDiffsRaw {
+		stateDiffs = append(stateDiffs, protocol.ContractStateDiffReader(sdRaw))
+	}
+
+	resultsBlock := &protocol.ResultsBlockContainer{
+		Header: protocol.ResultsBlockHeaderReader(rsBlockHeaderRaw),
+		BlockProof: protocol.ResultsBlockProofReader(rsBlockProofRaw),
+		ContractStateDiffs: stateDiffs,
+		TransactionReceipts: transactionReceipts,
+	}
+
+	return resultsBlock
 }
 
 func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
 	var results []*protocol.BlockPairContainer
 
-	iter := bp.db.NewIterator(util.BytesPrefix([]byte("transaction-block-header-")), nil)
+	iter := bp.db.NewIterator(util.BytesPrefix([]byte(TX_BLOCK_HEADER)), nil)
 
 	for iter.Next()  {
 		key := string(iter.Key())
@@ -154,21 +250,23 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 		blockHeightAsString := tokenizedKey[len(tokenizedKey) - 1]
 
 		txBlockHeaderRaw := copyByteArray(iter.Value())
-		txBlockProofRaw := copyByteArray(bp.retrieve("transaction-block-proof-" + blockHeightAsString))
-		txBlockMetadataRaw := copyByteArray(bp.retrieve("transaction-block-metadata-" + blockHeightAsString))
+		txBlockProofRaw := copyByteArray(bp.retrieve(TX_BLOCK_PROOF + blockHeightAsString))
+		txBlockMetadataRaw := copyByteArray(bp.retrieve(TX_BLOCK_METADATA + blockHeightAsString))
 
-		var txSignedTransactionsRaw [][]byte
+		txSignedTransactionsRaw := bp.retrieveByPrefix(TX_BLOCK_SIGNED_TRANSACTION + blockHeightAsString + "-")
 
-		txIter := bp.db.NewIterator(util.BytesPrefix([]byte("transaction-block-signed-transaction-" + blockHeightAsString + "-")), nil)
+		rsBlockHeaderRaw := copyByteArray(bp.retrieve(RS_BLOCK_HEADER + blockHeightAsString))
+		rsBlockProofRaw := copyByteArray(bp.retrieve(RS_BLOCK_PROOF + blockHeightAsString))
 
-		for txIter.Next() {
-			println("Retrieving key", string(txIter.Key()))
-			txSignedTransactionsRaw = append(txSignedTransactionsRaw, copyByteArray(txIter.Value()))
+		rsTransactionReceipts := copyArrayOfByteArrays(bp.retrieveByPrefix(RS_BLOCK_TRANSACTION_RECEIPTS + blockHeightAsString + "-"))
+		rsStateDiffs := copyArrayOfByteArrays(bp.retrieveByPrefix(RS_BLOCK_CONTRACT_STATE_DIFFS + blockHeightAsString + "-"))
+
+		container := &protocol.BlockPairContainer{
+			TransactionsBlock: constructTxBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw),
+			ResultsBlock: constructResultsBlockFromStorage(rsBlockHeaderRaw, rsBlockProofRaw, rsStateDiffs, rsTransactionReceipts),
 		}
 
-		txIter.Release()
-
-		results = append(results, constructBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw))
+		results = append(results, container)
 	}
 	iter.Release()
 	_ = iter.Error()

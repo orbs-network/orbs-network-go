@@ -83,8 +83,15 @@ func compareContainers(a *protocol.BlockPairContainer, b *protocol.BlockPairCont
 	Expect(a.TransactionsBlock.Header.BlockHeight()).To(Equal(b.TransactionsBlock.Header.BlockHeight()))
 	Expect(a.TransactionsBlock.Header.Timestamp()).To(Equal(b.TransactionsBlock.Header.Timestamp()))
 
-	Expect(a.TransactionsBlock.SignedTransactions[0].Transaction().ContractName()).To(Equal(b.TransactionsBlock.SignedTransactions[0].Transaction().ContractName()))
-	Expect(a.TransactionsBlock.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().StringValue()).To(Equal(b.TransactionsBlock.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().StringValue()))
+	Expect(a.TransactionsBlock.Header.Raw()).To(Equal(b.TransactionsBlock.Header.Raw()))
+	Expect(a.TransactionsBlock.SignedTransactions[0].Raw()).To(Equal(b.TransactionsBlock.SignedTransactions[0].Raw()))
+	Expect(a.TransactionsBlock.BlockProof.Raw()).To(Equal(b.TransactionsBlock.BlockProof.Raw()))
+	Expect(a.TransactionsBlock.Metadata.Raw()).To(Equal(b.TransactionsBlock.Metadata.Raw()))
+
+	Expect(a.ResultsBlock.Header.Raw()).To(Equal(b.ResultsBlock.Header.Raw()))
+	Expect(a.ResultsBlock.BlockProof.Raw()).To(Equal(b.ResultsBlock.BlockProof.Raw()))
+	Expect(a.ResultsBlock.TransactionReceipts[0].Raw()).To(Equal(b.ResultsBlock.TransactionReceipts[0].Raw()))
+	Expect(a.ResultsBlock.ContractStateDiffs[0].Raw()).To(Equal(b.ResultsBlock.ContractStateDiffs[0].Raw()))
 }
 
 var _ = Describe("LevelDb persistence", func() {
