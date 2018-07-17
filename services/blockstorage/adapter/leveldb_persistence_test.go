@@ -14,41 +14,62 @@ func TestLevelDbPersistence(t *testing.T) {
 }
 
 func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestamp, artist string, date string) *protocol.BlockPairContainer {
-	txHeaderBuilder := &protocol.TransactionsBlockHeaderBuilder{
-		BlockHeight: height,
-		Timestamp: timestamp,
-	}
-
-	txSignedTransactionBuilder := &protocol.SignedTransactionBuilder{
-		Transaction: &protocol.TransactionBuilder{
-			Signer: &protocol.SignerBuilder{
-				Eddsa: &protocol.EdDSA01SignerBuilder{
-					SignerPublicKey: []byte("fake-public-key"),
-				},
-			},
-			ContractName: "music-gig",
-			MethodName:   "purchase-tickets",
-			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "artist", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: artist},
-				{Name: "date", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: date},
-			},
-		},
-	}
-
-	txBlockProofBuilder := protocol.TransactionsBlockProofBuilder{
-		Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+	arguments := []*protocol.MethodArgumentBuilder{
+		{Name: "artist", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: artist},
+		{Name: "date", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: date},
 	}
 
 	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header: txHeaderBuilder.Build(),
+		Header: (&protocol.TransactionsBlockHeaderBuilder{
+			BlockHeight: height,
+			Timestamp: timestamp,
+		}).Build(),
+		BlockProof: (&protocol.TransactionsBlockProofBuilder{
+			Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		}).Build(),
 		Metadata: (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
 		SignedTransactions: []*protocol.SignedTransaction{
-			txSignedTransactionBuilder.Build(),
+			(&protocol.SignedTransactionBuilder{
+				Transaction: &protocol.TransactionBuilder{
+					Signer: &protocol.SignerBuilder{
+						Eddsa: &protocol.EdDSA01SignerBuilder{
+							SignerPublicKey: []byte("fake-public-key"),
+						},
+					},
+					ContractName: "music-gig",
+					MethodName:   "purchase-tickets",
+					InputArguments: arguments,
+				},
+			}).Build(),
 		},
-		BlockProof: txBlockProofBuilder.Build(),
 	}
 
-	resultsBlock := &protocol.ResultsBlockContainer{}
+	resultsBlock := &protocol.ResultsBlockContainer{
+		Header: (&protocol.ResultsBlockHeaderBuilder{
+			BlockHeight: height,
+			Timestamp: timestamp,
+			NumContractStateDiffs: 1,
+			NumTransactionReceipts: 1,
+		}).Build(),
+		BlockProof: (&protocol.ResultsBlockProofBuilder{
+			Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		}).Build(),
+		ContractStateDiffs: []*protocol.ContractStateDiff{
+			(&protocol.ContractStateDiffBuilder{
+				ContractName: "music-gig",
+				StateDiffs: []*protocol.StateRecordBuilder{
+					{ Key: []byte("some-key"), Value: []byte("some-value") },
+				},
+			}).Build(),
+		},
+		TransactionReceipts: []*protocol.TransactionReceipt{
+			(&protocol.TransactionReceiptBuilder{
+				Txhash: []byte("some-tx-hash"),
+				ExecutionResult: protocol.EXECUTION_RESULT_SUCCESS,
+				OutputArguments: arguments,
+			}).Build(),
+		},
+	}
 
 	container := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
