@@ -1,11 +1,11 @@
 package gossip
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 type Config interface {
@@ -45,8 +45,12 @@ func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTr
 		TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
 		NumPayloads:      1,
 	}).Build()
-	payloads := [][]byte{input.Message.SignedTransactions[0].Raw()}
-	return nil, s.transport.Send(header, payloads)
+	payloads := [][]byte{header.Raw(), input.Message.SignedTransactions[0].Raw()}
+	return nil, s.transport.Send(&adapter.TransportData{
+		RecipientMode: header.RecipientMode(),
+		// TODO: change to input.RecipientList
+		Payloads: payloads,
+	})
 }
 
 func (s *service) BroadcastBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
@@ -72,8 +76,12 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 		LeanHelix:     gossipmessages.LEAN_HELIX_PRE_PREPARE,
 		NumPayloads:   1,
 	}).Build()
-	payloads := [][]byte{input.Message.BlockPair.TransactionsBlock.SignedTransactions[0].Raw()}
-	return nil, s.transport.Send(header, payloads)
+	payloads := [][]byte{header.Raw(), input.Message.BlockPair.TransactionsBlock.SignedTransactions[0].Raw()}
+	return nil, s.transport.Send(&adapter.TransportData{
+		RecipientMode: header.RecipientMode(),
+		// TODO: change to input.RecipientList
+		Payloads: payloads,
+	})
 }
 
 func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
@@ -83,8 +91,12 @@ func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput
 		LeanHelix:     gossipmessages.LEAN_HELIX_PREPARE,
 		NumPayloads:   0,
 	}).Build()
-	payloads := [][]byte{}
-	return nil, s.transport.Send(header, payloads)
+	payloads := [][]byte{header.Raw()}
+	return nil, s.transport.Send(&adapter.TransportData{
+		RecipientMode: header.RecipientMode(),
+		// TODO: change to input.RecipientList
+		Payloads: payloads,
+	})
 }
 
 func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
@@ -94,8 +106,12 @@ func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) 
 		LeanHelix:     gossipmessages.LEAN_HELIX_COMMIT,
 		NumPayloads:   0,
 	}).Build()
-	payloads := [][]byte{}
-	return nil, s.transport.Send(header, payloads)
+	payloads := [][]byte{header.Raw()}
+	return nil, s.transport.Send(&adapter.TransportData{
+		RecipientMode: header.RecipientMode(),
+		// TODO: change to input.RecipientList
+		Payloads: payloads,
+	})
 }
 
 func (s *service) SendLeanHelixViewChange(input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.EmptyOutput, error) {
