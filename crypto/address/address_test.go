@@ -1,10 +1,11 @@
 package address_test
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-network-go/crypto/address"
 	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/crypto/address"
+	"strconv"
+	"testing"
 )
 
 type invalidTestPair struct {
@@ -50,7 +51,11 @@ func testAE(actual, expected string) string {
 }
 
 func TestAddressInitializationWithPublicKeyOnTestNet(t *testing.T) {
-	pktestNet, err := address.CreateFromPK([]byte(publicKey2), "9012ca", address.TEST_NETWORK_ID)
+	pk2bytes, err := hex.DecodeString(publicKey2)
+	if err != nil {
+		t.Errorf("something went wrong with pk->bytes %s", err)
+	}
+	pktestNet, err := address.CreateFromPK(pk2bytes, "9012ca", address.TEST_NETWORK_ID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -67,7 +72,7 @@ func TestAddressInitializationWithPublicKeyOnTestNet(t *testing.T) {
 		t.Errorf("address from pk on testnet, account id is incorrect (%s)", testAE(hex.EncodeToString(pktestNet.AccountId()), "44068acc1b9ffc072694b684fc11ff229aff0b28"))
 	}
 	if pktestNet.Checksum() != 0x258c93e8 {
-		t.Errorf("address from pk on testnet, checksum is incorrect (%s)", testAE(fmt.Sprint(pktestNet.Checksum()),fmt.Sprint(0x258c93e8)))
+		t.Errorf("address from pk on testnet, checksum is incorrect (%s)", testAE(strconv.FormatUint(uint64(pktestNet.Checksum()), 16), strconv.FormatUint(0x258c93e8, 16)))
 	}
 	if address.ToBase58(pktestNet.RawAddress()) != "T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR" {
 		t.Errorf("address from pk on testnet, base58 is incorrect (%s)", testAE(string(address.ToBase58(pktestNet.RawAddress())), "T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR"))

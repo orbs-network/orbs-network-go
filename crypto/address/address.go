@@ -2,22 +2,22 @@ package address
 
 import (
 	"crypto/sha256"
-	"golang.org/x/crypto/ripemd160"
-	"fmt"
-	"hash/crc32"
-	"encoding/hex"
 	"encoding/binary"
+	"encoding/hex"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
+	"golang.org/x/crypto/ripemd160"
+	"hash/crc32"
 )
 
 type Address struct {
-	networkId string
+	networkId      string
 	virtualChainId string
-	publicKey []byte
-	version uint8
-	accountId []byte
-	checksum uint32
-	fullAddress []byte
+	publicKey      []byte
+	version        uint8
+	accountId      []byte
+	checksum       uint32
+	fullAddress    []byte
 }
 
 const (
@@ -43,6 +43,11 @@ func CreateFromPK(publicKey []byte, virtualChainId string, networkId string) (Ad
 		return Address{}, err
 	}
 
+	_, err = newAddress.calculateChecksum()
+	if err != nil {
+		return Address{}, err
+	}
+
 	return newAddress, nil
 }
 
@@ -59,13 +64,16 @@ func (a *Address) Version() uint8 {
 }
 
 func (a *Address) createAccountId() (bool, error) {
-	if a.publicKey == nil || len(a.publicKey) == 0 {
-		return false, fmt.Errorf("public key invalid, cannot create account id. pk: %#v", a.publicKey)
+	if a == nil || len(a.publicKey) == 0 {
+		return false, fmt.Errorf("public key invalid, cannot create account id")
 	}
 
 	sha256digest := sha256.Sum256(a.publicKey)
 	r := ripemd160.New()
-	r.Write(sha256digest[:])
+	_, err := r.Write(sha256digest[:])
+	if err != nil {
+		return false, err
+	}
 	a.accountId = r.Sum(nil)
 	return true, nil
 }
@@ -80,12 +88,12 @@ func (a *Address) Checksum() uint32 {
 
 func (a *Address) RawAddress() []byte {
 	cs := make([]byte, 4)
-	binary.LittleEndian.PutUint32(cs, a.checksum)
+	binary.BigEndian.PutUint32(cs, a.checksum)
 	return append(a.fullAddress, cs...)
 }
 
 func ToBase58(rawAddress []byte) string {
-	bs58 := fmt.Sprintf("%s%s%s", rawAddress[:1], rawAddress[1:2], base58.Encode(rawAddress[2:]))
+	bs58 := fmt.Sprintf("%s%s%s", rawAddress[:1], hex.EncodeToString(rawAddress[1:2]), base58.Encode(rawAddress[2:]))
 	return bs58
 }
 
@@ -102,7 +110,7 @@ func (a *Address) generateFullAddress() (bool, error) {
 	versionPart := make([]byte, 1)
 	versionPart[0] = byte(a.version)
 	vchainIdPart, err := hex.DecodeString(a.virtualChainId)
-	if err != nil  {
+	if err != nil {
 		return false, err
 	}
 	a.fullAddress = append(networkPart, versionPart...)
