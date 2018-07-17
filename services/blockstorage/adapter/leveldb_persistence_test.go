@@ -6,7 +6,6 @@ import (
 	"testing"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"fmt"
 )
 
 func TestLevelDbPersistence(t *testing.T) {
@@ -50,9 +49,6 @@ var _ = Describe("LevelDb persistence", func() {
 			db.WriteBlock(container1)
 
 			allBlocks := db.ReadAllBlocks()
-
-			fmt.Println(allBlocks[0].TransactionsBlock.Header.String())
-			fmt.Println(allBlocks[1].TransactionsBlock.Header.String())
 
 			compareContainers(container0, allBlocks[0])
 			compareContainers(container1, allBlocks[1])

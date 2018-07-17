@@ -51,10 +51,29 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 	value := blockPair.TransactionsBlock.Header.Raw()
 
 	fmt.Printf("Writing key %v, value %v\n", key, value)
-	bp.db.Put([]byte(key), value, nil)
 
-	bp.blockPairs = append(bp.blockPairs, blockPair)
-	bp.blockWritten <- true
+	err := bp.db.Put([]byte(key), value, nil)
+
+	if err == nil {
+		bp.blockWritten <- true
+	} else {
+		fmt.Println("Failed to write block", err)
+	}
+}
+
+func constructBlockFromStorage(data []byte) *protocol.BlockPairContainer {
+	transactionsBlock := &protocol.TransactionsBlockContainer{
+		Header: protocol.TransactionsBlockHeaderReader(data),
+	}
+
+	resultsBlock := &protocol.ResultsBlockContainer{}
+
+	container := &protocol.BlockPairContainer{
+		TransactionsBlock: transactionsBlock,
+		ResultsBlock: resultsBlock,
+	}
+
+	return container
 }
 
 func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
@@ -63,27 +82,13 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 	iter := bp.db.NewIterator(util.BytesPrefix([]byte("transaction-block-header-")), nil)
 
 	for iter.Next()  {
-		// Remember that the contents of the returned slice should not be modified, and
-		// only valid until the next call to Next.
 		key := string(iter.Key())
-		value := iter.Value()
+		data := make([]byte, len(iter.Value()))
+		copy(data, iter.Value())
 
-		fmt.Printf("Retrieving key %v, value %v\n", key, value)
+		fmt.Printf("Retrieving key %v, value %v\n", key, data)
 
-		transactionsBlock := &protocol.TransactionsBlockContainer{
-			Header: protocol.TransactionsBlockHeaderReader(value),
-		}
-
-		fmt.Println("Height, timestamp", transactionsBlock.Header.BlockHeight(), transactionsBlock.Header.Timestamp())
-
-		resultsBlock := &protocol.ResultsBlockContainer{}
-
-		container := &protocol.BlockPairContainer{
-			TransactionsBlock: transactionsBlock,
-			ResultsBlock: resultsBlock,
-		}
-
-		results = append(results, container)
+		results = append(results, constructBlockFromStorage(data))
 	}
 	iter.Release()
 	_ = iter.Error()
