@@ -6,14 +6,14 @@ type transferTransaction struct {
 	builder *protocol.SignedTransactionBuilder
 }
 
-func TransferTransaction() *transferTransaction {
+func TransferTransaction(amount uint64) *transferTransaction {
 	return &transferTransaction{
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
 				ContractName: "BenchmarkToken",
 				MethodName:   "transfer",
 				InputArguments: []*protocol.MethodArgumentBuilder{
-					{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 10},
+					{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
 				},
 			},
 		},

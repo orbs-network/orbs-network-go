@@ -1,9 +1,9 @@
 package test
 
 import (
-	"github.com/orbs-network/go-mock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
@@ -29,7 +29,7 @@ var _ = Describe("transaction pool", func() {
 
 	It("forwards a new valid transaction with gossip", func() {
 
-		tx := test.TransferTransaction().Build()
+		tx := test.TransferTransaction(10).Build()
 
 		gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 			Message: &gossipmessages.ForwardedTransactionsMessage{
@@ -43,7 +43,6 @@ var _ = Describe("transaction pool", func() {
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(gossip).To(test.ExecuteAsPlanned())
-
 	})
 
 })
