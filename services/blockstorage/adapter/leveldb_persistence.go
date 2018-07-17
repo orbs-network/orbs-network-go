@@ -46,19 +46,59 @@ func NewLevelDbBlockPersistence(config Config) BlockPersistence {
 	}
 }
 
-func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
-	key := "transaction-block-header-" + strconv.FormatUint(uint64(blockPair.TransactionsBlock.Header.BlockHeight()), 10)
-	value := blockPair.TransactionsBlock.Header.Raw()
-
+func (bp *levelDbBlockPersistence) put(key string, value []byte) error {
 	fmt.Printf("Writing key %v, value %v\n", key, value)
 
-	err := bp.db.Put([]byte(key), value, nil)
+	return bp.db.Put([]byte(key), value, nil)
+}
 
-	if err == nil {
-		bp.blockWritten <- true
-	} else {
-		fmt.Println("Failed to write block", err)
+func (bp *levelDbBlockPersistence) revert(key string) error {
+	fmt.Println("Removing key", key)
+
+	return bp.db.Delete([]byte(key), nil)
+}
+
+func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
+	var errors []error
+	var keys []string
+
+	if !basicValidation(blockPair) {
+		fmt.Println("Block is invalid")
+		return
 	}
+
+	blockHeight := strconv.FormatUint(uint64(blockPair.TransactionsBlock.Header.BlockHeight()), 10)
+
+	txBlockHeaderKey := "transaction-block-header-" + blockHeight
+	txBlockProofKey := "transaction-block-proof-" + blockHeight
+	txBlockMetadataKey := "transaction-block-metadata-" + blockHeight
+
+	txBlockHeaderError := bp.put(txBlockHeaderKey, blockPair.TransactionsBlock.Header.Raw())
+	txBlockProofError := bp.put(txBlockProofKey, blockPair.TransactionsBlock.BlockProof.Raw())
+	txBlockMetadataError := bp.put(txBlockMetadataKey, blockPair.TransactionsBlock.Metadata.Raw())
+
+	for i, tx := range blockPair.TransactionsBlock.SignedTransactions {
+		txBlockSignedTransactionKey := "transaction-block-proof-" + blockHeight + "-" + strconv.FormatInt(int64(i), 10)
+		txBlockSignedTransactionError := bp.put(txBlockProofKey, tx.Raw())
+
+		keys = append(keys, txBlockSignedTransactionKey)
+		errors = append(errors, txBlockSignedTransactionError)
+	}
+
+	keys = append(keys, txBlockHeaderKey, txBlockProofKey, txBlockMetadataKey)
+	errors = append(errors, txBlockHeaderError, txBlockProofError, txBlockMetadataError)
+
+	if anyErrors(errors) {
+		fmt.Println("Failed to write block")
+
+		for _, key := range keys {
+			bp.revert(key)
+		}
+
+		return
+	}
+
+	bp.blockWritten <- true
 }
 
 func constructBlockFromStorage(data []byte) *protocol.BlockPairContainer {
@@ -94,4 +134,37 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 	_ = iter.Error()
 
 	return results
+}
+
+func anyErrors(errors []error) bool {
+	for _, error := range errors {
+		if error != nil {
+			fmt.Println("Found error", errors)
+			return true
+		}
+	}
+
+	return false
+}
+
+func anyConditions(bools []bool) bool {
+	for _, val := range bools {
+		if val == false {
+			return false
+		}
+	}
+
+	return true
+}
+
+func basicValidation(blockPair *protocol.BlockPairContainer) bool {
+	var validations []bool
+
+	validations = append(validations, blockPair.TransactionsBlock.Header.IsValid(), blockPair.TransactionsBlock.BlockProof.IsValid(), blockPair.TransactionsBlock.Metadata.IsValid())
+
+	for _, tx:= range blockPair.TransactionsBlock.SignedTransactions {
+		validations = append(validations, tx.IsValid())
+	}
+
+	return anyConditions(validations)
 }

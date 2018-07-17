@@ -14,11 +14,36 @@ func TestLevelDbPersistence(t *testing.T) {
 }
 
 func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestamp) *protocol.BlockPairContainer {
+	txHeaderBuilder := protocol.TransactionsBlockHeaderBuilder{
+		BlockHeight: height,
+		Timestamp: timestamp,
+	}
+
+	methodArgument := protocol.MethodArgumentBuilder{Name: "date", StringValue: "1972-12-22"}
+
+	txBuilder := protocol.TransactionBuilder{
+		ContractName: "music-gig",
+		MethodName: "purchase-tickets",
+		InputArguments: []*protocol.MethodArgumentBuilder{
+			&methodArgument,
+		},
+	}
+
+	txSignedTransactionBuilder := protocol.SignedTransactionBuilder{
+		Transaction: &txBuilder,
+	}
+
+	txBlockProofBuilder := protocol.TransactionsBlockProofBuilder{
+		Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+	}
+
 	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			BlockHeight: height,
-			Timestamp: timestamp,
-		}).Build(),
+		Header: txHeaderBuilder.Build(),
+		Metadata: (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
+		SignedTransactions: []*protocol.SignedTransaction{
+			txSignedTransactionBuilder.Build(),
+		},
+		BlockProof: txBlockProofBuilder.Build(),
 	}
 
 	resultsBlock := &protocol.ResultsBlockContainer{}
