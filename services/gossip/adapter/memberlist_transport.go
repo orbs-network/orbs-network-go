@@ -35,22 +35,18 @@ func (d gossipDelegate) NodeMeta(limit int) []byte {
 }
 
 func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
-	fmt.Println("Message received", string(rawMessage))
 	// No need to queue, we can dispatch right here
 	messageWithPayloads := decodeByteArray(rawMessage)
 	message := gossipmessages.HeaderReader(messageWithPayloads[0])
 	payloads := messageWithPayloads[1:]
-	fmt.Println("Unmarshalled message as", message)
+	fmt.Printf("Gossip: message received %v %v\n", message, payloads)
 	d.parent.receive(message, payloads)
 }
 
 func (d gossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 	broadcasts := d.OutgoingMessages.GetBroadcasts(overhead, limit)
 	if len(broadcasts) > 0 {
-		fmt.Println("Outgoing messages")
-	}
-	for _, message := range broadcasts {
-		fmt.Println(string(message))
+		fmt.Println("Outgoing messages", len(broadcasts))
 	}
 	return broadcasts
 }
@@ -70,11 +66,14 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	fmt.Println("Creating memberlist with config", config)
 	listConfig := memberlist.DefaultLocalConfig()
 	listConfig.BindPort = config.Port
+	listConfig.AdvertisePort = config.Port
 	listConfig.Name = config.Name
+	listConfig.GossipNodes = 21
+
 	delegate := NewGossipDelegate(config.Name)
 	delegate.OutgoingMessages = &memberlist.TransmitLimitedQueue{
 		NumNodes: func() int {
-			return len(config.Peers) - 1
+			return 21
 		},
 		RetransmitMult: listConfig.RetransmitMult,
 	}
@@ -86,9 +85,9 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	// Join an existing cluster by specifying at least one known member.
 	n, err := list.Join(config.Peers)
 	if err != nil {
-		fmt.Println("Failed to join cluster: " + err.Error())
+		fmt.Println(config.Name, "failed to join the cluster: " + err.Error())
 	} else {
-		fmt.Println("Connected to", n, "hosts")
+		fmt.Println(config.Name, "connected to", n, "hosts")
 	}
 	t := MemberlistTransport{
 		list:       list,
@@ -171,8 +170,8 @@ func encodeByteArray(payloads [][]byte) []byte {
 }
 
 func decodeByteArray(data []byte) (res [][]byte) {
-	var buffer bytes.Buffer
-	dec := gob.NewDecoder(&buffer)
+	buffer := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buffer)
 	dec.Decode(&res)
 	return
 }
