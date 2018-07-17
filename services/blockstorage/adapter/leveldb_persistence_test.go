@@ -13,24 +13,26 @@ func TestLevelDbPersistence(t *testing.T) {
 	RunSpecs(t, "Gossip Transport Contract")
 }
 
-func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestamp) *protocol.BlockPairContainer {
-	txHeaderBuilder := protocol.TransactionsBlockHeaderBuilder{
+func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestamp, artist string, date string) *protocol.BlockPairContainer {
+	txHeaderBuilder := &protocol.TransactionsBlockHeaderBuilder{
 		BlockHeight: height,
 		Timestamp: timestamp,
 	}
 
-	methodArgument := protocol.MethodArgumentBuilder{Name: "date", StringValue: "1972-12-22"}
-
-	txBuilder := protocol.TransactionBuilder{
-		ContractName: "music-gig",
-		MethodName: "purchase-tickets",
-		InputArguments: []*protocol.MethodArgumentBuilder{
-			&methodArgument,
+	txSignedTransactionBuilder := &protocol.SignedTransactionBuilder{
+		Transaction: &protocol.TransactionBuilder{
+			Signer: &protocol.SignerBuilder{
+				Eddsa: &protocol.EdDSA01SignerBuilder{
+					SignerPublicKey: []byte("fake-public-key"),
+				},
+			},
+			ContractName: "music-gig",
+			MethodName:   "purchase-tickets",
+			InputArguments: []*protocol.MethodArgumentBuilder{
+				{Name: "artist", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: artist},
+				{Name: "date", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: date},
+			},
 		},
-	}
-
-	txSignedTransactionBuilder := protocol.SignedTransactionBuilder{
-		Transaction: &txBuilder,
 	}
 
 	txBlockProofBuilder := protocol.TransactionsBlockProofBuilder{
@@ -59,6 +61,9 @@ func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestam
 func compareContainers(a *protocol.BlockPairContainer, b *protocol.BlockPairContainer) {
 	Expect(a.TransactionsBlock.Header.BlockHeight()).To(Equal(b.TransactionsBlock.Header.BlockHeight()))
 	Expect(a.TransactionsBlock.Header.Timestamp()).To(Equal(b.TransactionsBlock.Header.Timestamp()))
+
+	Expect(a.TransactionsBlock.SignedTransactions[0].Transaction().ContractName()).To(Equal(b.TransactionsBlock.SignedTransactions[0].Transaction().ContractName()))
+	Expect(a.TransactionsBlock.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().StringValue()).To(Equal(b.TransactionsBlock.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().StringValue()))
 }
 
 var _ = Describe("LevelDb persistence", func() {
@@ -67,8 +72,8 @@ var _ = Describe("LevelDb persistence", func() {
 			config := NewLevelDbBlockPersistenceConfig("node1")
 			db := NewLevelDbBlockPersistence(config)
 
-			container0 := buildContainer(0, 1000)
-			container1 := buildContainer(1, 2000)
+			container0 := buildContainer(0, 1000, "David Bowie", "1972-12-22")
+			container1 := buildContainer(1, 2000, "Iggy Pop", "1971-12-25")
 
 			db.WriteBlock(container0)
 			db.WriteBlock(container1)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"strconv"
+	"strings"
 )
 
 type Config interface {
@@ -52,10 +53,26 @@ func (bp *levelDbBlockPersistence) put(key string, value []byte) error {
 	return bp.db.Put([]byte(key), value, nil)
 }
 
+// FIXME should I handle errors?
+func (bp *levelDbBlockPersistence) retrieve(key string) []byte {
+	fmt.Printf("Retrieving key %v\n", key)
+
+	result, _ := bp.db.Get([]byte(key), nil)
+	return result
+}
+
+
 func (bp *levelDbBlockPersistence) revert(key string) error {
 	fmt.Println("Removing key", key)
 
 	return bp.db.Delete([]byte(key), nil)
+}
+
+func copyByteArray(data []byte) []byte {
+	result := make([]byte, len(data))
+	copy(result, data)
+
+	return result
 }
 
 func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
@@ -78,8 +95,8 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 	txBlockMetadataError := bp.put(txBlockMetadataKey, blockPair.TransactionsBlock.Metadata.Raw())
 
 	for i, tx := range blockPair.TransactionsBlock.SignedTransactions {
-		txBlockSignedTransactionKey := "transaction-block-proof-" + blockHeight + "-" + strconv.FormatInt(int64(i), 10)
-		txBlockSignedTransactionError := bp.put(txBlockProofKey, tx.Raw())
+		txBlockSignedTransactionKey := "transaction-block-signed-transaction-" + blockHeight + "-" + strconv.FormatInt(int64(i), 10)
+		txBlockSignedTransactionError := bp.put(txBlockSignedTransactionKey, tx.Raw())
 
 		keys = append(keys, txBlockSignedTransactionKey)
 		errors = append(errors, txBlockSignedTransactionError)
@@ -101,9 +118,19 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 	bp.blockWritten <- true
 }
 
-func constructBlockFromStorage(data []byte) *protocol.BlockPairContainer {
+func constructBlockFromStorage(txBlockHeaderRaw []byte, txBlockProofRaw []byte, txBlockMetadataRaw []byte,
+	txBlockSignedTransactionsRaw [][]byte) *protocol.BlockPairContainer {
+	var signedTransactions []*protocol.SignedTransaction
+
+	for _, txRaw := range txBlockSignedTransactionsRaw {
+		signedTransactions = append(signedTransactions, protocol.SignedTransactionReader(txRaw))
+	}
+
 	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header: protocol.TransactionsBlockHeaderReader(data),
+		Header: protocol.TransactionsBlockHeaderReader(txBlockHeaderRaw),
+		BlockProof: protocol.TransactionsBlockProofReader(txBlockProofRaw),
+		Metadata: protocol.TransactionsBlockMetadataReader(txBlockMetadataRaw),
+		SignedTransactions: signedTransactions,
 	}
 
 	resultsBlock := &protocol.ResultsBlockContainer{}
@@ -123,12 +150,25 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 
 	for iter.Next()  {
 		key := string(iter.Key())
-		data := make([]byte, len(iter.Value()))
-		copy(data, iter.Value())
+		tokenizedKey := strings.Split(key, "-")
+		blockHeightAsString := tokenizedKey[len(tokenizedKey) - 1]
 
-		fmt.Printf("Retrieving key %v, value %v\n", key, data)
+		txBlockHeaderRaw := copyByteArray(iter.Value())
+		txBlockProofRaw := copyByteArray(bp.retrieve("transaction-block-proof-" + blockHeightAsString))
+		txBlockMetadataRaw := copyByteArray(bp.retrieve("transaction-block-metadata-" + blockHeightAsString))
 
-		results = append(results, constructBlockFromStorage(data))
+		var txSignedTransactionsRaw [][]byte
+
+		txIter := bp.db.NewIterator(util.BytesPrefix([]byte("transaction-block-signed-transaction-" + blockHeightAsString + "-")), nil)
+
+		for txIter.Next() {
+			println("Retrieving key", string(txIter.Key()))
+			txSignedTransactionsRaw = append(txSignedTransactionsRaw, copyByteArray(txIter.Value()))
+		}
+
+		txIter.Release()
+
+		results = append(results, constructBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw))
 	}
 	iter.Release()
 	_ = iter.Error()
