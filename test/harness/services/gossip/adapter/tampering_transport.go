@@ -1,32 +1,35 @@
 package adapter
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"sync"
 )
 
+type MessagePredicate func(data *adapter.TransportData) bool
+
+type OngoingTamper interface {
+	Release()
+}
+
 type TamperingTransport interface {
 	adapter.Transport
-	Pause(topic gossipmessages.HeaderTopic, messageType uint16)
-	Resume(topic gossipmessages.HeaderTopic, messageType uint16)
-	Fail(topic gossipmessages.HeaderTopic, messageType uint16)
-	Pass(topic gossipmessages.HeaderTopic, messageType uint16)
+
+	Fail(predicate MessagePredicate) OngoingTamper
+	Pause(predicate MessagePredicate) OngoingTamper
 }
 
 type tamperingTransport struct {
 	transportListeners map[string]adapter.TransportListener
-	pausedMessages     map[string][]*adapter.TransportData
-	failMessages       map[string]bool
-	mutex              *sync.Mutex
+
+	mutex            *sync.Mutex
+	failingTamperers []*failingTamperer
+	pausingTamperers []*pausingTamperer
 }
 
 func NewTamperingTransport() TamperingTransport {
 	return &tamperingTransport{
 		transportListeners: make(map[string]adapter.TransportListener),
-		pausedMessages:     make(map[string][]*adapter.TransportData),
-		failMessages:       make(map[string]bool),
 		mutex:              &sync.Mutex{},
 	}
 }
@@ -36,79 +39,68 @@ func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener
 }
 
 func (t *tamperingTransport) Send(data *adapter.TransportData) error {
-	// because tampering requires intimate knowledge of the message, we must parse it (although we're not supposed to know its format)
-	if data == nil || len(data.Payloads) == 0 {
-		go t.receive(data) // according to contract we must always transport
-		return nil
-	}
-	header := gossipmessages.HeaderReader(data.Payloads[0])
-	if !header.IsValid() {
-		go t.receive(data) // according to contract we must always transport
-		return nil
-	}
-	msgTypeStr := gossipMessageHeaderToTypeString(header)
-	if t.fail(msgTypeStr) {
+	if t.shouldFail(data) {
 		return &adapter.ErrTransportFailed{data}
 	}
-	if t.paused(msgTypeStr) {
-		t.mutex.Lock()
-		t.pausedMessages[msgTypeStr] = append(t.pausedMessages[msgTypeStr], data)
-		t.mutex.Unlock()
+
+	if t.hasPaused(data) {
 		return nil
 	}
+
 	go t.receive(data)
 	return nil
 }
 
-func topicMessageToTypeString(topic gossipmessages.HeaderTopic, messageType uint16) string {
-	return fmt.Sprintf("%d.%d", uint16(topic), messageType)
-}
-
-func gossipMessageHeaderMessageType(message *gossipmessages.Header) uint16 {
-	switch message.Topic() {
-	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
-		return uint16(message.TransactionRelay())
-	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
-		return uint16(message.BlockSync())
-	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
-		return uint16(message.LeanHelix())
-	}
-	return 0
-}
-
-func gossipMessageHeaderToTypeString(message *gossipmessages.Header) string {
-	messageType := gossipMessageHeaderMessageType(message)
-	return fmt.Sprintf("%d.%d", uint16(message.Topic()), messageType)
-}
-
-func (t *tamperingTransport) Pause(topic gossipmessages.HeaderTopic, messageType uint16) {
-	msgTypeStr := topicMessageToTypeString(topic, messageType)
+func (t *tamperingTransport) Pause(predicate MessagePredicate) OngoingTamper {
+	tamperer := &pausingTamperer{predicate: predicate, transport: t}
 	t.mutex.Lock()
-	t.pausedMessages[msgTypeStr] = nil
-	t.mutex.Unlock()
+	defer t.mutex.Unlock()
+	t.pausingTamperers = append(t.pausingTamperers, tamperer)
+	return tamperer
 }
 
-func (t *tamperingTransport) Resume(topic gossipmessages.HeaderTopic, messageType uint16) {
-	msgTypeStr := topicMessageToTypeString(topic, messageType)
+func (t *tamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
+	tamperer := &failingTamperer{predicate: predicate, transport: t}
 	t.mutex.Lock()
-	messages, found := t.pausedMessages[msgTypeStr]
-	delete(t.pausedMessages, msgTypeStr)
-	t.mutex.Unlock()
-	if found {
-		for _, data := range messages {
-			t.Send(data)
+	defer t.mutex.Unlock()
+	t.failingTamperers = append(t.failingTamperers, tamperer)
+	return tamperer
+}
+
+func (t *tamperingTransport) removeFailTamperer(tamperer *failingTamperer) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	a := t.failingTamperers
+	for p, v := range a {
+		if v == tamperer {
+			a[p] = a[len(a)-1]
+			a[len(a)-1] = nil
+			a = a[:len(a)-1]
+
+			t.failingTamperers = a
+
+			return
 		}
 	}
+	panic("Tamperer not found in ongoing tamperer list")
 }
 
-func (t *tamperingTransport) Fail(topic gossipmessages.HeaderTopic, messageType uint16) {
-	messagesOfType := topicMessageToTypeString(topic, messageType)
-	t.failMessages[messagesOfType] = true
-}
+func (t *tamperingTransport) removePauseTamperer(tamperer *pausingTamperer) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	a := t.pausingTamperers
+	for p, v := range a {
+		if v == tamperer {
+			a[p] = a[len(a)-1]
+			a[len(a)-1] = nil
+			a = a[:len(a)-1]
 
-func (t *tamperingTransport) Pass(topic gossipmessages.HeaderTopic, messageType uint16) {
-	messagesOfType := topicMessageToTypeString(topic, messageType)
-	delete(t.failMessages, messagesOfType)
+			t.pausingTamperers = a
+
+			return
+		}
+	}
+	panic("Tamperer not found in ongoing tamperer list")
 }
 
 func (t *tamperingTransport) receive(data *adapter.TransportData) {
@@ -128,14 +120,52 @@ func (t *tamperingTransport) receive(data *adapter.TransportData) {
 	}
 }
 
-func (t *tamperingTransport) paused(msgTypeStr string) bool {
-	t.mutex.Lock()
-	_, found := t.pausedMessages[msgTypeStr]
-	t.mutex.Unlock()
-	return found
+func (t *tamperingTransport) shouldFail(data *adapter.TransportData) bool {
+	for _, o := range t.failingTamperers {
+		if o.predicate(data) {
+			return true
+		}
+	}
+
+	return false
 }
 
-func (t *tamperingTransport) fail(msgTypeStr string) bool {
-	_, found := t.failMessages[msgTypeStr]
-	return found
+func (t *tamperingTransport) hasPaused(data *adapter.TransportData) bool {
+	for _, p := range t.pausingTamperers {
+		if p.predicate(data) {
+			t.mutex.Lock()
+			defer t.mutex.Unlock()
+			p.messages = append(p.messages, data)
+
+			return true
+		}
+	}
+
+	return false
 }
+
+type failingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+}
+
+type pausingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+
+	messages []*adapter.TransportData
+}
+
+func (o *failingTamperer) Release() {
+	o.transport.removeFailTamperer(o)
+}
+
+func (o *pausingTamperer) Release() {
+	o.transport.removePauseTamperer(o)
+
+	for _, message := range o.messages {
+		o.transport.Send(message)
+	}
+}
+
+
