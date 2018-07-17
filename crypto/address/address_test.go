@@ -2,6 +2,9 @@ package address_test
 
 import (
 	"testing"
+	"github.com/orbs-network/orbs-network-go/crypto/address"
+	"encoding/hex"
+	"fmt"
 )
 
 type invalidTestPair struct {
@@ -37,8 +40,38 @@ var validAddressTests = []string{
 	"T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR",
 }
 
+const (
+	publicKey1 = "8d41d055d00459be37f749da2caf87bd4ced6fafa335b1f2142e0f44501b2c65"
+	publicKey2 = "7a463487bb0eb584dabccd52398506b4a2dd432503cc6b7b582f87832ad104e6"
+)
+
+func testAE(actual, expected string) string {
+	return fmt.Sprintf("a: %s, e: %s", actual, expected)
+}
+
 func TestAddressInitializationWithPublicKeyOnTestNet(t *testing.T) {
-	t.Error("need to implement")
+	pktestNet, err := address.CreateFromPK([]byte(publicKey2), "9012ca", address.TEST_NETWORK_ID)
+	if err != nil {
+		t.Error(err)
+	}
+	if pktestNet.NetworkId() != address.TEST_NETWORK_ID {
+		t.Errorf("address from pk on testnet, network id incorrect (%s)", testAE(pktestNet.NetworkId(), address.TEST_NETWORK_ID))
+	}
+	if pktestNet.VirtualChainId() != "9012ca" {
+		t.Errorf("address from pk on testnet, vchain id incorrect (%s)", testAE(pktestNet.VirtualChainId(), "9012ca"))
+	}
+	if pktestNet.Version() != 0 {
+		t.Errorf("address from pk on testnet, version is incorrect (%s)", testAE(string(pktestNet.Version()), "0"))
+	}
+	if hex.EncodeToString(pktestNet.AccountId()) != "44068acc1b9ffc072694b684fc11ff229aff0b28" {
+		t.Errorf("address from pk on testnet, account id is incorrect (%s)", testAE(hex.EncodeToString(pktestNet.AccountId()), "44068acc1b9ffc072694b684fc11ff229aff0b28"))
+	}
+	if pktestNet.Checksum() != 0x258c93e8 {
+		t.Errorf("address from pk on testnet, checksum is incorrect (%s)", testAE(fmt.Sprint(pktestNet.Checksum()),fmt.Sprint(0x258c93e8)))
+	}
+	if address.ToBase58(pktestNet.RawAddress()) != "T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR" {
+		t.Errorf("address from pk on testnet, base58 is incorrect (%s)", testAE(string(address.ToBase58(pktestNet.RawAddress())), "T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR"))
+	}
 }
 
 func TestAddressInitializationWithKeyOnMainNet(t *testing.T) {
