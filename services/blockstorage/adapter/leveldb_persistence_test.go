@@ -137,10 +137,10 @@ var _ = Describe("Encode/decode code as byte array", func () {
 		Expect(values).To(Equal([]string{"David Bowie", "Life On Mars"}))
 	})
 
-	//It("encodes and decodes a BlockPairContainer", func() {
-	//	a := buildContainer(999, 10000, "David Bowie", "1983-06-03")
-	//	b := byteArrayAsBlock(blockAsByteArray(a))
-	//
-	//	compareContainers(a, b)
-	//})
+	It("encodes and decodes a BlockPairContainer", func() {
+		a := buildContainer(999, 10000, "David Bowie", "1983-06-03")
+		b := byteArrayAsBlock(blockAsByteArray(a))
+
+		compareContainers(a, b)
+	})
 })

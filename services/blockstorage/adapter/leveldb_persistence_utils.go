@@ -51,23 +51,21 @@ func anyConditions(bools []bool) bool {
 }
 
 func bufferPutKeyValue(buffer *bytes.Buffer, key string, value []byte) {
-	keyLength := uint64(len(key))
+	bufferPutValue(buffer, []byte(key))
+	bufferPutValue(buffer, value)
+}
+
+func bufferPutValue(buffer *bytes.Buffer, value []byte) {
 	valueLength := uint64(len(value))
-
-	keyLengthAsBytes := make([]byte, binary.MaxVarintLen64)
-	binary.PutUvarint(keyLengthAsBytes, keyLength)
-
-	buffer.Write(keyLengthAsBytes)
-	buffer.Write([]byte(key))
 
 	valueLengthAsBytes := make([]byte, binary.MaxVarintLen64)
 	binary.PutUvarint(valueLengthAsBytes, valueLength)
 
 	buffer.Write(valueLengthAsBytes)
-	buffer.Write(value)
+	buffer.Write([]byte(value))
 }
 
-func bufferReadPair(data []byte, offset int) (value []byte, newOffset int) {
+func bufferReadValue(data []byte, offset int) (value []byte, newOffset int) {
 	keyLengthStart := offset
 	keyLengthEnd := offset+binary.MaxVarintLen64
 
@@ -89,8 +87,8 @@ func iterateOverKeyValueBuffer(buffer *bytes.Buffer, parseValue func(key string,
 	var value []byte
 
 	for offset < len(data)  {
-		key, offset = bufferReadPair(buffer.Bytes(), offset)
-		value, offset = bufferReadPair(buffer.Bytes(), offset)
+		key, offset = bufferReadValue(data, offset)
+		value, offset = bufferReadValue(data, offset)
 
 		parseValue(string(key), value)
 	}
@@ -99,10 +97,57 @@ func iterateOverKeyValueBuffer(buffer *bytes.Buffer, parseValue func(key string,
 func blockAsByteArray(container *protocol.BlockPairContainer) (result []byte) {
 	buffer := bytes.NewBuffer([]byte{})
 
+	bufferPutKeyValue(buffer, TX_BLOCK_HEADER, container.TransactionsBlock.Header.Raw())
+	bufferPutKeyValue(buffer, TX_BLOCK_PROOF, container.TransactionsBlock.BlockProof.Raw())
+	bufferPutKeyValue(buffer, TX_BLOCK_METADATA, container.TransactionsBlock.Metadata.Raw())
+
+	for _, tx := range container.TransactionsBlock.SignedTransactions {
+		bufferPutKeyValue(buffer, TX_BLOCK_SIGNED_TRANSACTION, tx.Raw())
+	}
+
+	bufferPutKeyValue(buffer, RS_BLOCK_HEADER, container.ResultsBlock.Header.Raw())
+	bufferPutKeyValue(buffer, RS_BLOCK_PROOF, container.ResultsBlock.BlockProof.Raw())
+
+	for _, receipt := range container.ResultsBlock.TransactionReceipts {
+		bufferPutKeyValue(buffer, RS_BLOCK_TRANSACTION_RECEIPTS, receipt.Raw())
+	}
+
+	for _, stateDiff := range container.ResultsBlock.ContractStateDiffs {
+		bufferPutKeyValue(buffer, RS_BLOCK_CONTRACT_STATE_DIFFS, stateDiff.Raw())
+	}
 
 	return buffer.Bytes()
 }
 
 func byteArrayAsBlock(data []byte) *protocol.BlockPairContainer {
-	return nil
+	var txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw,
+	rsBlockHeaderRaw, rsBlockProofRaw []byte
+
+	var txSignedTransactionsRaw, rsStateDiffs, rsTransactionReceipts [][]byte
+
+	iterateOverKeyValueBuffer(bytes.NewBuffer(data), func(key string, value []byte) {
+		switch key {
+		case TX_BLOCK_HEADER:
+			txBlockHeaderRaw = value
+		case TX_BLOCK_METADATA:
+			txBlockMetadataRaw = value
+		case TX_BLOCK_PROOF:
+			txBlockProofRaw = value
+		case TX_BLOCK_SIGNED_TRANSACTION:
+			txSignedTransactionsRaw = append(txSignedTransactionsRaw, value)
+		case RS_BLOCK_HEADER:
+			rsBlockHeaderRaw = value
+		case RS_BLOCK_PROOF:
+			rsBlockProofRaw = value
+		case RS_BLOCK_TRANSACTION_RECEIPTS:
+			rsTransactionReceipts = append(rsTransactionReceipts, value)
+		case RS_BLOCK_CONTRACT_STATE_DIFFS:
+			rsStateDiffs = append(rsStateDiffs, value)
+		}
+	})
+
+	return &protocol.BlockPairContainer{
+		TransactionsBlock: constructTxBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw),
+		ResultsBlock: constructResultsBlockFromStorage(rsBlockHeaderRaw, rsBlockProofRaw, rsStateDiffs, rsTransactionReceipts),
+	}
 }
