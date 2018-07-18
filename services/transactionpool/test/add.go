@@ -1,9 +1,9 @@
 package test
 
 import (
-	"github.com/orbs-network/go-mock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
@@ -36,6 +36,25 @@ var _ = Describe("transaction pool", func() {
 				SignedTransactions: []*protocol.SignedTransaction{tx},
 			},
 		}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
+
+		_, err := service.AddNewTransaction(&services.AddNewTransactionInput{
+			SignedTransaction: tx,
+		})
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(gossip).To(test.ExecuteAsPlanned())
+
+	})
+
+	It("dont forward an invalid transaction with gossip", func() {
+
+		tx := test.TransferTransaction().MakeInvalid().Build()
+
+		gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
+			Message: &gossipmessages.ForwardedTransactionsMessage{
+				SignedTransactions: []*protocol.SignedTransaction{tx},
+			},
+		}).Return(&gossiptopics.EmptyOutput{}, nil).Times(0)
 
 		_, err := service.AddNewTransaction(&services.AddNewTransactionInput{
 			SignedTransaction: tx,

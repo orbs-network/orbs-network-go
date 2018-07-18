@@ -22,12 +22,6 @@ func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services
 }
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
-	for _, t := range input.BlockPair.TransactionsBlock.SignedTransactions {
-		if t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value() > 1000 {
-			//TODO: handle invalid transaction gracefully
-			return nil, nil
-		}
-	}
 	var state []*protocol.StateRecordBuilder
 	for _, i := range input.BlockPair.TransactionsBlock.SignedTransactions {
 		byteArray := make([]byte, 8)

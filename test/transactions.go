@@ -32,3 +32,8 @@ func (t *transferTransaction) WithAmount(amount uint64) *transferTransaction {
 	t.builder.Transaction.InputArguments[0].Uint64Value = amount
 	return t
 }
+
+func (t *transferTransaction) MakeInvalid() *transferTransaction {
+	t.builder.Transaction.InputArguments[0].Uint64Value = 1000000
+	return t
+}
