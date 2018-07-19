@@ -45,10 +45,11 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
 		nodes[i].index = i
-		nodeId := fmt.Sprintf("node%d", i+1)
-		isLeader := (i == 0)                                          // TODO: remove the concept of leadership
-		nodes[i].config = config.NewHardCodedConfig(numNodes, nodeId) // TODO: change nodeId to public key
-		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeId)
+		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
+		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
+		isLeader := (i == 0) // TODO: remove the concept of leadership
+		nodes[i].config = config.NewHardCodedConfig(numNodes, nodePublicKey)
+		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].loopControl = harnessInstrumentation.NewBrakingLoop(nodes[i].log)
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)

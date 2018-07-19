@@ -3,13 +3,14 @@ package gossip
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 type Config interface {
-	NodeId() string
+	NodePublicKey() primitives.Ed25519Pkey
 }
 
 type service struct {
@@ -26,7 +27,7 @@ func NewGossip(transport adapter.Transport, config Config, reporting instrumenta
 		config:    config,
 		reporting: reporting,
 	}
-	transport.RegisterListener(s, s.config.NodeId())
+	transport.RegisterListener(s, s.config.NodePublicKey())
 	return s
 }
 

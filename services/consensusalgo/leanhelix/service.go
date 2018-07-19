@@ -3,6 +3,7 @@ package leanhelix
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -15,7 +16,7 @@ import (
 
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
-	NodeId() string
+	NodePublicKey() primitives.Ed25519Pkey
 }
 
 type service struct {
@@ -124,7 +125,7 @@ func (s *service) buildNextBlock(transaction *protocol.SignedTransaction) bool {
 
 	if gotConsensus {
 		if s.preparedBlock == nil {
-			panic(fmt.Sprintf("Node [%s] is trying to commit a block that wasn't prepared", s.config.NodeId()))
+			panic(fmt.Sprintf("Node [%v] is trying to commit a block that wasn't prepared", s.config.NodePublicKey()))
 		}
 		s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 	}

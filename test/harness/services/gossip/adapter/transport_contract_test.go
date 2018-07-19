@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"testing"
 )
@@ -64,16 +65,15 @@ func assertContractOf(makeContext func() *transportContractContext) {
 
 type mockListener struct {
 	mock.Mock
-	name string
 }
 
 func (m *mockListener) OnTransportMessageReceived(payloads [][]byte) {
 	m.Called(payloads)
 }
 
-func listenTo(transport adapter.Transport, name string) *mockListener {
-	l := &mockListener{name: name}
-	transport.RegisterListener(l, name)
+func listenTo(transport adapter.Transport, publicKey primitives.Ed25519Pkey) *mockListener {
+	l := &mockListener{}
+	transport.RegisterListener(l, publicKey)
 	return l
 }
 
@@ -88,28 +88,28 @@ type transportContractContext struct {
 
 func aTamperingTransport() *transportContractContext {
 	transport := NewTamperingTransport()
-	l1 := listenTo(transport, "l1")
-	l2 := listenTo(transport, "l2")
-	l3 := listenTo(transport, "l3")
+	l1 := listenTo(transport, []byte{0x01})
+	l2 := listenTo(transport, []byte{0x02})
+	l3 := listenTo(transport, []byte{0x03})
 	return &transportContractContext{l1, l2, l3, transport}
 }
 
 func aMemberlistTransport() *transportContractContext {
-	config1 := adapter.MemberlistGossipConfig{"node1", 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003", "127.0.0.1:60004"}}
+	config1 := adapter.MemberlistGossipConfig{[]byte{0x01}, 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003", "127.0.0.1:60004"}}
 	transport1 := adapter.NewMemberlistTransport(config1)
 
-	config2 := adapter.MemberlistGossipConfig{"node2", 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003", "127.0.0.1:60004"}}
+	config2 := adapter.MemberlistGossipConfig{[]byte{0x02}, 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003", "127.0.0.1:60004"}}
 	transport2 := adapter.NewMemberlistTransport(config2)
 
-	config3 := adapter.MemberlistGossipConfig{"node3", 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60004"}}
+	config3 := adapter.MemberlistGossipConfig{[]byte{0x03}, 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60004"}}
 	transport3 := adapter.NewMemberlistTransport(config3)
 
-	config4 := adapter.MemberlistGossipConfig{"node4", 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}}
+	config4 := adapter.MemberlistGossipConfig{[]byte{0x04}, 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}}
 	transport4 := adapter.NewMemberlistTransport(config4)
 
-	l1 := listenTo(transport1, "l1")
-	l2 := listenTo(transport2, "l2")
-	l3 := listenTo(transport3, "l3")
+	l1 := listenTo(transport1, []byte{0x01})
+	l2 := listenTo(transport2, []byte{0x02})
+	l3 := listenTo(transport3, []byte{0x03})
 
 	return &transportContractContext{l1, l2, l3, transport4}
 }

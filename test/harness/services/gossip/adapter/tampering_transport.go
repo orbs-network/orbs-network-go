@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"sync"
 )
@@ -34,8 +35,8 @@ func NewTamperingTransport() TamperingTransport {
 	}
 }
 
-func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, myNodeId string) {
-	t.transportListeners[myNodeId] = listener
+func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, myNodePublicKey primitives.Ed25519Pkey) {
+	t.transportListeners[string(myNodePublicKey)] = listener
 }
 
 func (t *tamperingTransport) Send(data *adapter.TransportData) error {
