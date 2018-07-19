@@ -12,19 +12,26 @@ type OngoingTamper interface {
 	Release()
 }
 
+type LatchingTamper interface {
+	Wait()
+	Remove()
+}
+
 type TamperingTransport interface {
 	adapter.Transport
 
 	Fail(predicate MessagePredicate) OngoingTamper
 	Pause(predicate MessagePredicate) OngoingTamper
+	LatchOn(predicate MessagePredicate) LatchingTamper
 }
 
 type tamperingTransport struct {
 	transportListeners map[string]adapter.TransportListener
 
-	mutex            *sync.Mutex
-	failingTamperers []*failingTamperer
-	pausingTamperers []*pausingTamperer
+	mutex             *sync.Mutex
+	failingTamperers  []*failingTamperer
+	pausingTamperers  []*pausingTamperer
+	latchingTamperers []*latchingTamperer
 }
 
 func NewTamperingTransport() TamperingTransport {
@@ -39,6 +46,8 @@ func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener
 }
 
 func (t *tamperingTransport) Send(data *adapter.TransportData) error {
+	t.releaseLatches(data)
+
 	if t.shouldFail(data) {
 		return &adapter.ErrTransportFailed{data}
 	}
@@ -66,6 +75,18 @@ func (t *tamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
 	t.failingTamperers = append(t.failingTamperers, tamperer)
 	return tamperer
 }
+
+
+func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper {
+	tamperer := &latchingTamperer{predicate: predicate, transport: t, cond: sync.NewCond(&sync.Mutex{})}
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	t.latchingTamperers = append(t.latchingTamperers, tamperer)
+
+	tamperer.cond.L.Lock()
+	return tamperer
+}
+
 
 func (t *tamperingTransport) removeFailTamperer(tamperer *failingTamperer) {
 	t.mutex.Lock()
@@ -102,6 +123,25 @@ func (t *tamperingTransport) removePauseTamperer(tamperer *pausingTamperer) {
 	}
 	panic("Tamperer not found in ongoing tamperer list")
 }
+
+func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	a := t.latchingTamperers
+	for p, v := range a {
+		if v == tamperer {
+			a[p] = a[len(a)-1]
+			a[len(a)-1] = nil
+			a = a[:len(a)-1]
+
+			t.latchingTamperers = a
+
+			return
+		}
+	}
+	panic("Tamperer not found in ongoing tamperer list")
+}
+
 
 func (t *tamperingTransport) receive(data *adapter.TransportData) {
 	switch data.RecipientMode {
@@ -143,6 +183,13 @@ func (t *tamperingTransport) hasPaused(data *adapter.TransportData) bool {
 
 	return false
 }
+func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
+	for _, o := range t.latchingTamperers {
+		if o.predicate(data) {
+			o.cond.Signal()
+		}
+	}
+}
 
 type failingTamperer struct {
 	predicate MessagePredicate
@@ -154,6 +201,12 @@ type pausingTamperer struct {
 	transport *tamperingTransport
 
 	messages []*adapter.TransportData
+}
+
+type latchingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+	cond      *sync.Cond
 }
 
 func (o *failingTamperer) Release() {
@@ -168,4 +221,11 @@ func (o *pausingTamperer) Release() {
 	}
 }
 
+func (o *latchingTamperer) Remove() {
+	o.transport.removeLatchingTamperer(o)
+}
+
+func (o *latchingTamperer) Wait() {
+	o.cond.Wait()
+}
 

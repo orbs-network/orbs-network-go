@@ -35,8 +35,7 @@ func NewNode(
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
-	loopControl := instrumentation.NewSimpleLoop(logger)
-	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, loopControl, nodeConfig, isLeader)
+	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, nodeConfig, isLeader)
 	httpServer := httpserver.NewHttpServer(address, logger, nodeLogic.PublicApi())
 
 	return &node{

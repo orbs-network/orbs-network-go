@@ -18,7 +18,6 @@ import (
 type AcceptanceTestNetwork interface {
 	FlushLog()
 	GossipTransport() gossipAdapter.TamperingTransport
-	LoopControl(nodeIndex int) harnessInstrumentation.BrakingLoop
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
@@ -34,7 +33,6 @@ type networkNode struct {
 	config           config.NodeConfig
 	log              harnessInstrumentation.BufferedLog
 	latch            harnessInstrumentation.Latch
-	loopControl      harnessInstrumentation.BrakingLoop
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
 	statePersistence stateStorageAdapter.InMemoryStatePersistence
 	nodeLogic        bootstrap.NodeLogic
@@ -50,7 +48,6 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 		nodes[i].config = config.NewHardCodedConfig(numNodes, nodeId) // TODO: change nodeId to public key
 		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeId)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
-		nodes[i].loopControl = harnessInstrumentation.NewBrakingLoop(nodes[i].log)
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence(nodes[i].config)
 		nodes[i].nodeLogic = bootstrap.NewNodeLogic(
@@ -58,7 +55,6 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 			nodes[i].blockPersistence,
 			nodes[i].statePersistence,
 			instrumentation.NewCompositeReporting([]instrumentation.Reporting{nodes[i].log, nodes[i].latch}),
-			nodes[i].loopControl,
 			nodes[i].config,
 			isLeader,
 		)
@@ -73,10 +69,6 @@ func (n *acceptanceTestNetwork) FlushLog() {
 	for i, _ := range n.nodes {
 		n.nodes[i].log.Flush()
 	}
-}
-
-func (n *acceptanceTestNetwork) LoopControl(nodeIndex int) harnessInstrumentation.BrakingLoop {
-	return n.nodes[nodeIndex].loopControl
 }
 
 func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {

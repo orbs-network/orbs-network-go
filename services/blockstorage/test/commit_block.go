@@ -12,6 +12,7 @@ import (
 	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"time"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 type adapterConfig struct {
@@ -59,7 +60,7 @@ func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence(&adapterConfig{})
-	d.blockStorage = blockstorage.NewBlockStorage(d.storageAdapter, d.stateStorage)
+	d.blockStorage = blockstorage.NewBlockStorage(d.storageAdapter, d.stateStorage, instrumentation.NewStdoutLog())
 
 	return d
 }

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"time"
 )
 
 type Config interface {
@@ -23,8 +24,7 @@ type service struct {
 	blockStorage         services.BlockStorage
 	transactionPool      services.TransactionPool
 	consensusContext     services.ConsensusContext
-	events               instrumentation.Reporting
-	loopControl          instrumentation.LoopControl
+	reporting            instrumentation.Reporting
 	votesForCurrentRound chan bool
 	config               Config
 	preparedBlock        *protocol.BlockPairContainer
@@ -39,8 +39,7 @@ func NewLeanHelixConsensusAlgo(
 	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
 	consensusContext services.ConsensusContext,
-	events instrumentation.Reporting,
-	loopControl instrumentation.LoopControl,
+	reporting instrumentation.Reporting,
 	config Config,
 	isLeader bool,
 ) services.ConsensusAlgoLeanHelix {
@@ -50,8 +49,7 @@ func NewLeanHelixConsensusAlgo(
 		blockStorage:     blockStorage,
 		transactionPool:  transactionPool,
 		consensusContext: consensusContext,
-		events:           events,
-		loopControl:      loopControl,
+		reporting:        reporting,
 		config:           config,
 		commitCond:       sync.NewCond(&sync.Mutex{}),
 	}
@@ -83,7 +81,7 @@ func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrep
 func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
 	// currently only leader should handle prepare
 	if s.votesForCurrentRound != nil {
-		s.events.Info(fmt.Sprintf("received vote"))
+		s.reporting.Info(fmt.Sprintf("received vote"))
 		s.votesForCurrentRound <- true
 	}
 	return nil, nil
@@ -110,7 +108,8 @@ func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInp
 func (s *service) buildNextBlock(transaction *protocol.SignedTransaction) bool {
 	votes, err := s.requestConsensusFor(transaction)
 	if err != nil {
-		s.events.Info(instrumentation.ConsensusError)
+		s.reporting.Info("Failed to get consensus for block")
+		time.Sleep(100 * time.Millisecond)
 		return false
 	}
 	gotConsensus := true
@@ -136,7 +135,8 @@ func (s *service) buildNextBlock(transaction *protocol.SignedTransaction) bool {
 func (s *service) buildBlocksEventLoop() {
 	var currentBlock *protocol.SignedTransaction
 	s.commitCond.L.Lock()
-	s.loopControl.NewLoop("consensus_round", func() {
+	for {
+		s.reporting.Infof("Entered consensus round, block height is %d", s.currentBlockHeight)
 		if currentBlock == nil {
 			res, _ := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
 				MaxNumberOfTransactions: 1,
@@ -146,7 +146,9 @@ func (s *service) buildBlocksEventLoop() {
 		if s.buildNextBlock(currentBlock) {
 			currentBlock = nil
 		}
-	})
+		s.reporting.Infof("Finished consensus round, block height is %d", s.currentBlockHeight)
+
+	}
 }
 
 func (s *service) requestConsensusFor(transaction *protocol.SignedTransaction) (chan bool, error) {

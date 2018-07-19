@@ -14,24 +14,24 @@ var _ = Describe("a leader node", func() {
 		// leader is nodeIndex 0, validator is nodeIndex 1
 		network := harness.NewTestNetwork(2)
 		defer network.FlushLog()
-		consensusRound := network.LoopControl(0).LatchFor("consensus_round")
 
-		consensusRound.Brake()
+		prePrepareLatch := network.GossipTransport().LatchOn(adapter.ConsensusMessage(gossipmessages.LEAN_HELIX_PRE_PREPARE))
 		prePrepareTamper := network.GossipTransport().Fail(adapter.ConsensusMessage(gossipmessages.LEAN_HELIX_PRE_PREPARE))
 		<-network.SendTransfer(0, 17)
 
-		consensusRound.Tick()
+		prePrepareLatch.Wait()
 		Expect(<-network.CallGetBalance(0)).To(BeEquivalentTo(0))
 		Expect(<-network.CallGetBalance(1)).To(BeEquivalentTo(0))
 
 		prePrepareTamper.Release()
-		consensusRound.Release()
+		prePrepareLatch.Remove()
 
 		network.BlockPersistence(0).WaitForBlocks(1)
 		Expect(<-network.CallGetBalance(0)).To(BeEquivalentTo(17))
 
 		network.BlockPersistence(1).WaitForBlocks(1)
 		Expect(<-network.CallGetBalance(1)).To(BeEquivalentTo(17))
+
 		close(done)
 	}, 1)
 
