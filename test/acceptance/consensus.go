@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 )
 
-var _ = FDescribe("a leader node", func() {
+var _ = Describe("a leader node", func() {
 
 	It("must get validations by all nodes to commit a transaction", func(done Done) {
 		// leader is nodeIndex 0, validator is nodeIndex 1
