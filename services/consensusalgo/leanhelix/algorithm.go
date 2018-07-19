@@ -9,15 +9,19 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-func (s *service) leaderProposeNextBlock() (*protocol.BlockPairContainer, error) {
+func (s *service) leaderProposeNextBlockIfNeeded() error {
+	if s.blocksForRounds[s.lastCommittedBlockHeight+1] != nil {
+		return nil
+	}
+
 	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: 1,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	blockPair := &protocol.BlockPairContainer{
+	proposedBlockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
 			Header: (&protocol.TransactionsBlockHeaderBuilder{
 				ProtocolVersion: blockstorage.ProtocolVersion,
@@ -27,7 +31,8 @@ func (s *service) leaderProposeNextBlock() (*protocol.BlockPairContainer, error)
 		},
 	}
 
-	return blockPair, nil
+	s.blocksForRounds[s.lastCommittedBlockHeight+1] = proposedBlockPair
+	return nil
 }
 
 func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContainer) (bool, error) {

@@ -97,12 +97,9 @@ func (s *service) buildBlocksEventLoop() {
 	s.loopControl.NewLoop("consensus_round", func() {
 
 		// see if we need to propose a new block
-		if s.blocksForRounds[s.lastCommittedBlockHeight+1] == nil {
-			proposedBlock, err := s.leaderProposeNextBlock()
-			if err != nil {
-				s.reporting.Error(err)
-			}
-			s.blocksForRounds[s.lastCommittedBlockHeight+1] = proposedBlock
+		err := s.leaderProposeNextBlockIfNeeded()
+		if err != nil {
+			s.reporting.Error(err)
 		}
 
 		// validate the current proposed block
