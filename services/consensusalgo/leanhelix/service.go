@@ -26,8 +26,8 @@ type service struct {
 	loopControl              instrumentation.LoopControl
 	config                   Config
 	lastCommittedBlockHeight primitives.BlockHeight
+	blocksForRounds          map[primitives.BlockHeight]*protocol.BlockPairContainer
 	votesForActiveRound      chan bool
-	blocksForActiveRounds    map[primitives.BlockHeight]*protocol.BlockPairContainer
 }
 
 func NewLeanHelixConsensusAlgo(
@@ -50,7 +50,7 @@ func NewLeanHelixConsensusAlgo(
 		loopControl:      loopControl,
 		config:           config,
 		lastCommittedBlockHeight: 0, // TODO: improve
-		blocksForActiveRounds:    make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
+		blocksForRounds:          make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
 	}
 
 	gossip.RegisterLeanHelixHandler(s)
@@ -72,24 +72,29 @@ func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*
 	panic("Not implemented")
 }
 
+// runs only on non-leaders
 func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
 	blockHeight := input.Message.BlockPair.TransactionsBlock.Header.BlockHeight()
-	s.blocksForActiveRounds[blockHeight] = input.Message.BlockPair
+	s.blocksForRounds[blockHeight] = input.Message.BlockPair
 	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 	return &gossiptopics.EmptyOutput{}, err
 }
 
+// runs only on leader
 func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
-	// currently only leader should handle prepare
 	// TODO: we assume we only get votes for the active round, in the real world we can't assume this,
 	// TODO:  but here since we don't move to the next round unless everybody voted, it's ok
+	if s.votesForActiveRound == nil {
+		panic("received vote while not collecting votes")
+	}
 	s.votesForActiveRound <- true
-	return nil, nil
+	return &gossiptopics.EmptyOutput{}, nil
 }
 
+// runs only on non-leaders
 func (s *service) HandleLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
 	s.commitBlockAndMoveToNextRound()
-	return nil, nil
+	return &gossiptopics.EmptyOutput{}, nil
 }
 
 func (s *service) HandleLeanHelixViewChange(input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.EmptyOutput, error) {
@@ -101,26 +106,68 @@ func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInp
 }
 
 func (s *service) buildBlocksEventLoop() {
-	var transactionsForActiveRound []*protocol.SignedTransaction
+
 	s.loopControl.NewLoop("consensus_round", func() {
-		if transactionsForActiveRound == nil {
-			res, _ := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
-				MaxNumberOfTransactions: 1,
-			})
-			transactionsForActiveRound = res.SignedTransactions
+
+		// see if we need to propose a new block
+		if s.blocksForRounds[s.lastCommittedBlockHeight+1] == nil {
+			proposedBlock, err := s.proposeNextBlock()
+			if err != nil {
+				s.reporting.Error(err)
+			}
+			s.blocksForRounds[s.lastCommittedBlockHeight+1] = proposedBlock
 		}
-		if s.buildNextBlock(transactionsForActiveRound) {
-			transactionsForActiveRound = nil
+
+		// validate the current proposed block
+		if s.blocksForRounds[s.lastCommittedBlockHeight+1] != nil {
+			valid, err := s.collectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
+			if err != nil {
+				s.reporting.Error(err)
+			}
+
+			// commit the block if validated
+			if valid {
+				s.commitBlockAndMoveToNextRound()
+				s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
+			}
 		}
+
 	})
 }
 
-// returns true if the block was committed successfully and we can move to the next block
-func (s *service) buildNextBlock(transactionsForBlock []*protocol.SignedTransaction) bool {
-	err := s.requestConsensusFor(transactionsForBlock)
+func (s *service) proposeNextBlock() (*protocol.BlockPairContainer, error) {
+	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+		MaxNumberOfTransactions: 1,
+	})
 	if err != nil {
-		s.reporting.Info(instrumentation.ConsensusError)
-		return false
+		return nil, err
+	}
+	blockPair := &protocol.BlockPairContainer{
+		TransactionsBlock: &protocol.TransactionsBlockContainer{
+			Header: (&protocol.TransactionsBlockHeaderBuilder{
+				ProtocolVersion: blockstorage.ProtocolVersion,
+				BlockHeight:     primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
+			}).Build(),
+			SignedTransactions: proposedTransactions.SignedTransactions,
+		},
+	}
+	return blockPair, nil
+}
+
+func (s *service) collectVotesForBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+	s.votesForActiveRound = make(chan bool)
+	defer func() {
+		close(s.votesForActiveRound)
+		s.votesForActiveRound = nil
+	}()
+
+	_, err := s.gossip.SendLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
+		Message: &gossipmessages.LeanHelixPrePrepareMessage{
+			BlockPair: blockPair,
+		},
+	})
+	if err != nil {
+		return false, nil
 	}
 
 	gotConsensus := true
@@ -129,48 +176,17 @@ func (s *service) buildNextBlock(transactionsForBlock []*protocol.SignedTransact
 		gotConsensus = gotConsensus && <-s.votesForActiveRound
 	}
 
-	if gotConsensus {
-		s.commitBlockAndMoveToNextRound()
-		s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
-		close(s.votesForActiveRound)
-		s.votesForActiveRound = nil
-	}
-
-	return gotConsensus
+	return gotConsensus, nil
 }
 
 func (s *service) commitBlockAndMoveToNextRound() {
-	blockPair, found := s.blocksForActiveRounds[s.lastCommittedBlockHeight+1]
+	blockPair, found := s.blocksForRounds[s.lastCommittedBlockHeight+1]
 	if !found {
 		panic(fmt.Sprintf("Node [%v] is trying to commit a block that wasn't prepared", s.config.NodePublicKey()))
 	}
 	s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
-	delete(s.blocksForActiveRounds, s.lastCommittedBlockHeight+1)
+	delete(s.blocksForRounds, s.lastCommittedBlockHeight+1)
 	s.lastCommittedBlockHeight += 1
-}
-
-func (s *service) requestConsensusFor(transactionsForBlock []*protocol.SignedTransaction) error {
-	blockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header: (&protocol.TransactionsBlockHeaderBuilder{
-				ProtocolVersion: blockstorage.ProtocolVersion,
-				BlockHeight:     primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
-			}).Build(),
-			SignedTransactions: transactionsForBlock,
-		},
-	}
-
-	s.votesForActiveRound = make(chan bool)
-	s.blocksForActiveRounds[s.lastCommittedBlockHeight+1] = blockPair
-	message := &gossipmessages.LeanHelixPrePrepareMessage{
-		BlockPair: blockPair,
-	}
-
-	_, err := s.gossip.SendLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
-		Message: message,
-	})
-
-	return err
 }
