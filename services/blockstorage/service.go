@@ -28,6 +28,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 			return nil, nil
 		}
 	}
+	// TODO: why are we updating the state? nothing about this in the spec
 	var state []*protocol.StateRecordBuilder
 	for _, i := range input.BlockPair.TransactionsBlock.SignedTransactions {
 		byteArray := make([]byte, 8)
