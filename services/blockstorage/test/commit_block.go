@@ -132,5 +132,21 @@ var _ = Describe("Committing a block", func () {
 				driver.verifyMocks()
 			})
 		})
+
+		When("block isn't the next of last_commited_block", func() {
+			It("should panic", func() {
+				driver := NewDriver()
+				driver.expectCommitStateDiff()
+
+				driver.commitBlock(test.BlockPairBuilder().Build())
+
+				Expect(func () {
+					driver.commitBlock(test.BlockPairBuilder().WithHeight(1000).Build())
+				}).To(Panic())
+
+				Expect(driver.numOfWrittenBlocks()).To(Equal(1))
+				driver.verifyMocks()
+			})
+		})
 	})
 })

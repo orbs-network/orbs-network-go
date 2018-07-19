@@ -34,13 +34,15 @@ func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
 
+	if err := s.validateProtocolVersion(txBlockHeader); err != nil {
+		return nil, err
+	}
+
 	if ok := s.validateBlockDoesNotExist(txBlockHeader); !ok {
 		return nil, nil
 	}
 
-	if err := s.validateProtocolVersion(txBlockHeader); err != nil {
-		return nil, err
-	}
+	s.validateMonotonicIncreasingBlockHeight(txBlockHeader)
 
 	//TODO tx validation should not even be here
 	for _, t := range input.BlockPair.TransactionsBlock.SignedTransactions {
@@ -92,6 +94,7 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
+
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
@@ -101,11 +104,11 @@ func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInp
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
-
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) bool {
 	if txBlockHeader.BlockHeight() <= s.lastCommittedBlockHeight {
 		if txBlockHeader.BlockHeight() == s.lastCommittedBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
+			// TODO should this really panic
 			panic(fmt.Sprintf("block with height %d already in storage, timestamp mismatch", s.lastCommittedBlockHeight))
 		}
 		return false
@@ -120,6 +123,14 @@ func (s *service) validateProtocolVersion(txBlockHeader *protocol.TransactionsBl
 	}
 
 	return nil
+}
+
+func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol.TransactionsBlockHeader) {
+	expectedNextBlockHeight := s.lastCommittedBlockHeight + 1
+	if txBlockHeader.BlockHeight() != expectedNextBlockHeight {
+		// TODO should this really panic
+		panic(fmt.Sprintf("expected block of height %d but got %d", expectedNextBlockHeight, txBlockHeader.BlockHeight()))
+	}
 }
 
 func (s *service) updateStateStorage(txBlock *protocol.TransactionsBlockContainer) {
