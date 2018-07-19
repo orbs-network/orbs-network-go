@@ -9,12 +9,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-func leaderProposeNextBlock(
-	transactionPool services.TransactionPool,
-	lastCommittedBlockHeight primitives.BlockHeight,
-) (*protocol.BlockPairContainer, error) {
-
-	proposedTransactions, err := transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+func (s *service) leaderProposeNextBlock() (*protocol.BlockPairContainer, error) {
+	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: 1,
 	})
 	if err != nil {
@@ -25,7 +21,7 @@ func leaderProposeNextBlock(
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
 			Header: (&protocol.TransactionsBlockHeaderBuilder{
 				ProtocolVersion: blockstorage.ProtocolVersion,
-				BlockHeight:     primitives.BlockHeight(lastCommittedBlockHeight + 1),
+				BlockHeight:     primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
 			}).Build(),
 			SignedTransactions: proposedTransactions.SignedTransactions,
 		},
@@ -34,20 +30,14 @@ func leaderProposeNextBlock(
 	return blockPair, nil
 }
 
-func leaderCollectVotesForBlock(
-	gossip gossiptopics.LeanHelix,
-	votesForActiveRound *chan bool,
-	blockPair *protocol.BlockPairContainer,
-	networkSize int,
-) (bool, error) {
-
-	*votesForActiveRound = make(chan bool)
+func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+	s.votesForActiveRound = make(chan bool)
 	defer func() {
-		close(*votesForActiveRound)
-		*votesForActiveRound = nil
+		close(s.votesForActiveRound)
+		s.votesForActiveRound = nil
 	}()
 
-	_, err := gossip.SendLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
+	_, err := s.gossip.SendLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
 		Message: &gossipmessages.LeanHelixPrePrepareMessage{
 			BlockPair: blockPair,
 		},
@@ -58,52 +48,40 @@ func leaderCollectVotesForBlock(
 
 	gotConsensus := true
 	// asking for votes from everybody except ourselves
-	for i := 0; i < networkSize-1; i++ {
-		gotConsensus = gotConsensus && <-*votesForActiveRound
+	for i := 0; i < int(s.config.NetworkSize(0))-1; i++ {
+		gotConsensus = gotConsensus && <-s.votesForActiveRound
 	}
 
 	return gotConsensus, nil
 }
 
-func validatorVoteForNewBlockProposal(
-	gossip gossiptopics.LeanHelix,
-	blocksForRounds map[primitives.BlockHeight]*protocol.BlockPairContainer,
-	blockPair *protocol.BlockPairContainer,
-) error {
-
+func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPairContainer) error {
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
-	blocksForRounds[blockHeight] = blockPair
+	s.blocksForRounds[blockHeight] = blockPair
 
-	_, err := gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 	return err
-
 }
 
-func leaderAddVote(votesForActiveRound *chan bool) {
+func (s *service) leaderAddVote() {
 	// TODO: we assume we only get votes for the active round, in the real world we can't assume this,
 	// TODO:  but here since we don't move to the next round unless everybody voted, it's ok
-	if *votesForActiveRound == nil {
+	if s.votesForActiveRound == nil {
 		panic("received vote while not collecting votes")
 	}
-	*votesForActiveRound <- true
+	s.votesForActiveRound <- true
 }
 
-func commitBlockAndMoveToNextRound(
-	blockStorage services.BlockStorage,
-	blocksForRounds map[primitives.BlockHeight]*protocol.BlockPairContainer,
-	lastCommittedBlockHeight primitives.BlockHeight,
-) primitives.BlockHeight {
-
-	blockPair, found := blocksForRounds[lastCommittedBlockHeight+1]
+func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
+	blockPair, found := s.blocksForRounds[s.lastCommittedBlockHeight+1]
 	if !found {
 		panic("trying to commit a block that wasn't prepared")
 	}
 
-	blockStorage.CommitBlock(&services.CommitBlockInput{
+	s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
 
-	delete(blocksForRounds, lastCommittedBlockHeight+1)
-	return lastCommittedBlockHeight + 1
-
+	delete(s.blocksForRounds, s.lastCommittedBlockHeight+1)
+	return s.lastCommittedBlockHeight + 1
 }

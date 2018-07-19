@@ -70,25 +70,17 @@ func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*
 }
 
 func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
-	err := validatorVoteForNewBlockProposal(
-		s.gossip,
-		s.blocksForRounds,
-		input.Message.BlockPair,
-	)
+	err := s.validatorVoteForNewBlockProposal(input.Message.BlockPair)
 	return &gossiptopics.EmptyOutput{}, err
 }
 
 func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
-	leaderAddVote(&s.votesForActiveRound)
+	s.leaderAddVote()
 	return &gossiptopics.EmptyOutput{}, nil
 }
 
 func (s *service) HandleLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
-	s.lastCommittedBlockHeight = commitBlockAndMoveToNextRound(
-		s.blockStorage,
-		s.blocksForRounds,
-		s.lastCommittedBlockHeight,
-	)
+	s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
 	return &gossiptopics.EmptyOutput{}, nil
 }
 
@@ -106,7 +98,7 @@ func (s *service) buildBlocksEventLoop() {
 
 		// see if we need to propose a new block
 		if s.blocksForRounds[s.lastCommittedBlockHeight+1] == nil {
-			proposedBlock, err := leaderProposeNextBlock(s.transactionPool, s.lastCommittedBlockHeight)
+			proposedBlock, err := s.leaderProposeNextBlock()
 			if err != nil {
 				s.reporting.Error(err)
 			}
@@ -115,23 +107,14 @@ func (s *service) buildBlocksEventLoop() {
 
 		// validate the current proposed block
 		if s.blocksForRounds[s.lastCommittedBlockHeight+1] != nil {
-			valid, err := leaderCollectVotesForBlock(
-				s.gossip,
-				&s.votesForActiveRound,
-				s.blocksForRounds[s.lastCommittedBlockHeight+1],
-				int(s.config.NetworkSize(0)),
-			)
+			valid, err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
 			if err != nil {
 				s.reporting.Error(err)
 			}
 
 			// commit the block if validated
 			if valid {
-				s.lastCommittedBlockHeight = commitBlockAndMoveToNextRound(
-					s.blockStorage,
-					s.blocksForRounds,
-					s.lastCommittedBlockHeight,
-				)
+				s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
 				s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 			}
 		}
