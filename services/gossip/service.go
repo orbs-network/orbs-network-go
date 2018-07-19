@@ -3,13 +3,14 @@ package gossip
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 type Config interface {
-	NodeId() string
+	NodePublicKey() primitives.Ed25519Pkey
 }
 
 type service struct {
@@ -26,7 +27,7 @@ func NewGossip(transport adapter.Transport, config Config, reporting instrumenta
 		config:    config,
 		reporting: reporting,
 	}
-	transport.RegisterListener(s, s.config.NodeId())
+	transport.RegisterListener(s, s.config.NodePublicKey())
 	return s
 }
 
@@ -47,7 +48,8 @@ func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTr
 	}).Build()
 	payloads := [][]byte{header.Raw(), input.Message.SignedTransactions[0].Raw()}
 	return nil, s.transport.Send(&adapter.TransportData{
-		RecipientMode: header.RecipientMode(),
+		SenderPublicKey: s.config.NodePublicKey(),
+		RecipientMode:   header.RecipientMode(),
 		// TODO: change to input.RecipientList
 		Payloads: payloads,
 	})
@@ -74,15 +76,15 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
 		LeanHelix:     gossipmessages.LEAN_HELIX_PRE_PREPARE,
-		NumPayloads:   1,
+		NumPayloads:   uint32(len(input.Message.BlockPair.TransactionsBlock.SignedTransactions)),
 	}).Build()
-	payloads := [][]byte{
-		header.Raw(),
-		input.Message.BlockPair.TransactionsBlock.Header.Raw(),
-		input.Message.BlockPair.TransactionsBlock.SignedTransactions[0].Raw(),
+	payloads := [][]byte{header.Raw(), input.Message.BlockPair.TransactionsBlock.Header.Raw()}
+	for _, tx := range input.Message.BlockPair.TransactionsBlock.SignedTransactions {
+		payloads = append(payloads, tx.Raw())
 	}
 	return nil, s.transport.Send(&adapter.TransportData{
-		RecipientMode: header.RecipientMode(),
+		SenderPublicKey: s.config.NodePublicKey(),
+		RecipientMode:   header.RecipientMode(),
 		// TODO: change to input.RecipientList
 		Payloads: payloads,
 	})
@@ -97,7 +99,8 @@ func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput
 	}).Build()
 	payloads := [][]byte{header.Raw()}
 	return nil, s.transport.Send(&adapter.TransportData{
-		RecipientMode: header.RecipientMode(),
+		SenderPublicKey: s.config.NodePublicKey(),
+		RecipientMode:   header.RecipientMode(),
 		// TODO: change to input.RecipientList
 		Payloads: payloads,
 	})
@@ -112,7 +115,8 @@ func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) 
 	}).Build()
 	payloads := [][]byte{header.Raw()}
 	return nil, s.transport.Send(&adapter.TransportData{
-		RecipientMode: header.RecipientMode(),
+		SenderPublicKey: s.config.NodePublicKey(),
+		RecipientMode:   header.RecipientMode(),
 		// TODO: change to input.RecipientList
 		Payloads: payloads,
 	})

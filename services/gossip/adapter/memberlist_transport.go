@@ -5,15 +5,16 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/hashicorp/memberlist"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
 )
 
 // TODO: move this to regular config model
 type MemberlistGossipConfig struct {
-	Name  string
-	Port  int
-	Peers []string
+	PublicKey primitives.Ed25519Pkey
+	Port      int
+	Peers     []string
 }
 
 // TODO: this needs to be private but had to be this way because it exports Join in main
@@ -60,15 +61,21 @@ func NewGossipDelegate(nodeName string) gossipDelegate {
 	return gossipDelegate{Name: nodeName}
 }
 
+// memberlist require node names in their cluster
+func memberlistNodeName(publicKey primitives.Ed25519Pkey) string {
+	return fmt.Sprintf("node-pkey-%x", publicKey)
+}
+
 func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	fmt.Println("Creating memberlist with config", config)
+	nodeName := memberlistNodeName(config.PublicKey)
 	listConfig := memberlist.DefaultLocalConfig()
 	listConfig.BindPort = config.Port
 	listConfig.AdvertisePort = config.Port
-	listConfig.Name = config.Name
+	listConfig.Name = nodeName
 	listConfig.GossipNodes = 21
 
-	delegate := NewGossipDelegate(config.Name)
+	delegate := NewGossipDelegate(nodeName)
 	delegate.OutgoingMessages = &memberlist.TransmitLimitedQueue{
 		NumNodes: func() int {
 			return 21
@@ -83,9 +90,9 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	// Join an existing cluster by specifying at least one known member.
 	n, err := list.Join(config.Peers)
 	if err != nil {
-		fmt.Println(config.Name, "failed to join the cluster: "+err.Error())
+		fmt.Println(nodeName, "failed to join the cluster: "+err.Error())
 	} else {
-		fmt.Println(config.Name, "connected to", n, "hosts")
+		fmt.Println(nodeName, "connected to", n, "hosts")
 	}
 	t := MemberlistTransport{
 		list:       list,
@@ -102,8 +109,6 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 func (t *MemberlistTransport) remainConnectedLoop() {
 	for {
 		t.join()
-		// go gossip.PrintPeers()
-		// go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -128,7 +133,6 @@ func (t *MemberlistTransport) Send(data *TransportData) error {
 	}
 	rawMessage := encodeByteArray(data.Payloads)
 	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: rawMessage})
-	t.receive(data.Payloads) // TODO: this needs to be removed because broadcast shouldn't send to self
 	// TODO: add proper error handling
 	return nil
 }
@@ -140,8 +144,8 @@ func (t *MemberlistTransport) receive(payloads [][]byte) {
 	}
 }
 
-func (t *MemberlistTransport) RegisterListener(listener TransportListener, myNodeId string) {
-	t.listeners[myNodeId] = listener
+func (t *MemberlistTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519Pkey) {
+	t.listeners[string(listenerPublicKey)] = listener
 }
 
 type broadcast struct {

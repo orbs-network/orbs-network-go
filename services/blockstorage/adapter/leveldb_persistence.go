@@ -5,7 +5,6 @@ import (
 )
 
 type Config interface {
-	NodeId() string
 }
 
 type levelDbBlockPersistence struct {
