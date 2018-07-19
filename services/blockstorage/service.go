@@ -33,6 +33,14 @@ func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
+
+	if txBlockHeader.BlockHeight() <= s.lastCommittedBlockHeight {
+		if txBlockHeader.BlockHeight() == s.lastCommittedBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
+			panic(fmt.Sprintf("block with height %d already in storage, timestamp mismatch", s.lastCommittedBlockHeight))
+		}
+		return nil, nil
+	}
+
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
 		return nil, fmt.Errorf("protocol version mismatch: expected 1 got %d", txBlockHeader.ProtocolVersion())
 	}

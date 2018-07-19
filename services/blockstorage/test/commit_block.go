@@ -148,5 +148,40 @@ var _ = Describe("Committing a block", func () {
 				Expect(err).To(MatchError("protocol version mismatch: expected 1 got 99999"))
 			})
 		})
+
+		When("block already exists", func() {
+			It("should be silently discarded the block if it is the exact same block", func () {
+				driver := NewDriver()
+
+				blockPair := buildContainer(1, 1000)
+
+				driver.expectCommitStateDiff()
+
+				driver.commitBlock(blockPair)
+				_, err := driver.commitBlock(blockPair)
+
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(driver.numOfWrittenBlocks()).To(Equal(1))
+				driver.verifyMocks()
+			})
+
+			It("should panic if it is the same height but different block", func () {
+				driver := NewDriver()
+				driver.expectCommitStateDiff()
+
+				blockPair := buildContainer(1, 1000)
+				blockPairDifferentTimestamp := buildContainer(1, 9000)
+
+				driver.commitBlock(blockPair)
+
+				Expect(func () {
+					driver.commitBlock(blockPairDifferentTimestamp)
+				}).To(Panic())
+
+				Expect(driver.numOfWrittenBlocks()).To(Equal(1))
+				driver.verifyMocks()
+			})
+		})
 	})
 })
