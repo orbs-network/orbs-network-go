@@ -13,7 +13,7 @@ type TransportData struct {
 }
 
 type Transport interface {
-	RegisterListener(listener TransportListener, myNodePublicKey primitives.Ed25519Pkey)
+	RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519Pkey)
 	Send(data *TransportData) error
 }
 

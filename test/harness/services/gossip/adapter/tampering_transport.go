@@ -35,8 +35,8 @@ func NewTamperingTransport() TamperingTransport {
 	}
 }
 
-func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, myNodePublicKey primitives.Ed25519Pkey) {
-	t.transportListeners[string(myNodePublicKey)] = listener
+func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519Pkey) {
+	t.transportListeners[string(listenerPublicKey)] = listener
 }
 
 func (t *tamperingTransport) Send(data *adapter.TransportData) error {
@@ -168,5 +168,3 @@ func (o *pausingTamperer) Release() {
 		o.transport.Send(message)
 	}
 }
-
-

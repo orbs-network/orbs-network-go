@@ -147,8 +147,8 @@ func (t *MemberlistTransport) receive(payloads [][]byte) {
 	}
 }
 
-func (t *MemberlistTransport) RegisterListener(listener TransportListener, myNodePublicKey primitives.Ed25519Pkey) {
-	t.listeners[string(myNodePublicKey)] = listener
+func (t *MemberlistTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519Pkey) {
+	t.listeners[string(listenerPublicKey)] = listener
 }
 
 type broadcast struct {
