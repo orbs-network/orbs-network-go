@@ -109,7 +109,9 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 	if txBlockHeader.BlockHeight() <= s.lastCommittedBlockHeight {
 		if txBlockHeader.BlockHeight() == s.lastCommittedBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
 			// TODO should this really panic
-			panic(fmt.Sprintf("block with height %d already in storage, timestamp mismatch", s.lastCommittedBlockHeight))
+			message := fmt.Sprintf("block with height %d already in storage, timestamp mismatch", s.lastCommittedBlockHeight)
+			println(message)
+			panic(message)
 		}
 		return false
 	}
@@ -129,7 +131,9 @@ func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol
 	expectedNextBlockHeight := s.lastCommittedBlockHeight + 1
 	if txBlockHeader.BlockHeight() != expectedNextBlockHeight {
 		// TODO should this really panic
-		panic(fmt.Sprintf("expected block of height %d but got %d", expectedNextBlockHeight, txBlockHeader.BlockHeight()))
+		message := fmt.Sprintf("expected block of height %d but got %d", expectedNextBlockHeight, txBlockHeader.BlockHeight())
+		println(message)
+		panic(message)
 	}
 }
 
