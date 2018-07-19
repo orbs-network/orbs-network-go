@@ -33,8 +33,11 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
 		},
 	})
+
 	//This is commented out because currently transport broadcast will also broadcast to myself. So HandleForwardedTransactions will be the on to add this transaction.
-	//s.pendingTransactions <- input.SignedTransaction
+	// no longer commented out
+	s.pendingTransactions <- input.SignedTransaction
+
 	return &services.AddNewTransactionOutput{}, nil
 }
 

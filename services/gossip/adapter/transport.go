@@ -7,6 +7,7 @@ import (
 )
 
 type TransportData struct {
+	SenderPublicKey     primitives.Ed25519Pkey
 	RecipientMode       gossipmessages.RecipientsListMode
 	RecipientPublicKeys []primitives.Ed25519Pkey
 	Payloads            [][]byte // the first payload is normally gossipmessages.Header

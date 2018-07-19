@@ -46,18 +46,21 @@ func assertContractOf(makeContext func() *transportContractContext) {
 	*/
 
 	When("broadcasting a message", func() {
-		It("reaches all recipients", func() {
+		It("reaches all recipients except the sender", func() {
 			c := makeContext()
 
 			data := &adapter.TransportData{
-				RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-				Payloads:      [][]byte{{0x01, 0x02, 0x03}},
+				SenderPublicKey: c.publicKeys[3],
+				RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+				Payloads:        [][]byte{{0x71, 0x72, 0x73}},
 			}
-			c.l1.expect(data.Payloads)
-			c.l2.expect(data.Payloads)
-			c.l3.expect(data.Payloads)
 
-			c.transport.Send(data)
+			c.listeners[0].expectReceive(data.Payloads)
+			c.listeners[1].expectReceive(data.Payloads)
+			c.listeners[2].expectReceive(data.Payloads)
+			c.listeners[3].expectNotReceive()
+
+			c.transports[3].Send(data)
 			c.verify()
 		})
 	})
@@ -77,45 +80,60 @@ func listenTo(transport adapter.Transport, publicKey primitives.Ed25519Pkey) *mo
 	return l
 }
 
-func (m *mockListener) expect(payloads [][]byte) {
+func (m *mockListener) expectReceive(payloads [][]byte) {
 	m.When("OnTransportMessageReceived", payloads).Return().Times(1)
 }
 
+func (m *mockListener) expectNotReceive() {
+	m.When("OnTransportMessageReceived", mock.Any).Return().Times(0)
+}
+
 type transportContractContext struct {
-	l1, l2, l3 *mockListener
-	transport  adapter.Transport
+	publicKeys []primitives.Ed25519Pkey
+	transports []adapter.Transport
+	listeners  []*mockListener
 }
 
 func aTamperingTransport() *transportContractContext {
+	res := &transportContractContext{}
 	transport := NewTamperingTransport()
-	l1 := listenTo(transport, []byte{0x01})
-	l2 := listenTo(transport, []byte{0x02})
-	l3 := listenTo(transport, []byte{0x03})
-	return &transportContractContext{l1, l2, l3, transport}
+	res.publicKeys = []primitives.Ed25519Pkey{{0x01}, {0x02}, {0x03}, {0x04}}
+	res.transports = []adapter.Transport{transport, transport, transport, transport}
+	res.listeners = []*mockListener{
+		listenTo(res.transports[0], res.publicKeys[0]),
+		listenTo(res.transports[1], res.publicKeys[1]),
+		listenTo(res.transports[2], res.publicKeys[2]),
+		listenTo(res.transports[3], res.publicKeys[3]),
+	}
+	return res
 }
 
 func aMemberlistTransport() *transportContractContext {
-	config1 := adapter.MemberlistGossipConfig{[]byte{0x01}, 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003", "127.0.0.1:60004"}}
-	transport1 := adapter.NewMemberlistTransport(config1)
-
-	config2 := adapter.MemberlistGossipConfig{[]byte{0x02}, 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003", "127.0.0.1:60004"}}
-	transport2 := adapter.NewMemberlistTransport(config2)
-
-	config3 := adapter.MemberlistGossipConfig{[]byte{0x03}, 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60004"}}
-	transport3 := adapter.NewMemberlistTransport(config3)
-
-	config4 := adapter.MemberlistGossipConfig{[]byte{0x04}, 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}}
-	transport4 := adapter.NewMemberlistTransport(config4)
-
-	l1 := listenTo(transport1, []byte{0x01})
-	l2 := listenTo(transport2, []byte{0x02})
-	l3 := listenTo(transport3, []byte{0x03})
-
-	return &transportContractContext{l1, l2, l3, transport4}
+	res := &transportContractContext{}
+	res.publicKeys = []primitives.Ed25519Pkey{{0x01}, {0x02}, {0x03}, {0x04}}
+	configs := []adapter.MemberlistGossipConfig{
+		{res.publicKeys[0], 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003", "127.0.0.1:60004"}},
+		{res.publicKeys[1], 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003", "127.0.0.1:60004"}},
+		{res.publicKeys[2], 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60004"}},
+		{res.publicKeys[3], 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}},
+	}
+	res.transports = []adapter.Transport{
+		adapter.NewMemberlistTransport(configs[0]),
+		adapter.NewMemberlistTransport(configs[1]),
+		adapter.NewMemberlistTransport(configs[2]),
+		adapter.NewMemberlistTransport(configs[3]),
+	}
+	res.listeners = []*mockListener{
+		listenTo(res.transports[0], res.publicKeys[0]),
+		listenTo(res.transports[1], res.publicKeys[1]),
+		listenTo(res.transports[2], res.publicKeys[2]),
+		listenTo(res.transports[3], res.publicKeys[3]),
+	}
+	return res
 }
 
 func (c *transportContractContext) verify() {
-	Eventually(c.l1).Should(ExecuteAsPlanned())
-	Eventually(c.l2).Should(ExecuteAsPlanned())
-	Eventually(c.l3).Should(ExecuteAsPlanned())
+	for _, mockListener := range c.listeners {
+		Eventually(mockListener).Should(ExecuteAsPlanned())
+	}
 }

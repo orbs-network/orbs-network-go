@@ -109,8 +109,6 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 func (t *MemberlistTransport) remainConnectedLoop() {
 	for {
 		t.join()
-		// go gossip.PrintPeers()
-		// go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -135,7 +133,6 @@ func (t *MemberlistTransport) Send(data *TransportData) error {
 	}
 	rawMessage := encodeByteArray(data.Payloads)
 	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: rawMessage})
-	t.receive(data.Payloads) // TODO: this needs to be removed because broadcast shouldn't send to self
 	// TODO: add proper error handling
 	return nil
 }

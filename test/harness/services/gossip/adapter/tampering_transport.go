@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"runtime"
 	"sync"
 )
 
@@ -106,19 +107,24 @@ func (t *tamperingTransport) removePauseTamperer(tamperer *pausingTamperer) {
 
 func (t *tamperingTransport) receive(data *adapter.TransportData) {
 	switch data.RecipientMode {
+
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for _, l := range t.transportListeners {
-			// TODO: this is broadcasting to self
-			l.OnTransportMessageReceived(data.Payloads)
+		for stringPublicKey, l := range t.transportListeners {
+			if stringPublicKey != string(data.SenderPublicKey) {
+				l.OnTransportMessageReceived(data.Payloads)
+			}
 		}
+
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientPublicKeys {
-			nodeId := string(recipientPublicKey)
-			t.transportListeners[nodeId].OnTransportMessageReceived(data.Payloads)
+			stringPublicKey := string(recipientPublicKey)
+			t.transportListeners[stringPublicKey].OnTransportMessageReceived(data.Payloads)
 		}
+
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
 		panic("Not implemented")
 	}
+
 }
 
 func (t *tamperingTransport) shouldFail(data *adapter.TransportData) bool {
@@ -127,7 +133,6 @@ func (t *tamperingTransport) shouldFail(data *adapter.TransportData) bool {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -137,11 +142,9 @@ func (t *tamperingTransport) hasPaused(data *adapter.TransportData) bool {
 			t.mutex.Lock()
 			defer t.mutex.Unlock()
 			p.messages = append(p.messages, data)
-
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -153,8 +156,7 @@ type failingTamperer struct {
 type pausingTamperer struct {
 	predicate MessagePredicate
 	transport *tamperingTransport
-
-	messages []*adapter.TransportData
+	messages  []*adapter.TransportData
 }
 
 func (o *failingTamperer) Release() {
@@ -163,8 +165,8 @@ func (o *failingTamperer) Release() {
 
 func (o *pausingTamperer) Release() {
 	o.transport.removePauseTamperer(o)
-
 	for _, message := range o.messages {
 		o.transport.Send(message)
+		runtime.Gosched() // TODO: this is required or else messages arrive in the opposite order after resume
 	}
 }
