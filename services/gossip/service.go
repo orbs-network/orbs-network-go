@@ -76,7 +76,11 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 		LeanHelix:     gossipmessages.LEAN_HELIX_PRE_PREPARE,
 		NumPayloads:   1,
 	}).Build()
-	payloads := [][]byte{header.Raw(), input.Message.BlockPair.TransactionsBlock.SignedTransactions[0].Raw()}
+	payloads := [][]byte{
+		header.Raw(),
+		input.Message.BlockPair.TransactionsBlock.Header.Raw(),
+		input.Message.BlockPair.TransactionsBlock.SignedTransactions[0].Raw(),
+	}
 	return nil, s.transport.Send(&adapter.TransportData{
 		RecipientMode: header.RecipientMode(),
 		// TODO: change to input.RecipientList
