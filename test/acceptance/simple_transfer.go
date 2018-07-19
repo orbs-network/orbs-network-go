@@ -15,7 +15,7 @@ var _ = Describe("a leader node", func() {
 		defer network.FlushLog()
 
 		network.SendTransfer(0, 17)
-		network.SendTransfer(0, 1000000) //this is invalid because currently we don't allow (temporarily) values over 1000 just so that we can create invalid transactions
+		network.SendInvalidTransfer(0)
 		network.SendTransfer(0, 22)
 
 		network.BlockPersistence(0).WaitForBlocks(2)

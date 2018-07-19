@@ -48,19 +48,15 @@ var _ = Describe("transaction pool", func() {
 
 	It("dont forward an invalid transaction with gossip", func() {
 
-		tx := test.TransferTransaction().MakeInvalid().Build()
+		tx := test.TransferTransaction().WithInvalidContent().Build()
 
-		gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
-			Message: &gossipmessages.ForwardedTransactionsMessage{
-				SignedTransactions: []*protocol.SignedTransaction{tx},
-			},
-		}).Return(&gossiptopics.EmptyOutput{}, nil).Times(0)
+		gossip.When("BroadcastForwardedTransactions", mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).Times(0)
 
 		_, err := service.AddNewTransaction(&services.AddNewTransactionInput{
 			SignedTransaction: tx,
 		})
 
-		Expect(err).ToNot(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 		Expect(gossip).To(test.ExecuteAsPlanned())
 
 	})
