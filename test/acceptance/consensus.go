@@ -8,12 +8,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 )
 
-var _ = Describe("a leader node", func() {
+var _ = FDescribe("a leader node", func() {
 
 	It("must get validations by all nodes to commit a transaction", func(done Done) {
 		// leader is nodeIndex 0, validator is nodeIndex 1
 		network := harness.NewTestNetwork(2)
 		defer network.FlushLog()
+
 		consensusRound := network.LoopControl(0).LatchFor("consensus_round")
 
 		consensusRound.Brake()

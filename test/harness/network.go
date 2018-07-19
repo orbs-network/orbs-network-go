@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/go-errors/errors"
 )
 
 type AcceptanceTestNetwork interface {
@@ -70,6 +71,10 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 }
 
 func (n *acceptanceTestNetwork) FlushLog() {
+	if r := recover(); r != nil {
+		println("panic recovered", errors.Wrap(r, 2).ErrorStack())
+	}
+
 	for i, _ := range n.nodes {
 		n.nodes[i].log.Flush()
 	}
