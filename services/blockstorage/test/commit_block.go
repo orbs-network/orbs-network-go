@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/go-mock"
+	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 )
 
 type adapterConfig struct {
@@ -25,6 +26,7 @@ func buildContainer(height primitives.BlockHeight, blockCreated primitives.Times
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
 			BlockHeight: height,
 			Timestamp:   blockCreated,
+			ProtocolVersion: blockstorage.ProtocolVersion,
 		}).Build(),
 		BlockProof: (&protocol.TransactionsBlockProofBuilder{
 			Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
@@ -69,33 +71,82 @@ func buildContainer(height primitives.BlockHeight, blockCreated primitives.Times
 	return container
 }
 
+type driver struct {
+	stateStorage *services.MockStateStorage
+	storageAdapter adapter2.BlockPersistence
+	blockStorage services.BlockStorage
+}
+
+func (d *driver) expectCommitStateDiff() {
+	csdOut := &services.CommitStateDiffOutput{}
+
+	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(1)
+
+}
+
+func (d *driver) verifyMocks() {
+	_, err := d.stateStorage.Verify()
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func (d *driver) commitBlock(blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
+	return d.blockStorage.CommitBlock(&services.CommitBlockInput{
+		BlockPair: blockPairContainer,
+	})
+}
+
+func (d *driver) numOfWrittenBlocks() int {
+	return len(d.storageAdapter.ReadAllBlocks())
+}
+
+func (d *driver) getLastBlockHeight() *services.GetLastCommittedBlockHeightOutput {
+	out, err := d.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+	Expect(err).ToNot(HaveOccurred())
+	return out
+}
+
+func NewDriver() *driver {
+	d := &driver{}
+	d.stateStorage = &services.MockStateStorage{}
+	d.storageAdapter = adapter.NewInMemoryBlockPersistence(&adapterConfig{})
+	d.blockStorage = blockstorage.NewBlockStorage(d.storageAdapter, d.stateStorage)
+
+	return d
+}
+
 var _ = Describe("Committing a block", func () {
-
 	It("saves it to persistent storage", func () {
-		stateStorage := &services.MockStateStorage{}
-		storageAdapter := adapter.NewInMemoryBlockPersistence(&adapterConfig{})
-		service := blockstorage.NewBlockStorage(storageAdapter, stateStorage)
+		driver := NewDriver()
 
-		commitBlockInput := &services.CommitBlockInput{
-			BlockPair: buildContainer(1, 1000),
-		}
+		driver.expectCommitStateDiff()
 
-		csdOut := &services.CommitStateDiffOutput{}
-		stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(1)
-
-		_, err := service.CommitBlock(commitBlockInput)
+		_, err := driver.commitBlock(buildContainer(1, 1000))
 
 		Expect(err).ToNot(HaveOccurred())
-		Expect(len(storageAdapter.ReadAllBlocks())).To(Equal(1))
-		_, err = stateStorage.Verify()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(driver.numOfWrittenBlocks()).To(Equal(1))
 
-		lastCommitedBlockHeight, err := service.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+		driver.verifyMocks()
 
-		Expect(err).ToNot(HaveOccurred())
-		Expect(lastCommitedBlockHeight.LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(1)))
-		Expect(lastCommitedBlockHeight.LastCommittedBlockTimestamp).To(Equal(primitives.Timestamp(1000)))
+		lastCommittedBlockHeight := driver.getLastBlockHeight()
 
+		Expect(lastCommittedBlockHeight.LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(1)))
+		Expect(lastCommittedBlockHeight.LastCommittedBlockTimestamp).To(Equal(primitives.Timestamp(1000)))
 
+		// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
+	})
+
+	Context("block is invalid", func () {
+		When("protocol version mismatches", func () {
+			It("returns an error", func () {
+				driver := NewDriver()
+
+				blockPair := buildContainer(1, 1000)
+				blockPair.TransactionsBlock.Header.MutateProtocolVersion(99999)
+
+				_, err := driver.commitBlock(blockPair)
+
+				Expect(err).To(MatchError("protocol version mismatch: expected 1 got 99999"))
+			})
+		})
 	})
 })

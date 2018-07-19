@@ -8,6 +8,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"fmt"
+)
+
+const (
+	// TODO extract it to the spec
+	ProtocolVersion = 1
 )
 
 type service struct {
@@ -26,6 +32,11 @@ func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services
 }
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+	txBlockHeader := input.BlockPair.TransactionsBlock.Header
+	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
+		return nil, fmt.Errorf("protocol version mismatch: expected 1 got %d", txBlockHeader.ProtocolVersion())
+	}
+
 	for _, t := range input.BlockPair.TransactionsBlock.SignedTransactions {
 		if t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value() > 1000 {
 			//TODO: handle invalid transaction gracefully
@@ -47,8 +58,8 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 
 	// TODO return an error
 	s.persistence.WriteBlock(input.BlockPair)
-	s.lastCommittedBlockHeight = input.BlockPair.TransactionsBlock.Header.BlockHeight()
-	s.lastCommittedBlockTimestamp = input.BlockPair.TransactionsBlock.Header.Timestamp()
+	s.lastCommittedBlockHeight = txBlockHeader.BlockHeight()
+	s.lastCommittedBlockTimestamp = txBlockHeader.Timestamp()
 
 	return nil, nil
 }

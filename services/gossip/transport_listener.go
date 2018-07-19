@@ -57,7 +57,8 @@ func (s *service) receivedLeanHelixMessage(message *gossipmessages.Header, paylo
 				Message: &gossipmessages.LeanHelixPrePrepareMessage{
 					BlockPair: &protocol.BlockPairContainer{
 						TransactionsBlock: &protocol.TransactionsBlockContainer{
-							SignedTransactions: []*protocol.SignedTransaction{protocol.SignedTransactionReader(payloads[0])},
+							Header: protocol.TransactionsBlockHeaderReader(payloads[0]),
+							SignedTransactions: []*protocol.SignedTransaction{protocol.SignedTransactionReader(payloads[1])},
 						},
 					},
 				},

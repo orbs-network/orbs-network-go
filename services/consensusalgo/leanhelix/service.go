@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 )
 
 type Config interface {
@@ -72,6 +73,7 @@ func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*
 
 func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
 	s.preparedBlock = input.Message.BlockPair // each node will save this block
+	println("block after preprepare", s.preparedBlock.TransactionsBlock.Header.String())
 	return s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 }
 
@@ -146,9 +148,14 @@ func (s *service) buildBlocksEventLoop() {
 func (s *service) requestConsensusFor(transaction *protocol.SignedTransaction) (chan bool, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
+			Header: (&protocol.TransactionsBlockHeaderBuilder{
+				ProtocolVersion: blockstorage.ProtocolVersion,
+			}).Build(),
 			SignedTransactions: []*protocol.SignedTransaction{transaction},
 		},
 	}
+
+	println("block before preprepare", blockPair.TransactionsBlock.Header.String())
 	message := &gossipmessages.LeanHelixPrePrepareMessage{
 		BlockPair: blockPair,
 	}
