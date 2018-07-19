@@ -63,7 +63,7 @@ func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPair
 	return err
 }
 
-func (s *service) leaderAddVote() {
+func (s *service) leaderAddVoteFromValidator() {
 	// TODO: we assume we only get votes for the active round, in the real world we can't assume this,
 	// TODO:  but here since we don't move to the next round unless everybody voted, it's ok
 	if s.votesForActiveRound == nil {

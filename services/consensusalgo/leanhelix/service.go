@@ -75,7 +75,7 @@ func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrep
 }
 
 func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
-	s.leaderAddVote()
+	s.leaderAddVoteFromValidator()
 	return &gossiptopics.EmptyOutput{}, nil
 }
 
