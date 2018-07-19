@@ -1,6 +1,7 @@
 package address_test
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/address"
@@ -50,100 +51,131 @@ func testAE(actual, expected string) string {
 	return fmt.Sprintf("a: %s, e: %s", actual, expected)
 }
 
-func TestAddressInitializationWithPublicKeyOnTestNet(t *testing.T) {
-	pk2bytes, err := hex.DecodeString(publicKey2)
+func pkStringToBytes(t *testing.T, pk string) []byte {
+	pk1bytes, err := hex.DecodeString(pk)
 	if err != nil {
 		t.Errorf("something went wrong with pk->bytes %s", err)
 	}
-	pktestNet, err := address.NewFromPK(pk2bytes, "9012ca", address.TEST_NETWORK_ID)
-	if err != nil {
+	return pk1bytes
+}
+
+func validateAddressFromPK(t *testing.T, a *address.Address, net, vchain, aid, rawbs58 string, version uint8, checksum uint32) {
+	if a.NetworkId() != net {
+		t.Errorf("address from pk, network id incorrect (%s)", testAE(a.NetworkId(), net))
+	}
+	if a.VirtualChainId() != vchain {
+		t.Errorf("address from pk, vchain id incorrect (%s)", testAE(a.VirtualChainId(), vchain))
+	}
+	if a.Version() != version {
+		t.Errorf("address from pk, version is incorrect (%s)", testAE(string(a.Version()), strconv.Itoa(int(version))))
+	}
+	if accountId, err := a.AccountId(); err != nil {
 		t.Error(err)
+	} else if hex.EncodeToString(accountId) != aid {
+		t.Errorf("address from pk, account id is incorrect (%s)", testAE(hex.EncodeToString(accountId), aid))
 	}
-	if pktestNet.NetworkId() != address.TEST_NETWORK_ID {
-		t.Errorf("address from pk on testnet, network id incorrect (%s)", testAE(pktestNet.NetworkId(), address.TEST_NETWORK_ID))
-	}
-	if pktestNet.VirtualChainId() != "9012ca" {
-		t.Errorf("address from pk on testnet, vchain id incorrect (%s)", testAE(pktestNet.VirtualChainId(), "9012ca"))
-	}
-	if pktestNet.Version() != 0 {
-		t.Errorf("address from pk on testnet, version is incorrect (%s)", testAE(string(pktestNet.Version()), "0"))
-	}
-	if accountId, err := pktestNet.AccountId(); err != nil {
+	if raw, err := a.Raw(); err != nil {
 		t.Error(err)
-	} else if hex.EncodeToString(accountId) != "44068acc1b9ffc072694b684fc11ff229aff0b28" {
-		t.Errorf("address from pk on testnet, account id is incorrect (%s)", testAE(hex.EncodeToString(accountId), "44068acc1b9ffc072694b684fc11ff229aff0b28"))
-	}
-	if raw, err := pktestNet.Raw(); err != nil {
-		t.Error(err)
-	} else if address.ToBase58(raw) != "T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR" {
-		t.Errorf("address from pk on testnet, base58 is incorrect (%s)", testAE(string(address.ToBase58(raw)), "T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR"))
+	} else if address.Base58Encode(raw) != rawbs58 {
+		t.Errorf("address from pk, base58 is incorrect (%s)", testAE(string(address.Base58Encode(raw)), rawbs58))
 	}
 	// if the above is okay, then the checksum must be okay..
-	if checksum, err := pktestNet.Checksum(); err != nil {
+	if cs, err := a.Checksum(); err != nil {
 		t.Error(err)
-	} else if checksum != 0x258c93e8 {
-		t.Errorf("address from pk on testnet, checksum is incorrect (%s)", testAE(strconv.FormatUint(uint64(checksum), 16), strconv.FormatUint(0x258c93e8, 16)))
+	} else if cs != checksum {
+		t.Errorf("address from pk, checksum is incorrect (%s)", testAE(strconv.FormatUint(uint64(cs), 16), strconv.FormatUint(uint64(checksum), 16)))
 	}
+}
+
+func TestAddressInitializationWithPublicKeyOnTestNet(t *testing.T) {
+	pk2bytes := pkStringToBytes(t, publicKey2)
+
+	pktestNet, err := address.NewFromPK(pk2bytes, "9012ca", address.TEST_NETWORK_ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validateAddressFromPK(
+		t,
+		pktestNet,
+		address.TEST_NETWORK_ID,
+		"9012ca",
+		"44068acc1b9ffc072694b684fc11ff229aff0b28",
+		"T00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMkGvQPR",
+		0,
+		0x258c93e8)
 }
 
 func TestAddressInitializationWithKeyOnMainNet(t *testing.T) {
-	pk1bytes, err := hex.DecodeString(publicKey1)
+	pk1bytes := pkStringToBytes(t, publicKey1)
+	pkmainNet, err := address.NewFromPK(pk1bytes, "640ed3", address.MAIN_NETWORK_ID)
 	if err != nil {
-		t.Errorf("something went wrong with pk->bytes %s", err)
+		t.Fatal(err)
 	}
-	pktestNet, err := address.NewFromPK(pk1bytes, "640ed3", address.MAIN_NETWORK_ID)
-	if err != nil {
-		t.Error(err)
-	}
-	if pktestNet.NetworkId() != address.MAIN_NETWORK_ID {
-		t.Errorf("address from pk on testnet, network id incorrect (%s)", testAE(pktestNet.NetworkId(), address.MAIN_NETWORK_ID))
-	}
-	if pktestNet.VirtualChainId() != "640ed3" {
-		t.Errorf("address from pk on testnet, vchain id incorrect (%s)", testAE(pktestNet.VirtualChainId(), "640ed3"))
-	}
-	if pktestNet.Version() != 0 {
-		t.Errorf("address from pk on testnet, version is incorrect (%s)", testAE(string(pktestNet.Version()), "0"))
-	}
-	if accountId, err := pktestNet.AccountId(); err != nil {
-		t.Error(err)
-	} else if hex.EncodeToString(accountId) != "c13052d8208230a58ab363708c08e78f1125f488" {
-		t.Errorf("address from pk on testnet, account id is incorrect (%s)", testAE(hex.EncodeToString(accountId), "c13052d8208230a58ab363708c08e78f1125f488"))
-	}
-	if raw, err := pktestNet.Raw(); err != nil {
-		t.Error(err)
-	} else if address.ToBase58(raw) != "M00EXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1" {
-		t.Errorf("address from pk on testnet, base58 is incorrect (%s)", testAE(string(address.ToBase58(raw)), "M00EXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1"))
-	}
-	// if the above is okay, then the checksum must be okay..
-	if checksum, err := pktestNet.Checksum(); err != nil {
-		t.Error(err)
-	} else if checksum != 0xb4af4d2 {
-		t.Errorf("address from pk on testnet, checksum is incorrect (%s)", testAE(strconv.FormatUint(uint64(checksum), 16), strconv.FormatUint(0xb4af4d2, 16)))
-	}
+	validateAddressFromPK(
+		t,
+		pkmainNet,
+		address.MAIN_NETWORK_ID,
+		"640ed3",
+		"c13052d8208230a58ab363708c08e78f1125f488",
+		"M00EXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1",
+		0,
+		0xb4af4d2)
 }
 
 func TestAddressInitializationFailsOnInvalidPK(t *testing.T) {
-	t.Error("need to implement")
+	_, err := address.NewFromPK([]byte{}, "010101", address.TEST_NETWORK_ID)
+	if err == nil {
+		t.Error("address initialized without pk")
+	}
 }
 
 func TestAddressInitializationFailsOnInvalidVChainId(t *testing.T) {
-	t.Error("need to implement")
+	if _, err := address.NewFromPK([]byte{}, "1", address.TEST_NETWORK_ID); err == nil {
+		t.Error("address initialized on invalid virtual chain id")
+	}
 }
 
 func TestAddressInitializationFailsOnInvalidNetworkId(t *testing.T) {
-	t.Error("need to implement")
+	if _, err := address.NewFromPK([]byte{}, "010101", "Z"); err == nil {
+		t.Error("address initialized on invalid network id")
+	}
 }
 
 func TestAddressSerialization(t *testing.T) {
-	t.Error("need to implement")
+	pk1bytes := pkStringToBytes(t, publicKey1)
+	pkmainNet, err := address.NewFromPK(pk1bytes, "640ed3", address.MAIN_NETWORK_ID)
+	if err != nil {
+		t.Fatalf("failed to generate new address (unstable): %s", err)
+	}
+
+	dsraw, err := address.Base58Decode("M00EXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1")
+	if err != nil {
+		t.Fatalf("failed to decode: %s", err)
+	}
+
+	if raw, err := pkmainNet.Raw(); err != nil {
+		t.Errorf("failed to generate raw from address (unstable)")
+	} else {
+		if !bytes.Equal(dsraw, raw) {
+			t.Errorf("deserialization failed, raw deserialized does not match expcted address")
+		}
+	}
 }
 
 func TestAddressSerializationFailsOnIncorrectChecksum(t *testing.T) {
-	t.Error("need to implement")
+	pk2bytes := pkStringToBytes(t, publicKey2)
+
+	if _, err := address.NewFromAddress("M00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMqZ9vya", pk2bytes); err == nil {
+		t.Errorf("invalid checksum and deserialization worked: %s", err)
+	}
 }
 
 func TestAddressSerializationFailsOnPKMismatch(t *testing.T) {
-	t.Error("need to implement")
+	pk2bytes := pkStringToBytes(t, publicKey1)
+
+	if _, err := address.NewFromAddress("M00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMqZ9vza", pk2bytes); err == nil {
+		t.Errorf("deserialization worked on a wrong public key: %s", err)
+	}
 }
 
 func TestAddressIsValid(t *testing.T) {
@@ -157,7 +189,7 @@ func TestAddressIsValid(t *testing.T) {
 func TestAddressIsValidFails(t *testing.T) {
 	for _, pair := range invalidAddressTests {
 		if _, err := address.IsValid(pair.invalidAddress); err == nil {
-			t.Errorf("invalid address passed validation: %s", pair.invalidAddress)
+			t.Errorf("invalid address passed validation: %s, test: %s", pair.invalidAddress, pair.testReason)
 		}
 	}
 }

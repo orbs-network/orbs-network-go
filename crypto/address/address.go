@@ -1,6 +1,7 @@
 package address
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -12,7 +13,7 @@ import (
 
 type Address struct {
 	networkId      string
-	virtualChainId string
+	virtualChainId []byte
 	publicKey      []byte
 	version        uint8
 	accountId      []byte
@@ -30,21 +31,99 @@ const (
 	VERSION_SIZE         = 1
 	ACCOUNT_ID_SIZE      = 20
 	CHECKSUM_SIZE        = 4
+	PUBLIC_KEY_SIZE      = 32
 )
 
-func NewFromPK(publicKey []byte, virtualChainId string, networkId string) (Address, error) {
+func validateAddressParts(pk []byte, vcId []byte, net string, v uint8) error {
+	if len(pk) != PUBLIC_KEY_SIZE {
+		return fmt.Errorf("pk invalid, cannot create address")
+	}
+
+	if !IsValidVChainId(vcId) {
+		return fmt.Errorf("invalid virtual chain id, cannot create address")
+	}
+
+	if !IsValidNetworkId(net) {
+		return fmt.Errorf("invalid network id, cannot create address")
+	}
+
+	if !IsValidVersion(v) {
+		return fmt.Errorf("invalid version, cannot create address")
+	}
+
+	return nil
+}
+
+func NewFromPK(publicKey []byte, virtualChainId string, networkId string) (*Address, error) {
+	vcidBytes, err := hex.DecodeString(virtualChainId)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert vcid from hex to bytes (%s)", virtualChainId)
+	}
+
+	if err := validateAddressParts(publicKey, vcidBytes, networkId, 0); err != nil {
+		return nil, err
+	}
+
 	newAddress := Address{
 		publicKey:      publicKey,
-		virtualChainId: virtualChainId,
+		virtualChainId: vcidBytes,
 		networkId:      networkId,
 		version:        0,
 	}
 
-	return newAddress, nil
+	return &newAddress, nil
+}
+
+func NewFromAddress(a string, publicKey []byte) (*Address, error) {
+	if _, err := IsValid(a); err != nil {
+		return nil, fmt.Errorf("address is invalid: %s", err)
+	}
+
+	if raw, err := Base58Decode(a); err != nil {
+		return nil, fmt.Errorf("address is invalid: %s", err)
+	} else {
+		return NewFromRaw(raw, publicKey)
+	}
+}
+
+func NewFromRaw(a []byte, publicKey []byte) (*Address, error) {
+	networkId := string(a[0])
+	version := a[VERSION_SIZE]
+	vcidBytes := a[NETWORK_ID_SIZE+VERSION_SIZE : NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE]
+	accountId := a[NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE : NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE+ACCOUNT_ID_SIZE]
+
+	if err := validateAddressParts(publicKey, vcidBytes, networkId, version); err != nil {
+		return nil, fmt.Errorf("failed to validate raw address: %s", err)
+	}
+
+	newAddress := Address{
+		publicKey:      publicKey,
+		virtualChainId: vcidBytes,
+		networkId:      networkId,
+		version:        0,
+	}
+
+	if aid, err := newAddress.AccountId(); err != nil {
+		return nil, fmt.Errorf("unable to create account id for new address")
+	} else if !bytes.Equal(aid, accountId) {
+		return nil, fmt.Errorf("account id mismatch, invalid address")
+	}
+
+	cs := binary.BigEndian.Uint32(a[NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE+ACCOUNT_ID_SIZE:])
+	if _, err := newAddress.generateFullAddress(); err != nil {
+		return nil, fmt.Errorf("f/ailed to generate full address for new address during checksum test")
+	} else if actualCs, err := newAddress.Checksum(); err != nil {
+		return nil, fmt.Errorf("failed to generate full address for new address during checksum test")
+	} else if cs != actualCs {
+		return nil, fmt.Errorf("checksum invalid, cannot create address")
+	}
+
+	return &newAddress, nil
 }
 
 func (a *Address) VirtualChainId() string {
-	return a.virtualChainId
+	vcidStr := hex.EncodeToString(a.virtualChainId)
+	return vcidStr
 }
 
 func (a *Address) NetworkId() string {
@@ -55,8 +134,20 @@ func (a *Address) Version() uint8 {
 	return a.version
 }
 
+func IsValidVersion(v uint8) bool {
+	return v == 0
+}
+
+func IsValidNetworkId(id string) bool {
+	return id == MAIN_NETWORK_ID || id == TEST_NETWORK_ID
+}
+
+func IsValidVChainId(vchain []byte) bool {
+	return len(vchain) == VCHAIN_ID_SIZE && vchain[0] >= VIRTUAL_CHAIN_ID_MSB
+}
+
 func calculateAccountId(publicKey []byte) ([]byte, error) {
-	if len(publicKey) == 0 {
+	if len(publicKey) != PUBLIC_KEY_SIZE {
 		return nil, fmt.Errorf("public key invalid, cannot create account id")
 	}
 
@@ -112,9 +203,28 @@ func (a *Address) Raw() ([]byte, error) {
 	}
 }
 
-func ToBase58(rawAddress []byte) string {
+func Base58Encode(rawAddress []byte) string {
 	bs58 := fmt.Sprintf("%s%s%s", rawAddress[:1], hex.EncodeToString(rawAddress[1:2]), base58.Encode(rawAddress[2:]))
 	return bs58
+}
+
+func Base58Decode(address string) ([]byte, error) {
+	net := address[0]
+	version, err := hex.DecodeString(address[1:3])
+	if err != nil {
+		return nil, err
+	}
+	fa, err := base58.Decode([]byte(address[3:]))
+	if err != nil {
+		return nil, err
+	}
+
+	raw := make([]byte, NETWORK_ID_SIZE)
+	raw[0] = net
+	raw = append(raw, version...)
+	raw = append(raw, fa...)
+
+	return raw, nil
 }
 
 func (a *Address) generateFullAddress() ([]byte, error) {
@@ -123,28 +233,21 @@ func (a *Address) generateFullAddress() ([]byte, error) {
 		if aID, err := a.AccountId(); err != nil {
 			return nil, err
 		} else {
-			a.fullAddress, err = generateFullAddress(a.networkId, a.version, a.virtualChainId, aID)
-			if err != nil {
-				return nil, err
-			}
+			a.fullAddress = generateFullAddress(a.networkId, a.version, a.virtualChainId, aID)
 		}
 	}
 	return a.fullAddress, nil
 }
 
-func generateFullAddress(networkId string, version uint8, vchainId string, accountId []byte) ([]byte, error) {
+func generateFullAddress(networkId string, version uint8, vchainId []byte, accountId []byte) []byte {
 	fa := make([]byte, NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE)
 	fa[0] = byte(networkId[0])
 	fa[1] = byte(version)
-	if vchainBytes, err := hex.DecodeString(vchainId); err != nil {
-		return nil, err
-	} else {
-		for i, vcb := range vchainBytes {
-			fa[i+NETWORK_ID_SIZE+VERSION_SIZE] = vcb
-		}
+	for i, vcb := range vchainId {
+		fa[i+NETWORK_ID_SIZE+VERSION_SIZE] = vcb
 	}
 	fa = append(fa, accountId...)
-	return fa, nil
+	return fa
 }
 
 func IsValid(address string) (bool, error) {
@@ -153,7 +256,7 @@ func IsValid(address string) (bool, error) {
 	}
 
 	net := string(address[0])
-	if net != MAIN_NETWORK_ID && net != TEST_NETWORK_ID {
+	if !IsValidNetworkId(net) {
 		return false, fmt.Errorf("network id invalid")
 	}
 
@@ -161,7 +264,7 @@ func IsValid(address string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("version parsing failed, %s", err)
 	}
-	if version[0] != 0 {
+	if !IsValidVersion(version[0]) {
 		return false, fmt.Errorf("invalid version")
 	}
 
@@ -176,18 +279,17 @@ func IsValid(address string) (bool, error) {
 	}
 
 	vchainID := decoded[0:VCHAIN_ID_SIZE]
-	if vchainID[0] < VIRTUAL_CHAIN_ID_MSB {
+	if !IsValidVChainId(vchainID) {
 		return false, fmt.Errorf("vchain id invalid")
 	}
 
 	accountId := decoded[VCHAIN_ID_SIZE : ACCOUNT_ID_SIZE+VCHAIN_ID_SIZE]
 	expectedCs := binary.BigEndian.Uint32(decoded[ACCOUNT_ID_SIZE+VCHAIN_ID_SIZE:])
-	if fa, err := generateFullAddress(net, version[0], hex.EncodeToString(vchainID), accountId); err != nil {
-		return false, fmt.Errorf("failed to generate full address: %s", err)
-	} else if actualCs, err := calculateChecksum(fa); err != nil {
+	fa := generateFullAddress(net, version[0], vchainID, accountId)
+	if actualCs, err := calculateChecksum(fa); err != nil {
 		return false, fmt.Errorf("failed to calculate checksum: %s", err)
 	} else {
-		if !(expectedCs == *actualCs) {
+		if expectedCs != *actualCs {
 			return false, fmt.Errorf("checksum does not match address")
 		}
 	}
