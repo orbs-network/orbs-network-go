@@ -27,6 +27,11 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrume
 }
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+	err := validateTransaction(input.SignedTransaction)
+	if err != nil {
+		s.reporting.Info(fmt.Sprintf("transaction is invalid [%v]", input.SignedTransaction))
+		return nil, err
+	}
 	s.reporting.Info(fmt.Sprintf("Adding new transaction [%v] to the pool", input.SignedTransaction))
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{

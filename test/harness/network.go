@@ -21,6 +21,7 @@ type AcceptanceTestNetwork interface {
 	LoopControl(nodeIndex int) harnessInstrumentation.BrakingLoop
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
 }
 
@@ -92,6 +93,24 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
 			SignedTransaction: test.TransferTransaction().WithAmount(amount).Builder(),
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			// TODO: handle error
+		}
+		ch <- output.ClientResponse
+	}()
+	return ch
+}
+
+func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse {
+	ch := make(chan *client.SendTransactionResponse)
+	go func() {
+		request := (&client.SendTransactionRequestBuilder{
+			SignedTransaction: test.TransferTransaction().WithInvalidContent().Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
