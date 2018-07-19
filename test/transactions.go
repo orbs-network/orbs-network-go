@@ -39,6 +39,6 @@ func (t *transferTransaction) WithAmount(amount uint64) *transferTransaction {
 }
 
 func (t *transferTransaction) WithInvalidContent() *transferTransaction {
-	t.builder.Transaction.Timestamp = primitives.Timestamp(time.Now().Add(+35 * time.Minute).UnixNano())
+	t.builder.Transaction.Timestamp = primitives.Timestamp(time.Now().Add(35 * time.Minute).UnixNano())
 	return t
 }

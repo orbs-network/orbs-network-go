@@ -46,7 +46,7 @@ var _ = Describe("transaction pool", func() {
 
 	})
 
-	It("dont forward an invalid transaction with gossip", func() {
+	It("does not forward an invalid transaction with gossip", func() {
 
 		tx := test.TransferTransaction().WithInvalidContent().Build()
 

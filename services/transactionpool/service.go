@@ -31,14 +31,13 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	if err != nil {
 		s.reporting.Info(fmt.Sprintf("transaction is invalid [%v]", input.SignedTransaction))
 		return nil, err
-	} else {
-		s.reporting.Info(fmt.Sprintf("Adding new transaction [%v] to the pool", input.SignedTransaction))
-		s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
-			Message: &gossipmessages.ForwardedTransactionsMessage{
-				SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
-			},
-		})
 	}
+	s.reporting.Info(fmt.Sprintf("Adding new transaction [%v] to the pool", input.SignedTransaction))
+	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+		Message: &gossipmessages.ForwardedTransactionsMessage{
+			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
+		},
+	})
 	//This is commented out because currently transport broadcast will also broadcast to myself. So HandleForwardedTransactions will be the on to add this transaction.
 	//s.pendingTransactions <- input.SignedTransaction
 	return &services.AddNewTransactionOutput{}, nil
