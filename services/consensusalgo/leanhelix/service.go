@@ -9,6 +9,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type Config interface {
@@ -27,6 +29,9 @@ type service struct {
 	config               Config
 	preparedBlock        *protocol.BlockPairContainer
 	commitCond           *sync.Cond
+
+	//TODO update this from block storage on startup
+	currentBlockHeight	int
 }
 
 func NewLeanHelixConsensusAlgo(
@@ -88,6 +93,7 @@ func (s *service) HandleLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput
 	s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: s.preparedBlock,
 	})
+	s.currentBlockHeight = int(s.preparedBlock.TransactionsBlock.Header.BlockHeight())
 	s.preparedBlock = nil
 	s.commitCond.Signal()
 	return nil, nil
@@ -146,9 +152,14 @@ func (s *service) buildBlocksEventLoop() {
 func (s *service) requestConsensusFor(transaction *protocol.SignedTransaction) (chan bool, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
+			Header: (&protocol.TransactionsBlockHeaderBuilder{
+				ProtocolVersion: blockstorage.ProtocolVersion,
+				BlockHeight: primitives.BlockHeight(s.currentBlockHeight + 1),
+			}).Build(),
 			SignedTransactions: []*protocol.SignedTransaction{transaction},
 		},
 	}
+
 	message := &gossipmessages.LeanHelixPrePrepareMessage{
 		BlockPair: blockPair,
 	}

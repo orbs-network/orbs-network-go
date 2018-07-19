@@ -1,19 +1,29 @@
 package gossip
 
 import (
+	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"fmt"
 )
 
-func (s *service) OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte) {
-	s.reporting.Info(fmt.Sprintf("Gossip: OnMessageReceived [%s]", message))
-	switch message.Topic() {
+func (s *service) OnTransportMessageReceived(payloads [][]byte) {
+	if len(payloads) == 0 {
+		s.reporting.Error(&adapter.ErrCorruptData{})
+		return
+	}
+	header := gossipmessages.HeaderReader(payloads[0])
+	if !header.IsValid() {
+		s.reporting.Error(&ErrCorruptHeader{payloads[0]})
+		return
+	}
+	s.reporting.Info(fmt.Sprintf("Gossip: OnTransportMessageReceived: %s", header))
+	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
-		s.receivedTransactionRelayMessage(message, payloads)
+		s.receivedTransactionRelayMessage(header, payloads[1:])
 	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
-		s.receivedLeanHelixMessage(message, payloads)
+		s.receivedLeanHelixMessage(header, payloads[1:])
 	}
 }
 
@@ -47,7 +57,8 @@ func (s *service) receivedLeanHelixMessage(message *gossipmessages.Header, paylo
 				Message: &gossipmessages.LeanHelixPrePrepareMessage{
 					BlockPair: &protocol.BlockPairContainer{
 						TransactionsBlock: &protocol.TransactionsBlockContainer{
-							SignedTransactions: []*protocol.SignedTransaction{protocol.SignedTransactionReader(payloads[0])},
+							Header: protocol.TransactionsBlockHeaderReader(payloads[0]),
+							SignedTransactions: []*protocol.SignedTransaction{protocol.SignedTransactionReader(payloads[1])},
 						},
 					},
 				},
