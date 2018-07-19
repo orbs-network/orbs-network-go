@@ -46,13 +46,12 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		return false, nil
 	}
 
-	gotConsensus := true
 	// asking for votes from everybody except ourselves
 	for i := 0; i < int(s.config.NetworkSize(0))-1; i++ {
-		gotConsensus = gotConsensus && <-s.votesForActiveRound
+		<-s.votesForActiveRound
 	}
 
-	return gotConsensus, nil
+	return true, nil
 }
 
 func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPairContainer) error {

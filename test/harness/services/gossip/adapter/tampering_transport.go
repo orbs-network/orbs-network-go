@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"runtime"
 	"sync"
-	"time"
 )
 
 type MessagePredicate func(data *adapter.TransportData) bool
@@ -168,7 +167,6 @@ func (o *pausingTamperer) Release() {
 	o.transport.removePauseTamperer(o)
 	for _, message := range o.messages {
 		o.transport.Send(message)
-		time.Sleep(10 * time.Millisecond) // TODO: this is required or else messages arrive in the opposite order after resume (improve)
-		runtime.Gosched()                 // TODO: this is required or else messages arrive in the opposite order after resume
+		runtime.Gosched() // TODO: this is required or else messages arrive in the opposite order after resume
 	}
 }
