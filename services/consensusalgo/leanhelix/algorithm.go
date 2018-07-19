@@ -43,7 +43,7 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		},
 	})
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
 	// asking for votes from everybody except ourselves
