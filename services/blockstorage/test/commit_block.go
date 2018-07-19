@@ -77,7 +77,7 @@ var _ = Describe("Committing a block", func () {
 		service := blockstorage.NewBlockStorage(storageAdapter, stateStorage)
 
 		commitBlockInput := &services.CommitBlockInput{
-			BlockPair: buildContainer(0, 1000),
+			BlockPair: buildContainer(1, 1000),
 		}
 
 		csdOut := &services.CommitStateDiffOutput{}
@@ -89,5 +89,13 @@ var _ = Describe("Committing a block", func () {
 		Expect(len(storageAdapter.ReadAllBlocks())).To(Equal(1))
 		_, err = stateStorage.Verify()
 		Expect(err).ToNot(HaveOccurred())
+
+		lastCommitedBlockHeight, err := service.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(lastCommitedBlockHeight.LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(1)))
+		Expect(lastCommitedBlockHeight.LastCommittedBlockTimestamp).To(Equal(primitives.Timestamp(1000)))
+
+
 	})
 })

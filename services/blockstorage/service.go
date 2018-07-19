@@ -7,11 +7,15 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
+
+	lastCommittedBlockHeight primitives.BlockHeight
+	lastCommittedBlockTimestamp primitives.Timestamp
 }
 
 func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage) services.BlockStorage {
@@ -40,7 +44,12 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	}
 	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state}).Build()}
 	s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{ContractStateDiffs: csdi})
+
+	// TODO return an error
 	s.persistence.WriteBlock(input.BlockPair)
+	s.lastCommittedBlockHeight = input.BlockPair.TransactionsBlock.Header.BlockHeight()
+	s.lastCommittedBlockTimestamp = input.BlockPair.TransactionsBlock.Header.Timestamp()
+
 	return nil, nil
 }
 
@@ -57,7 +66,10 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 }
 
 func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
-	panic("Not implemented")
+	return &services.GetLastCommittedBlockHeightOutput{
+		LastCommittedBlockHeight: s.lastCommittedBlockHeight,
+		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
+	}, nil
 }
 
 func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
