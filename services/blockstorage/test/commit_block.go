@@ -8,9 +8,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/go-mock"
+		"github.com/orbs-network/go-mock"
 	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
+	"time"
 )
 
 type adapterConfig struct {
@@ -20,57 +21,6 @@ type adapterConfig struct {
 func (c *adapterConfig) NodeId() string {
 	return "node1"
 }
-
-func buildContainer(height primitives.BlockHeight, blockCreated primitives.Timestamp) *protocol.BlockPairContainer {
-	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			BlockHeight: height,
-			Timestamp:   blockCreated,
-			ProtocolVersion: blockstorage.ProtocolVersion,
-		}).Build(),
-		BlockProof: (&protocol.TransactionsBlockProofBuilder{
-			Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		}).Build(),
-		Metadata: (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-		SignedTransactions: []*protocol.SignedTransaction{
-			(test.TransferTransaction().WithAmount(10)).Build(),
-		},
-	}
-
-	resultsBlock := &protocol.ResultsBlockContainer{
-		Header: (&protocol.ResultsBlockHeaderBuilder{
-			BlockHeight:            height,
-			Timestamp:              blockCreated,
-			NumContractStateDiffs:  1,
-			NumTransactionReceipts: 1,
-		}).Build(),
-		BlockProof: (&protocol.ResultsBlockProofBuilder{
-			Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		}).Build(),
-		ContractStateDiffs: []*protocol.ContractStateDiff{
-			(&protocol.ContractStateDiffBuilder{
-				ContractName: "BenchmarkToken",
-				StateDiffs: []*protocol.StateRecordBuilder{
-					{ Key: []byte("amount"), Value: []byte{10} },
-				},
-			}).Build(),
-		},
-		TransactionReceipts: []*protocol.TransactionReceipt{
-			(&protocol.TransactionReceiptBuilder{
-				Txhash: []byte("some-tx-hash"),
-				ExecutionResult: protocol.EXECUTION_RESULT_SUCCESS,
-			}).Build(),
-		},
-	}
-
-	container := &protocol.BlockPairContainer{
-		TransactionsBlock: transactionsBlock,
-		ResultsBlock: resultsBlock,
-	}
-
-	return container
-}
-
 type driver struct {
 	stateStorage *services.MockStateStorage
 	storageAdapter adapter2.BlockPersistence
@@ -120,7 +70,10 @@ var _ = Describe("Committing a block", func () {
 
 		driver.expectCommitStateDiff()
 
-		_, err := driver.commitBlock(buildContainer(1, 1000))
+		blockCreated := time.Now()
+		blockHeight := 1
+
+		_, err := driver.commitBlock(test.BlockPairBuilder().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(driver.numOfWrittenBlocks()).To(Equal(1))
@@ -129,8 +82,8 @@ var _ = Describe("Committing a block", func () {
 
 		lastCommittedBlockHeight := driver.getLastBlockHeight()
 
-		Expect(lastCommittedBlockHeight.LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(1)))
-		Expect(lastCommittedBlockHeight.LastCommittedBlockTimestamp).To(Equal(primitives.Timestamp(1000)))
+		Expect(lastCommittedBlockHeight.LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(blockHeight)))
+		Expect(lastCommittedBlockHeight.LastCommittedBlockTimestamp).To(Equal(primitives.Timestamp(blockCreated.Unix())))
 
 		// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
 	})
@@ -140,10 +93,7 @@ var _ = Describe("Committing a block", func () {
 			It("returns an error", func () {
 				driver := NewDriver()
 
-				blockPair := buildContainer(1, 1000)
-				blockPair.TransactionsBlock.Header.MutateProtocolVersion(99999)
-
-				_, err := driver.commitBlock(blockPair)
+				_, err := driver.commitBlock(test.BlockPairBuilder().WithProtocolVersion(99999).Build())
 
 				Expect(err).To(MatchError("protocol version mismatch: expected 1 got 99999"))
 			})
@@ -153,7 +103,7 @@ var _ = Describe("Committing a block", func () {
 			It("should be silently discarded the block if it is the exact same block", func () {
 				driver := NewDriver()
 
-				blockPair := buildContainer(1, 1000)
+				blockPair := test.BlockPairBuilder().Build()
 
 				driver.expectCommitStateDiff()
 
@@ -170,13 +120,12 @@ var _ = Describe("Committing a block", func () {
 				driver := NewDriver()
 				driver.expectCommitStateDiff()
 
-				blockPair := buildContainer(1, 1000)
-				blockPairDifferentTimestamp := buildContainer(1, 9000)
+				blockPair := test.BlockPairBuilder()
 
-				driver.commitBlock(blockPair)
+				driver.commitBlock(blockPair.Build())
 
 				Expect(func () {
-					driver.commitBlock(blockPairDifferentTimestamp)
+					driver.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
 				}).To(Panic())
 
 				Expect(driver.numOfWrittenBlocks()).To(Equal(1))
