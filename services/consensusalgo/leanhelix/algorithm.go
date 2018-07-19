@@ -35,7 +35,7 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	return nil
 }
 
-func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContainer) error {
 	s.votesForActiveRound = make(chan bool)
 	defer func() {
 		close(s.votesForActiveRound)
@@ -48,7 +48,7 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		},
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// asking for votes from everybody except ourselves
@@ -56,7 +56,7 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		<-s.votesForActiveRound
 	}
 
-	return true, nil
+	return nil
 }
 
 func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPairContainer) error {

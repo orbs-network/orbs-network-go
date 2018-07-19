@@ -100,20 +100,20 @@ func (s *service) buildBlocksEventLoop() {
 		err := s.leaderProposeNextBlockIfNeeded()
 		if err != nil {
 			s.reporting.Error(err)
+			return
 		}
 
 		// validate the current proposed block
 		if s.blocksForRounds[s.lastCommittedBlockHeight+1] != nil {
-			valid, err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
+			err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
 			if err != nil {
 				s.reporting.Error(err)
+				return
 			}
 
-			// commit the block if validated
-			if valid {
-				s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
-				s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
-			}
+			// commit the block since it's validated
+			s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
+			s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 		}
 
 	})
