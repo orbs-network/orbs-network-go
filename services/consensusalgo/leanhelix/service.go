@@ -7,7 +7,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-		)
+	"time"
+)
 
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
@@ -98,15 +99,16 @@ func (s *service) buildBlocksEventLoop() {
 		err := s.leaderProposeNextBlockIfNeeded()
 		if err != nil {
 			s.reporting.Error(err)
-			return
+			continue
 		}
 
 		// validate the current proposed block
-		if s.blocksForRounds[s.lastCommittedBlockHeight+1] != nil {
-			err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
+		if s.blocksForRounds[s.lastCommittedBlockHeight + 1] != nil {
+			err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight + 1])
 			if err != nil {
 				s.reporting.Error(err)
-				return
+				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff
+				continue
 			}
 
 			// commit the block since it's validated
