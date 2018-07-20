@@ -8,6 +8,28 @@ import (
 	"sync"
 )
 
+// The TamperingTransport is an in-memory implementation of the Gossip Transport adapter, that adds the ability
+// to tamper with the messages or to synchronize the test's goroutine with the SUT's goroutines
+type TamperingTransport interface {
+	adapter.Transport
+
+	// Creates an ongoing tamper which fails messages matching the given predicate, returning an error object to the sender.
+	// This is useful to emulate network errors, for instance
+	Fail(predicate MessagePredicate) OngoingTamper
+
+	// Creates an ongoing tamper which delays messages matching the given predicate. The messages will be sent when
+	// calling OngoingTamper.Release(). This is useful for emulating network congestion or messages arriving in an order
+	// different than expected
+	Pause(predicate MessagePredicate) OngoingTamper
+
+	// Creates an ongoing tamper which latches the latching goroutine (typically a test) until at least one message
+	// matching the given predicate is sent. The latch is created as inactive, and will only block the caller after
+	// calling LatchingTamper.Wait(). This is useful to force a test goroutine to block until a certain message has
+	// been sent
+	LatchOn(predicate MessagePredicate) LatchingTamper
+}
+
+// A predicate for matching messages with a certain property
 type MessagePredicate func(data *adapter.TransportData) bool
 
 type OngoingTamper interface {
@@ -17,14 +39,6 @@ type OngoingTamper interface {
 type LatchingTamper interface {
 	Wait()
 	Remove()
-}
-
-type TamperingTransport interface {
-	adapter.Transport
-
-	Fail(predicate MessagePredicate) OngoingTamper
-	Pause(predicate MessagePredicate) OngoingTamper
-	LatchOn(predicate MessagePredicate) LatchingTamper
 }
 
 type tamperingTransport struct {
