@@ -52,13 +52,19 @@ func (s *service) receivedLeanHelixMessage(message *gossipmessages.Header, paylo
 
 	case gossipmessages.LEAN_HELIX_PRE_PREPARE:
 		for _, l := range s.consensusHandlers {
-			//l.OnVoteRequest(message.Sender, tx)
+
+			header := protocol.TransactionsBlockHeaderReader(payloads[0])
+			txs := []*protocol.SignedTransaction{}
+			for _, payload := range payloads[1:] {
+				txs = append(txs, protocol.SignedTransactionReader(payload))
+			}
+
 			l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
 				Message: &gossipmessages.LeanHelixPrePrepareMessage{
 					BlockPair: &protocol.BlockPairContainer{
 						TransactionsBlock: &protocol.TransactionsBlockContainer{
-							Header: protocol.TransactionsBlockHeaderReader(payloads[0]),
-							SignedTransactions: []*protocol.SignedTransaction{protocol.SignedTransactionReader(payloads[1])},
+							Header:             header,
+							SignedTransactions: txs,
 						},
 					},
 				},

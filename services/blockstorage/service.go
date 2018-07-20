@@ -48,15 +48,6 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 
 	s.validateMonotonicIncreasingBlockHeight(txBlockHeader)
 
-	//TODO tx validation should not even be here
-	for _, t := range input.BlockPair.TransactionsBlock.SignedTransactions {
-		if t.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value() > 1000 {
-			//TODO: handle invalid transaction gracefully
-			return nil, nil
-		}
-	}
-
-	// TODO return an error
 	s.persistence.WriteBlock(input.BlockPair)
 
 	s.lastCommittedBlockHeight = txBlockHeader.BlockHeight()

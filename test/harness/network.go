@@ -20,6 +20,7 @@ type AcceptanceTestNetwork interface {
 	GossipTransport() gossipAdapter.TamperingTransport
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
 }
 
@@ -43,10 +44,11 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
 		nodes[i].index = i
-		nodeId := fmt.Sprintf("node%d", i+1)
-		isLeader := (i == 0)                                          // TODO: remove the concept of leadership
-		nodes[i].config = config.NewHardCodedConfig(numNodes, nodeId) // TODO: change nodeId to public key
-		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeId)
+		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
+		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
+		isLeader := (i == 0) // TODO: remove the concept of leadership
+		nodes[i].config = config.NewHardCodedConfig(numNodes, nodePublicKey)
+		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence(nodes[i].config)
@@ -84,6 +86,24 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
 			SignedTransaction: test.TransferTransaction().WithAmount(amount).Builder(),
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			// TODO: handle error
+		}
+		ch <- output.ClientResponse
+	}()
+	return ch
+}
+
+func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse {
+	ch := make(chan *client.SendTransactionResponse)
+	go func() {
+		request := (&client.SendTransactionRequestBuilder{
+			SignedTransaction: test.TransferTransaction().WithInvalidContent().Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{

@@ -1,11 +1,12 @@
 package acceptance
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/harness"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 var _ = Describe("a leader node", func() {
@@ -16,11 +17,15 @@ var _ = Describe("a leader node", func() {
 		defer network.FlushLog()
 
 		network.SendTransfer(0, 17)
-		network.SendTransfer(0, 1000000) //this is invalid because currently we don't allow (temporarily) values over 1000 just so that we can create invalid transactions
+		network.SendInvalidTransfer(0)
 		network.SendTransfer(0, 22)
+
+		fmt.Println("\nWaiting for node 0 blocks")
 
 		network.BlockPersistence(0).WaitForBlocks(2)
 		Expect(<-network.CallGetBalance(0)).To(BeEquivalentTo(39))
+
+		fmt.Println("\nWaiting for node 1 blocks")
 
 		network.BlockPersistence(1).WaitForBlocks(2)
 		Expect(<-network.CallGetBalance(1)).To(BeEquivalentTo(39))
