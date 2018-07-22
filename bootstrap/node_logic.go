@@ -35,7 +35,6 @@ func NewNodeLogic(
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
 	reporting instrumentation.Reporting,
-	loopControl instrumentation.LoopControl,
 	nodeConfig config.NodeConfig,
 	isLeader bool,
 ) NodeLogic {
@@ -43,13 +42,13 @@ func NewNodeLogic(
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
 	transactionPool := transactionpool.NewTransactionPool(gossip, reporting)
 	stateStorage := statestorage.NewStateStorage(statePersistence)
-	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage)
+	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage, reporting)
 	nativeProcessor := native.NewNativeProcessor()
 	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting, isLeader)
 	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
-	leanHelixConsensusAlgo := leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, loopControl, nodeConfig, isLeader)
+	leanHelixConsensusAlgo := leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig, isLeader)
 	return &nodeLogic{
 		publicApi: publicApi,
 		leanHelix: leanHelixConsensusAlgo,
