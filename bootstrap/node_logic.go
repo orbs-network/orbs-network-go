@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
@@ -24,10 +25,9 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	isLeader  bool
-	events    instrumentation.Reporting
-	leanHelix services.ConsensusAlgo // TODO: change this to a map
-	publicApi services.PublicApi
+	events         instrumentation.Reporting
+	publicApi      services.PublicApi
+	consensusAlgos []services.ConsensusAlgo
 }
 
 func NewNodeLogic(
@@ -37,7 +37,6 @@ func NewNodeLogic(
 	reporting instrumentation.Reporting,
 	loopControl instrumentation.LoopControl,
 	nodeConfig config.NodeConfig,
-	isLeader bool,
 ) NodeLogic {
 
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
@@ -47,12 +46,16 @@ func NewNodeLogic(
 	nativeProcessor := native.NewNativeProcessor()
 	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)
-	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting, isLeader)
+	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
 	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
-	leanHelixConsensusAlgo := leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, loopControl, nodeConfig, isLeader)
+
+	var consensusAlgos []services.ConsensusAlgo
+	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, loopControl, nodeConfig))
+	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(nodeConfig))
+
 	return &nodeLogic{
-		publicApi: publicApi,
-		leanHelix: leanHelixConsensusAlgo,
+		publicApi:      publicApi,
+		consensusAlgos: consensusAlgos,
 	}
 }
 

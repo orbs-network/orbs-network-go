@@ -26,18 +26,18 @@ type node struct {
 func NewNode(
 	httpAddress string,
 	nodePublicKey primitives.Ed25519Pkey,
-	transport gossipAdapter.Transport,
-	isLeader bool,
 	networkSize uint32,
+	constantConsensusLeader primitives.Ed25519Pkey, // TODO: move all of the config from the ctor, it's a smell
+	transport gossipAdapter.Transport,
 ) Node {
 
-	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey)
+	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader)
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
 	loopControl := instrumentation.NewSimpleLoop(logger)
-	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, loopControl, nodeConfig, isLeader)
+	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, loopControl, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 
 	return &node{

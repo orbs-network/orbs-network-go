@@ -47,9 +47,9 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 	for i, _ := range nodes {
 		nodes[i].index = i
 		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
+		constantConsensusLeaderPublicKey := []byte{byte(1)}
 		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
-		isLeader := (i == 0) // TODO: remove the concept of leadership
-		nodes[i].config = config.NewHardCodedConfig(numNodes, nodePublicKey)
+		nodes[i].config = config.NewHardCodedConfig(numNodes, nodePublicKey, constantConsensusLeaderPublicKey)
 		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].loopControl = harnessInstrumentation.NewBrakingLoop(nodes[i].log)
@@ -62,7 +62,6 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 			instrumentation.NewCompositeReporting([]instrumentation.Reporting{nodes[i].log, nodes[i].latch}),
 			nodes[i].loopControl,
 			nodes[i].config,
-			isLeader,
 		)
 	}
 	return &acceptanceTestNetwork{

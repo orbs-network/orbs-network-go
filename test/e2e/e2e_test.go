@@ -51,7 +51,8 @@ var _ = Describe("The Orbs Network", func() {
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
 			nodePublicKey := []byte{0x01}
-			node = bootstrap.NewNode(":8080", nodePublicKey, gossipTransport, true, 1)
+			constantConsensusLeaderPublicKey := []byte{0x01}
+			node = bootstrap.NewNode(":8080", nodePublicKey, 1, constantConsensusLeaderPublicKey, gossipTransport)
 		}
 
 		tx := &protocol.TransactionBuilder{
