@@ -135,10 +135,11 @@ func (s *service) updateStateStorage(txBlock *protocol.TransactionsBlockContaine
 		byteArray := make([]byte, 8)
 		binary.LittleEndian.PutUint64(byteArray, uint64(i.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
 		transactionStateDiff := &protocol.StateRecordBuilder{
+			Key: primitives.Ripmd160Sha256("balance"),
 			Value: byteArray,
 		}
 		state = append(state, transactionStateDiff)
 	}
-	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state}).Build()}
+	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state, ContractName: "BenchmarkToken"}).Build()}
 	s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{ContractStateDiffs: csdi})
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type service struct {
@@ -34,7 +35,7 @@ func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInp
 }
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
-	results, _ := s.stateStorage.ReadKeys(nil)
+	results, _ := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
 	sum := uint64(0)
 	for _, t := range results.StateRecords {
 		sum += binary.LittleEndian.Uint64(t.Value())
