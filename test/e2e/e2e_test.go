@@ -52,6 +52,9 @@ var _ = Describe("The Orbs Network", func() {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
 			nodePublicKey := []byte{0x01}
 			node = bootstrap.NewNode(":8080", nodePublicKey, gossipTransport, true, 1)
+
+			// To let node start up properly, otherwise in Docker we get connection refused
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		tx := &protocol.TransactionBuilder{
