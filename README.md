@@ -34,7 +34,7 @@ cd src/github.com/orbs-network/orbs-network-go
 git checkout master // or dev if you want the dev branch
 ```
 
-* Install dependencies with `go get -t ./...`
+* Install dependencies with `./git-submodules-checkout.sh`
 
 * Build with `go install`
 
