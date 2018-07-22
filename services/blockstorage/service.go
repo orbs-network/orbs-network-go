@@ -2,13 +2,13 @@ package blockstorage
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"fmt"
 )
 
 const (
@@ -20,8 +20,8 @@ type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 
-	lastCommittedBlockHeight primitives.BlockHeight
-	lastCommittedBlockTimestamp primitives.Timestamp
+	lastCommittedBlockHeight    primitives.BlockHeight
+	lastCommittedBlockTimestamp primitives.TimestampNano
 }
 
 func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage) services.BlockStorage {
@@ -69,7 +69,7 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 
 func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight: s.lastCommittedBlockHeight,
+		LastCommittedBlockHeight:    s.lastCommittedBlockHeight,
 		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
 	}, nil
 }
@@ -95,6 +95,7 @@ func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInp
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
+
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) bool {
 	if txBlockHeader.BlockHeight() <= s.lastCommittedBlockHeight {

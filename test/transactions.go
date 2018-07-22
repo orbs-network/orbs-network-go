@@ -16,7 +16,7 @@ func TransferTransaction() *transferTransaction {
 			Transaction: &protocol.TransactionBuilder{
 				ContractName: "BenchmarkToken",
 				MethodName:   "transfer",
-				Timestamp:    primitives.Timestamp(time.Now().UnixNano()),
+				Timestamp:    primitives.TimestampNano(time.Now().UnixNano()),
 				InputArguments: []*protocol.MethodArgumentBuilder{
 					{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 10},
 				},
@@ -39,6 +39,6 @@ func (t *transferTransaction) WithAmount(amount uint64) *transferTransaction {
 }
 
 func (t *transferTransaction) WithInvalidContent() *transferTransaction {
-	t.builder.Transaction.Timestamp = primitives.Timestamp(time.Now().Add(35 * time.Minute).UnixNano())
+	t.builder.Transaction.Timestamp = primitives.TimestampNano(time.Now().Add(35 * time.Minute).UnixNano())
 	return t
 }

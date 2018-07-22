@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
@@ -50,7 +51,7 @@ func (s *service) receivedTransactionRelayMessage(message *gossipmessages.Header
 func (s *service) receivedLeanHelixMessage(message *gossipmessages.Header, payloads [][]byte) {
 	switch message.LeanHelix() {
 
-	case gossipmessages.LEAN_HELIX_PRE_PREPARE:
+	case consensus.LEAN_HELIX_PRE_PREPARE:
 		for _, l := range s.consensusHandlers {
 
 			header := protocol.TransactionsBlockHeaderReader(payloads[0])
@@ -71,12 +72,12 @@ func (s *service) receivedLeanHelixMessage(message *gossipmessages.Header, paylo
 			})
 		}
 
-	case gossipmessages.LEAN_HELIX_PREPARE:
+	case consensus.LEAN_HELIX_PREPARE:
 		for _, l := range s.consensusHandlers {
 			l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 		}
 
-	case gossipmessages.LEAN_HELIX_COMMIT:
+	case consensus.LEAN_HELIX_COMMIT:
 		for _, l := range s.consensusHandlers {
 			l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 		}
