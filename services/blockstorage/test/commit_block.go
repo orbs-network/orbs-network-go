@@ -150,3 +150,38 @@ var _ = Describe("Committing a block", func() {
 		})
 	})
 })
+
+var _ = Describe("Block storage", func () {
+	When("asked to provide transactions block header", func () {
+		It("returns transactions block header", func () {
+			driver := NewDriver()
+			driver.expectCommitStateDiff()
+
+			block := test.BlockPairBuilder().Build()
+			driver.commitBlock(block)
+
+			output, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight:1})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(output.TransactionsBlockHeader).To(Equal(block.TransactionsBlock.Header))
+			Expect(output.TransactionsBlockMetadata).To(Equal(block.TransactionsBlock.Metadata))
+			Expect(output.TransactionsBlockProof).To(Equal(block.TransactionsBlock.BlockProof))
+		})
+	})
+
+	When("asked to provide results block header", func () {
+		It("returns results block header", func () {
+			driver := NewDriver()
+			driver.expectCommitStateDiff()
+
+			block := test.BlockPairBuilder().Build()
+			driver.commitBlock(block)
+
+			output, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight:1})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(output.ResultsBlockHeader).To(Equal(block.ResultsBlock.Header))
+			Expect(output.ResultsBlockProof).To(Equal(block.ResultsBlock.BlockProof))
+		})
+	})
+})

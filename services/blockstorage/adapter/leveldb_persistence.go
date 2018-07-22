@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type Config interface {
@@ -27,4 +28,12 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 
 func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
 	return bp.blockPairs
+}
+
+func (bp *levelDbBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+	panic("not implemented")
+}
+
+func (bp *levelDbBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
+	panic("not implemented")
 }

@@ -56,11 +56,30 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 }
 
 func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
-	panic("Not implemented")
+	txBlock, err := s.persistence.GetTransactionsBlock(input.BlockHeight)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &services.GetTransactionsBlockHeaderOutput{
+		TransactionsBlockProof: txBlock.BlockProof,
+		TransactionsBlockHeader: txBlock.Header,
+		TransactionsBlockMetadata: txBlock.Metadata,
+	}, nil
 }
 
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (*services.GetResultsBlockHeaderOutput, error) {
-	panic("Not implemented")
+	txBlock, err := s.persistence.GetResultsBlock(input.BlockHeight)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &services.GetResultsBlockHeaderOutput{
+		ResultsBlockProof: txBlock.BlockProof,
+		ResultsBlockHeader: txBlock.Header,
+	}, nil
 }
 
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
