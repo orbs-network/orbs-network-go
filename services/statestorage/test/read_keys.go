@@ -50,24 +50,29 @@ var _ = Describe("Reading a Key", func() {
 	})
 
 	When ( "State has multiple Contracts", func() {
-		When("key exist", func() {
-			It("Returns a Value", func() {
-				contract := primitives.ContractName("Foo")
+		When("same key exist in two contracts", func() {
+			It("Returns a different Value", func() {
+				contract, contract2 := primitives.ContractName("Foo"), primitives.ContractName("Foo2")
 				key := primitives.Ripmd160Sha256("foo")
-				value := []byte("bar")
+				value, value2 := []byte("bar"), []byte("bar2")
 				persistence := adapter.NewInMemoryStatePersistence(&struct{}{})
 				persistence.WriteState(contract, (&protocol.StateRecordBuilder{Key: key, Value: value}).Build())
-				persistence.WriteState(contract, (&protocol.StateRecordBuilder{Key: primitives.Ripmd160Sha256("foo2"), Value: value}).Build())
-				persistence.WriteState("Foo2", (&protocol.StateRecordBuilder{Key: primitives.Ripmd160Sha256("foo3"), Value: []byte("bar2")}).Build())
-				persistence.WriteState("Foo2", (&protocol.StateRecordBuilder{Key: primitives.Ripmd160Sha256("foo4"), Value: []byte("bar2")}).Build())
+				persistence.WriteState(contract, (&protocol.StateRecordBuilder{Key: primitives.Ripmd160Sha256("foo2"), Value: []byte("bar3")}).Build())
+				persistence.WriteState(contract2, (&protocol.StateRecordBuilder{Key: key, Value: value2}).Build())
+				persistence.WriteState(contract2, (&protocol.StateRecordBuilder{Key: primitives.Ripmd160Sha256("foo4"), Value: []byte("bar3")}).Build())
 				stateStorage := statestorage.NewStateStorage(persistence)
 
 				output, err := stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: contract, Keys: []primitives.Ripmd160Sha256{key}})
+				output2, err2 := stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: contract2, Keys: []primitives.Ripmd160Sha256{key}})
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(output.StateRecords).To(HaveLen(1))
 				Expect(output.StateRecords[0].Key()).To(Equal(key))
 				Expect(output.StateRecords[0].Value()).To(Equal(value))
+				Expect(err2).ToNot(HaveOccurred())
+				Expect(output2.StateRecords).To(HaveLen(1))
+				Expect(output2.StateRecords[0].Key()).To(Equal(key))
+				Expect(output2.StateRecords[0].Value()).To(Equal(value2))
 			})
 		})
 	})
