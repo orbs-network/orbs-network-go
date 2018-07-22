@@ -14,6 +14,7 @@ var _ = Describe("a leader node", func() {
 		// leader is nodeIndex 0, validator is nodeIndex 1
 		network := harness.NewTestNetwork(2)
 		defer network.FlushLog()
+
 		consensusRound := network.LoopControl(0).LatchFor("consensus_round")
 
 		consensusRound.Brake()
