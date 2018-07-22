@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
 func aMessageFrom(sender string) MessagePredicate {
@@ -59,9 +60,9 @@ func ExampleMessagePredicate_PayloadSize() {
 }
 
 func ExampleConsensusMessage() {
-	pred := ConsensusMessage(gossipmessages.LEAN_HELIX_COMMIT)
+	pred := ConsensusMessage(consensus.LEAN_HELIX_COMMIT)
 
-	printMessage := func(msgType gossipmessages.LeanHelixMessageType) {
+	printMessage := func(msgType consensus.LeanHelixMessageType) {
 
 		header := gossipmessages.HeaderBuilder{
 			Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
@@ -75,8 +76,8 @@ func ExampleConsensusMessage() {
 		}
 	}
 
-	printMessage(gossipmessages.LEAN_HELIX_COMMIT)
-	printMessage(gossipmessages.LEAN_HELIX_PRE_PREPARE)
+	printMessage(consensus.LEAN_HELIX_COMMIT)
+	printMessage(consensus.LEAN_HELIX_PRE_PREPARE)
 	// Output: got commit message
 	// got message of unexpected type
 }

@@ -1,11 +1,12 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-func ConsensusMessage(messageType gossipmessages.LeanHelixMessageType) MessagePredicate {
+func ConsensusMessage(messageType consensus.LeanHelixMessageType) MessagePredicate {
 	return func(data *adapter.TransportData) bool {
 		header, ok := parseHeader(data)
 

@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
 var _ = Describe("a leader node", func() {
@@ -15,8 +15,8 @@ var _ = Describe("a leader node", func() {
 		network := harness.NewTestNetwork(2)
 		defer network.FlushLog()
 
-		prePrepareLatch := network.GossipTransport().LatchOn(adapter.ConsensusMessage(gossipmessages.LEAN_HELIX_PRE_PREPARE))
-		prePrepareTamper := network.GossipTransport().Fail(adapter.ConsensusMessage(gossipmessages.LEAN_HELIX_PRE_PREPARE))
+		prePrepareLatch := network.GossipTransport().LatchOn(adapter.ConsensusMessage(consensus.LEAN_HELIX_PRE_PREPARE))
+		prePrepareTamper := network.GossipTransport().Fail(adapter.ConsensusMessage(consensus.LEAN_HELIX_PRE_PREPARE))
 		<-network.SendTransfer(0, 17)
 
 		prePrepareLatch.Wait()
