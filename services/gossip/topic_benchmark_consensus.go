@@ -3,7 +3,6 @@ package gossip
 import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -29,26 +28,11 @@ func (s *service) BroadcastBenchmarkConsensusCommit(input *gossiptopics.Benchmar
 		RecipientMode:      gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	payloads := make([][]byte, 0, 6+
-		len(input.Message.BlockPair.TransactionsBlock.SignedTransactions)+
-		len(input.Message.BlockPair.ResultsBlock.TransactionReceipts)+
-		len(input.Message.BlockPair.ResultsBlock.ContractStateDiffs),
-	)
-	payloads = append(payloads, header.Raw())
-	payloads = append(payloads, input.Message.BlockPair.TransactionsBlock.Header.Raw())
-	payloads = append(payloads, input.Message.BlockPair.TransactionsBlock.Metadata.Raw())
-	payloads = append(payloads, input.Message.BlockPair.TransactionsBlock.BlockProof.Raw())
-	payloads = append(payloads, input.Message.BlockPair.ResultsBlock.Header.Raw())
-	payloads = append(payloads, input.Message.BlockPair.ResultsBlock.BlockProof.Raw())
-	for _, tx := range input.Message.BlockPair.TransactionsBlock.SignedTransactions {
-		payloads = append(payloads, tx.Raw())
+	blockPairPayloads, err := encodeBlockPair(input.Message.BlockPair)
+	if err != nil {
+		return nil, err
 	}
-	for _, receipt := range input.Message.BlockPair.ResultsBlock.TransactionReceipts {
-		payloads = append(payloads, receipt.Raw())
-	}
-	for _, sdiff := range input.Message.BlockPair.ResultsBlock.ContractStateDiffs {
-		payloads = append(payloads, sdiff.Raw())
-	}
+	payloads := append([][]byte{header.Raw()}, blockPairPayloads...)
 
 	return nil, s.transport.Send(&adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
@@ -58,45 +42,15 @@ func (s *service) BroadcastBenchmarkConsensusCommit(input *gossiptopics.Benchmar
 }
 
 func (s *service) receivedBenchmarkConsensusCommit(header *gossipmessages.Header, payloads [][]byte) {
-	defer func() { recover() }() // this will make sure we don't crash on out of bounds on byzantine messages
-	txBlockHeader := protocol.TransactionsBlockHeaderReader(payloads[0])
-	txBlockMetadata := protocol.TransactionsBlockMetadataReader(payloads[1])
-	txBlockProof := protocol.TransactionsBlockProofReader(payloads[2])
-	rxBlockHeader := protocol.ResultsBlockHeaderReader(payloads[3])
-	rxBlockProof := protocol.ResultsBlockProofReader(payloads[4])
-	payloadIndex := uint32(5)
-	txs := make([]*protocol.SignedTransaction, 0, txBlockHeader.NumSignedTransactions())
-	for i := uint32(0); i < txBlockHeader.NumSignedTransactions(); i++ {
-		txs = append(txs, protocol.SignedTransactionReader(payloads[payloadIndex+i]))
-	}
-	payloadIndex += txBlockHeader.NumSignedTransactions()
-	receipts := make([]*protocol.TransactionReceipt, 0, rxBlockHeader.NumTransactionReceipts())
-	for i := uint32(0); i < rxBlockHeader.NumTransactionReceipts(); i++ {
-		receipts = append(receipts, protocol.TransactionReceiptReader(payloads[payloadIndex+i]))
-	}
-	payloadIndex += rxBlockHeader.NumTransactionReceipts()
-	sdiffs := make([]*protocol.ContractStateDiff, 0, rxBlockHeader.NumContractStateDiffs())
-	for i := uint32(0); i < rxBlockHeader.NumContractStateDiffs(); i++ {
-		sdiffs = append(sdiffs, protocol.ContractStateDiffReader(payloads[payloadIndex+i]))
+	blockPair, err := decodeBlockPair(payloads)
+	if err != nil {
+		return
 	}
 
 	for _, l := range s.benchmarkConsensusHandlers {
 		l.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
 			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
-				BlockPair: &protocol.BlockPairContainer{
-					TransactionsBlock: &protocol.TransactionsBlockContainer{
-						Header:             txBlockHeader,
-						Metadata:           txBlockMetadata,
-						SignedTransactions: txs,
-						BlockProof:         txBlockProof,
-					},
-					ResultsBlock: &protocol.ResultsBlockContainer{
-						Header:              rxBlockHeader,
-						TransactionReceipts: receipts,
-						ContractStateDiffs:  sdiffs,
-						BlockProof:          rxBlockProof,
-					},
-				},
+				BlockPair: blockPair,
 			},
 		})
 	}
@@ -113,11 +67,10 @@ func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkC
 		SenderPublicKey: s.config.NodePublicKey(),
 	}).Build()
 
-	payloads := [][]byte{
-		header.Raw(),
-		input.Message.Status.Raw(),
-		senderSignature.Raw(),
+	if input.Message.Status == nil {
+		return nil, &ErrCodecEncode{"BenchmarkConsensusCommittedMessage", input.Message}
 	}
+	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), senderSignature.Raw()}
 
 	return nil, s.transport.Send(&adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
@@ -128,9 +81,12 @@ func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkC
 }
 
 func (s *service) receivedBenchmarkConsensusCommitted(header *gossipmessages.Header, payloads [][]byte) {
-	defer func() { recover() }() // this will make sure we don't crash on out of bounds on byzantine messages
+	if len(payloads) < 2 {
+		return
+	}
 	status := gossipmessages.BenchmarkConsensusStatusReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
+
 	for _, l := range s.benchmarkConsensusHandlers {
 		l.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 			Message: &gossipmessages.BenchmarkConsensusCommittedMessage{

@@ -2,7 +2,6 @@ package gossip
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -30,13 +29,14 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	payloads := [][]byte{
-		header.Raw(),
-		input.Message.BlockPair.TransactionsBlock.Header.Raw(),
+	blockPairPayloads, err := encodeBlockPair(input.Message.BlockPair)
+	if err != nil {
+		return nil, err
 	}
-	for _, tx := range input.Message.BlockPair.TransactionsBlock.SignedTransactions {
-		payloads = append(payloads, tx.Raw())
+	if input.Message.SignedHeader == nil || input.Message.Sender == nil {
+		return nil, &ErrCodecEncode{"LeanHelixPrePrepareMessage", input.Message}
 	}
+	payloads := append([][]byte{header.Raw(), input.Message.SignedHeader.Raw(), input.Message.Sender.Raw()}, blockPairPayloads...)
 
 	return nil, s.transport.Send(&adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
@@ -46,22 +46,22 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 }
 
 func (s *service) receivedLeanHelixPrePrepare(header *gossipmessages.Header, payloads [][]byte) {
-	defer func() { recover() }() // this will make sure we don't crash on out of bounds on byzantine messages
-	txBlockHeader := protocol.TransactionsBlockHeaderReader(payloads[0])
-	txs := []*protocol.SignedTransaction{}
-	for _, payload := range payloads[1:] {
-		txs = append(txs, protocol.SignedTransactionReader(payload))
+	if len(payloads) < 2 {
+		return
+	}
+	signedHeader := consensus.LeanHelixBlockRefReader(payloads[0])
+	senderSignature := consensus.LeanHelixSenderSignatureReader(payloads[1])
+	blockPair, err := decodeBlockPair(payloads[2:])
+	if err != nil {
+		return
 	}
 
 	for _, l := range s.leanHelixHandlers {
 		l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
 			Message: &gossipmessages.LeanHelixPrePrepareMessage{
-				BlockPair: &protocol.BlockPairContainer{
-					TransactionsBlock: &protocol.TransactionsBlockContainer{
-						Header:             txBlockHeader,
-						SignedTransactions: txs,
-					},
-				},
+				SignedHeader: signedHeader,
+				Sender:       senderSignature,
+				BlockPair:    blockPair,
 			},
 		})
 	}
