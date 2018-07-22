@@ -13,6 +13,7 @@ import (
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
 	NodePublicKey() primitives.Ed25519Pkey
+	ConstantConsensusLeader() primitives.Ed25519Pkey
 }
 
 type service struct {
@@ -34,7 +35,6 @@ func NewLeanHelixConsensusAlgo(
 	consensusContext services.ConsensusContext,
 	reporting instrumentation.Reporting,
 	config Config,
-	isLeader bool,
 ) services.ConsensusAlgoLeanHelix {
 
 	s := &service{
@@ -49,7 +49,7 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	gossip.RegisterLeanHelixHandler(s)
-	if isLeader {
+	if config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
 		go s.buildBlocksEventLoop()
 	}
 	return s

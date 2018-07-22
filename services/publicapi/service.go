@@ -11,28 +11,25 @@ import (
 type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
-	events          instrumentation.Reporting
-	isLeader        bool
+	reporting       instrumentation.Reporting
 }
 
 func NewPublicApi(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
-	events instrumentation.Reporting,
-	isLeader bool,
+	reporting instrumentation.Reporting,
 ) services.PublicApi {
 
 	return &service{
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
-		events:          events,
-		isLeader:        isLeader,
+		reporting:       reporting,
 	}
 }
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
-	s.events.Info("enter_send_transaction")
-	defer s.events.Info("exit_send_transaction")
+	s.reporting.Info("enter_send_transaction")
+	defer s.reporting.Info("exit_send_transaction")
 	//TODO leader should also propagate transactions to other nodes
 	tx := input.ClientRequest.SignedTransaction()
 	s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
@@ -45,8 +42,8 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 }
 
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
-	s.events.Info("enter_call_method")
-	defer s.events.Info("exit_call_method")
+	s.reporting.Info("enter_call_method")
+	defer s.reporting.Info("exit_call_method")
 	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: input.ClientRequest.Transaction(),
 	})
