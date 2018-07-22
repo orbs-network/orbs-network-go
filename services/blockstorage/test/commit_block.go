@@ -3,28 +3,28 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-		"github.com/orbs-network/go-mock"
 	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
 
 type adapterConfig struct {
-
 }
 
 func (c *adapterConfig) NodeId() string {
 	return "node1"
 }
+
 type driver struct {
-	stateStorage *services.MockStateStorage
+	stateStorage   *services.MockStateStorage
 	storageAdapter adapter2.BlockPersistence
-	blockStorage services.BlockStorage
+	blockStorage   services.BlockStorage
 }
 
 func (d *driver) expectCommitStateDiff() {
@@ -64,8 +64,8 @@ func NewDriver() *driver {
 	return d
 }
 
-var _ = Describe("Committing a block", func () {
-	It("saves it to persistent storage", func () {
+var _ = Describe("Committing a block", func() {
+	It("saves it to persistent storage", func() {
 		driver := NewDriver()
 
 		driver.expectCommitStateDiff()
@@ -83,14 +83,14 @@ var _ = Describe("Committing a block", func () {
 		lastCommittedBlockHeight := driver.getLastBlockHeight()
 
 		Expect(lastCommittedBlockHeight.LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(blockHeight)))
-		Expect(lastCommittedBlockHeight.LastCommittedBlockTimestamp).To(Equal(primitives.Timestamp(blockCreated.Unix())))
+		Expect(lastCommittedBlockHeight.LastCommittedBlockTimestamp).To(Equal(primitives.TimestampNano(blockCreated.UnixNano())))
 
 		// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
 	})
 
-	Context("block is invalid", func () {
-		When("protocol version mismatches", func () {
-			It("returns an error", func () {
+	Context("block is invalid", func() {
+		When("protocol version mismatches", func() {
+			It("returns an error", func() {
 				driver := NewDriver()
 
 				_, err := driver.commitBlock(test.BlockPairBuilder().WithProtocolVersion(99999).Build())
@@ -100,7 +100,7 @@ var _ = Describe("Committing a block", func () {
 		})
 
 		When("block already exists", func() {
-			It("should be silently discarded the block if it is the exact same block", func () {
+			It("should be silently discarded the block if it is the exact same block", func() {
 				driver := NewDriver()
 
 				blockPair := test.BlockPairBuilder().Build()
@@ -116,7 +116,7 @@ var _ = Describe("Committing a block", func () {
 				driver.verifyMocks()
 			})
 
-			It("should panic if it is the same height but different block", func () {
+			It("should panic if it is the same height but different block", func() {
 				driver := NewDriver()
 				driver.expectCommitStateDiff()
 
@@ -124,7 +124,7 @@ var _ = Describe("Committing a block", func () {
 
 				driver.commitBlock(blockPair.Build())
 
-				Expect(func () {
+				Expect(func() {
 					driver.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
 				}).To(Panic())
 
@@ -140,7 +140,7 @@ var _ = Describe("Committing a block", func () {
 
 				driver.commitBlock(test.BlockPairBuilder().Build())
 
-				Expect(func () {
+				Expect(func() {
 					driver.commitBlock(test.BlockPairBuilder().WithHeight(1000).Build())
 				}).To(Panic())
 
