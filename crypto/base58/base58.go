@@ -2,7 +2,6 @@ package base58
 
 import (
 	"fmt"
-	"math/big"
 )
 
 const (
@@ -146,106 +145,4 @@ func Decode(source []byte) ([]byte, error) {
 		}
 	}
 	return decodedBytes[start:totalBytesUsed], nil
-}
-
-// all the code below can be dumped, working slow implementation and a buggy one i do not wish to finish (but its much faster)
-var bigRadix = big.NewInt(58)
-var bigZero = big.NewInt(0)
-
-func BuggyBase58Encode(b []byte) []byte {
-	inputSize := len(b)
-	size := inputSize*138/100 + 1
-	var encodedBuffer = make([]byte, 0, size)
-
-	for i := 0; i < inputSize; i++ {
-		carry := b[i]
-		for j := 0; j < len(encodedBuffer); j++ {
-			carry += encodedBuffer[j] << 8
-			encodedBuffer[j] = carry % 58
-			carry = carry / 58
-		}
-
-		for carry > 0 {
-			encodedBuffer = append(encodedBuffer, carry%58)
-			carry = carry / 58
-		}
-	}
-
-	for _, z := range b {
-		if z != 0 {
-			break
-		}
-		encodedBuffer = append(encodedBuffer, base58ZeroValue)
-	}
-
-	// reverse
-	answerLen := len(encodedBuffer)
-	for i := 0; i < answerLen/2; i++ {
-		encodedBuffer[i], encodedBuffer[answerLen-1-i] = encodedBuffer[answerLen-1-i], encodedBuffer[i]
-	}
-
-	// convert to base58 alphabet
-	b58 := make([]byte, answerLen)
-
-	for i := range encodedBuffer {
-		b58[i] = base58Alphabet[encodedBuffer[i]]
-	}
-
-	return b58
-}
-
-func SlowBase58Decode(b []byte) ([]byte, error) {
-	answer := big.NewInt(0)
-	j := big.NewInt(1)
-
-	scratch := new(big.Int)
-	for i := len(b) - 1; i >= 0; i-- {
-		tmp := base58AlphabetDecodeMap[b[i]]
-		if tmp == 255 {
-			return []byte{}, fmt.Errorf("non base58 character '%c' in input %s", b[i], b)
-		}
-		scratch.SetInt64(int64(tmp))
-		scratch.Mul(j, scratch)
-		answer.Add(answer, scratch)
-		j.Mul(j, bigRadix)
-	}
-
-	tmpval := answer.Bytes()
-
-	var numZeros int
-	for numZeros = 0; numZeros < len(b); numZeros++ {
-		if b[numZeros] != base58ZeroValue {
-			break
-		}
-	}
-	finalLen := numZeros + len(tmpval)
-	val := make([]byte, finalLen)
-	copy(val[numZeros:], tmpval)
-
-	return val, nil
-}
-
-func SlowBase58Encode(b []byte) []byte {
-	bigNum := new(big.Int)
-	bigNum.SetBytes(b)
-
-	i := len(b)*136/100 + 1
-
-	encodedBuffer := make([]byte, i)
-	for bigNum.Cmp(bigZero) > 0 {
-		mod := new(big.Int)
-		bigNum.DivMod(bigNum, bigRadix, mod)
-		i--
-		encodedBuffer[i] = base58Alphabet[mod.Int64()]
-	}
-
-	for zeroPaddingIndex := range b {
-		if b[zeroPaddingIndex] != 0 {
-			break
-		}
-		i--
-		encodedBuffer[i] = base58ZeroValue
-	}
-
-	return encodedBuffer[i:]
 }
