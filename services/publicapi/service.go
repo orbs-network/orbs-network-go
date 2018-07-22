@@ -38,7 +38,10 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
 		SignedTransaction: tx,
 	})
-	return &services.SendTransactionOutput{}, nil
+
+	response := &client.SendTransactionResponseBuilder{}
+
+	return &services.SendTransactionOutput{ClientResponse: response.Build()}, nil
 }
 
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {

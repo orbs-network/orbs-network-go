@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/test"
 	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -20,6 +21,7 @@ type AcceptanceTestNetwork interface {
 	LoopControl(nodeIndex int) harnessInstrumentation.BrakingLoop
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
 }
 
@@ -44,10 +46,11 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
 		nodes[i].index = i
-		nodeId := fmt.Sprintf("node%d", i+1)
-		isLeader := (i == 0)                                          // TODO: remove the concept of leadership
-		nodes[i].config = config.NewHardCodedConfig(numNodes, nodeId) // TODO: change nodeId to public key
-		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeId)
+		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
+		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
+		isLeader := (i == 0) // TODO: remove the concept of leadership
+		nodes[i].config = config.NewHardCodedConfig(numNodes, nodePublicKey)
+		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].loopControl = harnessInstrumentation.NewBrakingLoop(nodes[i].log)
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
@@ -90,15 +93,25 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: &protocol.SignedTransactionBuilder{
-				Transaction: &protocol.TransactionBuilder{
-					ContractName: "BenchmarkToken",
-					MethodName:   "transfer",
-					InputArguments: []*protocol.MethodArgumentBuilder{
-						{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
-					},
-				},
-			},
+			SignedTransaction: test.TransferTransaction().WithAmount(amount).Builder(),
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			// TODO: handle error
+		}
+		ch <- output.ClientResponse
+	}()
+	return ch
+}
+
+func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse {
+	ch := make(chan *client.SendTransactionResponse)
+	go func() {
+		request := (&client.SendTransactionRequestBuilder{
+			SignedTransaction: test.TransferTransaction().WithInvalidContent().Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
