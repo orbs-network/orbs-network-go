@@ -1,9 +1,6 @@
 [submodule "vendor/github.com/hashicorp/memberlist"]
 	path = vendor/github.com/hashicorp/memberlist
 	url = https://github.com/hashicorp/memberlist
-[submodule "vendor/github.com/maraino/go-mock"]
-	path = vendor/github.com/maraino/go-mock
-	url = https://github.com/maraino/go-mock
 [submodule "vendor/github.com/onsi/ginkgo"]
 	path = vendor/github.com/onsi/ginkgo
 	url = https://github.com/onsi/ginkgo
