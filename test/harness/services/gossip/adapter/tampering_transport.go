@@ -170,7 +170,3 @@ func (o *pausingTamperer) Release() {
 		runtime.Gosched() // TODO: this is required or else messages arrive in the opposite order after resume
 	}
 }
-
-func (t *tamperingTransport) Join() {
-	// not implemented because tempering transport is in memory and therefore does not need any network initialization
-}
