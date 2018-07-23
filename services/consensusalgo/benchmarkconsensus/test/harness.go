@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -11,7 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-type context struct {
+type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
@@ -20,9 +21,9 @@ type context struct {
 	service          services.ConsensusAlgoBenchmark
 }
 
-func newContext(
+func newHarness(
 	isLeader bool,
-) *context {
+) *harness {
 
 	leaderPublicKey := []byte{0x01}
 	nodePublicKey := leaderPublicKey
@@ -40,14 +41,17 @@ func newContext(
 	log := testInstrumentation.NewBufferedLog("BenchmarkConsensus")
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
-	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
+	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return()
 
 	blockStorage := &services.MockBlockStorage{}
-	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
+	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return()
 
 	consensusContext := &services.MockConsensusContext{}
+	if isLeader {
+		consensusContext.When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil)
+	}
 
-	return &context{
+	return &harness{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
@@ -57,12 +61,13 @@ func newContext(
 	}
 }
 
-func (c *context) createService() {
-	c.service = benchmarkconsensus.NewBenchmarkConsensusAlgo(
-		c.gossip,
-		c.blockStorage,
-		c.consensusContext,
-		c.reporting,
-		c.config,
+func (h *harness) createService(ctx context.Context) {
+	h.service = benchmarkconsensus.NewBenchmarkConsensusAlgo(
+		ctx,
+		h.gossip,
+		h.blockStorage,
+		h.consensusContext,
+		h.reporting,
+		h.config,
 	)
 }

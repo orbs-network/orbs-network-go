@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -22,6 +23,7 @@ type node struct {
 	httpServer   httpserver.HttpServer
 	logic        NodeLogic
 	shutdownCond *sync.Cond
+	ctxCancel    context.CancelFunc
 }
 
 func NewNode(
@@ -33,22 +35,25 @@ func NewNode(
 	transport gossipAdapter.Transport,
 ) Node {
 
+	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo)
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
 	logger := instrumentation.NewStdoutLog()
-	nodeLogic := NewNodeLogic(transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
+	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 
 	return &node{
 		logic:        nodeLogic,
 		httpServer:   httpServer,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
+		ctxCancel:    ctxCancel,
 	}
 }
 
 func (n *node) GracefulShutdown(timeout time.Duration) {
+	n.ctxCancel()
 	n.httpServer.GracefulShutdown(timeout)
 	n.shutdownCond.Broadcast()
 }
