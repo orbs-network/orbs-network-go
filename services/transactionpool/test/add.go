@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -29,7 +30,7 @@ var _ = Describe("transaction pool", func() {
 
 	It("forwards a new valid transaction with gossip", func() {
 
-		tx := test.TransferTransaction().Build()
+		tx := builders.TransferTransaction().Build()
 
 		gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 			Message: &gossipmessages.ForwardedTransactionsMessage{
@@ -48,7 +49,7 @@ var _ = Describe("transaction pool", func() {
 
 	It("does not forward an invalid transaction with gossip", func() {
 
-		tx := test.TransferTransaction().WithInvalidContent().Build()
+		tx := builders.TransferTransaction().WithInvalidContent().Build()
 
 		gossip.When("BroadcastForwardedTransactions", mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).Times(0)
 

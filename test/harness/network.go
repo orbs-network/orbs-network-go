@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -92,7 +92,7 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: test.TransferTransaction().WithAmount(amount).Builder(),
+			SignedTransaction: builders.TransferTransaction().WithAmount(amount).Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
@@ -110,7 +110,7 @@ func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: test.TransferTransaction().WithInvalidContent().Builder(),
+			SignedTransaction: builders.TransferTransaction().WithInvalidContent().Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{

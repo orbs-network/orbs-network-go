@@ -2,7 +2,7 @@ package gossip
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"testing"
 )
@@ -12,74 +12,13 @@ var blockPairTable = []struct {
 	encodeErr bool
 	decodeErr bool
 }{
-	{&protocol.BlockPairContainer{}, true, false},
-	{&protocol.BlockPairContainer{
-		&protocol.TransactionsBlockContainer{},
-		&protocol.ResultsBlockContainer{},
-	}, true, false},
-	{&protocol.BlockPairContainer{
-		&protocol.TransactionsBlockContainer{
-			Header:             (&protocol.TransactionsBlockHeaderBuilder{}).Build(),
-			Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-			SignedTransactions: []*protocol.SignedTransaction{},
-			BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
-		},
-		&protocol.ResultsBlockContainer{
-			Header:              (&protocol.ResultsBlockHeaderBuilder{}).Build(),
-			TransactionReceipts: []*protocol.TransactionReceipt{},
-			ContractStateDiffs:  []*protocol.ContractStateDiff{},
-			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
-		},
-	}, false, false},
-	{&protocol.BlockPairContainer{
-		&protocol.TransactionsBlockContainer{
-			Header: (&protocol.TransactionsBlockHeaderBuilder{
-				NumSignedTransactions: 3,
-			}).Build(),
-			Metadata: (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-			SignedTransactions: []*protocol.SignedTransaction{
-				test.TransferTransaction().WithAmount(30).Build(),
-				test.TransferTransaction().WithAmount(40).Build(),
-				test.TransferTransaction().WithAmount(50).Build(),
-			},
-			BlockProof: (&protocol.TransactionsBlockProofBuilder{}).Build(),
-		},
-		&protocol.ResultsBlockContainer{
-			Header: (&protocol.ResultsBlockHeaderBuilder{
-				NumTransactionReceipts: 3,
-				NumContractStateDiffs:  2,
-			}).Build(),
-			TransactionReceipts: []*protocol.TransactionReceipt{
-				(&protocol.TransactionReceiptBuilder{}).Build(),
-				(&protocol.TransactionReceiptBuilder{}).Build(),
-				(&protocol.TransactionReceiptBuilder{}).Build(),
-			},
-			ContractStateDiffs: []*protocol.ContractStateDiff{
-				(&protocol.ContractStateDiffBuilder{}).Build(),
-				(&protocol.ContractStateDiffBuilder{}).Build(),
-			},
-			BlockProof: (&protocol.ResultsBlockProofBuilder{}).Build(),
-		},
-	}, false, false},
-	{&protocol.BlockPairContainer{
-		&protocol.TransactionsBlockContainer{
-			Header: (&protocol.TransactionsBlockHeaderBuilder{
-				NumSignedTransactions: 25,
-			}).Build(),
-			Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-			SignedTransactions: []*protocol.SignedTransaction{},
-			BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
-		},
-		&protocol.ResultsBlockContainer{
-			Header: (&protocol.ResultsBlockHeaderBuilder{
-				NumTransactionReceipts: 34,
-				NumContractStateDiffs:  22,
-			}).Build(),
-			TransactionReceipts: []*protocol.TransactionReceipt{},
-			ContractStateDiffs:  []*protocol.ContractStateDiff{},
-			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
-		},
-	}, false, true},
+	{builders.CorruptBlockPair().WithMissingTransactionsBlock().WithMissingResultsBlock().Build(), true, false},
+	{builders.CorruptBlockPair().WithEmptyTransactionsBlock().WithEmptyResultsBlock().Build(), true, false},
+	{builders.BlockPair().WithTransactions(0).WithReceipts(0).WithStateDiffs(0).Build(), false, false},
+	{builders.BlockPair().WithTransactions(3).WithReceipts(3).WithStateDiffs(2).Build(), false, false},
+	{builders.BlockPair().WithCorruptNumTransactions(25).Build(), false, true},
+	{builders.BlockPair().WithCorruptNumReceipts(34).Build(), false, true},
+	{builders.BlockPair().WithCorruptNumStateDiffs(29).Build(), false, true},
 }
 
 func TestBlockPair(t *testing.T) {
