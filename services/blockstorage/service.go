@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 const (
@@ -69,8 +70,8 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 	}, nil
 }
 
-func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (*services.GetResultsBlockHeaderOutput, error) {
-	txBlock, err := s.persistence.GetResultsBlock(input.BlockHeight)
+func (s *service) lookForResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
+	txBlock, err := s.persistence.GetResultsBlock(height)
 
 	if err != nil {
 		return nil, err
@@ -80,6 +81,38 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 		ResultsBlockProof: txBlock.BlockProof,
 		ResultsBlockHeader: txBlock.Header,
 	}, nil
+}
+
+func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
+	if input.BlockHeight - s.lastCommittedBlockHeight <= 5 {
+		z := make(chan *services.GetResultsBlockHeaderOutput)
+
+		go func() {
+			const interval = 10
+			const timeout = 10000
+
+			for i:=0; i < timeout; i+= interval {
+				lookupResult, err := s.lookForResultsBlockHeader(input.BlockHeight)
+
+				fmt.Println("Looking for a block with height", input.BlockHeight, "last block height is", s.lastCommittedBlockHeight)
+				fmt.Println(lookupResult, err)
+
+				if err == nil {
+					fmt.Println("pushing result to the channel")
+					z <- lookupResult
+					return
+				}
+
+				time.Sleep(interval)
+			}
+		}()
+
+		result:= <-z
+		fmt.Printf("received %v\n", result)
+		return result, nil
+	}
+
+	return s.lookForResultsBlockHeader(input.BlockHeight)
 }
 
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {

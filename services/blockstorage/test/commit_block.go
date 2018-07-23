@@ -55,6 +55,10 @@ func (d *driver) getLastBlockHeight() *services.GetLastCommittedBlockHeightOutpu
 	return out
 }
 
+func (d *driver) getBlock(height int) *protocol.BlockPairContainer {
+	return d.storageAdapter.ReadAllBlocks()[height - 1]
+}
+
 func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
@@ -183,5 +187,35 @@ var _ = Describe("Block storage", func () {
 			Expect(output.ResultsBlockHeader).To(Equal(block.ResultsBlock.Header))
 			Expect(output.ResultsBlockProof).To(Equal(block.ResultsBlock.BlockProof))
 		})
+
+		It("blocks if requested block is in near future", func (done Done) {
+			driver := NewDriver()
+			driver.expectCommitStateDiff()
+
+			block := test.BlockPairBuilder().Build()
+			driver.commitBlock(block)
+
+			result := make(chan *services.GetResultsBlockHeaderOutput)
+
+			go func () {
+				output, _ := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight:5})
+				result <- output
+			}()
+
+			for i:=2; i <=6 ; i++ {
+				driver.commitBlock(test.BlockPairBuilder().WithHeight(i).Build())
+			}
+
+			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
+
+			block5 := driver.getBlock(5).ResultsBlock
+			output := <- result
+
+			Expect(output.ResultsBlockHeader.BlockHeight()).To(Equal(primitives.BlockHeight(5)))
+			Expect(output.ResultsBlockHeader).To(Equal(block5.Header))
+			Expect(output.ResultsBlockProof).To(Equal(block5.BlockProof))
+
+			close(done)
+		}, 100)
 	})
 })
