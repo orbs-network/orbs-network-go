@@ -37,19 +37,19 @@ const (
 
 func validateAddressParts(pk []byte, vcId []byte, net string, v uint8) error {
 	if len(pk) != PUBLIC_KEY_SIZE {
-		return fmt.Errorf("pk invalid, cannot create address")
+		return fmt.Errorf("pk invalid (%v), cannot create address", pk)
 	}
 
 	if !IsValidVChainId(vcId) {
-		return fmt.Errorf("invalid virtual chain id, cannot create address")
+		return fmt.Errorf("invalid virtual chain id (%v), cannot create address", vcId)
 	}
 
 	if !IsValidNetworkId(net) {
-		return fmt.Errorf("invalid network id, cannot create address")
+		return fmt.Errorf("invalid network id (%s), cannot create address", net)
 	}
 
 	if !IsValidVersion(v) {
-		return fmt.Errorf("invalid version, cannot create address")
+		return fmt.Errorf("invalid version (%d), cannot create address", v)
 	}
 
 	return nil

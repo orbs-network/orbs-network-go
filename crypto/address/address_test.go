@@ -150,6 +150,13 @@ func TestAddressInitializationFailsOnInvalidNetworkId(t *testing.T) {
 	}
 }
 
+func TestAddressInitializationFailsOnInvalidVersion(t *testing.T) {
+	pk1bytes := pkStringToBytes(t, publicKey1)
+	if _, err := address.NewFromAddress("M0FEXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1", pk1bytes); err == nil {
+		t.Error("address initialized on invalid version")
+	}
+}
+
 func TestAddressSerialization(t *testing.T) {
 	pk1bytes := pkStringToBytes(t, publicKey1)
 	pkmainNet, err := address.NewFromPK(pk1bytes, "640ed3", address.MAIN_NETWORK_ID)
