@@ -10,9 +10,6 @@ type Reporting interface {
 	Error(err error)
 }
 
-const FinishedConsensusRound = "finished_consensus_round"
-const ConsensusError = "consensus_error"
-
 type StdoutLog interface {
 	Reporting
 }
@@ -33,7 +30,7 @@ func (e *stdoutLog) Infof(message string, params ...interface{}) {
 }
 
 func (e *stdoutLog) Error(err error) {
-	log.Fatal(err)
+	log.Printf("Error: %s", err)
 }
 
 type compositeReporting struct {
