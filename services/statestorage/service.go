@@ -5,11 +5,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"fmt"
-	"bytes"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type service struct {
-	persistence adapter.StatePersistence
+	persistence        adapter.StatePersistence
+	lastCommittedBlock primitives.BlockHeight
 }
 
 func NewStateStorage(persistence adapter.StatePersistence) services.StateStorage {
@@ -19,13 +20,19 @@ func NewStateStorage(persistence adapter.StatePersistence) services.StateStorage
 }
 
 func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+	committedBlock := input.ResultsBlockHeader.BlockHeight()
+	if lastCommittedBlock := s.lastCommittedBlock; lastCommittedBlock+1 != committedBlock {
+		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
+	}
+
 	for _, stateDiffs := range input.ContractStateDiffs {
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
 			s.persistence.WriteState(stateDiffs.ContractName(), i.NextStateDiffs())
 		}
 	}
+	s.lastCommittedBlock = committedBlock
 
-	return nil, nil
+	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: committedBlock + 1}, nil
 }
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
@@ -33,16 +40,15 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	var state []*protocol.StateRecord
-	for _, stateDiff := range s.persistence.ReadState(input.ContractName) {
-		for _, key := range input.Keys {
-			if bytes.Equal(key, stateDiff.Key()) {
-				state = append(state, stateDiff)
-			}
+	records := make([]*protocol.StateRecord,0,len(input.Keys))
+	for _, key:= range input.Keys {
+		record, ok := s.persistence.ReadState(input.ContractName)[key.KeyForMap()]
+		if ok {
+			records = append(records, record)
 		}
-
 	}
-	output := &services.ReadKeysOutput{StateRecords: state}
+
+	output := &services.ReadKeysOutput{StateRecords: records}
 	if len(output.StateRecords) == 0 {
 		return output, fmt.Errorf("no value found for input key(s)")
 	}

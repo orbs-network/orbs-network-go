@@ -81,21 +81,22 @@ var _ = Describe("Commit a State Diff", func() {
 		v2 := []byte("v2")
 		v3 := []byte("v3")
 
-		input := &services.CommitStateDiffInput{ContractStateDiffs:
-		[]*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
-			ContractName: primitives.ContractName("contract1"),
-			StateDiffs: []*protocol.StateRecordBuilder{
-				{Key: []byte("key1"), Value: v1},
-				{Key: []byte("key2"), Value: v2},
-			},
-		}).Build(),
-			(&protocol.ContractStateDiffBuilder{
-				ContractName: primitives.ContractName("contract2"),
+		input := &services.CommitStateDiffInput{
+			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 1}).Build(),
+			ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
+				ContractName: primitives.ContractName("contract1"),
 				StateDiffs: []*protocol.StateRecordBuilder{
-					{Key: []byte("key1"), Value: v3},
+					{Key: []byte("key1"), Value: v1},
+					{Key: []byte("key2"), Value: v2},
 				},
 			}).Build(),
-		},
+				(&protocol.ContractStateDiffBuilder{
+					ContractName: primitives.ContractName("contract2"),
+					StateDiffs: []*protocol.StateRecordBuilder{
+						{Key: []byte("key1"), Value: v3},
+					},
+				}).Build(),
+			},
 		}
 
 		d.service.CommitStateDiff(input)
@@ -110,6 +111,66 @@ var _ = Describe("Commit a State Diff", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(output3).To(Equal(v3))
 
+	})
+
+	When("block height is not monotonously increasing", func() {
+		When("too high", func() {
+			It("does nothing and return desired height", func() {
+				d := newStateStorageDriver()
+				v1 := []byte("v1")
+				input := &services.CommitStateDiffInput{
+					ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 3}).Build(),
+					ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
+						ContractName: primitives.ContractName("contract1"),
+						StateDiffs: []*protocol.StateRecordBuilder{
+							{Key: []byte("key1"), Value: v1},
+						},
+					}).Build()},
+				}
+
+				result, err := d.service.CommitStateDiff(input)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(1)))
+
+				_, err = d.readSingleKey("contract1", "key1")
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		When("too low", func() {
+			It("does nothing and return desired height", func() {
+				d := newStateStorageDriver()
+				v1 := []byte("v1")
+				v2 := []byte("v2")
+				input := &services.CommitStateDiffInput{
+					ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 1}).Build(),
+					ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
+						ContractName: primitives.ContractName("contract1"),
+						StateDiffs: []*protocol.StateRecordBuilder{
+							{Key: []byte("key1"), Value: v1},
+						},
+					}).Build()},
+				}
+				input2 := &services.CommitStateDiffInput{
+					ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 2}).Build(),
+					ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
+						ContractName: primitives.ContractName("contract1"),
+						StateDiffs: []*protocol.StateRecordBuilder{
+							{Key: []byte("key1"), Value: v2},
+						},
+					}).Build()},
+				}
+
+				d.service.CommitStateDiff(input)
+				d.service.CommitStateDiff(input2)
+				result, err := d.service.CommitStateDiff(input)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(3)))
+
+				output, err := d.readSingleKey("contract1", "key1")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(output).To(Equal(v2))
+			})
+		})
 	})
 })
 

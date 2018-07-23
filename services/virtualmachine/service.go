@@ -31,15 +31,38 @@ func NewVirtualMachine(
 }
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	panic("Not implemented")
+	balance := input.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()
+
+	existingState, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
+
+	if err == nil && len(existingState.StateRecords) > 0 {
+		balance += binary.LittleEndian.Uint64(existingState.StateRecords[0].Value())
+	}
+
+	byteArray := make([]byte, 8)
+	binary.LittleEndian.PutUint64(byteArray, balance)
+
+	var state []*protocol.StateRecordBuilder
+	transactionStateDiff := &protocol.StateRecordBuilder{
+		Key:   primitives.Ripmd160Sha256("balance"),
+		Value: byteArray,
+	}
+	state = append(state, transactionStateDiff)
+
+	output := &services.ProcessTransactionSetOutput{ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state, ContractName: "BenchmarkToken"}).Build()}}
+	return output, nil
 }
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
-	results, _ := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
 	sum := uint64(0)
-	for _, t := range results.StateRecords {
-		sum += binary.LittleEndian.Uint64(t.Value())
+
+	results, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
+	if err == nil {
+		for _, t := range results.StateRecords {
+			sum += binary.LittleEndian.Uint64(t.Value())
+		}
 	}
+
 	arg := (&protocol.MethodArgumentBuilder{
 		Name:        "balance",
 		Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE,

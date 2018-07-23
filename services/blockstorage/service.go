@@ -24,14 +24,13 @@ type service struct {
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
 	reporting                   instrumentation.Reporting
-
 }
 
 func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.Reporting) services.BlockStorage {
 	return &service{
 		persistence:  persistence,
 		stateStorage: stateStorage,
-		reporting: reporting,
+		reporting:    reporting,
 	}
 }
 
@@ -142,16 +141,27 @@ func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol
 }
 
 func (s *service) updateStateStorage(txBlock *protocol.TransactionsBlockContainer) {
-	var state []*protocol.StateRecordBuilder
-	for _, i := range txBlock.SignedTransactions {
-		byteArray := make([]byte, 8)
-		binary.LittleEndian.PutUint64(byteArray, uint64(i.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
-		transactionStateDiff := &protocol.StateRecordBuilder{
-			Key: primitives.Ripmd160Sha256("balance"),
-			Value: byteArray,
-		}
-		state = append(state, transactionStateDiff)
+	balance := txBlock.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()
+
+	existingState, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
+
+	if err == nil && len(existingState.StateRecords) > 0 {
+		balance += binary.LittleEndian.Uint64(existingState.StateRecords[0].Value())
 	}
+
+	byteArray := make([]byte, 8)
+	binary.LittleEndian.PutUint64(byteArray, balance)
+
+	var state []*protocol.StateRecordBuilder
+	transactionStateDiff := &protocol.StateRecordBuilder{
+		Key:   primitives.Ripmd160Sha256("balance"),
+		Value: byteArray,
+	}
+	state = append(state, transactionStateDiff)
+
 	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state, ContractName: "BenchmarkToken"}).Build()}
-	s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{ContractStateDiffs: csdi})
+	s.stateStorage.CommitStateDiff(
+		&services.CommitStateDiffInput{
+			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: txBlock.Header.BlockHeight()}).Build(),
+			ContractStateDiffs: csdi})
 }
