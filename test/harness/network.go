@@ -9,10 +9,10 @@ import (
 	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 )
 
 type AcceptanceTestNetwork interface {
@@ -37,7 +37,7 @@ type networkNode struct {
 	latch            harnessInstrumentation.Latch
 	loopControl      harnessInstrumentation.BrakingLoop
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.InMemoryStatePersistence
+	statePersistence stateStorageAdapter.StatePersistence
 	nodeLogic        bootstrap.NodeLogic
 }
 
