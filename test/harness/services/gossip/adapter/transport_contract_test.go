@@ -3,7 +3,6 @@ package adapter
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -65,29 +64,6 @@ func assertContractOf(makeContext func() *transportContractContext) {
 		})
 	})
 }
-
-type mockListener struct {
-	mock.Mock
-}
-
-func (m *mockListener) OnTransportMessageReceived(payloads [][]byte) {
-	m.Called(payloads)
-}
-
-func listenTo(transport adapter.Transport, publicKey primitives.Ed25519Pkey) *mockListener {
-	l := &mockListener{}
-	transport.RegisterListener(l, publicKey)
-	return l
-}
-
-func (m *mockListener) expectReceive(payloads [][]byte) {
-	m.When("OnTransportMessageReceived", payloads).Return().Times(1)
-}
-
-func (m *mockListener) expectNotReceive() {
-	m.When("OnTransportMessageReceived", mock.Any).Return().Times(0)
-}
-
 type transportContractContext struct {
 	publicKeys []primitives.Ed25519Pkey
 	transports []adapter.Transport
