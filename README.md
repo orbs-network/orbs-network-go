@@ -34,7 +34,7 @@ cd src/github.com/orbs-network/orbs-network-go
 git checkout master // or dev if you want the dev branch
 ```
 
-* Install dependencies with `./git-submodules-checkout.sh`. To understand dependency management flow please refer [here](DependencyManagement.md).
+* Install dependencies with `./git-submodules-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
 
 * Build with `go install`
 

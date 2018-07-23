@@ -14,34 +14,38 @@ After the pull request is merged, everyone has to fetch the dependencies using `
 
 ## Initial flow
 
-To install all dependencies after checking out the project, do
+To install all dependencies after checking out the project, run:
 
 `./git-submodules-checkout.sh`
 
-To install dependency management tool, do
+To install dependency management tool, run:
 
 `go get github.com/kovetskiy/manul`
 
+The dependency management tool will enable you to update to specific versions and add new dependencies.
+
 ## Adding new dependency
 
-Add new dependency from `master`:
+Add new dependency from `master`, or 'latest version':
 
 `manul -I github.com/username/repo`
 
 Add new dependency pointing to a certain commit:
 
-`manul -I github.com/username/repo=COMMIT`
+`manul -I github.com/username/repo=COMMIT-HASH`
 
 ## Updating dependency to point to a certain commit
 
-`manul -U github.com/username/repo=COMMIT`
+Running `manul -U github.com/username/repo=COMMIT-HASH` will change the submodules version to the one you just set. Note that this will automatically checkout the correct version as well, so after running the update command you are in actual working with the updated version.
 
-`./git-submodules-checkout.sh`
+## Updating dependencies after pulling from the upstream
 
-## Updating dependencies after pulling from origin
+The checkout script resets to the committed state, this works both when doing the first init or at any later stage. So to update from pull run:
 
 `./git-submodules-checkout.sh`
 
 ## Rolling back
+
+In cases where you made changes just to check a specific version (commit hash) of a dependency (using `manul -U`), rolling back or resetting to the committed state is done also via the checkout script:
 
 `./git-submodules-checkout.sh`
