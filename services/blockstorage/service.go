@@ -56,8 +56,8 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	return nil, nil
 }
 
-func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
-	txBlock, err := s.persistence.GetTransactionsBlock(input.BlockHeight)
+func (s *service) lookForTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
+	txBlock, err := s.persistence.GetTransactionsBlock(height)
 
 	if err != nil {
 		return nil, err
@@ -68,6 +68,36 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 		TransactionsBlockHeader: txBlock.Header,
 		TransactionsBlockMetadata: txBlock.Metadata,
 	}, nil
+}
+
+func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
+	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight - s.lastCommittedBlockHeight <= 5 {
+		c := make(chan *services.GetTransactionsBlockHeaderOutput)
+
+		go func() {
+			// TODO extract to a config
+			const interval = 10
+			const timeout = 10000
+
+			for i:=0; i < timeout; i+= interval {
+				if input.BlockHeight <= s.lastCommittedBlockHeight {
+					lookupResult, err := s.lookForTransactionsBlockHeader(input.BlockHeight)
+
+					if err == nil {
+						c <- lookupResult
+						return
+					}
+				}
+
+				time.Sleep(interval)
+			}
+		}()
+
+		result:= <-c
+		return result, nil
+	}
+
+	return s.lookForTransactionsBlockHeader(input.BlockHeight)
 }
 
 func (s *service) lookForResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
@@ -84,31 +114,29 @@ func (s *service) lookForResultsBlockHeader(height primitives.BlockHeight) (*ser
 }
 
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
-	if input.BlockHeight - s.lastCommittedBlockHeight <= 5 {
-		z := make(chan *services.GetResultsBlockHeaderOutput)
+	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight - s.lastCommittedBlockHeight <= 5 {
+		c := make(chan *services.GetResultsBlockHeaderOutput)
 
 		go func() {
+			// TODO extract to a config
 			const interval = 10
 			const timeout = 10000
 
 			for i:=0; i < timeout; i+= interval {
-				lookupResult, err := s.lookForResultsBlockHeader(input.BlockHeight)
+				if input.BlockHeight <= s.lastCommittedBlockHeight {
+					lookupResult, err := s.lookForResultsBlockHeader(input.BlockHeight)
 
-				fmt.Println("Looking for a block with height", input.BlockHeight, "last block height is", s.lastCommittedBlockHeight)
-				fmt.Println(lookupResult, err)
-
-				if err == nil {
-					fmt.Println("pushing result to the channel")
-					z <- lookupResult
-					return
+					if err == nil {
+						c <- lookupResult
+						return
+					}
 				}
 
 				time.Sleep(interval)
 			}
 		}()
 
-		result:= <-z
-		fmt.Printf("received %v\n", result)
+		result:= <-c
 		return result, nil
 	}
 
