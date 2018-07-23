@@ -111,8 +111,10 @@ func NewFromRaw(a []byte, publicKey []byte) (*Address, error) {
 
 	cs := binary.BigEndian.Uint32(a[NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE+ACCOUNT_ID_SIZE:])
 	if _, err := newAddress.generateFullAddress(); err != nil {
-		return nil, fmt.Errorf("f/ailed to generate full address for new address during checksum test")
-	} else if actualCs, err := newAddress.Checksum(); err != nil {
+		return nil, fmt.Errorf("failed to generate full address for new address during checksum test")
+	}
+
+	if actualCs, err := newAddress.Checksum(); err != nil {
 		return nil, fmt.Errorf("failed to generate full address for new address during checksum test")
 	} else if cs != actualCs {
 		return nil, fmt.Errorf("checksum invalid, cannot create address")
