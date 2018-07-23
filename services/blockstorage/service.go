@@ -35,7 +35,7 @@ func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
 
-	if err := s.validateProtocolVersion(txBlockHeader); err != nil {
+	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
 	}
 
@@ -155,7 +155,15 @@ func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBl
 }
 
 func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-	panic("Not implemented")
+	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
+		return &services.ValidateBlockForCommitOutput{}, protocolVersionError
+	}
+
+	if blockHeightError := s.validateBlockHeight(input.BlockPair); blockHeightError != nil {
+		return &services.ValidateBlockForCommitOutput{}, blockHeightError
+	}
+
+	return &services.ValidateBlockForCommitOutput{}, nil
 }
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
@@ -191,9 +199,33 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 	return true
 }
 
-func (s *service) validateProtocolVersion(txBlockHeader *protocol.TransactionsBlockHeader) error {
+func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
+	expectedBlockHeight := s.lastCommittedBlockHeight + 1
+
+	txBlockHeader := blockPair.TransactionsBlock.Header
+	rsBlockHeader := blockPair.ResultsBlock.Header
+
+	if txBlockHeader.BlockHeight() != expectedBlockHeight {
+		return fmt.Errorf("block height is %d, expected %d", txBlockHeader.BlockHeight(), expectedBlockHeight)
+	}
+
+	if rsBlockHeader.BlockHeight() != expectedBlockHeight {
+		return fmt.Errorf("block height is %d, expected %d", rsBlockHeader.BlockHeight(), expectedBlockHeight)
+	}
+
+	return nil
+}
+
+func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer) error {
+	txBlockHeader := blockPair.TransactionsBlock.Header
+	rsBlockHeader := blockPair.ResultsBlock.Header
+
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
 		return fmt.Errorf("protocol version mismatch: expected 1 got %d", txBlockHeader.ProtocolVersion())
+	}
+
+	if rsBlockHeader.ProtocolVersion() != ProtocolVersion {
+		return fmt.Errorf("protocol version mismatch: expected 1 got %d", rsBlockHeader.ProtocolVersion())
 	}
 
 	return nil

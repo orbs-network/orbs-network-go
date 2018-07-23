@@ -45,6 +45,7 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 
 	resultsBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
+			ProtocolVersion: 1,
 			BlockHeight:            height,
 			Timestamp:              blockCreated,
 			NumContractStateDiffs:  1,
