@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	. "github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"testing"
@@ -64,6 +64,7 @@ func assertContractOf(makeContext func() *transportContractContext) {
 		})
 	})
 }
+
 type transportContractContext struct {
 	publicKeys []primitives.Ed25519Pkey
 	transports []adapter.Transport
@@ -110,6 +111,6 @@ func aMemberlistTransport() *transportContractContext {
 
 func (c *transportContractContext) verify() {
 	for _, mockListener := range c.listeners {
-		Eventually(mockListener).Should(ExecuteAsPlanned())
+		Eventually(mockListener).Should(test.ExecuteAsPlanned())
 	}
 }

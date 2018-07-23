@@ -12,6 +12,7 @@ import (
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -47,7 +48,14 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
 		constantConsensusLeaderPublicKey := []byte{byte(1)}
 		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
-		nodes[i].config = config.NewHardCodedConfig(numNodes, nodePublicKey, constantConsensusLeaderPublicKey)
+
+		nodes[i].config = config.NewHardCodedConfig(
+			numNodes,
+			nodePublicKey,
+			constantConsensusLeaderPublicKey,
+			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+		)
+
 		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)

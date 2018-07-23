@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"os"
 	"strconv"
 	"strings"
@@ -21,5 +22,12 @@ func main() {
 	config := gossipAdapter.MemberlistGossipConfig{nodePublicKey, int(gossipPort), peers}
 	gossipTransport := gossipAdapter.NewMemberlistTransport(config)
 
-	bootstrap.NewNode(httpAddress, nodePublicKey, 3, consensusLeader, gossipTransport).WaitUntilShutdown()
+	bootstrap.NewNode(
+		httpAddress,
+		nodePublicKey,
+		3,
+		consensusLeader,
+		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+		gossipTransport,
+	).WaitUntilShutdown()
 }

@@ -50,7 +50,7 @@ func NewNodeLogic(
 
 	var consensusAlgos []services.ConsensusAlgo
 	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
-	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(nodeConfig))
+	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(gossip, blockStorage, consensusContext, reporting, nodeConfig))
 
 	return &nodeLogic{
 		publicApi:      publicApi,

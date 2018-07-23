@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -14,6 +15,7 @@ type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
 	NodePublicKey() primitives.Ed25519Pkey
 	ConstantConsensusLeader() primitives.Ed25519Pkey
+	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 }
 
 type service struct {
@@ -21,7 +23,7 @@ type service struct {
 	blockStorage             services.BlockStorage
 	transactionPool          services.TransactionPool
 	consensusContext         services.ConsensusContext
-	reporting            instrumentation.Reporting
+	reporting                instrumentation.Reporting
 	config                   Config
 	lastCommittedBlockHeight primitives.BlockHeight
 	blocksForRounds          map[primitives.BlockHeight]*protocol.BlockPairContainer
@@ -49,8 +51,8 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	gossip.RegisterLeanHelixHandler(s)
-	if config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
-		go s.buildBlocksEventLoop()
+	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX && config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
+		go s.consensusRoundRunLoop()
 	}
 	return s
 }
@@ -90,7 +92,7 @@ func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInp
 	panic("Not implemented")
 }
 
-func (s *service) buildBlocksEventLoop() {
+func (s *service) consensusRoundRunLoop() {
 
 	for {
 		s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight)
@@ -103,8 +105,8 @@ func (s *service) buildBlocksEventLoop() {
 		}
 
 		// validate the current proposed block
-		if s.blocksForRounds[s.lastCommittedBlockHeight + 1] != nil {
-			err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight + 1])
+		if s.blocksForRounds[s.lastCommittedBlockHeight+1] != nil {
+			err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
 			if err != nil {
 				s.reporting.Error(err)
 				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff

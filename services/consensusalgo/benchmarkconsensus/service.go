@@ -1,7 +1,9 @@
 package benchmarkconsensus
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -11,15 +13,37 @@ type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
 	NodePublicKey() primitives.Ed25519Pkey
 	ConstantConsensusLeader() primitives.Ed25519Pkey
+	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 }
 
 type service struct {
-	config Config
+	gossip           gossiptopics.BenchmarkConsensus
+	blockStorage     services.BlockStorage
+	consensusContext services.ConsensusContext
+	reporting        instrumentation.Reporting
+	config           Config
 }
 
-func NewBenchmarkConsensusAlgo(config Config) services.ConsensusAlgoBenchmark {
+func NewBenchmarkConsensusAlgo(
+	gossip gossiptopics.BenchmarkConsensus,
+	blockStorage services.BlockStorage,
+	consensusContext services.ConsensusContext,
+	reporting instrumentation.Reporting,
+	config Config,
+) services.ConsensusAlgoBenchmark {
+
 	s := &service{
-		config: config,
+		gossip:           gossip,
+		blockStorage:     blockStorage,
+		consensusContext: consensusContext,
+		reporting:        reporting,
+		config:           config,
+	}
+
+	gossip.RegisterBenchmarkConsensusHandler(s)
+	blockStorage.RegisterConsensusBlocksHandler(s)
+	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
+		go s.consensusRoundRunLoop()
 	}
 	return s
 }
