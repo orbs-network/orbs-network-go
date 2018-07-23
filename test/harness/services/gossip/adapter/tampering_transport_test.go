@@ -51,7 +51,10 @@ func TestFailingTamperer(t *testing.T) {
 
 	c.listener.expectNotReceive()
 
-	c.listener.Verify()
+	ok, err := c.listener.Verify()
+	if !ok {
+		t.Fatal(err)
+	}
 }
 
 func TestPausingTamperer(t *testing.T) {
