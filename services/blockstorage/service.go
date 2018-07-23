@@ -2,14 +2,14 @@ package blockstorage
 
 import (
 	"encoding/binary"
+	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 const (
@@ -24,14 +24,14 @@ type service struct {
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
 	reporting                   instrumentation.Reporting
-
+	consensusBlocksHandlers     []handlers.ConsensusBlocksHandler
 }
 
 func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.Reporting) services.BlockStorage {
 	return &service{
 		persistence:  persistence,
 		stateStorage: stateStorage,
-		reporting: reporting,
+		reporting:    reporting,
 	}
 }
 
@@ -86,7 +86,7 @@ func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitI
 }
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
-	panic("Not implemented")
+	s.consensusBlocksHandlers = append(s.consensusBlocksHandlers, handler)
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {

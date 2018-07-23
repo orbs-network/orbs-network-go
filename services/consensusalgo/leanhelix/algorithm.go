@@ -1,13 +1,14 @@
 package leanhelix
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"fmt"
 )
 
 func (s *service) leaderProposeNextBlockIfNeeded() error {
@@ -27,10 +28,19 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	proposedBlockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
 			Header: (&protocol.TransactionsBlockHeaderBuilder{
-				ProtocolVersion: blockstorage.ProtocolVersion,
-				BlockHeight:     primitives.BlockHeight(nextBlockHeight),
+				ProtocolVersion:       blockstorage.ProtocolVersion,
+				BlockHeight:           primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
+				NumSignedTransactions: uint32(len(proposedTransactions.SignedTransactions)),
 			}).Build(),
+			Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
 			SignedTransactions: proposedTransactions.SignedTransactions,
+			BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
+		},
+		ResultsBlock: &protocol.ResultsBlockContainer{
+			Header:              (&protocol.ResultsBlockHeaderBuilder{}).Build(),
+			TransactionReceipts: nil,
+			ContractStateDiffs:  nil,
+			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
 		},
 	}
 
@@ -50,7 +60,9 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 
 	_, err := s.gossip.SendLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
 		Message: &gossipmessages.LeanHelixPrePrepareMessage{
-			BlockPair: blockPair,
+			SignedHeader: (&consensus.LeanHelixBlockRefBuilder{}).Build(),
+			Sender:       (&consensus.LeanHelixSenderSignatureBuilder{}).Build(),
+			BlockPair:    blockPair,
 		},
 	})
 	if err != nil {

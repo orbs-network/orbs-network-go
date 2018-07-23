@@ -5,13 +5,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -45,9 +46,16 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 	for i, _ := range nodes {
 		nodes[i].index = i
 		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
+		constantConsensusLeaderPublicKey := []byte{byte(1)}
 		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
-		isLeader := (i == 0) // TODO: remove the concept of leadership
-		nodes[i].config = config.NewHardCodedConfig(numNodes, nodePublicKey)
+
+		nodes[i].config = config.NewHardCodedConfig(
+			numNodes,
+			nodePublicKey,
+			constantConsensusLeaderPublicKey,
+			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+		)
+
 		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
@@ -58,7 +66,6 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 			nodes[i].statePersistence,
 			instrumentation.NewCompositeReporting([]instrumentation.Reporting{nodes[i].log, nodes[i].latch}),
 			nodes[i].config,
-			isLeader,
 		)
 	}
 	return &acceptanceTestNetwork{
@@ -85,7 +92,7 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: test.TransferTransaction().WithAmount(amount).Builder(),
+			SignedTransaction: builders.TransferTransaction().WithAmount(amount).Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
@@ -103,7 +110,7 @@ func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: test.TransferTransaction().WithInvalidContent().Builder(),
+			SignedTransaction: builders.TransferTransaction().WithInvalidContent().Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{

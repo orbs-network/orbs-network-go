@@ -1,4 +1,4 @@
-package test
+package builders
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
