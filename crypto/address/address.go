@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/ripemd160"
 	"hash/crc32"
 )
@@ -76,11 +77,11 @@ func NewFromPK(publicKey []byte, virtualChainId string, networkId string) (*Addr
 
 func NewFromAddress(a string, publicKey []byte) (*Address, error) {
 	if _, err := IsValid(a); err != nil {
-		return nil, fmt.Errorf("address is invalid: %s", err)
+		return nil, errors.Wrap(err, "address is invalid")
 	}
 
 	if raw, err := Base58Decode(a); err != nil {
-		return nil, fmt.Errorf("address is invalid: %s", err)
+		return nil, errors.Wrap(err, "address is invalid")
 	} else {
 		return NewFromRaw(raw, publicKey)
 	}
@@ -93,7 +94,7 @@ func NewFromRaw(a []byte, publicKey []byte) (*Address, error) {
 	accountId := a[NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE : NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE+ACCOUNT_ID_SIZE]
 
 	if err := validateAddressParts(publicKey, vcidBytes, networkId, version); err != nil {
-		return nil, fmt.Errorf("failed to validate raw address: %s", err)
+		return nil, errors.Wrap(err, "failed to validate raw address: %s")
 	}
 
 	newAddress := Address{
@@ -104,20 +105,20 @@ func NewFromRaw(a []byte, publicKey []byte) (*Address, error) {
 	}
 
 	if aid, err := newAddress.AccountId(); err != nil {
-		return nil, fmt.Errorf("unable to create account id for new address")
+		return nil, errors.Wrap(err, "unable to create account id for new address")
 	} else if !bytes.Equal(aid, accountId) {
-		return nil, fmt.Errorf("account id mismatch, invalid address")
+		return nil, fmt.Errorf("account id mismatch, pk does not match invalid address")
 	}
 
 	cs := binary.BigEndian.Uint32(a[NETWORK_ID_SIZE+VERSION_SIZE+VCHAIN_ID_SIZE+ACCOUNT_ID_SIZE:])
 	if _, err := newAddress.generateFullAddress(); err != nil {
-		return nil, fmt.Errorf("failed to generate full address for new address during checksum test")
+		return nil, errors.Wrap(err, "failed to generate full address for new address during checksum test")
 	}
 
 	if actualCs, err := newAddress.Checksum(); err != nil {
-		return nil, fmt.Errorf("failed to generate full address for new address during checksum test")
+		return nil, errors.Wrap(err, "failed to generate full address for new address during checksum test")
 	} else if cs != actualCs {
-		return nil, fmt.Errorf("checksum invalid, cannot create address")
+		return nil, fmt.Errorf("checksum mismatch, cannot create address")
 	}
 
 	return &newAddress, nil
@@ -166,7 +167,7 @@ func calculateAccountId(publicKey []byte) ([]byte, error) {
 func (a *Address) AccountId() ([]byte, error) {
 	if a.accountId == nil {
 		if result, err := calculateAccountId(a.publicKey); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create account id")
 		} else {
 			a.accountId = result
 		}
@@ -185,7 +186,7 @@ func calculateChecksum(fullAddress []byte) (*uint32, error) {
 func (a *Address) Checksum() (uint32, error) {
 	if a.checksum == nil {
 		if result, err := calculateChecksum(a.fullAddress); err != nil {
-			return 0, err
+			return 0, errors.Wrap(err, "failed to create checksum")
 		} else {
 			a.checksum = result
 		}
@@ -205,6 +206,13 @@ func (a *Address) Raw() ([]byte, error) {
 	}
 }
 
+func (a *Address) String() string {
+	if r, err := a.Raw(); err == nil {
+		return Base58Encode(r)
+	}
+	return "address object invalid"
+}
+
 func Base58Encode(rawAddress []byte) string {
 	bs58 := fmt.Sprintf("%s%s%s", rawAddress[:1], hex.EncodeToString(rawAddress[1:2]), base58.Encode(rawAddress[2:]))
 	return bs58
@@ -214,11 +222,11 @@ func Base58Decode(address string) ([]byte, error) {
 	net := address[0]
 	version, err := hex.DecodeString(address[1:3])
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed in decode version part")
 	}
 	fa, err := base58.Decode([]byte(address[3:]))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed in 'fullAddress' decode part")
 	}
 
 	raw := make([]byte, NETWORK_ID_SIZE)
@@ -264,7 +272,7 @@ func IsValid(address string) (bool, error) {
 
 	version, err := hex.DecodeString(string(address[1:3]))
 	if err != nil {
-		return false, fmt.Errorf("version parsing failed, %s", err)
+		return false, errors.Wrap(err, "version parsing failed")
 	}
 	if !IsValidVersion(version[0]) {
 		return false, fmt.Errorf("invalid version")
@@ -272,7 +280,7 @@ func IsValid(address string) (bool, error) {
 
 	decoded, err := base58.Decode([]byte(address[3:]))
 	if err != nil {
-		return false, fmt.Errorf("base58 decode failed: %s", err)
+		return false, errors.Wrap(err, "base58 decode failed")
 	}
 
 	// decoded: 3-vchain|20-account|4-checksum
@@ -289,7 +297,7 @@ func IsValid(address string) (bool, error) {
 	expectedCs := binary.BigEndian.Uint32(decoded[ACCOUNT_ID_SIZE+VCHAIN_ID_SIZE:])
 	fa := generateFullAddress(net, version[0], vchainID, accountId)
 	if actualCs, err := calculateChecksum(fa); err != nil {
-		return false, fmt.Errorf("failed to calculate checksum: %s", err)
+		return false, errors.Wrap(err, "failed to calculate checksum")
 	} else {
 		if expectedCs != *actualCs {
 			return false, fmt.Errorf("checksum does not match address")

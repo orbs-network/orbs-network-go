@@ -129,14 +129,23 @@ func TestAddressInitializationFailsOnInvalidPK(t *testing.T) {
 	}
 }
 
+func TestAddressInitializationFailsOnInvalidVChainIdHex(t *testing.T) {
+	pk1bytes := pkStringToBytes(t, publicKey1)
+	if _, err := address.NewFromPK(pk1bytes, "1", address.TEST_NETWORK_ID); err == nil {
+		t.Error("address initialized on invalid virtual chain id")
+	}
+}
+
 func TestAddressInitializationFailsOnInvalidVChainId(t *testing.T) {
-	if _, err := address.NewFromPK([]byte{}, "1", address.TEST_NETWORK_ID); err == nil {
+	pk1bytes := pkStringToBytes(t, publicKey1)
+	if _, err := address.NewFromPK(pk1bytes, "010101", address.TEST_NETWORK_ID); err == nil {
 		t.Error("address initialized on invalid virtual chain id")
 	}
 }
 
 func TestAddressInitializationFailsOnInvalidNetworkId(t *testing.T) {
-	if _, err := address.NewFromPK([]byte{}, "010101", "Z"); err == nil {
+	pk1bytes := pkStringToBytes(t, publicKey1)
+	if _, err := address.NewFromPK(pk1bytes, "101010", "Z"); err == nil {
 		t.Error("address initialized on invalid network id")
 	}
 }
@@ -173,8 +182,17 @@ func TestAddressSerializationFailsOnIncorrectChecksum(t *testing.T) {
 func TestAddressSerializationFailsOnPKMismatch(t *testing.T) {
 	pk2bytes := pkStringToBytes(t, publicKey1)
 
-	if _, err := address.NewFromAddress("M00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMqZ9vza", pk2bytes); err == nil {
-		t.Errorf("deserialization worked on a wrong public key: %s", err)
+	if a, err := address.NewFromAddress("M00LUPVrDh4SDHggRBJHpT8hiBb6FEf2rMqZ9vza", pk2bytes); err == nil {
+		t.Errorf("deserialization worked on a wrong public key: %s", a)
+	}
+}
+
+func TestStringerIsValid(t *testing.T) {
+	pk1bytes := pkStringToBytes(t, publicKey1)
+	if a, err := address.NewFromAddress("M00EXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1", pk1bytes); err != nil {
+		t.Errorf("problem with deserialization: %s", err)
+	} else if a.String() != "M00EXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1" {
+		t.Errorf("stringer is incorrect: %s", testAE(a.String(), "M00EXMPnnaWFqRyVxWdhYCgGzpnaL4qBy4N3Qqa1"))
 	}
 }
 
