@@ -8,24 +8,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-func aMessageFrom(sender string) MessagePredicate {
-	return func(data *adapter.TransportData) bool {
-		return string(data.SenderPublicKey) == sender
-	}
-}
-
-func aMessageWithPayloadOver(maxSizeInBytes int) MessagePredicate {
-	return func(data *adapter.TransportData) bool {
-		size := 0
-		for _, payload := range data.Payloads {
-			size += len(payload)
+func ExampleMessagePredicate_sender() {
+	aMessageFrom := func(sender string) MessagePredicate {
+		return func(data *adapter.TransportData) bool {
+			return string(data.SenderPublicKey) == sender
 		}
-
-		return size < maxSizeInBytes
 	}
-}
 
-func ExampleMessagePredicate_Sender() {
 	pred := aMessageFrom("sender1")
 
 	printSender := func(sender string) {
@@ -42,7 +31,18 @@ func ExampleMessagePredicate_Sender() {
 	// got message from other sender
 }
 
-func ExampleMessagePredicate_PayloadSize() {
+func ExampleMessagePredicate_payloadSize() {
+	aMessageWithPayloadOver := func(maxSizeInBytes int) MessagePredicate {
+		return func(data *adapter.TransportData) bool {
+			size := 0
+			for _, payload := range data.Payloads {
+				size += len(payload)
+			}
+
+			return size < maxSizeInBytes
+		}
+	}
+
 	pred := aMessageWithPayloadOver(100)
 
 	printMessage := func(payloads [][]byte) {
@@ -59,13 +59,13 @@ func ExampleMessagePredicate_PayloadSize() {
 	// got message larger than 100 bytes
 }
 
-func ExampleConsensusMessage() {
-	pred := ConsensusMessage(consensus.LEAN_HELIX_COMMIT)
+func ExampleLeanHelixMessage() {
+	pred := LeanHelixMessage(consensus.LEAN_HELIX_COMMIT)
 
 	printMessage := func(msgType consensus.LeanHelixMessageType) {
 
 		header := gossipmessages.HeaderBuilder{
-			Topic: gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+			Topic:     gossipmessages.HEADER_TOPIC_LEAN_HELIX,
 			LeanHelix: msgType,
 		}
 
@@ -81,4 +81,3 @@ func ExampleConsensusMessage() {
 	// Output: got commit message
 	// got message of unexpected type
 }
-
