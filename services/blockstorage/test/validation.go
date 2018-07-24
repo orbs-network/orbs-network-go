@@ -3,15 +3,15 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 )
 
 var _ = Describe("Block storage", func () {
 	When("asked to validate transactions block", func() {
 		It("checks protocol version", func() {
 			driver := NewDriver()
-			block := test.BlockPairBuilder().Build()
+			block := builders.BlockPair().Build()
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())
@@ -28,9 +28,9 @@ var _ = Describe("Block storage", func () {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
 
-			driver.commitBlock(test.BlockPairBuilder().Build())
+			driver.commitBlock(builders.BlockPair().Build())
 
-			block := test.BlockPairBuilder().WithHeight(2).Build()
+			block := builders.BlockPair().WithHeight(2).Build()
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())
@@ -51,7 +51,7 @@ var _ = Describe("Block storage", func () {
 	When("asked to validate results block", func () {
 		It("checks protocol version", func() {
 			driver := NewDriver()
-			block := test.BlockPairBuilder().Build()
+			block := builders.BlockPair().Build()
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())
@@ -70,9 +70,9 @@ var _ = Describe("Block storage", func () {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
 
-			driver.commitBlock(test.BlockPairBuilder().Build())
+			driver.commitBlock(builders.BlockPair().Build())
 
-			block := test.BlockPairBuilder().WithHeight(2).Build()
+			block := builders.BlockPair().WithHeight(2).Build()
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())

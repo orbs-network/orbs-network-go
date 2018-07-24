@@ -3,7 +3,7 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
@@ -14,7 +14,7 @@ var _ = Describe("Block storage", func () {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
 
-			block := test.BlockPairBuilder().Build()
+			block := builders.BlockPair().Build()
 			driver.commitBlock(block)
 
 			output, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight:1})
@@ -29,7 +29,7 @@ var _ = Describe("Block storage", func () {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
 
-			block := test.BlockPairBuilder().Build()
+			block := builders.BlockPair().Build()
 			driver.commitBlock(block)
 
 			result := make(chan *services.GetTransactionsBlockHeaderOutput)
@@ -40,7 +40,7 @@ var _ = Describe("Block storage", func () {
 			}()
 
 			for i:=2; i <=6 ; i++ {
-				driver.commitBlock(test.BlockPairBuilder().WithHeight(i).Build())
+				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 			}
 
 			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
@@ -62,7 +62,7 @@ var _ = Describe("Block storage", func () {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
 
-			block := test.BlockPairBuilder().Build()
+			block := builders.BlockPair().Build()
 			driver.commitBlock(block)
 
 			output, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight:1})
@@ -76,7 +76,7 @@ var _ = Describe("Block storage", func () {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
 
-			block := test.BlockPairBuilder().Build()
+			block := builders.BlockPair().Build()
 			driver.commitBlock(block)
 
 			result := make(chan *services.GetResultsBlockHeaderOutput)
@@ -87,7 +87,7 @@ var _ = Describe("Block storage", func () {
 			}()
 
 			for i:=2; i <=6 ; i++ {
-				driver.commitBlock(test.BlockPairBuilder().WithHeight(i).Build())
+				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 			}
 
 			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
