@@ -13,6 +13,7 @@ func TestInit(t *testing.T) {
 		h.gossip.Reset().When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
 		h.blockStorage.Reset().When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
 		h.createService(ctx)
+
 		ok, err := h.gossip.Verify()
 		if !ok {
 			t.Fatal("Did not register with Gossip:", err)

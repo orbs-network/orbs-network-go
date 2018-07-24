@@ -4,7 +4,10 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -36,7 +39,10 @@ func (s *service) consensusRoundTick() (err error) {
 }
 
 func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
-	return 0
+	if s.lastCommittedBlock == nil {
+		return 0
+	}
+	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 }
 
 func (s *service) generateNewProposedBlock() (*protocol.BlockPairContainer, error) {
@@ -45,4 +51,48 @@ func (s *service) generateNewProposedBlock() (*protocol.BlockPairContainer, erro
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
+	err := s.nonLeaderValidateBlock(blockPair)
+	if err != nil {
+		s.reporting.Error(err) // TODO: wrap with added context
+		return
+	}
+	err = s.nonLeaderCommitAndReply(blockPair)
+	if err != nil {
+		s.reporting.Error(err) // TODO: wrap with added context
+		return
+	}
+}
+
+func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer) error {
+	// block height
+	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+	if blockHeight > s.lastCommittedBlockHeight()+1 {
+		return errors.Errorf("invalid block: future block height %d", blockHeight)
+	}
+	return nil
+}
+
+func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
+	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
+		BlockPair: blockPair,
+	})
+	if err != nil {
+		return err
+	}
+	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeight() {
+		s.lastCommittedBlock = blockPair
+	}
+	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+		RecipientPublicKey: nil,
+		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
+			Status: (&gossipmessages.BenchmarkConsensusStatusBuilder{
+				LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
+			}).Build(),
+			Sender: nil,
+		},
+	})
+	return err
 }

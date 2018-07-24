@@ -1,0 +1,145 @@
+package test
+
+import (
+	"github.com/orbs-network/go-mock"
+	"testing"
+	"time"
+)
+
+func TestEventually(t *testing.T) {
+	num := 1
+	go func() {
+		time.Sleep(1 * time.Millisecond)
+		num = 2
+	}()
+	ok := Eventually(func() bool {
+		return num == 2
+	})
+	if !ok {
+		t.Fatal("Eventually did not discover change to 2")
+	}
+}
+
+func TestConsistently(t *testing.T) {
+	num := 1
+	go func() {
+		time.Sleep(1 * time.Millisecond)
+		num = 2
+	}()
+	ok := Consistently(func() bool {
+		return num == 1
+	})
+	if ok {
+		t.Fatal("Consistently did not discover change to 2")
+	}
+}
+
+type personMock struct {
+	mock.Mock
+}
+
+func (p *personMock) GetName() string {
+	return p.Called().String(0)
+}
+
+func TestEventuallyVerifySuccess(t *testing.T) {
+	p := &personMock{}
+	p.When("GetName").Return("john").Times(1)
+	go func() {
+		time.Sleep(1 * time.Millisecond)
+		p.GetName()
+	}()
+	err := EventuallyVerify(p)
+	if err != nil {
+		t.Fatal("EventuallyVerify did not discover mock was eventually called")
+	}
+}
+
+func TestEventuallyVerifyFailure(t *testing.T) {
+	p := &personMock{}
+	p.When("GetName").Return("john").Times(1)
+	err := EventuallyVerify(p)
+	if err == nil {
+		t.Fatal("EventuallyVerify did not discover mock was not eventually called")
+	}
+}
+
+func TestEventuallyVerifySuccessWithTwoMocks(t *testing.T) {
+	p1 := &personMock{}
+	p1.When("GetName").Return("john").Times(1)
+	p2 := &personMock{}
+	p2.When("GetName").Return("smith").Times(1)
+	go func() {
+		time.Sleep(1 * time.Millisecond)
+		p1.GetName()
+		time.Sleep(15 * time.Millisecond)
+		p2.GetName()
+	}()
+	err := EventuallyVerify(p1, p2)
+	if err != nil {
+		t.Fatal("EventuallyVerify did not discover both mocks were eventually called")
+	}
+}
+
+func TestEventuallyVerifyFailureWithTwoMocks(t *testing.T) {
+	p1 := &personMock{}
+	p1.When("GetName").Return("john").Times(1)
+	p2 := &personMock{}
+	p2.When("GetName").Return("smith").Times(1)
+	go func() {
+		time.Sleep(1 * time.Millisecond)
+		p1.GetName()
+	}()
+	err := EventuallyVerify(p1, p2)
+	if err == nil {
+		t.Fatal("EventuallyVerify did not discover mock was not eventually called")
+	}
+}
+
+func TestConsistentlyVerifySuccess(t *testing.T) {
+	p := &personMock{}
+	p.When("GetName").Return("john").Times(0)
+	err := ConsistentlyVerify(p)
+	if err != nil {
+		t.Fatal("ConsistentlyVerify discovered incorrectly that mock was called")
+	}
+}
+
+func TestConsistentlyVerifyFailure(t *testing.T) {
+	p := &personMock{}
+	p.When("GetName").Return("john").Times(0)
+	go func() {
+		time.Sleep(1 * time.Millisecond)
+		p.GetName()
+	}()
+	err := ConsistentlyVerify(p)
+	if err == nil {
+		t.Fatal("ConsistentlyVerify did not discover mock was called")
+	}
+}
+
+func TestConsistentlyVerifySuccessWithTwoMocks(t *testing.T) {
+	p1 := &personMock{}
+	p1.When("GetName").Return("john").Times(0)
+	p2 := &personMock{}
+	p2.When("GetName").Return("smith").Times(0)
+	err := ConsistentlyVerify(p1, p2)
+	if err != nil {
+		t.Fatal("ConsistentlyVerify discovered incorrectly that mocks were called")
+	}
+}
+
+func TestConsistentlyVerifyFailureWithTwoMocks(t *testing.T) {
+	p1 := &personMock{}
+	p1.When("GetName").Return("john").Times(0)
+	p2 := &personMock{}
+	p2.When("GetName").Return("smith").Times(0)
+	go func() {
+		time.Sleep(15 * time.Millisecond)
+		p2.GetName()
+	}()
+	err := ConsistentlyVerify(p1, p2)
+	if err == nil {
+		t.Fatal("ConsistentlyVerify did not discover mock was called")
+	}
+}

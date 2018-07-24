@@ -12,6 +12,7 @@ func TestLeaderCreatesBlocks(t *testing.T) {
 		h := newHarness(true)
 		h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).AtLeast(1)
 		h.createService(ctx)
+
 		err := test.EventuallyVerify(h.consensusContext)
 		if err != nil {
 			t.Fatal("Did not create block with ConsensusContext:", err)
