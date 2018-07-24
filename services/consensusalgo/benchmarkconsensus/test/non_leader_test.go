@@ -74,10 +74,11 @@ func TestNonLeaderIgnoresFutureBlockHeight(t *testing.T) {
 		h.createService(ctx)
 
 		h.expectIgnoreCommit()
-		h.receiveCommit(builders.BlockPair().
+		b1 := builders.BlockPair().
 			WithHeight(1000).
 			WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()).
-			Build())
+			Build()
+		h.receiveCommit(b1)
 		h.verifyIgnoreCommit(t)
 	})
 }
@@ -111,10 +112,10 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 		h.createService(ctx)
 
 		h.expectIgnoreCommit()
-		b2 := builders.BlockPair().
+		b1 := builders.BlockPair().
 			WithHeight(1).
 			Build()
-		h.receiveCommit(b2)
+		h.receiveCommit(b1)
 		h.verifyIgnoreCommit(t)
 	})
 }
@@ -125,11 +126,11 @@ func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
 		h.createService(ctx)
 
 		h.expectIgnoreCommit()
-		b2 := builders.BlockPair().
+		b1 := builders.BlockPair().
 			WithHeight(1).
 			WithBenchmarkConsensusBlockProof(nil, nonLeaderPublicKey()).
 			Build()
-		h.receiveCommit(b2)
+		h.receiveCommit(b1)
 		h.verifyIgnoreCommit(t)
 	})
 }
