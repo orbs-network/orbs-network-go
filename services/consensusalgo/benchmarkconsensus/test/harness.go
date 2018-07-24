@@ -77,6 +77,22 @@ func (h *harness) createService(ctx context.Context) {
 	)
 }
 
+func (h *harness) expectHandlerRegistrations() {
+	h.gossip.Reset().When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
+	h.blockStorage.Reset().When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
+}
+
+func (h *harness) verifyHandlerRegistrations(t *testing.T) {
+	ok, err := h.gossip.Verify()
+	if !ok {
+		t.Fatal("Did not register with Gossip:", err)
+	}
+	ok, err = h.blockStorage.Verify()
+	if !ok {
+		t.Fatal("Did not register with BlockStorage:", err)
+	}
+}
+
 func (h *harness) expectBlockCreation() {
 	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).AtLeast(1)
 }
