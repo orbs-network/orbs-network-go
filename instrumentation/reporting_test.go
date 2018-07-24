@@ -1,13 +1,13 @@
 package instrumentation
 
 import (
-	"testing"
-	"fmt"
-	"runtime"
-	"time"
 	"encoding/json"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
+	"runtime"
 	"strings"
+	"testing"
+	"time"
 )
 
 const NANOSECONDS_IN_A_SECOND = 1000000000
@@ -17,16 +17,16 @@ const (
 )
 
 const (
-	TransactionAccepted = "Transaction accepted"
+	TransactionAccepted  = "Transaction accepted"
 	TransactionProcessed = "Transaction processed"
 )
 
 type BasicLogger interface {
-	Log(level string, message string, params... *Field)
-	Info(message string, params... *Field)
+	Log(level string, message string, params ...*Field)
+	Info(message string, params ...*Field)
 	Metric(name string, value *Field)
-	For(params... *Field) BasicLogger
-	Meter(name string, params... *Field) BasicMeter
+	For(params ...*Field) BasicLogger
+	Meter(name string, params ...*Field) BasicMeter
 	Prefixes() []*Field
 }
 
@@ -35,14 +35,14 @@ type BasicMeter interface {
 }
 
 type basicLogger struct {
-	prefixes []*Field
+	prefixes     []*Field
 	nestingLevel int
 }
 
 type basicMeter struct {
-	name string
-	start int64
-	end int64
+	name   string
+	start  int64
+	end    int64
 	logger BasicLogger
 
 	params []*Field
@@ -60,13 +60,13 @@ const (
 )
 
 type Field struct {
-	Key string
+	Key  string
 	Type FieldType
 
 	String string
-	Int int64
-	Uint uint64
-	Bytes []byte
+	Int    int64
+	Uint   uint64
+	Bytes  []byte
 
 	Float float64
 }
@@ -120,16 +120,16 @@ func getCaller(level int) (function string, source string) {
 		return "n/a", "n/a"
 	}
 
-	fun := runtime.FuncForPC(fpcs[0]-1)
+	fun := runtime.FuncForPC(fpcs[0] - 1)
 	if fun == nil {
 		return "n/a", "n/a"
 	}
 
-	file, line := fun.FileLine(fpcs[0]-1)
+	file, line := fun.FileLine(fpcs[0] - 1)
 	return fun.Name(), fmt.Sprintf("%s:%d", file, line)
 }
 
-func GetLogger(params... *Field) BasicLogger {
+func GetLogger(params ...*Field) BasicLogger {
 	logger := &basicLogger{prefixes: params, nestingLevel: 4}
 
 	return logger
@@ -139,9 +139,9 @@ func (b *basicLogger) Prefixes() []*Field {
 	return b.prefixes
 }
 
-func (b *basicLogger) For(params... *Field) BasicLogger {
+func (b *basicLogger) For(params ...*Field) BasicLogger {
 	prefixes := append(b.prefixes, params...)
-	return &basicLogger{ prefixes: prefixes, nestingLevel: b.nestingLevel}
+	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel}
 }
 
 func (b *basicLogger) Metric(metric string, value *Field) {
@@ -165,7 +165,7 @@ func (f *Field) Value() interface{} {
 	return nil
 }
 
-func (b *basicLogger) Log(level string, message string, params... *Field) {
+func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	params = append(params, b.prefixes...)
 
 	logLine := make(map[string]interface{})
@@ -187,27 +187,30 @@ func (b *basicLogger) Log(level string, message string, params... *Field) {
 	fmt.Println(string(logLineAsJson))
 }
 
-func (b *basicLogger) Info(message string, params... *Field) {
+func (b *basicLogger) Info(message string, params ...*Field) {
 	b.Log("info", message, params...)
 }
 
-func (b *basicLogger) Meter(name string, params... *Field) BasicMeter {
+func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
 	meterLogger := &basicLogger{nestingLevel: 5, prefixes: b.prefixes}
 	return &basicMeter{name: name, start: time.Now().UnixNano(), logger: meterLogger, params: params}
 }
 
 func (m *basicMeter) Done() {
 	m.end = time.Now().UnixNano()
-	diff := float64(m.end - m.start) / NANOSECONDS_IN_A_SECOND
+	diff := float64(m.end-m.start) / NANOSECONDS_IN_A_SECOND
 
 	var names []string
 	for _, prefix := range m.logger.Prefixes() {
+		if prefix.Key == "node" {
+			continue
+		}
 		names = append(names, fmt.Sprintf("%s", prefix.Value()))
 	}
 
 	names = append(names, m.name)
 
-	metricName := strings.Join(names,"-")
+	metricName := strings.Join(names, "-")
 
 	m.logger.Metric(metricName, Float64("process-time", diff))
 }
