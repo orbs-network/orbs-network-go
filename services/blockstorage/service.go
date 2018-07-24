@@ -3,7 +3,6 @@ package blockstorage
 import (
 	"encoding/binary"
 	"fmt"
-	"time"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -11,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 const (
@@ -71,14 +71,14 @@ func (s *service) lookForTransactionsBlockHeader(height primitives.BlockHeight) 
 	}
 
 	return &services.GetTransactionsBlockHeaderOutput{
-		TransactionsBlockProof: txBlock.BlockProof,
-		TransactionsBlockHeader: txBlock.Header,
+		TransactionsBlockProof:    txBlock.BlockProof,
+		TransactionsBlockHeader:   txBlock.Header,
 		TransactionsBlockMetadata: txBlock.Metadata,
 	}, nil
 }
 
 func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
-	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight - s.lastCommittedBlockHeight <= 5 {
+	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
 		c := make(chan *services.GetTransactionsBlockHeaderOutput)
 
 		go func() {
@@ -86,7 +86,7 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 			const interval = 10
 			const timeout = 10000
 
-			for i:=0; i < timeout; i+= interval {
+			for i := 0; i < timeout; i += interval {
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.lookForTransactionsBlockHeader(input.BlockHeight)
 
@@ -100,7 +100,7 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 			}
 		}()
 
-		result:= <-c
+		result := <-c
 		return result, nil
 	}
 
@@ -115,13 +115,13 @@ func (s *service) lookForResultsBlockHeader(height primitives.BlockHeight) (*ser
 	}
 
 	return &services.GetResultsBlockHeaderOutput{
-		ResultsBlockProof: txBlock.BlockProof,
+		ResultsBlockProof:  txBlock.BlockProof,
 		ResultsBlockHeader: txBlock.Header,
 	}, nil
 }
 
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
-	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight - s.lastCommittedBlockHeight <= 5 {
+	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
 		c := make(chan *services.GetResultsBlockHeaderOutput)
 
 		go func() {
@@ -129,7 +129,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 			const interval = 10
 			const timeout = 10000
 
-			for i:=0; i < timeout; i+= interval {
+			for i := 0; i < timeout; i += interval {
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.lookForResultsBlockHeader(input.BlockHeight)
 
@@ -143,7 +143,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 			}
 		}()
 
-		result:= <-c
+		result := <-c
 		return result, nil
 	}
 

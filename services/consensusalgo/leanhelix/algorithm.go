@@ -14,7 +14,10 @@ import (
 func (s *service) leaderProposeNextBlockIfNeeded() error {
 	nextBlockHeight := s.lastCommittedBlockHeight + 1
 
-	if s.blocksForRounds[nextBlockHeight] != nil {
+	s.blocksForRoundsMutex.RLock()
+	nextBlock := s.blocksForRounds[nextBlockHeight]
+	s.blocksForRoundsMutex.RUnlock()
+	if nextBlock != nil {
 		return nil
 	}
 
@@ -37,14 +40,19 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 			BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
 		},
 		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:              (&protocol.ResultsBlockHeaderBuilder{}).Build(),
+			Header: (&protocol.ResultsBlockHeaderBuilder{
+				ProtocolVersion: blockstorage.ProtocolVersion,
+				BlockHeight:     primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
+			}).Build(),
 			TransactionReceipts: nil,
 			ContractStateDiffs:  nil,
 			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
 		},
 	}
 
+	s.blocksForRoundsMutex.Lock()
 	s.blocksForRounds[nextBlockHeight] = proposedBlockPair
+	s.blocksForRoundsMutex.Unlock()
 
 	s.reporting.Infof("Proposed block pair for height %d", nextBlockHeight)
 
@@ -82,7 +90,10 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 
 func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPairContainer) error {
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+
+	s.blocksForRoundsMutex.Lock()
 	s.blocksForRounds[blockHeight] = blockPair
+	s.blocksForRoundsMutex.Unlock()
 
 	s.reporting.Infof("Voting as validator for block of height %d", blockHeight)
 	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
@@ -100,7 +111,11 @@ func (s *service) leaderAddVoteFromValidator() {
 
 func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 	blockHeight := s.lastCommittedBlockHeight + 1
+
+	s.blocksForRoundsMutex.RLock()
 	blockPair, found := s.blocksForRounds[blockHeight]
+	s.blocksForRoundsMutex.RUnlock()
+
 	if !found {
 		err := fmt.Errorf("trying to commit a block of height %d that wasn't prepared", blockHeight)
 		s.reporting.Error(err)
@@ -111,6 +126,9 @@ func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 		BlockPair: blockPair,
 	})
 
+	s.blocksForRoundsMutex.Lock()
 	delete(s.blocksForRounds, blockHeight)
+	s.blocksForRoundsMutex.Unlock()
+
 	return blockHeight
 }

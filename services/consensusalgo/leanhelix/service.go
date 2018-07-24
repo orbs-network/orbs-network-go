@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"sync"
 	"time"
 )
 
@@ -19,14 +20,16 @@ type Config interface {
 }
 
 type service struct {
-	gossip                   gossiptopics.LeanHelix
-	blockStorage             services.BlockStorage
-	transactionPool          services.TransactionPool
-	consensusContext         services.ConsensusContext
-	reporting                instrumentation.Reporting
-	config                   Config
+	gossip           gossiptopics.LeanHelix
+	blockStorage     services.BlockStorage
+	transactionPool  services.TransactionPool
+	consensusContext services.ConsensusContext
+	reporting        instrumentation.Reporting
+	config           Config
+
 	lastCommittedBlockHeight primitives.BlockHeight
 	blocksForRounds          map[primitives.BlockHeight]*protocol.BlockPairContainer
+	blocksForRoundsMutex     *sync.RWMutex
 	votesForActiveRound      chan bool
 }
 
@@ -48,6 +51,7 @@ func NewLeanHelixConsensusAlgo(
 		config:           config,
 		lastCommittedBlockHeight: 0, // TODO: improve startup
 		blocksForRounds:          make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
+		blocksForRoundsMutex:     &sync.RWMutex{},
 	}
 
 	gossip.RegisterLeanHelixHandler(s)
@@ -105,8 +109,11 @@ func (s *service) consensusRoundRunLoop() {
 		}
 
 		// validate the current proposed block
-		if s.blocksForRounds[s.lastCommittedBlockHeight+1] != nil {
-			err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
+		s.blocksForRoundsMutex.RLock()
+		activeBlock := s.blocksForRounds[s.lastCommittedBlockHeight+1]
+		s.blocksForRoundsMutex.RUnlock()
+		if activeBlock != nil {
+			err := s.leaderCollectVotesForBlock(activeBlock)
 			if err != nil {
 				s.reporting.Error(err)
 				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff
