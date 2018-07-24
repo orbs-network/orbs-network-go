@@ -15,21 +15,17 @@ const (
 
 const (
 	TransactionAccepted = "Transaction accepted"
+	TransactionProcessed = "Transaction processed"
 )
 
 type BasicLogger interface {
-	Log(level string, flow string, message string, params... *Field)
-	Info(flow string, message string, params... *Field)
-}
-
-type jsonLogger struct {
-
+	Log(level string, message string, params... *Field)
+	Info(message string, params... *Field)
+	For(params... *Field) BasicLogger
 }
 
 type basicLogger struct {
-	node    string
-	vchain  int
-	service string
+	prefixes []*Field
 }
 
 type FieldType uint8
@@ -84,11 +80,11 @@ func Uint64(key string, value uint64) *Field {
 	return &Field{Key: key, Uint: value, Type: UintType}
 }
 
-func getCaller() (function string, source string) {
+func getCaller(level int) (function string, source string) {
 	fpcs := make([]uintptr, 1)
 
 	// skip levels to get to the caller of logger function
-	n := runtime.Callers(4, fpcs)
+	n := runtime.Callers(level, fpcs)
 	if n == 0 {
 		return "n/a", "n/a"
 	}
@@ -102,15 +98,19 @@ func getCaller() (function string, source string) {
 	return fun.Name(), fmt.Sprintf("%s:%d", file, line)
 }
 
-func (b *basicLogger) Log(level string, flow string, message string, params... *Field) {
-	enrichment := []*Field{
-		String("flow", flow),
-		String("node", b.node),
-		Int("vchain", b.vchain),
-		String("service", b.service),
-	}
+func getLogger(params... *Field) BasicLogger {
+	logger := &basicLogger{prefixes: params}
 
-	params = append(enrichment, params...)
+	return logger
+}
+
+func (b *basicLogger) For(params... *Field) BasicLogger {
+	prefixes := append(b.prefixes, params...)
+	return &basicLogger{ prefixes: prefixes}
+}
+
+func (b *basicLogger) Log(level string, message string, params... *Field) {
+	params = append(params, b.prefixes...)
 
 	logLine := make(map[string]interface{})
 
@@ -118,7 +118,7 @@ func (b *basicLogger) Log(level string, flow string, message string, params... *
 	logLine["timestamp"] = float64(time.Now().UTC().UnixNano()) / 1000000000
 	logLine["message"] = message
 
-	function, source := getCaller()
+	function, source := getCaller(4)
 	logLine["function"] = function
 	logLine["source"] = source
 
@@ -140,18 +140,24 @@ func (b *basicLogger) Log(level string, flow string, message string, params... *
 	fmt.Println(string(logLineAsJson))
 }
 
-func (j *basicLogger) Info(flow string, message string, params... *Field) {
-	j.Log("info", flow, message, params...)
+func (b *basicLogger) Info(message string, params... *Field) {
+	b.Log("info", message, params...)
 }
 
-func getLogger(node string, vchain int, service string) BasicLogger {
-	logger := &basicLogger{node, vchain, service}
+func TestReport(t *testing.T) {
+	serviceLogger := getLogger(String("node", "node1"), String("service", "public-api"))
+	serviceLogger.Info("Service initialized")
 
-	return logger
-}
+	txId := String("txId", "1234567")
 
-func TestReporint(t *testing.T) {
-	logger := getLogger("node1", 123, "public-api")
+	txFlowLogger := serviceLogger.For(String("flow", TransactionFlow))
+	txFlowLogger.Info(TransactionAccepted, txId, Bytes("payload", []byte{1, 2, 3, 99}))
 
-	logger.Info(TransactionFlow, TransactionAccepted, String("txId", "1234567"), Bytes("payload", []byte{1, 2, 3, 99}))
+	prefixedLogger := txFlowLogger.For(String("one-more-prefix", "one-more-value"))
+
+	prefixedLogger.Info(TransactionProcessed, txId)
+
+	//meter := serviceLogger.Meter("tx-process-time")
+	//defer meter.Done()
+
 }
