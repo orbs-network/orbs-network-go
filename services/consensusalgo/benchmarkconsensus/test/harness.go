@@ -77,6 +77,10 @@ func (h *harness) createService(ctx context.Context) {
 	)
 }
 
+func nonLeaderPublicKey() primitives.Ed25519Pkey {
+	return []byte{0x99}
+}
+
 func (h *harness) expectHandlerRegistrations() {
 	h.gossip.Reset().When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
 	h.blockStorage.Reset().When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)

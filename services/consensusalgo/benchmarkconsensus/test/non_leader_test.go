@@ -118,3 +118,18 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 		h.verifyIgnoreCommit(t)
 	})
 }
+
+func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(false)
+		h.createService(ctx)
+
+		h.expectIgnoreCommit()
+		b2 := builders.BlockPair().
+			WithHeight(1).
+			WithBenchmarkConsensusBlockProof(nil, nonLeaderPublicKey()).
+			Build()
+		h.receiveCommit(b2)
+		h.verifyIgnoreCommit(t)
+	})
+}

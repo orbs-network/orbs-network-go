@@ -102,6 +102,9 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 		return errors.Errorf("incorrect block proof type: %s", blockPair.ResultsBlock.BlockProof.Type())
 	}
 	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
+	if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
+		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
+	}
 	txHash := crypto.CalcTransactionsBlockHash(blockPair)
 	rxHash := crypto.CalcResultsBlockHash(blockPair)
 	xorHash := logic.CalcXor(txHash, rxHash)
