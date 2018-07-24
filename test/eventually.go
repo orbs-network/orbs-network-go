@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-const iterations = 50
-const interval = 2 * time.Millisecond
+const iterations = 10
+const interval = 5 * time.Millisecond
 
 func Eventually(f func() bool) bool {
 	for i := 0; i < iterations; i++ {

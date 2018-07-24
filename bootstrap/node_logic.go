@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
@@ -31,6 +32,7 @@ type nodeLogic struct {
 }
 
 func NewNodeLogic(
+	ctx context.Context,
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
@@ -50,7 +52,7 @@ func NewNodeLogic(
 
 	var consensusAlgos []services.ConsensusAlgo
 	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
-	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(gossip, blockStorage, consensusContext, reporting, nodeConfig))
+	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossip, blockStorage, consensusContext, reporting, nodeConfig))
 
 	return &nodeLogic{
 		publicApi:      publicApi,

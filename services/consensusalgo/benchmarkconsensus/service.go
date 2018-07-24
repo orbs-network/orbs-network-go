@@ -1,8 +1,10 @@
 package benchmarkconsensus
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -22,9 +24,12 @@ type service struct {
 	consensusContext services.ConsensusContext
 	reporting        instrumentation.Reporting
 	config           Config
+
+	activeBlock *protocol.BlockPairContainer
 }
 
 func NewBenchmarkConsensusAlgo(
+	ctx context.Context,
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
@@ -43,7 +48,7 @@ func NewBenchmarkConsensusAlgo(
 	gossip.RegisterBenchmarkConsensusHandler(s)
 	blockStorage.RegisterConsensusBlocksHandler(s)
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
-		go s.consensusRoundRunLoop()
+		go s.consensusRoundRunLoop(ctx)
 	}
 	return s
 }
@@ -61,7 +66,7 @@ func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*
 }
 
 func (s *service) HandleBenchmarkConsensusCommit(input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	return nil, nil
 }
 
 func (s *service) HandleBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {

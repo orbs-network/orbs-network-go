@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -40,7 +41,7 @@ type networkNode struct {
 	nodeLogic        bootstrap.NodeLogic
 }
 
-func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
+func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork {
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
@@ -61,6 +62,7 @@ func NewTestNetwork(numNodes uint32) AcceptanceTestNetwork {
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence(nodes[i].config)
 		nodes[i].nodeLogic = bootstrap.NewNodeLogic(
+			ctx,
 			sharedTamperingTransport,
 			nodes[i].blockPersistence,
 			nodes[i].statePersistence,
