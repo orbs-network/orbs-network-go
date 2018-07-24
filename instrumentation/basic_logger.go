@@ -4,22 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
+	"io"
+	"os"
 	"runtime"
-	"strings"
-	"testing"
 	"time"
 )
 
-const NANOSECONDS_IN_A_SECOND = 1000000000
-
-const (
-	TransactionFlow = "TransactionFlow"
-)
-
-const (
-	TransactionAccepted  = "Transaction accepted"
-	TransactionProcessed = "Transaction processed"
-)
+const NanosecondsInASecond = 1000000000
 
 type BasicLogger interface {
 	Log(level string, message string, params ...*Field)
@@ -28,24 +19,13 @@ type BasicLogger interface {
 	For(params ...*Field) BasicLogger
 	Meter(name string, params ...*Field) BasicMeter
 	Prefixes() []*Field
-}
-
-type BasicMeter interface {
-	Done()
+	WithOutput(writer io.Writer) BasicLogger
 }
 
 type basicLogger struct {
+	output       io.Writer
 	prefixes     []*Field
 	nestingLevel int
-}
-
-type basicMeter struct {
-	name   string
-	start  int64
-	end    int64
-	logger BasicLogger
-
-	params []*Field
 }
 
 type FieldType uint8
@@ -140,7 +120,7 @@ func getCaller(level int) (function string, source string) {
 }
 
 func GetLogger(params ...*Field) BasicLogger {
-	logger := &basicLogger{prefixes: params, nestingLevel: 4}
+	logger := &basicLogger{prefixes: params, nestingLevel: 4, output: os.Stdout}
 
 	return logger
 }
@@ -151,7 +131,7 @@ func (b *basicLogger) Prefixes() []*Field {
 
 func (b *basicLogger) For(params ...*Field) BasicLogger {
 	prefixes := append(b.prefixes, params...)
-	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel}
+	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel, output: b.output}
 }
 
 func (b *basicLogger) Metric(metric string, value *Field) {
@@ -185,7 +165,7 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
-	logLine["timestamp"] = float64(time.Now().UTC().UnixNano()) / NANOSECONDS_IN_A_SECOND
+	logLine["timestamp"] = float64(time.Now().UTC().UnixNano()) / NanosecondsInASecond
 	logLine["message"] = message
 
 	function, source := getCaller(b.nestingLevel)
@@ -198,7 +178,7 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 
 	logLineAsJson, _ := json.Marshal(logLine)
 
-	fmt.Println(string(logLineAsJson))
+	fmt.Fprintln(b.output, string(logLineAsJson))
 }
 
 func (b *basicLogger) Info(message string, params ...*Field) {
@@ -206,43 +186,11 @@ func (b *basicLogger) Info(message string, params ...*Field) {
 }
 
 func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
-	meterLogger := &basicLogger{nestingLevel: 5, prefixes: b.prefixes}
+	meterLogger := &basicLogger{nestingLevel: 5, prefixes: b.prefixes, output: b.output}
 	return &basicMeter{name: name, start: time.Now().UnixNano(), logger: meterLogger, params: params}
 }
 
-func (m *basicMeter) Done() {
-	m.end = time.Now().UnixNano()
-	diff := float64(m.end-m.start) / NANOSECONDS_IN_A_SECOND
-
-	var names []string
-	for _, prefix := range m.logger.Prefixes() {
-		if prefix.Type == NodeType {
-			continue
-		}
-		names = append(names, fmt.Sprintf("%s", prefix.Value()))
-	}
-
-	names = append(names, m.name)
-	metricName := strings.Join(names, "-")
-
-	m.logger.Metric(metricName, Float64("process-time", diff))
-}
-
-func TestReport(t *testing.T) {
-	serviceLogger := GetLogger(Node("node1"), Service("public-api"))
-	serviceLogger.Info("Service initialized")
-
-	txId := String("txId", "1234567")
-
-	txFlowLogger := serviceLogger.For(String("flow", TransactionFlow))
-	txFlowLogger.Info(TransactionAccepted, txId, Bytes("payload", []byte{1, 2, 3, 99}))
-
-	prefixedLogger := txFlowLogger.For(String("one-more-prefix", "one-more-value"))
-
-	prefixedLogger.Info(TransactionProcessed, txId)
-
-	meter := txFlowLogger.Meter("tx-process-time", txId)
-	defer meter.Done()
-
-	time.Sleep(1 * time.Millisecond)
+func (b *basicLogger) WithOutput(writer io.Writer) BasicLogger {
+	b.output = writer
+	return b
 }
