@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"fmt"
 )
 
 type service struct {
@@ -31,38 +32,27 @@ func NewVirtualMachine(
 }
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	balance := input.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()
-
-	existingState, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
-
-	if err == nil && len(existingState.StateRecords) > 0 {
-		balance += binary.LittleEndian.Uint64(existingState.StateRecords[0].Value())
-	}
-
-	byteArray := make([]byte, 8)
-	binary.LittleEndian.PutUint64(byteArray, balance)
-
-	var state []*protocol.StateRecordBuilder
-	transactionStateDiff := &protocol.StateRecordBuilder{
-		Key:   primitives.Ripmd160Sha256("balance"),
-		Value: byteArray,
-	}
-	state = append(state, transactionStateDiff)
-
-	output := &services.ProcessTransactionSetOutput{ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state, ContractName: "BenchmarkToken"}).Build()}}
-	return output, nil
+	panic("Not implemented")
 }
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
-	sum := uint64(0)
 
-	results, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
-	if err == nil {
-		for _, t := range results.StateRecords {
-			sum += binary.LittleEndian.Uint64(t.Value())
-		}
+	// TODO XXX this implementation bakes an implementation of an arbitraty contract function.
+	// The function scans a set of keys derived from the current block height and sums up all their values.
+
+	// todo get list of keys to read from "hard codded contract func"
+	blockHeight, _ := s.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+	keys := make([]primitives.Ripmd160Sha256, 0 , blockHeight.LastCommittedBlockHeight)
+	for i := uint64(0);i < uint64(blockHeight.LastCommittedBlockHeight) +  uint64(1);i++ {
+		keys = append(keys, primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", i)))
 	}
 
+	readKeys := &services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: keys}
+	results, _ := s.stateStorage.ReadKeys(readKeys)
+	sum := uint64(0)
+	for _, t := range results.StateRecords {
+		sum += binary.LittleEndian.Uint64(t.Value())
+	}
 	arg := (&protocol.MethodArgumentBuilder{
 		Name:        "balance",
 		Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE,

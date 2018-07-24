@@ -54,7 +54,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	s.lastCommittedBlockTimestamp = txBlockHeader.Timestamp()
 
 	// TODO: why are we updating the state? nothing about this in the spec
-	s.updateStateStorage(input.BlockPair.TransactionsBlock)
+	s.updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(input.BlockPair.TransactionsBlock)
 
 	s.reporting.Infof("Committed block of height %d", txBlockHeader.BlockHeight())
 
@@ -140,26 +140,19 @@ func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol
 	}
 }
 
-func (s *service) updateStateStorage(txBlock *protocol.TransactionsBlockContainer) {
-	balance := txBlock.SignedTransactions[0].Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()
-
-	existingState, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: []primitives.Ripmd160Sha256{primitives.Ripmd160Sha256("balance")}})
-
-	if err == nil && len(existingState.StateRecords) > 0 {
-		balance += binary.LittleEndian.Uint64(existingState.StateRecords[0].Value())
-	}
-
-	byteArray := make([]byte, 8)
-	binary.LittleEndian.PutUint64(byteArray, balance)
-
+func (s *service) updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(txBlock *protocol.TransactionsBlockContainer) {
+	// todo need to generate key from hard coded contract
 	var state []*protocol.StateRecordBuilder
-	transactionStateDiff := &protocol.StateRecordBuilder{
-		Key:   primitives.Ripmd160Sha256("balance"),
-		Value: byteArray,
+	for _, i := range txBlock.SignedTransactions {
+		byteArray := make([]byte, 8)
+		binary.LittleEndian.PutUint64(byteArray, uint64(i.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
+		transactionStateDiff := &protocol.StateRecordBuilder{
+			Key:   primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", uint64(txBlock.Header.BlockHeight()))),
+			Value: byteArray,
+		}
+		state = append(state, transactionStateDiff)
 	}
-	state = append(state, transactionStateDiff)
-
-	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state, ContractName: "BenchmarkToken"}).Build()}
+	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{ContractName: "BenchmarkToken", StateDiffs: state}).Build()}
 	s.stateStorage.CommitStateDiff(
 		&services.CommitStateDiffInput{
 			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: txBlock.Header.BlockHeight()}).Build(),

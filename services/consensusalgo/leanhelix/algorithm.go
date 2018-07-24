@@ -24,10 +24,6 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 		return err
 	}
 
-	//s.consensusContext.RequestNewTransactionsBlock()
-	//
-	//RequestNewResultsBlock(services.RequestNewResultsBlockInput{})
-	//
 	proposedBlockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
 			Header: (&protocol.TransactionsBlockHeaderBuilder{
