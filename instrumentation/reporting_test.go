@@ -52,6 +52,8 @@ type FieldType uint8
 
 const (
 	NoType = iota
+	NodeType
+	ServiceType
 	StringType
 	IntType
 	UintType
@@ -69,6 +71,14 @@ type Field struct {
 	Bytes  []byte
 
 	Float float64
+}
+
+func Node(value string) *Field {
+	return &Field{Key: "node", String: value, Type: NodeType}
+}
+
+func Service(value string) *Field {
+	return &Field{Key: "service", String: value, Type: ServiceType}
 }
 
 func String(key string, value string) *Field {
@@ -150,6 +160,10 @@ func (b *basicLogger) Metric(metric string, value *Field) {
 
 func (f *Field) Value() interface{} {
 	switch f.Type {
+	case NodeType:
+		return f.String
+	case ServiceType:
+		return f.String
 	case StringType:
 		return f.String
 	case IntType:
@@ -202,21 +216,20 @@ func (m *basicMeter) Done() {
 
 	var names []string
 	for _, prefix := range m.logger.Prefixes() {
-		if prefix.Key == "node" {
+		if prefix.Type == NodeType {
 			continue
 		}
 		names = append(names, fmt.Sprintf("%s", prefix.Value()))
 	}
 
 	names = append(names, m.name)
-
 	metricName := strings.Join(names, "-")
 
 	m.logger.Metric(metricName, Float64("process-time", diff))
 }
 
 func TestReport(t *testing.T) {
-	serviceLogger := GetLogger(String("node", "node1"), String("service", "public-api"))
+	serviceLogger := GetLogger(Node("node1"), Service("public-api"))
 	serviceLogger.Info("Service initialized")
 
 	txId := String("txId", "1234567")
