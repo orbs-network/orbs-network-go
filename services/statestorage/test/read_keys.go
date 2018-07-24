@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"bytes"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 )
 
 //TODO a case where we pass a set of keys to ReadKeys(), and at least one key has no matching value
@@ -77,39 +78,20 @@ var _ = Describe("Commit a State Diff", func() {
 	It("persists the state into storage", func() {
 		d := newStateStorageDriver()
 
-		v1 := []byte("v1")
-		v2 := []byte("v2")
-		v3 := []byte("v3")
+		contract1 := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "v1").WithStringRecord("key2", "v2").Build()
+		contract2 := builders.ContractStateDiff().WithContractName("contract2").WithStringRecord("key1", "v3").Build()
 
-		input := &services.CommitStateDiffInput{
-			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 1}).Build(),
-			ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
-				ContractName: primitives.ContractName("contract1"),
-				StateDiffs: []*protocol.StateRecordBuilder{
-					{Key: []byte("key1"), Value: v1},
-					{Key: []byte("key2"), Value: v2},
-				},
-			}).Build(),
-				(&protocol.ContractStateDiffBuilder{
-					ContractName: primitives.ContractName("contract2"),
-					StateDiffs: []*protocol.StateRecordBuilder{
-						{Key: []byte("key1"), Value: v3},
-					},
-				}).Build(),
-			},
-		}
-
-		d.service.CommitStateDiff(input)
+		d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).WithDiff(contract2).Build())
 
 		output, err := d.readSingleKey("contract1", "key1")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(output).To(Equal(v1))
+		Expect(output).To(Equal([]byte("v1")))
 		output2, err := d.readSingleKey("contract1", "key2")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(output2).To(Equal(v2))
+		Expect(output2).To(Equal([]byte("v2")))
 		output3, err := d.readSingleKey("contract2", "key1")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(output3).To(Equal(v3))
+		Expect(output3).To(Equal([]byte("v3")))
 
 	})
 
@@ -117,18 +99,9 @@ var _ = Describe("Commit a State Diff", func() {
 		When("too high", func() {
 			It("does nothing and return desired height", func() {
 				d := newStateStorageDriver()
-				v1 := []byte("v1")
-				input := &services.CommitStateDiffInput{
-					ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 3}).Build(),
-					ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
-						ContractName: primitives.ContractName("contract1"),
-						StateDiffs: []*protocol.StateRecordBuilder{
-							{Key: []byte("key1"), Value: v1},
-						},
-					}).Build()},
-				}
 
-				result, err := d.service.CommitStateDiff(input)
+				diff := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "whatever").Build()
+				result, err := d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(3).WithDiff(diff).Build())
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(1)))
 
@@ -139,40 +112,28 @@ var _ = Describe("Commit a State Diff", func() {
 		When("too low", func() {
 			It("does nothing and return desired height", func() {
 				d := newStateStorageDriver()
-				v1 := []byte("v1")
-				v2 := []byte("v2")
-				input := &services.CommitStateDiffInput{
-					ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 1}).Build(),
-					ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
-						ContractName: primitives.ContractName("contract1"),
-						StateDiffs: []*protocol.StateRecordBuilder{
-							{Key: []byte("key1"), Value: v1},
-						},
-					}).Build()},
-				}
-				input2 := &services.CommitStateDiffInput{
-					ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 2}).Build(),
-					ContractStateDiffs: []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{
-						ContractName: primitives.ContractName("contract1"),
-						StateDiffs: []*protocol.StateRecordBuilder{
-							{Key: []byte("key1"), Value: v2},
-						},
-					}).Build()},
-				}
+				v1 := "v1"
+				v2 := "v2"
 
-				d.service.CommitStateDiff(input)
-				d.service.CommitStateDiff(input2)
-				result, err := d.service.CommitStateDiff(input)
+				contractDiff := builders.ContractStateDiff().WithContractName("contract1")
+				diffAtHeight1 := CommitStateDiff().WithBlockHeight(1).WithDiff(contractDiff.WithStringRecord("key1", v1).Build()).Build()
+				diffAtHeight2 := CommitStateDiff().WithBlockHeight(2).WithDiff(contractDiff.WithStringRecord("key1", v2).Build()).Build()
+
+				d.service.CommitStateDiff(diffAtHeight1)
+				d.service.CommitStateDiff(diffAtHeight2)
+
+				result, err := d.service.CommitStateDiff(diffAtHeight1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(3)))
 
 				output, err := d.readSingleKey("contract1", "key1")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(output).To(Equal(v2))
+				Expect(output).To(Equal([]byte(v2)))
 			})
 		})
 	})
 })
+
 
 type driver struct {
 	service     services.StateStorage
