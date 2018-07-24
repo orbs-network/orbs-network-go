@@ -1,27 +1,27 @@
 package statestorage
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"fmt"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type service struct {
-	persistence        adapter.StatePersistence
-	lastCommittedBlock primitives.BlockHeight
+	persistence            adapter.StatePersistence
+	lastResultsBlockHeader *protocol.ResultsBlockHeader
 }
 
 func NewStateStorage(persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
-		persistence: persistence,
+		persistence:            persistence,
+		lastResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(),
 	}
 }
 
 func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
 	committedBlock := input.ResultsBlockHeader.BlockHeight()
-	if lastCommittedBlock := s.lastCommittedBlock; lastCommittedBlock+1 != committedBlock {
+	if lastCommittedBlock := s.lastResultsBlockHeader.BlockHeight(); lastCommittedBlock+1 != committedBlock {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
 
@@ -30,7 +30,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 			s.persistence.WriteState(stateDiffs.ContractName(), i.NextStateDiffs())
 		}
 	}
-	s.lastCommittedBlock = committedBlock
+	s.lastResultsBlockHeader = input.ResultsBlockHeader
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: committedBlock + 1}, nil
 }
@@ -40,8 +40,8 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	records := make([]*protocol.StateRecord,0,len(input.Keys))
-	for _, key:= range input.Keys {
+	records := make([]*protocol.StateRecord, 0, len(input.Keys))
+	for _, key := range input.Keys {
 		record, ok := s.persistence.ReadState(input.ContractName)[key.KeyForMap()]
 		if ok {
 			records = append(records, record)
@@ -56,7 +56,11 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 }
 
 func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
-	panic("Not implemented")
+	result := &services.GetStateStorageBlockHeightOutput{
+		LastCommittedBlockHeight:    s.lastResultsBlockHeader.BlockHeight(),
+		LastCommittedBlockTimestamp: s.lastResultsBlockHeader.Timestamp(),
+	}
+	return result, nil
 }
 
 func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {

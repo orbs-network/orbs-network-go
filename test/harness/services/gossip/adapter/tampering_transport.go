@@ -92,7 +92,6 @@ func (t *tamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
 	return tamperer
 }
 
-
 func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper {
 	tamperer := &latchingTamperer{predicate: predicate, transport: t, cond: sync.NewCond(&sync.Mutex{})}
 	t.mutex.Lock()
@@ -102,7 +101,6 @@ func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper 
 	tamperer.cond.L.Lock()
 	return tamperer
 }
-
 
 func (t *tamperingTransport) removeFailTamperer(tamperer *failingTamperer) {
 	t.mutex.Lock()
@@ -157,7 +155,6 @@ func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 	}
 	panic("Tamperer not found in ongoing tamperer list")
 }
-
 
 func (t *tamperingTransport) receive(data *adapter.TransportData) {
 	switch data.RecipientMode {
@@ -245,4 +242,3 @@ func (o *latchingTamperer) Remove() {
 func (o *latchingTamperer) Wait() {
 	o.cond.Wait()
 }
-

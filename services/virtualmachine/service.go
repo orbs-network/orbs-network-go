@@ -2,11 +2,11 @@ package virtualmachine
 
 import (
 	"encoding/binary"
+	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"fmt"
 )
 
 type service struct {
@@ -42,8 +42,8 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 
 	// todo get list of keys to read from "hard codded contract func"
 	blockHeight, _ := s.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
-	keys := make([]primitives.Ripmd160Sha256, 0 , blockHeight.LastCommittedBlockHeight)
-	for i := uint64(0);i < uint64(blockHeight.LastCommittedBlockHeight) +  uint64(1);i++ {
+	keys := make([]primitives.Ripmd160Sha256, 0, blockHeight.LastCommittedBlockHeight)
+	for i := uint64(0); i < uint64(blockHeight.LastCommittedBlockHeight)+uint64(1); i++ {
 		keys = append(keys, primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", i)))
 	}
 

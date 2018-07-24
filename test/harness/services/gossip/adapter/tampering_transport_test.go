@@ -1,13 +1,13 @@
 package adapter
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/go-mock"
-		"sync"
-	)
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"sync"
+	"testing"
+)
 
 type context struct {
 	senderKey string
@@ -25,7 +25,7 @@ func newContext() *context {
 	return &context{
 		senderKey: senderKey,
 		transport: transport,
-		listener: listener,
+		listener:  listener,
 	}
 }
 
@@ -40,7 +40,6 @@ func (c *context) broadcast(sender string, payloads [][]byte) error {
 		Payloads:        payloads,
 	})
 }
-
 
 func TestFailingTamperer(t *testing.T) {
 	c := newContext()
@@ -73,7 +72,7 @@ func TestPausingTamperer(t *testing.T) {
 	}
 
 	for b := 0; b < 5; b++ {
-		if <-digits % 2 != 0 {
+		if <-digits%2 != 0 {
 			t.Errorf("got odd number while odds should be paused")
 		}
 	}
@@ -81,7 +80,7 @@ func TestPausingTamperer(t *testing.T) {
 	odds.Release()
 
 	for b := 0; b < 5; b++ {
-		if <-digits % 2 != 1 {
+		if <-digits%2 != 1 {
 			t.Errorf("got even number while odds should be released")
 		}
 	}
@@ -117,19 +116,19 @@ func TestLatchingTamperer(t *testing.T) {
 	c.send(nil)
 
 	select {
-	case <- called:
+	case <-called:
 		t.Error("called too early")
 	default:
 	}
 
 	afterMessageArrived.Done()
 
-	<- called
+	<-called
 }
 
 func oddNumbers() MessagePredicate {
 	return func(data *adapter.TransportData) bool {
-		return data.Payloads[0][0] % 2 == 1
+		return data.Payloads[0][0]%2 == 1
 	}
 }
 
@@ -138,4 +137,3 @@ func anyMessage() MessagePredicate {
 		return true
 	}
 }
-

@@ -1,9 +1,9 @@
 package adapter
 
 import (
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/go-mock"
 )
 
 type mockListener struct {

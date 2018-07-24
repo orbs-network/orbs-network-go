@@ -1,8 +1,8 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type Config interface {
@@ -17,7 +17,7 @@ type InMemoryStatePersistence struct {
 func NewInMemoryStatePersistence(config Config) StatePersistence {
 	return &InMemoryStatePersistence{
 		config:       config,
-		stateDiffs:  map[primitives.ContractName]map[string]*protocol.StateRecord{},
+		stateDiffs:   map[primitives.ContractName]map[string]*protocol.StateRecord{},
 		stateWritten: make(chan bool, 10),
 	}
 }

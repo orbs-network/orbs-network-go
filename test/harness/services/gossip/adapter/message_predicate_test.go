@@ -1,11 +1,11 @@
 package adapter
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"fmt"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 func ExampleMessagePredicate_sender() {

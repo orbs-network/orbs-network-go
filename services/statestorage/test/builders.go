@@ -1,8 +1,8 @@
 package test
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -19,6 +19,11 @@ type commitStateDiffInputBuilder struct {
 
 func (b *commitStateDiffInputBuilder) WithBlockHeight(h int) *commitStateDiffInputBuilder {
 	b.headerBuilder.BlockHeight = primitives.BlockHeight(h)
+	return b
+}
+
+func (b *commitStateDiffInputBuilder) WithBlockTimestamp(t int) *commitStateDiffInputBuilder {
+	b.headerBuilder.Timestamp = primitives.TimestampNano(t)
 	return b
 }
 

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/membuffers/go"
 )
 
 type HttpServer interface {

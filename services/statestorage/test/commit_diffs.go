@@ -1,0 +1,69 @@
+package test
+
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+)
+
+var _ = Describe("Commit a State Diff", func() {
+
+	It("persists the state into storage", func() {
+		d := newStateStorageDriver()
+
+		contract1 := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "v1").WithStringRecord("key2", "v2").Build()
+		contract2 := builders.ContractStateDiff().WithContractName("contract2").WithStringRecord("key1", "v3").Build()
+
+		d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).WithDiff(contract2).Build())
+
+		output, err := d.readSingleKey("contract1", "key1")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(output).To(Equal([]byte("v1")))
+		output2, err := d.readSingleKey("contract1", "key2")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(output2).To(Equal([]byte("v2")))
+		output3, err := d.readSingleKey("contract2", "key1")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(output3).To(Equal([]byte("v3")))
+
+	})
+
+	When("block height is not monotonously increasing", func() {
+		When("too high", func() {
+			It("does nothing and return desired height", func() {
+				d := newStateStorageDriver()
+
+				diff := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "whatever").Build()
+				result, err := d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(3).WithDiff(diff).Build())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(1)))
+
+				_, err = d.readSingleKey("contract1", "key1")
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		When("too low", func() {
+			It("does nothing and return desired height", func() {
+				d := newStateStorageDriver()
+				v1 := "v1"
+				v2 := "v2"
+
+				contractDiff := builders.ContractStateDiff().WithContractName("contract1")
+				diffAtHeight1 := CommitStateDiff().WithBlockHeight(1).WithDiff(contractDiff.WithStringRecord("key1", v1).Build()).Build()
+				diffAtHeight2 := CommitStateDiff().WithBlockHeight(2).WithDiff(contractDiff.WithStringRecord("key1", v2).Build()).Build()
+
+				d.service.CommitStateDiff(diffAtHeight1)
+				d.service.CommitStateDiff(diffAtHeight2)
+
+				result, err := d.service.CommitStateDiff(diffAtHeight1)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(3)))
+
+				output, err := d.readSingleKey("contract1", "key1")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(output).To(Equal([]byte(v2)))
+			})
+		})
+	})
+})
