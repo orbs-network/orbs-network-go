@@ -17,7 +17,7 @@ type InMemoryStatePersistence struct {
 func NewInMemoryStatePersistence(config Config) StatePersistence {
 	return &InMemoryStatePersistence{
 		config:       config,
-		stateDiffs:   map[primitives.ContractName]map[string]*protocol.StateRecord{},
+		stateDiffs:   map[primitives.ContractName]map[string]*protocol.StateRecord{primitives.ContractName("BenchmarkToken"): {}},
 		stateWritten: make(chan bool, 10),
 	}
 }

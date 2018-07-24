@@ -15,11 +15,21 @@ var _ = Describe("Reading a Key", func() {
 		})
 	})
 
-	When("key doesn't exist", func() {
-		It("Returns no Value", func() {
+	When("providing a non existing contract", func() {
+		It("Returns an error", func() {
 			d := newStateStorageDriver()
-			_, err := d.readSingleKey("fooContract", "someKey")
-			Expect(err).To(MatchError("no value found for input key(s)"))
+			_, err := d.readSingleKey("foo", "someKey")
+			Expect(err).To(MatchError("missing contract name"))
+		})
+	})
+
+	When("key doesn't exist", func() {
+		It("Returns an empty byte array", func() {
+			d := newStateStorageDriver()
+			d.write("fooContract", "someRandomKeyToForceNewContract", []byte("randomValue"))
+			value, err := d.readSingleKey("fooContract", "someKey")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(value).To(Equal([]byte{}))
 		})
 	})
 

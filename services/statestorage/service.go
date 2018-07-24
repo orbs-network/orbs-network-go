@@ -40,12 +40,20 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
+	contractState := s.persistence.ReadState(input.ContractName)
+	if contractState == nil {
+		return nil, fmt.Errorf("missing contract name")
+	}
+
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok := s.persistence.ReadState(input.ContractName)[key.KeyForMap()]
+		record, ok := contractState[key.KeyForMap()]
 		if ok {
 			records = append(records, record)
+		} else { // implicitly insert the zero value if key is missing
+			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: []byte{}}).Build())
 		}
+
 	}
 
 	output := &services.ReadKeysOutput{StateRecords: records}

@@ -51,7 +51,9 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 	results, _ := s.stateStorage.ReadKeys(readKeys)
 	sum := uint64(0)
 	for _, t := range results.StateRecords {
-		sum += binary.LittleEndian.Uint64(t.Value())
+		if len(t.Value()) > 0 {
+			sum += binary.LittleEndian.Uint64(t.Value())
+		}
 	}
 	arg := (&protocol.MethodArgumentBuilder{
 		Name:        "balance",
