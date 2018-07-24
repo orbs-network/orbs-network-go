@@ -2,6 +2,9 @@ package benchmarkconsensus
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/logic"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -67,10 +70,43 @@ func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) 
 }
 
 func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer) error {
+	// nils
+	if blockPair.TransactionsBlock == nil ||
+		blockPair.ResultsBlock == nil ||
+		blockPair.TransactionsBlock.Header == nil ||
+		blockPair.ResultsBlock.Header == nil ||
+		blockPair.ResultsBlock.BlockProof == nil {
+		panic("invalid block: missing fields")
+	}
+
 	// block height
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 	if blockHeight > s.lastCommittedBlockHeight()+1 {
 		return errors.Errorf("invalid block: future block height %d", blockHeight)
+	}
+
+	// prev block hash ptr
+	if s.lastCommittedBlock != nil && blockHeight == s.lastCommittedBlockHeight()+1 {
+		prevTxHash := crypto.CalcTransactionsBlockHash(s.lastCommittedBlock)
+		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
+			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
+		}
+		prevRxHash := crypto.CalcResultsBlockHash(s.lastCommittedBlock)
+		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
+			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
+		}
+	}
+
+	// block proof
+	if !blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() {
+		return errors.Errorf("incorrect block proof type: %s", blockPair.ResultsBlock.BlockProof.Type())
+	}
+	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
+	txHash := crypto.CalcTransactionsBlockHash(blockPair)
+	rxHash := crypto.CalcResultsBlockHash(blockPair)
+	xorHash := logic.CalcXor(txHash, rxHash)
+	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), xorHash, blockProof.Sender().Signature()) {
+		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
 	}
 	return nil
 }

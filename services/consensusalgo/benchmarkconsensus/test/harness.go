@@ -131,14 +131,16 @@ func (h *harness) expectIgnoreCommit() {
 func (h *harness) verifyIgnoreCommit(t *testing.T) {
 	err := test.ConsistentlyVerify(h.blockStorage, h.gossip)
 	if err != nil {
-		t.Fatal("Did not ignore block with future block height:", err)
+		t.Fatal("Did not ignore block:", err)
 	}
 }
 
 func (h *harness) expectCommitSaveAndReply(reply *primitives.BlockHeight) {
 	h.blockStorage.Reset().When("CommitBlock", mock.Any).Return(nil, nil).Times(1)
 	h.gossip.Reset().When("SendBenchmarkConsensusCommitted", mock.Any).Call(func(input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
-		*reply = input.Message.Status.LastCommittedBlockHeight()
+		if reply != nil {
+			*reply = input.Message.Status.LastCommittedBlockHeight()
+		}
 		return nil, nil
 	}).Times(1)
 }
@@ -146,6 +148,6 @@ func (h *harness) expectCommitSaveAndReply(reply *primitives.BlockHeight) {
 func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
 	err := test.EventuallyVerify(h.blockStorage, h.gossip)
 	if err != nil {
-		t.Fatal("Did not commit and reply to block with valid block height:", err)
+		t.Fatal("Did not commit and reply to block:", err)
 	}
 }

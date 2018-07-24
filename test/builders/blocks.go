@@ -1,9 +1,13 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/logic"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
 )
 
@@ -73,6 +77,30 @@ func (b *blockPair) Build() *protocol.BlockPairContainer {
 func (b *blockPair) WithHeight(blockHeight primitives.BlockHeight) *blockPair {
 	b.txHeader.BlockHeight = blockHeight
 	b.rxHeader.BlockHeight = blockHeight
+	return b
+}
+
+func (b *blockPair) WithPrevBlockHash(prevBlock *protocol.BlockPairContainer) *blockPair {
+	b.txHeader.PrevBlockHashPtr = crypto.CalcTransactionsBlockHash(prevBlock)
+	b.rxHeader.PrevBlockHashPtr = crypto.CalcResultsBlockHash(prevBlock)
+	return b
+}
+
+func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey []byte, publicKey primitives.Ed25519Pkey) *blockPair {
+	built := b.Build()
+	txHash := crypto.CalcTransactionsBlockHash(built)
+	rxHash := crypto.CalcResultsBlockHash(built)
+	xorHash := logic.CalcXor(txHash, rxHash)
+	signature := signature.SignEd25519(privateKey, xorHash)
+	b.rxProof = &protocol.ResultsBlockProofBuilder{
+		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
+			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
+				SenderPublicKey: publicKey,
+				Signature:       signature,
+			},
+		},
+	}
 	return b
 }
 
