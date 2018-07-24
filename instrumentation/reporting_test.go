@@ -18,6 +18,7 @@ const (
 )
 
 type BasicLogger interface {
+	Log(level string, flow string, message string, params... *Field)
 	Info(flow string, message string, params... *Field)
 }
 
@@ -26,11 +27,9 @@ type jsonLogger struct {
 }
 
 type basicLogger struct {
-	node string
-	vchain int
+	node    string
+	vchain  int
 	service string
-
-	jsonLogger *jsonLogger
 }
 
 type FieldType uint8
@@ -89,7 +88,7 @@ func getCaller() (function string, source string) {
 	fpcs := make([]uintptr, 1)
 
 	// skip levels to get to the caller of logger function
-	n := runtime.Callers(5, fpcs)
+	n := runtime.Callers(4, fpcs)
 	if n == 0 {
 		return "n/a", "n/a"
 	}
@@ -103,7 +102,16 @@ func getCaller() (function string, source string) {
 	return fun.Name(), fmt.Sprintf("%s:%d", file, line)
 }
 
-func (j *jsonLogger) Log(level string, message string, params... *Field) {
+func (b *basicLogger) Log(level string, flow string, message string, params... *Field) {
+	enrichment := []*Field{
+		String("flow", flow),
+		String("node", b.node),
+		Int("vchain", b.vchain),
+		String("service", b.service),
+	}
+
+	params = append(enrichment, params...)
+
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
@@ -132,23 +140,12 @@ func (j *jsonLogger) Log(level string, message string, params... *Field) {
 	fmt.Println(string(logLineAsJson))
 }
 
-func (j *jsonLogger) Info(message string, params... *Field) {
-	j.Log("info", message, params...)
-}
-
-func (b *basicLogger) Info(flow string, message string, params... *Field){
-	logLineParams := []*Field{
-		String("node", b.node),
-		Int("vchain", b.vchain),
-		String("flow", TransactionFlow),
-	}
-
-	logLineParams = append(logLineParams, params...)
-	b.jsonLogger.Info(message, logLineParams...)
+func (j *basicLogger) Info(flow string, message string, params... *Field) {
+	j.Log("info", flow, message, params...)
 }
 
 func getLogger(node string, vchain int, service string) BasicLogger {
-	logger := &basicLogger{node, vchain, service, &jsonLogger{}}
+	logger := &basicLogger{node, vchain, service}
 
 	return logger
 }
