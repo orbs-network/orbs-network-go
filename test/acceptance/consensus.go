@@ -18,8 +18,8 @@ var _ = Describe("a leader node", func() {
 			network := harness.NewTestNetwork(ctx, 2)
 			defer network.FlushLog()
 
-			prePrepareLatch := network.GossipTransport().LatchOn(adapter.ConsensusMessage(consensus.LEAN_HELIX_PRE_PREPARE))
-			prePrepareTamper := network.GossipTransport().Fail(adapter.ConsensusMessage(consensus.LEAN_HELIX_PRE_PREPARE))
+			prePrepareLatch := network.GossipTransport().LatchOn(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
+			prePrepareTamper := network.GossipTransport().Fail(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
 			<-network.SendTransfer(0, 17)
 
 			prePrepareLatch.Wait()
