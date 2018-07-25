@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestNonLeaderDoesNotCreateBlocks(t *testing.T) {
+func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)
 		h.expectNewBlockProposalNotRequested()
@@ -16,7 +16,7 @@ func TestNonLeaderDoesNotCreateBlocks(t *testing.T) {
 	})
 }
 
-func TestNonLeaderCommitsAndRepliesToConsecutiveBlockHeights(t *testing.T) {
+func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)
 		h.createService(ctx)
@@ -40,7 +40,7 @@ func TestNonLeaderCommitsAndRepliesToConsecutiveBlockHeights(t *testing.T) {
 	})
 }
 
-func TestNonLeaderCommitsAndRepliesToAnOldBlockHeight(t *testing.T) {
+func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)
 		h.createService(ctx)
@@ -64,7 +64,7 @@ func TestNonLeaderCommitsAndRepliesToAnOldBlockHeight(t *testing.T) {
 	})
 }
 
-func TestNonLeaderIgnoresFutureBlockHeight(t *testing.T) {
+func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)
 		h.createService(ctx)
