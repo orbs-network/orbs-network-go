@@ -9,8 +9,8 @@ import (
 func TestLeaderCreatesBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(true)
-		h.expectBlockCreation()
+		h.expectNewBlockProposalRequested()
 		h.createService(ctx)
-		h.verifyBlockCreation(t)
+		h.verifyNewBlockProposalRequested(t)
 	})
 }

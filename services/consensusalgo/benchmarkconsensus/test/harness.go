@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -97,29 +98,29 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) expectBlockCreation() {
+func (h *harness) expectNewBlockProposalRequested() {
 	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).AtLeast(1)
 }
 
-func (h *harness) verifyBlockCreation(t *testing.T) {
+func (h *harness) verifyNewBlockProposalRequested(t *testing.T) {
 	err := test.EventuallyVerify(h.consensusContext)
 	if err != nil {
 		t.Fatal("Did not create block with ConsensusContext:", err)
 	}
 }
 
-func (h *harness) expectNoBlockCreation() {
+func (h *harness) expectNewBlockProposalNotRequested() {
 	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).Times(0)
 }
 
-func (h *harness) verifyNoBlockCreation(t *testing.T) {
+func (h *harness) verifyNewBlockProposalNotRequested(t *testing.T) {
 	err := test.ConsistentlyVerify(h.consensusContext)
 	if err != nil {
 		t.Fatal("Did create block with ConsensusContext:", err)
 	}
 }
 
-func (h *harness) receiveCommit(blockPair *protocol.BlockPairContainer) {
+func (h *harness) receivedCommitViaGossip(blockPair *protocol.BlockPairContainer) {
 	h.service.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
 		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
 			BlockPair: blockPair,
@@ -127,26 +128,26 @@ func (h *harness) receiveCommit(blockPair *protocol.BlockPairContainer) {
 	})
 }
 
-func (h *harness) expectIgnoreCommit() {
+func (h *harness) expectCommitIgnored() {
 	h.blockStorage.Reset().When("CommitBlock", mock.Any).Return(nil, nil).Times(0)
 	h.gossip.Reset().When("SendBenchmarkConsensusCommitted", mock.Any).Return(nil, nil).Times(0)
 }
 
-func (h *harness) verifyIgnoreCommit(t *testing.T) {
+func (h *harness) verifyCommitIgnored(t *testing.T) {
 	err := test.ConsistentlyVerify(h.blockStorage, h.gossip)
 	if err != nil {
 		t.Fatal("Did not ignore block:", err)
 	}
 }
 
-func (h *harness) expectCommitSaveAndReply(reply *primitives.BlockHeight) {
-	h.blockStorage.Reset().When("CommitBlock", mock.Any).Return(nil, nil).Times(1)
-	h.gossip.Reset().When("SendBenchmarkConsensusCommitted", mock.Any).Call(func(input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
-		if reply != nil {
-			*reply = input.Message.Status.LastCommittedBlockHeight()
-		}
-		return nil, nil
-	}).Times(1)
+func (h *harness) expectCommitSaveAndReply(expectedBlockPair *protocol.BlockPairContainer, expectedLastCommitted primitives.BlockHeight) {
+	lastCommittedReplyMatcher := func(i interface{}) bool {
+		input, ok := i.(*gossiptopics.BenchmarkConsensusCommittedInput)
+		return ok && input.Message.Status.LastCommittedBlockHeight() == expectedLastCommitted
+	}
+
+	h.blockStorage.Reset().When("CommitBlock", &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(1)
+	h.gossip.Reset().When("SendBenchmarkConsensusCommitted", mock.AnyIf(fmt.Sprintf("Message.Status.LastCommittedBlockHeight of %d", expectedLastCommitted), lastCommittedReplyMatcher)).Times(1)
 }
 
 func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
