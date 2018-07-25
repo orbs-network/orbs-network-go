@@ -36,7 +36,7 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
-	reporting instrumentation.Reporting,
+	reporting instrumentation.BasicLogger,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 

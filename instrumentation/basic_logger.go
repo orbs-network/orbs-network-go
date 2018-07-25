@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"io"
 	"os"
 	"runtime"
@@ -15,6 +16,7 @@ const NanosecondsInASecond = 1000000000
 type BasicLogger interface {
 	Log(level string, message string, params ...*Field)
 	Info(message string, params ...*Field)
+	Error(message string, params ...*Field)
 	Metric(name string, params ...*Field)
 	For(params ...*Field) BasicLogger
 	Meter(name string, params ...*Field) BasicMeter
@@ -32,6 +34,7 @@ type FieldType uint8
 
 const (
 	NoType = iota
+	ErrorType
 	NodeType
 	ServiceType
 	StringType
@@ -39,6 +42,7 @@ const (
 	UintType
 	BytesType
 	FloatType
+	BlockHeightType
 )
 
 type Field struct {
@@ -51,6 +55,8 @@ type Field struct {
 	Bytes  []byte
 
 	Float float64
+
+	Error error
 }
 
 func Node(value string) *Field {
@@ -99,6 +105,14 @@ func Float32(key string, value float32) *Field {
 
 func Float64(key string, value float64) *Field {
 	return &Field{Key: key, Float: value, Type: FloatType}
+}
+
+func Error(value error) *Field {
+	return &Field{Key: "error", Error: value, Type: ErrorType}
+}
+
+func BlockHeight(value primitives.BlockHeight) *Field {
+	return &Field{Key: "blockHeight", Uint: uint64(value), Type: BlockHeightType}
 }
 
 func getCaller(level int) (function string, source string) {
@@ -155,6 +169,10 @@ func (f *Field) Value() interface{} {
 		return base58.Encode(f.Bytes)
 	case FloatType:
 		return f.Float
+	case ErrorType:
+		return f.Error.Error()
+	case BlockHeightType:
+		return f.Uint
 	}
 
 	return nil
@@ -183,6 +201,10 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 }
 
 func (b *basicLogger) Info(message string, params ...*Field) {
+	b.Log("info", message, params...)
+}
+
+func (b *basicLogger) Error(message string, params ...*Field) {
 	b.Log("info", message, params...)
 }
 

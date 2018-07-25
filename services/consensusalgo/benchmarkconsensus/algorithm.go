@@ -2,6 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -12,12 +13,12 @@ func (s *service) consensusRoundRunLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.reporting.Infof("Consensus round run loop terminating with context")
+			s.reporting.Info("Consensus round run loop terminating with context")
 			return
 		default:
 			err := s.consensusRoundTick()
 			if err != nil {
-				s.reporting.Error(err)
+				s.reporting.Error(err.Error())
 				time.Sleep(1 * time.Second) // TODO: replace with a configuration
 			}
 		}
@@ -25,7 +26,7 @@ func (s *service) consensusRoundRunLoop(ctx context.Context) {
 }
 
 func (s *service) consensusRoundTick() (err error) {
-	s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight())
+	s.reporting.Info("Entered consensus round, last committed block height is", instrumentation.BlockHeight(s.lastCommittedBlockHeight()))
 	if s.activeBlock == nil {
 		s.activeBlock, err = s.generateNewProposedBlock()
 		if err != nil {

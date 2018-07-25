@@ -66,7 +66,8 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			sharedTamperingTransport,
 			nodes[i].blockPersistence,
 			nodes[i].statePersistence,
-			instrumentation.NewCompositeReporting([]instrumentation.Reporting{nodes[i].log, nodes[i].latch}),
+			instrumentation.GetLogger(),
+			//instrumentation.NewCompositeReporting([]instrumentation.Reporting{nodes[i].log, nodes[i].latch}),
 			nodes[i].config,
 		)
 	}

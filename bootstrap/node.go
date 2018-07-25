@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/base58"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -38,9 +39,10 @@ func NewNode(
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo)
 
+	logger := instrumentation.GetLogger(instrumentation.Node(string(base58.Encode([]byte(nodePublicKey)))))
+
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
-	logger := instrumentation.NewStdoutLog()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 
