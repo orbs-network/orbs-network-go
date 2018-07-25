@@ -25,7 +25,8 @@ type service struct {
 	reporting        instrumentation.Reporting
 	config           Config
 
-	activeBlock *protocol.BlockPairContainer
+	activeBlock        *protocol.BlockPairContainer
+	lastCommittedBlock *protocol.BlockPairContainer
 }
 
 func NewBenchmarkConsensusAlgo(
@@ -66,6 +67,10 @@ func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*
 }
 
 func (s *service) HandleBenchmarkConsensusCommit(input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
+	if input.Message == nil || input.Message.BlockPair == nil {
+		panic("HandleBenchmarkConsensusCommit received corrupt args")
+	}
+	s.nonLeaderHandleCommit(input.Message.BlockPair)
 	return nil, nil
 }
 

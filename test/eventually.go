@@ -28,20 +28,42 @@ func Consistently(f func() bool) bool {
 	return true
 }
 
-func EventuallyVerify(mock mock.HasVerify) (err error) {
-	var ok bool
+func EventuallyVerify(mocks ...mock.HasVerify) error {
+	verified := make([]bool, len(mocks))
+	numVerified := 0
+	var errExample error
 	Eventually(func() bool {
-		ok, err = mock.Verify()
-		return ok
+		for i, mock := range mocks {
+			if !verified[i] {
+				ok, err := mock.Verify()
+				if ok {
+					verified[i] = true
+					numVerified++
+				} else {
+					errExample = err
+				}
+			}
+		}
+		return numVerified == len(mocks)
 	})
-	return
+	if numVerified == len(mocks) {
+		return nil
+	} else {
+		return errExample
+	}
 }
 
-func ConsistentlyVerify(mock mock.HasVerify) (err error) {
-	var ok bool
+func ConsistentlyVerify(mocks ...mock.HasVerify) error {
+	var errExample error
 	Consistently(func() bool {
-		ok, err = mock.Verify()
-		return ok
+		for _, mock := range mocks {
+			ok, err := mock.Verify()
+			if !ok {
+				errExample = err
+				return false
+			}
+		}
+		return true
 	})
-	return
+	return errExample
 }
