@@ -26,7 +26,6 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	events         instrumentation.Reporting
 	publicApi      services.PublicApi
 	consensusAlgos []services.ConsensusAlgo
 }
