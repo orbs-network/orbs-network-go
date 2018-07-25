@@ -12,6 +12,11 @@ type Signer struct {
 	privateKeyUnsafe []byte
 }
 
+const (
+	PUBLIC_KEY_SIZE  = 32
+	PRIVATE_KEY_SIZE = 64
+)
+
 // TODO NewFromRandUnsafe() this should probably be removed in the future, used for debugging mainly
 func NewFromRandUnsafe() (*Signer, error) {
 	if pub, pri, err := ed25519.GenerateKey(nil); err != nil {
@@ -30,15 +35,18 @@ func NewPublicKeyString(pk string) (*Signer, error) {
 		return nil, errors.Wrapf(err, "public key hex decode failed")
 	}
 
-	return NewPublicKeyBytes(pkBytes), nil
+	return NewPublicKeyBytes(pkBytes)
 }
 
-func NewPublicKeyBytes(pk []byte) *Signer {
+func NewPublicKeyBytes(pk []byte) (*Signer, error) {
+	if len(pk) != PUBLIC_KEY_SIZE {
+		return nil, fmt.Errorf("invalid public key, length expected to be %d but data recevied was %v", PUBLIC_KEY_SIZE, pk)
+	}
 	s := &Signer{
 		publicKey: pk,
 	}
 
-	return s
+	return s, nil
 }
 
 func NewSecretKeyStringUnsafe(pk string) (*Signer, error) {
@@ -52,7 +60,7 @@ func NewSecretKeyStringUnsafe(pk string) (*Signer, error) {
 
 func NewSecretKeyBytesUnsafe(pk []byte) (*Signer, error) {
 	if len(pk) != ed25519.PrivateKeySize {
-		return nil, fmt.Errorf("invalid private key")
+		return nil, fmt.Errorf("invalid private key, length expected to be %d but data recevied was %v", PRIVATE_KEY_SIZE, pk)
 	}
 
 	pub := make([]byte, 32)
@@ -82,11 +90,14 @@ func (e *Signer) PrivateKeyUnsafeString() string {
 	return hex.EncodeToString(e.privateKeyUnsafe)
 }
 
-func (e *Signer) Sign(data []byte) string {
-	// not implementing until we start using secure memory or other decision is made
-	return ""
+func (e *Signer) Sign(data []byte) ([]byte, error) {
+	if len(e.privateKeyUnsafe) != PRIVATE_KEY_SIZE {
+		return nil, fmt.Errorf("cannot sign, private key invalid")
+	}
+	signedData := ed25519.Sign(e.PrivateKeyUnsafe(), data)
+	return signedData, nil
 }
 
-func (e *Signer) Verify(data []byte, sig string) bool {
-	return false
+func (e *Signer) Verify(data []byte, sig []byte) bool {
+	return ed25519.Verify(e.publicKey, data, sig)
 }
