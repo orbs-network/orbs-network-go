@@ -102,7 +102,9 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 		h := newHarness(false)
 		h.createService(ctx)
 
-		b1 := builders.BlockPair().WithHeight(1).Build()
+		aBlock := builders.BlockPair().WithInvalidBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+
+		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitIgnored()
 		h.receivedCommitViaGossip(b1)
 		h.verifyCommitIgnored(t)

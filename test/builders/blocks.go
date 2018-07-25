@@ -57,6 +57,14 @@ func BlockPair() *blockPair {
 	}
 }
 
+func LeanHelixBlockPair() *blockPair {
+	return BlockPair()
+}
+
+func BenchmarkConsensusBlockPair() *blockPair {
+	return BlockPair().WithBenchmarkConsensusBlockProof(nil, []byte{0x88})
+}
+
 func (b *blockPair) Build() *protocol.BlockPairContainer {
 	return &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
@@ -92,6 +100,25 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey []byte, publicKe
 	rxHash := crypto.CalcResultsBlockHash(built)
 	xorHash := logic.CalcXor(txHash, rxHash)
 	signature := signature.SignEd25519(privateKey, xorHash)
+	b.rxProof = &protocol.ResultsBlockProofBuilder{
+		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
+			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
+				SenderPublicKey: publicKey,
+				Signature:       signature,
+			},
+		},
+	}
+	return b
+}
+
+func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(privateKey []byte, publicKey primitives.Ed25519Pkey) *blockPair {
+	built := b.Build()
+	txHash := crypto.CalcTransactionsBlockHash(built)
+	rxHash := crypto.CalcResultsBlockHash(built)
+	xorHash := logic.CalcXor(txHash, rxHash)
+	signature := signature.SignEd25519(privateKey, xorHash)
+	signature[0] ^= 0xaa // corrupt the first byte of the signature
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
