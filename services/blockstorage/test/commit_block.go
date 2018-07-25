@@ -4,15 +4,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 type adapterConfig struct {
@@ -72,9 +72,9 @@ var _ = Describe("Committing a block", func() {
 		driver.expectCommitStateDiff()
 
 		blockCreated := time.Now()
-		blockHeight := 1
+		blockHeight := primitives.BlockHeight(1)
 
-		_, err := driver.commitBlock(test.BlockPairBuilder().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+		_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(driver.numOfWrittenBlocks()).To(Equal(1))
@@ -94,7 +94,7 @@ var _ = Describe("Committing a block", func() {
 			It("returns an error", func() {
 				driver := NewDriver()
 
-				_, err := driver.commitBlock(test.BlockPairBuilder().WithProtocolVersion(99999).Build())
+				_, err := driver.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
 				Expect(err).To(MatchError("protocol version mismatch: expected 1 got 99999"))
 			})
@@ -104,7 +104,7 @@ var _ = Describe("Committing a block", func() {
 			It("should be silently discarded the block if it is the exact same block", func() {
 				driver := NewDriver()
 
-				blockPair := test.BlockPairBuilder().Build()
+				blockPair := builders.BlockPair().Build()
 
 				driver.expectCommitStateDiff()
 
@@ -121,7 +121,7 @@ var _ = Describe("Committing a block", func() {
 				driver := NewDriver()
 				driver.expectCommitStateDiff()
 
-				blockPair := test.BlockPairBuilder()
+				blockPair := builders.BlockPair()
 
 				driver.commitBlock(blockPair.Build())
 
@@ -139,10 +139,10 @@ var _ = Describe("Committing a block", func() {
 				driver := NewDriver()
 				driver.expectCommitStateDiff()
 
-				driver.commitBlock(test.BlockPairBuilder().Build())
+				driver.commitBlock(builders.BlockPair().Build())
 
 				Expect(func() {
-					driver.commitBlock(test.BlockPairBuilder().WithHeight(1000).Build())
+					driver.commitBlock(builders.BlockPair().WithHeight(1000).Build())
 				}).To(Panic())
 
 				Expect(driver.numOfWrittenBlocks()).To(Equal(1))
