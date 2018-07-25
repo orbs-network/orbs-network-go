@@ -34,5 +34,6 @@ func (m *basicMeter) Done() {
 	names = append(names, m.name)
 	metricName := strings.Join(names, "-")
 
-	m.logger.Metric(metricName, Float64("process-time", diff))
+	metricParams := append(m.params, Float64("process-time", diff))
+	m.logger.Metric(metricName, metricParams...)
 }

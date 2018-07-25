@@ -104,7 +104,7 @@ func TestReport(t *testing.T) {
 	Expect(jsonMap["timestamp"]).NotTo(BeNil())
 	Expect(jsonMap["metric"]).To(Equal("public-api-TransactionFlow-tx-process-time"))
 	//FIXME pass txId as well
-	//Expect(jsonMap["txId"]).To(Equal("1234567"))
+	Expect(jsonMap["txId"]).To(Equal("1234567"))
 	Expect(jsonMap["flow"]).To(Equal(TransactionFlow))
 	Expect(jsonMap["process-time"]).NotTo(BeNil())
 }

@@ -15,7 +15,7 @@ const NanosecondsInASecond = 1000000000
 type BasicLogger interface {
 	Log(level string, message string, params ...*Field)
 	Info(message string, params ...*Field)
-	Metric(name string, value *Field)
+	Metric(name string, params ...*Field)
 	For(params ...*Field) BasicLogger
 	Meter(name string, params ...*Field) BasicMeter
 	Prefixes() []*Field
@@ -134,8 +134,9 @@ func (b *basicLogger) For(params ...*Field) BasicLogger {
 	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel, output: b.output}
 }
 
-func (b *basicLogger) Metric(metric string, value *Field) {
-	b.Log("metric", "Metric recorded", String("metric", metric), value)
+func (b *basicLogger) Metric(metric string, params ...*Field) {
+	metricParams := append(params, String("metric", metric))
+	b.Log("metric", "Metric recorded", metricParams...)
 }
 
 func (f *Field) Value() interface{} {
