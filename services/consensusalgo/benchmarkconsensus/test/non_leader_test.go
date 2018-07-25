@@ -31,7 +31,7 @@ func TestNonLeaderCommitsAndRepliesToValidBlockHeights(t *testing.T) {
 			Build()
 		h.receiveCommit(b1)
 		if replyBlockHeight != 1 {
-			t.Fatalf("Replied committed with wrong last block height: %d", replyBlockHeight)
+			t.Fatalf("Expected reply with height %d but got %d", 1, replyBlockHeight)
 		}
 		h.verifyCommitSaveAndReply(t)
 
@@ -43,14 +43,14 @@ func TestNonLeaderCommitsAndRepliesToValidBlockHeights(t *testing.T) {
 			Build()
 		h.receiveCommit(b2)
 		if replyBlockHeight != 2 {
-			t.Fatalf("Replied committed with wrong last block height: %d", replyBlockHeight)
+			t.Fatalf("Expected reply with height %d but got %d", 2, replyBlockHeight)
 		}
 		h.verifyCommitSaveAndReply(t)
 
 		h.expectCommitSaveAndReply(&replyBlockHeight)
 		h.receiveCommit(b1)
 		if replyBlockHeight != 2 {
-			t.Fatalf("Replied committed with wrong last block height: %d", replyBlockHeight)
+			t.Fatalf("Expected reply with height %d but got %d", 2, replyBlockHeight)
 		}
 		h.verifyCommitSaveAndReply(t)
 
@@ -62,7 +62,7 @@ func TestNonLeaderCommitsAndRepliesToValidBlockHeights(t *testing.T) {
 			Build()
 		h.receiveCommit(b3)
 		if replyBlockHeight != 3 {
-			t.Fatalf("Replied committed with wrong last block height: %d", replyBlockHeight)
+			t.Fatalf("Expected reply with height %d but got %d", 3, replyBlockHeight)
 		}
 		h.verifyCommitSaveAndReply(t)
 	})
