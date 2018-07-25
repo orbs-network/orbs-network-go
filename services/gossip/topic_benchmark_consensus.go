@@ -61,7 +61,7 @@ func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkC
 		Topic:               gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus:  consensus.BENCHMARK_CONSENSUS_COMMITTED,
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519Pkey{input.RecipientPublicKey},
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
 	senderSignature := (&gossipmessages.SenderSignatureBuilder{
 		SenderPublicKey: s.config.NodePublicKey(),
@@ -75,7 +75,7 @@ func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkC
 	return nil, s.transport.Send(&adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519Pkey{input.RecipientPublicKey},
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 		Payloads:            payloads,
 	})
 }

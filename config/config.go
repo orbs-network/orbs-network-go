@@ -6,8 +6,8 @@ import (
 )
 
 type NodeConfig interface {
-	NodePublicKey() primitives.Ed25519Pkey
+	NodePublicKey() primitives.Ed25519PublicKey
 	NetworkSize(asOfBlock uint64) uint32
-	ConstantConsensusLeader() primitives.Ed25519Pkey
+	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 }

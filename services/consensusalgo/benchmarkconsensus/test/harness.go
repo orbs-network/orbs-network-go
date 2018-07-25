@@ -78,7 +78,7 @@ func (h *harness) createService(ctx context.Context) {
 	)
 }
 
-func nonLeaderPublicKey() primitives.Ed25519Pkey {
+func nonLeaderPublicKey() primitives.Ed25519PublicKey {
 	return []byte{0x99}
 }
 
