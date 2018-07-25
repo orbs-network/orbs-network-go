@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	. "github.com/onsi/gomega"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"io"
 	"os"
 	"testing"
@@ -55,6 +56,8 @@ func TestSimpleLogger(t *testing.T) {
 }
 
 func TestNestedLogger(t *testing.T) {
+	RegisterTestingT(t)
+
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := GetLogger(Node("node1"), Service("public-api")).WithOutput(writer)
 		txId := String("txId", "1234567")
@@ -78,6 +81,8 @@ func TestNestedLogger(t *testing.T) {
 }
 
 func TestMeter(t *testing.T) {
+	RegisterTestingT(t)
+
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := GetLogger(Node("node1"), Service("public-api")).WithOutput(writer)
 		txId := String("txId", "1234567")
@@ -103,4 +108,26 @@ func TestMeter(t *testing.T) {
 	Expect(jsonMap["txId"]).To(Equal("1234567"))
 	Expect(jsonMap["flow"]).To(Equal(TransactionFlow))
 	Expect(jsonMap["process-time"]).NotTo(BeNil())
+}
+
+func TestCustomLogFormatter(t *testing.T) {
+	RegisterTestingT(t)
+
+	stdout := captureStdout(func(writer io.Writer) {
+		serviceLogger := GetLogger(Node("node1"), Service("public-api")).WithOutput(writer).WithFormatter(NewHumanReadableFormatter())
+		serviceLogger.Info("Service initialized", Int("some-int-value", 12), BlockHeight(primitives.BlockHeight(9999)), Bytes("bytes", []byte{2, 3, 99}))
+	})
+
+	fmt.Println(stdout)
+
+	Expect(stdout).To(HavePrefix("info"))
+	Expect(stdout).To(ContainSubstring("Service initialized"))
+	Expect(stdout).To(ContainSubstring("node=node1"))
+	Expect(stdout).To(ContainSubstring("service=public-api"))
+	Expect(stdout).To(ContainSubstring("blockHeight=9999"))
+	Expect(stdout).To(ContainSubstring("bytes=gDp"))
+	Expect(stdout).To(ContainSubstring("some-int-value=12"))
+	Expect(stdout).To(ContainSubstring("function=github.com/orbs-network/orbs-network-go/instrumentation.TestCustomLogFormatter.func1"))
+	Expect(stdout).To(ContainSubstring("source="))
+	Expect(stdout).To(ContainSubstring("orbs-network/orbs-network-go/instrumentation/basic_logger_test.go"))
 }
