@@ -123,7 +123,7 @@ func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer
 	if err != nil {
 		return err
 	}
-	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeight() {
+	if blockPair.TransactionsBlock.Header.BlockHeight() == s.lastCommittedBlockHeight()+1 {
 		s.lastCommittedBlock = blockPair
 	}
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
