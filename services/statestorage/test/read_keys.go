@@ -50,6 +50,32 @@ var _ = Describe("Reading a Key", func() {
 				Expect(output).To(Equal(value))
 			})
 		})
+
+		When("read 5 keys some are not existing", func() {
+			It("Returns 5 values (some are empty)", func() {
+				d := newStateStorageDriver()
+
+				d.write("contract", "key1", []byte("bar1"))
+				d.write("contract", "key2", []byte("bar2"))
+				d.write("contract", "key3", []byte("bar3"))
+				d.write("contract", "key4", []byte("bar4"))
+				d.write("contract", "key5", []byte("bar5"))
+
+				output, err := d.readKeys("contract", "key1", "key22", "key5", "key3", "key6")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(output)).To(Equal(5))
+				Expect(output[0].key).To(Equal("key1"))
+				Expect(output[0].value).To(Equal([]byte("bar1")))
+				Expect(output[1].key).To(Equal("key22"))
+				Expect(output[1].value).To(Equal([]byte{}))
+				Expect(output[2].key).To(Equal("key5"))
+				Expect(output[2].value).To(Equal([]byte("bar5")))
+				Expect(output[3].key).To(Equal("key3"))
+				Expect(output[3].value).To(Equal([]byte("bar3")))
+				Expect(output[4].key).To(Equal("key6"))
+				Expect(output[4].value).To(Equal([]byte{}))
+			})
+		})
 	})
 
 	When("State has multiple Contracts", func() {

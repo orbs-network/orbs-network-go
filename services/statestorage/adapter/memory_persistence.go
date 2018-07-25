@@ -16,7 +16,8 @@ type InMemoryStatePersistence struct {
 
 func NewInMemoryStatePersistence(config Config) StatePersistence {
 	return &InMemoryStatePersistence{
-		config:       config,
+		config: config,
+		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
 		stateDiffs:   map[primitives.ContractName]map[string]*protocol.StateRecord{primitives.ContractName("BenchmarkToken"): {}},
 		stateWritten: make(chan bool, 10),
 	}

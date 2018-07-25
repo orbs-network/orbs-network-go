@@ -61,8 +61,8 @@ var _ = Describe("The Orbs Network", func() {
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				gossipTransport,
 			)
-      
-      // To let node start up properly, otherwise in Docker we get connection refused
+
+			// To let node start up properly, otherwise in Docker we get connection refused
 			time.Sleep(100 * time.Millisecond)
 		}
 

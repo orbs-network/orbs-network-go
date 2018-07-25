@@ -15,6 +15,11 @@ type driver struct {
 	persistence adapter.StatePersistence
 }
 
+type keyValue struct {
+	key   string
+	value []byte
+}
+
 func newStateStorageDriver() *driver {
 	p := adapter.NewInMemoryStatePersistence(&struct{}{})
 
@@ -22,21 +27,38 @@ func newStateStorageDriver() *driver {
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
-	out, err := d.service.ReadKeys(&services.ReadKeysInput{ContractName: primitives.ContractName(contract), Keys: []primitives.Ripmd160Sha256{[]byte(key)}})
+	if out, err := d.readKeys(contract, key); err != nil {
+		return nil, err
+	} else {
+		return out[0].value, nil
+	}
+}
+
+
+func (d *driver) readKeys(contract string, keys ...string) ([]*keyValue, error) {
+	ripmdKeys := make([]primitives.Ripmd160Sha256, 0, len(keys))
+	for _, key := range keys {
+		ripmdKeys = append(ripmdKeys, primitives.Ripmd160Sha256(key))
+	}
+	out, err := d.service.ReadKeys(&services.ReadKeysInput{ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
 
 	if err != nil {
 		return nil, err
 	}
 
-	if l := len(out.StateRecords); l != 1 {
-		panic(fmt.Sprintf("expected exactly one element in array. found %v", l))
+	if l, k := len(out.StateRecords), len(keys); l != k {
+		panic(fmt.Sprintf("expected exactly %v elements in array. found %v", k, l))
 	}
 
-	if actual, expected := out.StateRecords[0].Key(), []byte(key); !bytes.Equal(actual, expected) {
-		panic(fmt.Sprintf("expected output key %s to match input key %s", actual, expected))
+	result := make([]*keyValue, 0, len(keys))
+	for i := range out.StateRecords {
+		if actual, expected := out.StateRecords[i].Key(), keys[i]; !bytes.Equal(actual, []byte(expected)) {
+			panic(fmt.Sprintf("expected output key %s to match input key %s", actual, expected))
+		}
+		result = append(result, &keyValue{string(out.StateRecords[i].Key()), out.StateRecords[i].Value()})
 	}
 
-	return out.StateRecords[0].Value(), nil
+	return result, nil
 }
 
 func (d *driver) write(contract string, key string, value []byte) {

@@ -31,8 +31,8 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 		}
 	}
 	s.lastResultsBlockHeader = input.ResultsBlockHeader
-
-	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: committedBlock + 1}, nil
+	hi := committedBlock + 1
+	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: hi}, nil
 }
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
