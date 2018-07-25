@@ -63,7 +63,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	return nil, nil
 }
 
-func (s *service) lookForTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
+func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
 	txBlock, err := s.persistence.GetTransactionsBlock(height)
 
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 
 			for i := 0; i < timeout; i += interval {
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
-					lookupResult, err := s.lookForTransactionsBlockHeader(input.BlockHeight)
+					lookupResult, err := s.loadTransactionsBlockHeader(input.BlockHeight)
 
 					if err == nil {
 						c <- lookupResult
@@ -104,10 +104,10 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 		return result, nil
 	}
 
-	return s.lookForTransactionsBlockHeader(input.BlockHeight)
+	return s.loadTransactionsBlockHeader(input.BlockHeight)
 }
 
-func (s *service) lookForResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
+func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
 	txBlock, err := s.persistence.GetResultsBlock(height)
 
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 
 			for i := 0; i < timeout; i += interval {
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
-					lookupResult, err := s.lookForResultsBlockHeader(input.BlockHeight)
+					lookupResult, err := s.loadResultsBlockHeader(input.BlockHeight)
 
 					if err == nil {
 						c <- lookupResult
@@ -147,7 +147,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 		return result, nil
 	}
 
-	return s.lookForResultsBlockHeader(input.BlockHeight)
+	return s.loadResultsBlockHeader(input.BlockHeight)
 }
 
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
