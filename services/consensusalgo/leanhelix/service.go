@@ -4,14 +4,18 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
 	NodePublicKey() primitives.Ed25519Pkey
+	ConstantConsensusLeader() primitives.Ed25519Pkey
+	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 }
 
 type service struct {
@@ -20,7 +24,6 @@ type service struct {
 	transactionPool          services.TransactionPool
 	consensusContext         services.ConsensusContext
 	reporting                instrumentation.Reporting
-	loopControl              instrumentation.LoopControl
 	config                   Config
 	lastCommittedBlockHeight primitives.BlockHeight
 	blocksForRounds          map[primitives.BlockHeight]*protocol.BlockPairContainer
@@ -32,10 +35,8 @@ func NewLeanHelixConsensusAlgo(
 	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
 	consensusContext services.ConsensusContext,
-	events instrumentation.Reporting,
-	loopControl instrumentation.LoopControl,
+	reporting instrumentation.Reporting,
 	config Config,
-	isLeader bool,
 ) services.ConsensusAlgoLeanHelix {
 
 	s := &service{
@@ -43,16 +44,15 @@ func NewLeanHelixConsensusAlgo(
 		blockStorage:     blockStorage,
 		transactionPool:  transactionPool,
 		consensusContext: consensusContext,
-		reporting:        events,
-		loopControl:      loopControl,
+		reporting:        reporting,
 		config:           config,
 		lastCommittedBlockHeight: 0, // TODO: improve startup
 		blocksForRounds:          make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
 	}
 
 	gossip.RegisterLeanHelixHandler(s)
-	if isLeader {
-		go s.buildBlocksEventLoop()
+	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX && config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
+		go s.consensusRoundRunLoop()
 	}
 	return s
 }
@@ -92,15 +92,16 @@ func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInp
 	panic("Not implemented")
 }
 
-func (s *service) buildBlocksEventLoop() {
+func (s *service) consensusRoundRunLoop() {
 
-	s.loopControl.NewLoop("consensus_round", func() {
+	for {
+		s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight)
 
 		// see if we need to propose a new block
 		err := s.leaderProposeNextBlockIfNeeded()
 		if err != nil {
 			s.reporting.Error(err)
-			return
+			continue
 		}
 
 		// validate the current proposed block
@@ -108,7 +109,8 @@ func (s *service) buildBlocksEventLoop() {
 			err := s.leaderCollectVotesForBlock(s.blocksForRounds[s.lastCommittedBlockHeight+1])
 			if err != nil {
 				s.reporting.Error(err)
-				return
+				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff
+				continue
 			}
 
 			// commit the block since it's validated
@@ -116,5 +118,5 @@ func (s *service) buildBlocksEventLoop() {
 			s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 		}
 
-	})
+	}
 }

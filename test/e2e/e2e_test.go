@@ -9,6 +9,7 @@ import (
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"io/ioutil"
 	"net/http"
@@ -51,9 +52,17 @@ var _ = Describe("The Orbs Network", func() {
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
 			nodePublicKey := []byte{0x01}
-			node = bootstrap.NewNode(":8080", nodePublicKey, gossipTransport, true, 1)
-
-			// To let node start up properly, otherwise in Docker we get connection refused
+			constantConsensusLeaderPublicKey := []byte{0x01}
+			node = bootstrap.NewNode(
+				":8080",
+				nodePublicKey,
+				1,
+				constantConsensusLeaderPublicKey,
+				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+				gossipTransport,
+			)
+      
+      // To let node start up properly, otherwise in Docker we get connection refused
 			time.Sleep(100 * time.Millisecond)
 		}
 

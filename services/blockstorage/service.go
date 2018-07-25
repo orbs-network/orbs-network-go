@@ -3,6 +3,7 @@ package blockstorage
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -22,17 +23,21 @@ type service struct {
 
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
+	reporting                   instrumentation.Reporting
+	consensusBlocksHandlers     []handlers.ConsensusBlocksHandler
 }
 
-func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage) services.BlockStorage {
+func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.Reporting) services.BlockStorage {
 	return &service{
 		persistence:  persistence,
 		stateStorage: stateStorage,
+		reporting:    reporting,
 	}
 }
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
+	s.reporting.Infof("Trying to commit block of height %d", txBlockHeader.BlockHeight())
 
 	if err := s.validateProtocolVersion(txBlockHeader); err != nil {
 		return nil, err
@@ -51,6 +56,8 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 
 	// TODO: why are we updating the state? nothing about this in the spec
 	s.updateStateStorage(input.BlockPair.TransactionsBlock)
+
+	s.reporting.Infof("Committed block of height %d", txBlockHeader.BlockHeight())
 
 	return nil, nil
 }
@@ -79,7 +86,7 @@ func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitI
 }
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
-	panic("Not implemented")
+	s.consensusBlocksHandlers = append(s.consensusBlocksHandlers, handler)
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
@@ -101,10 +108,12 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 	if txBlockHeader.BlockHeight() <= s.lastCommittedBlockHeight {
 		if txBlockHeader.BlockHeight() == s.lastCommittedBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
 			// TODO should this really panic
-			message := fmt.Sprintf("block with height %d already in storage, timestamp mismatch", s.lastCommittedBlockHeight)
-			println(message)
-			panic(message)
+			err := fmt.Errorf("block with height %d already in storage, timestamp mismatch", s.lastCommittedBlockHeight)
+			s.reporting.Error(err)
+			panic(err.Error())
 		}
+
+		s.reporting.Infof("block with height %d already in storage, skipping", s.lastCommittedBlockHeight)
 		return false
 	}
 
@@ -113,7 +122,9 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 
 func (s *service) validateProtocolVersion(txBlockHeader *protocol.TransactionsBlockHeader) error {
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
-		return fmt.Errorf("protocol version mismatch: expected 1 got %d", txBlockHeader.ProtocolVersion())
+		err := fmt.Errorf("protocol version mismatch: expected 1 got %d", txBlockHeader.ProtocolVersion())
+		s.reporting.Error(err)
+		return err
 	}
 
 	return nil
@@ -123,9 +134,10 @@ func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol
 	expectedNextBlockHeight := s.lastCommittedBlockHeight + 1
 	if txBlockHeader.BlockHeight() != expectedNextBlockHeight {
 		// TODO should this really panic
-		message := fmt.Sprintf("expected block of height %d but got %d", expectedNextBlockHeight, txBlockHeader.BlockHeight())
-		println(message)
-		panic(message)
+		err := fmt.Errorf("expected block of height %d but got %d", expectedNextBlockHeight, txBlockHeader.BlockHeight())
+		s.reporting.Error(err)
+		panic(err.Error())
+
 	}
 }
 

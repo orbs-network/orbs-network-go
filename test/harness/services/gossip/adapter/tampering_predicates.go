@@ -6,7 +6,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-func ConsensusMessage(messageType consensus.LeanHelixMessageType) MessagePredicate {
+// a MessagePredicate for capturing Lean Helix Consensus Algorithm gossip messages of the given type
+func LeanHelixMessage(messageType consensus.LeanHelixMessageType) MessagePredicate {
 	return func(data *adapter.TransportData) bool {
 		header, ok := parseHeader(data)
 
