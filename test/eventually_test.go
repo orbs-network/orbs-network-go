@@ -7,12 +7,14 @@ import (
 )
 
 func TestEventually(t *testing.T) {
+	sem := newSemaphore(4)
 	num := 1
 	go func() {
-		time.Sleep(1 * time.Millisecond)
+		sem.waitUntilZero()
 		num = 2
 	}()
 	ok := Eventually(func() bool {
+		sem.dec()
 		return num == 2
 	})
 	if !ok {
@@ -21,12 +23,14 @@ func TestEventually(t *testing.T) {
 }
 
 func TestConsistently(t *testing.T) {
+	sem := newSemaphore(4)
 	num := 1
 	go func() {
-		time.Sleep(1 * time.Millisecond)
+		sem.waitUntilZero()
 		num = 2
 	}()
 	ok := Consistently(func() bool {
+		sem.dec()
 		return num == 1
 	})
 	if ok {
@@ -141,5 +145,28 @@ func TestConsistentlyVerifyFailureWithTwoMocks(t *testing.T) {
 	err := ConsistentlyVerify(p1, p2)
 	if err == nil {
 		t.Fatal("ConsistentlyVerify did not discover mock was called")
+	}
+}
+
+type semaphore struct {
+	c     chan bool
+	value int
+}
+
+func newSemaphore(initialValue int) *semaphore {
+	return &semaphore{make(chan bool), initialValue}
+}
+
+func (s *semaphore) dec() {
+	if s.value > 0 {
+		s.value--
+		if s.value == 0 {
+			close(s.c)
+		}
+	}
+}
+
+func (s *semaphore) waitUntilZero() {
+	for _ = range s.c {
 	}
 }
