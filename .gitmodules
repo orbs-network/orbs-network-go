@@ -58,3 +58,9 @@
 [submodule "vendor/github.com/google/go-cmp"]
 	path = vendor/github.com/google/go-cmp
 	url = https://github.com/google/go-cmp
+[submodule "vendor/github.com/pkg/errors"]
+	path = vendor/github.com/pkg/errors
+	url = https://github.com/pkg/errors
+[submodule "vendor/golang.org/x/crypto"]
+	path = vendor/golang.org/x/crypto
+	url = https://go.googlesource.com/crypto
