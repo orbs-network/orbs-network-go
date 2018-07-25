@@ -1,9 +1,9 @@
 package adapter
 
 import (
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/go-mock"
 )
 
 type mockListener struct {
@@ -14,7 +14,7 @@ func (m *mockListener) OnTransportMessageReceived(payloads [][]byte) {
 	m.Called(payloads)
 }
 
-func listenTo(transport adapter.Transport, publicKey primitives.Ed25519Pkey) *mockListener {
+func listenTo(transport adapter.Transport, publicKey primitives.Ed25519PublicKey) *mockListener {
 	l := &mockListener{}
 	transport.RegisterListener(l, publicKey)
 	return l

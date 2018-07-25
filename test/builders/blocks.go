@@ -94,7 +94,7 @@ func (b *blockPair) WithPrevBlockHash(prevBlock *protocol.BlockPairContainer) *b
 	return b
 }
 
-func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey []byte, publicKey primitives.Ed25519Pkey) *blockPair {
+func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
 	built := b.Build()
 	txHash := crypto.CalcTransactionsBlockHash(built)
 	rxHash := crypto.CalcResultsBlockHash(built)
@@ -112,7 +112,7 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey []byte, publicKe
 	return b
 }
 
-func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(privateKey []byte, publicKey primitives.Ed25519Pkey) *blockPair {
+func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
 	built := b.Build()
 	txHash := crypto.CalcTransactionsBlockHash(built)
 	rxHash := crypto.CalcResultsBlockHash(built)
