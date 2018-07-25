@@ -8,7 +8,8 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
 		return nil, &ErrCodecEncode{"BlockPair", blockPair}
 	}
-	payloads := make([][]byte, 0, 5+ // the 5 is coming from the 5 payloads we're always sending first (txHeader, txMetadata...)
+	const numPayloadsForHardcodedBlockFields = 5 // txHeader, txMetadata, rxHeader..
+	payloads := make([][]byte, 0, numPayloadsForHardcodedBlockFields+
 		len(blockPair.TransactionsBlock.SignedTransactions)+
 		len(blockPair.ResultsBlock.TransactionReceipts)+
 		len(blockPair.ResultsBlock.ContractStateDiffs),
