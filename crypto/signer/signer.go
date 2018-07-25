@@ -1,4 +1,4 @@
-package elliptic
+package signer
 
 import (
 	"encoding/hex"

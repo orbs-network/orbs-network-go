@@ -1,9 +1,9 @@
-package elliptic_test
+package signer_test
 
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/orbs-network/orbs-network-go/crypto/elliptic"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"testing"
 )
 
@@ -25,7 +25,7 @@ func pkStringToBytes(t *testing.T, pk string) []byte {
 }
 
 func TestNewPublicKeyString(t *testing.T) {
-	if s, err := elliptic.NewPublicKeyString(publicKey1); err != nil {
+	if s, err := signer.NewPublicKeyString(publicKey1); err != nil {
 		t.Error(err)
 	} else {
 		if !bytes.Equal(s.PublicKey(), pkStringToBytes(t, publicKey1)) {
@@ -35,19 +35,19 @@ func TestNewPublicKeyString(t *testing.T) {
 }
 
 func TestNewPublicKeyStringFailsOnInvalidPKString(t *testing.T) {
-	if _, err := elliptic.NewPublicKeyString("z" + publicKey1); err == nil {
+	if _, err := signer.NewPublicKeyString("z" + publicKey1); err == nil {
 		t.Errorf("signer initialized on invalid pk string")
 	}
 }
 
 func TestNewPublicKeyBytesInvalid(t *testing.T) {
-	if _, err := elliptic.NewPublicKeyBytes([]byte{0}); err == nil {
+	if _, err := signer.NewPublicKeyBytes([]byte{0}); err == nil {
 		t.Errorf("signer initialized on invalid pk bytes")
 	}
 }
 
 func TestNewSecretKeyStringUnsafe(t *testing.T) {
-	if s, err := elliptic.NewSecretKeyStringUnsafe(privateKey2); err != nil {
+	if s, err := signer.NewSecretKeyStringUnsafe(privateKey2); err != nil {
 		t.Error(err)
 	} else {
 		if !bytes.Equal(s.PublicKey(), pkStringToBytes(t, publicKey2)) {
@@ -60,19 +60,19 @@ func TestNewSecretKeyStringUnsafe(t *testing.T) {
 }
 
 func TestNewSecretKeyStringUnsafeFailedOnInvalidPKString(t *testing.T) {
-	if _, err := elliptic.NewSecretKeyStringUnsafe("z" + privateKey2); err == nil {
+	if _, err := signer.NewSecretKeyStringUnsafe("z" + privateKey2); err == nil {
 		t.Error("signed initilaized on invalid pk sting")
 	}
 }
 
 func TestNewSecretKeyBytesUnsafeInvalid(t *testing.T) {
-	if _, err := elliptic.NewSecretKeyBytesUnsafe([]byte{0}); err == nil {
+	if _, err := signer.NewSecretKeyBytesUnsafe([]byte{0}); err == nil {
 		t.Errorf("signer initialized on invalid pk bytes")
 	}
 }
 
 func TestSignerCanSign(t *testing.T) {
-	if s, err := elliptic.NewSecretKeyStringUnsafe(privateKey2); err != nil {
+	if s, err := signer.NewSecretKeyStringUnsafe(privateKey2); err != nil {
 		t.Error(err)
 	} else {
 		if sig, err := s.Sign(someDataToSign); err != nil {
@@ -86,7 +86,7 @@ func TestSignerCanSign(t *testing.T) {
 }
 
 func TestSignerFailedOnMissingPK(t *testing.T) {
-	if s, err := elliptic.NewPublicKeyString(publicKey1); err != nil {
+	if s, err := signer.NewPublicKeyString(publicKey1); err != nil {
 		t.Error(err)
 	} else {
 		if _, err := s.Sign(someDataToSign); err == nil {
@@ -96,7 +96,7 @@ func TestSignerFailedOnMissingPK(t *testing.T) {
 }
 
 func TestSignerCanVerify(t *testing.T) {
-	if s, err := elliptic.NewPublicKeyString(publicKey2); err != nil {
+	if s, err := signer.NewPublicKeyString(publicKey2); err != nil {
 		t.Error(err)
 	} else {
 		if expectedSigByPK2B, err := hex.DecodeString(expectedSigByPK2); err != nil {
@@ -110,7 +110,7 @@ func TestSignerCanVerify(t *testing.T) {
 }
 
 func TestSignerVerificationFailedOnIncorrectPK(t *testing.T) {
-	if s, err := elliptic.NewPublicKeyString(publicKey1); err != nil {
+	if s, err := signer.NewPublicKeyString(publicKey1); err != nil {
 		t.Error(err)
 	} else {
 		if expectedSigByPK2B, err := hex.DecodeString(expectedSigByPK2); err != nil {
