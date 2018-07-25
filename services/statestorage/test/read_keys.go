@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-//TODO a case where we pass a set of keys to ReadKeys(), and at least one key has no matching value
 var _ = Describe("Reading a Key", func() {
 	When("not providing a contract name", func() {
 		It("Returns an error", func() {
