@@ -1,20 +1,85 @@
 package elliptic
 
+import (
+	"encoding/hex"
+	"fmt"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ed25519"
+)
+
 type Signer struct {
 	publicKey        []byte
-	privateKeyUnsafe []byte // in order to make this safe we need some sort of secure memory, there are external packages implementing this already
+	privateKeyUnsafe []byte
 }
 
-func NewPublicKeyString(pk string) *Signer {
-	return nil
+// TODO NewFromRandUnsafe() this should probably be removed in the future, used for debugging mainly
+func NewFromRandUnsafe() (*Signer, error) {
+	if pub, pri, err := ed25519.GenerateKey(nil); err != nil {
+		return nil, errors.Wrapf(err, "cannot create new signer from random keys")
+	} else {
+		return &Signer{
+			publicKey:        pub,
+			privateKeyUnsafe: pri,
+		}, nil
+	}
+}
+
+func NewPublicKeyString(pk string) (*Signer, error) {
+	pkBytes, err := hex.DecodeString(pk)
+	if err != nil {
+		return nil, errors.Wrapf(err, "public key hex decode failed")
+	}
+
+	return NewPublicKeyBytes(pkBytes), nil
 }
 
 func NewPublicKeyBytes(pk []byte) *Signer {
-	return nil
+	s := &Signer{
+		publicKey: pk,
+	}
+
+	return s
+}
+
+func NewSecretKeyStringUnsafe(pk string) (*Signer, error) {
+	pkBytes, err := hex.DecodeString(pk)
+	if err != nil {
+		return nil, errors.Wrapf(err, "public key hex invalid")
+	}
+
+	return NewSecretKeyBytesUnsafe(pkBytes)
+}
+
+func NewSecretKeyBytesUnsafe(pk []byte) (*Signer, error) {
+	if len(pk) != ed25519.PrivateKeySize {
+		return nil, fmt.Errorf("invalid private key")
+	}
+
+	pub := make([]byte, 32)
+	copy(pub, pk[32:])
+	pri := make([]byte, 64)
+	copy(pri, pk)
+
+	return &Signer{
+		pub,
+		pri,
+	}, nil
 }
 
 func (e *Signer) PublicKey() []byte {
 	return e.publicKey
+}
+
+func (e *Signer) PublicKeyHex() string {
+	return hex.EncodeToString(e.publicKey)
+}
+
+func (e *Signer) PrivateKeyUnsafe() []byte {
+	return e.privateKeyUnsafe
+}
+
+func (e *Signer) PrivateKeyUnsafeString() string {
+	return hex.EncodeToString(e.privateKeyUnsafe)
 }
 
 func (e *Signer) Sign(data []byte) string {
