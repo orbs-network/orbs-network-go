@@ -85,6 +85,11 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 		return errors.Errorf("invalid block: future block height %d", blockHeight)
 	}
 
+	// correct block type
+	if !blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() {
+		return errors.Errorf("incorrect block proof type: %s", blockPair.ResultsBlock.BlockProof.Type())
+	}
+
 	// prev block hash ptr
 	if s.lastCommittedBlock != nil && blockHeight == s.lastCommittedBlockHeight()+1 {
 		prevTxHash := crypto.CalcTransactionsBlockHash(s.lastCommittedBlock)
@@ -98,9 +103,6 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 	}
 
 	// block proof
-	if !blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("incorrect block proof type: %s", blockPair.ResultsBlock.BlockProof.Type())
-	}
 	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
 	if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
 		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
