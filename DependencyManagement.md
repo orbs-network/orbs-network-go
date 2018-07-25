@@ -4,11 +4,11 @@
 
 This project uses git submodules for dependency management, which means that we do not store third-party source code in our source tree, but instead point to a different git repositories from `vendor/website/vendor-name/lib-name` folder.
 
-Git stores a link to a certain commit in a different repository. That way we always have a certain version and can make sure that we always have working codebase.
+Git stores a link to a specific commit in a different repository. That way we always have a specific version of a dependency what we use to raise both the stability and security of our codebase.
 
-Most of the time you only want to fetch the dependencies via `./git-submodules-checkout.sh` script.
+Most of the time you only want to fetch the dependencies via `./git-submodules-checkout.sh` script. It will both init and update you to the latest version (set to the specific version that was vetted and selected) of all dependencies.
 
-In case you need to introduce or update a dependency, use `manul` to update a commit that points to the dependency version, and open a pull request.
+In case you need to introduce or update a dependency, use `manul` to update a commit that points to the dependency version, and open a pull request. (https://github.com/kovetskiy/manul)
 
 After the pull request is merged, everyone has to fetch the dependencies using `./git-submodules-checkout.sh`. You can always verify if you are up to date with command `manul -Q`. If you see a plus sign (`+`) next to a commit id, it means that it's out of sync.
 
