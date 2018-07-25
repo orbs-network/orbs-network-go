@@ -27,13 +27,12 @@ func newStateStorageDriver() *driver {
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
-	if out, err := d.readKeys(contract, key); err != nil {
+	out, err := d.readKeys(contract, key)
+	if err != nil {
 		return nil, err
-	} else {
-		return out[0].value, nil
 	}
+	return out[0].value, nil
 }
-
 
 func (d *driver) readKeys(contract string, keys ...string) ([]*keyValue, error) {
 	ripmdKeys := make([]primitives.Ripmd160Sha256, 0, len(keys))
