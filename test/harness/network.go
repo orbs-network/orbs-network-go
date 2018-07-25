@@ -62,7 +62,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			sharedTamperingTransport,
 			nodes[i].blockPersistence,
 			nodes[i].statePersistence,
-			instrumentation.GetLogger().For(instrumentation.Node(nodeName)),
+			instrumentation.GetLogger().For(instrumentation.Node(nodeName)).WithFormatter(instrumentation.NewHumanReadableFormatter()),
 			nodes[i].config,
 		)
 
