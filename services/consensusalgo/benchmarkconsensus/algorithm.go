@@ -33,11 +33,22 @@ func (s *service) consensusRoundRunLoop(ctx context.Context) {
 func (s *service) consensusRoundTick() (err error) {
 	s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight())
 	if s.activeBlock == nil {
-		s.activeBlock, err = s.generateNewProposedBlock()
+		s.activeBlock, err = s.leaderGenerateNewProposedBlock()
 		if err != nil {
 			return err
 		}
 	}
+	if s.activeBlock != nil {
+		_, err = s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
+				BlockPair: s.activeBlock,
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -48,12 +59,34 @@ func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
 	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 }
 
-func (s *service) generateNewProposedBlock() (*protocol.BlockPairContainer, error) {
-	_, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{})
+func (s *service) leaderGenerateNewProposedBlock() (*protocol.BlockPairContainer, error) {
+	// get tx
+	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+		BlockHeight: s.lastCommittedBlockHeight() + 1,
+	})
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+
+	// get rx
+	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
+		BlockHeight: s.lastCommittedBlockHeight() + 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// generate block
+	if txOutput == nil || txOutput.TransactionsBlock == nil || rxOutput == nil || rxOutput.ResultsBlock == nil {
+		panic("invalid responses: missing fields")
+		// TODO: should we have these panics? because this is internal code
+	}
+	blockPair := &protocol.BlockPairContainer{
+		TransactionsBlock: txOutput.TransactionsBlock,
+		ResultsBlock:      rxOutput.ResultsBlock,
+	}
+
+	return blockPair, nil
 }
 
 func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {

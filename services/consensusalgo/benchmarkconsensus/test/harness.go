@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	testInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -53,9 +55,6 @@ func newHarness(
 	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return()
 
 	consensusContext := &services.MockConsensusContext{}
-	if isLeader {
-		consensusContext.When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil)
-	}
 
 	return &harness{
 		gossip:           gossip,
@@ -98,8 +97,34 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) expectNewBlockProposalRequested() {
-	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).AtLeast(1)
+func (h *harness) expectNewBlockProposalRequested(expectedBlockHeight primitives.BlockHeight, prevBlockPair *protocol.BlockPairContainer) {
+	txRequestMatcher := func(i interface{}) bool {
+		input, ok := i.(*services.RequestNewTransactionsBlockInput)
+		return ok &&
+			input.BlockHeight.Equal(expectedBlockHeight) &&
+			(prevBlockPair == nil || input.PrevBlockHash.Equal(crypto.CalcTransactionsBlockHash(prevBlockPair)))
+	}
+	rxRequestMatcher := func(i interface{}) bool {
+		input, ok := i.(*services.RequestNewResultsBlockInput)
+		return ok &&
+			input.BlockHeight.Equal(expectedBlockHeight) &&
+			(prevBlockPair == nil || input.PrevBlockHash.Equal(crypto.CalcResultsBlockHash(prevBlockPair)))
+	}
+
+	aBlock := builders.BenchmarkConsensusBlockPair().WithHeight(expectedBlockHeight)
+	if prevBlockPair != nil {
+		aBlock = aBlock.WithPrevBlockHash(prevBlockPair)
+	}
+	builtBlockForReturn := aBlock.Build()
+	txReturn := &services.RequestNewTransactionsBlockOutput{
+		TransactionsBlock: builtBlockForReturn.TransactionsBlock,
+	}
+	rxReturn := &services.RequestNewResultsBlockOutput{
+		ResultsBlock: builtBlockForReturn.ResultsBlock,
+	}
+
+	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d and prev block hash matches", expectedBlockHeight), txRequestMatcher)).Return(txReturn, nil).AtLeast(1)
+	h.consensusContext.When("RequestNewResultsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d and prev block hash matches", expectedBlockHeight), rxRequestMatcher)).Return(rxReturn, nil).AtLeast(1)
 }
 
 func (h *harness) verifyNewBlockProposalRequested(t *testing.T) {
@@ -111,6 +136,7 @@ func (h *harness) verifyNewBlockProposalRequested(t *testing.T) {
 
 func (h *harness) expectNewBlockProposalNotRequested() {
 	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).Times(0)
+	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, nil).Times(0)
 }
 
 func (h *harness) verifyNewBlockProposalNotRequested(t *testing.T) {
@@ -156,5 +182,23 @@ func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
 	err := test.EventuallyVerify(h.blockStorage, h.gossip)
 	if err != nil {
 		t.Fatal("Did not commit and reply to block:", err)
+	}
+}
+
+func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight) {
+	commitSentMatcher := func(i interface{}) bool {
+		input, ok := i.(*gossiptopics.BenchmarkConsensusCommitInput)
+		return ok &&
+			input.Message.BlockPair.TransactionsBlock.Header.BlockHeight().Equal(expectedBlockHeight) &&
+			input.Message.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedBlockHeight)
+	}
+
+	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d and recipient equals %s", expectedBlockHeight), commitSentMatcher)).AtLeast(1)
+}
+
+func (h *harness) verifyCommitSent(t *testing.T) {
+	err := test.EventuallyVerify(h.gossip)
+	if err != nil {
+		t.Fatal("Did not broadcast block commit:", err)
 	}
 }

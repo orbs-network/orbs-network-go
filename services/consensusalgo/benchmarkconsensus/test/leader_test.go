@@ -6,11 +6,13 @@ import (
 	"testing"
 )
 
-func TestLeaderProposesBlocks(t *testing.T) {
+func TestLeaderCommitsValidFirstBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(true)
-		h.expectNewBlockProposalRequested()
+		h.expectNewBlockProposalRequested(1, nil)
+		h.expectCommitSent(1)
 		h.createService(ctx)
 		h.verifyNewBlockProposalRequested(t)
+		h.verifyCommitSent(t)
 	})
 }
