@@ -132,8 +132,8 @@ func TestVerifyEd25519(t *testing.T) {
 
 func TestVerifyEd25519InvalidPublicKey(t *testing.T) {
 	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("code did not panic and should have")
+		if r := recover(); r != nil {
+			t.Errorf("code paniced, shouldn't have: %s", r)
 		}
 	}()
 
