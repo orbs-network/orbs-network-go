@@ -3,12 +3,13 @@ package signer
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ed25519"
 )
 
 type Signer struct {
-	publicKey        []byte
+	publicKey        primitives.Ed25519Pkey
 	privateKeyUnsafe []byte
 }
 
@@ -23,7 +24,7 @@ func NewFromRandUnsafe() (*Signer, error) {
 		return nil, errors.Wrapf(err, "cannot create new signer from random keys")
 	} else {
 		return &Signer{
-			publicKey:        pub,
+			publicKey:        primitives.Ed25519Pkey(pub),
 			privateKeyUnsafe: pri,
 		}, nil
 	}
@@ -74,7 +75,7 @@ func NewSecretKeyBytesUnsafe(pk []byte) (*Signer, error) {
 	}, nil
 }
 
-func (e *Signer) PublicKey() []byte {
+func (e *Signer) PublicKey() primitives.Ed25519Pkey {
 	return e.publicKey
 }
 
@@ -90,7 +91,7 @@ func (e *Signer) PrivateKeyUnsafeString() string {
 	return hex.EncodeToString(e.privateKeyUnsafe)
 }
 
-func (e *Signer) Sign(data []byte) ([]byte, error) {
+func (e *Signer) Sign(data []byte) (primitives.Ed25519Sig, error) {
 	if len(e.privateKeyUnsafe) != PRIVATE_KEY_SIZE {
 		return nil, fmt.Errorf("cannot sign, private key invalid")
 	}
@@ -98,6 +99,6 @@ func (e *Signer) Sign(data []byte) ([]byte, error) {
 	return signedData, nil
 }
 
-func (e *Signer) Verify(data []byte, sig []byte) bool {
-	return ed25519.Verify(e.publicKey, data, sig)
+func (e *Signer) Verify(data []byte, sig primitives.Ed25519Sig) bool {
+	return ed25519.Verify([]byte(e.publicKey), data, sig)
 }
