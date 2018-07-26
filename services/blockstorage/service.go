@@ -15,7 +15,8 @@ import (
 
 const (
 	// TODO extract it to the spec
-	ProtocolVersion = 1
+	ProtocolVersion          = 1
+	NanosecondsInMillisecond = 1000000
 )
 
 type service struct {
@@ -85,11 +86,10 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 		c := make(chan *services.GetTransactionsBlockHeaderOutput)
 
 		go func() {
-			// TODO extract to a config
-			const interval = 10
-			const timeout = 10000
+			const interval = 10 * NanosecondsInMillisecond
+			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
 
-			for i := 0; i < timeout; i += interval {
+			for i := int64(0); i < timeout; i += interval {
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.loadTransactionsBlockHeader(input.BlockHeight)
 
@@ -99,12 +99,17 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 					}
 				}
 
-				time.Sleep(interval)
+				time.Sleep(10 * time.Millisecond)
 			}
+
+			c <- nil
 		}()
 
-		result := <-c
-		return result, nil
+		if result := <-c; result != nil {
+			return result, nil
+		}
+
+		return nil, fmt.Errorf("operation timed out")
 	}
 
 	return s.loadTransactionsBlockHeader(input.BlockHeight)
@@ -128,7 +133,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 		c := make(chan *services.GetResultsBlockHeaderOutput)
 
 		go func() {
-			const interval = 10000 // 10 ms
+			const interval = 10 * NanosecondsInMillisecond // 10 ms
 			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
 
 			for i := int64(0); i < timeout; i += interval {
@@ -141,12 +146,17 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 					}
 				}
 
-				time.Sleep(interval)
+				time.Sleep(10 * time.Millisecond)
 			}
+
+			c <- nil
 		}()
 
-		result := <-c
-		return result, nil
+		if result := <-c; result != nil {
+			return result, nil
+		}
+
+		return nil, fmt.Errorf("operation timed out")
 	}
 
 	return s.loadResultsBlockHeader(input.BlockHeight)
