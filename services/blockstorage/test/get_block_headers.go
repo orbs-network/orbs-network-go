@@ -45,13 +45,8 @@ var _ = Describe("Block storage", func() {
 
 			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
 
-			block5 := driver.getBlock(5).TransactionsBlock
 			output := <-result
-
 			Expect(output.TransactionsBlockHeader.BlockHeight()).To(Equal(primitives.BlockHeight(5)))
-			Expect(output.TransactionsBlockHeader).To(Equal(block5.Header))
-			Expect(output.TransactionsBlockProof).To(Equal(block5.BlockProof))
-			Expect(output.TransactionsBlockMetadata).To(Equal(block5.Metadata))
 
 			close(done)
 		}, 100)
@@ -116,12 +111,9 @@ var _ = Describe("Block storage", func() {
 
 			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
 
-			block5 := driver.getBlock(5).ResultsBlock
 			output := <-result
 
 			Expect(output.ResultsBlockHeader.BlockHeight()).To(Equal(primitives.BlockHeight(5)))
-			Expect(output.ResultsBlockHeader).To(Equal(block5.Header))
-			Expect(output.ResultsBlockProof).To(Equal(block5.BlockProof))
 
 			close(done)
 		}, 100)

@@ -175,11 +175,11 @@ func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBl
 
 func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
-		return &services.ValidateBlockForCommitOutput{}, protocolVersionError
+		return nil, protocolVersionError
 	}
 
 	if blockHeightError := s.validateBlockHeight(input.BlockPair); blockHeightError != nil {
-		return &services.ValidateBlockForCommitOutput{}, blockHeightError
+		return nil, blockHeightError
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
