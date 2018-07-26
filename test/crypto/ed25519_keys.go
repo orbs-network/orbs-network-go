@@ -5,18 +5,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-const (
-	PublicKey1  = "b9a91acbf23c22123a8253cfc4325d7b4b7a620465c57f932c7943f60887308b"
-	PublicKey2  = "dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"
-	PrivateKey2 = "93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"
-)
-
-type keyPairHex struct {
+type ed25519KeyPairHex struct {
 	publicKey  string
 	privateKey string
 }
 
-var keyPairData = map[int]keyPairHex{
+var ed25519KeyPairData = map[int]ed25519KeyPairHex{
 	1:  {"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173", "93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"},
 	2:  {"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152", "3b24b5f9e6b1371c3b5de2e402a96930eeafe52111bb4a1b003e5ecad3fab53892d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152"},
 	3:  {"a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0", "2c72df84be2b994c32a3f4ded0eab901debd3f3e13721a59eed00fbd1da4cc00a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0"},
@@ -29,33 +23,33 @@ var keyPairData = map[int]keyPairHex{
 	10: {"70d92324eb8d24b7c7ed646e1996f94dcd52934a031935b9ac2d0e5bbcfa357c", "f1c41ba8a1d78f7cdc4f4ff23f3b736e30c630085697d6503e16ac899646f5ab70d92324eb8d24b7c7ed646e1996f94dcd52934a031935b9ac2d0e5bbcfa357c"},
 }
 
-type keyPair struct {
+type ed25519KeyPair struct {
 	publicKey        primitives.Ed25519PublicKey
 	privateKeyUnsafe primitives.Ed25519PrivateKey
 }
 
-func NewKeyPair(set int) *keyPair {
-	if set > len(keyPairData) {
+func Ed25519KeyPairForTests(setIndex int) *ed25519KeyPair {
+	if setIndex > len(ed25519KeyPairData) {
 		return nil
 	}
 
-	pub, err := hex.DecodeString(keyPairData[set].publicKey)
+	pub, err := hex.DecodeString(ed25519KeyPairData[setIndex].publicKey)
 	if err != nil {
 		return nil
 	}
 
-	pri, err := hex.DecodeString(keyPairData[set].privateKey)
+	pri, err := hex.DecodeString(ed25519KeyPairData[setIndex].privateKey)
 	if err != nil {
 		return nil
 	}
 
-	return &keyPair{pub, pri}
+	return &ed25519KeyPair{pub, pri}
 }
 
-func (k *keyPair) PublicKey() primitives.Ed25519PublicKey {
+func (k *ed25519KeyPair) PublicKey() primitives.Ed25519PublicKey {
 	return k.publicKey
 }
 
-func (k *keyPair) PrivateKeyUnsafe() primitives.Ed25519PrivateKey {
+func (k *ed25519KeyPair) PrivateKeyUnsafe() primitives.Ed25519PrivateKey {
 	return k.privateKeyUnsafe
 }

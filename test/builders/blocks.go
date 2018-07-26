@@ -124,8 +124,8 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey primitives.Ed255
 }
 
 func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
-	corruptPK := make([]byte, len(privateKey))
-	return b.WithBenchmarkConsensusBlockProof(corruptPK, publicKey)
+	corruptPrivateKey := make([]byte, len(privateKey))
+	return b.WithBenchmarkConsensusBlockProof(corruptPrivateKey, publicKey)
 }
 
 func (b *blockPair) WithBlockCreated(time time.Time) *blockPair {

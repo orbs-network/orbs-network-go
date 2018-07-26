@@ -32,7 +32,7 @@ func newHarness(
 	isLeader bool,
 ) *harness {
 
-	leaderPublicKey := crypto.NewKeyPair(1).PublicKey()
+	leaderPublicKey := crypto.Ed25519KeyPairForTests(1).PublicKey()
 	nodePublicKey := leaderPublicKey
 	if !isLeader {
 		nodePublicKey = []byte{0x02}

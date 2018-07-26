@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-var privateKey = crypto.NewKeyPair(1).PrivateKeyUnsafe()
+var privateKey = crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
 
 func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
