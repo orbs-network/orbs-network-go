@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -44,6 +45,7 @@ func newHarness(
 		nodePublicKey,
 		leaderPublicKey,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+		1,
 	)
 
 	log := testInstrumentation.NewBufferedLog("BenchmarkConsensus")
@@ -134,6 +136,11 @@ func (h *harness) verifyNewBlockProposalRequested(t *testing.T) {
 	}
 }
 
+func (h *harness) expectNewBlockProposalRequestedToFail() {
+	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).AtLeast(1)
+	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
+}
+
 func (h *harness) expectNewBlockProposalNotRequested() {
 	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).Times(0)
 	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, nil).Times(0)
@@ -202,5 +209,16 @@ func (h *harness) verifyCommitSent(t *testing.T) {
 	err := test.EventuallyVerify(h.gossip)
 	if err != nil {
 		t.Fatal("Did not broadcast block commit:", err)
+	}
+}
+
+func (h *harness) expectCommitNotSent() {
+	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any).Times(0)
+}
+
+func (h *harness) verifyCommitNotSent(t *testing.T) {
+	err := test.ConsistentlyVerify(h.gossip)
+	if err != nil {
+		t.Fatal("Did broadcast block commit:", err)
 	}
 }

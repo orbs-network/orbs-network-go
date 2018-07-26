@@ -7,10 +7,11 @@ import (
 
 //TODO introduce FileSystemConfig
 type hardcodedConfig struct {
-	networkSize             uint32
-	nodePublicKey           primitives.Ed25519PublicKey
-	constantConsensusLeader primitives.Ed25519PublicKey
-	activeConsensusAlgo     consensus.ConsensusAlgoType
+	networkSize                                  uint32
+	nodePublicKey                                primitives.Ed25519PublicKey
+	constantConsensusLeader                      primitives.Ed25519PublicKey
+	activeConsensusAlgo                          consensus.ConsensusAlgoType
+	benchmarkConsensusRoundRetryIntervalMillisec uint32
 }
 
 func NewHardCodedConfig(
@@ -18,13 +19,15 @@ func NewHardCodedConfig(
 	nodePublicKey primitives.Ed25519PublicKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	benchmarkConsensusRoundRetryIntervalMillisec uint32,
 ) NodeConfig {
 
 	return &hardcodedConfig{
-		networkSize:             networkSize,
-		nodePublicKey:           nodePublicKey,
-		constantConsensusLeader: constantConsensusLeader,
-		activeConsensusAlgo:     activeConsensusAlgo,
+		networkSize:                                  networkSize,
+		nodePublicKey:                                nodePublicKey,
+		constantConsensusLeader:                      constantConsensusLeader,
+		activeConsensusAlgo:                          activeConsensusAlgo,
+		benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
 	}
 }
 
@@ -42,4 +45,8 @@ func (c *hardcodedConfig) ConstantConsensusLeader() primitives.Ed25519PublicKey 
 
 func (c *hardcodedConfig) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
+}
+
+func (c *hardcodedConfig) BenchmarkConsensusRoundRetryIntervalMillisec() uint32 {
+	return c.benchmarkConsensusRoundRetryIntervalMillisec
 }

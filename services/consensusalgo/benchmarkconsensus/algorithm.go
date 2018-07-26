@@ -25,7 +25,7 @@ func (s *service) consensusRoundRunLoop(ctx context.Context) {
 			err := s.consensusRoundTick()
 			if err != nil {
 				s.reporting.Error(err)
-				time.Sleep(1 * time.Second) // TODO: replace with a configuration
+				time.Sleep(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillisec()) * time.Millisecond)
 			}
 		}
 	}

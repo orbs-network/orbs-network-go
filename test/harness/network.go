@@ -48,13 +48,14 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 		nodes[i].index = i
 		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
 		constantConsensusLeaderPublicKey := []byte{byte(1)}
-		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
+		nodeName := fmt.Sprintf("node-pkey-%s", nodePublicKey)
 
 		nodes[i].config = config.NewHardCodedConfig(
 			numNodes,
 			nodePublicKey,
 			constantConsensusLeaderPublicKey,
 			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+			1,
 		)
 
 		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)

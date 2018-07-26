@@ -16,6 +16,7 @@ type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
 }
 
 type service struct {
