@@ -24,17 +24,17 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()) //TODO: fix private key
 
 		b1 := aBlock.WithHeight(1).Build()
-		h.expectCommitSaveAndReply(b1, 1)
+		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader())
 		h.receivedCommitViaGossip(b1)
 		h.verifyCommitSaveAndReply(t)
 
 		b2 := aBlock.WithHeight(2).WithPrevBlockHash(b1).Build()
-		h.expectCommitSaveAndReply(b2, 2)
+		h.expectCommitSaveAndReply(b2, 2, h.config.ConstantConsensusLeader())
 		h.receivedCommitViaGossip(b2)
 		h.verifyCommitSaveAndReply(t)
 
 		b3 := aBlock.WithHeight(3).WithPrevBlockHash(b2).Build()
-		h.expectCommitSaveAndReply(b3, 3)
+		h.expectCommitSaveAndReply(b3, 3, h.config.ConstantConsensusLeader())
 		h.receivedCommitViaGossip(b3)
 		h.verifyCommitSaveAndReply(t)
 	})
@@ -48,17 +48,17 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
-		h.expectCommitSaveAndReply(b1, 1)
+		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader())
 		h.receivedCommitViaGossip(b1)
 		h.verifyCommitSaveAndReply(t)
 
 		b2 := aBlock.WithHeight(2).WithPrevBlockHash(b1).Build()
-		h.expectCommitSaveAndReply(b2, 2)
+		h.expectCommitSaveAndReply(b2, 2, h.config.ConstantConsensusLeader())
 		h.receivedCommitViaGossip(b2)
 		h.verifyCommitSaveAndReply(t)
 
 		// sending b1 again (an old valid block)
-		h.expectCommitSaveAndReply(b1, 2)
+		h.expectCommitSaveAndReply(b1, 2, h.config.ConstantConsensusLeader())
 		h.receivedCommitViaGossip(b1)
 		h.verifyCommitSaveAndReply(t)
 	})
@@ -86,7 +86,7 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
-		h.expectCommitSaveAndReply(b1, 1)
+		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader())
 		h.receivedCommitViaGossip(b1)
 		h.verifyCommitSaveAndReply(t)
 

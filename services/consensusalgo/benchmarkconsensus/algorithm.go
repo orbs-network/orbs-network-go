@@ -127,7 +127,7 @@ func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer
 		s.lastCommittedBlock = blockPair
 	}
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
-		RecipientPublicKey: nil,
+		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
 		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
 			Status: (&gossipmessages.BenchmarkConsensusStatusBuilder{
 				LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
