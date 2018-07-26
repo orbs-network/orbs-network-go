@@ -60,12 +60,12 @@ func (s *service) generateNewProposedBlock() (*protocol.BlockPairContainer, erro
 func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
 	err := s.nonLeaderValidateBlock(blockPair)
 	if err != nil {
-		s.reporting.Error(err) // TODO: wrap with added context
+		s.reporting.Error("Follower failed to validate a block", instrumentation.Error(err)) // TODO: wrap with added context
 		return
 	}
 	err = s.nonLeaderCommitAndReply(blockPair)
 	if err != nil {
-		s.reporting.Error(err) // TODO: wrap with added context
+		s.reporting.Error("Follower failed to commit a block", instrumentation.Error(err)) // TODO: wrap with added context
 		return
 	}
 }
