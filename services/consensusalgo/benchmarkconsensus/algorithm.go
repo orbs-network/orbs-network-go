@@ -169,22 +169,33 @@ func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer
 }
 
 func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
+	// commit the block in block storage
 	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
 	if err != nil {
 		return err
 	}
+
+	// remember the block in our last committed state variable
 	if blockPair.TransactionsBlock.Header.BlockHeight() == s.lastCommittedBlockHeight()+1 {
 		s.lastCommittedBlock = blockPair
 	}
+
+	// send committed back to leader via gossip
+	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
+		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
+	}).Build()
+	signedData := status.Raw()
+	signature := signature.SignEd25519(nil, signedData)
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
 		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
-			Status: (&gossipmessages.BenchmarkConsensusStatusBuilder{
-				LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
+			Status: status,
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+				Signature:       signature,
 			}).Build(),
-			Sender: nil,
 		},
 	})
 	return err
