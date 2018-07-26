@@ -3,6 +3,7 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -186,7 +187,7 @@ func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
 	}).Build()
-	signedData := status.Raw()
+	signedData := hash.CalcSha256(status.Raw())
 	signature := signature.SignEd25519(nil, signedData)
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
