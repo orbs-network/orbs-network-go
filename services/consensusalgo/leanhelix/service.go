@@ -14,8 +14,8 @@ import (
 
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
-	NodePublicKey() primitives.Ed25519Pkey
-	ConstantConsensusLeader() primitives.Ed25519Pkey
+	NodePublicKey() primitives.Ed25519PublicKey
+	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 }
 

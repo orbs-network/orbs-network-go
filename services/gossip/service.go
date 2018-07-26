@@ -11,7 +11,7 @@ import (
 )
 
 type Config interface {
-	NodePublicKey() primitives.Ed25519Pkey
+	NodePublicKey() primitives.Ed25519PublicKey
 }
 
 type service struct {
