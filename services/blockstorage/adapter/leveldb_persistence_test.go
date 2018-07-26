@@ -1,8 +1,6 @@
 package adapter
 
 import (
-	"bytes"
-	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -113,34 +111,5 @@ var _ = Describe("LevelDb persistence", func() {
 			compareContainers(container0, allBlocks[0])
 			compareContainers(container1, allBlocks[1])
 		})
-	})
-})
-
-var _ = Describe("Encode/decode code as byte array", func() {
-	It("encodes/decodes key/value pairs in a buffer", func() {
-		buffer := bytes.NewBuffer([]byte{})
-
-		bufferPutKeyValue(buffer, "Artist", []byte("David Bowie"))
-		bufferPutKeyValue(buffer, "Song", []byte("Life On Mars"))
-
-		fmt.Println("buf contents", buffer.String())
-
-		var keys []string
-		var values []string
-
-		iterateOverKeyValueBuffer(buffer, func(key string, value []byte) {
-			keys = append(keys, key)
-			values = append(values, string(value))
-		})
-
-		Expect(keys).To(Equal([]string{"Artist", "Song"}))
-		Expect(values).To(Equal([]string{"David Bowie", "Life On Mars"}))
-	})
-
-	It("encodes and decodes a BlockPairContainer", func() {
-		a := buildContainer(999, 10000, "David Bowie", "1983-06-03")
-		b := byteArrayAsBlock(blockAsByteArray(a))
-
-		compareContainers(a, b)
 	})
 })
