@@ -99,13 +99,13 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey primitives.Ed255
 	txHash := crypto.CalcTransactionsBlockHash(built)
 	rxHash := crypto.CalcResultsBlockHash(built)
 	xorHash := logic.CalcXor(txHash, rxHash)
-	signature := signature.SignEd25519(privateKey, xorHash)
+	sig := signature.SignEd25519(privateKey, xorHash)
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
 			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
 				SenderPublicKey: publicKey,
-				Signature:       signature,
+				Signature:       sig,
 			},
 		},
 	}

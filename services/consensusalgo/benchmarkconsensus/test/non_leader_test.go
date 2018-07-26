@@ -7,6 +7,14 @@ import (
 	"testing"
 )
 
+func TestNonLeaderInit(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(false)
+		h.createService(ctx)
+		h.verifyHandlerRegistrations(t)
+	})
+}
+
 func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)

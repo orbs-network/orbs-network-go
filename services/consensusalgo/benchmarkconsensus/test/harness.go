@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -45,16 +44,16 @@ func newHarness(
 		nodePublicKey,
 		leaderPublicKey,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-		1,
+		5,
 	)
 
 	log := testInstrumentation.NewBufferedLog("BenchmarkConsensus")
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
-	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return()
+	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
 
 	blockStorage := &services.MockBlockStorage{}
-	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return()
+	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
 
 	consensusContext := &services.MockConsensusContext{}
 
@@ -83,11 +82,6 @@ func nonLeaderPublicKey() primitives.Ed25519PublicKey {
 	return []byte{0x99}
 }
 
-func (h *harness) expectHandlerRegistrations() {
-	h.gossip.Reset().When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
-	h.blockStorage.Reset().When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
-}
-
 func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	ok, err := h.gossip.Verify()
 	if !ok {
@@ -99,25 +93,17 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) expectNewBlockProposalRequested(expectedBlockHeight primitives.BlockHeight, prevBlockPair *protocol.BlockPairContainer) {
+func (h *harness) expectNewBlockProposalRequested(expectedBlockHeight primitives.BlockHeight) {
 	txRequestMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.RequestNewTransactionsBlockInput)
-		return ok &&
-			input.BlockHeight.Equal(expectedBlockHeight) &&
-			(prevBlockPair == nil || input.PrevBlockHash.Equal(crypto.CalcTransactionsBlockHash(prevBlockPair)))
+		return ok && input.BlockHeight.Equal(expectedBlockHeight)
 	}
 	rxRequestMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.RequestNewResultsBlockInput)
-		return ok &&
-			input.BlockHeight.Equal(expectedBlockHeight) &&
-			(prevBlockPair == nil || input.PrevBlockHash.Equal(crypto.CalcResultsBlockHash(prevBlockPair)))
+		return ok && input.BlockHeight.Equal(expectedBlockHeight)
 	}
 
-	aBlock := builders.BenchmarkConsensusBlockPair().WithHeight(expectedBlockHeight)
-	if prevBlockPair != nil {
-		aBlock = aBlock.WithPrevBlockHash(prevBlockPair)
-	}
-	builtBlockForReturn := aBlock.Build()
+	builtBlockForReturn := builders.BenchmarkConsensusBlockPair().WithHeight(expectedBlockHeight).Build()
 	txReturn := &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: builtBlockForReturn.TransactionsBlock,
 	}
@@ -125,8 +111,8 @@ func (h *harness) expectNewBlockProposalRequested(expectedBlockHeight primitives
 		ResultsBlock: builtBlockForReturn.ResultsBlock,
 	}
 
-	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d and prev block hash matches", expectedBlockHeight), txRequestMatcher)).Return(txReturn, nil).AtLeast(1)
-	h.consensusContext.When("RequestNewResultsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d and prev block hash matches", expectedBlockHeight), rxRequestMatcher)).Return(rxReturn, nil).AtLeast(1)
+	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), txRequestMatcher)).Return(txReturn, nil).AtLeast(1)
+	h.consensusContext.When("RequestNewResultsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), rxRequestMatcher)).Return(rxReturn, nil).AtLeast(1)
 }
 
 func (h *harness) verifyNewBlockProposalRequested(t *testing.T) {
@@ -159,6 +145,26 @@ func (h *harness) receivedCommitViaGossip(blockPair *protocol.BlockPairContainer
 			BlockPair: blockPair,
 		},
 	})
+}
+
+func (h *harness) receivedCommittedViaGossip(message *gossipmessages.BenchmarkConsensusCommittedMessage) {
+	h.service.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+		RecipientPublicKey: nil,
+		Message:            message,
+	})
+}
+
+func (h *harness) receivedCommittedViaGossipFromSeveral(numNodes int, lastCommitted primitives.BlockHeight, validSignature bool) {
+	aCommitted := builders.BenchmarkConsensusCommittedMessage().WithLastCommittedHeight(lastCommitted)
+	for i := 0; i < numNodes; i++ {
+		var c *gossipmessages.BenchmarkConsensusCommittedMessage
+		if validSignature {
+			c = aCommitted.WithSenderSignature(nil, []byte{byte(i + 5)}).Build()
+		} else {
+			c = aCommitted.WithInvalidSenderSignature(nil, []byte{byte(i + 5)}).Build()
+		}
+		h.receivedCommittedViaGossip(c)
+	}
 }
 
 func (h *harness) expectCommitIgnored() {
@@ -203,7 +209,8 @@ func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight, e
 			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
+	h.gossip.ResetAndWhen("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
+	h.gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return()
 }
 
 func (h *harness) verifyCommitSent(t *testing.T) {
@@ -214,7 +221,8 @@ func (h *harness) verifyCommitSent(t *testing.T) {
 }
 
 func (h *harness) expectCommitNotSent() {
-	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any).Times(0)
+	h.gossip.ResetAndWhen("BroadcastBenchmarkConsensusCommit", mock.Any).Times(0)
+	h.gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return()
 }
 
 func (h *harness) verifyCommitNotSent(t *testing.T) {

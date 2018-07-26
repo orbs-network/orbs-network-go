@@ -1,107 +1,23 @@
 package benchmarkconsensus
 
 import (
-	"context"
 	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
-	"time"
 )
-
-func (s *service) consensusRoundRunLoop(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			s.reporting.Infof("Consensus round run loop terminating with context")
-			return
-		default:
-			err := s.consensusRoundTick()
-			if err != nil {
-				s.reporting.Error(err)
-				time.Sleep(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillisec()) * time.Millisecond)
-			}
-		}
-	}
-}
-
-func (s *service) consensusRoundTick() (err error) {
-	s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight())
-	if s.activeBlock == nil {
-		s.activeBlock, err = s.leaderGenerateNewProposedBlock()
-		if err != nil {
-			return err
-		}
-	}
-	if s.activeBlock != nil {
-		_, err = s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
-			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
-				BlockPair: s.activeBlock,
-			},
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
 	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
-}
-
-func (s *service) leaderGenerateNewProposedBlock() (*protocol.BlockPairContainer, error) {
-	// get tx
-	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
-		BlockHeight: s.lastCommittedBlockHeight() + 1,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// get rx
-	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
-		BlockHeight: s.lastCommittedBlockHeight() + 1,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// generate block
-	if txOutput == nil || txOutput.TransactionsBlock == nil || rxOutput == nil || rxOutput.ResultsBlock == nil {
-		panic("invalid responses: missing fields")
-		// TODO: should we have these panics? because this is internal code
-	}
-	blockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: txOutput.TransactionsBlock,
-		ResultsBlock:      rxOutput.ResultsBlock,
-	}
-
-	// generate block proof
-	signedData := s.signedDataForBlockProof(blockPair)
-	signature := signature.SignEd25519(nil, signedData)
-	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
-		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
-		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
-			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
-				Signature:       signature,
-			},
-		},
-	}).Build()
-
-	return blockPair, nil
 }
 
 func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
@@ -159,6 +75,7 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
 		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
 	}
+
 	return nil
 }
 
@@ -188,14 +105,14 @@ func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer
 		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
 	}).Build()
 	signedData := hash.CalcSha256(status.Raw())
-	signature := signature.SignEd25519(nil, signedData)
+	sig := signature.SignEd25519(nil, signedData)
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
 		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
 			Status: status,
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: s.config.NodePublicKey(),
-				Signature:       signature,
+				Signature:       sig,
 			}).Build(),
 		},
 	})

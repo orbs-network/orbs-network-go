@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"sync"
 )
 
 type Config interface {
@@ -26,8 +27,14 @@ type service struct {
 	reporting        instrumentation.Reporting
 	config           Config
 
-	activeBlock        *protocol.BlockPairContainer
+	isLeader           bool
 	lastCommittedBlock *protocol.BlockPairContainer
+
+	// leader only
+	leaderMutex                *sync.Mutex
+	lastSuccessfullyVotedBlock primitives.BlockHeight
+	successfullyVotedBlocks    chan primitives.BlockHeight
+	lastCommittedBlockVoters   map[string]bool
 }
 
 func NewBenchmarkConsensusAlgo(
@@ -45,18 +52,19 @@ func NewBenchmarkConsensusAlgo(
 		consensusContext: consensusContext,
 		reporting:        reporting,
 		config:           config,
+		isLeader:         config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
+
+		// leader only
+		leaderMutex:             &sync.Mutex{},
+		successfullyVotedBlocks: make(chan primitives.BlockHeight),
 	}
 
 	gossip.RegisterBenchmarkConsensusHandler(s)
 	blockStorage.RegisterConsensusBlocksHandler(s)
-	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
+	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
 		go s.consensusRoundRunLoop(ctx)
 	}
 	return s
-}
-
-func (s *service) OnNewConsensusRound(input *services.OnNewConsensusRoundInput) (*services.OnNewConsensusRoundOutput, error) {
-	panic("Not implemented")
 }
 
 func (s *service) HandleTransactionsBlock(input *handlers.HandleTransactionsBlockInput) (*handlers.HandleTransactionsBlockOutput, error) {
@@ -71,10 +79,18 @@ func (s *service) HandleBenchmarkConsensusCommit(input *gossiptopics.BenchmarkCo
 	if input.Message == nil || input.Message.BlockPair == nil {
 		panic("HandleBenchmarkConsensusCommit received corrupt args")
 	}
-	s.nonLeaderHandleCommit(input.Message.BlockPair)
+	if !s.isLeader {
+		s.nonLeaderHandleCommit(input.Message.BlockPair)
+	}
 	return nil, nil
 }
 
 func (s *service) HandleBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	if input.Message == nil || input.Message.Sender == nil || input.Message.Status == nil {
+		panic("HandleBenchmarkConsensusCommitted received corrupt args")
+	}
+	if s.isLeader {
+		s.leaderHandleCommittedVote(input.Message.Sender, input.Message.Status)
+	}
+	return nil, nil
 }
