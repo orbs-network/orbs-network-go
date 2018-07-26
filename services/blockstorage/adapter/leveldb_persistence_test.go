@@ -1,13 +1,13 @@
 package adapter
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"testing"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"bytes"
 	"fmt"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"testing"
 )
 
 func TestLevelDbPersistence(t *testing.T) {
@@ -15,7 +15,7 @@ func TestLevelDbPersistence(t *testing.T) {
 	RunSpecs(t, "Gossip Transport Contract")
 }
 
-func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestamp, artist string, date string) *protocol.BlockPairContainer {
+func buildContainer(height primitives.BlockHeight, timestamp primitives.TimestampNano, artist string, date string) *protocol.BlockPairContainer {
 	arguments := []*protocol.MethodArgumentBuilder{
 		{Name: "artist", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: artist},
 		{Name: "date", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: date},
@@ -24,7 +24,7 @@ func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestam
 	transactionsBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
 			BlockHeight: height,
-			Timestamp: timestamp,
+			Timestamp:   timestamp,
 		}).Build(),
 		BlockProof: (&protocol.TransactionsBlockProofBuilder{
 			Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
@@ -38,8 +38,8 @@ func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestam
 							SignerPublicKey: []byte("fake-public-key"),
 						},
 					},
-					ContractName: "music-gig",
-					MethodName:   "purchase-tickets",
+					ContractName:   "music-gig",
+					MethodName:     "purchase-tickets",
 					InputArguments: arguments,
 				},
 			}).Build(),
@@ -48,9 +48,9 @@ func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestam
 
 	resultsBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
-			BlockHeight: height,
-			Timestamp: timestamp,
-			NumContractStateDiffs: 1,
+			BlockHeight:            height,
+			Timestamp:              timestamp,
+			NumContractStateDiffs:  1,
 			NumTransactionReceipts: 1,
 		}).Build(),
 		BlockProof: (&protocol.ResultsBlockProofBuilder{
@@ -60,13 +60,13 @@ func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestam
 			(&protocol.ContractStateDiffBuilder{
 				ContractName: "music-gig",
 				StateDiffs: []*protocol.StateRecordBuilder{
-					{ Key: []byte("some-key"), Value: []byte("some-value") },
+					{Key: []byte("some-key"), Value: []byte("some-value")},
 				},
 			}).Build(),
 		},
 		TransactionReceipts: []*protocol.TransactionReceipt{
 			(&protocol.TransactionReceiptBuilder{
-				Txhash: []byte("some-tx-hash"),
+				Txhash:          []byte("some-tx-hash"),
 				ExecutionResult: protocol.EXECUTION_RESULT_SUCCESS,
 				OutputArguments: arguments,
 			}).Build(),
@@ -75,7 +75,7 @@ func buildContainer(height primitives.BlockHeight, timestamp primitives.Timestam
 
 	container := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
-		ResultsBlock: resultsBlock,
+		ResultsBlock:      resultsBlock,
 	}
 
 	return container
@@ -116,11 +116,11 @@ var _ = Describe("LevelDb persistence", func() {
 	})
 })
 
-var _ = Describe("Encode/decode code as byte array", func () {
+var _ = Describe("Encode/decode code as byte array", func() {
 	It("encodes/decodes key/value pairs in a buffer", func() {
 		buffer := bytes.NewBuffer([]byte{})
 
-		bufferPutKeyValue(buffer,"Artist", []byte("David Bowie"))
+		bufferPutKeyValue(buffer, "Artist", []byte("David Bowie"))
 		bufferPutKeyValue(buffer, "Song", []byte("Life On Mars"))
 
 		fmt.Println("buf contents", buffer.String())

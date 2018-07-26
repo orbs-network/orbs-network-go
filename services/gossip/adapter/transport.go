@@ -2,22 +2,37 @@ package adapter
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
+type TransportData struct {
+	SenderPublicKey     primitives.Ed25519PublicKey
+	RecipientMode       gossipmessages.RecipientsListMode
+	RecipientPublicKeys []primitives.Ed25519PublicKey
+	Payloads            [][]byte // the first payload is normally gossipmessages.Header
+}
+
 type Transport interface {
-	RegisterListener(listener TransportListener, myNodeId string)
-	Send(header *gossipmessages.Header, payloads [][]byte) error
+	RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519PublicKey)
+	Send(data *TransportData) error
 }
 
 type TransportListener interface {
-	OnTransportMessageReceived(message *gossipmessages.Header, payloads [][]byte)
+	OnTransportMessageReceived(payloads [][]byte)
 }
 
-type ErrGossipRequestFailed struct {
-	Message *gossipmessages.Header
+type ErrCorruptData struct {
 }
 
-func (e *ErrGossipRequestFailed) Error() string {
-	return fmt.Sprintf("gossip message failed to send: %v", e.Message)
+func (e *ErrCorruptData) Error() string {
+	return fmt.Sprintf("transport data is corrupt and missing required fields")
+}
+
+type ErrTransportFailed struct {
+	Data *TransportData
+}
+
+func (e *ErrTransportFailed) Error() string {
+	return fmt.Sprintf("transport failed to send: %v", e.Data)
 }

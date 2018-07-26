@@ -5,15 +5,16 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/hashicorp/memberlist"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
 )
 
 // TODO: move this to regular config model
 type MemberlistGossipConfig struct {
-	Name  string
-	Port  int
-	Peers []string
+	PublicKey primitives.Ed25519PublicKey
+	Port      int
+	Peers     []string
 }
 
 // TODO: this needs to be private but had to be this way because it exports Join in main
@@ -35,22 +36,16 @@ func (d gossipDelegate) NodeMeta(limit int) []byte {
 }
 
 func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
-	fmt.Println("Message received", string(rawMessage))
 	// No need to queue, we can dispatch right here
-	messageWithPayloads := decodeByteArray(rawMessage)
-	message := gossipmessages.HeaderReader(messageWithPayloads[0])
-	payloads := messageWithPayloads[1:]
-	fmt.Println("Unmarshalled message as", message)
-	d.parent.receive(message, payloads)
+	payloads := decodeByteArray(rawMessage)
+	fmt.Printf("Gossip: message received %v\n", payloads)
+	d.parent.receive(payloads)
 }
 
 func (d gossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 	broadcasts := d.OutgoingMessages.GetBroadcasts(overhead, limit)
 	if len(broadcasts) > 0 {
-		fmt.Println("Outgoing messages")
-	}
-	for _, message := range broadcasts {
-		fmt.Println(string(message))
+		fmt.Println("Outgoing messages", len(broadcasts))
 	}
 	return broadcasts
 }
@@ -66,15 +61,24 @@ func NewGossipDelegate(nodeName string) gossipDelegate {
 	return gossipDelegate{Name: nodeName}
 }
 
+// memberlist require node names in their cluster
+func memberlistNodeName(publicKey primitives.Ed25519PublicKey) string {
+	return fmt.Sprintf("node-pkey-%x", publicKey)
+}
+
 func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	fmt.Println("Creating memberlist with config", config)
+	nodeName := memberlistNodeName(config.PublicKey)
 	listConfig := memberlist.DefaultLocalConfig()
 	listConfig.BindPort = config.Port
-	listConfig.Name = config.Name
-	delegate := NewGossipDelegate(config.Name)
+	listConfig.AdvertisePort = config.Port
+	listConfig.Name = nodeName
+	listConfig.GossipNodes = 21
+
+	delegate := NewGossipDelegate(nodeName)
 	delegate.OutgoingMessages = &memberlist.TransmitLimitedQueue{
 		NumNodes: func() int {
-			return len(config.Peers) - 1
+			return 21
 		},
 		RetransmitMult: listConfig.RetransmitMult,
 	}
@@ -86,9 +90,9 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	// Join an existing cluster by specifying at least one known member.
 	n, err := list.Join(config.Peers)
 	if err != nil {
-		fmt.Println("Failed to join cluster: " + err.Error())
+		fmt.Println(nodeName, "failed to join the cluster: "+err.Error())
 	} else {
-		fmt.Println("Connected to", n, "hosts")
+		fmt.Println(nodeName, "connected to", n, "hosts")
 	}
 	t := MemberlistTransport{
 		list:       list,
@@ -105,8 +109,6 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 func (t *MemberlistTransport) remainConnectedLoop() {
 	for {
 		t.join()
-		// go gossip.PrintPeers()
-		// go gossip.SendMessage("hello from " + nodeName + " " + time.Now().Format(time.RFC3339))
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -125,23 +127,25 @@ func (t *MemberlistTransport) PrintPeers() {
 	}
 }
 
-func (t *MemberlistTransport) Send(header *gossipmessages.Header, payloads [][]byte) error {
-	data := encodeByteArray(append([][]byte{header.Raw()}, payloads...))
-	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: data})
-	t.receive(header, payloads)
+func (t *MemberlistTransport) Send(data *TransportData) error {
+	if data.RecipientMode != gossipmessages.RECIPIENT_LIST_MODE_BROADCAST {
+		panic("Not implemented")
+	}
+	rawMessage := encodeByteArray(data.Payloads)
+	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: rawMessage})
 	// TODO: add proper error handling
 	return nil
 }
 
-func (t *MemberlistTransport) receive(message *gossipmessages.Header, payloads [][]byte) {
+func (t *MemberlistTransport) receive(payloads [][]byte) {
 	fmt.Println("Gossip: triggering listeners")
 	for _, l := range t.listeners {
-		l.OnTransportMessageReceived(message, payloads)
+		l.OnTransportMessageReceived(payloads)
 	}
 }
 
-func (t *MemberlistTransport) RegisterListener(listener TransportListener, myNodeId string) {
-	t.listeners[myNodeId] = listener
+func (t *MemberlistTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
+	t.listeners[string(listenerPublicKey)] = listener
 }
 
 type broadcast struct {
@@ -171,8 +175,8 @@ func encodeByteArray(payloads [][]byte) []byte {
 }
 
 func decodeByteArray(data []byte) (res [][]byte) {
-	var buffer bytes.Buffer
-	dec := gob.NewDecoder(&buffer)
+	buffer := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buffer)
 	dec.Decode(&res)
 	return
 }

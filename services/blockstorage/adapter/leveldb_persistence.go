@@ -1,35 +1,34 @@
 package adapter
 
 import (
+	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/syndtr/goleveldb/leveldb"
-	"fmt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"strings"
 )
 
 const (
-	TX_BLOCK_HEADER = "transaction-block-header-"
-	TX_BLOCK_PROOF = "transaction-block-proof-"
-	TX_BLOCK_METADATA = "transaction-block-metadata-"
+	TX_BLOCK_HEADER             = "transaction-block-header-"
+	TX_BLOCK_PROOF              = "transaction-block-proof-"
+	TX_BLOCK_METADATA           = "transaction-block-metadata-"
 	TX_BLOCK_SIGNED_TRANSACTION = "transaction-block-signed-transaction-"
 
-	RS_BLOCK_HEADER = "results-block-header-"
-	RS_BLOCK_PROOF = "results-block-proof-"
+	RS_BLOCK_HEADER               = "results-block-header-"
+	RS_BLOCK_PROOF                = "results-block-proof-"
 	RS_BLOCK_CONTRACT_STATE_DIFFS = "results-block-contract-state-diffs-"
 	RS_BLOCK_TRANSACTION_RECEIPTS = "results-block-transaction-receipts-"
 )
 
-
 type Config interface {
-	NodeId() string
 }
 
 type levelDbBlockPersistence struct {
 	blockWritten chan bool
 	blockPairs   []*protocol.BlockPairContainer
 	config       Config
-	db *leveldb.DB
+	db           *leveldb.DB
 }
 
 type config struct {
@@ -47,7 +46,7 @@ func NewLevelDbBlockPersistenceConfig(name string) Config {
 func NewLevelDbBlockPersistence(config Config) BlockPersistence {
 	db, err := leveldb.OpenFile("/tmp/db", nil)
 
-	if err != nil{
+	if err != nil {
 		fmt.Println("Could not instantiate leveldb", err)
 		panic("Could not instantiate leveldb")
 	}
@@ -55,7 +54,7 @@ func NewLevelDbBlockPersistence(config Config) BlockPersistence {
 	return &levelDbBlockPersistence{
 		config:       config,
 		blockWritten: make(chan bool, 10),
-		db: db,
+		db:           db,
 	}
 }
 
@@ -95,10 +94,10 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 
 	iter := bp.db.NewIterator(util.BytesPrefix([]byte(TX_BLOCK_HEADER)), nil)
 
-	for iter.Next()  {
+	for iter.Next() {
 		key := string(iter.Key())
 		tokenizedKey := strings.Split(key, "-")
-		blockHeightAsString := tokenizedKey[len(tokenizedKey) - 1]
+		blockHeightAsString := tokenizedKey[len(tokenizedKey)-1]
 
 		txBlockHeaderRaw := copyByteArray(iter.Value())
 		txBlockProofRaw := copyByteArray(bp.retrieve(TX_BLOCK_PROOF + blockHeightAsString))
@@ -114,7 +113,7 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 
 		container := &protocol.BlockPairContainer{
 			TransactionsBlock: constructTxBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw),
-			ResultsBlock: constructResultsBlockFromStorage(rsBlockHeaderRaw, rsBlockProofRaw, rsStateDiffs, rsTransactionReceipts),
+			ResultsBlock:      constructResultsBlockFromStorage(rsBlockHeaderRaw, rsBlockProofRaw, rsStateDiffs, rsTransactionReceipts),
 		}
 
 		results = append(results, container)
@@ -130,9 +129,17 @@ func basicValidation(blockPair *protocol.BlockPairContainer) bool {
 
 	validations = append(validations, blockPair.TransactionsBlock.Header.IsValid(), blockPair.TransactionsBlock.BlockProof.IsValid(), blockPair.TransactionsBlock.Metadata.IsValid())
 
-	for _, tx:= range blockPair.TransactionsBlock.SignedTransactions {
+	for _, tx := range blockPair.TransactionsBlock.SignedTransactions {
 		validations = append(validations, tx.IsValid())
 	}
 
 	return anyConditions(validations)
+}
+
+func (bp *levelDbBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+	panic("not implemented")
+}
+
+func (bp *levelDbBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
+	panic("not implemented")
 }
