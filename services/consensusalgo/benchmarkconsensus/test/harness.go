@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/crypto"
 	testInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -31,7 +32,7 @@ func newHarness(
 	isLeader bool,
 ) *harness {
 
-	leaderPublicKey := []byte{223, 192, 108, 91, 226, 74, 103, 173, 238, 128, 179, 90, 180, 241, 71, 187, 26, 53, 197, 95, 248, 94, 218, 105, 244, 14, 248, 39, 189, 222, 193, 115}
+	leaderPublicKey := crypto.NewKeyPair(1).PublicKey()
 	nodePublicKey := leaderPublicKey
 	if !isLeader {
 		nodePublicKey = []byte{0x02}

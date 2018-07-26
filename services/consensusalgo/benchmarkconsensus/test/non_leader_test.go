@@ -4,10 +4,11 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto"
 	"testing"
 )
 
-var privateKey = []byte{147, 233, 25, 152, 106, 34, 71, 127, 218, 1, 103, 137, 204, 163, 12, 184, 65, 161, 53, 101, 9, 56, 113, 79, 133, 240, 0, 10, 101, 7, 107, 212, 223, 192, 108, 91, 226, 74, 103, 173, 238, 128, 179, 90, 180, 241, 71, 187, 26, 53, 197, 95, 248, 94, 218, 105, 244, 14, 248, 39, 189, 222, 193, 115}
+var privateKey = crypto.NewKeyPair(1).PrivateKeyUnsafe()
 
 func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
