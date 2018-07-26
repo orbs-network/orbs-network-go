@@ -28,9 +28,9 @@ type node struct {
 
 func NewNode(
 	httpAddress string,
-	nodePublicKey primitives.Ed25519Pkey,
+	nodePublicKey primitives.Ed25519PublicKey,
 	networkSize uint32,
-	constantConsensusLeader primitives.Ed25519Pkey,
+	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 ) Node {

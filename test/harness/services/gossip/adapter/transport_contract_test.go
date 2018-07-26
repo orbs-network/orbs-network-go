@@ -66,7 +66,7 @@ func assertContractOf(makeContext func() *transportContractContext) {
 }
 
 type transportContractContext struct {
-	publicKeys []primitives.Ed25519Pkey
+	publicKeys []primitives.Ed25519PublicKey
 	transports []adapter.Transport
 	listeners  []*mockListener
 }
@@ -74,7 +74,7 @@ type transportContractContext struct {
 func aTamperingTransport() *transportContractContext {
 	res := &transportContractContext{}
 	transport := NewTamperingTransport()
-	res.publicKeys = []primitives.Ed25519Pkey{{0x01}, {0x02}, {0x03}, {0x04}}
+	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
 	res.listeners = []*mockListener{
 		listenTo(res.transports[0], res.publicKeys[0]),
@@ -87,7 +87,7 @@ func aTamperingTransport() *transportContractContext {
 
 func aMemberlistTransport() *transportContractContext {
 	res := &transportContractContext{}
-	res.publicKeys = []primitives.Ed25519Pkey{{0x01}, {0x02}, {0x03}, {0x04}}
+	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
 	configs := []adapter.MemberlistGossipConfig{
 		{res.publicKeys[0], 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003", "127.0.0.1:60004"}},
 		{res.publicKeys[1], 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003", "127.0.0.1:60004"}},

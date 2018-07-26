@@ -12,7 +12,7 @@ import (
 
 // TODO: move this to regular config model
 type MemberlistGossipConfig struct {
-	PublicKey primitives.Ed25519Pkey
+	PublicKey primitives.Ed25519PublicKey
 	Port      int
 	Peers     []string
 }
@@ -62,7 +62,7 @@ func NewGossipDelegate(nodeName string) gossipDelegate {
 }
 
 // memberlist require node names in their cluster
-func memberlistNodeName(publicKey primitives.Ed25519Pkey) string {
+func memberlistNodeName(publicKey primitives.Ed25519PublicKey) string {
 	return fmt.Sprintf("node-pkey-%x", publicKey)
 }
 
@@ -144,7 +144,7 @@ func (t *MemberlistTransport) receive(payloads [][]byte) {
 	}
 }
 
-func (t *MemberlistTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519Pkey) {
+func (t *MemberlistTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
 	t.listeners[string(listenerPublicKey)] = listener
 }
 
