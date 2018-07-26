@@ -3,16 +3,16 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/go-mock"
-	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"testing"
+	"time"
 )
-
 
 func TestComponent(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -61,14 +61,18 @@ func (d *driver) getLastBlockHeight() *services.GetLastCommittedBlockHeightOutpu
 }
 
 func (d *driver) getBlock(height int) *protocol.BlockPairContainer {
-	return d.storageAdapter.ReadAllBlocks()[height - 1]
+	return d.storageAdapter.ReadAllBlocks()[height-1]
+}
+
+func testBlockStorageConfig() blockstorage.BlockStorageConfig {
+	return blockstorage.NewBlockStorageConfig(70*time.Millisecond, 5*time.Millisecond, 0, 10)
 }
 
 func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence(&adapterConfig{})
-	d.blockStorage = blockstorage.NewBlockStorage(d.storageAdapter, d.stateStorage, instrumentation.NewStdoutLog())
+	d.blockStorage = blockstorage.NewBlockStorage(testBlockStorageConfig(), d.storageAdapter, d.stateStorage, instrumentation.NewStdoutLog())
 
 	return d
 }

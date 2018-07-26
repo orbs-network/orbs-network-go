@@ -22,17 +22,20 @@ type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 
+	config BlockStorageConfig
+
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
 	reporting                   instrumentation.Reporting
 	consensusBlocksHandlers     []handlers.ConsensusBlocksHandler
 }
 
-func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.Reporting) services.BlockStorage {
+func NewBlockStorage(config BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.Reporting) services.BlockStorage {
 	return &service{
 		persistence:  persistence,
 		stateStorage: stateStorage,
 		reporting:    reporting,
+		config:       config,
 	}
 }
 
@@ -125,11 +128,10 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 		c := make(chan *services.GetResultsBlockHeaderOutput)
 
 		go func() {
-			// TODO extract to a config
-			const interval = 10
-			const timeout = 10000
+			const interval = 10000 // 10 ms
+			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
 
-			for i := 0; i < timeout; i += interval {
+			for i := int64(0); i < timeout; i += interval {
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.loadResultsBlockHeader(input.BlockHeight)
 
