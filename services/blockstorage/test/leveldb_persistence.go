@@ -1,17 +1,12 @@
-package adapter
+package test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"testing"
 )
-
-func TestLevelDbPersistence(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gossip Transport Contract")
-}
 
 func buildContainer(height primitives.BlockHeight, timestamp primitives.TimestampNano, artist string, date string) *protocol.BlockPairContainer {
 	arguments := []*protocol.MethodArgumentBuilder{
@@ -97,8 +92,8 @@ func compareContainers(a *protocol.BlockPairContainer, b *protocol.BlockPairCont
 var _ = Describe("LevelDb persistence", func() {
 	When("#WriteBlock", func() {
 		It("does not fail", func() {
-			config := NewLevelDbBlockPersistenceConfig("node1")
-			db := NewLevelDbBlockPersistence(config)
+			config := adapter.NewLevelDbBlockPersistenceConfig("node1")
+			db := adapter.NewLevelDbBlockPersistence(config)
 
 			container0 := buildContainer(0, 1000, "David Bowie", "1972-12-22")
 			container1 := buildContainer(1, 2000, "Iggy Pop", "1971-12-25")
