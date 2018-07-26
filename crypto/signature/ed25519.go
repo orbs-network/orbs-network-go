@@ -83,7 +83,7 @@ func (e *Ed25519Signer) PublicKeyHex() string {
 	return hex.EncodeToString(e.publicKey)
 }
 
-func (e *Ed25519Signer) PrivateKeyUnsafe() []byte {
+func (e *Ed25519Signer) PrivateKeyUnsafe() primitives.Ed25519PrivateKey {
 	return e.privateKeyUnsafe
 }
 
@@ -99,11 +99,11 @@ func (e *Ed25519Signer) Verify(data []byte, sig primitives.Ed25519Sig) bool {
 	return VerifyEd25519(e.publicKey, data, sig)
 }
 
-func SignEd25519(privateKey []byte, data []byte) (primitives.Ed25519Sig, error) {
+func SignEd25519(privateKey primitives.Ed25519PrivateKey, data []byte) (primitives.Ed25519Sig, error) {
 	if len(privateKey) != PRIVATE_KEY_SIZE {
 		return nil, fmt.Errorf("cannot sign, private key invalid")
 	}
-	signedData := ed25519.Sign(privateKey, data)
+	signedData := ed25519.Sign([]byte(privateKey), data)
 	return signedData, nil
 }
 
