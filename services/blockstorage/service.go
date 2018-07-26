@@ -37,7 +37,7 @@ func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
-	s.reporting.Info("Trying to commit a block", instrumentation.Int("blockHeight", int(txBlockHeader.BlockHeight())))
+	s.reporting.Info("Trying to commit a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(txBlockHeader); err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	// TODO: why are we updating the state? nothing about this in the spec
 	s.updateStateStorage(input.BlockPair.TransactionsBlock)
 
-	s.reporting.Info("Committed a block", instrumentation.Int("blockHeight", int(txBlockHeader.BlockHeight())))
+	s.reporting.Info("Committed a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
 
 	return nil, nil
 }
@@ -109,11 +109,11 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 		if txBlockHeader.BlockHeight() == s.lastCommittedBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
 			// TODO should this really panic
 			errorMessage := "block already in storage, timestamp mismatch"
-			s.reporting.Error(errorMessage, instrumentation.Int("blockHeight", int(s.lastCommittedBlockHeight)))
+			s.reporting.Error(errorMessage, instrumentation.BlockHeight(s.lastCommittedBlockHeight))
 			panic(errorMessage)
 		}
 
-		s.reporting.Info("block already in storage, skipping", instrumentation.Int("blockHeight", int(s.lastCommittedBlockHeight)))
+		s.reporting.Info("block already in storage, skipping", instrumentation.BlockHeight(s.lastCommittedBlockHeight))
 		return false
 	}
 
@@ -123,7 +123,7 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 func (s *service) validateProtocolVersion(txBlockHeader *protocol.TransactionsBlockHeader) error {
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
 		errorMessage := "protocol version mismatch"
-		s.reporting.Error(errorMessage, instrumentation.Int("expected", 1), instrumentation.Int("received", int(txBlockHeader.ProtocolVersion())))
+		s.reporting.Error(errorMessage, instrumentation.String("expected", "1"), instrumentation.Stringable("received", txBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
 	}
 
@@ -135,7 +135,7 @@ func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol
 	if txBlockHeader.BlockHeight() != expectedNextBlockHeight {
 		// TODO should this really panic
 		errorMessage := "block height mismatch"
-		s.reporting.Error(errorMessage, instrumentation.Int("expected", int(expectedNextBlockHeight)), instrumentation.Int("received", int(txBlockHeader.BlockHeight())))
+		s.reporting.Error(errorMessage, instrumentation.Stringable("expectedBlockHeight", expectedNextBlockHeight), instrumentation.Stringable("receivedBlockHeight", txBlockHeader.BlockHeight()))
 		panic(fmt.Errorf(errorMessage))
 
 	}

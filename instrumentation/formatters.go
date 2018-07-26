@@ -73,8 +73,6 @@ func printParam(builder *strings.Builder, param *Field) {
 		value = strconv.FormatFloat(param.Float, 'f', 24, -1)
 	case ErrorType:
 		value = param.Error.Error()
-	case BlockHeightType:
-		value = strconv.FormatUint(param.Uint, 10)
 	}
 
 	builder.WriteString(param.Key)
@@ -118,11 +116,6 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	}
 
 	if idx, param := findFieldByType(ServiceType, params); param != nil {
-		printParam(&builder, param)
-		params = cut(idx, params)
-	}
-
-	if idx, param := findFieldByType(BlockHeightType, params); param != nil {
 		printParam(&builder, param)
 		params = cut(idx, params)
 	}

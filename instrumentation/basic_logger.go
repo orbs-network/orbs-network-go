@@ -43,7 +43,6 @@ const (
 	UintType
 	BytesType
 	FloatType
-	BlockHeightType
 )
 
 type Field struct {
@@ -70,6 +69,10 @@ func Service(value string) *Field {
 
 func String(key string, value string) *Field {
 	return &Field{Key: key, String: value, Type: StringType}
+}
+
+func Stringable(key string, value fmt.Stringer) *Field {
+	return &Field{Key: key, String: value.String(), Type: StringType}
 }
 
 func Int(key string, value int) *Field {
@@ -113,7 +116,7 @@ func Error(value error) *Field {
 }
 
 func BlockHeight(value primitives.BlockHeight) *Field {
-	return &Field{Key: "blockHeight", Uint: uint64(value), Type: BlockHeightType}
+	return &Field{Key: "blockHeight", String: value.String(), Type: StringType}
 }
 
 func getCaller(level int) (function string, source string) {
@@ -172,8 +175,6 @@ func (f *Field) Value() interface{} {
 		return f.Float
 	case ErrorType:
 		return f.Error.Error()
-	case BlockHeightType:
-		return f.Uint
 	}
 
 	return nil
