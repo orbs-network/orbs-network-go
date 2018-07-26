@@ -185,15 +185,17 @@ func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
 	}
 }
 
-func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight) {
+func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight, expectedSender primitives.Ed25519PublicKey) {
 	commitSentMatcher := func(i interface{}) bool {
 		input, ok := i.(*gossiptopics.BenchmarkConsensusCommitInput)
 		return ok &&
 			input.Message.BlockPair.TransactionsBlock.Header.BlockHeight().Equal(expectedBlockHeight) &&
-			input.Message.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedBlockHeight)
+			input.Message.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedBlockHeight) &&
+			input.Message.BlockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() &&
+			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d and recipient equals %s", expectedBlockHeight), commitSentMatcher)).AtLeast(1)
+	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
 }
 
 func (h *harness) verifyCommitSent(t *testing.T) {

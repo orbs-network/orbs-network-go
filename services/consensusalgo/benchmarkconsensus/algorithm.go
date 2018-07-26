@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -86,6 +87,19 @@ func (s *service) leaderGenerateNewProposedBlock() (*protocol.BlockPairContainer
 		ResultsBlock:      rxOutput.ResultsBlock,
 	}
 
+	// generate block proof
+	signedData := s.signedDataForBlockProof(blockPair)
+	signature := signature.SignEd25519(nil, signedData)
+	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
+		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
+			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+				Signature:       signature,
+			},
+		},
+	}).Build()
+
 	return blockPair, nil
 }
 
@@ -140,13 +154,18 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 	if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
 		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
 	}
-	txHash := crypto.CalcTransactionsBlockHash(blockPair)
-	rxHash := crypto.CalcResultsBlockHash(blockPair)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), xorHash, blockProof.Sender().Signature()) {
+	signedData := s.signedDataForBlockProof(blockPair)
+	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
 		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
 	}
 	return nil
+}
+
+func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
+	txHash := crypto.CalcTransactionsBlockHash(blockPair)
+	rxHash := crypto.CalcResultsBlockHash(blockPair)
+	xorHash := logic.CalcXor(txHash, rxHash)
+	return xorHash
 }
 
 func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
