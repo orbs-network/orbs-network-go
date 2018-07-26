@@ -31,7 +31,7 @@ func newHarness(
 	isLeader bool,
 ) *harness {
 
-	leaderPublicKey := []byte{0x01}
+	leaderPublicKey := []byte{223, 192, 108, 91, 226, 74, 103, 173, 238, 128, 179, 90, 180, 241, 71, 187, 26, 53, 197, 95, 248, 94, 218, 105, 244, 14, 248, 39, 189, 222, 193, 115}
 	nodePublicKey := leaderPublicKey
 	if !isLeader {
 		nodePublicKey = []byte{0x02}
