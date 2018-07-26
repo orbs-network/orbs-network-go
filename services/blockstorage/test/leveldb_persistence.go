@@ -4,75 +4,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
-
-func buildContainer(height primitives.BlockHeight, timestamp primitives.TimestampNano, artist string, date string) *protocol.BlockPairContainer {
-	arguments := []*protocol.MethodArgumentBuilder{
-		{Name: "artist", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: artist},
-		{Name: "date", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: date},
-	}
-
-	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			BlockHeight: height,
-			Timestamp:   timestamp,
-		}).Build(),
-		BlockProof: (&protocol.TransactionsBlockProofBuilder{
-			Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		}).Build(),
-		Metadata: (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-		SignedTransactions: []*protocol.SignedTransaction{
-			(&protocol.SignedTransactionBuilder{
-				Transaction: &protocol.TransactionBuilder{
-					Signer: &protocol.SignerBuilder{
-						Eddsa: &protocol.EdDSA01SignerBuilder{
-							SignerPublicKey: []byte("fake-public-key"),
-						},
-					},
-					ContractName:   "music-gig",
-					MethodName:     "purchase-tickets",
-					InputArguments: arguments,
-				},
-			}).Build(),
-		},
-	}
-
-	resultsBlock := &protocol.ResultsBlockContainer{
-		Header: (&protocol.ResultsBlockHeaderBuilder{
-			BlockHeight:            height,
-			Timestamp:              timestamp,
-			NumContractStateDiffs:  1,
-			NumTransactionReceipts: 1,
-		}).Build(),
-		BlockProof: (&protocol.ResultsBlockProofBuilder{
-			Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		}).Build(),
-		ContractStateDiffs: []*protocol.ContractStateDiff{
-			(&protocol.ContractStateDiffBuilder{
-				ContractName: "music-gig",
-				StateDiffs: []*protocol.StateRecordBuilder{
-					{Key: []byte("some-key"), Value: []byte("some-value")},
-				},
-			}).Build(),
-		},
-		TransactionReceipts: []*protocol.TransactionReceipt{
-			(&protocol.TransactionReceiptBuilder{
-				Txhash:          []byte("some-tx-hash"),
-				ExecutionResult: protocol.EXECUTION_RESULT_SUCCESS,
-				OutputArguments: arguments,
-			}).Build(),
-		},
-	}
-
-	container := &protocol.BlockPairContainer{
-		TransactionsBlock: transactionsBlock,
-		ResultsBlock:      resultsBlock,
-	}
-
-	return container
-}
 
 func compareContainers(a *protocol.BlockPairContainer, b *protocol.BlockPairContainer) {
 	Expect(a.TransactionsBlock.Header.BlockHeight()).To(Equal(b.TransactionsBlock.Header.BlockHeight()))
@@ -95,16 +30,20 @@ var _ = Describe("LevelDb persistence", func() {
 			config := adapter.NewLevelDbBlockPersistenceConfig("node1")
 			db := adapter.NewLevelDbBlockPersistence(config)
 
-			container0 := buildContainer(0, 1000, "David Bowie", "1972-12-22")
-			container1 := buildContainer(1, 2000, "Iggy Pop", "1971-12-25")
+			block1 := builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build()
+			block2 := builders.BlockPair().WithHeight(primitives.BlockHeight(2)).Build()
 
-			db.WriteBlock(container0)
-			db.WriteBlock(container1)
+			db.WriteBlock(block1)
+			db.WriteBlock(block2)
 
 			allBlocks := db.ReadAllBlocks()
 
-			compareContainers(container0, allBlocks[0])
-			compareContainers(container1, allBlocks[1])
+			compareContainers(block1, allBlocks[0])
+			compareContainers(block2, allBlocks[1])
+
+			//FIXME does not work for some reason, investigate
+			//Expect(allBlocks[0]).To(Equal(block1))
+			//Expect(allBlocks[1]).To(Equal(block2))
 		})
 	})
 })
