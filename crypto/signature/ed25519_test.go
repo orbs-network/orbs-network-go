@@ -1,9 +1,9 @@
-package signer_test
+package signature_test
 
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/orbs-network/orbs-network-go/crypto/signer"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"testing"
 )
 
@@ -25,54 +25,54 @@ func pkStringToBytes(t *testing.T, pk string) []byte {
 }
 
 func TestNewPublicKeyString(t *testing.T) {
-	if s, err := signer.NewPublicKeyString(publicKey1); err != nil {
+	if s, err := signature.NewEd25519SignerPublicKeyString(publicKey1); err != nil {
 		t.Error(err)
 	} else {
 		if !bytes.Equal(s.PublicKey(), pkStringToBytes(t, publicKey1)) {
-			t.Error("falied to create a valid signer object")
+			t.Error("falied to create a valid signature object")
 		}
 	}
 }
 
 func TestNewPublicKeyStringFailsOnInvalidPKString(t *testing.T) {
-	if _, err := signer.NewPublicKeyString("z" + publicKey1); err == nil {
-		t.Errorf("signer initialized on invalid pk string")
+	if _, err := signature.NewEd25519SignerPublicKeyString("z" + publicKey1); err == nil {
+		t.Errorf("signature initialized on invalid pk string")
 	}
 }
 
 func TestNewPublicKeyBytesInvalid(t *testing.T) {
-	if _, err := signer.NewPublicKeyBytes([]byte{0}); err == nil {
-		t.Errorf("signer initialized on invalid pk bytes")
+	if _, err := signature.NewEd25519SignerPublicKeyBytes([]byte{0}); err == nil {
+		t.Errorf("signature initialized on invalid pk bytes")
 	}
 }
 
 func TestNewSecretKeyStringUnsafe(t *testing.T) {
-	if s, err := signer.NewSecretKeyStringUnsafe(privateKey2); err != nil {
+	if s, err := signature.NewEd25519SignerSecretKeyStringUnsafe(privateKey2); err != nil {
 		t.Error(err)
 	} else {
 		if !bytes.Equal(s.PublicKey(), pkStringToBytes(t, publicKey2)) {
-			t.Errorf("falied to create a valid signer object, publicKey is %v, should be %v", s.PublicKey(), pkStringToBytes(t, publicKey2))
+			t.Errorf("falied to create a valid signature object, publicKey is %v, should be %v", s.PublicKey(), pkStringToBytes(t, publicKey2))
 		}
 		if !bytes.Equal(s.PrivateKeyUnsafe(), pkStringToBytes(t, privateKey2)) {
-			t.Errorf("falied to create a valid signer object, privateKey is %v, should be %v", s.PrivateKeyUnsafe(), pkStringToBytes(t, privateKey2))
+			t.Errorf("falied to create a valid signature object, privateKey is %v, should be %v", s.PrivateKeyUnsafe(), pkStringToBytes(t, privateKey2))
 		}
 	}
 }
 
 func TestNewSecretKeyStringUnsafeFailedOnInvalidPKString(t *testing.T) {
-	if _, err := signer.NewSecretKeyStringUnsafe("z" + privateKey2); err == nil {
+	if _, err := signature.NewEd25519SignerSecretKeyStringUnsafe("z" + privateKey2); err == nil {
 		t.Error("signed initilaized on invalid pk sting")
 	}
 }
 
 func TestNewSecretKeyBytesUnsafeInvalid(t *testing.T) {
-	if _, err := signer.NewSecretKeyBytesUnsafe([]byte{0}); err == nil {
-		t.Errorf("signer initialized on invalid pk bytes")
+	if _, err := signature.NewEd25519SignerSecretKeyBytesUnsafe([]byte{0}); err == nil {
+		t.Errorf("signature initialized on invalid pk bytes")
 	}
 }
 
 func TestSignerCanSign(t *testing.T) {
-	if s, err := signer.NewSecretKeyStringUnsafe(privateKey2); err != nil {
+	if s, err := signature.NewEd25519SignerSecretKeyStringUnsafe(privateKey2); err != nil {
 		t.Error(err)
 	} else {
 		if sig, err := s.Sign(someDataToSign); err != nil {
@@ -86,17 +86,17 @@ func TestSignerCanSign(t *testing.T) {
 }
 
 func TestSignerFailedOnMissingPK(t *testing.T) {
-	if s, err := signer.NewPublicKeyString(publicKey1); err != nil {
+	if s, err := signature.NewEd25519SignerPublicKeyString(publicKey1); err != nil {
 		t.Error(err)
 	} else {
 		if _, err := s.Sign(someDataToSign); err == nil {
-			t.Error("signer was able to sign a message without a private key")
+			t.Error("signature was able to sign a message without a private key")
 		}
 	}
 }
 
 func TestSignerCanVerify(t *testing.T) {
-	if s, err := signer.NewPublicKeyString(publicKey2); err != nil {
+	if s, err := signature.NewEd25519SignerPublicKeyString(publicKey2); err != nil {
 		t.Error(err)
 	} else {
 		if expectedSigByPK2B, err := hex.DecodeString(expectedSigByPK2); err != nil {
@@ -110,7 +110,7 @@ func TestSignerCanVerify(t *testing.T) {
 }
 
 func TestSignerVerificationFailedOnIncorrectPK(t *testing.T) {
-	if s, err := signer.NewPublicKeyString(publicKey1); err != nil {
+	if s, err := signature.NewEd25519SignerPublicKeyString(publicKey1); err != nil {
 		t.Error(err)
 	} else {
 		if expectedSigByPK2B, err := hex.DecodeString(expectedSigByPK2); err != nil {
@@ -118,6 +118,38 @@ func TestSignerVerificationFailedOnIncorrectPK(t *testing.T) {
 		} else {
 			if s.Verify(someDataToSign, expectedSigByPK2B) {
 				t.Error("verification succeeded although PK is wrong")
+			}
+		}
+	}
+}
+
+func TestSignEd25519(t *testing.T) {
+	if pkb, err := hex.DecodeString(privateKey2); err != nil {
+		t.Error(err)
+	} else {
+		if sig, err := signature.SignEd25519(pkb, someDataToSign); err != nil {
+			t.Error(err)
+		} else {
+			if publickeyb, err := hex.DecodeString(publicKey2); err != nil {
+				t.Error(err)
+			} else {
+				if !signature.VerifyEd25519(publickeyb, someDataToSign, sig) {
+					t.Error("verification failed")
+				}
+			}
+		}
+	}
+}
+
+func TestVerifyEd25519(t *testing.T) {
+	if pkb, err := hex.DecodeString(publicKey2); err != nil {
+		t.Error(err)
+	} else {
+		if expectedSigByPK2B, err := hex.DecodeString(expectedSigByPK2); err != nil {
+			t.Error(err)
+		} else {
+			if !signature.VerifyEd25519(pkb, someDataToSign, expectedSigByPK2B) {
+				t.Error("verification failed")
 			}
 		}
 	}
