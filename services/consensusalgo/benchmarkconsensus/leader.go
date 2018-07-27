@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -108,6 +109,14 @@ func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairCon
 }
 
 func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) {
+	successfullyVotedBlock := primitives.BlockHeight(0)
+	defer func() {
+		// this needs to happen after s.leaderMutex.Unlock() to avoid deadlock
+		if successfullyVotedBlock > 0 {
+			s.successfullyVotedBlocks <- successfullyVotedBlock
+		}
+	}()
+
 	s.leaderMutex.Lock()
 	defer s.leaderMutex.Unlock()
 
@@ -123,9 +132,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	if len(s.lastCommittedBlockVoters)+1 >= int(math.Ceil(2/3*float64(s.config.NetworkSize(0)))) {
-		s.leaderMutex.Unlock()
-		s.successfullyVotedBlocks <- s.lastCommittedBlockHeight()
-		s.leaderMutex.Lock()
+		successfullyVotedBlock = s.lastCommittedBlockHeight()
 	}
 }
 
