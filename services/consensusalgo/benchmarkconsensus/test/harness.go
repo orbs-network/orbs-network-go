@@ -111,8 +111,8 @@ func (h *harness) expectNewBlockProposalRequested(expectedBlockHeight primitives
 		ResultsBlock: builtBlockForReturn.ResultsBlock,
 	}
 
-	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), txRequestMatcher)).Return(txReturn, nil).AtLeast(1)
-	h.consensusContext.When("RequestNewResultsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), rxRequestMatcher)).Return(rxReturn, nil).AtLeast(1)
+	h.consensusContext.When("RequestNewTransactionsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), txRequestMatcher)).Return(txReturn, nil).Times(1)
+	h.consensusContext.When("RequestNewResultsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), rxRequestMatcher)).Return(rxReturn, nil).Times(1)
 }
 
 func (h *harness) verifyNewBlockProposalRequested(t *testing.T) {
@@ -123,13 +123,13 @@ func (h *harness) verifyNewBlockProposalRequested(t *testing.T) {
 }
 
 func (h *harness) expectNewBlockProposalRequestedToFail() {
-	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).AtLeast(1)
+	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).AtLeast(1)
 	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
 }
 
 func (h *harness) expectNewBlockProposalNotRequested() {
-	h.consensusContext.Reset().When("RequestNewTransactionsBlock", mock.Any).Return(nil, nil).Times(0)
-	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, nil).Times(0)
+	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
+	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
 }
 
 func (h *harness) verifyNewBlockProposalNotRequested(t *testing.T) {
@@ -168,8 +168,8 @@ func (h *harness) receivedCommittedViaGossipFromSeveral(numNodes int, lastCommit
 }
 
 func (h *harness) expectCommitIgnored() {
-	h.blockStorage.Reset().When("CommitBlock", mock.Any).Return(nil, nil).Times(0)
-	h.gossip.Reset().When("SendBenchmarkConsensusCommitted", mock.Any).Return(nil, nil).Times(0)
+	h.blockStorage.When("CommitBlock", mock.Any).Return(nil, nil).Times(0)
+	h.gossip.When("SendBenchmarkConsensusCommitted", mock.Any).Return(nil, nil).Times(0)
 }
 
 func (h *harness) verifyCommitIgnored(t *testing.T) {
@@ -188,8 +188,8 @@ func (h *harness) expectCommitSaveAndReply(expectedBlockPair *protocol.BlockPair
 			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.blockStorage.Reset().When("CommitBlock", &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(1)
-	h.gossip.Reset().When("SendBenchmarkConsensusCommitted", mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
+	h.blockStorage.When("CommitBlock", &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(1)
+	h.gossip.When("SendBenchmarkConsensusCommitted", mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
 }
 
 func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
@@ -209,8 +209,7 @@ func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight, e
 			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.gossip.ResetAndWhen("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
-	h.gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return()
+	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
 }
 
 func (h *harness) verifyCommitSent(t *testing.T) {
@@ -221,8 +220,7 @@ func (h *harness) verifyCommitSent(t *testing.T) {
 }
 
 func (h *harness) expectCommitNotSent() {
-	h.gossip.ResetAndWhen("BroadcastBenchmarkConsensusCommit", mock.Any).Times(0)
-	h.gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return()
+	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any).Times(0)
 }
 
 func (h *harness) verifyCommitNotSent(t *testing.T) {

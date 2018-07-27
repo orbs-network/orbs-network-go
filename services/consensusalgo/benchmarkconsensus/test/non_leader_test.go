@@ -79,8 +79,8 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
 
-		h.expectCommitIgnored()
 		b1 := aBlock.WithHeight(1000).Build()
+		h.expectCommitIgnored()
 		h.receivedCommitViaGossip(b1)
 		h.verifyCommitIgnored(t)
 	})
