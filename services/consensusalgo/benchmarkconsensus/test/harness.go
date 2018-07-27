@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	testInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -47,7 +46,7 @@ func newHarness(
 		5,
 	)
 
-	log := testInstrumentation.NewBufferedLog("BenchmarkConsensus")
+	log := instrumentation.NewStdoutLog()
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
