@@ -26,7 +26,7 @@ func (s *service) consensusRoundRunLoop(ctx context.Context) {
 			s.reporting.Info("Consensus round run loop terminating with context")
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			s.reporting.Infof("Consensus round successfully voted block %d", s.lastSuccessfullyVotedBlock)
+			s.reporting.Infof("Consensus round waking up after successfully voted block %d", s.lastSuccessfullyVotedBlock)
 			continue
 		case <-time.After(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillisec()) * time.Millisecond):
 			s.reporting.Info("Consensus round waking up after retry timeout")
@@ -66,6 +66,8 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairContainer, error) {
+	s.reporting.Infof("Generating new proposed block for height %d", s.lastCommittedBlockHeight()+1)
+
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
 		BlockHeight: s.lastCommittedBlockHeight() + 1,
@@ -131,7 +133,10 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	s.lastCommittedBlockVoters[sender.SenderPublicKey().KeyForMap()] = true
 
 	// count if we have enough votes to move forward
-	if len(s.lastCommittedBlockVoters)+1 >= int(math.Ceil(2/3*float64(s.config.NetworkSize(0)))) {
+	existingVotes := len(s.lastCommittedBlockVoters) + 1
+	neededVotes := int(math.Ceil(float64(s.config.NetworkSize(0)) * 2 / 3))
+	s.reporting.Infof("Vote arrived, now have %d votes out of %d needed", existingVotes, neededVotes)
+	if existingVotes >= neededVotes {
 		successfullyVotedBlock = s.lastCommittedBlockHeight()
 	}
 }

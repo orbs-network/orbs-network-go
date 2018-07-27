@@ -60,6 +60,23 @@ func TestLeaderCommitsSecondBlockAfterEnoughConfirmations(t *testing.T) {
 	})
 }
 
+func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(true)
+		h.expectNewBlockProposalRequested(1)
+		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.createService(ctx)
+		h.verifyNewBlockProposalRequested(t)
+		h.verifyCommitSent(t)
+
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.receivedCommittedViaGossipFromSeveral(2, 1, true)
+		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyCommitSent(t)
+	})
+}
+
 func TestLeaderRetriesCommitAfterEnoughBadSignatures(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(true)
