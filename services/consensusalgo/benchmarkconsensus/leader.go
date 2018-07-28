@@ -179,8 +179,12 @@ func (s *service) leaderValidateVoteUnsafe(sender *gossipmessages.SenderSignatur
 		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, s.lastCommittedBlockHeight())
 	}
 
+	// approved signer
+	if _, found := s.config.FederationNodes(0)[sender.SenderPublicKey().KeyForMap()]; !found {
+		return errors.Errorf("signer with public key %s is not a valid federation member", sender.SenderPublicKey())
+	}
+
 	// signature
-	// TODO: check if an approved sender
 	signedData := hash.CalcSha256(status.Raw())
 	if !signature.VerifyEd25519(sender.SenderPublicKey(), signedData, sender.Signature()) {
 		return errors.Errorf("sender signature is invalid: %s", sender.Signature())

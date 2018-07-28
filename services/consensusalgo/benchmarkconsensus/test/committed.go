@@ -15,12 +15,15 @@ func (h *harness) receivedCommittedViaGossip(message *gossipmessages.BenchmarkCo
 	})
 }
 
-func (h *harness) receivedCommittedViaGossipFromSeveral(numNodes int, lastCommitted primitives.BlockHeight, validSignature bool) {
+func (h *harness) receivedCommittedViaGossipFromSeveral(numNodes int, lastCommitted primitives.BlockHeight, validSignatures bool, federationMembers bool) {
 	aCommitted := builders.BenchmarkConsensusCommittedMessage().WithLastCommittedHeight(lastCommitted)
 	for i := 0; i < numNodes; i++ {
 		keyPair := keys.Ed25519KeyPairForTests(i + 1) // leader is set 0
+		if !federationMembers {
+			keyPair = keys.Ed25519KeyPairForTests(i + networkSize)
+		}
 		var c *gossipmessages.BenchmarkConsensusCommittedMessage
-		if validSignature {
+		if validSignatures {
 			c = aCommitted.WithSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build()
 		} else {
 			c = aCommitted.WithInvalidSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build()

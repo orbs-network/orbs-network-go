@@ -23,20 +23,19 @@ func TestLeaderInit(t *testing.T) {
 	})
 }
 
-// TODO: check it's from the approved list
 func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 
 		h.expectNewBlockProposalRequested(2)
 		h.expectCommitSent(2, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 1, true)
+		h.receivedCommittedViaGossipFromSeveral(3, 1, true, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 	})
@@ -48,7 +47,7 @@ func TestLeaderRetriesCommitOnError(t *testing.T) {
 
 		h.expectNewBlockProposalRequestedToFail()
 		h.expectCommitNotSent()
-		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitNotSent(t)
 	})
@@ -60,25 +59,37 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(2, 1, true)
+		h.receivedCommittedViaGossipFromSeveral(2, 1, true, true)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitSent(t)
 	})
 }
 
-func TestLeaderRetriesCommitAfterEnoughBadSignatures(t *testing.T) {
+func TestLeaderIgnoresBadSignatures(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitSent(0, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 0, false)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, false, true)
+		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyCommitSent(t)
+	})
+}
+
+func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newLeaderHarnessAndInit(t, ctx)
+
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitSent(0, h.config.NodePublicKey())
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true, false)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitSent(t)
 	})
@@ -90,13 +101,13 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitSent(t)
 	})
@@ -108,7 +119,7 @@ func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitSent(0, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 1000, true)
+		h.receivedCommittedViaGossipFromSeveral(3, 1000, true, true)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitSent(t)
 	})
