@@ -7,10 +7,15 @@ import (
 	"testing"
 )
 
+func newNonLeaderHarnessAndInit(t *testing.T, ctx context.Context) *harness {
+	h := newHarness(false)
+	h.createService(ctx)
+	return h
+}
+
 func TestNonLeaderInit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 		h.verifyHandlerRegistrations(t)
 	})
 }
@@ -26,8 +31,7 @@ func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 
 func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()) //TODO: fix private key
 
@@ -40,8 +44,7 @@ func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 
 func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()) //TODO: fix private key
 
@@ -64,8 +67,7 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 
 func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
 
@@ -88,8 +90,7 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 
 func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
 
@@ -102,8 +103,7 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 
 func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
 
@@ -121,8 +121,7 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 
 func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		aBlock := builders.BlockPair().WithInvalidBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
 
@@ -135,8 +134,7 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 
 func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
-		h.createService(ctx)
+		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, nonLeaderPublicKey())
 

@@ -6,27 +6,27 @@ import (
 	"testing"
 )
 
-func newLeaderHarnessAndVerifyInit(t *testing.T, ctx context.Context) *harness {
+func newLeaderHarnessAndInit(t *testing.T, ctx context.Context) *harness {
 	h := newHarness(true)
 	h.expectNewBlockProposalNotRequested()
 	h.expectCommitSent(0, h.config.NodePublicKey())
 	h.createService(ctx)
 	h.verifyCommitSent(t)
-	h.verifyHandlerRegistrations(t)
 	return h
 }
 
 func TestLeaderInit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndVerifyInit(t, ctx)
+		h := newLeaderHarnessAndInit(t, ctx)
 		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyHandlerRegistrations(t)
 	})
 }
 
 // TODO: check it's from the approved list
 func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndVerifyInit(t, ctx)
+		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
@@ -44,7 +44,7 @@ func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 
 func TestLeaderRetriesCommitOnError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndVerifyInit(t, ctx)
+		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalRequestedToFail()
 		h.expectCommitNotSent()
@@ -56,7 +56,7 @@ func TestLeaderRetriesCommitOnError(t *testing.T) {
 
 func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndVerifyInit(t, ctx)
+		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
@@ -74,7 +74,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 
 func TestLeaderRetriesCommitAfterEnoughBadSignatures(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndVerifyInit(t, ctx)
+		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitSent(0, h.config.NodePublicKey())
@@ -86,7 +86,7 @@ func TestLeaderRetriesCommitAfterEnoughBadSignatures(t *testing.T) {
 
 func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndVerifyInit(t, ctx)
+		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
@@ -104,7 +104,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 
 func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndVerifyInit(t, ctx)
+		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitSent(0, h.config.NodePublicKey())
