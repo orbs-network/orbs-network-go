@@ -29,6 +29,7 @@ type node struct {
 func NewNode(
 	httpAddress string,
 	nodePublicKey primitives.Ed25519PublicKey,
+	nodePrivateKey primitives.Ed25519PrivateKey,
 	networkSize uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
@@ -40,6 +41,7 @@ func NewNode(
 	nodeConfig := config.NewHardCodedConfig(
 		networkSize,
 		nodePublicKey,
+		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec,

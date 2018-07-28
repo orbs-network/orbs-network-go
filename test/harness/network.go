@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto"
 	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -46,14 +47,15 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
 		nodes[i].index = i
-		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
-		constantConsensusLeaderPublicKey := []byte{byte(1)}
-		nodeName := fmt.Sprintf("node-pkey-%s", nodePublicKey)
+		nodeKeyPair := crypto.Ed25519KeyPairForTests(i + 1)
+		leaderKeyPair := crypto.Ed25519KeyPairForTests(1)
+		nodeName := fmt.Sprintf("node-pkey-%s", nodeKeyPair.PublicKey())
 
 		nodes[i].config = config.NewHardCodedConfig(
 			numNodes,
-			nodePublicKey,
-			constantConsensusLeaderPublicKey,
+			nodeKeyPair.PublicKey(),
+			nodeKeyPair.PrivateKeyUnsafe(),
+			leaderKeyPair.PublicKey(),
 			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 			1,
 		)

@@ -3,7 +3,6 @@ package benchmarkconsensus
 import (
 	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -88,14 +87,19 @@ func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer
 		s.lastCommittedBlock = blockPair
 	}
 
-	// send committed back to leader via gossip
+	// sign the committed message we're about to send
 	s.reporting.Infof("Replying committed with last committed height of %d", s.lastCommittedBlockHeight())
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
 	}).Build()
 	signedData := hash.CalcSha256(status.Raw())
-	sig := signature.SignEd25519(nil, signedData)
-	_, err := s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	if err != nil {
+		return err
+	}
+
+	// send committed back to leader via gossip
+	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
 		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
 			Status: status,

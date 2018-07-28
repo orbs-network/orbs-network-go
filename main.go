@@ -14,6 +14,7 @@ func main() {
 	port, _ := strconv.ParseInt(os.Getenv("PORT"), 10, 0)
 	gossipPort, _ := strconv.ParseInt(os.Getenv("GOSSIP_PORT"), 10, 0)
 	nodePublicKey, _ := hex.DecodeString(os.Getenv("NODE_PUBLIC_KEY"))
+	nodePrivateKey, _ := hex.DecodeString(os.Getenv("NODE_PRIVATE_KEY"))
 	peers := strings.Split(os.Getenv("GOSSIP_PEERS"), ",")
 	consensusLeader, _ := hex.DecodeString(os.Getenv("CONSENSUS_LEADER"))
 	httpAddress := ":" + strconv.FormatInt(port, 10)
@@ -25,6 +26,7 @@ func main() {
 	bootstrap.NewNode(
 		httpAddress,
 		nodePublicKey,
+		nodePrivateKey,
 		3,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,

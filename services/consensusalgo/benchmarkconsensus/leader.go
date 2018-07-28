@@ -77,7 +77,11 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 		ContractStateDiffs:  nil,
 		BlockProof:          nil,
 	}
-	return s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
+	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
+	if err != nil {
+		panic(err)
+	}
+	return blockPair
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairContainer, error) {
@@ -104,18 +108,27 @@ func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairCon
 		panic("invalid responses: missing fields")
 		// TODO: should we have these panics? because this is internal code
 	}
-	return s.leaderSignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock), nil
+	blockPair, err := s.leaderSignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
+	if err != nil {
+		return nil, err
+	}
+	return blockPair, nil
 }
 
-func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) *protocol.BlockPairContainer {
+func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
 		ResultsBlock:      resultsBlock,
 	}
 
-	// generate block proof
+	// prepare signature over the block headers
 	signedData := s.signedDataForBlockProof(blockPair)
-	sig := signature.SignEd25519(nil, signedData)
+	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	if err != nil {
+		return nil, err
+	}
+
+	// generate block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
@@ -125,7 +138,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 			},
 		},
 	}).Build()
-	return blockPair
+	return blockPair, nil
 }
 
 func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) {

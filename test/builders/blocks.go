@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	crypto2 "github.com/orbs-network/orbs-network-go/test/crypto"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -12,14 +13,15 @@ import (
 )
 
 type blockPair struct {
-	txHeader     *protocol.TransactionsBlockHeaderBuilder
-	txMetadata   *protocol.TransactionsBlockMetadataBuilder
-	transactions []*protocol.SignedTransaction
-	txProof      *protocol.TransactionsBlockProofBuilder
-	rxHeader     *protocol.ResultsBlockHeaderBuilder
-	receipts     []*protocol.TransactionReceipt
-	sdiffs       []*protocol.ContractStateDiff
-	rxProof      *protocol.ResultsBlockProofBuilder
+	txHeader         *protocol.TransactionsBlockHeaderBuilder
+	txMetadata       *protocol.TransactionsBlockMetadataBuilder
+	transactions     []*protocol.SignedTransaction
+	txProof          *protocol.TransactionsBlockProofBuilder
+	rxHeader         *protocol.ResultsBlockHeaderBuilder
+	receipts         []*protocol.TransactionReceipt
+	sdiffs           []*protocol.ContractStateDiff
+	rxProof          *protocol.ResultsBlockProofBuilder
+	blockProofSigner primitives.Ed25519PrivateKey
 }
 
 func BlockPair() *blockPair {
@@ -62,19 +64,34 @@ func LeanHelixBlockPair() *blockPair {
 }
 
 func BenchmarkConsensusBlockPair() *blockPair {
-	return BlockPair().WithBenchmarkConsensusBlockProof(nil, []byte{0x88})
+	keyPair := crypto2.Ed25519KeyPairForTests(1)
+	return BlockPair().WithBenchmarkConsensusBlockProof(keyPair.PrivateKeyUnsafe(), keyPair.PublicKey())
 }
 
 func (b *blockPair) Build() *protocol.BlockPairContainer {
+	txHeaderBuilt := b.txHeader.Build()
+	rxHeaderBuilt := b.rxHeader.Build()
+
+	if b.rxProof.Type == protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS {
+		txHash := crypto.CalcTransactionsBlockHash(&protocol.BlockPairContainer{TransactionsBlock: &protocol.TransactionsBlockContainer{Header: txHeaderBuilt}})
+		rxHash := crypto.CalcResultsBlockHash(&protocol.BlockPairContainer{ResultsBlock: &protocol.ResultsBlockContainer{Header: rxHeaderBuilt}})
+		xorHash := logic.CalcXor(txHash, rxHash)
+		sig, err := signature.SignEd25519(b.blockProofSigner, xorHash)
+		if err != nil {
+			panic(err)
+		}
+		b.rxProof.BenchmarkConsensus.Sender.Signature = sig
+	}
+
 	return &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header:             b.txHeader.Build(),
+			Header:             txHeaderBuilt,
 			Metadata:           b.txMetadata.Build(),
 			SignedTransactions: b.transactions,
 			BlockProof:         b.txProof.Build(),
 		},
 		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:              b.rxHeader.Build(),
+			Header:              rxHeaderBuilt,
 			TransactionReceipts: b.receipts,
 			ContractStateDiffs:  b.sdiffs,
 			BlockProof:          b.rxProof.Build(),
@@ -95,17 +112,13 @@ func (b *blockPair) WithPrevBlockHash(prevBlock *protocol.BlockPairContainer) *b
 }
 
 func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
-	built := b.Build()
-	txHash := crypto.CalcTransactionsBlockHash(built)
-	rxHash := crypto.CalcResultsBlockHash(built)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	sig := signature.SignEd25519(privateKey, xorHash)
+	b.blockProofSigner = privateKey
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
 			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
 				SenderPublicKey: publicKey,
-				Signature:       sig,
+				Signature:       nil,
 			},
 		},
 	}
@@ -113,22 +126,8 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey primitives.Ed255
 }
 
 func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
-	built := b.Build()
-	txHash := crypto.CalcTransactionsBlockHash(built)
-	rxHash := crypto.CalcResultsBlockHash(built)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	signature := signature.SignEd25519(privateKey, xorHash)
-	signature[0] ^= 0xaa // corrupt the first byte of the signature
-	b.rxProof = &protocol.ResultsBlockProofBuilder{
-		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
-		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
-			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
-				SenderPublicKey: publicKey,
-				Signature:       signature,
-			},
-		},
-	}
-	return b
+	corruptPrivateKey := make([]byte, len(privateKey))
+	return b.WithBenchmarkConsensusBlockProof(corruptPrivateKey, publicKey)
 }
 
 func (b *blockPair) WithBlockCreated(time time.Time) *blockPair {

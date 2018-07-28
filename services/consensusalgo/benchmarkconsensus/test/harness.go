@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
+	"github.com/orbs-network/orbs-network-go/test/crypto"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -26,16 +27,17 @@ func newHarness(
 	isLeader bool,
 ) *harness {
 
-	leaderPublicKey := []byte{0x01}
-	nodePublicKey := leaderPublicKey
+	leaderKeyPair := crypto.Ed25519KeyPairForTests(1)
+	nodeKeyPair := leaderKeyPair
 	if !isLeader {
-		nodePublicKey = []byte{0x02}
+		nodeKeyPair = crypto.Ed25519KeyPairForTests(2)
 	}
 
 	config := config.NewHardCodedConfig(
 		5,
-		nodePublicKey,
-		leaderPublicKey,
+		nodeKeyPair.PublicKey(),
+		nodeKeyPair.PrivateKeyUnsafe(),
+		leaderKeyPair.PublicKey(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		5,
 	)

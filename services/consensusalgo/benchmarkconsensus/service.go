@@ -18,6 +18,7 @@ const blockHeightNone = primitives.BlockHeight(math.MaxUint64)
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
 	NodePublicKey() primitives.Ed25519PublicKey
+	NodePrivateKey() primitives.Ed25519PrivateKey
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRoundRetryIntervalMillisec() uint32

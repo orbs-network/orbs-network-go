@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto"
 	"testing"
 )
 
@@ -33,7 +34,8 @@ func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()) //TODO: fix private key
+		privateKey := crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader()) //TODO: fix private key
 
 		b0 := aBlock.WithHeight(0).Build()
 		h.expectCommitReplyWithoutSave(b0, 0, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -46,7 +48,8 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()) //TODO: fix private key
+		privateKey := crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -69,7 +72,8 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		privateKey := crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -92,7 +96,8 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		privateKey := crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1000).Build()
 		h.expectCommitIgnored()
@@ -105,7 +110,8 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		privateKey := crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -123,7 +129,8 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		aBlock := builders.BlockPair().WithInvalidBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		privateKey := crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
+		aBlock := builders.BlockPair().WithInvalidBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitIgnored()
@@ -136,7 +143,8 @@ func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, nonLeaderPublicKey())
+		privateKey := crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, nonLeaderPublicKey())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitIgnored()

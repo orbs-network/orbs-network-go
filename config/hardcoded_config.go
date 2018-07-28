@@ -9,6 +9,7 @@ import (
 type hardcodedConfig struct {
 	networkSize                                  uint32
 	nodePublicKey                                primitives.Ed25519PublicKey
+	nodePrivateKey                               primitives.Ed25519PrivateKey
 	constantConsensusLeader                      primitives.Ed25519PublicKey
 	activeConsensusAlgo                          consensus.ConsensusAlgoType
 	benchmarkConsensusRoundRetryIntervalMillisec uint32
@@ -17,6 +18,7 @@ type hardcodedConfig struct {
 func NewHardCodedConfig(
 	networkSize uint32,
 	nodePublicKey primitives.Ed25519PublicKey,
+	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32,
@@ -25,6 +27,7 @@ func NewHardCodedConfig(
 	return &hardcodedConfig{
 		networkSize:                                  networkSize,
 		nodePublicKey:                                nodePublicKey,
+		nodePrivateKey:                               nodePrivateKey,
 		constantConsensusLeader:                      constantConsensusLeader,
 		activeConsensusAlgo:                          activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
@@ -37,6 +40,10 @@ func (c *hardcodedConfig) NetworkSize(asOfBlock uint64) uint32 {
 
 func (c *hardcodedConfig) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
+}
+
+func (c *hardcodedConfig) NodePrivateKey() primitives.Ed25519PrivateKey {
+	return c.nodePrivateKey
 }
 
 func (c *hardcodedConfig) ConstantConsensusLeader() primitives.Ed25519PublicKey {

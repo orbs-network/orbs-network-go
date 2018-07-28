@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"github.com/orbs-network/orbs-network-go/test/crypto"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -49,15 +50,16 @@ var _ = Describe("The Orbs Network", func() {
 	It("accepts a transaction and reflects the state change after it is committed", func(done Done) {
 		var node bootstrap.Node
 
+		// TODO: kill me - why do we need this override?
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
-			nodePublicKey := []byte{0x01}
-			constantConsensusLeaderPublicKey := []byte{0x01}
+			nodeKeyPair := crypto.Ed25519KeyPairForTests(1)
 			node = bootstrap.NewNode(
 				":8080",
-				nodePublicKey,
+				nodeKeyPair.PublicKey(),
+				nodeKeyPair.PrivateKeyUnsafe(),
 				1,
-				constantConsensusLeaderPublicKey,
+				nodeKeyPair.PublicKey(), // we are the leader
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				2*1000,
 				gossipTransport,
