@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -43,18 +44,27 @@ type networkNode struct {
 
 func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork {
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
+	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+
+	federationNodes := make(map[string]config.FederationNode)
+	for i := 0; i < int(numNodes); i++ {
+		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+	}
+
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
 		nodes[i].index = i
-		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
-		constantConsensusLeaderPublicKey := []byte{byte(1)}
-		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
+		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+		nodeName := fmt.Sprintf("node-pkey-%s", nodeKeyPair.PublicKey())
 
 		nodes[i].config = config.NewHardCodedConfig(
-			numNodes,
-			nodePublicKey,
-			constantConsensusLeaderPublicKey,
+			federationNodes,
+			nodeKeyPair.PublicKey(),
+			nodeKeyPair.PrivateKey(),
+			leaderKeyPair.PublicKey(),
 			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+			1,
 		)
 
 		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)

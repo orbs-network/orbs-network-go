@@ -1,75 +1,32 @@
 package benchmarkconsensus
 
 import (
-	"context"
 	"github.com/orbs-network/orbs-network-go/crypto"
-	"github.com/orbs-network/orbs-network-go/crypto/logic"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
-	"time"
 )
 
-func (s *service) consensusRoundRunLoop(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			s.reporting.Infof("Consensus round run loop terminating with context")
-			return
-		default:
-			err := s.consensusRoundTick()
-			if err != nil {
-				s.reporting.Error(err)
-				time.Sleep(1 * time.Second) // TODO: replace with a configuration
-			}
-		}
-	}
-}
-
-func (s *service) consensusRoundTick() (err error) {
-	s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight())
-	if s.activeBlock == nil {
-		s.activeBlock, err = s.generateNewProposedBlock()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
-	if s.lastCommittedBlock == nil {
-		return 0
-	}
-	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
-}
-
-func (s *service) generateNewProposedBlock() (*protocol.BlockPairContainer, error) {
-	_, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{})
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
-}
-
 func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
-	err := s.nonLeaderValidateBlock(blockPair)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	err := s.nonLeaderValidateBlockUnsafe(blockPair)
 	if err != nil {
 		s.reporting.Error(err) // TODO: wrap with added context
 		return
 	}
-	err = s.nonLeaderCommitAndReply(blockPair)
+	err = s.nonLeaderCommitAndReplyUnsafe(blockPair)
 	if err != nil {
 		s.reporting.Error(err) // TODO: wrap with added context
 		return
 	}
 }
 
-func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer) error {
+func (s *service) nonLeaderValidateBlockUnsafe(blockPair *protocol.BlockPairContainer) error {
 	// nils
 	if blockPair.TransactionsBlock == nil ||
 		blockPair.ResultsBlock == nil ||
@@ -107,32 +64,46 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 	if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
 		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
 	}
-	txHash := crypto.CalcTransactionsBlockHash(blockPair)
-	rxHash := crypto.CalcResultsBlockHash(blockPair)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), xorHash, blockProof.Sender().Signature()) {
+	signedData := s.signedDataForBlockProof(blockPair)
+	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
 		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
 	}
+
 	return nil
 }
 
-func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
-	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
-		BlockPair: blockPair,
-	})
+func (s *service) nonLeaderCommitAndReplyUnsafe(blockPair *protocol.BlockPairContainer) error {
+	// save the block to block storage
+	err := s.saveToBlockStorage(blockPair)
 	if err != nil {
 		return err
 	}
+
+	// remember the block in our last committed state variable
 	if blockPair.TransactionsBlock.Header.BlockHeight() == s.lastCommittedBlockHeight()+1 {
 		s.lastCommittedBlock = blockPair
 	}
+
+	// sign the committed message we're about to send
+	s.reporting.Infof("Replying committed with last committed height of %d", s.lastCommittedBlockHeight())
+	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
+		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
+	}).Build()
+	signedData := hash.CalcSha256(status.Raw())
+	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	if err != nil {
+		return err
+	}
+
+	// send committed back to leader via gossip
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
-		RecipientPublicKey: nil,
+		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
 		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
-			Status: (&gossipmessages.BenchmarkConsensusStatusBuilder{
-				LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
+			Status: status,
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+				Signature:       sig,
 			}).Build(),
-			Sender: nil,
 		},
 	})
 	return err

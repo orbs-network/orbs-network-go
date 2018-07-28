@@ -29,14 +29,23 @@ type node struct {
 func NewNode(
 	httpAddress string,
 	nodePublicKey primitives.Ed25519PublicKey,
-	networkSize uint32,
+	nodePrivateKey primitives.Ed25519PrivateKey,
+	federationNodes map[string]config.FederationNode,
 	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType, // TODO: move all of the config from the ctor, it's a smell
+	activeConsensusAlgo consensus.ConsensusAlgoType,
+	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo)
+	nodeConfig := config.NewHardCodedConfig(
+		federationNodes,
+		nodePublicKey,
+		nodePrivateKey,
+		constantConsensusLeader,
+		activeConsensusAlgo,
+		benchmarkConsensusRoundRetryIntervalMillisec,
+	)
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
