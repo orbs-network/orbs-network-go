@@ -5,20 +5,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 )
-
-func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
-	if s.lastCommittedBlock == nil {
-		return 0
-	}
-	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
-}
 
 func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
 	err := s.nonLeaderValidateBlock(blockPair)
@@ -88,11 +80,14 @@ func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer
 
 func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
 	// commit the block in block storage
-	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
-		BlockPair: blockPair,
-	})
-	if err != nil {
-		return err
+	if blockPair.TransactionsBlock.Header.BlockHeight() > 0 {
+		s.reporting.Infof("Saving block %d to storage", blockPair.TransactionsBlock.Header.BlockHeight())
+		_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
+			BlockPair: blockPair,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// remember the block in our last committed state variable
@@ -101,12 +96,13 @@ func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer
 	}
 
 	// send committed back to leader via gossip
+	s.reporting.Infof("Replying committed with last committed height of %d", s.lastCommittedBlockHeight())
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
 	}).Build()
 	signedData := hash.CalcSha256(status.Raw())
 	sig := signature.SignEd25519(nil, signedData)
-	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+	_, err := s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
 		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
 			Status: status,

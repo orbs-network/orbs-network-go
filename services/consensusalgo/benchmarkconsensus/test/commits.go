@@ -52,6 +52,30 @@ func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
 	}
 }
 
+func (h *harness) expectCommitReplyWithoutSave(expectedBlockPair *protocol.BlockPairContainer, expectedLastCommitted primitives.BlockHeight, expectedRecipient primitives.Ed25519PublicKey, expectedSender primitives.Ed25519PublicKey) {
+	lastCommittedReplyMatcher := func(i interface{}) bool {
+		input, ok := i.(*gossiptopics.BenchmarkConsensusCommittedInput)
+		return ok &&
+			input.Message.Status.LastCommittedBlockHeight() == expectedLastCommitted &&
+			input.RecipientPublicKey.Equal(expectedRecipient) &&
+			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
+	}
+
+	h.blockStorage.When("CommitBlock", &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(0)
+	h.gossip.When("SendBenchmarkConsensusCommitted", mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
+}
+
+func (h *harness) verifyCommitReplyWithoutSave(t *testing.T) {
+	err := test.ConsistentlyVerify(h.blockStorage)
+	if err != nil {
+		t.Fatal("Did save the block to block storage:", err)
+	}
+	err = test.EventuallyVerify(h.gossip)
+	if err != nil {
+		t.Fatal("Did not reply to block:", err)
+	}
+}
+
 func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight, expectedSender primitives.Ed25519PublicKey) {
 	commitSentMatcher := func(i interface{}) bool {
 		input, ok := i.(*gossiptopics.BenchmarkConsensusCommitInput)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -15,7 +14,8 @@ import (
 	"time"
 )
 
-func (s *service) consensusRoundRunLoop(ctx context.Context) {
+func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
+	s.lastCommittedBlock = s.leaderGenerateGenesisBlock()
 	for {
 		err := s.leaderConsensusRoundTick()
 		if err != nil {
@@ -51,18 +51,32 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 	}
 
 	// broadcast the commit via gossip for last committed block
-	if s.lastCommittedBlock != nil {
-		_, err = s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
-			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
-				BlockPair: s.lastCommittedBlock,
-			},
-		})
-		if err != nil {
-			return err
-		}
+	_, err = s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
+			BlockPair: s.lastCommittedBlock,
+		},
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
+}
+
+func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
+	transactionsBlock := &protocol.TransactionsBlockContainer{
+		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
+		SignedTransactions: nil,
+		BlockProof:         nil,
+	}
+	resultsBlock := &protocol.ResultsBlockContainer{
+		Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		TransactionReceipts: nil,
+		ContractStateDiffs:  nil,
+		BlockProof:          nil,
+	}
+	return s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairContainer, error) {
@@ -84,14 +98,18 @@ func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairCon
 		return nil, err
 	}
 
-	// generate block
+	// generate signed block
 	if txOutput == nil || txOutput.TransactionsBlock == nil || rxOutput == nil || rxOutput.ResultsBlock == nil {
 		panic("invalid responses: missing fields")
 		// TODO: should we have these panics? because this is internal code
 	}
+	return s.leaderSignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock), nil
+}
+
+func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) *protocol.BlockPairContainer {
 	blockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: txOutput.TransactionsBlock,
-		ResultsBlock:      rxOutput.ResultsBlock,
+		TransactionsBlock: transactionsBlock,
+		ResultsBlock:      resultsBlock,
 	}
 
 	// generate block proof
@@ -106,15 +124,14 @@ func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairCon
 			},
 		},
 	}).Build()
-
-	return blockPair, nil
+	return blockPair
 }
 
 func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) {
-	successfullyVotedBlock := primitives.BlockHeight(0)
+	successfullyVotedBlock := blockHeightNone
 	defer func() {
 		// this needs to happen after s.leaderMutex.Unlock() to avoid deadlock
-		if successfullyVotedBlock > 0 {
+		if successfullyVotedBlock != blockHeightNone {
 			s.successfullyVotedBlocks <- successfullyVotedBlock
 		}
 	}()

@@ -9,8 +9,11 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"math"
 	"sync"
 )
+
+const blockHeightNone = primitives.BlockHeight(math.MaxUint64)
 
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
@@ -52,18 +55,23 @@ func NewBenchmarkConsensusAlgo(
 		consensusContext: consensusContext,
 		reporting:        reporting,
 		config:           config,
-		isLeader:         config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
+
+		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
 
 		// leader only
-		leaderMutex:             &sync.Mutex{},
-		successfullyVotedBlocks: make(chan primitives.BlockHeight),
+		leaderMutex:                &sync.Mutex{},
+		lastSuccessfullyVotedBlock: blockHeightNone,
+		successfullyVotedBlocks:    make(chan primitives.BlockHeight),
+		lastCommittedBlockVoters:   make(map[string]bool),
 	}
 
 	gossip.RegisterBenchmarkConsensusHandler(s)
 	blockStorage.RegisterConsensusBlocksHandler(s)
+
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
-		go s.consensusRoundRunLoop(ctx)
+		go s.leaderConsensusRoundRunLoop(ctx)
 	}
+
 	return s
 }
 

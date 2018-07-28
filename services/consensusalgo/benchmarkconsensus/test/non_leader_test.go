@@ -24,6 +24,20 @@ func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	})
 }
 
+func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(false)
+		h.createService(ctx)
+
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()) //TODO: fix private key
+
+		b0 := aBlock.WithHeight(0).Build()
+		h.expectCommitReplyWithoutSave(b0, 0, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
+		h.receivedCommitViaGossip(b0)
+		h.verifyCommitReplyWithoutSave(t)
+	})
+}
+
 func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)

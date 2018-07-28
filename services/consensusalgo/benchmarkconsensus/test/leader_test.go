@@ -6,21 +6,30 @@ import (
 	"testing"
 )
 
+func newLeaderHarnessAndVerifyInit(t *testing.T, ctx context.Context) *harness {
+	h := newHarness(true)
+	h.expectNewBlockProposalNotRequested()
+	h.expectCommitSent(0, h.config.NodePublicKey())
+	h.createService(ctx)
+	h.verifyNewBlockProposalNotRequested(t)
+	h.verifyCommitSent(t)
+	h.verifyHandlerRegistrations(t)
+	return h
+}
+
 func TestLeaderInit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
-		h.expectNewBlockProposalRequestedToFail()
-		h.createService(ctx)
-		h.verifyHandlerRegistrations(t)
+		newLeaderHarnessAndVerifyInit(t, ctx)
 	})
 }
 
-func TestLeaderCommitsValidFirstBlock(t *testing.T) {
+func TestLeaderCommitsValidFirstBlockAfterEnoughGenesisConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
+		h := newLeaderHarnessAndVerifyInit(t, ctx)
+
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.createService(ctx)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 	})
@@ -28,27 +37,24 @@ func TestLeaderCommitsValidFirstBlock(t *testing.T) {
 
 func TestLeaderRetriesCommitOnError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
+		h := newLeaderHarnessAndVerifyInit(t, ctx)
+
 		h.expectNewBlockProposalRequestedToFail()
 		h.expectCommitNotSent()
-		h.createService(ctx)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitNotSent(t)
-
-		h.expectNewBlockProposalRequested(1)
-		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.verifyNewBlockProposalRequested(t)
-		h.verifyCommitSent(t)
 	})
 }
 
 // TODO: check it's from the approved list
 func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
+		h := newLeaderHarnessAndVerifyInit(t, ctx)
+
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.createService(ctx)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 
@@ -62,10 +68,11 @@ func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 
 func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
+		h := newLeaderHarnessAndVerifyInit(t, ctx)
+
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.createService(ctx)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 
@@ -79,16 +86,11 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 
 func TestLeaderRetriesCommitAfterEnoughBadSignatures(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
-		h.expectNewBlockProposalRequested(1)
-		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.createService(ctx)
-		h.verifyNewBlockProposalRequested(t)
-		h.verifyCommitSent(t)
+		h := newLeaderHarnessAndVerifyInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.receivedCommittedViaGossipFromSeveral(3, 1, false)
+		h.expectCommitSent(0, h.config.NodePublicKey())
+		h.receivedCommittedViaGossipFromSeveral(3, 0, false)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitSent(t)
 	})
@@ -96,10 +98,11 @@ func TestLeaderRetriesCommitAfterEnoughBadSignatures(t *testing.T) {
 
 func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
+		h := newLeaderHarnessAndVerifyInit(t, ctx)
+
 		h.expectNewBlockProposalRequested(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.createService(ctx)
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
 		h.verifyNewBlockProposalRequested(t)
 		h.verifyCommitSent(t)
 
@@ -111,19 +114,12 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 	})
 }
 
-// TODO: change leader to start by asking (or committing empty block zero) to see where the others are
-
 func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(true)
-		h.expectNewBlockProposalRequested(1)
-		h.expectCommitSent(1, h.config.NodePublicKey())
-		h.createService(ctx)
-		h.verifyNewBlockProposalRequested(t)
-		h.verifyCommitSent(t)
+		h := newLeaderHarnessAndVerifyInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.expectCommitSent(0, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 1000, true)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitSent(t)
