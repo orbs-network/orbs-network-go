@@ -1,11 +1,59 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
+
+// protocol.BlockPairContainer
+
+func BenchmarkConsensusBlockPair() *blockPair {
+	keyPair := keys.Ed25519KeyPairForTests(0)
+	return BlockPair().WithBenchmarkConsensusBlockProof(keyPair.PrivateKey(), keyPair.PublicKey())
+}
+
+func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.TransactionsBlockHeader, rxHeaderBuilt *protocol.ResultsBlockHeader) {
+	txHash := crypto.CalcTransactionsBlockHash(&protocol.BlockPairContainer{TransactionsBlock: &protocol.TransactionsBlockContainer{Header: txHeaderBuilt}})
+	rxHash := crypto.CalcResultsBlockHash(&protocol.BlockPairContainer{ResultsBlock: &protocol.ResultsBlockContainer{Header: rxHeaderBuilt}})
+	xorHash := logic.CalcXor(txHash, rxHash)
+	sig, err := signature.SignEd25519(b.blockProofSigner, xorHash)
+	if err != nil {
+		panic(err)
+	}
+	b.rxProof.BenchmarkConsensus.Sender.Signature = sig
+}
+
+func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
+	b.blockProofSigner = privateKey
+	b.txProof = &protocol.TransactionsBlockProofBuilder{
+		Type:               protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{},
+	}
+	b.rxProof = &protocol.ResultsBlockProofBuilder{
+		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
+			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
+				SenderPublicKey: publicKey,
+				Signature:       nil,
+			},
+		},
+	}
+	return b
+}
+
+func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
+	corruptPrivateKey := make([]byte, len(privateKey))
+	return b.WithBenchmarkConsensusBlockProof(corruptPrivateKey, publicKey)
+}
+
+// gossipmessages.BenchmarkConsensusCommittedMessage
 
 type committed struct {
 	messageSigner primitives.Ed25519PrivateKey
@@ -14,15 +62,17 @@ type committed struct {
 }
 
 func BenchmarkConsensusCommittedMessage() *committed {
-	return &committed{
+	keyPair := keys.Ed25519KeyPairForTests(0)
+	c := &committed{
 		status: &gossipmessages.BenchmarkConsensusStatusBuilder{
 			LastCommittedBlockHeight: 0,
 		},
 		sender: &gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x66},
+			SenderPublicKey: nil,
 			Signature:       nil,
 		},
 	}
+	return c.WithSenderSignature(keyPair.PrivateKey(), keyPair.PublicKey())
 }
 
 func (c *committed) WithLastCommittedHeight(blockHeight primitives.BlockHeight) *committed {

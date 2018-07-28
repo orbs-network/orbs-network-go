@@ -2,15 +2,13 @@ package builders
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto"
-	"github.com/orbs-network/orbs-network-go/crypto/logic"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
 )
+
+// protocol.BlockPairContainer
 
 type blockPair struct {
 	txHeader         *protocol.TransactionsBlockHeaderBuilder
@@ -26,7 +24,7 @@ type blockPair struct {
 
 func BlockPair() *blockPair {
 	createdDate := time.Now()
-	return &blockPair{
+	b := &blockPair{
 		txHeader: &protocol.TransactionsBlockHeaderBuilder{
 			BlockHeight:           1,
 			Timestamp:             primitives.TimestampNano(createdDate.UnixNano()),
@@ -37,9 +35,7 @@ func BlockPair() *blockPair {
 		transactions: []*protocol.SignedTransaction{
 			(TransferTransaction().WithAmount(10)).Build(),
 		},
-		txProof: &protocol.TransactionsBlockProofBuilder{
-			Type: protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		},
+		txProof: nil,
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
 			BlockHeight:            1,
 			Timestamp:              primitives.TimestampNano(createdDate.UnixNano()),
@@ -53,19 +49,9 @@ func BlockPair() *blockPair {
 		sdiffs: []*protocol.ContractStateDiff{
 			(ContractStateDiff().Build()),
 		},
-		rxProof: &protocol.ResultsBlockProofBuilder{
-			Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		},
+		rxProof: nil,
 	}
-}
-
-func LeanHelixBlockPair() *blockPair {
-	return BlockPair()
-}
-
-func BenchmarkConsensusBlockPair() *blockPair {
-	keyPair := keys.Ed25519KeyPairForTests(1)
-	return BlockPair().WithBenchmarkConsensusBlockProof(keyPair.PrivateKey(), keyPair.PublicKey())
+	return b.WithLeanHelixBlockProof()
 }
 
 func (b *blockPair) Build() *protocol.BlockPairContainer {
@@ -73,14 +59,7 @@ func (b *blockPair) Build() *protocol.BlockPairContainer {
 	rxHeaderBuilt := b.rxHeader.Build()
 
 	if b.rxProof.Type == protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS {
-		txHash := crypto.CalcTransactionsBlockHash(&protocol.BlockPairContainer{TransactionsBlock: &protocol.TransactionsBlockContainer{Header: txHeaderBuilt}})
-		rxHash := crypto.CalcResultsBlockHash(&protocol.BlockPairContainer{ResultsBlock: &protocol.ResultsBlockContainer{Header: rxHeaderBuilt}})
-		xorHash := logic.CalcXor(txHash, rxHash)
-		sig, err := signature.SignEd25519(b.blockProofSigner, xorHash)
-		if err != nil {
-			panic(err)
-		}
-		b.rxProof.BenchmarkConsensus.Sender.Signature = sig
+		b.buildBenchmarkConsensusBlockProof(txHeaderBuilt, rxHeaderBuilt)
 	}
 
 	return &protocol.BlockPairContainer{
@@ -109,25 +88,6 @@ func (b *blockPair) WithPrevBlockHash(prevBlock *protocol.BlockPairContainer) *b
 	b.txHeader.PrevBlockHashPtr = crypto.CalcTransactionsBlockHash(prevBlock)
 	b.rxHeader.PrevBlockHashPtr = crypto.CalcResultsBlockHash(prevBlock)
 	return b
-}
-
-func (b *blockPair) WithBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
-	b.blockProofSigner = privateKey
-	b.rxProof = &protocol.ResultsBlockProofBuilder{
-		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
-		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
-			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
-				SenderPublicKey: publicKey,
-				Signature:       nil,
-			},
-		},
-	}
-	return b
-}
-
-func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(privateKey primitives.Ed25519PrivateKey, publicKey primitives.Ed25519PublicKey) *blockPair {
-	corruptPrivateKey := make([]byte, len(privateKey))
-	return b.WithBenchmarkConsensusBlockProof(corruptPrivateKey, publicKey)
 }
 
 func (b *blockPair) WithBlockCreated(time time.Time) *blockPair {
