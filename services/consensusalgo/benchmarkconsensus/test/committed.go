@@ -21,9 +21,9 @@ func (h *harness) receivedCommittedViaGossipFromSeveral(numNodes int, lastCommit
 		keyPair := keys.Ed25519KeyPairForTests(i + 1) // leader is set 0
 		var c *gossipmessages.BenchmarkConsensusCommittedMessage
 		if validSignature {
-			c = aCommitted.WithSenderSignature(keyPair.PrivateKey(), keyPair.PublicKey()).Build()
+			c = aCommitted.WithSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build()
 		} else {
-			c = aCommitted.WithInvalidSenderSignature(keyPair.PrivateKey(), keyPair.PublicKey()).Build()
+			c = aCommitted.WithInvalidSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build()
 		}
 		h.receivedCommittedViaGossip(c)
 	}

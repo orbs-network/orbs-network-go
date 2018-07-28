@@ -8,7 +8,7 @@ import (
 )
 
 var leaderPublicKey, leaderPrivateKey = leaderKeyPair()
-var aBlockFromLeader = builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPrivateKey, leaderPublicKey)
+var aBlockFromLeader = builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 func newNonLeaderHarnessAndInit(t *testing.T, ctx context.Context) *harness {
 	h := newHarness(false)
@@ -118,7 +118,7 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 
 		b1 := aBlockFromLeader.
 			WithHeight(1).
-			WithInvalidBenchmarkConsensusBlockProof(leaderPrivateKey, leaderPublicKey).
+			WithInvalidBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey).
 			Build()
 
 		h.expectCommitIgnored()
@@ -132,7 +132,7 @@ func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
 		otherNonLeaderPublicKey, otherNonLeaderPrivateKey := otherNonLeaderKeyPair()
-		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderPrivateKey, otherNonLeaderPublicKey)
+		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderPublicKey, otherNonLeaderPrivateKey)
 
 		b1 := aBlockFromNonLeader.WithHeight(1).Build()
 		h.expectCommitIgnored()
