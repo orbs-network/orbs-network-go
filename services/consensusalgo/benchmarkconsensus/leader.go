@@ -45,9 +45,13 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 		if err != nil {
 			return err
 		}
+		err = s.saveToBlockStorage(proposedBlock)
+		if err != nil {
+			return err
+		}
+
 		s.lastCommittedBlock = proposedBlock
 		s.lastCommittedBlockVoters = make(map[string]bool)
-		// TODO: commit this block locally
 	}
 
 	// broadcast the commit via gossip for last committed block

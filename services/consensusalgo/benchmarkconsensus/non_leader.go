@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 )
@@ -71,15 +70,10 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 }
 
 func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
-	// commit the block in block storage
-	if blockPair.TransactionsBlock.Header.BlockHeight() > 0 {
-		s.reporting.Infof("Saving block %d to storage", blockPair.TransactionsBlock.Header.BlockHeight())
-		_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
-			BlockPair: blockPair,
-		})
-		if err != nil {
-			return err
-		}
+	// save the block to block storage
+	err := s.saveToBlockStorage(blockPair)
+	if err != nil {
+		return err
 	}
 
 	// remember the block in our last committed state variable

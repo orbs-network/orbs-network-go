@@ -27,16 +27,16 @@ func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
-		h.expectNewBlockProposalRequested(1)
+		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
-		h.verifyNewBlockProposalRequested(t)
+		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitSent(t)
 
-		h.expectNewBlockProposalRequested(2)
+		h.expectNewBlockProposalRequestedAndSaved(2)
 		h.expectCommitSent(2, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 1, true, true)
-		h.verifyNewBlockProposalRequested(t)
+		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitSent(t)
 	})
 }
@@ -48,7 +48,7 @@ func TestLeaderRetriesCommitOnError(t *testing.T) {
 		h.expectNewBlockProposalRequestedToFail()
 		h.expectCommitNotSent()
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
-		h.verifyNewBlockProposalRequested(t)
+		h.verifyNewBlockProposalRequestedAndNotSaved(t)
 		h.verifyCommitNotSent(t)
 	})
 }
@@ -57,10 +57,10 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
-		h.expectNewBlockProposalRequested(1)
+		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
-		h.verifyNewBlockProposalRequested(t)
+		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitSent(t)
 
 		h.expectNewBlockProposalNotRequested()
@@ -99,10 +99,10 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
-		h.expectNewBlockProposalRequested(1)
+		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitSent(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
-		h.verifyNewBlockProposalRequested(t)
+		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitSent(t)
 
 		h.expectNewBlockProposalNotRequested()
