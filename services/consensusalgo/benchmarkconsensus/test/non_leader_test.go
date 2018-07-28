@@ -4,12 +4,11 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"testing"
 )
 
-var leaderKeyPair = keys.Ed25519KeyPairForTests(0)
-var aBlockFromLeader = builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair.PrivateKey(), leaderKeyPair.PublicKey())
+var leaderPublicKey, leaderPrivateKey = leaderKeyPair()
+var aBlockFromLeader = builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPrivateKey, leaderPublicKey)
 
 func newNonLeaderHarnessAndInit(t *testing.T, ctx context.Context) *harness {
 	h := newHarness(false)
@@ -119,7 +118,7 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 
 		b1 := aBlockFromLeader.
 			WithHeight(1).
-			WithInvalidBenchmarkConsensusBlockProof(leaderKeyPair.PrivateKey(), leaderKeyPair.PublicKey()).
+			WithInvalidBenchmarkConsensusBlockProof(leaderPrivateKey, leaderPublicKey).
 			Build()
 
 		h.expectCommitIgnored()
@@ -132,8 +131,8 @@ func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		nonLeaderPublicKey, nonLeaderPrivateKey := nonLeaderKeyPair()
-		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(nonLeaderPrivateKey, nonLeaderPublicKey)
+		otherNonLeaderPublicKey, otherNonLeaderPrivateKey := otherNonLeaderKeyPair()
+		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderPrivateKey, otherNonLeaderPublicKey)
 
 		b1 := aBlockFromNonLeader.WithHeight(1).Build()
 		h.expectCommitIgnored()

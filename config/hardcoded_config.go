@@ -6,8 +6,9 @@ import (
 )
 
 //TODO introduce FileSystemConfig
+
 type hardcodedConfig struct {
-	networkSize                                  uint32
+	federationNodes                              map[string]FederationNode
 	nodePublicKey                                primitives.Ed25519PublicKey
 	nodePrivateKey                               primitives.Ed25519PrivateKey
 	constantConsensusLeader                      primitives.Ed25519PublicKey
@@ -16,7 +17,7 @@ type hardcodedConfig struct {
 }
 
 func NewHardCodedConfig(
-	networkSize uint32,
+	federationNodes map[string]FederationNode,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
@@ -25,7 +26,7 @@ func NewHardCodedConfig(
 ) NodeConfig {
 
 	return &hardcodedConfig{
-		networkSize:                                  networkSize,
+		federationNodes:                              federationNodes,
 		nodePublicKey:                                nodePublicKey,
 		nodePrivateKey:                               nodePrivateKey,
 		constantConsensusLeader:                      constantConsensusLeader,
@@ -35,7 +36,11 @@ func NewHardCodedConfig(
 }
 
 func (c *hardcodedConfig) NetworkSize(asOfBlock uint64) uint32 {
-	return c.networkSize
+	return uint32(len(c.federationNodes))
+}
+
+func (c *hardcodedConfig) FederationNodes(asOfBlock uint64) map[string]FederationNode {
+	return c.federationNodes
 }
 
 func (c *hardcodedConfig) NodePublicKey() primitives.Ed25519PublicKey {
@@ -56,4 +61,18 @@ func (c *hardcodedConfig) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 
 func (c *hardcodedConfig) BenchmarkConsensusRoundRetryIntervalMillisec() uint32 {
 	return c.benchmarkConsensusRoundRetryIntervalMillisec
+}
+
+type hardCodedFederationNode struct {
+	nodePublicKey primitives.Ed25519PublicKey
+}
+
+func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
+	return &hardCodedFederationNode{
+		nodePublicKey: nodePublicKey,
+	}
+}
+
+func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
+	return n.nodePublicKey
 }

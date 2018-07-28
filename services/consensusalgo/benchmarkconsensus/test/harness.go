@@ -14,6 +14,8 @@ import (
 	"testing"
 )
 
+const networkSize = 5
+
 type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
@@ -23,21 +25,42 @@ type harness struct {
 	service          services.ConsensusAlgoBenchmark
 }
 
+func leaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
+	keyPair := keys.Ed25519KeyPairForTests(0)
+	return keyPair.PublicKey(), keyPair.PrivateKey()
+}
+
+func nonLeaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
+	keyPair := keys.Ed25519KeyPairForTests(1)
+	return keyPair.PublicKey(), keyPair.PrivateKey()
+}
+
+func otherNonLeaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
+	keyPair := keys.Ed25519KeyPairForTests(2)
+	return keyPair.PublicKey(), keyPair.PrivateKey()
+}
+
 func newHarness(
 	isLeader bool,
 ) *harness {
 
-	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
-	nodeKeyPair := leaderKeyPair
+	federationNodes := make(map[string]config.FederationNode)
+	for i := 0; i < networkSize; i++ {
+		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+	}
+
+	leaderPublicKey, leaderPrivateKey := leaderKeyPair()
+	nodePublicKey, nodePrivateKey := leaderPublicKey, leaderPrivateKey
 	if !isLeader {
-		nodeKeyPair = keys.Ed25519KeyPairForTests(1)
+		nodePublicKey, nodePrivateKey = nonLeaderKeyPair()
 	}
 
 	config := config.NewHardCodedConfig(
-		5,
-		nodeKeyPair.PublicKey(),
-		nodeKeyPair.PrivateKey(),
-		leaderKeyPair.PublicKey(),
+		federationNodes,
+		nodePublicKey,
+		nodePrivateKey,
+		leaderPublicKey,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		5,
 	)
@@ -71,11 +94,6 @@ func (h *harness) createService(ctx context.Context) {
 		h.reporting,
 		h.config,
 	)
-}
-
-func nonLeaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
-	keyPair := keys.Ed25519KeyPairForTests(3)
-	return keyPair.PublicKey(), keyPair.PrivateKey()
 }
 
 func (h *harness) verifyHandlerRegistrations(t *testing.T) {

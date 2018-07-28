@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -58,7 +59,7 @@ var _ = Describe("The Orbs Network", func() {
 				":8080",
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey(),
-				1,
+				map[string]config.FederationNode{nodeKeyPair.PublicKey().KeyForMap(): config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())},
 				nodeKeyPair.PublicKey(), // we are the leader
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				2*1000,

@@ -2,6 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -16,9 +17,10 @@ import (
 const blockHeightNone = primitives.BlockHeight(math.MaxUint64)
 
 type Config interface {
-	NetworkSize(asOfBlock uint64) uint32
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
+	NetworkSize(asOfBlock uint64) uint32
+	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRoundRetryIntervalMillisec() uint32

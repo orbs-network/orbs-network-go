@@ -44,15 +44,22 @@ type networkNode struct {
 
 func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork {
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
+	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+
+	federationNodes := make(map[string]config.FederationNode)
+	for i := 0; i < int(numNodes); i++ {
+		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+	}
+
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
 		nodes[i].index = i
 		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		nodeName := fmt.Sprintf("node-pkey-%s", nodeKeyPair.PublicKey())
 
 		nodes[i].config = config.NewHardCodedConfig(
-			numNodes,
+			federationNodes,
 			nodeKeyPair.PublicKey(),
 			nodeKeyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
