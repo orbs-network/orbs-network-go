@@ -63,6 +63,7 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 	return nil
 }
 
+// used for the first commit a leader does which is nop (genesis block) just to see where everybody's at
 func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	transactionsBlock := &protocol.TransactionsBlockContainer{
 		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),

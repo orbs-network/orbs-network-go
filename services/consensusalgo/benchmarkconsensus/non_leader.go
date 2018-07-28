@@ -71,13 +71,6 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 	return nil
 }
 
-func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
-	txHash := crypto.CalcTransactionsBlockHash(blockPair)
-	rxHash := crypto.CalcResultsBlockHash(blockPair)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	return xorHash
-}
-
 func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
 	// commit the block in block storage
 	if blockPair.TransactionsBlock.Header.BlockHeight() > 0 {
