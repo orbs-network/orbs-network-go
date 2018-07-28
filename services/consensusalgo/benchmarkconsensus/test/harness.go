@@ -6,7 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
-	"github.com/orbs-network/orbs-network-go/test/crypto"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -27,16 +27,16 @@ func newHarness(
 	isLeader bool,
 ) *harness {
 
-	leaderKeyPair := crypto.Ed25519KeyPairForTests(1)
+	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 	nodeKeyPair := leaderKeyPair
 	if !isLeader {
-		nodeKeyPair = crypto.Ed25519KeyPairForTests(2)
+		nodeKeyPair = keys.Ed25519KeyPairForTests(1)
 	}
 
 	config := config.NewHardCodedConfig(
 		5,
 		nodeKeyPair.PublicKey(),
-		nodeKeyPair.PrivateKeyUnsafe(),
+		nodeKeyPair.PrivateKey(),
 		leaderKeyPair.PublicKey(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		5,
@@ -73,8 +73,9 @@ func (h *harness) createService(ctx context.Context) {
 	)
 }
 
-func nonLeaderPublicKey() primitives.Ed25519PublicKey {
-	return []byte{0x99}
+func nonLeaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
+	keyPair := keys.Ed25519KeyPairForTests(3)
+	return keyPair.PublicKey(), keyPair.PrivateKey()
 }
 
 func (h *harness) verifyHandlerRegistrations(t *testing.T) {

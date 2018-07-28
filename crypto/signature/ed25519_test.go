@@ -3,7 +3,7 @@ package signature_test
 import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-network-go/test/crypto"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"testing"
 )
 
@@ -11,7 +11,7 @@ var someDataToSign = []byte("this is what we want to sign")
 var expectedSigByKeyPair1 = "b228422c0c2b384bc60c7e0b14107b609d5c0d6fe72d6c6fbdd5ade28f017d3b8bc9a3f69ae8797af20ae31b8407f814c2852d0110140ef202ce719786eabd0c"
 
 func TestNewPublicKey(t *testing.T) {
-	kp := crypto.Ed25519KeyPairForTests(1)
+	kp := keys.Ed25519KeyPairForTests(1)
 	if s, err := signature.NewEd25519SignerPublicKey(kp.PublicKey()); err != nil {
 		t.Error(err)
 	} else {
@@ -28,15 +28,15 @@ func TestNewPublicKeyInvalid(t *testing.T) {
 }
 
 func TestNewSecretKeyUnsafe(t *testing.T) {
-	kp := crypto.Ed25519KeyPairForTests(1)
-	if s, err := signature.NewEd25519SignerSecretKeyUnsafe(kp.PrivateKeyUnsafe()); err != nil {
+	kp := keys.Ed25519KeyPairForTests(1)
+	if s, err := signature.NewEd25519SignerSecretKeyUnsafe(kp.PrivateKey()); err != nil {
 		t.Error(err)
 	} else {
 		if !s.PublicKey().Equal(kp.PublicKey()) {
-			t.Errorf("falied to create a valid signature object, publicKey is %v, should be %v", s.PublicKey(), kp.PrivateKeyUnsafe())
+			t.Errorf("falied to create a valid signature object, publicKey is %v, should be %v", s.PublicKey(), kp.PrivateKey())
 		}
-		if !s.PrivateKeyUnsafe().Equal(kp.PrivateKeyUnsafe()) {
-			t.Errorf("falied to create a valid signature object, privateKey is %v, should be %v", s.PrivateKeyUnsafe(), kp.PrivateKeyUnsafe())
+		if !s.PrivateKeyUnsafe().Equal(kp.PrivateKey()) {
+			t.Errorf("falied to create a valid signature object, privateKey is %v, should be %v", s.PrivateKeyUnsafe(), kp.PrivateKey())
 		}
 	}
 }
@@ -48,7 +48,7 @@ func TestNewSecretKeyBytesUnsafeInvalid(t *testing.T) {
 }
 
 func TestSignerCanSign(t *testing.T) {
-	if s, err := signature.NewEd25519SignerSecretKeyUnsafe(crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()); err != nil {
+	if s, err := signature.NewEd25519SignerSecretKeyUnsafe(keys.Ed25519KeyPairForTests(1).PrivateKey()); err != nil {
 		t.Error(err)
 	} else {
 		if sig, err := s.Sign(someDataToSign); err != nil {
@@ -62,7 +62,7 @@ func TestSignerCanSign(t *testing.T) {
 }
 
 func TestSignerFailedOnMissingPK(t *testing.T) {
-	if s, err := signature.NewEd25519SignerPublicKey(crypto.Ed25519KeyPairForTests(1).PublicKey()); err != nil {
+	if s, err := signature.NewEd25519SignerPublicKey(keys.Ed25519KeyPairForTests(1).PublicKey()); err != nil {
 		t.Error(err)
 	} else {
 		if _, err := s.Sign(someDataToSign); err == nil {
@@ -72,7 +72,7 @@ func TestSignerFailedOnMissingPK(t *testing.T) {
 }
 
 func TestSignerCanVerify(t *testing.T) {
-	if s, err := signature.NewEd25519SignerPublicKey(crypto.Ed25519KeyPairForTests(1).PublicKey()); err != nil {
+	if s, err := signature.NewEd25519SignerPublicKey(keys.Ed25519KeyPairForTests(0).PublicKey()); err != nil {
 		t.Error(err)
 	} else {
 		if expectedSigByPK2B, err := hex.DecodeString(expectedSigByKeyPair1); err != nil {
@@ -87,7 +87,7 @@ func TestSignerCanVerify(t *testing.T) {
 
 func TestSignerVerificationFailedOnIncorrectPK(t *testing.T) {
 	// using a different set from whats expected
-	if s, err := signature.NewEd25519SignerPublicKey(crypto.Ed25519KeyPairForTests(2).PublicKey()); err != nil {
+	if s, err := signature.NewEd25519SignerPublicKey(keys.Ed25519KeyPairForTests(2).PublicKey()); err != nil {
 		t.Error(err)
 	} else {
 		if expectedSigByPK2B, err := hex.DecodeString(expectedSigByKeyPair1); err != nil {
@@ -101,9 +101,9 @@ func TestSignerVerificationFailedOnIncorrectPK(t *testing.T) {
 }
 
 func TestSignEd25519(t *testing.T) {
-	kp := crypto.Ed25519KeyPairForTests(1)
+	kp := keys.Ed25519KeyPairForTests(1)
 
-	if sig, err := signature.SignEd25519(kp.PrivateKeyUnsafe(), someDataToSign); err != nil {
+	if sig, err := signature.SignEd25519(kp.PrivateKey(), someDataToSign); err != nil {
 		t.Error(err)
 	} else {
 		if !signature.VerifyEd25519(kp.PublicKey(), someDataToSign, sig) {
@@ -119,7 +119,7 @@ func TestSignEd25519InvalidPrivateKey(t *testing.T) {
 }
 
 func TestVerifyEd25519(t *testing.T) {
-	kp := crypto.Ed25519KeyPairForTests(1)
+	kp := keys.Ed25519KeyPairForTests(0)
 
 	if expectedSigBytes, err := hex.DecodeString(expectedSigByKeyPair1); err != nil {
 		t.Error(err)
