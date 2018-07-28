@@ -43,7 +43,7 @@ func TestLeaderRetriesCommitOnError(t *testing.T) {
 }
 
 // TODO: check it's from the approved list
-func TestLeaderCommitsSecondBlockAfterEnoughConfirmations(t *testing.T) {
+func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(true)
 		h.expectNewBlockProposalRequested(1)
@@ -89,6 +89,42 @@ func TestLeaderRetriesCommitAfterEnoughBadSignatures(t *testing.T) {
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitSent(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 1, false)
+		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyCommitSent(t)
+	})
+}
+
+func TestLeaderIgnoresOldConfirmations(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(true)
+		h.expectNewBlockProposalRequested(1)
+		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.createService(ctx)
+		h.verifyNewBlockProposalRequested(t)
+		h.verifyCommitSent(t)
+
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.receivedCommittedViaGossipFromSeveral(3, 0, true)
+		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyCommitSent(t)
+	})
+}
+
+// TODO: change leader to start by asking (or committing empty block zero) to see where the others are
+
+func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(true)
+		h.expectNewBlockProposalRequested(1)
+		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.createService(ctx)
+		h.verifyNewBlockProposalRequested(t)
+		h.verifyCommitSent(t)
+
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.receivedCommittedViaGossipFromSeveral(3, 1000, true)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitSent(t)
 	})

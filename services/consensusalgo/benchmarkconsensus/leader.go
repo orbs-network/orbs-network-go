@@ -144,8 +144,8 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 func (s *service) leaderValidateVoteUnsafe(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
 	// block height
 	blockHeight := status.LastCommittedBlockHeight()
-	if blockHeight < s.lastCommittedBlockHeight() {
-		return errors.Errorf("committed message with old block height: %d", blockHeight)
+	if blockHeight != s.lastCommittedBlockHeight() {
+		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, s.lastCommittedBlockHeight())
 	}
 
 	// signature
