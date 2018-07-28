@@ -36,8 +36,8 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 }
 
 func (s *service) leaderConsensusRoundTick() (err error) {
-	s.leaderMutex.Lock()
-	defer s.leaderMutex.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeight() {
@@ -148,14 +148,14 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) {
 	successfullyVotedBlock := blockHeightNone
 	defer func() {
-		// this needs to happen after s.leaderMutex.Unlock() to avoid deadlock
+		// this needs to happen after s.mutex.Unlock() to avoid deadlock
 		if successfullyVotedBlock != blockHeightNone {
 			s.successfullyVotedBlocks <- successfullyVotedBlock
 		}
 	}()
 
-	s.leaderMutex.Lock()
-	defer s.leaderMutex.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// validate the vote
 	err := s.leaderValidateVoteUnsafe(sender, status)

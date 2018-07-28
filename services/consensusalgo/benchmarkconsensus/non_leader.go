@@ -11,19 +11,22 @@ import (
 )
 
 func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
-	err := s.nonLeaderValidateBlock(blockPair)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	err := s.nonLeaderValidateBlockUnsafe(blockPair)
 	if err != nil {
 		s.reporting.Error(err) // TODO: wrap with added context
 		return
 	}
-	err = s.nonLeaderCommitAndReply(blockPair)
+	err = s.nonLeaderCommitAndReplyUnsafe(blockPair)
 	if err != nil {
 		s.reporting.Error(err) // TODO: wrap with added context
 		return
 	}
 }
 
-func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer) error {
+func (s *service) nonLeaderValidateBlockUnsafe(blockPair *protocol.BlockPairContainer) error {
 	// nils
 	if blockPair.TransactionsBlock == nil ||
 		blockPair.ResultsBlock == nil ||
@@ -69,7 +72,7 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer)
 	return nil
 }
 
-func (s *service) nonLeaderCommitAndReply(blockPair *protocol.BlockPairContainer) error {
+func (s *service) nonLeaderCommitAndReplyUnsafe(blockPair *protocol.BlockPairContainer) error {
 	// save the block to block storage
 	err := s.saveToBlockStorage(blockPair)
 	if err != nil {

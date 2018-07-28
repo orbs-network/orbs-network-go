@@ -34,10 +34,10 @@ type service struct {
 	config           Config
 
 	isLeader           bool
+	mutex              *sync.Mutex
 	lastCommittedBlock *protocol.BlockPairContainer
 
 	// leader only
-	leaderMutex                *sync.Mutex
 	lastSuccessfullyVotedBlock primitives.BlockHeight
 	successfullyVotedBlocks    chan primitives.BlockHeight
 	lastCommittedBlockVoters   map[string]bool
@@ -62,7 +62,7 @@ func NewBenchmarkConsensusAlgo(
 		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
 
 		// leader only
-		leaderMutex:                &sync.Mutex{},
+		mutex: &sync.Mutex{},
 		lastSuccessfullyVotedBlock: blockHeightNone,
 		successfullyVotedBlocks:    make(chan primitives.BlockHeight),
 		lastCommittedBlockVoters:   make(map[string]bool),
