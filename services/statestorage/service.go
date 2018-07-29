@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 )
 
 type service struct {
@@ -15,7 +16,7 @@ type service struct {
 func NewStateStorage(persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
 		persistence:            persistence,
-		lastResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(),
+		lastResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
 	}
 }
 
@@ -31,8 +32,8 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 		}
 	}
 	s.lastResultsBlockHeader = input.ResultsBlockHeader
-	hi := committedBlock + 1
-	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: hi}, nil
+	height := committedBlock + 1
+	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: height}, nil
 }
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
@@ -40,9 +41,9 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	contractState := s.persistence.ReadState(input.ContractName)
-	if contractState == nil {
-		return nil, fmt.Errorf("missing contract name")
+	contractState, err := s.persistence.ReadState(input.ContractName)
+	if err != nil  {
+		return nil, errors.Wrap(err, "persistence layer error")
 	}
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))

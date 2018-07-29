@@ -3,6 +3,7 @@ package adapter
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/pkg/errors"
 )
 
 type Config interface {
@@ -23,21 +24,21 @@ func NewInMemoryStatePersistence(config Config) StatePersistence {
 	}
 }
 
-func (sp *InMemoryStatePersistence) WriteState(contract primitives.ContractName, stateDiff *protocol.StateRecord) {
+func (sp *InMemoryStatePersistence) WriteState(contract primitives.ContractName, stateDiff *protocol.StateRecord) error {
 	if _, ok := sp.stateDiffs[contract]; !ok {
 		sp.stateDiffs[contract] = map[string]*protocol.StateRecord{}
 	}
 
 	sp.stateDiffs[contract][stateDiff.Key().KeyForMap()] = stateDiff
-
 	sp.stateWritten <- true
+
+	return nil
 }
 
-func (sp *InMemoryStatePersistence) ReadState(contract primitives.ContractName) map[string]*protocol.StateRecord {
+func (sp *InMemoryStatePersistence) ReadState(contract primitives.ContractName) (map[string]*protocol.StateRecord, error){
 	if contractStateDiff, ok := sp.stateDiffs[contract]; ok {
-		return contractStateDiff
+		return contractStateDiff, nil
 	} else {
-		// TODO think about err
-		return nil
+		return nil, errors.Errorf("contract %v does not exist", contract)
 	}
 }
