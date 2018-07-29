@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
-	"math"
 	"time"
 )
 
@@ -41,7 +40,7 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeight() {
-		proposedBlock, err := s.leaderGenerateNewProposedBlockUnsafe()
+		proposedBlock, err := s.leaderGenerateNewProposedBlockUnderMutex()
 		if err != nil {
 			return err
 		}
@@ -88,7 +87,7 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	return blockPair
 }
 
-func (s *service) leaderGenerateNewProposedBlockUnsafe() (*protocol.BlockPairContainer, error) {
+func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
 	s.reporting.Infof("Generating new proposed block for height %d", s.lastCommittedBlockHeight()+1)
 
 	// get tx
@@ -164,7 +163,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	defer s.mutex.Unlock()
 
 	// validate the vote
-	err := s.leaderValidateVoteUnsafe(sender, status)
+	err := s.leaderValidateVoteUnderMutex(sender, status)
 	if err != nil {
 		s.reporting.Error(err) // TODO: wrap with added context
 		return
@@ -175,14 +174,13 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	neededVotes := int(math.Ceil(float64(s.config.NetworkSize(0)) * 2 / 3))
-	s.reporting.Infof("Vote arrived, now have %d votes out of %d needed", existingVotes, neededVotes)
-	if existingVotes >= neededVotes {
+	s.reporting.Infof("Vote arrived, now have %d votes out of %d needed", existingVotes, s.requiredQuorumSize())
+	if existingVotes >= s.requiredQuorumSize() {
 		successfullyVotedBlock = s.lastCommittedBlockHeight()
 	}
 }
 
-func (s *service) leaderValidateVoteUnsafe(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
+func (s *service) leaderValidateVoteUnderMutex(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
 	// block height
 	blockHeight := status.LastCommittedBlockHeight()
 	if blockHeight != s.lastCommittedBlockHeight() {

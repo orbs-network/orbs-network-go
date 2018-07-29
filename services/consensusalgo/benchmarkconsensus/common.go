@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"math"
 )
 
 func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
@@ -15,6 +16,10 @@ func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
 		return 0
 	}
 	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+}
+
+func (s *service) requiredQuorumSize() int {
+	return int(math.Ceil(float64(s.config.NetworkSize(0)) * 2 / 3))
 }
 
 func (s *service) saveToBlockStorage(blockPair *protocol.BlockPairContainer) error {

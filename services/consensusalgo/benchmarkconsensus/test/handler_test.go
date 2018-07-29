@@ -13,7 +13,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(1002, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1002, h.config.NodePublicKey())
 
 		b1001 := aBlockFromLeader.WithHeight(1001).Build()
 		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
@@ -23,7 +23,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		}
 
 		h.verifyNewBlockProposalNotRequested(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
 

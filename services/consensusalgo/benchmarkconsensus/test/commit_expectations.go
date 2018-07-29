@@ -67,7 +67,7 @@ func (h *harness) verifyCommitReplyWithoutSave(t *testing.T) {
 	}
 }
 
-func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight, expectedSender primitives.Ed25519PublicKey) {
+func (h *harness) expectCommitBroadcastViaGossip(expectedBlockHeight primitives.BlockHeight, expectedSender primitives.Ed25519PublicKey) {
 	commitSentMatcher := func(i interface{}) bool {
 		input, ok := i.(*gossiptopics.BenchmarkConsensusCommitInput)
 		return ok &&
@@ -80,7 +80,7 @@ func (h *harness) expectCommitSent(expectedBlockHeight primitives.BlockHeight, e
 	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
 }
 
-func (h *harness) verifyCommitSent(t *testing.T) {
+func (h *harness) verifyCommitBroadcastViaGossip(t *testing.T) {
 	err := test.EventuallyVerify(h.gossip)
 	if err != nil {
 		t.Fatal("Did not broadcast block commit:", err)

@@ -9,9 +9,9 @@ import (
 func newLeaderHarnessAndInit(t *testing.T, ctx context.Context) *harness {
 	h := newHarness(true)
 	h.expectNewBlockProposalNotRequested()
-	h.expectCommitSent(0, h.config.NodePublicKey())
+	h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 	h.createService(ctx)
-	h.verifyCommitSent(t)
+	h.verifyCommitBroadcastViaGossip(t)
 	return h
 }
 
@@ -27,17 +27,22 @@ func TestLeaderCommitsNextBlockAfterEnoughConfirmations(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
+		// TODO: fix spacing
+
 		h.expectNewBlockProposalRequestedAndSaved(1)
-		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
+
+		// TODO: change to a builder and put it in the first line
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
+
 		h.verifyNewBlockProposalRequestedAndSaved(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t) // TODO: more descriptive names
 
 		h.expectNewBlockProposalRequestedAndSaved(2)
-		h.expectCommitSent(2, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(2, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 1, true, true)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
 
@@ -50,6 +55,8 @@ func TestLeaderRetriesCommitOnError(t *testing.T) {
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalRequestedAndNotSaved(t)
 		h.verifyCommitNotSent(t)
+
+		// TODO: add the missing half of the test
 	})
 }
 
@@ -58,16 +65,16 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalRequestedAndSaved(1)
-		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(2, 1, true, true)
 		h.verifyNewBlockProposalNotRequested(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
 
@@ -76,10 +83,10 @@ func TestLeaderIgnoresBadSignatures(t *testing.T) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(0, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, false, true)
 		h.verifyNewBlockProposalNotRequested(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
 
@@ -88,10 +95,10 @@ func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(0, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, false)
 		h.verifyNewBlockProposalNotRequested(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
 
@@ -100,16 +107,16 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalRequestedAndSaved(1)
-		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 0, true, true)
 		h.verifyNewBlockProposalNotRequested(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
 
@@ -118,9 +125,9 @@ func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 		h := newLeaderHarnessAndInit(t, ctx)
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitSent(0, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 		h.receivedCommittedViaGossipFromSeveral(3, 1000, true, true)
 		h.verifyNewBlockProposalNotRequested(t)
-		h.verifyCommitSent(t)
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
