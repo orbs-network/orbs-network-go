@@ -4,8 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-)
+	)
 
 var _ = Describe("Commit a State Diff", func() {
 
@@ -19,13 +18,13 @@ var _ = Describe("Commit a State Diff", func() {
 
 		output, err := d.readSingleKey("contract1", "key1")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(output).To(Equal([]byte("v1")))
+		Expect(output).To(BeEquivalentTo("v1"))
 		output2, err := d.readSingleKey("contract1", "key2")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(output2).To(Equal([]byte("v2")))
+		Expect(output2).To(BeEquivalentTo("v2"))
 		output3, err := d.readSingleKey("contract2", "key1")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(output3).To(Equal([]byte("v3")))
+		Expect(output3).To(BeEquivalentTo("v3"))
 
 	})
 
@@ -37,7 +36,7 @@ var _ = Describe("Commit a State Diff", func() {
 				diff := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "whatever").Build()
 				result, err := d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(3).WithDiff(diff).Build())
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(1)))
+				Expect(result.NextDesiredBlockHeight).To(BeEquivalentTo(1))
 
 				_, err = d.readSingleKey("contract1", "key1")
 				Expect(err).To(HaveOccurred())
@@ -56,13 +55,17 @@ var _ = Describe("Commit a State Diff", func() {
 				d.service.CommitStateDiff(diffAtHeight1)
 				d.service.CommitStateDiff(diffAtHeight2)
 
-				result, err := d.service.CommitStateDiff(diffAtHeight1)
+				diffWrongOldHeight := CommitStateDiff().WithBlockHeight(1).WithDiff(contractDiff.WithStringRecord("key1", "v3").WithStringRecord("key3", "v3").Build()).Build()
+				result, err := d.service.CommitStateDiff(diffWrongOldHeight)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result.NextDesiredBlockHeight).To(Equal(primitives.BlockHeight(3)))
+				Expect(result.NextDesiredBlockHeight).To(BeEquivalentTo(3))
 
 				output, err := d.readSingleKey("contract1", "key1")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(output).To(Equal([]byte(v2)))
+				Expect(output).To(BeEquivalentTo(v2))
+				output2, err := d.readSingleKey("contract1", "key3")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(output2).To(BeEquivalentTo([]byte{}))
 			})
 		})
 	})

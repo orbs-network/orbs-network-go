@@ -21,8 +21,7 @@ var _ = Describe("Getting Block Height", func() {
 		It("Returns the current block height and timestamp", func() {
 			d := newStateStorageDriver()
 			heightBefore, _, err := d.getBlockHeightAndTimestamp()
-			contract1 := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "v1").WithStringRecord("key2", "v2").Build()
-			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithBlockTimestamp(6579).WithDiff(contract1).Build())
+			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithBlockTimestamp(6579).WithDiff(builders.ContractStateDiff().Build()).Build())
 			heightAfter, timestampAfter, err := d.getBlockHeightAndTimestamp()
 
 			Expect(err).ToNot(HaveOccurred())
@@ -35,12 +34,11 @@ var _ = Describe("Getting Block Height", func() {
 	When("Block fails to commits", func() {
 		It("Returns an block height of before", func() {
 			d := newStateStorageDriver()
-			contract1 := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "v1").WithStringRecord("key2", "v2").Build()
-			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).Build())
-			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(2).WithDiff(contract1).Build())
-			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(3).WithDiff(contract1).Build())
+			stateDiff := builders.ContractStateDiff().Build()
+			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(stateDiff).Build())
+			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(2).WithDiff(stateDiff).Build())
 			heightBefore, _, err := d.getBlockHeightAndTimestamp()
-			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).Build())
+			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(stateDiff).Build())
 			heightAfter, _, err := d.getBlockHeightAndTimestamp()
 
 			Expect(err).ToNot(HaveOccurred())

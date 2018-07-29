@@ -3,25 +3,9 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-)
+	)
 
 var _ = Describe("Reading a Key", func() {
-	When("not providing a contract name", func() {
-		It("Returns an error", func() {
-			d := newStateStorageDriver()
-			_, err := d.readSingleKey("", "someKey")
-			Expect(err).To(MatchError("missing contract name"))
-		})
-	})
-
-	When("providing a non existing contract", func() {
-		It("Returns an error", func() {
-			d := newStateStorageDriver()
-			_, err := d.readSingleKey("foo", "someKey")
-			Expect(err).To(MatchError("missing contract name"))
-		})
-	})
-
 	When("key doesn't exist", func() {
 		It("Returns an empty byte array", func() {
 			d := newStateStorageDriver()
@@ -64,13 +48,13 @@ var _ = Describe("Reading a Key", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(output)).To(Equal(5))
 				Expect(output[0].key).To(Equal("key1"))
-				Expect(output[0].value).To(Equal([]byte("bar1")))
+				Expect(output[0].value).To(BeEquivalentTo("bar1"))
 				Expect(output[1].key).To(Equal("key22"))
 				Expect(output[1].value).To(Equal([]byte{}))
 				Expect(output[2].key).To(Equal("key5"))
-				Expect(output[2].value).To(Equal([]byte("bar5")))
+				Expect(output[2].value).To(BeEquivalentTo("bar5"))
 				Expect(output[3].key).To(Equal("key3"))
-				Expect(output[3].value).To(Equal([]byte("bar3")))
+				Expect(output[3].value).To(BeEquivalentTo("bar3"))
 				Expect(output[4].key).To(Equal("key6"))
 				Expect(output[4].value).To(Equal([]byte{}))
 			})
