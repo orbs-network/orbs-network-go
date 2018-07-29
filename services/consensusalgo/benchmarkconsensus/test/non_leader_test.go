@@ -27,6 +27,7 @@ func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)
 		h.expectNewBlockProposalNotRequested()
+
 		h.createService(ctx)
 		h.verifyNewBlockProposalNotRequested(t)
 	})
