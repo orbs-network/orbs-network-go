@@ -7,31 +7,42 @@ import (
 	"testing"
 )
 
-func TestHandlerOfLeaderForValidBlockConsensus(t *testing.T) {
+func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessAndInit(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
-		b1 := aBlockFromLeader.WithHeight(1).Build()
-		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
-		err := h.handleBlockConsensus(b2, b1)
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitSent(1002, h.config.NodePublicKey())
+
+		b1001 := aBlockFromLeader.WithHeight(1001).Build()
+		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
+		err := h.handleBlockConsensus(b1002, b1001)
 		if err != nil {
 			t.Fatal("handle did not validate valid block:", err)
 		}
+
+		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyCommitSent(t)
 	})
 }
 
-func TestHandlerOfNonLeaderForValidBlockConsensus(t *testing.T) {
+func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
-		b1 := aBlockFromLeader.WithHeight(1).Build()
-		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
-		err := h.handleBlockConsensus(b2, b1)
+		b1001 := aBlockFromLeader.WithHeight(1001).Build()
+		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
+		err := h.handleBlockConsensus(b1002, b1001)
 		if err != nil {
 			t.Fatal("handle did not validate valid block:", err)
 		}
+
+		b1003 := aBlockFromLeader.WithHeight(1003).WithPrevBlockHash(b1002).Build()
+		h.expectCommitSaveAndReply(b1003, 1003, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
+		h.receivedCommitViaGossip(b1003)
+		h.verifyCommitSaveAndReply(t)
 	})
 }
 
@@ -81,5 +92,3 @@ func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
 		}
 	})
 }
-
-// TODO: rely on future block to set lastCommitted

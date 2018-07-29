@@ -73,9 +73,23 @@ func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer
 }
 
 func (s *service) handleBlockConsensusFromHandler(blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// validate the block consensus
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
 		return errors.Errorf("handler received unsupported block type %s", blockType)
 	}
 	err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// update lastCommitted to reflect this if newer
+	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeight() {
+		s.lastCommittedBlock = blockPair
+		s.lastCommittedBlockVoters = make(map[string]bool) // leader only
+	}
+
+	return nil
 }

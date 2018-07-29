@@ -92,9 +92,9 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
-		b1 := aBlockFromLeader.WithHeight(1000).Build()
+		b1000 := aBlockFromLeader.WithHeight(1000).Build()
 		h.expectCommitIgnored()
-		h.receivedCommitViaGossip(b1)
+		h.receivedCommitViaGossip(b1000)
 		h.verifyCommitIgnored(t)
 	})
 }
