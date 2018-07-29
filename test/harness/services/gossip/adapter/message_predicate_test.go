@@ -18,7 +18,7 @@ func ExampleMessagePredicate_sender() {
 	pred := aMessageFrom("sender1")
 
 	printSender := func(sender string) {
-		if pred(&adapter.TransportData{SenderPublicKey: primitives.Ed25519Pkey(sender)}) {
+		if pred(&adapter.TransportData{SenderPublicKey: primitives.Ed25519PublicKey(sender)}) {
 			fmt.Printf("got message from %s\n", sender)
 		} else {
 			fmt.Println("got message from other sender")

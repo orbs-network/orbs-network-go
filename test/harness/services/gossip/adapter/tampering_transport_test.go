@@ -20,7 +20,7 @@ func newContext() *context {
 	listenerKey := "listener"
 	listener := &mockListener{}
 	transport := NewTamperingTransport()
-	transport.RegisterListener(listener, primitives.Ed25519Pkey(listenerKey))
+	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
 
 	return &context{
 		senderKey: senderKey,
@@ -36,7 +36,7 @@ func (c *context) send(payloads [][]byte) {
 func (c *context) broadcast(sender string, payloads [][]byte) error {
 	return c.transport.Send(&adapter.TransportData{
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		SenderPublicKey: primitives.Ed25519Pkey(sender),
+		SenderPublicKey: primitives.Ed25519PublicKey(sender),
 		Payloads:        payloads,
 	})
 }

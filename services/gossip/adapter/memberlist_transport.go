@@ -12,7 +12,7 @@ import (
 
 // TODO: move this to regular config model
 type MemberlistGossipConfig struct {
-	PublicKey primitives.Ed25519Pkey
+	PublicKey primitives.Ed25519PublicKey
 	Port      int
 	Peers     []string
 }
@@ -38,7 +38,7 @@ func (d gossipDelegate) NodeMeta(limit int) []byte {
 func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
 	// No need to queue, we can dispatch right here
 	payloads := decodeByteArray(rawMessage)
-	fmt.Printf("Gossip: message received %v\n", payloads)
+	fmt.Printf("Gossip: message received by %s, %v\n", d.Name, payloads)
 	d.parent.receive(payloads)
 }
 
@@ -62,8 +62,8 @@ func NewGossipDelegate(nodeName string) gossipDelegate {
 }
 
 // memberlist require node names in their cluster
-func memberlistNodeName(publicKey primitives.Ed25519Pkey) string {
-	return fmt.Sprintf("node-pkey-%x", publicKey)
+func memberlistNodeName(publicKey primitives.Ed25519PublicKey) string {
+	return fmt.Sprintf("node-pkey-%s", publicKey)
 }
 
 func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
@@ -144,7 +144,7 @@ func (t *MemberlistTransport) receive(payloads [][]byte) {
 	}
 }
 
-func (t *MemberlistTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519Pkey) {
+func (t *MemberlistTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
 	t.listeners[string(listenerPublicKey)] = listener
 }
 

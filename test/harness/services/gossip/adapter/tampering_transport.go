@@ -57,7 +57,7 @@ func NewTamperingTransport() TamperingTransport {
 	}
 }
 
-func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519Pkey) {
+func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
 	t.transportListeners[string(listenerPublicKey)] = listener
 }
 

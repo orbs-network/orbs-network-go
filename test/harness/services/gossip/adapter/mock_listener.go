@@ -14,7 +14,7 @@ func (m *mockListener) OnTransportMessageReceived(payloads [][]byte) {
 	m.Called(payloads)
 }
 
-func listenTo(transport adapter.Transport, publicKey primitives.Ed25519Pkey) *mockListener {
+func listenTo(transport adapter.Transport, publicKey primitives.Ed25519PublicKey) *mockListener {
 	l := &mockListener{}
 	transport.RegisterListener(l, publicKey)
 	return l
