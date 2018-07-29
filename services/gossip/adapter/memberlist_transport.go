@@ -38,7 +38,7 @@ func (d gossipDelegate) NodeMeta(limit int) []byte {
 func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
 	// No need to queue, we can dispatch right here
 	payloads := decodeByteArray(rawMessage)
-	fmt.Printf("Gossip: message received %v\n", payloads)
+	fmt.Printf("Gossip: message received by %s, %v\n", d.Name, payloads)
 	d.parent.receive(payloads)
 }
 
@@ -63,7 +63,7 @@ func NewGossipDelegate(nodeName string) gossipDelegate {
 
 // memberlist require node names in their cluster
 func memberlistNodeName(publicKey primitives.Ed25519PublicKey) string {
-	return fmt.Sprintf("node-pkey-%x", publicKey)
+	return fmt.Sprintf("node-pkey-%s", publicKey)
 }
 
 func NewMemberlistTransport(config MemberlistGossipConfig) Transport {

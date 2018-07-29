@@ -31,10 +31,10 @@ The project is thoroughly tested with unit tests, component tests per microservi
 cd `go env GOPATH`
 go get github.com/orbs-network/orbs-network-go
 cd src/github.com/orbs-network/orbs-network-go
-git checkout master // or dev if you want the dev branch
+git checkout master
 ```
 
-* Install dependencies with `./git-submodules-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
+* Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
 
 * Build with `go install`
 
