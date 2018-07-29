@@ -11,6 +11,8 @@ import (
 	"testing"
 )
 
+// expectations
+
 func (h *harness) expectNewBlockProposalRequestedAndSaved(expectedBlockHeight primitives.BlockHeight) {
 	txRequestMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.RequestNewTransactionsBlockInput)
