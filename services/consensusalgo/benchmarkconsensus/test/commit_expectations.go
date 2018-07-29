@@ -6,19 +6,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"testing"
 )
-
-func (h *harness) receivedCommitViaGossip(blockPair *protocol.BlockPairContainer) {
-	h.service.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
-		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
-			BlockPair: blockPair,
-		},
-	})
-}
 
 func (h *harness) expectCommitIgnored() {
 	h.blockStorage.When("CommitBlock", mock.Any).Return(nil, nil).Times(0)

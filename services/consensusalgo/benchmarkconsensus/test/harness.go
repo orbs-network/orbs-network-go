@@ -6,11 +6,15 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"testing"
 )
 
@@ -94,6 +98,47 @@ func (h *harness) createService(ctx context.Context) {
 		h.reporting,
 		h.config,
 	)
+}
+
+func (h *harness) receivedCommitViaGossip(blockPair *protocol.BlockPairContainer) {
+	h.service.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
+			BlockPair: blockPair,
+		},
+	})
+}
+
+func (h *harness) receivedCommittedViaGossip(message *gossipmessages.BenchmarkConsensusCommittedMessage) {
+	h.service.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+		RecipientPublicKey: nil,
+		Message:            message,
+	})
+}
+
+func (h *harness) receivedCommittedViaGossipFromSeveral(numNodes int, lastCommitted primitives.BlockHeight, validSignatures bool, federationMembers bool) {
+	aCommitted := builders.BenchmarkConsensusCommittedMessage().WithLastCommittedHeight(lastCommitted)
+	for i := 0; i < numNodes; i++ {
+		keyPair := keys.Ed25519KeyPairForTests(i + 1) // leader is set 0
+		if !federationMembers {
+			keyPair = keys.Ed25519KeyPairForTests(i + networkSize)
+		}
+		var c *gossipmessages.BenchmarkConsensusCommittedMessage
+		if validSignatures {
+			c = aCommitted.WithSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build()
+		} else {
+			c = aCommitted.WithInvalidSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build()
+		}
+		h.receivedCommittedViaGossip(c)
+	}
+}
+
+func (h *harness) handleBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommitted *protocol.BlockPairContainer) error {
+	_, err := h.service.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+		BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
+		BlockPair:              blockPair,
+		PrevCommittedBlockPair: prevCommitted,
+	})
+	return err
 }
 
 func (h *harness) verifyHandlerRegistrations(t *testing.T) {
