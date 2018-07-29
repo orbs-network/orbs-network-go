@@ -9,7 +9,7 @@ import (
 
 func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessAndInit(t, ctx)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		h.expectNewBlockProposalNotRequested()
@@ -29,7 +29,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 
 func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarnessAndInit(t, ctx)
+		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b1001 := aBlockFromLeader.WithHeight(1001).Build()
@@ -48,7 +48,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 
 func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarnessAndInit(t, ctx)
+		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b1 := aBlockFromLeader.WithHeight(1).Build()
@@ -62,7 +62,7 @@ func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 
 func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarnessAndInit(t, ctx)
+		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b1 := aBlockFromLeader.WithHeight(1).Build()
@@ -80,7 +80,7 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 
 func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarnessAndInit(t, ctx)
+		h := newNonLeaderHarness(t, ctx)
 		otherNonLeaderPublicKey, otherNonLeaderPrivateKey := otherNonLeaderKeyPair()
 		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderPublicKey, otherNonLeaderPrivateKey)
 
