@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -18,12 +19,12 @@ func (s *service) consensusRoundRunLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.reporting.Infof("Consensus round run loop terminating with context")
+			s.reporting.Info("Consensus round run loop terminating with context")
 			return
 		default:
 			err := s.consensusRoundTick()
 			if err != nil {
-				s.reporting.Error(err)
+				s.reporting.Error(err.Error())
 				time.Sleep(1 * time.Second) // TODO: replace with a configuration
 			}
 		}
@@ -31,7 +32,7 @@ func (s *service) consensusRoundRunLoop(ctx context.Context) {
 }
 
 func (s *service) consensusRoundTick() (err error) {
-	s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight())
+	s.reporting.Info("Entered consensus round, last committed block height is", instrumentation.BlockHeight(s.lastCommittedBlockHeight()))
 	if s.activeBlock == nil {
 		s.activeBlock, err = s.generateNewProposedBlock()
 		if err != nil {
@@ -59,12 +60,12 @@ func (s *service) generateNewProposedBlock() (*protocol.BlockPairContainer, erro
 func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
 	err := s.nonLeaderValidateBlock(blockPair)
 	if err != nil {
-		s.reporting.Error(err) // TODO: wrap with added context
+		s.reporting.Error("Follower failed to validate a block", instrumentation.Error(err)) // TODO: wrap with added context
 		return
 	}
 	err = s.nonLeaderCommitAndReply(blockPair)
 	if err != nil {
-		s.reporting.Error(err) // TODO: wrap with added context
+		s.reporting.Error("Follower failed to commit a block", instrumentation.Error(err)) // TODO: wrap with added context
 		return
 	}
 }

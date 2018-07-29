@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto"
-	testInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -23,7 +22,7 @@ type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
-	reporting        instrumentation.Reporting
+	reporting        instrumentation.BasicLogger
 	config           benchmarkconsensus.Config
 	service          services.ConsensusAlgoBenchmark
 }
@@ -45,7 +44,7 @@ func newHarness(
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 	)
 
-	log := testInstrumentation.NewBufferedLog("BenchmarkConsensus")
+	log := instrumentation.GetLogger()
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return()

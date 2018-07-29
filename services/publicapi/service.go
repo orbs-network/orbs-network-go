@@ -11,19 +11,19 @@ import (
 type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
-	reporting       instrumentation.Reporting
+	reporting       instrumentation.BasicLogger
 }
 
 func NewPublicApi(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
-	reporting instrumentation.Reporting,
+	reporting instrumentation.BasicLogger,
 ) services.PublicApi {
 
 	return &service{
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
-		reporting:       reporting,
+		reporting:       reporting.For(instrumentation.Service("public-api")),
 	}
 }
 

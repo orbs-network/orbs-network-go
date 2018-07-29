@@ -60,7 +60,7 @@ func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence(&adapterConfig{})
-	d.blockStorage = blockstorage.NewBlockStorage(d.storageAdapter, d.stateStorage, instrumentation.NewStdoutLog())
+	d.blockStorage = blockstorage.NewBlockStorage(d.storageAdapter, d.stateStorage, instrumentation.GetLogger())
 
 	return d
 }
@@ -96,7 +96,7 @@ var _ = Describe("Committing a block", func() {
 
 				_, err := driver.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
-				Expect(err).To(MatchError("protocol version mismatch: expected 1 got 99999"))
+				Expect(err).To(MatchError("protocol version mismatch"))
 			})
 		})
 

@@ -26,7 +26,6 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	events         instrumentation.Reporting
 	publicApi      services.PublicApi
 	consensusAlgos []services.ConsensusAlgo
 }
@@ -36,7 +35,7 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
-	reporting instrumentation.Reporting,
+	reporting instrumentation.BasicLogger,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
