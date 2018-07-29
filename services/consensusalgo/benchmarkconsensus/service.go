@@ -78,12 +78,12 @@ func NewBenchmarkConsensusAlgo(
 	return s
 }
 
-func (s *service) HandleTransactionsBlock(input *handlers.HandleTransactionsBlockInput) (*handlers.HandleTransactionsBlockOutput, error) {
-	panic("Not implemented")
-}
-
-func (s *service) HandleResultsBlock(input *handlers.HandleResultsBlockInput) (*handlers.HandleResultsBlockOutput, error) {
-	panic("Not implemented")
+func (s *service) HandleBlockConsensus(input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+	if input.BlockPair == nil || input.PrevCommittedBlockPair == nil {
+		panic("HandleBlockConsensus received corrupt args")
+	}
+	err := s.handleBlockConsensusFromHandler(input.BlockType, input.BlockPair, input.PrevCommittedBlockPair)
+	return nil, err
 }
 
 func (s *service) HandleBenchmarkConsensusCommit(input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {

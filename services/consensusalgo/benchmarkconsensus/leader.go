@@ -132,7 +132,13 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 		return nil, err
 	}
 
-	// generate block proof
+	// generate tx block proof
+	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
+		Type:               protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{},
+	}).Build()
+
+	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{

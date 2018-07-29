@@ -1,7 +1,6 @@
 package benchmarkconsensus
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -38,35 +37,22 @@ func (s *service) nonLeaderValidateBlockUnsafe(blockPair *protocol.BlockPairCont
 
 	// block height
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+	if blockHeight != blockPair.ResultsBlock.Header.BlockHeight() {
+		return errors.Errorf("invalid block: block height of tx %d is not equal rx %d", blockHeight, blockPair.ResultsBlock.Header.BlockHeight())
+	}
 	if blockHeight > s.lastCommittedBlockHeight()+1 {
 		return errors.Errorf("invalid block: future block height %d", blockHeight)
 	}
 
-	// correct block type
-	if !blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("incorrect block proof type: %s", blockPair.ResultsBlock.BlockProof.Type())
-	}
-
-	// prev block hash ptr
+	// block consensus
+	var prevCommittedBlock *protocol.BlockPairContainer = nil
 	if s.lastCommittedBlock != nil && blockHeight == s.lastCommittedBlockHeight()+1 {
-		prevTxHash := crypto.CalcTransactionsBlockHash(s.lastCommittedBlock)
-		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
-			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
-		}
-		prevRxHash := crypto.CalcResultsBlockHash(s.lastCommittedBlock)
-		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
-			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
-		}
+		// in this case we also want to validate match to the prev (prev hashes)
+		prevCommittedBlock = s.lastCommittedBlock
 	}
-
-	// block proof
-	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
-	if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
-		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
-	}
-	signedData := s.signedDataForBlockProof(blockPair)
-	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
-		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
+	err := s.validateBlockConsensus(blockPair, prevCommittedBlock)
+	if err != nil {
+		return err
 	}
 
 	return nil
