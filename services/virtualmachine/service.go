@@ -8,24 +8,24 @@ import (
 )
 
 type service struct {
-	blockStorage        services.BlockStorage
-	stateStorage        services.StateStorage
-	processor           services.Processor           // TODO: change to a map
-	crosschainConnector services.CrosschainConnector // TODO: change to a map
+	blockStorage         services.BlockStorage
+	stateStorage         services.StateStorage
+	processors           map[protocol.ProcessorType]services.Processor
+	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
 }
 
 func NewVirtualMachine(
 	blockStorage services.BlockStorage,
 	stateStorage services.StateStorage,
-	processor services.Processor,
-	crosschainConnector services.CrosschainConnector,
+	processors map[protocol.ProcessorType]services.Processor,
+	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector,
 ) services.VirtualMachine {
 
 	return &service{
-		blockStorage:        blockStorage,
-		processor:           processor,
-		crosschainConnector: crosschainConnector,
-		stateStorage:        stateStorage,
+		blockStorage:         blockStorage,
+		processors:           processors,
+		crosschainConnectors: crosschainConnectors,
+		stateStorage:         stateStorage,
 	}
 }
 

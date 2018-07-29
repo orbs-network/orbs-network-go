@@ -18,6 +18,7 @@ import (
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -43,13 +44,18 @@ func NewNodeLogic(
 	transactionPool := transactionpool.NewTransactionPool(gossip, reporting)
 	stateStorage := statestorage.NewStateStorage(statePersistence)
 	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage, reporting)
-	nativeProcessor := native.NewNativeProcessor()
-	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
-	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)
+
+	processors := make(map[protocol.ProcessorType]services.Processor)
+	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor()
+
+	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
+	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
+
+	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, processors, crosschainConnectors)
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
 	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
 
-	var consensusAlgos []services.ConsensusAlgo
+	consensusAlgos := make([]services.ConsensusAlgo, 0)
 	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossip, blockStorage, consensusContext, reporting, nodeConfig))
 
