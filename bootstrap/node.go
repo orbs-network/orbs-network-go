@@ -47,9 +47,10 @@ func NewNode(
 		benchmarkConsensusRoundRetryIntervalMillisec,
 	)
 
+	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
+
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
-	logger := instrumentation.NewStdoutLog()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 

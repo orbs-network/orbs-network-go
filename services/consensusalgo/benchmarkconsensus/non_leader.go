@@ -3,6 +3,7 @@ package benchmarkconsensus
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -15,12 +16,12 @@ func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) 
 
 	err := s.nonLeaderValidateBlockUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error(err) // TODO: wrap with added context
+		s.reporting.Error(err.Error()) // TODO: wrap with added context
 		return
 	}
 	err = s.nonLeaderCommitAndReplyUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error(err) // TODO: wrap with added context
+		s.reporting.Error(err.Error()) // TODO: wrap with added context
 		return
 	}
 }
@@ -71,7 +72,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 	}
 
 	// sign the committed message we're about to send
-	s.reporting.Infof("Replying committed with last committed height of %d", s.lastCommittedBlockHeight())
+	s.reporting.Info("Replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()))
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
 	}).Build()

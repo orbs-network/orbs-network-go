@@ -22,7 +22,7 @@ type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
-	reporting        instrumentation.Reporting
+	reporting        instrumentation.BasicLogger
 	config           benchmarkconsensus.Config
 	service          services.ConsensusAlgoBenchmark
 }
@@ -67,7 +67,7 @@ func newHarness(
 		5,
 	)
 
-	log := instrumentation.NewStdoutLog()
+	log := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)

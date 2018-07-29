@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	harnessInstrumentation "github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
@@ -35,8 +34,6 @@ type acceptanceTestNetwork struct {
 type networkNode struct {
 	index            int
 	config           config.NodeConfig
-	log              harnessInstrumentation.BufferedLog
-	latch            harnessInstrumentation.Latch
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
 	statePersistence stateStorageAdapter.InMemoryStatePersistence
 	nodeLogic        bootstrap.NodeLogic
@@ -67,18 +64,18 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			1,
 		)
 
-		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
-		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence(nodes[i].config)
+
 		nodes[i].nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			sharedTamperingTransport,
 			nodes[i].blockPersistence,
 			nodes[i].statePersistence,
-			instrumentation.NewCompositeReporting([]instrumentation.Reporting{nodes[i].log, nodes[i].latch}),
+			instrumentation.GetLogger().For(instrumentation.Node(nodeName)).WithFormatter(instrumentation.NewHumanReadableFormatter()),
 			nodes[i].config,
 		)
+
 	}
 	return &acceptanceTestNetwork{
 		nodes:           nodes,
@@ -87,9 +84,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 }
 
 func (n *acceptanceTestNetwork) FlushLog() {
-	for i, _ := range n.nodes {
-		n.nodes[i].log.Flush()
-	}
+
 }
 
 func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {

@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -26,7 +27,7 @@ func (s *service) saveToBlockStorage(blockPair *protocol.BlockPairContainer) err
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return nil
 	}
-	s.reporting.Infof("Saving block %d to storage", blockPair.TransactionsBlock.Header.BlockHeight())
+	s.reporting.Info("Saving block to storage", instrumentation.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})

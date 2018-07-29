@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -18,14 +19,14 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	for {
 		err := s.leaderConsensusRoundTick()
 		if err != nil {
-			s.reporting.Error(err)
+			s.reporting.Error(err.Error())
 		}
 		select {
 		case <-ctx.Done():
 			s.reporting.Info("Consensus round run loop terminating with context")
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			s.reporting.Infof("Consensus round waking up after successfully voted block %d", s.lastSuccessfullyVotedBlock)
+			s.reporting.Info("Consensus round waking up after successfully voted block", instrumentation.BlockHeight(s.lastSuccessfullyVotedBlock))
 			continue
 		case <-time.After(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillisec()) * time.Millisecond):
 			s.reporting.Info("Consensus round waking up after retry timeout")
@@ -88,7 +89,7 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
-	s.reporting.Infof("Generating new proposed block for height %d", s.lastCommittedBlockHeight()+1)
+	s.reporting.Info("Generating new proposed block for height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
@@ -165,7 +166,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	// validate the vote
 	err := s.leaderValidateVoteUnderMutex(sender, status)
 	if err != nil {
-		s.reporting.Error(err) // TODO: wrap with added context
+		s.reporting.Error(err.Error()) // TODO: wrap with added context
 		return
 	}
 
@@ -174,7 +175,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	s.reporting.Infof("Vote arrived, now have %d votes out of %d needed", existingVotes, s.requiredQuorumSize())
+	s.reporting.Info("Vote arrived", instrumentation.Int("existing-votes", existingVotes), instrumentation.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() {
 		successfullyVotedBlock = s.lastCommittedBlockHeight()
 	}
