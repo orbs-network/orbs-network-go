@@ -8,7 +8,6 @@ import (
 )
 
 var leaderPublicKey, leaderPrivateKey = leaderKeyPair()
-var aBlockFromLeader = builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 func newNonLeaderHarnessAndInit(t *testing.T, ctx context.Context) *harness {
 	h := newHarness(false)
@@ -35,6 +34,7 @@ func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b0 := aBlockFromLeader.WithHeight(0).Build()
 		h.expectCommitReplyWithoutSave(b0, 0, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -46,6 +46,7 @@ func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -67,6 +68,7 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -88,6 +90,7 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b1 := aBlockFromLeader.WithHeight(1000).Build()
 		h.expectCommitIgnored()
@@ -99,6 +102,7 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
 
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
@@ -116,11 +120,10 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarnessAndInit(t, ctx)
 
-		b1 := aBlockFromLeader.
+		b1 := builders.BlockPair().
 			WithHeight(1).
 			WithInvalidBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey).
 			Build()
-
 		h.expectCommitIgnored()
 		h.receivedCommitViaGossip(b1)
 		h.verifyCommitIgnored(t)
