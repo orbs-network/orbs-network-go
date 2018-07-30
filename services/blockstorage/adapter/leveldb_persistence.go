@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -29,6 +30,7 @@ type levelDbBlockPersistence struct {
 	blockWritten chan bool
 	blockPairs   []*protocol.BlockPairContainer
 	config       Config
+	reporting    instrumentation.BasicLogger
 	db           *leveldb.DB
 }
 
@@ -56,7 +58,13 @@ func NewLevelDbBlockPersistence(config Config) BlockPersistence {
 		config:       config,
 		blockWritten: make(chan bool, 10),
 		db:           db,
+		reporting:    instrumentation.GetLogger(),
 	}
+}
+
+func (bp *levelDbBlockPersistence) WithLogger(reporting instrumentation.BasicLogger) BlockPersistence {
+	bp.reporting = reporting
+	return bp
 }
 
 func (bp *levelDbBlockPersistence) loadLastBlockHeight() (primitives.BlockHeight, error) {
@@ -108,6 +116,7 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 			bp.revert(key)
 		}
 
+		bp.blockWritten <- false
 		return
 	}
 

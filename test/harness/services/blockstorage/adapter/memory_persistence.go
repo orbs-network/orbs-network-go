@@ -1,10 +1,11 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type InMemoryBlockPersistence interface {
@@ -23,6 +24,10 @@ func NewInMemoryBlockPersistence(config adapter.Config) InMemoryBlockPersistence
 		config:       config,
 		blockWritten: make(chan bool, 10),
 	}
+}
+
+func (bp *inMemoryBlockPersistence) WithLogger(reporting instrumentation.BasicLogger) adapter.BlockPersistence {
+	return bp
 }
 
 func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {

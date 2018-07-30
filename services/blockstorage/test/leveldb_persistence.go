@@ -3,6 +3,7 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -31,7 +32,7 @@ var _ = Describe("LevelDb persistence", func() {
 			os.RemoveAll("/tmp/db")
 
 			config := adapter.NewLevelDbBlockPersistenceConfig("node1")
-			db := adapter.NewLevelDbBlockPersistence(config)
+			db := adapter.NewLevelDbBlockPersistence(config).WithLogger(instrumentation.GetLogger(instrumentation.String("adapter", "LevelDBPersistence")))
 
 			block1 := builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build()
 			block2 := builders.BlockPair().WithHeight(primitives.BlockHeight(2)).Build()

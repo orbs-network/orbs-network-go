@@ -32,10 +32,12 @@ type service struct {
 }
 
 func NewBlockStorage(config BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
+	logger := reporting.For(instrumentation.Service("block-storage"))
+
 	return &service{
-		persistence:  persistence,
+		persistence:  persistence.WithLogger(logger.For(instrumentation.String("component", "persistence"))),
 		stateStorage: stateStorage,
-		reporting:    reporting.For(instrumentation.Service("block-storage")),
+		reporting:    logger,
 		config:       config,
 	}
 }
