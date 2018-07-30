@@ -42,7 +42,7 @@ func NewNodeLogic(
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
 	transactionPool := transactionpool.NewTransactionPool(gossip, reporting)
 	stateStorage := statestorage.NewStateStorage(statePersistence)
-	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage, reporting)
+	blockStorage := blockstorage.NewBlockStorage(blockstorage.DefaultBlockStorageConfig(), blockPersistence, stateStorage, reporting)
 	nativeProcessor := native.NewNativeProcessor()
 	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)
