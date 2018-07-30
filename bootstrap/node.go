@@ -38,9 +38,10 @@ func NewNode(
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo)
 
+	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
+
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
 	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
-	logger := instrumentation.NewStdoutLog()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 

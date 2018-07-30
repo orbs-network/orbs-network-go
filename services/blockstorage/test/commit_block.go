@@ -39,7 +39,7 @@ var _ = Describe("Committing a block", func() {
 
 				_, err := driver.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
-				Expect(err).To(MatchError("protocol version mismatch: expected 1 got 99999"))
+				Expect(err).To(MatchError("protocol version mismatch"))
 			})
 		})
 

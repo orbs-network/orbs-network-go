@@ -31,10 +31,10 @@ The project is thoroughly tested with unit tests, component tests per microservi
 cd `go env GOPATH`
 go get github.com/orbs-network/orbs-network-go
 cd src/github.com/orbs-network/orbs-network-go
-git checkout master // or dev if you want the dev branch
+git checkout master
 ```
 
-* Install dependencies with `./git-submodules-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
+* Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
 
 * Build with `go install`
 
@@ -131,13 +131,12 @@ go run *.go
 * For easy testing, under `Run | Edit Configurations` add these `Go Test` configurations:
   * "Fast" with `Directory` set to project root and `-short` flag added to `Go tool arguments`
   * "All" with `Directory` set to project root
-  * It's also recommended to hide ignored tests in the test panel after running the configuration
+  * It's also recommended to uncheck `Show Ignored` tests and check `Show Passed` in the test panel after running the configuration
+  * If you have a failed test which keeps failing due to cache click `Rerun Failed Tests` in the test panel (it will ignore cache)
 
 * You may enable the following automatic tools that run on file changes:
   * "go fmt" in `Preferences | Tools | File Watchers`, add with `+` the `go fmt` watcher
-  * "go test" in `Preferences | Tools | File Watchers`, add with `+` a `custom` watcher:
-    * Name: `go test`, File type: `Go`, Scope: `Project Files`
-    * Program: `$GoExecPath$`, Arguments: `test -short ./...`, Working directory: `$ProjectFileDir$`
+  * To run tests automatically on save, check `Toggle auto-test` in the test panel (it's now a core feature of GoLand)
 
 ## License
 

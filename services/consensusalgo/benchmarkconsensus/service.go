@@ -22,7 +22,7 @@ type service struct {
 	gossip           gossiptopics.BenchmarkConsensus
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
-	reporting        instrumentation.Reporting
+	reporting        instrumentation.BasicLogger
 	config           Config
 
 	activeBlock        *protocol.BlockPairContainer
@@ -34,7 +34,7 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	reporting instrumentation.Reporting,
+	reporting instrumentation.BasicLogger,
 	config Config,
 ) services.ConsensusAlgoBenchmark {
 
@@ -42,7 +42,7 @@ func NewBenchmarkConsensusAlgo(
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		reporting:        reporting,
+		reporting:        reporting.For(instrumentation.String("consensus-algo", "benchmark")),
 		config:           config,
 	}
 
