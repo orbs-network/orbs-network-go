@@ -1,9 +1,8 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"strconv"
 	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
@@ -41,7 +40,7 @@ func (bp *levelDbBlockPersistence) revert(key string) error {
 }
 
 func (bp *levelDbBlockPersistence) putTxBlock(txBlock *protocol.TransactionsBlockContainer) (errors []error, keys []string) {
-	blockHeight := strconv.FormatUint(uint64(txBlock.Header.BlockHeight()), 10)
+	blockHeight := txBlock.Header.BlockHeight().String()
 
 	txBlockHeaderKey := TX_BLOCK_HEADER + blockHeight
 	txBlockProofKey := TX_BLOCK_PROOF + blockHeight
@@ -66,7 +65,7 @@ func (bp *levelDbBlockPersistence) putTxBlock(txBlock *protocol.TransactionsBloc
 }
 
 func (bp *levelDbBlockPersistence) putResultsBlock(rsBlock *protocol.ResultsBlockContainer) (errors []error, keys []string) {
-	blockHeight := strconv.FormatUint(uint64(rsBlock.Header.BlockHeight()), 10)
+	blockHeight := rsBlock.Header.BlockHeight().String()
 
 	rsBlockHeaderKey := RS_BLOCK_HEADER + blockHeight
 	rsBlockProofKey := RS_BLOCK_PROOF + blockHeight
@@ -76,7 +75,6 @@ func (bp *levelDbBlockPersistence) putResultsBlock(rsBlock *protocol.ResultsBloc
 
 	keys = append(keys, rsBlockHeaderKey, rsBlockProofKey)
 	errors = append(errors, rsBlockHeaderError, rsBlockProofError)
-
 
 	for i, sd := range rsBlock.ContractStateDiffs {
 		rsBlockContractStatesDiffsKey := RS_BLOCK_CONTRACT_STATE_DIFFS + blockHeight + "-" + formatInt(i)
@@ -106,9 +104,9 @@ func constructTxBlockFromStorage(txBlockHeaderRaw []byte, txBlockProofRaw []byte
 	}
 
 	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header: protocol.TransactionsBlockHeaderReader(txBlockHeaderRaw),
-		BlockProof: protocol.TransactionsBlockProofReader(txBlockProofRaw),
-		Metadata: protocol.TransactionsBlockMetadataReader(txBlockMetadataRaw),
+		Header:             protocol.TransactionsBlockHeaderReader(txBlockHeaderRaw),
+		BlockProof:         protocol.TransactionsBlockProofReader(txBlockProofRaw),
+		Metadata:           protocol.TransactionsBlockMetadataReader(txBlockMetadataRaw),
 		SignedTransactions: signedTransactions,
 	}
 
@@ -128,9 +126,9 @@ func constructResultsBlockFromStorage(rsBlockHeaderRaw []byte, rsBlockProofRaw [
 	}
 
 	resultsBlock := &protocol.ResultsBlockContainer{
-		Header: protocol.ResultsBlockHeaderReader(rsBlockHeaderRaw),
-		BlockProof: protocol.ResultsBlockProofReader(rsBlockProofRaw),
-		ContractStateDiffs: stateDiffs,
+		Header:              protocol.ResultsBlockHeaderReader(rsBlockHeaderRaw),
+		BlockProof:          protocol.ResultsBlockProofReader(rsBlockProofRaw),
+		ContractStateDiffs:  stateDiffs,
 		TransactionReceipts: transactionReceipts,
 	}
 

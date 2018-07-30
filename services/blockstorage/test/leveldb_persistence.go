@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"os"
 )
 
 func compareContainers(a *protocol.BlockPairContainer, b *protocol.BlockPairContainer) {
@@ -27,6 +28,8 @@ func compareContainers(a *protocol.BlockPairContainer, b *protocol.BlockPairCont
 var _ = Describe("LevelDb persistence", func() {
 	When("#WriteBlock", func() {
 		It("does not fail", func() {
+			os.RemoveAll("/tmp/db")
+
 			config := adapter.NewLevelDbBlockPersistenceConfig("node1")
 			db := adapter.NewLevelDbBlockPersistence(config)
 
@@ -41,7 +44,7 @@ var _ = Describe("LevelDb persistence", func() {
 			compareContainers(block1, allBlocks[0])
 			compareContainers(block2, allBlocks[1])
 
-			//FIXME does not work for some reason, investigate
+			//FIXME does not work because of membuffers
 			//Expect(allBlocks[0]).To(Equal(block1))
 			//Expect(allBlocks[1]).To(Equal(block2))
 		})
