@@ -12,6 +12,7 @@ func formatInt(i int) string {
 func anyErrors(errors []error) bool {
 	for _, error := range errors {
 		if error != nil {
+			// FIXME report all errors to the log
 			fmt.Println("Found error", errors)
 			return true
 		}
