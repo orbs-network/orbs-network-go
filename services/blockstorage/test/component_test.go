@@ -72,7 +72,7 @@ func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence(&adapterConfig{})
-	d.blockStorage = blockstorage.NewBlockStorage(testBlockStorageConfig(), d.storageAdapter, d.stateStorage, instrumentation.NewStdoutLog())
+	d.blockStorage = blockstorage.NewBlockStorage(testBlockStorageConfig(), d.storageAdapter, d.stateStorage, instrumentation.GetLogger())
 
 	return d
 }

@@ -13,14 +13,14 @@ import (
 type service struct {
 	pendingTransactions chan *protocol.SignedTransaction
 	gossip              gossiptopics.TransactionRelay
-	reporting           instrumentation.Reporting
+	reporting           instrumentation.BasicLogger
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrumentation.Reporting) services.TransactionPool {
+func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrumentation.BasicLogger) services.TransactionPool {
 	s := &service{
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 		gossip:              gossip,
-		reporting:           reporting,
+		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s

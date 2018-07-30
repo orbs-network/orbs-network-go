@@ -2,6 +2,7 @@ package leanhelix
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -54,7 +55,7 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	s.blocksForRounds[nextBlockHeight] = proposedBlockPair
 	s.blocksForRoundsMutex.Unlock()
 
-	s.reporting.Infof("Proposed block pair for height %d", nextBlockHeight)
+	s.reporting.Info("Proposed block pair for height", instrumentation.BlockHeight(nextBlockHeight))
 
 	return nil
 }
@@ -83,7 +84,7 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		<-s.votesForActiveRound
 	}
 
-	s.reporting.Infof("Got the required %d votes for next block", numOfRequiredVotes)
+	s.reporting.Info("Got the required votes", instrumentation.Int("votes", numOfRequiredVotes))
 
 	return nil
 }
@@ -95,7 +96,7 @@ func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPair
 	s.blocksForRounds[blockHeight] = blockPair
 	s.blocksForRoundsMutex.Unlock()
 
-	s.reporting.Infof("Voting as validator for block of height %d", blockHeight)
+	s.reporting.Info("Voting as validator for block of height %d", instrumentation.BlockHeight(blockHeight))
 	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 	return err
 }
@@ -117,9 +118,9 @@ func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 	s.blocksForRoundsMutex.RUnlock()
 
 	if !found {
-		err := fmt.Errorf("trying to commit a block of height %d that wasn't prepared", blockHeight)
-		s.reporting.Error(err)
-		panic(err)
+		errorMessage := "trying to commit a block that wasn't prepared"
+		s.reporting.Error(errorMessage, instrumentation.BlockHeight(blockHeight))
+		panic(fmt.Errorf(errorMessage))
 	}
 
 	s.blockStorage.CommitBlock(&services.CommitBlockInput{

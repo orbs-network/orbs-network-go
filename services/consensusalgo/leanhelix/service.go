@@ -24,7 +24,7 @@ type service struct {
 	blockStorage     services.BlockStorage
 	transactionPool  services.TransactionPool
 	consensusContext services.ConsensusContext
-	reporting        instrumentation.Reporting
+	reporting        instrumentation.BasicLogger
 	config           Config
 
 	lastCommittedBlockHeight primitives.BlockHeight
@@ -38,7 +38,7 @@ func NewLeanHelixConsensusAlgo(
 	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
 	consensusContext services.ConsensusContext,
-	reporting instrumentation.Reporting,
+	reporting instrumentation.BasicLogger,
 	config Config,
 ) services.ConsensusAlgoLeanHelix {
 
@@ -47,7 +47,7 @@ func NewLeanHelixConsensusAlgo(
 		blockStorage:     blockStorage,
 		transactionPool:  transactionPool,
 		consensusContext: consensusContext,
-		reporting:        reporting,
+		reporting:        reporting.For(instrumentation.Service("consensus")),
 		config:           config,
 		lastCommittedBlockHeight: 0, // TODO: improve startup
 		blocksForRounds:          make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
@@ -99,12 +99,12 @@ func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInp
 func (s *service) consensusRoundRunLoop() {
 
 	for {
-		s.reporting.Infof("Entered consensus round, last committed block height is %d", s.lastCommittedBlockHeight)
+		s.reporting.Info("Entered consensus round, last committed block height is", instrumentation.BlockHeight(s.lastCommittedBlockHeight))
 
 		// see if we need to propose a new block
 		err := s.leaderProposeNextBlockIfNeeded()
 		if err != nil {
-			s.reporting.Error(err)
+			s.reporting.Error(err.Error())
 			continue
 		}
 
@@ -115,7 +115,7 @@ func (s *service) consensusRoundRunLoop() {
 		if activeBlock != nil {
 			err := s.leaderCollectVotesForBlock(activeBlock)
 			if err != nil {
-				s.reporting.Error(err)
+				s.reporting.Error(err.Error())
 				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff
 				continue
 			}

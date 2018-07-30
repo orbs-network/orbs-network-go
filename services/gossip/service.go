@@ -16,18 +16,18 @@ type Config interface {
 
 type service struct {
 	config                     Config
-	reporting                  instrumentation.Reporting
+	reporting                  instrumentation.BasicLogger
 	transport                  adapter.Transport
 	transactionHandlers        []gossiptopics.TransactionRelayHandler
 	leanHelixHandlers          []gossiptopics.LeanHelixHandler
 	benchmarkConsensusHandlers []gossiptopics.BenchmarkConsensusHandler
 }
 
-func NewGossip(transport adapter.Transport, config Config, reporting instrumentation.Reporting) services.Gossip {
+func NewGossip(transport adapter.Transport, config Config, reporting instrumentation.BasicLogger) services.Gossip {
 	s := &service{
 		transport: transport,
 		config:    config,
-		reporting: reporting,
+		reporting: reporting.For(instrumentation.Service("gossip")),
 	}
 	transport.RegisterListener(s, s.config.NodePublicKey())
 	return s
@@ -35,12 +35,16 @@ func NewGossip(transport adapter.Transport, config Config, reporting instrumenta
 
 func (s *service) OnTransportMessageReceived(payloads [][]byte) {
 	if len(payloads) == 0 {
-		s.reporting.Error(&adapter.ErrCorruptData{})
+		// FIXME error handling
+		err := &adapter.ErrCorruptData{}
+		s.reporting.Error(err.Error())
 		return
 	}
 	header := gossipmessages.HeaderReader(payloads[0])
 	if !header.IsValid() {
-		s.reporting.Error(&ErrCorruptHeader{payloads[0]})
+		// FIXME error handling
+		err := &ErrCorruptHeader{payloads[0]}
+		s.reporting.Error(err.Error())
 		return
 	}
 	s.reporting.Info(fmt.Sprintf("Gossip: OnTransportMessageReceived: %s", header))

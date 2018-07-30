@@ -4,8 +4,11 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto"
 	"testing"
 )
+
+var privateKey = crypto.Ed25519KeyPairForTests(1).PrivateKeyUnsafe()
 
 func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
@@ -21,7 +24,7 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 		h := newHarness(false)
 		h.createService(ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader()) //TODO: fix private key
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1)
@@ -45,7 +48,7 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 		h := newHarness(false)
 		h.createService(ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1)
@@ -69,7 +72,7 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 		h := newHarness(false)
 		h.createService(ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		h.expectCommitIgnored()
 		b1 := aBlock.WithHeight(1000).Build()
@@ -83,7 +86,7 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 		h := newHarness(false)
 		h.createService(ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1)
@@ -102,7 +105,7 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 		h := newHarness(false)
 		h.createService(ctx)
 
-		aBlock := builders.BlockPair().WithInvalidBenchmarkConsensusBlockProof(nil, h.config.ConstantConsensusLeader())
+		aBlock := builders.BlockPair().WithInvalidBenchmarkConsensusBlockProof(privateKey, h.config.ConstantConsensusLeader())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitIgnored()
@@ -116,7 +119,7 @@ func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
 		h := newHarness(false)
 		h.createService(ctx)
 
-		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(nil, nonLeaderPublicKey())
+		aBlock := builders.BlockPair().WithBenchmarkConsensusBlockProof(privateKey, nonLeaderPublicKey())
 
 		b1 := aBlock.WithHeight(1).Build()
 		h.expectCommitIgnored()
