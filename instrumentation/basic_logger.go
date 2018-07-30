@@ -179,6 +179,10 @@ func (f *Field) Value() interface{} {
 		return f.String
 	case ServiceType:
 		return f.String
+	case FunctionType:
+		return f.String
+	case SourceType:
+		return f.String
 	case StringType:
 		return f.String
 	case IntType:
@@ -207,7 +211,8 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	enrichmentParams = append(enrichmentParams, b.prefixes...)
 	enrichmentParams = append(enrichmentParams, params...)
 
-	fmt.Fprintln(b.output, b.formatter.FormatRow(level, message, enrichmentParams...))
+	logLine := b.formatter.FormatRow(level, message, enrichmentParams...)
+	fmt.Fprintln(b.output, logLine)
 }
 
 func (b *basicLogger) Info(message string, params ...*Field) {
