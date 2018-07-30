@@ -5,23 +5,6 @@ import (
 	"strconv"
 )
 
-func copyByteArray(data []byte) []byte {
-	result := make([]byte, len(data))
-	copy(result, data)
-
-	return result
-}
-
-func copyArrayOfByteArrays(data [][]byte) [][]byte {
-	result := make([][]byte, len(data))
-	for i := range data {
-		result[i] = make([]byte, len(data[i]))
-		copy(result[i], data[i])
-	}
-
-	return result
-}
-
 func formatInt(i int) string {
 	return strconv.FormatInt(int64(i), 10)
 }

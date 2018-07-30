@@ -1,12 +1,10 @@
 package adapter
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/syndtr/goleveldb/leveldb"
-	"strconv"
 )
 
 const (
@@ -50,7 +48,7 @@ func NewLevelDbBlockPersistence(config Config) BlockPersistence {
 	db, err := leveldb.OpenFile("/tmp/db", nil)
 
 	if err != nil {
-		fmt.Println("Could not instantiate leveldb", err)
+		instrumentation.GetLogger(instrumentation.String("component", "persistence")).Error("Could not instantiate leveldb", instrumentation.Error(err))
 		panic("Could not instantiate leveldb")
 	}
 
@@ -67,27 +65,12 @@ func (bp *levelDbBlockPersistence) WithLogger(reporting instrumentation.BasicLog
 	return bp
 }
 
-func (bp *levelDbBlockPersistence) loadLastBlockHeight() (primitives.BlockHeight, error) {
-	val, err := bp.db.Get([]byte(LAST_BLOCK_HEIGHT), nil)
-
-	if err != nil {
-		return 0, nil
-	}
-
-	result, err := strconv.ParseUint(string(val), 16, 64)
-	return primitives.BlockHeight(result), err
-}
-
-func (bp *levelDbBlockPersistence) saveLastBlockHeight(height primitives.BlockHeight) error {
-	return bp.db.Put([]byte(LAST_BLOCK_HEIGHT), []byte(height.String()), nil)
-}
-
 func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
 	var errors []error
 	var keys []string
 
 	if !basicValidation(blockPair) {
-		fmt.Println("Block is invalid")
+		bp.reporting.Info("Block is invalid", instrumentation.Stringable("txBlockHeader", blockPair.TransactionsBlock.Header))
 		return
 	}
 
@@ -97,7 +80,8 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 	txErrors, txKeys := bp.putTxBlock(blockPair.TransactionsBlock)
 	rsErrors, rsKeys := bp.putResultsBlock(blockPair.ResultsBlock)
 
-	blockHeightSaveError := bp.saveLastBlockHeight(blockPair.TransactionsBlock.Header.BlockHeight())
+	newBlockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+	blockHeightSaveError := bp.saveLastBlockHeight(newBlockHeight)
 
 	errors = append(errors, blockHeightSaveError)
 
@@ -108,9 +92,8 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 	keys = append(keys, rsKeys...)
 
 	if anyErrors(errors) {
-		fmt.Println("Failed to write block")
-
 		bp.saveLastBlockHeight(lastBlockHeight)
+		bp.reporting.Error("Failed to write block", instrumentation.BlockHeight(newBlockHeight))
 
 		for _, key := range keys {
 			bp.revert(key)
@@ -157,11 +140,13 @@ func basicValidation(blockPair *protocol.BlockPairContainer) bool {
 func (bp *levelDbBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
 	blockHeightAsString := height.String()
 
-	txBlockHeaderRaw := copyByteArray(bp.retrieve(TX_BLOCK_HEADER + blockHeightAsString))
-	txBlockProofRaw := copyByteArray(bp.retrieve(TX_BLOCK_PROOF + blockHeightAsString))
-	txBlockMetadataRaw := copyByteArray(bp.retrieve(TX_BLOCK_METADATA + blockHeightAsString))
+	txBlockHeaderRaw := bp.retrieve(TX_BLOCK_HEADER + blockHeightAsString)
+	txBlockProofRaw := bp.retrieve(TX_BLOCK_PROOF + blockHeightAsString)
+	txBlockMetadataRaw := bp.retrieve(TX_BLOCK_METADATA + blockHeightAsString)
 
 	txSignedTransactionsRaw := bp.retrieveByPrefix(TX_BLOCK_SIGNED_TRANSACTION + blockHeightAsString + "-")
+
+	bp.reporting.Info("Retrieved transactions block from storage", instrumentation.BlockHeight(height))
 
 	return constructTxBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw), nil
 }
@@ -169,11 +154,13 @@ func (bp *levelDbBlockPersistence) GetTransactionsBlock(height primitives.BlockH
 func (bp *levelDbBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
 	blockHeightAsString := height.String()
 
-	rsBlockHeaderRaw := copyByteArray(bp.retrieve(RS_BLOCK_HEADER + blockHeightAsString))
-	rsBlockProofRaw := copyByteArray(bp.retrieve(RS_BLOCK_PROOF + blockHeightAsString))
+	rsBlockHeaderRaw := bp.retrieve(RS_BLOCK_HEADER + blockHeightAsString)
+	rsBlockProofRaw := bp.retrieve(RS_BLOCK_PROOF + blockHeightAsString)
 
-	rsTransactionReceipts := copyArrayOfByteArrays(bp.retrieveByPrefix(RS_BLOCK_TRANSACTION_RECEIPTS + blockHeightAsString + "-"))
-	rsStateDiffs := copyArrayOfByteArrays(bp.retrieveByPrefix(RS_BLOCK_CONTRACT_STATE_DIFFS + blockHeightAsString + "-"))
+	rsTransactionReceipts := bp.retrieveByPrefix(RS_BLOCK_TRANSACTION_RECEIPTS + blockHeightAsString + "-")
+	rsStateDiffs := bp.retrieveByPrefix(RS_BLOCK_CONTRACT_STATE_DIFFS + blockHeightAsString + "-")
+
+	bp.reporting.Info("Retrieved results block from storage", instrumentation.BlockHeight(height))
 
 	return constructResultsBlockFromStorage(rsBlockHeaderRaw, rsBlockProofRaw, rsStateDiffs, rsTransactionReceipts), nil
 }

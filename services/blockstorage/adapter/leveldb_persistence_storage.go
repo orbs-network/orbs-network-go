@@ -1,21 +1,18 @@
 package adapter
 
 import (
-	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"strconv"
 )
 
 func (bp *levelDbBlockPersistence) put(key string, value []byte) error {
-	fmt.Printf("Writing key %v, value %v\n", key, value)
-
 	return bp.db.Put([]byte(key), value, nil)
 }
 
 // FIXME should I handle errors?
 func (bp *levelDbBlockPersistence) retrieve(key string) []byte {
-	fmt.Printf("Retrieving key %v\n", key)
-
 	result, _ := bp.db.Get([]byte(key), nil)
 	return result
 }
@@ -24,8 +21,7 @@ func (bp *levelDbBlockPersistence) retrieveByPrefix(prefix string) (results [][]
 	iter := bp.db.NewIterator(util.BytesPrefix([]byte(prefix)), nil)
 
 	for iter.Next() {
-		println("Retrieving key", string(iter.Key()))
-		results = append(results, copyByteArray(iter.Value()))
+		results = append(results, iter.Value())
 	}
 
 	iter.Release()
@@ -34,8 +30,6 @@ func (bp *levelDbBlockPersistence) retrieveByPrefix(prefix string) (results [][]
 }
 
 func (bp *levelDbBlockPersistence) revert(key string) error {
-	fmt.Println("Removing key", key)
-
 	return bp.db.Delete([]byte(key), nil)
 }
 
@@ -133,4 +127,19 @@ func constructResultsBlockFromStorage(rsBlockHeaderRaw []byte, rsBlockProofRaw [
 	}
 
 	return resultsBlock
+}
+
+func (bp *levelDbBlockPersistence) loadLastBlockHeight() (primitives.BlockHeight, error) {
+	val, err := bp.db.Get([]byte(LAST_BLOCK_HEIGHT), nil)
+
+	if err != nil {
+		return 0, nil
+	}
+
+	result, err := strconv.ParseUint(string(val), 16, 64)
+	return primitives.BlockHeight(result), err
+}
+
+func (bp *levelDbBlockPersistence) saveLastBlockHeight(height primitives.BlockHeight) error {
+	return bp.db.Put([]byte(LAST_BLOCK_HEIGHT), []byte(height.String()), nil)
 }
