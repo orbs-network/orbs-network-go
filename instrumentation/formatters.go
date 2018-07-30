@@ -43,9 +43,9 @@ const (
 	EQUALS = "="
 )
 
-func findFieldByType(fieldType int, params []*Field) (index int, result *Field) {
+func findFieldByType(fieldType FieldType, params []*Field) (index int, result *Field) {
 	for idx, param := range params {
-		if param.Type == FieldType(fieldType) {
+		if param.Type == fieldType {
 			return idx, param
 		}
 	}
@@ -54,6 +54,10 @@ func findFieldByType(fieldType int, params []*Field) (index int, result *Field) 
 }
 
 func printParam(builder *strings.Builder, param *Field) {
+	if param == nil {
+		return
+	}
+
 	var value string
 
 	switch param.Type {
@@ -62,6 +66,10 @@ func printParam(builder *strings.Builder, param *Field) {
 	case NodeType:
 		value = param.String
 	case ServiceType:
+		value = param.String
+	case FunctionType:
+		value = param.String
+	case SourceType:
 		value = param.String
 	case IntType:
 		value = strconv.FormatInt(param.Int, 10)
@@ -87,6 +95,21 @@ func cut(i int, params []*Field) []*Field {
 	return params
 }
 
+func extractParamByType(params []*Field, ft FieldType, shouldPrint, shouldRemove bool, builder *strings.Builder) (*Field, []*Field) {
+	if idx, param := findFieldByType(ft, params); param != nil {
+		if shouldPrint {
+			printParam(builder, param)
+		}
+		if shouldRemove {
+			params = cut(idx, params)
+		}
+
+		return param, params
+	}
+
+	return nil, params
+}
+
 func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
 	logLine := make(map[string]interface{})
 
@@ -110,19 +133,18 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	builder.WriteString(message)
 	builder.WriteString(SPACE)
 
-	if idx, param := findFieldByType(NodeType, params); param != nil {
-		printParam(&builder, param)
-		params = cut(idx, params)
-	}
-
-	if idx, param := findFieldByType(ServiceType, params); param != nil {
-		printParam(&builder, param)
-		params = cut(idx, params)
-	}
+	_, params = extractParamByType(params, NodeType, true, true, &builder)
+	_, params = extractParamByType(params, ServiceType, true, true, &builder)
+	functionParam, params := extractParamByType(params, FunctionType, false, true, nil)
+	sourceParam, params := extractParamByType(params, SourceType, false, true, nil)
 
 	for _, param := range params {
 		printParam(&builder, param)
 	}
+
+	// append the function/source
+	printParam(&builder, functionParam)
+	printParam(&builder, sourceParam)
 
 	return builder.String()
 }
