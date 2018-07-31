@@ -86,8 +86,8 @@ func (b *blockPair) WithHeight(blockHeight primitives.BlockHeight) *blockPair {
 
 func (b *blockPair) WithPrevBlockHash(prevBlock *protocol.BlockPairContainer) *blockPair {
 	if prevBlock != nil {
-		b.txHeader.PrevBlockHashPtr = crypto.CalcTransactionsBlockHash(prevBlock)
-		b.rxHeader.PrevBlockHashPtr = crypto.CalcResultsBlockHash(prevBlock)
+		b.txHeader.PrevBlockHashPtr = crypto.CalcTransactionsBlockHash(prevBlock.TransactionsBlock)
+		b.rxHeader.PrevBlockHashPtr = crypto.CalcResultsBlockHash(prevBlock.ResultsBlock)
 	}
 	return b
 }
