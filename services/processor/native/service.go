@@ -13,7 +13,14 @@ func NewNativeProcessor() services.Processor {
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-	panic("Not implemented")
+	if input.ContractName == "" || input.MethodName == "" {
+		panic("ProcessCall received corrupt args")
+	}
+	_, _, err := s.retrieveMethodFromRepository(input.ContractName, input.MethodName)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) (*services.DeployNativeServiceOutput, error) {
