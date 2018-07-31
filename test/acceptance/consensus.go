@@ -15,8 +15,6 @@ var _ = Describe("a leader node", func() {
 		consensusAlgos := []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX}
 		harness.WithNetwork(2, consensusAlgos, func(ctx context.Context, network harness.AcceptanceTestNetwork) {
 
-			defer network.FlushLog()
-
 			prePrepareLatch := network.GossipTransport().LatchOn(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
 			prePrepareTamper := network.GossipTransport().Fail(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
 			<-network.SendTransfer(0, 17)

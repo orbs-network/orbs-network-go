@@ -18,7 +18,6 @@ var _ = Describe("a leader node", func() {
 		harness.WithNetwork(2, consensusAlgos, func(ctx context.Context, network harness.AcceptanceTestNetwork) {
 
 			// leader is nodeIndex 0, validator is nodeIndex 1
-			defer network.FlushLog()
 
 			network.SendTransfer(0, 17)
 			network.SendInvalidTransfer(0)
