@@ -14,7 +14,7 @@ import (
 var _ = Describe("a leader node", func() {
 
 	It("commits transactions to all nodes, skipping invalid transactions", func() {
-		consensusAlgos := []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX}
+		consensusAlgos := []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 		harness.WithNetwork(2, consensusAlgos, func(ctx context.Context, network harness.AcceptanceTestNetwork) {
 
 			// leader is nodeIndex 0, validator is nodeIndex 1
@@ -41,7 +41,7 @@ var _ = Describe("a leader node", func() {
 var _ = Describe("a non-leader (validator) node", func() {
 
 	It("propagates transactions to leader but does not commit them itself", func() {
-		consensusAlgos := []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX}
+		consensusAlgos := []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 		harness.WithNetwork(2, consensusAlgos, func(ctx context.Context, network harness.AcceptanceTestNetwork) {
 
 			// leader is nodeIndex 0, validator is nodeIndex 1
