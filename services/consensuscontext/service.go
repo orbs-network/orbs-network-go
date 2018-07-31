@@ -1,6 +1,8 @@
 package consensuscontext
 
-import "github.com/orbs-network/orbs-spec/types/go/services"
+import (
+	"github.com/orbs-network/orbs-spec/types/go/services"
+)
 
 type service struct {
 	transactionPool services.TransactionPool
@@ -22,11 +24,24 @@ func NewConsensusContext(
 }
 
 func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
-	panic("Not implemented")
+	txBlock, err := s.createTransactionsBlock(input.BlockHeight, input.PrevBlockHash)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &services.RequestNewTransactionsBlockOutput{
+		TransactionsBlock: txBlock,
+	}, nil
 }
 
 func (s *service) RequestNewResultsBlock(input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
-	panic("Not implemented")
+
+	rxBlock := s.createResultsBlock(input.BlockHeight, input.PrevBlockHash, input.TransactionsBlock)
+
+	return &services.RequestNewResultsBlockOutput{
+		ResultsBlock: rxBlock,
+	}, nil
 }
 
 func (s *service) ValidateTransactionsBlock(input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {

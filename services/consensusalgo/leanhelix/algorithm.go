@@ -2,7 +2,7 @@ package leanhelix
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -14,39 +14,48 @@ import (
 func (s *service) leaderProposeNextBlockIfNeeded() error {
 	nextBlockHeight := s.lastCommittedBlockHeight + 1
 
-	if s.blocksForRounds[nextBlockHeight] != nil {
+	s.blocksForRoundsMutex.RLock()
+	nextBlock := s.blocksForRounds[nextBlockHeight]
+	s.blocksForRoundsMutex.RUnlock()
+	if nextBlock != nil {
 		return nil
 	}
 
-	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
-		MaxNumberOfTransactions: 1,
+	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+		BlockHeight:             s.lastCommittedBlockHeight + 1,
+		MaxBlockSizeKb:          0,
+		MaxNumberOfTransactions: 0,
+		PrevBlockHash:           nil,
 	})
 	if err != nil {
 		return err
 	}
 
-	proposedBlockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header: (&protocol.TransactionsBlockHeaderBuilder{
-				ProtocolVersion:       blockstorage.ProtocolVersion,
-				BlockHeight:           primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
-				NumSignedTransactions: uint32(len(proposedTransactions.SignedTransactions)),
-			}).Build(),
-			Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-			SignedTransactions: proposedTransactions.SignedTransactions,
-			BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
-		},
-		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:              (&protocol.ResultsBlockHeaderBuilder{}).Build(),
-			TransactionReceipts: nil,
-			ContractStateDiffs:  nil,
-			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
-		},
+	txBlock := txOutput.TransactionsBlock
+	txBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
+
+	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
+		BlockHeight:       s.lastCommittedBlockHeight + 1,
+		PrevBlockHash:     nil,
+		TransactionsBlock: txBlock,
+	})
+	if err != nil {
+		return err
 	}
 
-	s.blocksForRounds[nextBlockHeight] = proposedBlockPair
+	rxBlock := rxOutput.ResultsBlock
+	rxBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{}).Build()
 
-	s.reporting.Infof("Proposed block pair for height %d", nextBlockHeight)
+	proposedBlockPair := &protocol.BlockPairContainer{
+		TransactionsBlock: txBlock,
+		ResultsBlock:      rxBlock,
+	}
+
+	s.blocksForRoundsMutex.Lock()
+	s.blocksForRounds[nextBlockHeight] = proposedBlockPair
+	s.blocksForRoundsMutex.Unlock()
+
+	s.reporting.Info("Proposed block pair for height", instrumentation.BlockHeight(nextBlockHeight))
 
 	return nil
 }
@@ -75,16 +84,19 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		<-s.votesForActiveRound
 	}
 
-	s.reporting.Infof("Got the required %d votes for next block", numOfRequiredVotes)
+	s.reporting.Info("Got the required votes", instrumentation.Int("votes", numOfRequiredVotes))
 
 	return nil
 }
 
 func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPairContainer) error {
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
-	s.blocksForRounds[blockHeight] = blockPair
 
-	s.reporting.Infof("Voting as validator for block of height %d", blockHeight)
+	s.blocksForRoundsMutex.Lock()
+	s.blocksForRounds[blockHeight] = blockPair
+	s.blocksForRoundsMutex.Unlock()
+
+	s.reporting.Info("Voting as validator for block of height %d", instrumentation.BlockHeight(blockHeight))
 	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 	return err
 }
@@ -100,17 +112,24 @@ func (s *service) leaderAddVoteFromValidator() {
 
 func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 	blockHeight := s.lastCommittedBlockHeight + 1
+
+	s.blocksForRoundsMutex.RLock()
 	blockPair, found := s.blocksForRounds[blockHeight]
+	s.blocksForRoundsMutex.RUnlock()
+
 	if !found {
-		err := fmt.Errorf("trying to commit a block of height %d that wasn't prepared", blockHeight)
-		s.reporting.Error(err)
-		panic(err)
+		errorMessage := "trying to commit a block that wasn't prepared"
+		s.reporting.Error(errorMessage, instrumentation.BlockHeight(blockHeight))
+		panic(fmt.Errorf(errorMessage))
 	}
 
 	s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
 
+	s.blocksForRoundsMutex.Lock()
 	delete(s.blocksForRounds, blockHeight)
+	s.blocksForRoundsMutex.Unlock()
+
 	return blockHeight
 }

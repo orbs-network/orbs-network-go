@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// protocol.SignedTransaction
+
 type transferTransaction struct {
 	builder *protocol.SignedTransactionBuilder
 }
