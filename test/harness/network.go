@@ -67,7 +67,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 	for i, _ := range nodes {
 		nodes[i].index = i
 		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-		nodeName := fmt.Sprintf("node-pkey-%s", nodeKeyPair.PublicKey())
+		nodeName := fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 
 		nodes[i].config = config.NewHardCodedConfig(
 			federationNodes,
