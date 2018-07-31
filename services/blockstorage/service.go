@@ -2,6 +2,7 @@ package blockstorage
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -19,8 +20,7 @@ type Config interface {
 
 const (
 	// TODO extract it to the spec
-	ProtocolVersion          = 1
-	NanosecondsInMillisecond = 1000000
+	ProtocolVersion = 1
 )
 
 type service struct {
@@ -87,33 +87,25 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 
 func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
 	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
-		c := make(chan *services.GetTransactionsBlockHeaderOutput)
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeout())
+		defer timeout.Stop()
+		tick := time.NewTicker(10 * time.Millisecond)
+		defer tick.Stop()
 
-		go func() {
-			const interval = 10 * NanosecondsInMillisecond
-			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
-
-			for i := int64(0); i < timeout; i += interval {
+		for {
+			select {
+			case <-timeout.C:
+				return nil, errors.New("operation timed out")
+			case <-tick.C:
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.loadTransactionsBlockHeader(input.BlockHeight)
 
 					if err == nil {
-						c <- lookupResult
-						return
+						return lookupResult, nil
 					}
 				}
-
-				time.Sleep(10 * time.Millisecond)
 			}
-
-			c <- nil
-		}()
-
-		if result := <-c; result != nil {
-			return result, nil
 		}
-
-		return nil, fmt.Errorf("operation timed out")
 	}
 
 	return s.loadTransactionsBlockHeader(input.BlockHeight)
@@ -134,35 +126,25 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
 	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
-		c := make(chan *services.GetResultsBlockHeaderOutput)
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeout())
+		defer timeout.Stop()
+		tick := time.NewTicker(10 * time.Millisecond)
+		defer tick.Stop()
 
-		go func() {
-
-			// TODO use timeout channel
-			const interval = 10 * NanosecondsInMillisecond // 10 ms
-			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
-
-			for i := int64(0); i < timeout; i += interval {
+		for {
+			select {
+			case <-timeout.C:
+				return nil, errors.New("operation timed out")
+			case <-tick.C:
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.loadResultsBlockHeader(input.BlockHeight)
 
 					if err == nil {
-						c <- lookupResult
-						return
+						return lookupResult, nil
 					}
 				}
-
-				time.Sleep(10 * time.Millisecond)
 			}
-
-			c <- nil
-		}()
-
-		if result := <-c; result != nil {
-			return result, nil
 		}
-
-		return nil, fmt.Errorf("operation timed out")
 	}
 
 	return s.loadResultsBlockHeader(input.BlockHeight)
