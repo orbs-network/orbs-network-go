@@ -20,8 +20,8 @@ func BenchmarkConsensusBlockPair() *blockPair {
 }
 
 func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.TransactionsBlockHeader, rxHeaderBuilt *protocol.ResultsBlockHeader) {
-	txHash := crypto.CalcTransactionsBlockHash(&protocol.BlockPairContainer{TransactionsBlock: &protocol.TransactionsBlockContainer{Header: txHeaderBuilt}})
-	rxHash := crypto.CalcResultsBlockHash(&protocol.BlockPairContainer{ResultsBlock: &protocol.ResultsBlockContainer{Header: rxHeaderBuilt}})
+	txHash := crypto.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
+	rxHash := crypto.CalcResultsBlockHash(&protocol.ResultsBlockContainer{Header: rxHeaderBuilt})
 	xorHash := logic.CalcXor(txHash, rxHash)
 	sig, err := signature.SignEd25519(b.blockProofSigner, xorHash)
 	if err != nil {

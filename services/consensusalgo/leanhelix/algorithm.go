@@ -3,7 +3,6 @@ package leanhelix
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -22,33 +21,34 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 		return nil
 	}
 
-	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
-		MaxNumberOfTransactions: 1,
+	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+		BlockHeight:             s.lastCommittedBlockHeight + 1,
+		MaxBlockSizeKb:          0,
+		MaxNumberOfTransactions: 0,
+		PrevBlockHash:           nil,
 	})
 	if err != nil {
 		return err
 	}
 
+	txBlock := txOutput.TransactionsBlock
+	txBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
+
+	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
+		BlockHeight:       s.lastCommittedBlockHeight + 1,
+		PrevBlockHash:     nil,
+		TransactionsBlock: txBlock,
+	})
+	if err != nil {
+		return err
+	}
+
+	rxBlock := rxOutput.ResultsBlock
+	rxBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{}).Build()
+
 	proposedBlockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header: (&protocol.TransactionsBlockHeaderBuilder{
-				ProtocolVersion:       blockstorage.ProtocolVersion,
-				BlockHeight:           primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
-				NumSignedTransactions: uint32(len(proposedTransactions.SignedTransactions)),
-			}).Build(),
-			Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-			SignedTransactions: proposedTransactions.SignedTransactions,
-			BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
-		},
-		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header: (&protocol.ResultsBlockHeaderBuilder{
-				ProtocolVersion: blockstorage.ProtocolVersion,
-				BlockHeight:     primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
-			}).Build(),
-			TransactionReceipts: nil,
-			ContractStateDiffs:  nil,
-			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
-		},
+		TransactionsBlock: txBlock,
+		ResultsBlock:      rxBlock,
 	}
 
 	s.blocksForRoundsMutex.Lock()

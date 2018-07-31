@@ -2,6 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -93,25 +94,31 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPai
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
-		BlockHeight: s.lastCommittedBlockHeight() + 1,
+		BlockHeight:   s.lastCommittedBlockHeight() + 1,
+		PrevBlockHash: crypto.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
 		return nil, err
+	}
+	if txOutput == nil || txOutput.TransactionsBlock == nil {
+		panic("invalid response consensusContext.RequestNewTransactionsBlock: missing TransactionsBlock")
+		// TODO: should we have these panics? because this is internal code
 	}
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
-		BlockHeight: s.lastCommittedBlockHeight() + 1,
+		BlockHeight:       s.lastCommittedBlockHeight() + 1,
+		PrevBlockHash:     crypto.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
+		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
 		return nil, err
 	}
+	if rxOutput == nil || rxOutput.ResultsBlock == nil {
+		panic("invalid response from consensusContext.RequestNewResultsBlock: missing ResultsBlock")
+	}
 
 	// generate signed block
-	if txOutput == nil || txOutput.TransactionsBlock == nil || rxOutput == nil || rxOutput.ResultsBlock == nil {
-		panic("invalid responses: missing fields")
-		// TODO: should we have these panics? because this is internal code
-	}
 	blockPair, err := s.leaderSignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
 	if err != nil {
 		return nil, err

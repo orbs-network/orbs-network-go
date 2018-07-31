@@ -48,11 +48,11 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 
 	// prev block hash ptr (if given)
 	if prevCommittedBlockPair != nil {
-		prevTxHash := crypto.CalcTransactionsBlockHash(prevCommittedBlockPair)
+		prevTxHash := crypto.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
 		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
 			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
 		}
-		prevRxHash := crypto.CalcResultsBlockHash(prevCommittedBlockPair)
+		prevRxHash := crypto.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
 		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
 			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
 		}
@@ -72,8 +72,8 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 }
 
 func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
-	txHash := crypto.CalcTransactionsBlockHash(blockPair)
-	rxHash := crypto.CalcResultsBlockHash(blockPair)
+	txHash := crypto.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
+	rxHash := crypto.CalcResultsBlockHash(blockPair.ResultsBlock)
 	xorHash := logic.CalcXor(txHash, rxHash)
 	return xorHash
 }
