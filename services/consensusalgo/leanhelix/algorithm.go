@@ -22,28 +22,26 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 		return nil
 	}
 
-	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
-		MaxNumberOfTransactions: 1,
+	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+		BlockHeight:             s.lastCommittedBlockHeight + 1,
+		MaxBlockSizeKb:          0,
+		MaxNumberOfTransactions: 0,
+		PrevBlockHash:           nil,
 	})
 	if err != nil {
 		return err
 	}
 
+	txBlock := txOutput.TransactionsBlock
+
+	txBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
+
 	proposedBlockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header: (&protocol.TransactionsBlockHeaderBuilder{
-				ProtocolVersion:       blockstorage.ProtocolVersion,
-				BlockHeight:           primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
-				NumSignedTransactions: uint32(len(proposedTransactions.SignedTransactions)),
-			}).Build(),
-			Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-			SignedTransactions: proposedTransactions.SignedTransactions,
-			BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
-		},
+		TransactionsBlock: txBlock,
 		ResultsBlock: &protocol.ResultsBlockContainer{
 			Header: (&protocol.ResultsBlockHeaderBuilder{
 				ProtocolVersion: blockstorage.ProtocolVersion,
-				BlockHeight:     primitives.BlockHeight(s.lastCommittedBlockHeight + 1),
+				BlockHeight:     s.lastCommittedBlockHeight + 1,
 			}).Build(),
 			TransactionReceipts: nil,
 			ContractStateDiffs:  nil,
