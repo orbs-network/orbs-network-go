@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
@@ -16,6 +17,15 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
+
+func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(ctx context.Context, network AcceptanceTestNetwork)) {
+	for _, consensusAlgo := range consensusAlgos {
+		test.WithContext(func(ctx context.Context) {
+			network := NewTestNetwork(ctx, 2, consensusAlgo)
+			f(ctx, network)
+		})
+	}
+}
 
 type AcceptanceTestNetwork interface {
 	FlushLog()
@@ -39,7 +49,11 @@ type networkNode struct {
 	nodeLogic        bootstrap.NodeLogic
 }
 
-func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork {
+func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
+
+	testLogger := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	testLogger.Info("Creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
+
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -60,7 +74,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			nodeKeyPair.PublicKey(),
 			nodeKeyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
-			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+			consensusAlgo,
 			1,
 		)
 
@@ -75,8 +89,8 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			instrumentation.GetLogger().For(instrumentation.Node(nodeName)).WithFormatter(instrumentation.NewHumanReadableFormatter()),
 			nodes[i].config,
 		)
-
 	}
+
 	return &acceptanceTestNetwork{
 		nodes:           nodes,
 		gossipTransport: sharedTamperingTransport,
