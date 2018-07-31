@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -11,10 +13,8 @@ func (bp *levelDbBlockPersistence) put(key string, value []byte) error {
 	return bp.db.Put([]byte(key), value, nil)
 }
 
-// FIXME should I handle errors?
-func (bp *levelDbBlockPersistence) retrieve(key string) []byte {
-	result, _ := bp.db.Get([]byte(key), nil)
-	return result
+func (bp *levelDbBlockPersistence) retrieve(key string) ([]byte, error) {
+	return bp.db.Get([]byte(key), nil)
 }
 
 func (bp *levelDbBlockPersistence) retrieveByPrefix(prefix string) (results [][]byte) {
@@ -142,4 +142,56 @@ func (bp *levelDbBlockPersistence) loadLastBlockHeight() (primitives.BlockHeight
 
 func (bp *levelDbBlockPersistence) saveLastBlockHeight(height primitives.BlockHeight) error {
 	return bp.db.Put([]byte(LAST_BLOCK_HEIGHT), []byte(height.String()), nil)
+}
+
+func basicValidation(blockPair *protocol.BlockPairContainer) bool {
+	var validations []bool
+
+	validations = append(validations, blockPair.TransactionsBlock.Header.IsValid(), blockPair.TransactionsBlock.BlockProof.IsValid(), blockPair.TransactionsBlock.Metadata.IsValid())
+
+	for _, tx := range blockPair.TransactionsBlock.SignedTransactions {
+		validations = append(validations, tx.IsValid())
+	}
+
+	return anyConditions(validations)
+}
+
+func (bp *levelDbBlockPersistence) loadTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+	blockHeightAsString := height.String()
+
+	txBlockHeaderRaw, txBlockHeaderRawError := bp.retrieve(TX_BLOCK_HEADER + blockHeightAsString)
+	txBlockProofRaw, txBlockProofError := bp.retrieve(TX_BLOCK_PROOF + blockHeightAsString)
+	txBlockMetadataRaw, txBlockMetadataError := bp.retrieve(TX_BLOCK_METADATA + blockHeightAsString)
+
+	txSignedTransactionsRaw := bp.retrieveByPrefix(TX_BLOCK_SIGNED_TRANSACTION + blockHeightAsString + "-")
+
+	if hasErrors, firstError := anyErrors(txBlockHeaderRawError, txBlockProofError, txBlockMetadataError); hasErrors {
+		errorMessage := "failed to retrieve transactions block from storage"
+		bp.reporting.Error(errorMessage, instrumentation.Error(firstError))
+		return nil, fmt.Errorf(errorMessage)
+	}
+
+	bp.reporting.Info("Retrieved transactions block from storage", instrumentation.BlockHeight(height))
+
+	return constructTxBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw), nil
+}
+
+func (bp *levelDbBlockPersistence) loadResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
+	blockHeightAsString := height.String()
+
+	rsBlockHeaderRaw, rsBlockHeaderRawError := bp.retrieve(RS_BLOCK_HEADER + blockHeightAsString)
+	rsBlockProofRaw, rsBlockProofRawError := bp.retrieve(RS_BLOCK_PROOF + blockHeightAsString)
+
+	rsTransactionReceipts := bp.retrieveByPrefix(RS_BLOCK_TRANSACTION_RECEIPTS + blockHeightAsString + "-")
+	rsStateDiffs := bp.retrieveByPrefix(RS_BLOCK_CONTRACT_STATE_DIFFS + blockHeightAsString + "-")
+
+	if hasErrors, firstError := anyErrors(rsBlockHeaderRawError, rsBlockProofRawError); hasErrors {
+		errorMessage := "failed to retrieve results block from storage"
+		bp.reporting.Error(errorMessage, instrumentation.Error(firstError))
+		return nil, fmt.Errorf(errorMessage)
+	}
+
+	bp.reporting.Info("Retrieved results block from storage", instrumentation.BlockHeight(height))
+
+	return constructResultsBlockFromStorage(rsBlockHeaderRaw, rsBlockProofRaw, rsStateDiffs, rsTransactionReceipts), nil
 }

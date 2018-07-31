@@ -11,43 +11,74 @@ import (
 	"os"
 )
 
+func compareTxBlocks(a *protocol.TransactionsBlockContainer, b *protocol.TransactionsBlockContainer) {
+	Expect(a.Header.Equal(b.Header)).To(BeTrue())
+	Expect(a.SignedTransactions[0].Equal(b.SignedTransactions[0])).To(BeTrue())
+	Expect(a.BlockProof.Equal(b.BlockProof)).To(BeTrue())
+	Expect(a.Metadata.Equal(b.Metadata)).To(BeTrue())
+
+}
+
+func compareRsBlocks(a *protocol.ResultsBlockContainer, b *protocol.ResultsBlockContainer) {
+	Expect(a.Header.Equal(b.Header)).To(BeTrue())
+	Expect(a.BlockProof.Equal(b.BlockProof)).To(BeTrue())
+	Expect(a.TransactionReceipts[0].Equal(b.TransactionReceipts[0])).To(BeTrue())
+	Expect(a.ContractStateDiffs[0].Equal(b.ContractStateDiffs[0])).To(BeTrue())
+}
+
 func compareContainers(a *protocol.BlockPairContainer, b *protocol.BlockPairContainer) {
-	Expect(a.TransactionsBlock.Header.BlockHeight()).To(Equal(b.TransactionsBlock.Header.BlockHeight()))
-	Expect(a.TransactionsBlock.Header.Timestamp()).To(Equal(b.TransactionsBlock.Header.Timestamp()))
+	compareTxBlocks(a.TransactionsBlock, b.TransactionsBlock)
+	compareRsBlocks(a.ResultsBlock, b.ResultsBlock)
+}
 
-	Expect(a.TransactionsBlock.Header.Raw()).To(Equal(b.TransactionsBlock.Header.Raw()))
-	Expect(a.TransactionsBlock.SignedTransactions[0].Raw()).To(Equal(b.TransactionsBlock.SignedTransactions[0].Raw()))
-	Expect(a.TransactionsBlock.BlockProof.Raw()).To(Equal(b.TransactionsBlock.BlockProof.Raw()))
-	Expect(a.TransactionsBlock.Metadata.Raw()).To(Equal(b.TransactionsBlock.Metadata.Raw()))
+func prepareStorage() (adapter.BlockPersistence, []*protocol.BlockPairContainer) {
+	config := adapter.NewLevelDbBlockPersistenceConfig("node1")
+	db := adapter.NewLevelDbBlockPersistence(config).WithLogger(instrumentation.GetLogger(instrumentation.String("adapter", "LevelDBPersistence")))
 
-	Expect(a.ResultsBlock.Header.Raw()).To(Equal(b.ResultsBlock.Header.Raw()))
-	Expect(a.ResultsBlock.BlockProof.Raw()).To(Equal(b.ResultsBlock.BlockProof.Raw()))
-	Expect(a.ResultsBlock.TransactionReceipts[0].Raw()).To(Equal(b.ResultsBlock.TransactionReceipts[0].Raw()))
-	Expect(a.ResultsBlock.ContractStateDiffs[0].Raw()).To(Equal(b.ResultsBlock.ContractStateDiffs[0].Raw()))
+	block1 := builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build()
+	block2 := builders.BlockPair().WithHeight(primitives.BlockHeight(2)).Build()
+
+	db.WriteBlock(block1)
+	db.WriteBlock(block2)
+
+	return db, []*protocol.BlockPairContainer{block1, block2}
 }
 
 var _ = Describe("LevelDb persistence", func() {
+	BeforeEach(func() {
+		os.RemoveAll("/tmp/db")
+	})
+
 	When("#WriteBlock", func() {
 		It("does not fail", func() {
-			os.RemoveAll("/tmp/db")
-
-			config := adapter.NewLevelDbBlockPersistenceConfig("node1")
-			db := adapter.NewLevelDbBlockPersistence(config).WithLogger(instrumentation.GetLogger(instrumentation.String("adapter", "LevelDBPersistence")))
-
-			block1 := builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build()
-			block2 := builders.BlockPair().WithHeight(primitives.BlockHeight(2)).Build()
-
-			db.WriteBlock(block1)
-			db.WriteBlock(block2)
+			db, savedBlocks := prepareStorage()
 
 			allBlocks := db.ReadAllBlocks()
 
-			compareContainers(block1, allBlocks[0])
-			compareContainers(block2, allBlocks[1])
+			compareContainers(savedBlocks[0], allBlocks[0])
+			compareContainers(savedBlocks[1], allBlocks[1])
+		})
+	})
 
-			//FIXME does not work because of membuffers
-			//Expect(allBlocks[0]).To(Equal(block1))
-			//Expect(allBlocks[1]).To(Equal(block2))
+	When("#GetTransactionsBlock", func() {
+		It("Reads a certain block", func() {
+			db, savedBlocks := prepareStorage()
+
+			lastTxBlock, err := db.GetTransactionsBlock(2)
+
+			Expect(err).ToNot(HaveOccurred())
+			compareTxBlocks(savedBlocks[1].TransactionsBlock, lastTxBlock)
+		})
+	})
+
+	When("#GetResultsBlock", func() {
+		It("Reads a certain block", func() {
+			db, savedBlocks := prepareStorage()
+
+			lastTxBlock, err := db.GetResultsBlock(2)
+
+			Expect(err).ToNot(HaveOccurred())
+			compareRsBlocks(savedBlocks[1].ResultsBlock, lastTxBlock)
 		})
 	})
 })

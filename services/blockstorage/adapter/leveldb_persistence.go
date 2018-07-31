@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -91,9 +92,9 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 	keys = append(keys, txKeys...)
 	keys = append(keys, rsKeys...)
 
-	if anyErrors(errors) {
+	if hasErrors, firstError := anyErrors(errors...); hasErrors {
 		bp.saveLastBlockHeight(lastBlockHeight)
-		bp.reporting.Error("Failed to write block", instrumentation.BlockHeight(newBlockHeight))
+		bp.reporting.Error("Failed to write block", instrumentation.BlockHeight(newBlockHeight), instrumentation.Error(firstError))
 
 		for _, key := range keys {
 			bp.revert(key)
@@ -125,42 +126,30 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 	return results
 }
 
-func basicValidation(blockPair *protocol.BlockPairContainer) bool {
-	var validations []bool
+func (bp *levelDbBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+	lastBlockHeight, err := bp.loadLastBlockHeight()
 
-	validations = append(validations, blockPair.TransactionsBlock.Header.IsValid(), blockPair.TransactionsBlock.BlockProof.IsValid(), blockPair.TransactionsBlock.Metadata.IsValid())
-
-	for _, tx := range blockPair.TransactionsBlock.SignedTransactions {
-		validations = append(validations, tx.IsValid())
+	if err != nil {
+		return nil, err
 	}
 
-	return anyConditions(validations)
-}
+	if height > lastBlockHeight {
+		return nil, fmt.Errorf("transactions block with this height does not exist yet")
+	}
 
-func (bp *levelDbBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
-	blockHeightAsString := height.String()
-
-	txBlockHeaderRaw := bp.retrieve(TX_BLOCK_HEADER + blockHeightAsString)
-	txBlockProofRaw := bp.retrieve(TX_BLOCK_PROOF + blockHeightAsString)
-	txBlockMetadataRaw := bp.retrieve(TX_BLOCK_METADATA + blockHeightAsString)
-
-	txSignedTransactionsRaw := bp.retrieveByPrefix(TX_BLOCK_SIGNED_TRANSACTION + blockHeightAsString + "-")
-
-	bp.reporting.Info("Retrieved transactions block from storage", instrumentation.BlockHeight(height))
-
-	return constructTxBlockFromStorage(txBlockHeaderRaw, txBlockProofRaw, txBlockMetadataRaw, txSignedTransactionsRaw), nil
+	return bp.loadTransactionsBlock(height)
 }
 
 func (bp *levelDbBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
-	blockHeightAsString := height.String()
+	lastBlockHeight, err := bp.loadLastBlockHeight()
 
-	rsBlockHeaderRaw := bp.retrieve(RS_BLOCK_HEADER + blockHeightAsString)
-	rsBlockProofRaw := bp.retrieve(RS_BLOCK_PROOF + blockHeightAsString)
+	if err != nil {
+		return nil, err
+	}
 
-	rsTransactionReceipts := bp.retrieveByPrefix(RS_BLOCK_TRANSACTION_RECEIPTS + blockHeightAsString + "-")
-	rsStateDiffs := bp.retrieveByPrefix(RS_BLOCK_CONTRACT_STATE_DIFFS + blockHeightAsString + "-")
+	if height > lastBlockHeight {
+		return nil, fmt.Errorf("results block with this height does not exist yet")
+	}
 
-	bp.reporting.Info("Retrieved results block from storage", instrumentation.BlockHeight(height))
-
-	return constructResultsBlockFromStorage(rsBlockHeaderRaw, rsBlockProofRaw, rsStateDiffs, rsTransactionReceipts), nil
+	return bp.loadResultsBlock(height)
 }
