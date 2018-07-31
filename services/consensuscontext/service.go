@@ -1,8 +1,6 @@
 package consensuscontext
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -39,15 +37,7 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 
 func (s *service) RequestNewResultsBlock(input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
 
-	rxBlock := &protocol.ResultsBlockContainer{
-		Header: (&protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion: blockstorage.ProtocolVersion,
-			BlockHeight:     input.BlockHeight,
-		}).Build(),
-		TransactionReceipts: nil,
-		ContractStateDiffs:  nil,
-		BlockProof:          nil,
-	}
+	rxBlock := s.createResultsBlock(input.BlockHeight)
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,

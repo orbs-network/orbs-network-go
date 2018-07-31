@@ -30,3 +30,17 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight) (*
 
 	return txBlock, nil
 }
+
+func (s *service) createResultsBlock(blockHeight primitives.BlockHeight) *protocol.ResultsBlockContainer {
+	rxBlock := &protocol.ResultsBlockContainer{
+		Header: (&protocol.ResultsBlockHeaderBuilder{
+			ProtocolVersion: blockstorage.ProtocolVersion,
+			BlockHeight:     blockHeight,
+		}).Build(),
+		TransactionReceipts: nil,
+		ContractStateDiffs:  nil,
+		BlockProof:          nil,
+	}
+
+	return rxBlock
+}
