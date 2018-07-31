@@ -6,6 +6,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -49,20 +51,22 @@ var _ = Describe("The Orbs Network", func() {
 	It("accepts a transaction and reflects the state change after it is committed", func(done Done) {
 		var node bootstrap.Node
 
+		// TODO: kill me - why do we need this override?
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
-			nodePublicKey := []byte{0x01}
-			constantConsensusLeaderPublicKey := []byte{0x01}
+			nodeKeyPair := keys.Ed25519KeyPairForTests(0)
 			node = bootstrap.NewNode(
 				":8080",
-				nodePublicKey,
-				1,
-				constantConsensusLeaderPublicKey,
+				nodeKeyPair.PublicKey(),
+				nodeKeyPair.PrivateKey(),
+				map[string]config.FederationNode{nodeKeyPair.PublicKey().KeyForMap(): config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())},
+				nodeKeyPair.PublicKey(), // we are the leader
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+				2*1000,
 				gossipTransport,
 			)
-      
-      // To let node start up properly, otherwise in Docker we get connection refused
+
+			// To let node start up properly, otherwise in Docker we get connection refused
 			time.Sleep(100 * time.Millisecond)
 		}
 

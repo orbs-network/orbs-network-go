@@ -4,6 +4,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
+// protocol.TransactionReceipt
+
 type receipt struct {
 	builder *protocol.TransactionReceiptBuilder
 }
