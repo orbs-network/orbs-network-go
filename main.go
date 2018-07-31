@@ -26,6 +26,7 @@ func main() {
 		httpAddress,
 		nodePublicKey,
 		3,
+		70,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 		gossipTransport,

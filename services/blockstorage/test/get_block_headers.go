@@ -33,20 +33,21 @@ var _ = Describe("Block storage", func() {
 			driver.commitBlock(block)
 
 			result := make(chan *services.GetTransactionsBlockHeaderOutput)
+			blockHeightInTheFuture := primitives.BlockHeight(5)
 
 			go func() {
-				output, _ := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: 5})
+				output, _ := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
 				result <- output
 			}()
 
-			for i := 2; i <= 6; i++ {
+			for i := 2; i <= int(blockHeightInTheFuture)+1; i++ {
 				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 			}
 
-			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
+			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(BeEquivalentTo(blockHeightInTheFuture + 1))
 
 			output := <-result
-			Expect(output.TransactionsBlockHeader.BlockHeight()).To(Equal(primitives.BlockHeight(5)))
+			Expect(output.TransactionsBlockHeader.BlockHeight()).To(Equal(blockHeightInTheFuture))
 
 			close(done)
 		}, 100)

@@ -50,7 +50,7 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
 		},
 	}
-
+	// TODO refactor to a read/write methods (use defer to unlock)
 	s.blocksForRoundsMutex.Lock()
 	s.blocksForRounds[nextBlockHeight] = proposedBlockPair
 	s.blocksForRoundsMutex.Unlock()

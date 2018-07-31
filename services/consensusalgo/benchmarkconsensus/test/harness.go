@@ -42,6 +42,7 @@ func newHarness(
 		nodePublicKey,
 		leaderPublicKey,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+		70,
 	)
 
 	log := instrumentation.GetLogger()

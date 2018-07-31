@@ -52,6 +52,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			nodePublicKey,
 			constantConsensusLeaderPublicKey,
 			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+			70,
 		)
 
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)

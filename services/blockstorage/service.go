@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+type Config interface {
+	BlockSyncCommitTimeout() time.Duration
+}
+
 const (
 	// TODO extract it to the spec
 	ProtocolVersion          = 1
@@ -23,7 +27,7 @@ type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 
-	config BlockStorageConfig
+	config Config
 
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
@@ -31,7 +35,7 @@ type service struct {
 	consensusBlocksHandlers     []handlers.ConsensusBlocksHandler
 }
 
-func NewBlockStorage(config BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
+func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
 	return &service{
 		persistence:  persistence,
 		stateStorage: stateStorage,
@@ -133,6 +137,8 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 		c := make(chan *services.GetResultsBlockHeaderOutput)
 
 		go func() {
+
+			// TODO use timeout channel
 			const interval = 10 * NanosecondsInMillisecond // 10 ms
 			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
 

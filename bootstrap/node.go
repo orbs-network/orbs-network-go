@@ -30,13 +30,14 @@ func NewNode(
 	httpAddress string,
 	nodePublicKey primitives.Ed25519PublicKey,
 	networkSize uint32,
+	blockSyncCommitTimeoutMS uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo)
+	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo, blockSyncCommitTimeoutMS)
 
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
 

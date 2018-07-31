@@ -15,7 +15,7 @@ var _ = Describe("Block storage", func() {
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())
-
+			// TODO split to valid/invalid
 			block.TransactionsBlock.Header.MutateProtocolVersion(999)
 
 			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
@@ -29,6 +29,7 @@ var _ = Describe("Block storage", func() {
 			driver.expectCommitStateDiff()
 
 			driver.commitBlock(builders.BlockPair().Build())
+			// TODO split to valid/invalid
 
 			block := builders.BlockPair().WithHeight(2).Build()
 
@@ -51,6 +52,7 @@ var _ = Describe("Block storage", func() {
 		It("checks protocol version", func() {
 			driver := NewDriver()
 			block := builders.BlockPair().Build()
+			// TODO fix test language / names to represent what its testing
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())
@@ -68,6 +70,7 @@ var _ = Describe("Block storage", func() {
 		It("checks block height", func() {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
+			// TODO fix test language / names to represent what its testing
 
 			driver.commitBlock(builders.BlockPair().Build())
 

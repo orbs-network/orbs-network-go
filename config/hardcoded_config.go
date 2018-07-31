@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"time"
 )
 
 //TODO introduce FileSystemConfig
@@ -11,6 +12,7 @@ type hardcodedConfig struct {
 	nodePublicKey           primitives.Ed25519PublicKey
 	constantConsensusLeader primitives.Ed25519PublicKey
 	activeConsensusAlgo     consensus.ConsensusAlgoType
+	blockSyncCommitTimeout  time.Duration
 }
 
 func NewHardCodedConfig(
@@ -18,6 +20,7 @@ func NewHardCodedConfig(
 	nodePublicKey primitives.Ed25519PublicKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	blockSyncCommitTimeoutMS uint32,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -25,6 +28,7 @@ func NewHardCodedConfig(
 		nodePublicKey:           nodePublicKey,
 		constantConsensusLeader: constantConsensusLeader,
 		activeConsensusAlgo:     activeConsensusAlgo,
+		blockSyncCommitTimeout:  time.Duration(blockSyncCommitTimeoutMS) * time.Millisecond,
 	}
 }
 
@@ -42,4 +46,8 @@ func (c *hardcodedConfig) ConstantConsensusLeader() primitives.Ed25519PublicKey 
 
 func (c *hardcodedConfig) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
+}
+
+func (c *hardcodedConfig) BlockSyncCommitTimeout() time.Duration {
+	return c.blockSyncCommitTimeout
 }
