@@ -2,8 +2,8 @@ package test
 
 import (
 	"fmt"
-	"github.com/orbs-network/go-mock"
 	"github.com/onsi/gomega/types"
+	"github.com/orbs-network/go-mock"
 )
 
 func ExecuteAsPlanned() types.GomegaMatcher {

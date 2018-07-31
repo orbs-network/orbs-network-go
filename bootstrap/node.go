@@ -50,7 +50,7 @@ func NewNode(
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
-	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence(nodeConfig)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 
