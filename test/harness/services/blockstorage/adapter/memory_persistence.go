@@ -64,3 +64,12 @@ func (bp *inMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeigh
 
 	return nil, fmt.Errorf("results block header with height %v not found", height)
 }
+
+func (bp *inMemoryBlockPersistence) GetLastBlockDetails() (primitives.BlockHeight, primitives.TimestampNano) {
+	if len(bp.blockPairs) == 0 {
+		return 0, 0
+	}
+
+	lastBlock := bp.blockPairs[len(bp.blockPairs)-1]
+	return lastBlock.TransactionsBlock.Header.BlockHeight(), lastBlock.TransactionsBlock.Header.Timestamp()
+}

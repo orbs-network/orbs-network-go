@@ -81,4 +81,16 @@ var _ = Describe("LevelDb persistence", func() {
 			compareRsBlocks(savedBlocks[1].ResultsBlock, lastTxBlock)
 		})
 	})
+
+	When("#GetLastBlockDetails", func() {
+		It("returns default values", func() {
+			config := adapter.NewLevelDbBlockPersistenceConfig("node1")
+			db := adapter.NewLevelDbBlockPersistence(config).WithLogger(instrumentation.GetLogger(instrumentation.String("adapter", "LevelDBPersistence")))
+
+			height, timestamp := db.GetLastBlockDetails()
+
+			Expect(height).To(Equal(primitives.BlockHeight(0)))
+			Expect(timestamp).To(Equal(primitives.TimestampNano(0)))
+		})
+	})
 })

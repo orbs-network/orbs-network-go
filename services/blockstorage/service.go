@@ -34,11 +34,15 @@ type service struct {
 func NewBlockStorage(config BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
 	logger := reporting.For(instrumentation.Service("block-storage"))
 
+	lastCommittedBlockHeight, lastCommittedBlockTimestamp := persistence.GetLastBlockDetails()
+
 	return &service{
 		persistence:  persistence.WithLogger(logger.For(instrumentation.String("component", "persistence"))),
 		stateStorage: stateStorage,
 		reporting:    logger,
 		config:       config,
+		lastCommittedBlockHeight:    lastCommittedBlockHeight,
+		lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
 	}
 }
 

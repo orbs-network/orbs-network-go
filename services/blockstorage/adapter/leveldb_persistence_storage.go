@@ -140,6 +140,17 @@ func (bp *levelDbBlockPersistence) loadLastBlockHeight() (primitives.BlockHeight
 	return primitives.BlockHeight(result), err
 }
 
+func (bp *levelDbBlockPersistence) loadLastBlockTimestamp() (primitives.TimestampNano, error) {
+	val, err := bp.db.Get([]byte(LAST_BLOCK_TIMESTAMP), nil)
+
+	if err != nil {
+		return 0, nil
+	}
+
+	result, err := strconv.ParseUint(string(val), 16, 64)
+	return primitives.TimestampNano(result), err
+}
+
 func (bp *levelDbBlockPersistence) saveLastBlockHeight(height primitives.BlockHeight) error {
 	return bp.db.Put([]byte(LAST_BLOCK_HEIGHT), []byte(height.String()), nil)
 }

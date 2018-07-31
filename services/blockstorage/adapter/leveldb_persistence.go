@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	LAST_BLOCK_HEIGHT = "last-block-height"
+	LAST_BLOCK_HEIGHT    = "last-block-height"
+	LAST_BLOCK_TIMESTAMP = "last-block-timestamp"
 
 	TX_BLOCK_HEADER             = "transaction-block-header-"
 	TX_BLOCK_PROOF              = "transaction-block-proof-"
@@ -152,4 +153,15 @@ func (bp *levelDbBlockPersistence) GetResultsBlock(height primitives.BlockHeight
 	}
 
 	return bp.loadResultsBlock(height)
+}
+
+func (bp *levelDbBlockPersistence) GetLastBlockDetails() (primitives.BlockHeight, primitives.TimestampNano) {
+	height, heightError := bp.loadLastBlockHeight()
+	timestamp, timestampError := bp.loadLastBlockTimestamp()
+
+	if hasErrors, firstError := anyErrors(heightError, timestampError); hasErrors {
+		bp.reporting.Error("failed to retrieve last block details", instrumentation.Error(firstError))
+	}
+
+	return height, timestamp
 }
