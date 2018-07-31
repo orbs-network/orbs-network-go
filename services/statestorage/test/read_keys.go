@@ -5,10 +5,10 @@ import (
 	. "github.com/onsi/gomega"
 	)
 
-var _ = Describe("Reading a Key", func() {
+var _ bool = Describe("Reading a Key", func() {
 	When("key doesn't exist", func() {
 		It("Returns an empty byte array", func() {
-			d := newStateStorageDriver()
+			d := newStateStorageDriver(1)
 			d.write("fooContract", "someRandomKeyToForceNewContract", []byte("randomValue"))
 			value, err := d.readSingleKey("fooContract", "someKey")
 			Expect(err).ToNot(HaveOccurred())
@@ -23,7 +23,7 @@ var _ = Describe("Reading a Key", func() {
 				key := "foo"
 				contract := "some-contract"
 
-				d := newStateStorageDriver()
+				d := newStateStorageDriver(1)
 				d.write(contract, key, value)
 				d.write(contract, "someOtherKey", value)
 
@@ -36,7 +36,7 @@ var _ = Describe("Reading a Key", func() {
 
 		When("read 5 keys some are not existing", func() {
 			It("Returns 5 values (some are empty)", func() {
-				d := newStateStorageDriver()
+				d := newStateStorageDriver(1)
 
 				d.write("contract", "key1", []byte("bar1"))
 				d.write("contract", "key2", []byte("bar2"))
@@ -67,7 +67,7 @@ var _ = Describe("Reading a Key", func() {
 				key := "foo"
 				v1, v2 := []byte("bar"), []byte("bar2")
 
-				d := newStateStorageDriver()
+				d := newStateStorageDriver(1)
 				d.write("contract1", key, v1)
 				d.write("contract2", key, v2)
 
@@ -82,4 +82,51 @@ var _ = Describe("Reading a Key", func() {
 		})
 	})
 
+	When("Reading with block height states", func() {
+		When("Reading inside the allowed and existing history", func() {
+			It("Reads the correct past key", func() {
+				key := "foo"
+				v1, v2 := []byte("bar"), []byte("bar2")
+
+				d := newStateStorageDriver(5)
+				d.writeSToBlockHeight(1, "contract", key, v1)
+				d.writeSToBlockHeight(2, "contract", key, v2)
+				d.writeSToBlockHeight(2, "contract2", key, v2)
+
+				historical, err := d.readSingleKeyFromHistory(1, "contract", key)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(historical).To(BeEquivalentTo(v1))
+
+				current1, err := d.readSingleKeyFromHistory(2, "contract2", key)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(current1).To(BeEquivalentTo(v2))
+				current, err := d.readSingleKeyFromHistory(2, "contract", key)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(current).To(BeEquivalentTo(v2))
+			})
+		})
+		When("Reading outside the allowed history", func() {
+			It("fails", func() {
+				key := "foo"
+
+				d := newStateStorageDriver(1)
+				d.writeSToBlockHeight(1, "contract", key, []byte("bar"))
+				d.writeSToBlockHeight(2, "contract", key, []byte("bar2"))
+
+				_, err := d.readSingleKeyFromHistory(1, "contract", key)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		When("Reading in the far future", func() {
+			It("fails", func() {
+				key := "foo"
+
+				d := newStateStorageDriver(1)
+				d.writeSToBlockHeight(1, "contract", key, []byte("bar"))
+
+				_, err := d.readSingleKeyFromHistory(100, "contract", key)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
 })

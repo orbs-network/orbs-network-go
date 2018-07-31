@@ -55,12 +55,13 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			nodePublicKey,
 			constantConsensusLeaderPublicKey,
 			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+			5,
 		)
 
 		nodes[i].log = harnessInstrumentation.NewBufferedLog(nodeName)
 		nodes[i].latch = harnessInstrumentation.NewLatch()
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
-		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence(nodes[i].config)
+		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence()
 		nodes[i].nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			sharedTamperingTransport,
@@ -139,10 +140,12 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 		output, err := publicApi.CallMethod(&services.CallMethodInput{
 			ClientRequest: request,
 		})
-		if err != nil {
+		if err != nil || output == nil || output.ClientResponse == nil {
 			// TODO: handle error
+			ch <- 0
+		} else {
+			ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 		}
-		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()
 	return ch
 }

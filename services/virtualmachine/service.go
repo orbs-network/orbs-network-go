@@ -47,12 +47,15 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 		keys = append(keys, primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", i)))
 	}
 
-	readKeys := &services.ReadKeysInput{ContractName: "BenchmarkToken", Keys: keys}
-	results, _ := s.stateStorage.ReadKeys(readKeys)
 	sum := uint64(0)
-	for _, t := range results.StateRecords {
-		if len(t.Value()) > 0 {
-			sum += binary.LittleEndian.Uint64(t.Value())
+	readKeys := &services.ReadKeysInput{BlockHeight: blockHeight.LastCommittedBlockHeight, ContractName: "BenchmarkToken", Keys: keys}
+	if results, err := s.stateStorage.ReadKeys(readKeys); err != nil {
+		// Todo handle error gracefully
+	} else {
+		for _, t := range results.StateRecords {
+			if len(t.Value()) > 0 {
+				sum += binary.LittleEndian.Uint64(t.Value())
+			}
 		}
 	}
 	arg := (&protocol.MethodArgumentBuilder{

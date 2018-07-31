@@ -29,5 +29,6 @@ func main() {
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 		gossipTransport,
+		5,
 	).WaitUntilShutdown()
 }

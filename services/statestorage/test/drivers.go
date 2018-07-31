@@ -13,6 +13,7 @@ import (
 type driver struct {
 	service     services.StateStorage
 	persistence adapter.StatePersistence
+	history 	driverConfig
 }
 
 type keyValue struct {
@@ -20,14 +21,23 @@ type keyValue struct {
 	value []byte
 }
 
-func newStateStorageDriver() *driver {
-	p := adapter.NewInMemoryStatePersistence(&struct{}{})
+func newStateStorageDriver(history int) *driver {
+	if history <= 0 {
+		history = 1
+	}
+	historySize := driverConfig{history}
 
-	return &driver{persistence: p, service: statestorage.NewStateStorage(p)}
+	p := adapter.NewInMemoryStatePersistence()
+
+	return &driver{persistence: p, service: statestorage.NewStateStorage(&historySize, p), history : historySize}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
-	out, err := d.readKeys(contract, key)
+	return d.readSingleKeyFromHistory(1, contract, key)
+}
+
+func (d *driver) readSingleKeyFromHistory(history int, contract string, key string)  ([]byte, error) {
+	out, err := d.readKeysFromHistory(history, contract, key)
 	if err != nil {
 		return nil, err
 	}
@@ -35,11 +45,15 @@ func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
 }
 
 func (d *driver) readKeys(contract string, keys ...string) ([]*keyValue, error) {
+	return d.readKeysFromHistory(1, contract, keys...)
+}
+
+func (d *driver) readKeysFromHistory(history int, contract string, keys ...string) ([]*keyValue, error) {
 	ripmdKeys := make([]primitives.Ripmd160Sha256, 0, len(keys))
 	for _, key := range keys {
 		ripmdKeys = append(ripmdKeys, primitives.Ripmd160Sha256(key))
 	}
-	out, err := d.service.ReadKeys(&services.ReadKeysInput{ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
+	out, err := d.service.ReadKeys(&services.ReadKeysInput{BlockHeight: primitives.BlockHeight(history), ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
 
 	if err != nil {
 		return nil, err
@@ -61,10 +75,22 @@ func (d *driver) readKeys(contract string, keys ...string) ([]*keyValue, error) 
 }
 
 func (d *driver) write(contract string, key string, value []byte) {
-	d.persistence.WriteState(primitives.ContractName(contract), (&protocol.StateRecordBuilder{Key: []byte(key), Value: value}).Build())
+	d.persistence.WriteState(1, primitives.ContractName(contract), (&protocol.StateRecordBuilder{Key: []byte(key), Value: value}).Build())
+}
+
+func (d *driver) writeSToBlockHeight(history int, contract string, key string, value []byte) {
+	d.persistence.WriteState(primitives.BlockHeight(history), primitives.ContractName(contract), (&protocol.StateRecordBuilder{Key: []byte(key), Value: value}).Build())
 }
 
 func (d *driver) getBlockHeightAndTimestamp() (int, int, error) {
 	output, err := d.service.GetStateStorageBlockHeight(&services.GetStateStorageBlockHeightInput{})
 	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
+}
+
+type driverConfig struct {
+	historySize 	int
+}
+
+func (d *driverConfig) GetMaxStateHistory() uint64 {
+	return uint64(d.historySize)
 }

@@ -33,13 +33,14 @@ func NewNode(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
+	maxStateHistory uint64,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo)
+	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo, maxStateHistory)
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
-	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
 	logger := instrumentation.NewStdoutLog()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())

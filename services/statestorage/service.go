@@ -8,15 +8,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Config interface {
+	GetMaxStateHistory() uint64
+}
+
 type service struct {
 	persistence            adapter.StatePersistence
 	lastResultsBlockHeader *protocol.ResultsBlockHeader
+	config				   Config
 }
 
-func NewStateStorage(persistence adapter.StatePersistence) services.StateStorage {
+func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
 		persistence:            persistence,
 		lastResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
+		config:					config,
 	}
 }
 
@@ -28,9 +34,10 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 
 	for _, stateDiffs := range input.ContractStateDiffs {
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
-			s.persistence.WriteState(stateDiffs.ContractName(), i.NextStateDiffs())
+			s.persistence.WriteState(committedBlock, stateDiffs.ContractName(), i.NextStateDiffs())
 		}
 	}
+
 	s.lastResultsBlockHeader = input.ResultsBlockHeader
 	height := committedBlock + 1
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: height}, nil
@@ -41,7 +48,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	contractState, err := s.persistence.ReadState(input.ContractName)
+	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
 	if err != nil  {
 		return nil, errors.Wrap(err, "persistence layer error")
 	}
@@ -51,10 +58,9 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		record, ok := contractState[key.KeyForMap()]
 		if ok {
 			records = append(records, record)
-		} else { // implicitly insert the zero value if key is missing
+		} else { // implicitly return the zero value if key is missing in db
 			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: []byte{}}).Build())
 		}
-
 	}
 
 	output := &services.ReadKeysOutput{StateRecords: records}
