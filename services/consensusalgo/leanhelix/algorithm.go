@@ -32,7 +32,6 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	}
 
 	txBlock := txOutput.TransactionsBlock
-
 	txBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
 
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
@@ -40,6 +39,9 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 		PrevBlockHash:     nil,
 		TransactionsBlock: txBlock,
 	})
+	if err != nil {
+		return err
+	}
 
 	rxBlock := rxOutput.ResultsBlock
 	rxBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{}).Build()
