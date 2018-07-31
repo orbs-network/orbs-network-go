@@ -26,7 +26,6 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	events         instrumentation.Reporting
 	publicApi      services.PublicApi
 	consensusAlgos []services.ConsensusAlgo
 }
@@ -36,14 +35,14 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
-	reporting instrumentation.Reporting,
+	reporting instrumentation.BasicLogger,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
 	transactionPool := transactionpool.NewTransactionPool(gossip, reporting)
 	stateStorage := statestorage.NewStateStorage(nodeConfig, statePersistence)
-	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage, reporting)
+	blockStorage := blockstorage.NewBlockStorage(blockstorage.DefaultBlockStorageConfig(), blockPersistence, stateStorage, reporting)
 	nativeProcessor := native.NewNativeProcessor()
 	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)

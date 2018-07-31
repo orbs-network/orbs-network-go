@@ -4,10 +4,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/harness/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -22,7 +22,7 @@ var _ = Describe("transaction pool", func() {
 	)
 
 	BeforeEach(func() {
-		log := instrumentation.NewBufferedLog("TransactionPool")
+		log := instrumentation.GetLogger()
 		gossip = &gossiptopics.MockTransactionRelay{}
 		gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 		service = transactionpool.NewTransactionPool(gossip, log)

@@ -7,8 +7,21 @@ import (
 
 type NodeConfig interface {
 	NodePublicKey() primitives.Ed25519PublicKey
+	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
+	FederationNodes(asOfBlock uint64) map[string]FederationNode
+
+	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+
+	// benchmark consensus
+	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
+
+	// state storage
 	GetMaxStateHistory() uint64
+}
+
+type FederationNode interface {
+	NodePublicKey() primitives.Ed25519PublicKey
 }

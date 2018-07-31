@@ -5,6 +5,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
+// protocol.ContractStateDiff
+
 type sdiff struct {
 	builder *protocol.ContractStateDiffBuilder
 	records []*protocol.StateRecordBuilder

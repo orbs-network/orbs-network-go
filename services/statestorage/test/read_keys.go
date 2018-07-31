@@ -112,6 +112,7 @@ var _ bool = Describe("Reading a Key", func() {
 				d := newStateStorageDriver(1)
 				d.writeSToBlockHeight(1, "contract", key, []byte("bar"))
 				d.writeSToBlockHeight(2, "contract", key, []byte("bar2"))
+				d.writeSToBlockHeight(3, "contract", key, []byte("bar2"))
 
 				_, err := d.readSingleKeyFromHistory(1, "contract", key)
 				Expect(err).To(HaveOccurred())
