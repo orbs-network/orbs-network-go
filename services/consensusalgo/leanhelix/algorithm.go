@@ -3,7 +3,6 @@ package leanhelix
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -36,17 +35,18 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 
 	txBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
 
+	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
+		BlockHeight:       s.lastCommittedBlockHeight + 1,
+		PrevBlockHash:     nil,
+		TransactionsBlock: txBlock,
+	})
+
+	rxBlock := rxOutput.ResultsBlock
+	rxBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{}).Build()
+
 	proposedBlockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: txBlock,
-		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header: (&protocol.ResultsBlockHeaderBuilder{
-				ProtocolVersion: blockstorage.ProtocolVersion,
-				BlockHeight:     s.lastCommittedBlockHeight + 1,
-			}).Build(),
-			TransactionReceipts: nil,
-			ContractStateDiffs:  nil,
-			BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
-		},
+		ResultsBlock:      rxBlock,
 	}
 
 	s.blocksForRoundsMutex.Lock()
