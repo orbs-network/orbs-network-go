@@ -29,20 +29,30 @@ type node struct {
 func NewNode(
 	httpAddress string,
 	nodePublicKey primitives.Ed25519PublicKey,
-	networkSize uint32,
+	nodePrivateKey primitives.Ed25519PrivateKey,
+	federationNodes map[string]config.FederationNode,
 	blockSyncCommitTimeoutMS uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType, // TODO: move all of the config from the ctor, it's a smell
+	activeConsensusAlgo consensus.ConsensusAlgoType,
+	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	nodeConfig := config.NewHardCodedConfig(networkSize, nodePublicKey, constantConsensusLeader, activeConsensusAlgo, blockSyncCommitTimeoutMS)
+	nodeConfig := config.NewHardCodedConfig(
+		federationNodes,
+		nodePublicKey,
+		nodePrivateKey,
+		constantConsensusLeader,
+		activeConsensusAlgo,
+		benchmarkConsensusRoundRetryIntervalMillisec,
+		blockSyncCommitTimeoutMS,
+	)
 
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence(nodeConfig)
-	stateStorageAdapter := stateStorageAdapter.NewLevelDbStatePersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence(nodeConfig)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 
