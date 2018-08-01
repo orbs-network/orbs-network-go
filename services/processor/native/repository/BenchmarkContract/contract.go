@@ -11,11 +11,12 @@ var CONTRACT = types.ContractInfo{
 	Methods: []types.MethodInfo{
 		METHOD_INIT,
 		METHOD_ADD,
+		METHOD_SET,
 	},
-	Context: NewContext,
+	Implementation: newContract,
 }
 
-func NewContext(base *types.BaseContext) types.Context {
+func newContract(base *types.BaseContext) types.ContractContext {
 	return &contract{base}
 }
 
@@ -44,6 +45,19 @@ var METHOD_ADD = types.MethodInfo{
 }
 
 func (c *contract) add(a uint64, b uint64) (uint64, error) {
-	c.SdkCall()
 	return a + b, nil
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+var METHOD_SET = types.MethodInfo{
+	Name:           "set",
+	External:       true,
+	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Implementation: (*contract).set,
+}
+
+func (c *contract) set(a uint64) error {
+	// TODO: write to state
+	return nil
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestCallUnknownContract(t *testing.T) {
+func TestCallUnknownContractFails(t *testing.T) {
 	h := newHarness()
 	call := processCallInput().WithUnknownContract().Build()
 
@@ -13,9 +13,57 @@ func TestCallUnknownContract(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCallUnknownMethod(t *testing.T) {
+func TestCallUnknownMethodFails(t *testing.T) {
 	h := newHarness()
 	call := processCallInput().WithUnknownMethod().Build()
+
+	_, err := h.service.ProcessCall(call)
+	assert.Error(t, err)
+}
+
+func TestCallExternalMethodFromAnotherServiceSucceeds(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithExternalMethod().WithDifferentCallingService().Build()
+
+	_, err := h.service.ProcessCall(call)
+	assert.NoError(t, err)
+}
+
+func TestCallInternalMethodFromSameServiceSucceeds(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithInternalMethod().WithSameCallingService().Build()
+
+	_, err := h.service.ProcessCall(call)
+	assert.NoError(t, err)
+}
+
+func TestCallInternalMethodFromAnotherServiceFails(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithInternalMethod().WithDifferentCallingService().Build()
+
+	_, err := h.service.ProcessCall(call)
+	assert.Error(t, err)
+}
+
+func TestCallInternalMethodFromAnotherServiceUnderSystemPermissionsSucceeds(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithInternalMethod().WithDifferentCallingService().WithSystemPermissions().Build()
+
+	_, err := h.service.ProcessCall(call)
+	assert.NoError(t, err)
+}
+
+func TestCallWriteMethodWithWriteAccessSucceeds(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithExternalWriteMethod().WithWriteAccess().Build()
+
+	_, err := h.service.ProcessCall(call)
+	assert.NoError(t, err)
+}
+
+func TestCallWriteMethodWithoutWriteAccessFails(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithExternalWriteMethod().Build()
 
 	_, err := h.service.ProcessCall(call)
 	assert.Error(t, err)

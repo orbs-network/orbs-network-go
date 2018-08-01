@@ -6,10 +6,10 @@ import (
 )
 
 type ContractInfo struct {
-	Name       primitives.ContractName
-	Permission protocol.ExecutionPermissionScope
-	Methods    []MethodInfo
-	Context    func(*BaseContext) Context
+	Name           primitives.ContractName
+	Permission     protocol.ExecutionPermissionScope
+	Methods        []MethodInfo
+	Implementation func(*BaseContext) ContractContext
 }
 
 type MethodInfo struct {
