@@ -18,12 +18,24 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 		return nil, err
 	}
 
+	txCount := len(proposedTransactions.SignedTransactions)
+	if txCount == 0 {
+
+		//time.Sleep(...)
+		// TODO: How to test that Sleep() was called
+
+		proposedTransactions, err = s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+			MaxNumberOfTransactions: 1,
+		})
+		txCount = len(proposedTransactions.SignedTransactions)
+	}
+
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
 			ProtocolVersion:       blockstorage.ProtocolVersion,
 			BlockHeight:           blockHeight,
 			PrevBlockHashPtr:      prevBlockHash,
-			NumSignedTransactions: uint32(len(proposedTransactions.SignedTransactions)),
+			NumSignedTransactions: uint32(txCount),
 		}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
 		SignedTransactions: proposedTransactions.SignedTransactions,
