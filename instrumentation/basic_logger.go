@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -43,6 +44,8 @@ const (
 	UintType
 	BytesType
 	FloatType
+	FunctionType
+	SourceType
 )
 
 type Field struct {
@@ -65,6 +68,14 @@ func Node(value string) *Field {
 
 func Service(value string) *Field {
 	return &Field{Key: "service", String: value, Type: ServiceType}
+}
+
+func Function(value string) *Field {
+	return &Field{Key: "function", String: value, Type: FunctionType}
+}
+
+func Source(value string) *Field {
+	return &Field{Key: "source", String: value, Type: SourceType}
 }
 
 func String(key string, value string) *Field {
@@ -134,7 +145,12 @@ func getCaller(level int) (function string, source string) {
 	}
 
 	file, line := fun.FileLine(fpcs[0] - 1)
-	return fun.Name(), fmt.Sprintf("%s:%d", file, line)
+	fName := fun.Name()
+	lastSlashOfName := strings.LastIndex(fName, "/")
+	if lastSlashOfName > 0 {
+		fName = fName[lastSlashOfName+1:]
+	}
+	return fName, fmt.Sprintf("%s:%d", file, line)
 }
 
 func GetLogger(params ...*Field) BasicLogger {
@@ -163,6 +179,10 @@ func (f *Field) Value() interface{} {
 		return f.String
 	case ServiceType:
 		return f.String
+	case FunctionType:
+		return f.String
+	case SourceType:
+		return f.String
 	case StringType:
 		return f.String
 	case IntType:
@@ -184,14 +204,15 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	function, source := getCaller(b.nestingLevel)
 
 	enrichmentParams := []*Field{
-		String("function", function),
-		String("source", source),
+		Function(function),
+		Source(source),
 	}
 
 	enrichmentParams = append(enrichmentParams, b.prefixes...)
 	enrichmentParams = append(enrichmentParams, params...)
 
-	fmt.Fprintln(b.output, b.formatter.FormatRow(level, message, enrichmentParams...))
+	logLine := b.formatter.FormatRow(level, message, enrichmentParams...)
+	fmt.Fprintln(b.output, logLine)
 }
 
 func (b *basicLogger) Info(message string, params ...*Field) {

@@ -43,7 +43,7 @@ func NewNodeLogic(
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
 	transactionPool := transactionpool.NewTransactionPool(gossip, reporting)
 	stateStorage := statestorage.NewStateStorage(statePersistence)
-	blockStorage := blockstorage.NewBlockStorage(blockPersistence, stateStorage, reporting)
+	blockStorage := blockstorage.NewBlockStorage(blockstorage.DefaultBlockStorageConfig(), blockPersistence, stateStorage, reporting)
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor()

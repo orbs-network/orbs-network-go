@@ -1,8 +1,8 @@
 package adapter
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 func TestPayloadPackUnpack(t *testing.T) {

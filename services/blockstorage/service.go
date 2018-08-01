@@ -10,16 +10,20 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 const (
 	// TODO extract it to the spec
-	ProtocolVersion = 1
+	ProtocolVersion          = 1
+	NanosecondsInMillisecond = 1000000
 )
 
 type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
+
+	config BlockStorageConfig
 
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
@@ -27,11 +31,12 @@ type service struct {
 	consensusBlocksHandlers     []handlers.ConsensusBlocksHandler
 }
 
-func NewBlockStorage(persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
+func NewBlockStorage(config BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
 	return &service{
 		persistence:  persistence,
 		stateStorage: stateStorage,
 		reporting:    reporting.For(instrumentation.Service("block-storage")),
+		config:       config,
 	}
 }
 
@@ -39,7 +44,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
 	s.reporting.Info("Trying to commit a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
 
-	if err := s.validateProtocolVersion(txBlockHeader); err != nil {
+	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
 	}
 
@@ -55,19 +60,106 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	s.lastCommittedBlockTimestamp = txBlockHeader.Timestamp()
 
 	// TODO: why are we updating the state? nothing about this in the spec
-	s.updateStateStorage(input.BlockPair.TransactionsBlock)
+	s.updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(input.BlockPair.TransactionsBlock)
 
 	s.reporting.Info("Committed a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
 
 	return nil, nil
 }
 
-func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
-	panic("Not implemented")
+func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
+	txBlock, err := s.persistence.GetTransactionsBlock(height)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &services.GetTransactionsBlockHeaderOutput{
+		TransactionsBlockProof:    txBlock.BlockProof,
+		TransactionsBlockHeader:   txBlock.Header,
+		TransactionsBlockMetadata: txBlock.Metadata,
+	}, nil
 }
 
-func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (*services.GetResultsBlockHeaderOutput, error) {
-	panic("Not implemented")
+func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
+	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
+		c := make(chan *services.GetTransactionsBlockHeaderOutput)
+
+		go func() {
+			const interval = 10 * NanosecondsInMillisecond
+			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
+
+			for i := int64(0); i < timeout; i += interval {
+				if input.BlockHeight <= s.lastCommittedBlockHeight {
+					lookupResult, err := s.loadTransactionsBlockHeader(input.BlockHeight)
+
+					if err == nil {
+						c <- lookupResult
+						return
+					}
+				}
+
+				time.Sleep(10 * time.Millisecond)
+			}
+
+			c <- nil
+		}()
+
+		if result := <-c; result != nil {
+			return result, nil
+		}
+
+		return nil, fmt.Errorf("operation timed out")
+	}
+
+	return s.loadTransactionsBlockHeader(input.BlockHeight)
+}
+
+func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
+	txBlock, err := s.persistence.GetResultsBlock(height)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &services.GetResultsBlockHeaderOutput{
+		ResultsBlockProof:  txBlock.BlockProof,
+		ResultsBlockHeader: txBlock.Header,
+	}, nil
+}
+
+func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
+	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
+		c := make(chan *services.GetResultsBlockHeaderOutput)
+
+		go func() {
+			const interval = 10 * NanosecondsInMillisecond // 10 ms
+			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
+
+			for i := int64(0); i < timeout; i += interval {
+				if input.BlockHeight <= s.lastCommittedBlockHeight {
+					lookupResult, err := s.loadResultsBlockHeader(input.BlockHeight)
+
+					if err == nil {
+						c <- lookupResult
+						return
+					}
+				}
+
+				time.Sleep(10 * time.Millisecond)
+			}
+
+			c <- nil
+		}()
+
+		if result := <-c; result != nil {
+			return result, nil
+		}
+
+		return nil, fmt.Errorf("operation timed out")
+	}
+
+	return s.loadResultsBlockHeader(input.BlockHeight)
 }
 
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
@@ -82,7 +174,15 @@ func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBl
 }
 
 func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-	panic("Not implemented")
+	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
+		return nil, protocolVersionError
+	}
+
+	if blockHeightError := s.validateBlockHeight(input.BlockPair); blockHeightError != nil {
+		return nil, blockHeightError
+	}
+
+	return &services.ValidateBlockForCommitOutput{}, nil
 }
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
@@ -120,11 +220,35 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 	return true
 }
 
-func (s *service) validateProtocolVersion(txBlockHeader *protocol.TransactionsBlockHeader) error {
+func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
+	expectedBlockHeight := s.lastCommittedBlockHeight + 1
+
+	txBlockHeader := blockPair.TransactionsBlock.Header
+	rsBlockHeader := blockPair.ResultsBlock.Header
+
+	if txBlockHeader.BlockHeight() != expectedBlockHeight {
+		return fmt.Errorf("block height is %d, expected %d", txBlockHeader.BlockHeight(), expectedBlockHeight)
+	}
+
+	if rsBlockHeader.BlockHeight() != expectedBlockHeight {
+		return fmt.Errorf("block height is %d, expected %d", rsBlockHeader.BlockHeight(), expectedBlockHeight)
+	}
+
+	return nil
+}
+
+func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer) error {
+	txBlockHeader := blockPair.TransactionsBlock.Header
+	rsBlockHeader := blockPair.ResultsBlock.Header
+
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
 		errorMessage := "protocol version mismatch"
 		s.reporting.Error(errorMessage, instrumentation.String("expected", "1"), instrumentation.Stringable("received", txBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
+	}
+
+	if rsBlockHeader.ProtocolVersion() != ProtocolVersion {
+		return fmt.Errorf("protocol version mismatch: expected 1 got %d", rsBlockHeader.ProtocolVersion())
 	}
 
 	return nil
@@ -141,16 +265,21 @@ func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol
 	}
 }
 
-func (s *service) updateStateStorage(txBlock *protocol.TransactionsBlockContainer) {
+func (s *service) updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(txBlock *protocol.TransactionsBlockContainer) {
+	// todo need to generate key from hard coded contract
 	var state []*protocol.StateRecordBuilder
 	for _, i := range txBlock.SignedTransactions {
 		byteArray := make([]byte, 8)
 		binary.LittleEndian.PutUint64(byteArray, uint64(i.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
 		transactionStateDiff := &protocol.StateRecordBuilder{
+			Key:   primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", uint64(txBlock.Header.BlockHeight()))),
 			Value: byteArray,
 		}
 		state = append(state, transactionStateDiff)
 	}
-	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{StateDiffs: state}).Build()}
-	s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{ContractStateDiffs: csdi})
+	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{ContractName: "BenchmarkToken", StateDiffs: state}).Build()}
+	s.stateStorage.CommitStateDiff(
+		&services.CommitStateDiffInput{
+			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: txBlock.Header.BlockHeight()}).Build(),
+			ContractStateDiffs: csdi})
 }

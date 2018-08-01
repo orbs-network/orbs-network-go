@@ -6,15 +6,26 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
+
+func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(ctx context.Context, network AcceptanceTestNetwork)) {
+	for _, consensusAlgo := range consensusAlgos {
+		test.WithContext(func(ctx context.Context) {
+			network := NewTestNetwork(ctx, 2, consensusAlgo)
+			f(ctx, network)
+		})
+	}
+}
 
 type AcceptanceTestNetwork interface {
 	FlushLog()
@@ -34,24 +45,37 @@ type networkNode struct {
 	index            int
 	config           config.NodeConfig
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.InMemoryStatePersistence
+	statePersistence stateStorageAdapter.StatePersistence
 	nodeLogic        bootstrap.NodeLogic
 }
 
-func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork {
+func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
+
+	testLogger := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	testLogger.Info("Creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
+
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
+	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+
+	federationNodes := make(map[string]config.FederationNode)
+	for i := 0; i < int(numNodes); i++ {
+		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+	}
+
 	nodes := make([]networkNode, numNodes)
 	for i, _ := range nodes {
 		nodes[i].index = i
-		nodePublicKey := []byte{byte(i + 1)} // TODO: improve this to real generation of public key
-		constantConsensusLeaderPublicKey := []byte{byte(1)}
-		nodeName := fmt.Sprintf("node-pkey-%x", nodePublicKey)
+		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+		nodeName := fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 
 		nodes[i].config = config.NewHardCodedConfig(
-			numNodes,
-			nodePublicKey,
-			constantConsensusLeaderPublicKey,
-			consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+			federationNodes,
+			nodeKeyPair.PublicKey(),
+			nodeKeyPair.PrivateKey(),
+			leaderKeyPair.PublicKey(),
+			consensusAlgo,
+			1,
 		)
 
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
@@ -65,8 +89,8 @@ func NewTestNetwork(ctx context.Context, numNodes uint32) AcceptanceTestNetwork 
 			instrumentation.GetLogger().For(instrumentation.Node(nodeName)).WithFormatter(instrumentation.NewHumanReadableFormatter()),
 			nodes[i].config,
 		)
-
 	}
+
 	return &acceptanceTestNetwork{
 		nodes:           nodes,
 		gossipTransport: sharedTamperingTransport,
