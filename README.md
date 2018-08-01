@@ -138,6 +138,13 @@ go run *.go
   * "go fmt" in `Preferences | Tools | File Watchers`, add with `+` the `go fmt` watcher
   * To run tests automatically on save, check `Toggle auto-test` in the test panel (it's now a core feature of GoLand)
 
+* If you experience lags while working with GoLand, increasing its default VM heap size can help:
+ * Go to `Help | Edit Custom VM Options...` and set:
+ ```
+ -Xms256m
+ -Xmx1536m
+ ```
+
 ## License
 
 MIT

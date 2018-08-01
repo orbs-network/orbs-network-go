@@ -72,7 +72,6 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 	}
 
 	// sign the committed message we're about to send
-	s.reporting.Info("Replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()))
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
 	}).Build()
@@ -82,16 +81,21 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 		return err
 	}
 
+	// prepare the message
+	message := &gossipmessages.BenchmarkConsensusCommittedMessage{
+		Status: status,
+		Sender: (&gossipmessages.SenderSignatureBuilder{
+			SenderPublicKey: s.config.NodePublicKey(),
+			Signature:       sig,
+		}).Build(),
+	}
+
 	// send committed back to leader via gossip
+	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
+	s.reporting.Info("Replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()), instrumentation.String("signed-data", signedData.String()))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
-		RecipientPublicKey: blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey(),
-		Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
-			Status: status,
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
-				Signature:       sig,
-			}).Build(),
-		},
+		RecipientPublicKey: recipient,
+		Message:            message,
 	})
 	return err
 }

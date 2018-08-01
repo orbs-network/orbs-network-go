@@ -21,14 +21,13 @@ import (
 func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(ctx context.Context, network AcceptanceTestNetwork)) {
 	for _, consensusAlgo := range consensusAlgos {
 		test.WithContext(func(ctx context.Context) {
-			network := NewTestNetwork(ctx, 2, consensusAlgo)
+			network := NewTestNetwork(ctx, numNodes, consensusAlgo)
 			f(ctx, network)
 		})
 	}
 }
 
 type AcceptanceTestNetwork interface {
-	FlushLog()
 	GossipTransport() gossipAdapter.TamperingTransport
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
@@ -95,10 +94,6 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 		nodes:           nodes,
 		gossipTransport: sharedTamperingTransport,
 	}
-}
-
-func (n *acceptanceTestNetwork) FlushLog() {
-
 }
 
 func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {
