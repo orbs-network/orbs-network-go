@@ -40,7 +40,7 @@ var _ = Describe("Block storage", func() {
 				result <- output
 			}()
 
-			for i := 2; i <= int(blockHeightInTheFuture)+1; i++ {
+			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
 				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 			}
 
