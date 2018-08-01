@@ -51,6 +51,6 @@ func (s *service) verifyInternalMethodCall(contractInfo *types.ContractInfo, met
 	return errors.Errorf("internal method '%s' called from different service '%s' without system permissions", methodInfo.Name, callingService)
 }
 
-func (s *service) processMethodCall(*types.ContractInfo, *types.MethodInfo) error {
-	return nil
+func (s *service) processMethodCall(contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args []*protocol.MethodArgument) ([]*protocol.MethodArgument, error) {
+	return []*protocol.MethodArgument{}, nil
 }

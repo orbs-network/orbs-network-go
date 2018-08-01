@@ -1,6 +1,7 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
@@ -25,7 +26,16 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 		return nil, err
 	}
 
-	return nil, nil
+	// execute
+	outputArgs, err := s.processMethodCall(contractInfo, methodInfo, input.InputArguments)
+	if err != nil {
+		return nil, err
+	}
+
+	return &services.ProcessCallOutput{
+		OutputArguments: outputArgs,
+		CallResult:      protocol.EXECUTION_RESULT_SUCCESS,
+	}, nil
 }
 
 func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) (*services.DeployNativeServiceOutput, error) {
