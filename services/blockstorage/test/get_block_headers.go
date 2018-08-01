@@ -108,7 +108,7 @@ var _ = Describe("Block storage", func() {
 				result <- output
 			}()
 
-			for i := primitives.BlockHeight(2); i <= 6; i++ {
+			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
 				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 			}
 
@@ -136,7 +136,7 @@ var _ = Describe("Block storage", func() {
 				timeoutError <- err
 			}()
 
-			for i := primitives.BlockHeight(2); i <= 4; i++ {
+			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture-1; i++ {
 				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 			}
 
