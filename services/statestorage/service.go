@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type Config interface {
@@ -46,6 +47,10 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
 	if input.ContractName == "" {
 		return nil, fmt.Errorf("missing contract name")
+	}
+
+	if input.BlockHeight + primitives.BlockHeight(s.config.GetMaxStateHistory()) <= s.lastResultsBlockHeader.BlockHeight() {
+		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastResultsBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.GetMaxStateHistory()))
 	}
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)

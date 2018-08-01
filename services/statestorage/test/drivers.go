@@ -6,13 +6,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 )
 
 type driver struct {
 	service     services.StateStorage
-	persistence adapter.StatePersistence
 	history 	driverConfig
 }
 
@@ -29,11 +28,12 @@ func newStateStorageDriver(history int) *driver {
 
 	p := adapter.NewInMemoryStatePersistence()
 
-	return &driver{persistence: p, service: statestorage.NewStateStorage(&historySize, p), history : historySize}
+	return &driver{service: statestorage.NewStateStorage(&historySize, p), history : historySize}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
-	return d.readSingleKeyFromHistory(1, contract, key)
+	h, _, _ := d.getBlockHeightAndTimestamp()
+	return d.readSingleKeyFromHistory(h, contract, key)
 }
 
 func (d *driver) readSingleKeyFromHistory(history int, contract string, key string)  ([]byte, error) {
@@ -45,7 +45,8 @@ func (d *driver) readSingleKeyFromHistory(history int, contract string, key stri
 }
 
 func (d *driver) readKeys(contract string, keys ...string) ([]*keyValue, error) {
-	return d.readKeysFromHistory(1, contract, keys...)
+	h, _, _ := d.getBlockHeightAndTimestamp()
+	return d.readKeysFromHistory(h, contract, keys...)
 }
 
 func (d *driver) readKeysFromHistory(history int, contract string, keys ...string) ([]*keyValue, error) {
@@ -74,17 +75,32 @@ func (d *driver) readKeysFromHistory(history int, contract string, keys ...strin
 	return result, nil
 }
 
-func (d *driver) write(contract string, key string, value []byte) {
-	d.persistence.WriteState(1, primitives.ContractName(contract), (&protocol.StateRecordBuilder{Key: []byte(key), Value: value}).Build())
-}
-
-func (d *driver) writeSToBlockHeight(history int, contract string, key string, value []byte) {
-	d.persistence.WriteState(primitives.BlockHeight(history), primitives.ContractName(contract), (&protocol.StateRecordBuilder{Key: []byte(key), Value: value}).Build())
-}
-
 func (d *driver) getBlockHeightAndTimestamp() (int, int, error) {
 	output, err := d.service.GetStateStorageBlockHeight(&services.GetStateStorageBlockHeightInput{})
 	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
+}
+
+func (d *driver) commitStateDiff(state *services.CommitStateDiffInput) {
+	d.service.CommitStateDiff(state)
+}
+
+func (d *driver) commitValuePairs(contract string, keyValues ...string) {
+	h, _, _ := d.getBlockHeightAndTimestamp()
+	d.commitValuePairsAtHeight(h + 1, contract, keyValues...)
+}
+
+func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...string) {
+	if len(keyValues) % 2 != 0 {
+		panic("expecting an array of key value pairs")
+	}
+	b := builders.ContractStateDiff().WithContractName(contract)
+
+	for i := 0; i < len(keyValues); i+=2 {
+		b.WithStringRecord(keyValues[i], keyValues[i+1])
+	}
+
+	contractStateDiff := b.Build()
+	d.commitStateDiff(CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
 }
 
 type driverConfig struct {

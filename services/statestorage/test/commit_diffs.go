@@ -14,7 +14,7 @@ var _ = Describe("Commit a State Diff", func() {
 		contract1 := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "v1").WithStringRecord("key2", "v2").Build()
 		contract2 := builders.ContractStateDiff().WithContractName("contract2").WithStringRecord("key1", "v3").Build()
 
-		d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).WithDiff(contract2).Build())
+		d.commitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).WithDiff(contract2).Build())
 
 		output, err := d.readSingleKey("contract1", "key1")
 		Expect(err).ToNot(HaveOccurred())
