@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
-	adapter2 "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -25,7 +24,7 @@ func (c *testConfig) NodeId() string {
 
 type driver struct {
 	stateStorage   *services.MockStateStorage
-	storageAdapter adapter2.BlockPersistence
+	storageAdapter adapter.InMemoryBlockPersistence
 	blockStorage   services.BlockStorage
 }
 
@@ -63,6 +62,10 @@ func (d *driver) getBlock(height int) *protocol.BlockPairContainer {
 
 func testBlockStorageConfig() blockstorage.Config {
 	return &testConfig{}
+}
+
+func (d *driver) failNextBlocks() {
+	d.storageAdapter.FailNextBlocks()
 }
 
 func NewDriver() *driver {

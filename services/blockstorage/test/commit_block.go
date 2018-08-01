@@ -32,6 +32,30 @@ var _ = Describe("Committing a block", func() {
 		// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
 	})
 
+	It("does not update last committed block height and timestamp when persistence storage fails", func() {
+		driver := NewDriver()
+
+		driver.expectCommitStateDiff()
+
+		blockCreated := time.Now()
+		blockHeight := primitives.BlockHeight(1)
+
+		driver.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+		Expect(driver.numOfWrittenBlocks()).To(Equal(1))
+
+		driver.failNextBlocks()
+
+		_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
+		Expect(err).To(MatchError("could not write a block"))
+
+		driver.verifyMocks()
+
+		lastCommittedBlockHeight := driver.getLastBlockHeight()
+
+		Expect(lastCommittedBlockHeight.LastCommittedBlockHeight).To(BeEquivalentTo(blockHeight))
+		Expect(lastCommittedBlockHeight.LastCommittedBlockTimestamp).To(BeEquivalentTo(blockCreated.UnixNano()))
+	})
+
 	Context("block is invalid", func() {
 		When("protocol version mismatches", func() {
 			It("returns an error", func() {
