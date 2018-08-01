@@ -8,87 +8,86 @@ import (
 )
 
 var _ = Describe("Block storage", func() {
-	When("asked to validate transactions block", func() {
-		It("checks protocol version", func() {
+	When("asked to validate the block", func() {
+		It("protocol version when version when valid", func() {
 			driver := NewDriver()
 			block := builders.BlockPair().Build()
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO split to valid/invalid
+		})
+
+		It("protocol version when version is invalid", func() {
+			driver := NewDriver()
+			block := builders.BlockPair().Build()
+
+			block.TransactionsBlock.Header.MutateProtocolVersion(998)
+
+			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+			Expect(err).To(MatchError("protocol version mismatch"))
+
+			block.ResultsBlock.Header.MutateProtocolVersion(999)
+
+			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+			Expect(err).To(MatchError("protocol version mismatch"))
+
 			block.TransactionsBlock.Header.MutateProtocolVersion(999)
+
+			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+			Expect(err).To(MatchError("protocol version mismatch"))
+
+			block.TransactionsBlock.Header.MutateProtocolVersion(1)
 
 			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).To(MatchError("protocol version mismatch"))
 		})
 
-		XIt("checks virtual chain")
-
-		It("checks block height", func() {
+		It("height when valid", func() {
 			driver := NewDriver()
 			driver.expectCommitStateDiff()
 
 			driver.commitBlock(builders.BlockPair().Build())
-			// TODO split to valid/invalid
 
 			block := builders.BlockPair().WithHeight(2).Build()
 
 			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("height when invalid", func() {
+			driver := NewDriver()
+			driver.expectCommitStateDiff()
+
+			driver.commitBlock(builders.BlockPair().Build())
+
+			block := builders.BlockPair().WithHeight(2).Build()
+
+			block.TransactionsBlock.Header.MutateBlockHeight(998)
+
+			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+			Expect(err).To(MatchError("block height is 998, expected 2"))
 
 			block.ResultsBlock.Header.MutateBlockHeight(999)
+
+			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+			Expect(err).To(MatchError("block height is 998, expected 2"))
+
+			block.TransactionsBlock.Header.MutateBlockHeight(999)
+
+			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+			Expect(err).To(MatchError("block height is 999, expected 2"))
+
+			block.TransactionsBlock.Header.MutateProtocolVersion(1)
 
 			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 			Expect(err).To(MatchError("block height is 999, expected 2"))
 		})
 
-		XIt("checks transactions root hash")
-
-		XIt("checks metadata hash")
-
-	})
-
-	When("asked to validate results block", func() {
-		It("checks protocol version", func() {
-			driver := NewDriver()
-			block := builders.BlockPair().Build()
-			// TODO fix test language / names to represent what its testing
-
-			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-			Expect(err).NotTo(HaveOccurred())
-
-			block.ResultsBlock.Header.MutateProtocolVersion(1000)
-
-			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-			Expect(err).To(MatchError("protocol version mismatch: expected 1 got 1000"))
-		})
-
-		XIt("checks virtual chain", func() {
-
-		})
-
-		It("checks block height", func() {
-			driver := NewDriver()
-			driver.expectCommitStateDiff()
-			// TODO fix test language / names to represent what its testing
-
-			driver.commitBlock(builders.BlockPair().Build())
-
-			block := builders.BlockPair().WithHeight(2).Build()
-
-			_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-			Expect(err).NotTo(HaveOccurred())
-
-			block.ResultsBlock.Header.MutateBlockHeight(1000)
-
-			_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-			Expect(err).To(MatchError("block height is 1000, expected 2"))
-		})
-
-		XIt("checks receipts root hash")
-
-		XIt("checks state diff hash")
-
-		XIt("checks block consensus")
+		XIt("virtual chain")
+		XIt("transactions root hash")
+		XIt("metadata hash")
+		XIt("receipts root hash")
+		XIt("state diff hash")
+		XIt("block consensus")
 	})
 })
