@@ -8,5 +8,5 @@ import (
 
 func TestComponent(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BlockStorage Component Suite")
+	RunSpecs(t, "StateStorage Component Suite")
 }

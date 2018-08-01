@@ -67,13 +67,14 @@ func (bp *levelDbBlockPersistence) WithLogger(reporting instrumentation.BasicLog
 	return bp
 }
 
-func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
+func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) error {
 	var errors []error
 	var keys []string
 
 	if !basicValidation(blockPair) {
+		//FIXME: handle errors
 		bp.reporting.Info("Block is invalid", instrumentation.Stringable("txBlockHeader", blockPair.TransactionsBlock.Header))
-		return
+		return fmt.Errorf("block is invalid")
 	}
 
 	lastBlockHeight, lastBlockHeightRetrivalError := bp.loadLastBlockHeight()
@@ -102,10 +103,11 @@ func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairConta
 		}
 
 		bp.blockWritten <- false
-		return
+		return nil
 	}
-
 	bp.blockWritten <- true
+
+	return nil
 }
 
 func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
