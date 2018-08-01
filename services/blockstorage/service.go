@@ -2,6 +2,7 @@ package blockstorage
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -10,33 +11,46 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"sync"
 	"time"
 )
 
+type Config interface {
+	BlockSyncCommitTimeout() time.Duration
+}
+
 const (
 	// TODO extract it to the spec
-	ProtocolVersion          = 1
-	NanosecondsInMillisecond = 1000000
+	ProtocolVersion = 1
 )
 
 type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 
-	config BlockStorageConfig
+	config Config
+
+	reporting               instrumentation.BasicLogger
+	consensusBlocksHandlers []handlers.ConsensusBlocksHandler
 
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
-	reporting                   instrumentation.BasicLogger
-	consensusBlocksHandlers     []handlers.ConsensusBlocksHandler
+	lastBlockLock               *sync.Mutex
 }
 
-func NewBlockStorage(config BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
+func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
+	logger := reporting.For(instrumentation.Service("block-storage"))
+
+	lastCommittedBlockHeight, lastCommittedBlockTimestamp := persistence.GetLastBlockDetails()
+
 	return &service{
-		persistence:  persistence,
+		persistence:  persistence.WithLogger(logger.For(instrumentation.String("component", "persistence"))),
 		stateStorage: stateStorage,
-		reporting:    reporting.For(instrumentation.Service("block-storage")),
+		reporting:    logger,
 		config:       config,
+		lastCommittedBlockHeight:    lastCommittedBlockHeight,
+		lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
+		lastBlockLock: &sync.Mutex{},
 	}
 }
 
@@ -48,16 +62,20 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 		return nil, err
 	}
 
-	if ok := s.validateBlockDoesNotExist(txBlockHeader); !ok {
-		return nil, nil
+	// TODO there might be a non-idiomatic pattern here, but the commit block output is an empty struct, if that changes this should be refactored
+	if ok, err := s.validateBlockDoesNotExist(txBlockHeader); err != nil || !ok {
+		return nil, err
 	}
 
-	s.validateMonotonicIncreasingBlockHeight(txBlockHeader)
+	if err := s.validateBlockHeight(input.BlockPair); err != nil {
+		return nil, err
+	}
 
-	s.persistence.WriteBlock(input.BlockPair)
+	if err := s.persistence.WriteBlock(input.BlockPair); err != nil {
+		return nil, err
+	}
 
-	s.lastCommittedBlockHeight = txBlockHeader.BlockHeight()
-	s.lastCommittedBlockTimestamp = txBlockHeader.Timestamp()
+	s.updateLastCommittedBlockHeightAndTimestamp(txBlockHeader)
 
 	// TODO: why are we updating the state? nothing about this in the spec
 	s.updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(input.BlockPair.TransactionsBlock)
@@ -65,6 +83,14 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	s.reporting.Info("Committed a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
 
 	return nil, nil
+}
+
+func (s *service) updateLastCommittedBlockHeightAndTimestamp(txBlockHeader *protocol.TransactionsBlockHeader) {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
+	s.lastCommittedBlockHeight = txBlockHeader.BlockHeight()
+	s.lastCommittedBlockTimestamp = txBlockHeader.Timestamp()
 }
 
 func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
@@ -82,34 +108,27 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 }
 
 func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
-	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
-		c := make(chan *services.GetTransactionsBlockHeaderOutput)
+	currentBlockHeight := s.lastCommittedBlockHeight
+	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeout())
+		defer timeout.Stop()
+		tick := time.NewTicker(10 * time.Millisecond)
+		defer tick.Stop()
 
-		go func() {
-			const interval = 10 * NanosecondsInMillisecond
-			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
-
-			for i := int64(0); i < timeout; i += interval {
+		for {
+			select {
+			case <-timeout.C:
+				return nil, errors.New("operation timed out")
+			case <-tick.C:
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.loadTransactionsBlockHeader(input.BlockHeight)
 
 					if err == nil {
-						c <- lookupResult
-						return
+						return lookupResult, nil
 					}
 				}
-
-				time.Sleep(10 * time.Millisecond)
 			}
-
-			c <- nil
-		}()
-
-		if result := <-c; result != nil {
-			return result, nil
 		}
-
-		return nil, fmt.Errorf("operation timed out")
 	}
 
 	return s.loadTransactionsBlockHeader(input.BlockHeight)
@@ -129,34 +148,27 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 }
 
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
-	if input.BlockHeight > s.lastCommittedBlockHeight && input.BlockHeight-s.lastCommittedBlockHeight <= 5 {
-		c := make(chan *services.GetResultsBlockHeaderOutput)
+	currentBlockHeight := s.lastCommittedBlockHeight
+	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeout())
+		defer timeout.Stop()
+		tick := time.NewTicker(10 * time.Millisecond)
+		defer tick.Stop()
 
-		go func() {
-			const interval = 10 * NanosecondsInMillisecond // 10 ms
-			timeout := s.config.BlockSyncCommitTimeout().Nanoseconds()
-
-			for i := int64(0); i < timeout; i += interval {
+		for {
+			select {
+			case <-timeout.C:
+				return nil, errors.New("operation timed out")
+			case <-tick.C:
 				if input.BlockHeight <= s.lastCommittedBlockHeight {
 					lookupResult, err := s.loadResultsBlockHeader(input.BlockHeight)
 
 					if err == nil {
-						c <- lookupResult
-						return
+						return lookupResult, nil
 					}
 				}
-
-				time.Sleep(10 * time.Millisecond)
 			}
-
-			c <- nil
-		}()
-
-		if result := <-c; result != nil {
-			return result, nil
 		}
-
-		return nil, fmt.Errorf("operation timed out")
 	}
 
 	return s.loadResultsBlockHeader(input.BlockHeight)
@@ -204,20 +216,20 @@ func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseI
 }
 
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
-func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) bool {
-	if txBlockHeader.BlockHeight() <= s.lastCommittedBlockHeight {
-		if txBlockHeader.BlockHeight() == s.lastCommittedBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
-			// TODO should this really panic
+func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
+	currentBlockHeight := s.lastCommittedBlockHeight
+	if txBlockHeader.BlockHeight() <= currentBlockHeight {
+		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
 			errorMessage := "block already in storage, timestamp mismatch"
-			s.reporting.Error(errorMessage, instrumentation.BlockHeight(s.lastCommittedBlockHeight))
-			panic(errorMessage)
+			s.reporting.Error(errorMessage, instrumentation.BlockHeight(currentBlockHeight))
+			return false, errors.New(errorMessage)
 		}
 
-		s.reporting.Info("block already in storage, skipping", instrumentation.BlockHeight(s.lastCommittedBlockHeight))
-		return false
+		s.reporting.Info("block already in storage, skipping", instrumentation.BlockHeight(currentBlockHeight))
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
 
 func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
@@ -241,6 +253,7 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
+	// FIXME we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
 		errorMessage := "protocol version mismatch"
 		s.reporting.Error(errorMessage, instrumentation.String("expected", "1"), instrumentation.Stringable("received", txBlockHeader.ProtocolVersion()))
@@ -248,21 +261,12 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	}
 
 	if rsBlockHeader.ProtocolVersion() != ProtocolVersion {
-		return fmt.Errorf("protocol version mismatch: expected 1 got %d", rsBlockHeader.ProtocolVersion())
+		errorMessage := "protocol version mismatch"
+		s.reporting.Error(errorMessage, instrumentation.String("expected", "1"), instrumentation.Stringable("received", txBlockHeader.ProtocolVersion()))
+		return fmt.Errorf(errorMessage)
 	}
 
 	return nil
-}
-
-func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol.TransactionsBlockHeader) {
-	expectedNextBlockHeight := s.lastCommittedBlockHeight + 1
-	if txBlockHeader.BlockHeight() != expectedNextBlockHeight {
-		// TODO should this really panic
-		errorMessage := "block height mismatch"
-		s.reporting.Error(errorMessage, instrumentation.Stringable("expectedBlockHeight", expectedNextBlockHeight), instrumentation.Stringable("receivedBlockHeight", txBlockHeader.BlockHeight()))
-		panic(fmt.Errorf(errorMessage))
-
-	}
 }
 
 func (s *service) updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(txBlock *protocol.TransactionsBlockContainer) {
