@@ -182,7 +182,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	s.reporting.Info("Vote arrived", instrumentation.Int("existing-votes", existingVotes), instrumentation.Int("required-votes", s.requiredQuorumSize()))
+	s.reporting.Info("Valid vote arrived", instrumentation.Int("existing-votes", existingVotes), instrumentation.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() {
 		successfullyVotedBlock = s.lastCommittedBlockHeight()
 	}
@@ -203,7 +203,7 @@ func (s *service) leaderValidateVoteUnderMutex(sender *gossipmessages.SenderSign
 	// signature
 	signedData := hash.CalcSha256(status.Raw())
 	if !signature.VerifyEd25519(sender.SenderPublicKey(), signedData, sender.Signature()) {
-		return errors.Errorf("sender signature is invalid: %s", sender.Signature())
+		return errors.Errorf("sender signature is invalid: %s, signed data: %s", sender.Signature(), signedData)
 	}
 
 	return nil
