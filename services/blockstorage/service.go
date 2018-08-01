@@ -52,11 +52,14 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 		return nil, err
 	}
 
-	if ok := s.validateBlockDoesNotExist(txBlockHeader); !ok {
-		return nil, nil
+	// TODO there might be a non-idiomatic pattern here, but the commit block output is an empty struct, if that changes this should be refactored
+	if ok, err := s.validateBlockDoesNotExist(txBlockHeader); err != nil || !ok {
+		return nil, err
 	}
 
-	s.validateMonotonicIncreasingBlockHeight(txBlockHeader)
+	if err := s.validateBlockHeight(input.BlockPair); err != nil {
+		return nil, err
+	}
 
 	s.persistence.WriteBlock(input.BlockPair)
 
@@ -192,20 +195,19 @@ func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseI
 }
 
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
-func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) bool {
+func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
 	if txBlockHeader.BlockHeight() <= s.lastCommittedBlockHeight {
 		if txBlockHeader.BlockHeight() == s.lastCommittedBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
-			// TODO should this really panic
 			errorMessage := "block already in storage, timestamp mismatch"
 			s.reporting.Error(errorMessage, instrumentation.BlockHeight(s.lastCommittedBlockHeight))
-			panic(errorMessage)
+			return false, errors.New(errorMessage)
 		}
 
 		s.reporting.Info("block already in storage, skipping", instrumentation.BlockHeight(s.lastCommittedBlockHeight))
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
 
 func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
@@ -243,17 +245,6 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	}
 
 	return nil
-}
-
-func (s *service) validateMonotonicIncreasingBlockHeight(txBlockHeader *protocol.TransactionsBlockHeader) {
-	expectedNextBlockHeight := s.lastCommittedBlockHeight + 1
-	if txBlockHeader.BlockHeight() != expectedNextBlockHeight {
-		// TODO should this really panic
-		errorMessage := "block height mismatch"
-		s.reporting.Error(errorMessage, instrumentation.Stringable("expectedBlockHeight", expectedNextBlockHeight), instrumentation.Stringable("receivedBlockHeight", txBlockHeader.BlockHeight()))
-		panic(fmt.Errorf(errorMessage))
-
-	}
 }
 
 func (s *service) updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(txBlock *protocol.TransactionsBlockContainer) {

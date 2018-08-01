@@ -60,7 +60,7 @@ var _ = Describe("Committing a block", func() {
 				driver.verifyMocks()
 			})
 
-			It("should panic if it is the same height but different block", func() {
+			It("should return an error if it is the same height but different block", func() {
 				driver := NewDriver()
 				driver.expectCommitStateDiff()
 
@@ -68,26 +68,23 @@ var _ = Describe("Committing a block", func() {
 
 				driver.commitBlock(blockPair.Build())
 
-				Expect(func() {
-					driver.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
-				}).To(Panic())
+				_, err := driver.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
 
+				Expect(err).To(MatchError("block already in storage, timestamp mismatch"))
 				Expect(driver.numOfWrittenBlocks()).To(Equal(1))
 				driver.verifyMocks()
 			})
 		})
 
 		When("block isn't the next of last_commited_block", func() {
-			It("should panic", func() {
+			It("should return an error", func() {
 				driver := NewDriver()
 				driver.expectCommitStateDiff()
 
 				driver.commitBlock(builders.BlockPair().Build())
 
-				Expect(func() {
-					driver.commitBlock(builders.BlockPair().WithHeight(1000).Build())
-				}).To(Panic())
-
+				_, err := driver.commitBlock(builders.BlockPair().WithHeight(1000).Build())
+				Expect(err).To(MatchError("block height is 1000, expected 2"))
 				Expect(driver.numOfWrittenBlocks()).To(Equal(1))
 				driver.verifyMocks()
 			})
