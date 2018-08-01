@@ -55,6 +55,12 @@ var _ = Describe("The Orbs Network", func() {
 		// TODO: kill me - why do we need this override?
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
+			federationNodes := make(map[string]config.FederationNode)
+			leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+			for i := 0; i < 3; i++ {
+				nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+				federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())
+			}
 
 			for i := 0; i < 3; i++ {
 				nodeKeyPair := keys.Ed25519KeyPairForTests(i)
@@ -62,9 +68,9 @@ var _ = Describe("The Orbs Network", func() {
 					fmt.Sprintf(":%d", 8080+i),
 					nodeKeyPair.PublicKey(),
 					nodeKeyPair.PrivateKey(),
-					map[string]config.FederationNode{nodeKeyPair.PublicKey().KeyForMap(): config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())},
-					nodeKeyPair.PublicKey(), // we are the leader
-					consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+					federationNodes,
+					leaderKeyPair.PublicKey(), // we are the leader
+					consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 					2*1000,
 					gossipTransport,
 				)
