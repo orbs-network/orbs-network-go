@@ -39,7 +39,7 @@ func main() {
 		nodePrivateKey,
 		federationNodes,
 		consensusLeader,
-		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		2*1000,
 		gossipTransport,
 	).WaitUntilShutdown()
