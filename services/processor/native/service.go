@@ -13,7 +13,19 @@ func NewNativeProcessor() services.Processor {
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-	panic("Not implemented")
+	// retrieve code
+	contractInfo, methodInfo, err := s.retrieveMethodFromRepository(input.ContractName, input.MethodName)
+	if err != nil {
+		return nil, err
+	}
+
+	// check permissions
+	err = s.verifyMethodPermissions(contractInfo, methodInfo, input.CallingService, input.PermissionScope, input.AccessScope)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) (*services.DeployNativeServiceOutput, error) {
