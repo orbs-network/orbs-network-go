@@ -66,20 +66,23 @@ func (s *service) verifyMethodArgs(methodInfo *types.MethodInfo, implementation 
 		return errors.Errorf("method '%s' takes %d args but received %d", methodInfo.Name, methodType.NumIn()-1, len(args))
 	}
 	for i := 1; i < methodType.NumIn(); i++ {
-		switch methodType.In(i).Name() {
-		case "uint32":
+		switch methodType.In(i).Kind() {
+		case reflect.Uint32:
 			if !args[i-1].IsTypeUint32Value() {
 				return errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i-1, args[i-1].Type())
 			}
-		case "uint64":
+		case reflect.Uint64:
 			if !args[i-1].IsTypeUint64Value() {
 				return errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i-1, args[i-1].Type())
 			}
-		case "string":
+		case reflect.String:
 			if !args[i-1].IsTypeStringValue() {
 				return errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i-1, args[i-1].Type())
 			}
-		case "[]byte":
+		case reflect.Slice:
+			if methodType.In(i).Elem().Kind() != reflect.Uint8 {
+				return errors.Errorf("method '%s' arg %d slice type is not byte", methodInfo.Name, i-1)
+			}
 			if !args[i-1].IsTypeBytesValue() {
 				return errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i-1, args[i-1].Type())
 			}

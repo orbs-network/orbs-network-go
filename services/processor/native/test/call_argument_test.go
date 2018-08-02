@@ -18,9 +18,9 @@ func TestCallNoArgsNoReturn(t *testing.T) {
 	assert.Equal(t, output.OutputArguments, res)
 }
 
-func TestCallUint64ArgNoReturn(t *testing.T) {
+func TestCallAllArgTypesNoReturn(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(uint64(12)).WithWriteAccess().Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}).Build()
 
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err)
@@ -30,9 +30,9 @@ func TestCallUint64ArgNoReturn(t *testing.T) {
 	assert.Equal(t, output.OutputArguments, res)
 }
 
-func TestCallIncorrectStringArgForUint64Fails(t *testing.T) {
+func TestCallIncorrectArgTypeFails(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs("hello").WithWriteAccess().Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint64(12), uint32(11), []byte{0x01, 0x02, 0x03}, "hello").Build()
 
 	_, err := h.service.ProcessCall(call)
 	assert.Error(t, err)
@@ -40,8 +40,13 @@ func TestCallIncorrectStringArgForUint64Fails(t *testing.T) {
 
 func TestCallIncorrectArgNumFails(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(uint64(12), uint64(13)).WithWriteAccess().Build()
+	tooLittleCall := processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello").Build()
 
-	_, err := h.service.ProcessCall(call)
+	_, err := h.service.ProcessCall(tooLittleCall)
+	assert.Error(t, err)
+
+	tooMuchCall := processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}, uint32(11)).Build()
+
+	_, err = h.service.ProcessCall(tooMuchCall)
 	assert.Error(t, err)
 }

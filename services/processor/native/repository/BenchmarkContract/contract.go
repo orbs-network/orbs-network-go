@@ -12,6 +12,7 @@ var CONTRACT = types.ContractInfo{
 		METHOD_INIT,
 		METHOD_ADD,
 		METHOD_SET,
+		METHOD_ARGTYPES,
 	},
 	Implementation: newContract,
 }
@@ -59,5 +60,18 @@ var METHOD_SET = types.MethodInfo{
 
 func (c *contract) set(a uint64) error {
 	// TODO: write to state
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+var METHOD_ARGTYPES = types.MethodInfo{
+	Name:           "argTypes",
+	External:       true,
+	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Implementation: (*contract).argTypes,
+}
+
+func (c *contract) argTypes(a1 uint32, a2 uint64, a3 string, a4 []byte) error {
 	return nil
 }
