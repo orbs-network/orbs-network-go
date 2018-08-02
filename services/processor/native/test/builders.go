@@ -90,7 +90,11 @@ func (p *processCall) WithWriteAccess() *processCall {
 }
 
 func (p *processCall) WithArgs(args ...interface{}) *processCall {
-	res := []*protocol.MethodArgument{}
+	p.input.InputArguments = argumentBuilder(args...)
+	return p
+}
+
+func argumentBuilder(args ...interface{}) (res []*protocol.MethodArgument) {
 	for _, arg := range args {
 		switch arg.(type) {
 		case uint32:
@@ -103,6 +107,5 @@ func (p *processCall) WithArgs(args ...interface{}) *processCall {
 			res = append(res, (&protocol.MethodArgumentBuilder{Name: "bytes", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.([]byte)}).Build())
 		}
 	}
-	p.input.InputArguments = res
-	return p
+	return
 }

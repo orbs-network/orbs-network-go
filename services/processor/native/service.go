@@ -30,25 +30,39 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	// retrieve code
 	contractInfo, methodInfo, err := s.retrieveMethodFromRepository(input.ContractName, input.MethodName)
 	if err != nil {
-		return nil, err
+		return &services.ProcessCallOutput{
+			OutputArguments: nil,
+			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+		}, err
 	}
 
 	// check permissions
 	err = s.verifyMethodPermissions(contractInfo, methodInfo, input.CallingService, input.PermissionScope, input.AccessScope)
 	if err != nil {
-		return nil, err
+		return &services.ProcessCallOutput{
+			OutputArguments: nil,
+			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+		}, err
 	}
 
 	// execute
-	outputArgs, err := s.processMethodCall(contractInfo, methodInfo, input.InputArguments)
+	outputArgs, contractErr, err := s.processMethodCall(contractInfo, methodInfo, input.InputArguments)
 	if err != nil {
-		return nil, err
+		return &services.ProcessCallOutput{
+			OutputArguments: nil,
+			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+		}, err
 	}
 
+	// result
+	callResult := protocol.EXECUTION_RESULT_SUCCESS
+	if contractErr != nil {
+		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
+	}
 	return &services.ProcessCallOutput{
 		OutputArguments: outputArgs,
-		CallResult:      protocol.EXECUTION_RESULT_SUCCESS,
-	}, nil
+		CallResult:      callResult,
+	}, contractErr
 }
 
 func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) (*services.DeployNativeServiceOutput, error) {
