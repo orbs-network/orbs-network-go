@@ -92,7 +92,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
-	s.reporting.Info("Replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()), instrumentation.String("signed-data", signedData.String()))
+	s.reporting.Info("Replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()), instrumentation.Stringable("signed-data", signedData))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: recipient,
 		Message:            message,
