@@ -60,13 +60,13 @@ func (p *processCall) WithInternalMethod() *processCall {
 func (p *processCall) WithExternalMethod() *processCall {
 	p.input.ContractName = "BenchmarkContract"
 	p.input.MethodName = "add"
-	return p
+	return p.WithArgs(uint64(1), uint64(2))
 }
 
 func (p *processCall) WithExternalWriteMethod() *processCall {
 	p.input.ContractName = "BenchmarkContract"
 	p.input.MethodName = "set"
-	return p
+	return p.WithArgs(uint64(3))
 }
 
 func (p *processCall) WithSameCallingService() *processCall {
@@ -89,7 +89,20 @@ func (p *processCall) WithWriteAccess() *processCall {
 	return p
 }
 
-func (p *processCall) WithArgs(args []*protocol.MethodArgument) *processCall {
-	p.input.InputArguments = args
+func (p *processCall) WithArgs(args ...interface{}) *processCall {
+	res := []*protocol.MethodArgument{}
+	for _, arg := range args {
+		switch arg.(type) {
+		case uint32:
+			res = append(res, (&protocol.MethodArgumentBuilder{Name: "uint32", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.(uint32)}).Build())
+		case uint64:
+			res = append(res, (&protocol.MethodArgumentBuilder{Name: "uint64", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.(uint64)}).Build())
+		case string:
+			res = append(res, (&protocol.MethodArgumentBuilder{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.(string)}).Build())
+		case []byte:
+			res = append(res, (&protocol.MethodArgumentBuilder{Name: "bytes", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.([]byte)}).Build())
+		}
+	}
+	p.input.InputArguments = res
 	return p
 }

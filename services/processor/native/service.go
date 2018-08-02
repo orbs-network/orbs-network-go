@@ -1,16 +1,29 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 type service struct {
+	contractRepository map[primitives.ContractName]types.ContractContext
 }
 
 func NewNativeProcessor() services.Processor {
-	return &service{}
+	// init repository
+	baseContext := types.NewBaseContext()
+	contractRepository := make(map[primitives.ContractName]types.ContractContext)
+	for _, contract := range repository.Contracts {
+		contractRepository[contract.Name] = contract.Implementation(baseContext)
+	}
+
+	return &service{
+		contractRepository: contractRepository,
+	}
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
