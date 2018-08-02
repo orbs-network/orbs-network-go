@@ -15,7 +15,7 @@ type hardcodedConfig struct {
 	constantConsensusLeader                      primitives.Ed25519PublicKey
 	activeConsensusAlgo                          consensus.ConsensusAlgoType
 	benchmarkConsensusRoundRetryIntervalMillisec uint32
-	blockSyncCommitTimeout                       time.Duration
+	blockSyncCommitTimeoutMillisec               time.Duration
 }
 
 func NewHardCodedConfig(
@@ -25,7 +25,7 @@ func NewHardCodedConfig(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32,
-	blockSyncCommitTimeoutMS uint32,
+	blockSyncCommitTimeoutMillisec uint32,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -35,7 +35,7 @@ func NewHardCodedConfig(
 		constantConsensusLeader:                      constantConsensusLeader,
 		activeConsensusAlgo:                          activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
-		blockSyncCommitTimeout:                       time.Duration(blockSyncCommitTimeoutMS) * time.Millisecond,
+		blockSyncCommitTimeoutMillisec:               time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
 	}
 }
 
@@ -81,6 +81,6 @@ func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return n.nodePublicKey
 }
 
-func (c *hardcodedConfig) BlockSyncCommitTimeout() time.Duration {
-	return c.blockSyncCommitTimeout
+func (c *hardcodedConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
+	return c.blockSyncCommitTimeoutMillisec
 }

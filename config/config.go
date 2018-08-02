@@ -20,7 +20,7 @@ type NodeConfig interface {
 	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
 
 	// block storage
-	BlockSyncCommitTimeout() time.Duration
+	BlockSyncCommitTimeoutMillisec() time.Duration
 }
 
 type FederationNode interface {

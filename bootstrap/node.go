@@ -31,7 +31,7 @@ func NewNode(
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	federationNodes map[string]config.FederationNode,
-	blockSyncCommitTimeoutMS uint32,
+	blockSyncCommitTimeoutMillisec uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
@@ -46,7 +46,7 @@ func NewNode(
 		constantConsensusLeader,
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec,
-		blockSyncCommitTimeoutMS,
+		blockSyncCommitTimeoutMillisec,
 	)
 
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))

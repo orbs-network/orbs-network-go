@@ -16,7 +16,7 @@ import (
 )
 
 type Config interface {
-	BlockSyncCommitTimeout() time.Duration
+	BlockSyncCommitTimeoutMillisec() time.Duration
 }
 
 const (
@@ -104,7 +104,7 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
 	currentBlockHeight := s.lastCommittedBlockHeight
 	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
-		timeout := time.NewTimer(s.config.BlockSyncCommitTimeout())
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillisec())
 		defer timeout.Stop()
 		tick := time.NewTicker(10 * time.Millisecond)
 		defer tick.Stop()
@@ -144,7 +144,7 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
 	currentBlockHeight := s.lastCommittedBlockHeight
 	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
-		timeout := time.NewTimer(s.config.BlockSyncCommitTimeout())
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillisec())
 		defer timeout.Stop()
 		tick := time.NewTicker(10 * time.Millisecond)
 		defer tick.Stop()

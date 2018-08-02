@@ -14,7 +14,7 @@ import (
 type testConfig struct {
 }
 
-func (c *testConfig) BlockSyncCommitTimeout() time.Duration {
+func (c *testConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
 	return 70 * time.Millisecond
 }
 
