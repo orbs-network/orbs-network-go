@@ -63,14 +63,11 @@ func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkC
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
-	senderSignature := (&gossipmessages.SenderSignatureBuilder{
-		SenderPublicKey: s.config.NodePublicKey(),
-	}).Build()
 
 	if input.Message.Status == nil {
 		return nil, &ErrCodecEncode{"BenchmarkConsensusCommittedMessage", input.Message}
 	}
-	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), senderSignature.Raw()}
+	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), input.Message.Sender.Raw()}
 
 	return nil, s.transport.Send(&adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),

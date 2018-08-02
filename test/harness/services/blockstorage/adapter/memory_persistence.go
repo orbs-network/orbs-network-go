@@ -1,27 +1,29 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/pkg/errors"
 )
 
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	WaitForBlocks(count int)
+	FailNextBlocks()
 }
 
 type inMemoryBlockPersistence struct {
-	blockWritten chan bool
-	blockPairs   []*protocol.BlockPairContainer
-	config       adapter.Config
+	blockWritten   chan bool
+	blockPairs     []*protocol.BlockPairContainer
+	failNextBlocks bool
 }
 
-func NewInMemoryBlockPersistence(config adapter.Config) InMemoryBlockPersistence {
+func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
 	return &inMemoryBlockPersistence{
-		config:       config,
-		blockWritten: make(chan bool, 10),
+		blockWritten:   make(chan bool, 10),
+		failNextBlocks: false,
 	}
 }
 
@@ -31,9 +33,15 @@ func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {
 	}
 }
 
-func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) {
+func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) error {
+	if bp.failNextBlocks {
+		return errors.New("could not write a block")
+	}
+
 	bp.blockPairs = append(bp.blockPairs, blockPair)
 	bp.blockWritten <- true
+
+	return nil
 }
 
 func (bp *inMemoryBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
@@ -58,4 +66,8 @@ func (bp *inMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeigh
 	}
 
 	return nil, fmt.Errorf("results block header with height %v not found", height)
+}
+
+func (bp *inMemoryBlockPersistence) FailNextBlocks() {
+	bp.failNextBlocks = true
 }
