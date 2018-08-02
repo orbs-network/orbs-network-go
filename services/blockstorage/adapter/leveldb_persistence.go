@@ -5,18 +5,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-type Config interface {
-}
-
 type levelDbBlockPersistence struct {
 	blockWritten chan bool
 	blockPairs   []*protocol.BlockPairContainer
-	config       Config
 }
 
-func NewLevelDbBlockPersistence(config Config) BlockPersistence {
+func NewLevelDbBlockPersistence() BlockPersistence {
 	return &levelDbBlockPersistence{
-		config:       config,
 		blockWritten: make(chan bool, 10),
 	}
 }
