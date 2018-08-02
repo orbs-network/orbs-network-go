@@ -79,6 +79,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
 			1,
+			70,
 		)
 
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
