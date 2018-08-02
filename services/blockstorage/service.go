@@ -104,6 +104,7 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
 	currentBlockHeight := s.lastCommittedBlockHeight
 	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
+		// TODO try to remove this type of polling in the future: https://github.com/orbs-network/orbs-network-go/issues/54
 		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillisec())
 		defer timeout.Stop()
 		tick := time.NewTicker(10 * time.Millisecond)
