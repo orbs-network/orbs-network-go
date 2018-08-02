@@ -8,19 +8,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
+	"github.com/orbs-network/orbs-network-go/config"
 )
-
-type testConfig struct {
-}
-
-func (c *testConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
-	return 70 * time.Millisecond
-}
-
-func (c *testConfig) NodeId() string {
-	return "node1"
-}
 
 type driver struct {
 	stateStorage   *services.MockStateStorage
@@ -60,10 +49,6 @@ func (d *driver) getBlock(height int) *protocol.BlockPairContainer {
 	return d.storageAdapter.ReadAllBlocks()[height-1]
 }
 
-func testBlockStorageConfig() blockstorage.Config {
-	return &testConfig{}
-}
-
 func (d *driver) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }
@@ -71,8 +56,8 @@ func (d *driver) failNextBlocks() {
 func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
-	d.storageAdapter = adapter.NewInMemoryBlockPersistence(&testConfig{})
-	d.blockStorage = blockstorage.NewBlockStorage(testBlockStorageConfig(), d.storageAdapter, d.stateStorage, instrumentation.GetLogger())
+	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
+	d.blockStorage = blockstorage.NewBlockStorage(config.NewBlockStorageConfig(70), d.storageAdapter, d.stateStorage, instrumentation.GetLogger())
 
 	return d
 }

@@ -17,13 +17,11 @@ type InMemoryBlockPersistence interface {
 type inMemoryBlockPersistence struct {
 	blockWritten   chan bool
 	blockPairs     []*protocol.BlockPairContainer
-	config         adapter.Config
 	failNextBlocks bool
 }
 
-func NewInMemoryBlockPersistence(config adapter.Config) InMemoryBlockPersistence {
+func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
 	return &inMemoryBlockPersistence{
-		config:         config,
 		blockWritten:   make(chan bool, 10),
 		failNextBlocks: false,
 	}
