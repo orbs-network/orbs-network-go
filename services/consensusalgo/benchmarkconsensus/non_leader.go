@@ -16,26 +16,17 @@ func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) 
 
 	err := s.nonLeaderValidateBlockUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error(err.Error()) // TODO: wrap with added context
+		s.reporting.Error("non leader failed to validate block", instrumentation.Error(err))
 		return
 	}
 	err = s.nonLeaderCommitAndReplyUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error(err.Error()) // TODO: wrap with added context
+		s.reporting.Error("non leader failed to commit and reply vote", instrumentation.Error(err))
 		return
 	}
 }
 
 func (s *service) nonLeaderValidateBlockUnderMutex(blockPair *protocol.BlockPairContainer) error {
-	// nils
-	if blockPair.TransactionsBlock == nil ||
-		blockPair.ResultsBlock == nil ||
-		blockPair.TransactionsBlock.Header == nil ||
-		blockPair.ResultsBlock.Header == nil ||
-		blockPair.ResultsBlock.BlockProof == nil {
-		panic("invalid block: missing fields")
-	}
-
 	// block height
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 	if blockHeight != blockPair.ResultsBlock.Header.BlockHeight() {
@@ -92,7 +83,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
-	s.reporting.Info("Replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()), instrumentation.Stringable("signed-data", signedData))
+	s.reporting.Info("replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()), instrumentation.Stringable("signed-data", signedData))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: recipient,
 		Message:            message,

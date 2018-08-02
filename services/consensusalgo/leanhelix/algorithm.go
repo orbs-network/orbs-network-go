@@ -1,7 +1,6 @@
 package leanhelix
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -22,10 +21,8 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	}
 
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
-		BlockHeight:             s.lastCommittedBlockHeight + 1,
-		MaxBlockSizeKb:          0,
-		MaxNumberOfTransactions: 0,
-		PrevBlockHash:           nil,
+		BlockHeight:   s.lastCommittedBlockHeight + 1,
+		PrevBlockHash: nil,
 	})
 	if err != nil {
 		return err
@@ -55,7 +52,7 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	s.blocksForRounds[nextBlockHeight] = proposedBlockPair
 	s.blocksForRoundsMutex.Unlock()
 
-	s.reporting.Info("Proposed block pair for height", instrumentation.BlockHeight(nextBlockHeight))
+	s.reporting.Info("proposed block pair", instrumentation.BlockHeight(nextBlockHeight))
 
 	return nil
 }
@@ -84,7 +81,7 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		<-s.votesForActiveRound
 	}
 
-	s.reporting.Info("Got the required votes", instrumentation.Int("votes", numOfRequiredVotes))
+	s.reporting.Info("got the required votes", instrumentation.Int("votes", numOfRequiredVotes))
 
 	return nil
 }
@@ -96,7 +93,7 @@ func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPair
 	s.blocksForRounds[blockHeight] = blockPair
 	s.blocksForRoundsMutex.Unlock()
 
-	s.reporting.Info("Voting as validator for block of height %d", instrumentation.BlockHeight(blockHeight))
+	s.reporting.Info("voting as validator for block", instrumentation.BlockHeight(blockHeight))
 	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 	return err
 }
@@ -104,9 +101,6 @@ func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPair
 func (s *service) leaderAddVoteFromValidator() {
 	// TODO: we assume we only get votes for the active round, in the real world we can't assume this,
 	// TODO:  but here since we don't move to the next round unless everybody voted, it's ok
-	if s.votesForActiveRound == nil {
-		panic("received vote while not collecting votes")
-	}
 	s.votesForActiveRound <- true
 }
 
@@ -118,9 +112,8 @@ func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 	s.blocksForRoundsMutex.RUnlock()
 
 	if !found {
-		errorMessage := "trying to commit a block that wasn't prepared"
-		s.reporting.Error(errorMessage, instrumentation.BlockHeight(blockHeight))
-		panic(fmt.Errorf(errorMessage))
+		s.reporting.Error("trying to commit a block that wasn't prepared", instrumentation.BlockHeight(blockHeight))
+		return s.lastCommittedBlockHeight
 	}
 
 	s.blockStorage.CommitBlock(&services.CommitBlockInput{
