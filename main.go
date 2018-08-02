@@ -38,6 +38,7 @@ func main() {
 		nodePublicKey,
 		nodePrivateKey,
 		federationNodes,
+		70,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 		2*1000,

@@ -65,6 +65,7 @@ func newHarness(
 		leaderPublicKey,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		5,
+		70,
 	)
 
 	log := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
