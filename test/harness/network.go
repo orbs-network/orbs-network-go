@@ -18,13 +18,17 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(ctx context.Context, network AcceptanceTestNetwork)) {
+func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
 	for _, consensusAlgo := range consensusAlgos {
 		test.WithContext(func(ctx context.Context) {
 			network := NewTestNetwork(ctx, numNodes, consensusAlgo)
-			f(ctx, network)
+			f(network)
 		})
 	}
+}
+
+func WithAlgos(algos ...consensus.ConsensusAlgoType) []consensus.ConsensusAlgoType {
+	return algos
 }
 
 type AcceptanceTestNetwork interface {
