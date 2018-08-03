@@ -9,7 +9,7 @@ type ContractInfo struct {
 	Name           primitives.ContractName
 	Permission     protocol.ExecutionPermissionScope
 	Methods        []MethodInfo
-	Implementation func(*BaseContext) ContractContext
+	Implementation func(*BaseContract) Contract
 }
 
 type MethodInfo struct {

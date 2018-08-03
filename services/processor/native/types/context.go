@@ -1,11 +1,5 @@
 package types
 
-type ContractContext interface {
-}
+import "github.com/orbs-network/orbs-spec/types/go/primitives"
 
-type BaseContext struct {
-}
-
-func NewBaseContext() *BaseContext {
-	return &BaseContext{}
-}
+type Context primitives.ExecutionContextId

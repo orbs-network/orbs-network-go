@@ -7,26 +7,22 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/pkg/errors"
 )
 
 type service struct {
-	contractRepository map[primitives.ContractName]types.ContractContext
+	contractRepository map[primitives.ContractName]types.Contract
 }
 
 func NewNativeProcessor() services.Processor {
-	// init repository
-	baseContext := types.NewBaseContext()
-	contractRepository := make(map[primitives.ContractName]types.ContractContext)
-	for _, contract := range repository.Contracts {
-		contractRepository[contract.Name] = contract.Implementation(baseContext)
-	}
-
-	return &service{
-		contractRepository: contractRepository,
-	}
+	return &service{}
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	if s.contractRepository == nil {
+		return nil, errors.New("contractRepository is not initialized")
+	}
+
 	// retrieve code
 	contractInfo, methodInfo, err := s.retrieveMethodFromRepository(input.ContractName, input.MethodName)
 	if err != nil {
@@ -46,7 +42,8 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}
 
 	// execute
-	outputArgs, contractErr, err := s.processMethodCall(contractInfo, methodInfo, input.InputArguments)
+	ctx := types.Context(input.ContextId)
+	outputArgs, contractErr, err := s.processMethodCall(ctx, contractInfo, methodInfo, input.InputArguments)
 	if err != nil {
 		return &services.ProcessCallOutput{
 			OutputArguments: nil,
@@ -70,5 +67,11 @@ func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) 
 }
 
 func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
-	panic("Not implemented")
+	baseContract := types.NewBaseContract(
+		&stateSdk{handler},
+	)
+	s.contractRepository = make(map[primitives.ContractName]types.Contract)
+	for _, contract := range repository.Contracts {
+		s.contractRepository[contract.Name] = contract.Implementation(baseContract)
+	}
 }

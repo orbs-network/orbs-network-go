@@ -78,9 +78,27 @@ func TestCallThatThrowsError(t *testing.T) {
 	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, "call result should be smart contract error")
 }
 
-func TestCallWithInvalidMissingErrorFails(t *testing.T) {
+func TestCallThatPanics(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithMethod("BenchmarkContract", "panic").WithArgs().Build()
+
+	output, err := h.service.ProcessCall(call)
+	assert.Error(t, err, "call should fail")
+	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+}
+
+func TestCallWithInvalidMethodMissingErrorFails(t *testing.T) {
 	h := newHarness()
 	call := processCallInput().WithMethod("BenchmarkContract", "invalidNoError").WithArgs().Build()
+
+	output, err := h.service.ProcessCall(call)
+	assert.Error(t, err, "call should fail")
+	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+}
+
+func TestCallWithInvalidMethodMissingContextFails(t *testing.T) {
+	h := newHarness()
+	call := processCallInput().WithMethod("BenchmarkContract", "invalidNoContext").WithArgs().Build()
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
