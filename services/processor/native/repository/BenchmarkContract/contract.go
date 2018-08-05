@@ -78,7 +78,7 @@ var METHOD_GET = types.MethodInfo{
 }
 
 func (c *contract) get(ctx types.Context) (uint64, error) {
-	return c.State.ReadUint64ByKey(ctx, "example-key"), nil
+	return c.State.ReadUint64ByKey(ctx, "example-key")
 }
 
 ///////////////////////////////////////////////////////////////////////////

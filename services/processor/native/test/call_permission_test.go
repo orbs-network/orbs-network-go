@@ -56,6 +56,7 @@ func TestCallInternalMethodFromAnotherServiceUnderSystemPermissionsSucceeds(t *t
 func TestCallWriteMethodWithWriteAccessSucceeds(t *testing.T) {
 	h := newHarness()
 	call := processCallInput().WithExternalWriteMethod().WithWriteAccess().Build()
+	h.expectSdkCallMadeWithStateWrite()
 
 	_, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")

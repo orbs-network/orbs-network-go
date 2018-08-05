@@ -4,14 +4,14 @@ import "github.com/orbs-network/orbs-spec/types/go/primitives"
 
 type StateSdk interface {
 	// read
-	ReadBytesByAddress(ctx Context, address primitives.Ripmd160Sha256) []byte
-	ReadBytesByKey(ctx Context, key string) []byte
-	ReadStringByAddress(ctx Context, address primitives.Ripmd160Sha256) string
-	ReadStringByKey(ctx Context, key string) string
-	ReadUint64ByAddress(ctx Context, address primitives.Ripmd160Sha256) uint64
-	ReadUint64ByKey(ctx Context, key string) uint64
-	ReadUint32ByAddress(ctx Context, address primitives.Ripmd160Sha256) uint32
-	ReadUint32ByKey(ctx Context, key string) uint32
+	ReadBytesByAddress(ctx Context, address primitives.Ripmd160Sha256) ([]byte, error)
+	ReadBytesByKey(ctx Context, key string) ([]byte, error)
+	ReadStringByAddress(ctx Context, address primitives.Ripmd160Sha256) (string, error)
+	ReadStringByKey(ctx Context, key string) (string, error)
+	ReadUint64ByAddress(ctx Context, address primitives.Ripmd160Sha256) (uint64, error)
+	ReadUint64ByKey(ctx Context, key string) (uint64, error)
+	ReadUint32ByAddress(ctx Context, address primitives.Ripmd160Sha256) (uint32, error)
+	ReadUint32ByKey(ctx Context, key string) (uint32, error)
 
 	// write
 	WriteBytesByAddress(ctx Context, address primitives.Ripmd160Sha256, value []byte) error

@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 type processCall struct {
@@ -95,6 +96,7 @@ func (p *processCall) WithArgs(args ...interface{}) *processCall {
 }
 
 func argumentBuilder(args ...interface{}) (res []*protocol.MethodArgument) {
+	res = []*protocol.MethodArgument{}
 	for _, arg := range args {
 		switch arg.(type) {
 		case uint32:
@@ -108,4 +110,19 @@ func argumentBuilder(args ...interface{}) (res []*protocol.MethodArgument) {
 		}
 	}
 	return
+}
+
+func handleSdkCallInput(contractName primitives.ContractName, methodName primitives.MethodName, args []*protocol.MethodArgument) *handlers.HandleSdkCallInput {
+	return &handlers.HandleSdkCallInput{
+		ContextId:      0,
+		ContractName:   contractName,
+		MethodName:     methodName,
+		InputArguments: args,
+	}
+}
+
+func handleSdkCallOutput(args []*protocol.MethodArgument) *handlers.HandleSdkCallOutput {
+	return &handlers.HandleSdkCallOutput{
+		OutputArguments: args,
+	}
 }
