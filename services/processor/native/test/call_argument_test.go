@@ -12,10 +12,8 @@ func TestCallWithNoArgsAndNoReturn(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_SUCCESS, "call result should be success")
-
-	expected := []*protocol.MethodArgument{}
-	assert.Equal(t, output.OutputArguments, expected, "call return args should be empty")
+	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	assert.Equal(t, argumentBuilder(), output.OutputArguments, "call return args should be empty")
 }
 
 func TestCallWithAllArgTypes(t *testing.T) {
@@ -24,10 +22,8 @@ func TestCallWithAllArgTypes(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_SUCCESS, "call result should be success")
-
-	expected := argumentBuilder(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01})
-	assert.Equal(t, expected, output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	assert.Equal(t, argumentBuilder(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01}), output.OutputArguments, "call return args should be equal")
 }
 
 func TestCallWithIncorrectArgTypeFails(t *testing.T) {
@@ -36,7 +32,7 @@ func TestCallWithIncorrectArgTypeFails(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 }
 
 func TestCallWithIncorrectArgNumFails(t *testing.T) {
@@ -45,13 +41,13 @@ func TestCallWithIncorrectArgNumFails(t *testing.T) {
 
 	output, err := h.service.ProcessCall(tooLittleCall)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 
 	tooMuchCall := processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}, uint32(11)).Build()
 
 	output, err = h.service.ProcessCall(tooMuchCall)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 }
 
 func TestCallWithUnknownArgTypeFails(t *testing.T) {
@@ -60,13 +56,13 @@ func TestCallWithUnknownArgTypeFails(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call1)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 
 	call2 := processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(float32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}).Build()
 
 	output, err = h.service.ProcessCall(call2)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 }
 
 func TestCallThatThrowsError(t *testing.T) {
@@ -75,7 +71,7 @@ func TestCallThatThrowsError(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, "call result should be smart contract error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, output.CallResult, "call result should be smart contract error")
 }
 
 func TestCallThatPanics(t *testing.T) {
@@ -84,7 +80,7 @@ func TestCallThatPanics(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 }
 
 func TestCallWithInvalidMethodMissingErrorFails(t *testing.T) {
@@ -93,7 +89,7 @@ func TestCallWithInvalidMethodMissingErrorFails(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 }
 
 func TestCallWithInvalidMethodMissingContextFails(t *testing.T) {
@@ -102,5 +98,5 @@ func TestCallWithInvalidMethodMissingContextFails(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, "call result should be unexpected error")
+	assert.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, output.CallResult, "call result should be unexpected error")
 }

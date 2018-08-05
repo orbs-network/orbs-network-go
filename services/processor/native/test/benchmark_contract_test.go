@@ -16,10 +16,8 @@ func TestBenchmarkContractAddMethod(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_SUCCESS, "call result should be success")
-
-	expectedResult := argumentBuilder(uint64(12 + 27))
-	assert.Equal(t, expectedResult, output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	assert.Equal(t, argumentBuilder(uint64(12+27)), output.OutputArguments, "call return args should be equal")
 }
 
 func TestBenchmarkContractSetGetMethods(t *testing.T) {
@@ -35,10 +33,8 @@ func TestBenchmarkContractSetGetMethods(t *testing.T) {
 
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_SUCCESS, "call result should be success")
-
-	expectedResult := argumentBuilder()
-	assert.Equal(t, expectedResult, output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	assert.Equal(t, argumentBuilder(), output.OutputArguments, "call return args should be equal")
 	h.verifySdkCallMade(t)
 
 	t.Log("Runs BenchmarkContract.get to read that value back from state")
@@ -48,9 +44,7 @@ func TestBenchmarkContractSetGetMethods(t *testing.T) {
 
 	output, err = h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, output.CallResult, protocol.EXECUTION_RESULT_SUCCESS, "call result should be success")
-
-	expectedResult = argumentBuilder(valueAsUint64)
-	assert.Equal(t, expectedResult, output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	assert.Equal(t, argumentBuilder(valueAsUint64), output.OutputArguments, "call return args should be equal")
 	h.verifySdkCallMade(t)
 }
