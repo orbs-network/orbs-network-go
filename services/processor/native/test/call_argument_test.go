@@ -8,7 +8,7 @@ import (
 
 func TestCallWithNoArgsAndNoReturn(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "_init").WithArgs().Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "_init").Build()
 
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
@@ -71,7 +71,7 @@ func TestCallWithUnknownArgTypeFails(t *testing.T) {
 
 func TestCallThatThrowsError(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "throw").WithArgs().Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "throw").Build()
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
@@ -80,7 +80,7 @@ func TestCallThatThrowsError(t *testing.T) {
 
 func TestCallThatPanics(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "panic").WithArgs().Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "panic").Build()
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
@@ -89,7 +89,7 @@ func TestCallThatPanics(t *testing.T) {
 
 func TestCallWithInvalidMethodMissingErrorFails(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "invalidNoError").WithArgs().Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "invalidNoError").Build()
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
@@ -98,7 +98,7 @@ func TestCallWithInvalidMethodMissingErrorFails(t *testing.T) {
 
 func TestCallWithInvalidMethodMissingContextFails(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "invalidNoContext").WithArgs().Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "invalidNoContext").Build()
 
 	output, err := h.service.ProcessCall(call)
 	assert.Error(t, err, "call should fail")
