@@ -60,12 +60,12 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	}()
 
 	// verify input args
-	argValues, err := s.verifyMethodArgs(ctx, methodInfo, methodInfo.Implementation, args)
+	argValues, err := s.prepareMethodInputArgsForCall(ctx, methodInfo, methodInfo.Implementation, args)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// execute
+	// execute the call
 	contractValue := reflect.ValueOf(s.contractRepository[contractInfo.Name])
 	contextValue := reflect.ValueOf(ctx)
 	inValues := append([]reflect.Value{contractValue, contextValue}, argValues...)
@@ -77,30 +77,32 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	// create output args
 	outArgs = []*protocol.MethodArgument{}
 	if len(outValues) > 1 {
-		outArgs, err = s.createMethodArgs(methodInfo, outValues[:len(outValues)-1])
+		outArgs, err = s.createMethodOutputArgs(methodInfo, outValues[:len(outValues)-1])
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
-	// get contract error
-	outErr, err = s.createContractError(methodInfo, outValues[len(outValues)-1])
+	// create contract output error
+	outErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
 	return outArgs, outErr, err
 }
 
-func (s *service) verifyMethodArgs(ctx types.Context, methodInfo *types.MethodInfo, implementation interface{}, args []*protocol.MethodArgument) ([]reflect.Value, error) {
+func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *types.MethodInfo, implementation interface{}, args []*protocol.MethodArgument) ([]reflect.Value, error) {
+	const NUM_ARGS_RECEIVER_AND_CONTEXT = 2
+
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(implementation).Type()
-	if methodType.NumIn() < 2 || methodType.In(1) != reflect.TypeOf(ctx) {
+	if methodType.NumIn() < NUM_ARGS_RECEIVER_AND_CONTEXT || methodType.In(1) != reflect.TypeOf(ctx) {
 		return nil, errors.Errorf("method '%s' first arg is not Context", methodInfo.Name)
 	}
 
-	if methodType.NumIn()-2 != len(args) {
-		return nil, errors.Errorf("method '%s' takes %d args but received %d", methodInfo.Name, methodType.NumIn()-2, len(args))
+	if methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT != len(args) {
+		return nil, errors.Errorf("method '%s' takes %d args but received %d", methodInfo.Name, methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT, len(args))
 	}
 
-	for i := 0; i < methodType.NumIn()-2; i++ {
-		switch methodType.In(i + 2).Kind() {
+	for i := 0; i < methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT; i++ {
+		switch methodType.In(i + NUM_ARGS_RECEIVER_AND_CONTEXT).Kind() {
 		case reflect.Uint32:
 			if !args[i].IsTypeUint32Value() {
 				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, args[i].Type())
@@ -117,7 +119,7 @@ func (s *service) verifyMethodArgs(ctx types.Context, methodInfo *types.MethodIn
 			}
 			res = append(res, reflect.ValueOf(args[i].StringValue()))
 		case reflect.Slice:
-			if methodType.In(i+2).Elem().Kind() != reflect.Uint8 {
+			if methodType.In(i+NUM_ARGS_RECEIVER_AND_CONTEXT).Elem().Kind() != reflect.Uint8 {
 				return nil, errors.Errorf("method '%s' arg %d slice type is not byte", methodInfo.Name, i)
 			}
 			if !args[i].IsTypeBytesValue() {
@@ -132,7 +134,7 @@ func (s *service) verifyMethodArgs(ctx types.Context, methodInfo *types.MethodIn
 	return res, nil
 }
 
-func (s *service) createMethodArgs(methodInfo *types.MethodInfo, args []reflect.Value) ([]*protocol.MethodArgument, error) {
+func (s *service) createMethodOutputArgs(methodInfo *types.MethodInfo, args []reflect.Value) ([]*protocol.MethodArgument, error) {
 	res := []*protocol.MethodArgument{}
 	for i, arg := range args {
 		switch arg.Kind() {
@@ -154,7 +156,7 @@ func (s *service) createMethodArgs(methodInfo *types.MethodInfo, args []reflect.
 	return res, nil
 }
 
-func (s *service) createContractError(methodInfo *types.MethodInfo, value reflect.Value) (outErr error, err error) {
+func (s *service) createContractOutputError(methodInfo *types.MethodInfo, value reflect.Value) (outErr error, err error) {
 	if value.Interface() != nil {
 		var ok bool
 		outErr, ok = value.Interface().(error)
