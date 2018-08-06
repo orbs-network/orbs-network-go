@@ -36,9 +36,12 @@ func NewNode(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
+	belowMinimalBlockDelayMillis uint32,
+	minimumTransactionsInBlock int,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
+
 	nodeConfig := config.NewHardCodedConfig(
 		federationNodes,
 		nodePublicKey,
@@ -47,6 +50,8 @@ func NewNode(
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec,
 		blockSyncCommitTimeoutMillisec,
+		belowMinimalBlockDelayMillis,
+		minimumTransactionsInBlock,
 	)
 
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))

@@ -21,6 +21,10 @@ type NodeConfig interface {
 
 	// block storage
 	BlockSyncCommitTimeoutMillisec() time.Duration
+
+	// consensus context
+	BelowMinimalBlockDelayMillis() uint32
+	MinimumTransactionsInBlock() int
 }
 
 type FederationNode interface {

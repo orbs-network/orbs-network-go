@@ -25,6 +25,11 @@ type blockStorageConfig struct {
 	blockSyncCommitTimeoutMillisec time.Duration
 }
 
+type consensusContextConfig struct {
+	belowMinimalBlockDelayMillis uint32
+	minimumTransactionsInBlock   int
+}
+
 type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
@@ -33,6 +38,7 @@ type hardcodedConfig struct {
 	*identity
 	*consensusConfig
 	*blockStorageConfig
+	*consensusContextConfig
 }
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -49,6 +55,8 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32,
 	blockSyncCommitTimeoutMillisec uint32,
+	belowMinimalBlockDelayMillis uint32,
+	minimumTransactionsInBlock int,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -65,6 +73,10 @@ func NewHardCodedConfig(
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
 		},
+		consensusContextConfig: &consensusContextConfig{
+			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
+			minimumTransactionsInBlock:   minimumTransactionsInBlock,
+		},
 	}
 }
 
@@ -79,8 +91,8 @@ func NewConsensusConfig(
 
 	return &consensusConfig{
 		identity: &identity{
-			nodePublicKey:                                nodePublicKey,
-			nodePrivateKey:                               nodePrivateKey,
+			nodePublicKey:  nodePublicKey,
+			nodePrivateKey: nodePrivateKey,
 		},
 		federationNodes:                              federationNodes,
 		constantConsensusLeader:                      constantConsensusLeader,
@@ -90,7 +102,14 @@ func NewConsensusConfig(
 }
 
 func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillisec:time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+	return &blockStorageConfig{blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+}
+
+func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {
+	return &consensusContextConfig{
+		belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
+		minimumTransactionsInBlock:   minimumTransactionsInBlock,
+	}
 }
 
 func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
@@ -127,4 +146,12 @@ func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 
 func (c *blockStorageConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
 	return c.blockSyncCommitTimeoutMillisec
+}
+
+func (c *consensusContextConfig) BelowMinimalBlockDelayMillis() uint32 {
+	return c.belowMinimalBlockDelayMillis
+}
+
+func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
+	return c.minimumTransactionsInBlock
 }

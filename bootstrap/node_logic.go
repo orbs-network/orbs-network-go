@@ -47,7 +47,7 @@ func NewNodeLogic(
 	ethereumCrosschainConnector := ethereum.NewEthereumCrosschainConnector()
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, nativeProcessor, ethereumCrosschainConnector)
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
-	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
+	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig)
 
 	var consensusAlgos []services.ConsensusAlgo
 	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))

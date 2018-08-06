@@ -80,6 +80,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			consensusAlgo,
 			1,
 			70,
+			300, 0,
 		)
 
 		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
