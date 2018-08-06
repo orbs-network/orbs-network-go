@@ -7,7 +7,7 @@ import (
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 
 	h := newHarness()
-	txCount := 3
+	txCount := h.config.MinimumTransactionsInBlock() + 1
 
 	h.expectTransactionsRequestedFromTransactionPool(txCount)
 
@@ -25,7 +25,12 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 func TestRetryWhenNotEnoughTransactionsPendingOnTransactionPool(t *testing.T) {
 
 	h := newHarness()
-	txCount := 3
+
+	if h.config.MinimumTransactionsInBlock() <= 0 {
+		t.Errorf("must set MinimumTransactionsInBlock > 0 in test config")
+	}
+
+	txCount := h.config.MinimumTransactionsInBlock() - 1
 
 
 	// TODO: The order of expect() is reversed: Tal should fix it and the order of expects() here should then be reversed!!!

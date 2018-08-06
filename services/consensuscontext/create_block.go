@@ -6,14 +6,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
 
 	proposedTransactions, err := s.fetchTransactions(&services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: 1,
-	}, 2, 1000*time.Millisecond)
+	}, s.config.MinimumTransactionsInBlock(), s.config.BelowMinimalBlockDelayMillis())
 	if err != nil {
 		return nil, err
 	}

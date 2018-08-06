@@ -4,22 +4,30 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+type Config interface {
+	MinimumTransactionsInBlock() int
+	BelowMinimalBlockDelayMillis() uint32
+}
+
 type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
+	config          Config
 }
 
 func NewConsensusContext(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
+	config Config,
 ) services.ConsensusContext {
 
 	return &service{
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
 		stateStorage:    stateStorage,
+		config:          config,
 	}
 }
 

@@ -2,7 +2,6 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -10,13 +9,14 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"testing"
+	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type harness struct {
 	transactionPool *services.MockTransactionPool
 	reporting       instrumentation.BasicLogger
-	config          benchmarkconsensus.Config
 	service         services.ConsensusContext
+	config          consensuscontext.Config
 }
 
 func (h *harness) requestTransactionsBlock() (*protocol.TransactionsBlockContainer, error) {
@@ -62,12 +62,15 @@ func newHarness() *harness {
 
 	transactionPool := &services.MockTransactionPool{}
 
-	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil)
+	serviceConfig := config.NewConsensusContextConfig(300, 1)
+
+	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
+		serviceConfig)
 
 	return &harness{
 		transactionPool: transactionPool,
 		reporting:       log,
-		config:          nil,
 		service:         service,
+		config:          serviceConfig,
 	}
 }
