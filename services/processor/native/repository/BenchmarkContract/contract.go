@@ -20,7 +20,7 @@ var CONTRACT = types.ContractInfo{
 		METHOD_INVALID_NOERROR,
 		METHOD_INVALID_NOCONTEXT,
 	},
-	Implementation: newContract,
+	InitSingleton: newContract,
 }
 
 func newContract(base *types.BaseContract) types.Contract {

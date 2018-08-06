@@ -9,5 +9,5 @@ import (
 var Contracts = []types.ContractInfo{
 	benchmarkcontract.CONTRACT,
 	benchmarktoken.CONTRACT,
-	// add contracts here
+	// add new native system contracts here
 }

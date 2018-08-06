@@ -18,13 +18,24 @@ func NewNativeProcessor() services.Processor {
 	return &service{}
 }
 
+// runs once on system initialization (called by the virtual machine constructor)
+func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
+	baseContract := types.NewBaseContract(
+		&stateSdk{handler},
+	)
+	s.contractRepository = make(map[primitives.ContractName]types.Contract)
+	for _, contract := range repository.Contracts {
+		s.contractRepository[contract.Name] = contract.InitSingleton(baseContract)
+	}
+}
+
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	if s.contractRepository == nil {
 		return nil, errors.New("contractRepository is not initialized")
 	}
 
 	// retrieve code
-	contractInfo, methodInfo, err := s.retrieveMethodFromRepository(input.ContractName, input.MethodName)
+	contractInfo, methodInfo, err := s.retrieveContractFromRepository(input.ContractName, input.MethodName)
 	if err != nil {
 		return &services.ProcessCallOutput{
 			OutputArguments: nil,
@@ -64,14 +75,4 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 
 func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) (*services.DeployNativeServiceOutput, error) {
 	panic("Not implemented")
-}
-
-func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
-	baseContract := types.NewBaseContract(
-		&stateSdk{handler},
-	)
-	s.contractRepository = make(map[primitives.ContractName]types.Contract)
-	for _, contract := range repository.Contracts {
-		s.contractRepository[contract.Name] = contract.Implementation(baseContract)
-	}
 }

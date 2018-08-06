@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-func (s *service) retrieveMethodFromRepository(contractName primitives.ContractName, methodName primitives.MethodName) (*types.ContractInfo, *types.MethodInfo, error) {
+func (s *service) retrieveContractFromRepository(contractName primitives.ContractName, methodName primitives.MethodName) (*types.ContractInfo, *types.MethodInfo, error) {
 	for _, contract := range repository.Contracts {
 		if contractName.Equal(contract.Name) {
 			for _, method := range contract.Methods {
@@ -52,7 +52,7 @@ func (s *service) verifyInternalMethodCall(contractInfo *types.ContractInfo, met
 	return errors.Errorf("internal method '%s' called from different service '%s' without system permissions", methodInfo.Name, callingService)
 }
 
-func (s *service) processMethodCall(ctx types.Context, contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args []*protocol.MethodArgument) (outArgs []*protocol.MethodArgument, outErr error, err error) {
+func (s *service) processMethodCall(ctx types.Context, contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args []*protocol.MethodArgument) (contractOutputArgs []*protocol.MethodArgument, contractOutputErr error, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("call method '%s' panicked: %v", methodInfo.Name, r)
@@ -75,17 +75,17 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	}
 
 	// create output args
-	outArgs = []*protocol.MethodArgument{}
+	contractOutputArgs = []*protocol.MethodArgument{}
 	if len(outValues) > 1 {
-		outArgs, err = s.createMethodOutputArgs(methodInfo, outValues[:len(outValues)-1])
+		contractOutputArgs, err = s.createMethodOutputArgs(methodInfo, outValues[:len(outValues)-1])
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
 	// create contract output error
-	outErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
-	return outArgs, outErr, err
+	contractOutputErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
+	return contractOutputArgs, contractOutputErr, err
 }
 
 func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *types.MethodInfo, implementation interface{}, args []*protocol.MethodArgument) ([]reflect.Value, error) {

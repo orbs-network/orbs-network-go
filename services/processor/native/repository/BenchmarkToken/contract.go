@@ -14,7 +14,7 @@ var CONTRACT = types.ContractInfo{
 		METHOD_TRANSFER,
 		METHOD_GETBALANCE,
 	},
-	Implementation: newContract,
+	InitSingleton: newContract,
 }
 
 func newContract(base *types.BaseContract) types.Contract {
