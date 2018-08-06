@@ -104,7 +104,7 @@ func (s *server) handler(handler func(bytes []byte, r *response)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			s.reporting.Error("could not read http request body", instrumentation.Error(err))
+			s.reporting.Info("could not read http request body", instrumentation.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return

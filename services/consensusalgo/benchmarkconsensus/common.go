@@ -27,14 +27,11 @@ func (s *service) saveToBlockStorage(blockPair *protocol.BlockPairContainer) err
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return nil
 	}
-	s.reporting.Info("Saving block to storage", instrumentation.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	s.reporting.Info("saving block to storage", instrumentation.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
