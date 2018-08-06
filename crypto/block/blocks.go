@@ -1,4 +1,4 @@
-package crypto
+package block
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"

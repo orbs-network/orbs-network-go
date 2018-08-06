@@ -1,7 +1,7 @@
 package consensuscontext
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/block"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -48,7 +48,7 @@ func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlo
 			ProtocolVersion:          blockstorage.ProtocolVersion,
 			BlockHeight:              blockHeight,
 			PrevBlockHashPtr:         prevBlockHash,
-			TransactionsBlockHashPtr: crypto.CalcTransactionsBlockHash(transactionsBlock),
+			TransactionsBlockHashPtr: block.CalcTransactionsBlockHash(transactionsBlock),
 			NumTransactionReceipts:   uint32(len(output.TransactionReceipts)),
 			NumContractStateDiffs:    uint32(len(output.ContractStateDiffs)),
 		}).Build(),

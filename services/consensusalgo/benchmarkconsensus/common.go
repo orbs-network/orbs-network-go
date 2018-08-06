@@ -1,7 +1,7 @@
 package benchmarkconsensus
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/block"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -45,11 +45,11 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 
 	// prev block hash ptr (if given)
 	if prevCommittedBlockPair != nil {
-		prevTxHash := crypto.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
+		prevTxHash := block.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
 		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
 			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
 		}
-		prevRxHash := crypto.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
+		prevRxHash := block.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
 		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
 			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
 		}
@@ -69,8 +69,8 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 }
 
 func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
-	txHash := crypto.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
-	rxHash := crypto.CalcResultsBlockHash(blockPair.ResultsBlock)
+	txHash := block.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
+	rxHash := block.CalcResultsBlockHash(blockPair.ResultsBlock)
 	xorHash := logic.CalcXor(txHash, rxHash)
 	return xorHash
 }
