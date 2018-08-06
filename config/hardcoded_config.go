@@ -26,7 +26,7 @@ type blockStorageConfig struct {
 }
 
 type stateStorageConfig struct {
-	maxStateHistory	uint64
+	maxStateHistory uint64
 }
 
 type hardCodedFederationNode struct {
@@ -54,7 +54,7 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32,
 	blockSyncCommitTimeoutMillisec uint32,
-	maxStateHistory	uint64,
+	maxStateHistory uint64,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -71,7 +71,7 @@ func NewHardCodedConfig(
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
 		},
-		stateStorageConfig: &stateStorageConfig{ maxStateHistory:maxStateHistory },
+		stateStorageConfig: &stateStorageConfig{maxStateHistory: maxStateHistory},
 	}
 
 }
@@ -87,18 +87,19 @@ func NewConsensusConfig(
 
 	return &consensusConfig{
 		identity: &identity{
-			nodePublicKey:                                nodePublicKey,
-			nodePrivateKey:                               nodePrivateKey,
+			nodePublicKey:  nodePublicKey,
+			nodePrivateKey: nodePrivateKey,
 		},
 		federationNodes:                              federationNodes,
 		constantConsensusLeader:                      constantConsensusLeader,
 		activeConsensusAlgo:                          activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
+		maxStateHistory:                              maxStateHistory,
 	}
 }
 
 func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillisec:time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+	return &blockStorageConfig{blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
 }
 
 func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {

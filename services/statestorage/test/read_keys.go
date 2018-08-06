@@ -3,7 +3,7 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	)
+)
 
 var _ bool = Describe("Reading a Key", func() {
 	When("key doesn't exist", func() {
@@ -37,7 +37,7 @@ var _ bool = Describe("Reading a Key", func() {
 			It("Returns 5 values (some are empty)", func() {
 				d := newStateStorageDriver(1)
 
-				d.commitValuePairs("contract","key1", "bar1", "key2", "bar2", "key3", "bar3", "key4", "bar4", "key5", "bar5")
+				d.commitValuePairs("contract", "key1", "bar1", "key2", "bar2", "key3", "bar3", "key4", "bar4", "key5", "bar5")
 
 				output, err := d.readKeys("contract", "key1", "key22", "key5", "key3", "key6")
 				Expect(err).ToNot(HaveOccurred())
