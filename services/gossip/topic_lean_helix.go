@@ -1,10 +1,12 @@
 package gossip
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 )
 
 func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler) {
@@ -34,7 +36,7 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 		return nil, err
 	}
 	if input.Message.SignedHeader == nil || input.Message.Sender == nil {
-		return nil, &ErrCodecEncode{"LeanHelixPrePrepareMessage", input.Message}
+		return nil, errors.Errorf("cannot encode LeanHelixPrePrepareMessage", instrumentation.Stringable("message", input.Message))
 	}
 	payloads := append([][]byte{header.Raw(), input.Message.SignedHeader.Raw(), input.Message.Sender.Raw()}, blockPairPayloads...)
 
