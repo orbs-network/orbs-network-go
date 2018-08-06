@@ -60,6 +60,7 @@ var _ = Describe("The Orbs Network", func() {
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey(),
 				map[string]config.FederationNode{nodeKeyPair.PublicKey().KeyForMap(): config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())},
+				70,
 				nodeKeyPair.PublicKey(), // we are the leader
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				2*1000,

@@ -3,7 +3,8 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	)
+	"time"
+)
 
 type NodeConfig interface {
 	NodePublicKey() primitives.Ed25519PublicKey
@@ -17,6 +18,9 @@ type NodeConfig interface {
 
 	// benchmark consensus
 	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
+
+	// block storage
+	BlockSyncCommitTimeoutMillisec() time.Duration
 
 	// state storage
 	GetMaxStateHistory() uint64

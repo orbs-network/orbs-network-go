@@ -18,17 +18,20 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(ctx context.Context, network AcceptanceTestNetwork)) {
+func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
 	for _, consensusAlgo := range consensusAlgos {
 		test.WithContext(func(ctx context.Context) {
-			network := NewTestNetwork(ctx, 2, consensusAlgo)
-			f(ctx, network)
+			network := NewTestNetwork(ctx, numNodes, consensusAlgo)
+			f(network)
 		})
 	}
 }
 
+func WithAlgos(algos ...consensus.ConsensusAlgoType) []consensus.ConsensusAlgoType {
+	return algos
+}
+
 type AcceptanceTestNetwork interface {
-	FlushLog()
 	GossipTransport() gossipAdapter.TamperingTransport
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
@@ -52,7 +55,7 @@ type networkNode struct {
 func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
 
 	testLogger := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
-	testLogger.Info("Creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
+	testLogger.Info("creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
 
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
@@ -76,11 +79,13 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
 			1,
+			70,
 			5,
 		)
 
-		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(nodes[i].config)
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence()
+		nodes[i].blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
+
 		nodes[i].nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			sharedTamperingTransport,
@@ -95,10 +100,6 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 		nodes:           nodes,
 		gossipTransport: sharedTamperingTransport,
 	}
-}
-
-func (n *acceptanceTestNetwork) FlushLog() {
-
 }
 
 func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {

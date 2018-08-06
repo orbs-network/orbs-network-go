@@ -15,6 +15,14 @@ func LeanHelixMessage(messageType consensus.LeanHelixMessageType) MessagePredica
 	}
 }
 
+func BenchmarkConsensusMessage(messageType consensus.BenchmarkConsensusMessageType) MessagePredicate {
+	return func(data *adapter.TransportData) bool {
+		header, ok := parseHeader(data)
+
+		return ok && header.IsTopicBenchmarkConsensus() && header.BenchmarkConsensus() == messageType
+	}
+}
+
 func TransactionRelayMessage(messageType gossipmessages.TransactionsRelayMessageType) MessagePredicate {
 	return func(data *adapter.TransportData) bool {
 		header, ok := parseHeader(data)

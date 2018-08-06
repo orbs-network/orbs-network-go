@@ -33,20 +33,21 @@ var _ = Describe("Block storage", func() {
 			driver.commitBlock(block)
 
 			result := make(chan *services.GetTransactionsBlockHeaderOutput)
+			blockHeightInTheFuture := primitives.BlockHeight(5)
 
 			go func() {
-				output, _ := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: 5})
+				output, _ := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
 				result <- output
 			}()
 
-			for i := 2; i <= 6; i++ {
+			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
 				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 			}
 
-			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
+			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(BeEquivalentTo(blockHeightInTheFuture + 1))
 
 			output := <-result
-			Expect(output.TransactionsBlockHeader.BlockHeight()).To(Equal(primitives.BlockHeight(5)))
+			Expect(output.TransactionsBlockHeader.BlockHeight()).To(Equal(blockHeightInTheFuture))
 
 			close(done)
 		}, 100)
@@ -59,14 +60,15 @@ var _ = Describe("Block storage", func() {
 			driver.commitBlock(block)
 
 			timeoutError := make(chan error)
+			blockHeightInTheFuture := primitives.BlockHeight(5)
 
 			go func() {
-				_, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: 5})
+				_, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
 				timeoutError <- err
 			}()
 
-			for i := 2; i <= 4; i++ {
-				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+			for i := primitives.BlockHeight(2); i <= 4; i++ {
+				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 			}
 
 			err := <-timeoutError
@@ -99,21 +101,22 @@ var _ = Describe("Block storage", func() {
 			driver.commitBlock(block)
 
 			result := make(chan *services.GetResultsBlockHeaderOutput)
+			blockHeightInTheFuture := primitives.BlockHeight(5)
 
 			go func() {
-				output, _ := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: 5})
+				output, _ := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
 				result <- output
 			}()
 
-			for i := 2; i <= 6; i++ {
-				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
+				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 			}
 
-			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(primitives.BlockHeight(6)))
+			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(blockHeightInTheFuture + 1))
 
 			output := <-result
 
-			Expect(output.ResultsBlockHeader.BlockHeight()).To(Equal(primitives.BlockHeight(5)))
+			Expect(output.ResultsBlockHeader.BlockHeight()).To(Equal(blockHeightInTheFuture))
 
 			close(done)
 		}, 100)
@@ -126,14 +129,15 @@ var _ = Describe("Block storage", func() {
 			driver.commitBlock(block)
 
 			timeoutError := make(chan error)
+			blockHeightInTheFuture := primitives.BlockHeight(5)
 
 			go func() {
-				_, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: 5})
+				_, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
 				timeoutError <- err
 			}()
 
-			for i := 2; i <= 4; i++ {
-				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture-1; i++ {
+				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 			}
 
 			err := <-timeoutError
