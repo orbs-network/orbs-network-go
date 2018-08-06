@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/binary"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -18,7 +19,7 @@ func TestBenchmarkTokenGetBalancePostInit(t *testing.T) {
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
 	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, argumentBuilder(uint64(0)), output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, builders.MethodArguments(uint64(0)), output.OutputArguments, "call return args should be equal")
 	h.verifySdkCallMade(t)
 }
 
@@ -37,7 +38,7 @@ func TestBenchmarkTokenTransferThenGetBalance(t *testing.T) {
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
 	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, argumentBuilder(), output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, builders.MethodArguments(), output.OutputArguments, "call return args should be equal")
 	h.verifySdkCallMade(t)
 
 	t.Log("Runs BenchmarkToken.getBalance")
@@ -48,7 +49,7 @@ func TestBenchmarkTokenTransferThenGetBalance(t *testing.T) {
 	output, err = h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
 	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, argumentBuilder(valueAsUint64), output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, builders.MethodArguments(valueAsUint64), output.OutputArguments, "call return args should be equal")
 	h.verifySdkCallMade(t)
 }
 

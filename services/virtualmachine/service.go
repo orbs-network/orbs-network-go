@@ -3,6 +3,7 @@ package virtualmachine
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -14,6 +15,7 @@ type service struct {
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
+	reporting            instrumentation.BasicLogger
 }
 
 func NewVirtualMachine(
@@ -21,14 +23,22 @@ func NewVirtualMachine(
 	stateStorage services.StateStorage,
 	processors map[protocol.ProcessorType]services.Processor,
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector,
+	reporting instrumentation.BasicLogger,
 ) services.VirtualMachine {
 
-	return &service{
+	s := &service{
 		blockStorage:         blockStorage,
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
+		reporting:            reporting.For(instrumentation.Service("virtual-machine")),
 	}
+
+	for _, processor := range processors {
+		processor.RegisterContractSdkCallHandler(s)
+	}
+
+	return s
 }
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {

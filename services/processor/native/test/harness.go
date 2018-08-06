@@ -3,6 +3,7 @@ package test
 import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,7 @@ func (h *harness) expectSdkCallMadeWithStateRead(returnValue []byte) {
 	}
 
 	readReturn := &handlers.HandleSdkCallOutput{
-		OutputArguments: argumentBuilder(returnValue),
+		OutputArguments: builders.MethodArguments(returnValue),
 	}
 
 	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State and method equals read", stateReadCallMatcher)).Return(readReturn, nil).Times(1)

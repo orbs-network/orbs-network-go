@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -13,7 +14,7 @@ func TestCallWithNoArgsAndNoReturn(t *testing.T) {
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
 	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, argumentBuilder(), output.OutputArguments, "call return args should be empty")
+	assert.Equal(t, builders.MethodArguments(), output.OutputArguments, "call return args should be empty")
 }
 
 func TestCallWithAllArgTypes(t *testing.T) {
@@ -23,7 +24,7 @@ func TestCallWithAllArgTypes(t *testing.T) {
 	output, err := h.service.ProcessCall(call)
 	assert.NoError(t, err, "call should succeed")
 	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, argumentBuilder(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01}), output.OutputArguments, "call return args should be equal")
+	assert.Equal(t, builders.MethodArguments(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01}), output.OutputArguments, "call return args should be equal")
 }
 
 func TestCallWithIncorrectArgTypeFails(t *testing.T) {
