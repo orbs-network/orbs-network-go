@@ -15,14 +15,14 @@ type identity struct {
 
 type consensusConfig struct {
 	*identity
-	federationNodes                              map[string]FederationNode
-	constantConsensusLeader                      primitives.Ed25519PublicKey
-	activeConsensusAlgo                          consensus.ConsensusAlgoType
-	benchmarkConsensusRoundRetryIntervalMillisec uint32
+	federationNodes                            map[string]FederationNode
+	constantConsensusLeader                    primitives.Ed25519PublicKey
+	activeConsensusAlgo                        consensus.ConsensusAlgoType
+	benchmarkConsensusRoundRetryIntervalMillis uint32
 }
 
 type blockStorageConfig struct {
-	blockSyncCommitTimeoutMillisec time.Duration
+	blockSyncCommitTimeoutMillis time.Duration
 }
 
 type consensusContextConfig struct {
@@ -53,8 +53,8 @@ func NewHardCodedConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillisec uint32,
-	blockSyncCommitTimeoutMillisec uint32,
+	benchmarkConsensusRoundRetryIntervalMillis uint32,
+	blockSyncCommitTimeoutMillis uint32,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) NodeConfig {
@@ -65,13 +65,13 @@ func NewHardCodedConfig(
 			nodePrivateKey: nodePrivateKey,
 		},
 		consensusConfig: &consensusConfig{
-			federationNodes:                              federationNodes,
-			constantConsensusLeader:                      constantConsensusLeader,
-			activeConsensusAlgo:                          activeConsensusAlgo,
-			benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
+			federationNodes:                            federationNodes,
+			constantConsensusLeader:                    constantConsensusLeader,
+			activeConsensusAlgo:                        activeConsensusAlgo,
+			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		blockStorageConfig: &blockStorageConfig{
-			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
+			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
 		},
 		consensusContextConfig: &consensusContextConfig{
 			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
@@ -86,7 +86,7 @@ func NewConsensusConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillisec uint32,
+	benchmarkConsensusRoundRetryIntervalMillis uint32,
 ) *consensusConfig {
 
 	return &consensusConfig{
@@ -94,15 +94,15 @@ func NewConsensusConfig(
 			nodePublicKey:  nodePublicKey,
 			nodePrivateKey: nodePrivateKey,
 		},
-		federationNodes:                              federationNodes,
-		constantConsensusLeader:                      constantConsensusLeader,
-		activeConsensusAlgo:                          activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
+		federationNodes:                            federationNodes,
+		constantConsensusLeader:                    constantConsensusLeader,
+		activeConsensusAlgo:                        activeConsensusAlgo,
+		benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 	}
 }
 
 func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+	return &blockStorageConfig{blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
 }
 
 func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {
@@ -136,16 +136,16 @@ func (c *consensusConfig) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
 }
 
-func (c *consensusConfig) BenchmarkConsensusRoundRetryIntervalMillisec() uint32 {
-	return c.benchmarkConsensusRoundRetryIntervalMillisec
+func (c *consensusConfig) BenchmarkConsensusRoundRetryIntervalMillis() uint32 {
+	return c.benchmarkConsensusRoundRetryIntervalMillis
 }
 
 func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return n.nodePublicKey
 }
 
-func (c *blockStorageConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
-	return c.blockSyncCommitTimeoutMillisec
+func (c *blockStorageConfig) BlockSyncCommitTimeoutMillis() time.Duration {
+	return c.blockSyncCommitTimeoutMillis
 }
 
 func (c *consensusContextConfig) BelowMinimalBlockDelayMillis() uint32 {

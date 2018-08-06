@@ -31,10 +31,10 @@ func NewNode(
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	federationNodes map[string]config.FederationNode,
-	blockSyncCommitTimeoutMillisec uint32,
+	blockSyncCommitTimeoutMillis uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
+	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
@@ -48,8 +48,8 @@ func NewNode(
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillisec,
-		blockSyncCommitTimeoutMillisec,
+		benchmarkConsensusRoundRetryIntervalMillis,
+		blockSyncCommitTimeoutMillis,
 		belowMinimalBlockDelayMillis,
 		minimumTransactionsInBlock,
 	)

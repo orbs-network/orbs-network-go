@@ -16,7 +16,7 @@ import (
 )
 
 type Config interface {
-	BlockSyncCommitTimeoutMillisec() time.Duration
+	BlockSyncCommitTimeoutMillis() time.Duration
 }
 
 const (
@@ -105,7 +105,7 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 	currentBlockHeight := s.lastCommittedBlockHeight
 	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
 		// TODO try to remove this type of polling in the future: https://github.com/orbs-network/orbs-network-go/issues/54
-		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillisec())
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillis())
 		defer timeout.Stop()
 		tick := time.NewTicker(10 * time.Millisecond)
 		defer tick.Stop()
@@ -145,7 +145,7 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
 	currentBlockHeight := s.lastCommittedBlockHeight
 	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
-		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillisec())
+		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillis())
 		defer timeout.Stop()
 		tick := time.NewTicker(10 * time.Millisecond)
 		defer tick.Stop()
