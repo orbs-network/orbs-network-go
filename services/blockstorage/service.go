@@ -33,9 +33,8 @@ type service struct {
 	reporting               instrumentation.BasicLogger
 	consensusBlocksHandlers []handlers.ConsensusBlocksHandler
 
-	lastCommittedBlockHeight    primitives.BlockHeight
-	lastCommittedBlockTimestamp primitives.TimestampNano
-	lastBlockLock               *sync.Mutex
+	lastCommittedBlock *protocol.BlockPairContainer
+	lastBlockLock      *sync.Mutex
 }
 
 func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
@@ -69,7 +68,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 		return nil, err
 	}
 
-	s.updateLastCommittedBlockHeightAndTimestamp(txBlockHeader)
+	s.updateLastCommittedBlock(input.BlockPair)
 
 	// TODO: why are we updating the state? nothing about this in the spec
 	s.updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(input.BlockPair.TransactionsBlock)
@@ -79,12 +78,25 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	return nil, nil
 }
 
-func (s *service) updateLastCommittedBlockHeightAndTimestamp(txBlockHeader *protocol.TransactionsBlockHeader) {
+func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
 	s.lastBlockLock.Lock()
 	defer s.lastBlockLock.Unlock()
 
-	s.lastCommittedBlockHeight = txBlockHeader.BlockHeight()
-	s.lastCommittedBlockTimestamp = txBlockHeader.Timestamp()
+	s.lastCommittedBlock = block
+}
+
+func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
+	if s.lastCommittedBlock == nil {
+		return 0
+	}
+	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+}
+
+func (s *service) lastCommittedBlockTimestamp() primitives.TimestampNano {
+	if s.lastCommittedBlock == nil {
+		return 0
+	}
+	return s.lastCommittedBlock.TransactionsBlock.Header.Timestamp()
 }
 
 func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
@@ -102,7 +114,7 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 }
 
 func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
-	currentBlockHeight := s.lastCommittedBlockHeight
+	currentBlockHeight := s.lastCommittedBlockHeight()
 	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
 		// TODO try to remove this type of polling in the future: https://github.com/orbs-network/orbs-network-go/issues/54
 		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillisec())
@@ -115,7 +127,7 @@ func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBloc
 			case <-timeout.C:
 				return nil, errors.New("operation timed out")
 			case <-tick.C:
-				if input.BlockHeight <= s.lastCommittedBlockHeight {
+				if input.BlockHeight <= s.lastCommittedBlockHeight() {
 					lookupResult, err := s.loadTransactionsBlockHeader(input.BlockHeight)
 
 					if err == nil {
@@ -143,7 +155,7 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 }
 
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
-	currentBlockHeight := s.lastCommittedBlockHeight
+	currentBlockHeight := s.lastCommittedBlockHeight()
 	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
 		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillisec())
 		defer timeout.Stop()
@@ -155,7 +167,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 			case <-timeout.C:
 				return nil, errors.New("operation timed out")
 			case <-tick.C:
-				if input.BlockHeight <= s.lastCommittedBlockHeight {
+				if input.BlockHeight <= s.lastCommittedBlockHeight() {
 					lookupResult, err := s.loadResultsBlockHeader(input.BlockHeight)
 
 					if err == nil {
@@ -172,8 +184,8 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 func (s *service) createEmptyTransactionReceiptResult() *services.GetTransactionReceiptOutput {
 	return &services.GetTransactionReceiptOutput{
 		TransactionReceipt: nil,
-		BlockHeight:        s.lastCommittedBlockHeight,
-		BlockTimestamp:     s.lastCommittedBlockTimestamp,
+		BlockHeight:        s.lastCommittedBlockHeight(),
+		BlockTimestamp:     s.lastCommittedBlockTimestamp(),
 	}
 }
 
@@ -183,8 +195,8 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 
 func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    s.lastCommittedBlockHeight,
-		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
+		LastCommittedBlockHeight:    s.lastCommittedBlockHeight(),
+		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
 	}, nil
 }
 
@@ -220,9 +232,9 @@ func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseI
 
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
-	currentBlockHeight := s.lastCommittedBlockHeight
+	currentBlockHeight := s.lastCommittedBlockHeight()
 	if txBlockHeader.BlockHeight() <= currentBlockHeight {
-		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp {
+		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "block already in storage, timestamp mismatch"
 			s.reporting.Error(errorMessage, instrumentation.BlockHeight(currentBlockHeight))
 			return false, errors.New(errorMessage)
@@ -236,7 +248,7 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 }
 
 func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
-	expectedBlockHeight := s.lastCommittedBlockHeight + 1
+	expectedBlockHeight := s.lastCommittedBlockHeight() + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
