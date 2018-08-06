@@ -169,8 +169,16 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 	return s.loadResultsBlockHeader(input.BlockHeight)
 }
 
+func (s *service) createEmptyTransactionReceiptResult() *services.GetTransactionReceiptOutput {
+	return &services.GetTransactionReceiptOutput{
+		TransactionReceipt: nil,
+		BlockHeight:        s.lastCommittedBlockHeight,
+		BlockTimestamp:     s.lastCommittedBlockTimestamp,
+	}
+}
+
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
-	panic("Not implemented")
+	return s.createEmptyTransactionReceiptResult(), nil
 }
 
 func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
