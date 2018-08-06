@@ -76,7 +76,7 @@ func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInp
 }
 
 func (s *service) HandleLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
-	s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
+	s.validatorHandleCommit()
 	return &gossiptopics.EmptyOutput{}, nil
 }
 

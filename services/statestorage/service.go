@@ -22,6 +22,8 @@ func NewStateStorage(persistence adapter.StatePersistence) services.StateStorage
 
 func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
 	committedBlock := input.ResultsBlockHeader.BlockHeight()
+	fmt.Printf("trying to commit state diff for block height %d, num contract state diffs %d\n", committedBlock, len(input.ContractStateDiffs)) // TODO: move this to reporting mechanism
+
 	if lastCommittedBlock := s.lastResultsBlockHeader.BlockHeight(); lastCommittedBlock+1 != committedBlock {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
@@ -42,7 +44,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	}
 
 	contractState, err := s.persistence.ReadState(input.ContractName)
-	if err != nil  {
+	if err != nil {
 		return nil, errors.Wrap(err, "persistence layer error")
 	}
 

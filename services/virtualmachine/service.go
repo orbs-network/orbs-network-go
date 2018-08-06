@@ -32,7 +32,27 @@ func NewVirtualMachine(
 }
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	panic("Not implemented")
+
+	var state []*protocol.StateRecordBuilder
+	for _, i := range input.SignedTransactions {
+		byteArray := make([]byte, 8)
+		binary.LittleEndian.PutUint64(byteArray, uint64(i.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
+		transactionStateDiff := &protocol.StateRecordBuilder{
+			Key:   primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", uint64(input.BlockHeight))),
+			Value: byteArray,
+		}
+		state = append(state, transactionStateDiff)
+	}
+	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{ContractName: "BenchmarkToken", StateDiffs: state}).Build()}
+	s.stateStorage.CommitStateDiff(
+		&services.CommitStateDiffInput{
+			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: input.BlockHeight}).Build(),
+			ContractStateDiffs: csdi})
+
+	return &services.ProcessTransactionSetOutput{
+		TransactionReceipts: nil, // TODO
+		ContractStateDiffs:  csdi,
+	}, nil
 }
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
