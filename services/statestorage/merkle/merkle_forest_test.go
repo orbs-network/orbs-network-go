@@ -97,7 +97,8 @@ var _ bool = Describe("Merkle Forest", func() {
 		It("is possible to get valid proofs for the exclusion of a missing entry", func() {
 		})
 	})
-	When("Adding Single Node", func() {
+
+	When("Adding Single Node in every iteration", func() {
 		When("updating an existing root which is a leaf", func() {
 			It("becomes the new root", func() {
 				f := NewForest()
@@ -121,7 +122,7 @@ var _ bool = Describe("Merkle Forest", func() {
 			})
 		})
 		When("extending a tree by a second key longer by 1 character", func() {
-			It("becomes the new root", func() {
+			It("becomes the new leaf", func() {
 				f := NewForest()
 
 				diffContract := builders.ContractStateDiff().WithContractName("foo")
@@ -142,8 +143,8 @@ var _ bool = Describe("Merkle Forest", func() {
 				Expect(exists).To(BeTrue())
 			})
 		})
-		When("??", func() {
-			It("becomes the new root", func() {
+		When("extending a two level tree by yet another key longer by 1 char", func() {
+			It("becomes the new leaf", func() {
 				f := NewForest()
 
 				rootId := f.updateStringEntries("bar", "baz", "bar123", "qux", "bar1234", "quux")
@@ -155,8 +156,8 @@ var _ bool = Describe("Merkle Forest", func() {
 				Expect(exists).To(BeTrue())
 			})
 		})
-		When("??", func() {
-			It("becomes the new root", func() {
+		When("extending a two level tree by yet another key longer by 1 char", func() {
+			It("becomes the new leaf", func() {
 				f := NewForest()
 
 				rootId := f.updateStringEntries("bar", "baz", "bar12", "qux", "bar123456789", "quux")
@@ -168,8 +169,8 @@ var _ bool = Describe("Merkle Forest", func() {
 				Expect(exists).To(BeTrue())
 			})
 		})
-		When("??", func() {
-			It("becomes the new root", func() {
+		When("extending a two level tree by yet another key which can use the same branching node", func() {
+			It("becomes the new leaf", func() {
 				f := NewForest()
 
 				rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bar2", "quux")
@@ -181,7 +182,7 @@ var _ bool = Describe("Merkle Forest", func() {
 				Expect(exists).To(BeTrue())
 			})
 		})
-		When("??", func() {
+		When("adding new value that splits a current branch into two levels", func() {
 			It("becomes the new root", func() {
 				f := NewForest()
 

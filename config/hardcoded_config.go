@@ -94,7 +94,6 @@ func NewConsensusConfig(
 		constantConsensusLeader:                      constantConsensusLeader,
 		activeConsensusAlgo:                          activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
-		maxStateHistory:                              maxStateHistory,
 	}
 }
 

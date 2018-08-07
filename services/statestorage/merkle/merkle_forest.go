@@ -101,6 +101,34 @@ func (m *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 		return
 	}
 
+	// current node replaced by a new branch node, so that current node is one child and new node is second child
+	i := 0
+	for i = 0; i < len(currentNode.path) && i < len(path) && currentNode.path[i] == path[i]; i++ {
+	}
+	newCommonPath := path[:i]
+	newParent := &Node{
+		path:     newCommonPath,
+		value:    zeroValueHash,
+		hasValue: false,
+		branches: map[byte]primitives.MerkleSha256{},
+	}
+	newChild := &Node{
+		path:     path[i+1:],
+		value:    valueHash,
+		hasValue: true,
+		branches: map[byte]primitives.MerkleSha256{},
+	}
+	newChildHash := newChild.hash()
+
+	m.nodes[newChildHash.KeyForMap()] = newChild
+	newParent.branches[byte(path[i])] = newChildHash
+	newNode.path = newNode.path[i+1:]
+	newNodeHash := newNode.hash()
+	newParent.branches[byte(currentNode.path[i])] = newNodeHash
+	m.nodes[newNodeHash.KeyForMap()] = newNode
+	return newParent
+
+
 	//// find the first mismatch in path:
 	//i := 0
 	//for i = 0; i < len(currentNode.path) && i < len(path) && currentNode.path[i] == path[i]; i++ {
