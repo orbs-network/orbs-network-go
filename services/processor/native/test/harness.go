@@ -6,7 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -55,5 +55,5 @@ func (h *harness) expectSdkCallMadeWithStateWrite() {
 
 func (h *harness) verifySdkCallMade(t *testing.T) {
 	ok, err := h.sdkCallHandler.Verify()
-	assert.True(t, ok, "sdkCallHandler should run as expected", err)
+	require.True(t, ok, "sdkCallHandler should run as expected", err)
 }
