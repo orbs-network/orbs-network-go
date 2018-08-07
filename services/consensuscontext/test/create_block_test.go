@@ -2,6 +2,7 @@ package test
 
 import (
 	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
@@ -26,23 +27,19 @@ func TestRetryWhenNotEnoughTransactionsPendingOnTransactionPool(t *testing.T) {
 
 	h := newHarness()
 
-	if h.config.MinimumTransactionsInBlock() <= 0 {
-		t.Errorf("must set MinimumTransactionsInBlock > 0 in test config")
+	if h.config.MinimumTransactionsInBlock() <= 1 {
+		t.Errorf("must set MinimumTransactionsInBlock > 1 in test config, now it is %v", h.config.MinimumTransactionsInBlock())
 	}
 
+	// TODO Use config instead of hard-coded value
 	txCount := h.config.MinimumTransactionsInBlock() - 1
 
-
-	// TODO: The order of expect() is reversed: Tal should fix it and the order of expects() here should then be reversed!!!
-	//h.expectTransactionsNoLongerRequestedFromTransactionPool()
-	h.expectTransactionsRequestedFromTransactionPool(txCount)
 	h.expectTransactionsRequestedFromTransactionPool(0)
-
+	h.expectTransactionsRequestedFromTransactionPool(txCount)
+	//h.expectTransactionsNoLongerRequestedFromTransactionPool()
 
 	txBlock, err := h.requestTransactionsBlock()
-	if err != nil {
-		t.Fatal("request transactions block failed:", err)
-	}
+	require.NoError(t, err, "request transactions block failed:", err)
 
 	if len(txBlock.SignedTransactions) != txCount {
 		t.Fatalf("returned %d instead of %d", len(txBlock.SignedTransactions), txCount)

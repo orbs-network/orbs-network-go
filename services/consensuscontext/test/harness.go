@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"testing"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/stretchr/testify/require"
 )
 
 type harness struct {
@@ -50,10 +51,10 @@ func (h *harness) expectTransactionsNoLongerRequestedFromTransactionPool() {
 }
 
 func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
-	ok, err := h.transactionPool.Verify()
-	if !ok {
-		t.Fatal(err)
-	}
+	ok, _ := h.transactionPool.Verify()
+
+	// TODO: How to print err if it's sometimes nil
+	require.True(t, ok)
 }
 
 func newHarness() *harness {
@@ -62,7 +63,7 @@ func newHarness() *harness {
 
 	transactionPool := &services.MockTransactionPool{}
 
-	serviceConfig := config.NewConsensusContextConfig(300, 1)
+	serviceConfig := config.NewConsensusContextConfig(300, 2)
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
 		serviceConfig)

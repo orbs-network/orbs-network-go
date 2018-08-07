@@ -3,13 +3,15 @@ package consensuscontext
 import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
-	"fmt"
 )
 
-func (s *service) fetchTransactions(input *services.GetTransactionsForOrderingInput, minimumTransactionsInBlock int, belowMinimalBlockDelayMillis uint32) (*services.GetTransactionsForOrderingOutput, error) {
+func (s *service) fetchTransactions(maxNumberOfTransactions uint32,
+	minimumTransactionsInBlock int, belowMinimalBlockDelayMillis uint32) (*services.GetTransactionsForOrderingOutput, error) {
 
-	fmt.Println("Fetch transactions")
-	var proposedTransactions *services.GetTransactionsForOrderingOutput = nil
+	input := &services.GetTransactionsForOrderingInput{
+		MaxNumberOfTransactions: maxNumberOfTransactions,
+	}
+
 	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(input)
 	if err != nil {
 		return nil, err
@@ -18,8 +20,10 @@ func (s *service) fetchTransactions(input *services.GetTransactionsForOrderingIn
 	if txCount >= minimumTransactionsInBlock {
 		return proposedTransactions, nil
 	}
-	// TODO: How to test that Sleep() was called
+
+	// TODO: Replace Sleep() with some other mechanism once we decide on it (such as context, timers...)
 	time.Sleep(time.Duration(belowMinimalBlockDelayMillis) * time.Millisecond)
+
 	proposedTransactions, err = s.transactionPool.GetTransactionsForOrdering(input)
 	if err != nil {
 		return nil, err
