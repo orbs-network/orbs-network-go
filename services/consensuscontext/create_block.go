@@ -32,17 +32,28 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 	return txBlock, nil
 }
 
-func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) *protocol.ResultsBlockContainer {
+func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
+
+	output, err := s.virtualMachine.ProcessTransactionSet(&services.ProcessTransactionSetInput{
+		BlockHeight:        blockHeight,
+		SignedTransactions: transactionsBlock.SignedTransactions,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	rxBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
 			ProtocolVersion:          blockstorage.ProtocolVersion,
 			BlockHeight:              blockHeight,
 			PrevBlockHashPtr:         prevBlockHash,
 			TransactionsBlockHashPtr: crypto.CalcTransactionsBlockHash(transactionsBlock),
+			NumTransactionReceipts:   uint32(len(output.TransactionReceipts)),
+			NumContractStateDiffs:    uint32(len(output.ContractStateDiffs)),
 		}).Build(),
-		TransactionReceipts: nil,
-		ContractStateDiffs:  nil,
+		TransactionReceipts: output.TransactionReceipts,
+		ContractStateDiffs:  output.ContractStateDiffs,
 		BlockProof:          nil,
 	}
-	return rxBlock
+	return rxBlock, nil
 }

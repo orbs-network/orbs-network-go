@@ -104,6 +104,10 @@ func (s *service) leaderAddVoteFromValidator() {
 	s.votesForActiveRound <- true
 }
 
+func (s *service) validatorHandleCommit() {
+	s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
+}
+
 func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 	blockHeight := s.lastCommittedBlockHeight + 1
 
