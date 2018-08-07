@@ -26,19 +26,24 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrume
 }
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+	//On any failure, return the relevant error status and an empty receipt.
+	//For an already committed transaction, return the receipt.
 	err := validateTransaction(input.SignedTransaction)
 	if err != nil {
 		s.reporting.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
 		return nil, err
 	}
-	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
+
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 
 			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
 		},
 	})
+
+	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
 	s.pendingTransactions <- input.SignedTransaction
+
 	return &services.AddNewTransactionOutput{}, nil
 }
 
