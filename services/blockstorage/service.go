@@ -1,7 +1,6 @@
 package blockstorage
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -65,14 +64,17 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 		return nil, err
 	}
 
+	// TODO: this part should be moved after persistence.WriteBlock, it's moved here due to convoluted sync mechanism in acceptance test where we wait until block is written to block persistence where instead we need to wait on block written to state persistence
+	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
+		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
+		s.reporting.Error("intra-node sync to state storage failed", instrumentation.Error(err))
+	}
+
 	if err := s.persistence.WriteBlock(input.BlockPair); err != nil {
 		return nil, err
 	}
 
 	s.updateLastCommittedBlockHeightAndTimestamp(txBlockHeader)
-
-	// TODO: why are we updating the state? nothing about this in the spec
-	s.updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(input.BlockPair.TransactionsBlock)
 
 	s.reporting.Info("Committed a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
 
@@ -264,21 +266,11 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-func (s *service) updateStateStorage_assumingHardCodedBenchmarkTokenContractLogic(txBlock *protocol.TransactionsBlockContainer) {
-	// todo need to generate key from hard coded contract
-	var state []*protocol.StateRecordBuilder
-	for _, i := range txBlock.SignedTransactions {
-		byteArray := make([]byte, 8)
-		binary.LittleEndian.PutUint64(byteArray, uint64(i.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
-		transactionStateDiff := &protocol.StateRecordBuilder{
-			Key:   primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", uint64(txBlock.Header.BlockHeight()))),
-			Value: byteArray,
-		}
-		state = append(state, transactionStateDiff)
-	}
-	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{ContractName: "BenchmarkToken", StateDiffs: state}).Build()}
-	s.stateStorage.CommitStateDiff(
-		&services.CommitStateDiffInput{
-			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: txBlock.Header.BlockHeight()}).Build(),
-			ContractStateDiffs: csdi})
+// TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
+func (s *service) syncBlockToStateStorage(commitedBlockPair *protocol.BlockPairContainer) error {
+	_, err := s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{
+		ResultsBlockHeader: commitedBlockPair.ResultsBlock.Header,
+		ContractStateDiffs: commitedBlockPair.ResultsBlock.ContractStateDiffs,
+	})
+	return err
 }
