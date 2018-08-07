@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -35,19 +34,15 @@ func NewGossip(transport adapter.Transport, config Config, reporting instrumenta
 
 func (s *service) OnTransportMessageReceived(payloads [][]byte) {
 	if len(payloads) == 0 {
-		// FIXME error handling
-		err := &adapter.ErrCorruptData{}
-		s.reporting.Error(err.Error())
+		s.reporting.Error("transport did not receive any payloads, header missing")
 		return
 	}
 	header := gossipmessages.HeaderReader(payloads[0])
 	if !header.IsValid() {
-		// FIXME error handling
-		err := &ErrCorruptHeader{payloads[0]}
-		s.reporting.Error(err.Error())
+		s.reporting.Error("transport header is corrupt", instrumentation.Bytes("header", payloads[0]))
 		return
 	}
-	s.reporting.Info(fmt.Sprintf("Gossip: OnTransportMessageReceived: %s", header))
+	s.reporting.Info("transport message received", instrumentation.Stringable("header", header))
 	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		s.receivedTransactionRelayMessage(header, payloads[1:])
