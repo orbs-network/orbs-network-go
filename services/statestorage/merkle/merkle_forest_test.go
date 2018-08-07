@@ -293,6 +293,7 @@ var _ = Describe("Merkle Forest", func() {
 //TODO - avoid hashing values of less than 32 bytes
 //TODO - what hash functions should be used for values and what functions for node addresses?
 //TODO - in case save key length is enforced - accept a key length in the forest constructor
+//TODO - Prepare for GC (set values of older nodes to know when they were last valid)
 
 //TODO - change verify and update types to []byte from strings
 

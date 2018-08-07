@@ -21,6 +21,13 @@ type Node struct {
 }
 var emptyNode = &Node{value: zeroValueHash}
 var emptyNodeHash = emptyNode.hash()
+func createNode(path string, valueHash primitives.Sha256) *Node {
+	return &Node{
+		path:     path,
+		value:    valueHash,
+		branches: [256]primitives.MerkleSha256{},
+	}
+}
 func (n *Node) hasValue() bool {
 	return !zeroValueHash.Equal(n.value)
 }
@@ -70,6 +77,12 @@ func (f *Forest) GetTopRoot() (primitives.MerkleSha256, error) {
 	return f.roots[f.topRoot], nil
 }
 
+func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, selector byte) {
+	childHash := childNode.hash()
+	parentNode.branches[selector] = childHash
+	f.nodes[childHash.KeyForMap()] = childNode
+}
+
 func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) RootId {
 	currentRoot := f.nodes[f.roots[f.topRoot].KeyForMap()]
 	newRoot := f.add(currentRoot, path, valueHash)
@@ -90,11 +103,7 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 
 	if strings.HasPrefix(path, currentNode.path) {
 		if !currentNode.hasValue() && !currentNode.hasChildren() { // this node has no children and no value, replace it
-			newNode = &Node{
-				path:     path,
-				value:    valueHash,
-				branches: [256]primitives.MerkleSha256{},
-			}
+			newNode = createNode(path, valueHash)
 			return
 		}
 
@@ -104,56 +113,31 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 		if branchHash := currentNode.branches[branchSelector]; len(branchHash) != 0 {
 			newChild = f.add(f.nodes[branchHash.KeyForMap()], childPath, valueHash)
 		} else {
-			newChild = &Node{
-				path:     childPath,
-				value:    valueHash,
-				branches: [256]primitives.MerkleSha256{},
-			}
+			newChild = createNode(childPath, valueHash)
 		}
-		childHash := newChild.hash()
-		newNode.branches[branchSelector] = childHash
-		f.nodes[childHash.KeyForMap()] = newChild
+		f.connectChildToParentAndSaveChild(newChild, newNode, branchSelector)
 		return
 	}
 
 	if strings.HasPrefix(currentNode.path, path) { // "insert" a leaf node along the path of currentNode
-		newChild := newNode
+		newChild := newNode // my clone is now the new child
 		branchSelector := newChild.path[len(path)]
 		newChild.path = newChild.path[len(path)+1:]
-		newNode = &Node{
-			path:     path,
-			value:    valueHash,
-			branches: [256]primitives.MerkleSha256{},
-		}
-		childHash := newChild.hash()
-		newNode.branches[branchSelector] = childHash
-		f.nodes[childHash.KeyForMap()] = newChild
+		newNode = createNode(path, valueHash)
+		f.connectChildToParentAndSaveChild(newChild, newNode, branchSelector)
 		return
 	}
 
 	// current node replaced by a new branch node, so that current node is one child and new node is second child
 	i := 0
-	for i = 0; i < len(currentNode.path) && i < len(path) && currentNode.path[i] == path[i]; i++ {
-	}
+	for i = 0; i < len(currentNode.path) && i < len(path) && currentNode.path[i] == path[i]; i++ {}
 	newCommonPath := path[:i]
-	newParent := &Node{
-		path:     newCommonPath,
-		value:    zeroValueHash,
-		branches: [256]primitives.MerkleSha256{},
-	}
-	newChild := &Node{
-		path:     path[i+1:],
-		value:    valueHash,
-		branches: [256]primitives.MerkleSha256{},
-	}
-	newChildHash := newChild.hash()
+	newParent := createNode(newCommonPath, zeroValueHash)
+	newChild := createNode(path[i+1:], valueHash)
+	f.connectChildToParentAndSaveChild(newChild, newParent, path[i])
 
-	f.nodes[newChildHash.KeyForMap()] = newChild
-	newParent.branches[byte(path[i])] = newChildHash
 	newNode.path = newNode.path[i+1:]
-	newNodeHash := newNode.hash()
-	newParent.branches[byte(currentNode.path[i])] = newNodeHash
-	f.nodes[newNodeHash.KeyForMap()] = newNode
+	f.connectChildToParentAndSaveChild(newNode, newParent, currentNode.path[i])
 	return newParent
 }
 
@@ -164,7 +148,6 @@ func (f *Forest) Update(rootId RootId, diffs []*protocol.ContractStateDiff) Root
 			record := i.NextStateDiffs()
 			path := contract + record.StringKey()
 			f.addSingleEntry(path, hash.CalcSha256([]byte(record.StringValue())))
-			//f.nodes[path] = &Node{path: path, value: hash.CalcSha256([]byte(record.StringValue())), hasValue: true}
 		}
 	}
 	return f.topRoot
