@@ -31,12 +31,10 @@ func TestRetryWhenNotEnoughTransactionsPendingOnTransactionPool(t *testing.T) {
 		t.Errorf("must set MinimumTransactionsInBlock > 1 in test config, now it is %v", h.config.MinimumTransactionsInBlock())
 	}
 
-	// TODO Use config instead of hard-coded value
 	txCount := h.config.MinimumTransactionsInBlock() - 1
 
 	h.expectTransactionsRequestedFromTransactionPool(0)
 	h.expectTransactionsRequestedFromTransactionPool(txCount)
-	//h.expectTransactionsNoLongerRequestedFromTransactionPool()
 
 	txBlock, err := h.requestTransactionsBlock()
 	require.NoError(t, err, "request transactions block failed:", err)
