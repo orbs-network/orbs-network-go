@@ -40,6 +40,8 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	defer s.mutex.Unlock()
 
 	committedBlock := input.ResultsBlockHeader.BlockHeight()
+	fmt.Printf("trying to commit state diff for block height %d, num contract state diffs %d\n", committedBlock, len(input.ContractStateDiffs)) // TODO: move this to reporting mechanism
+
 	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != committedBlock {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
@@ -63,12 +65,12 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	if input.BlockHeight + primitives.BlockHeight(s.config.GetMaxStateHistory()) <= s.lastCommittedBlockHeader.BlockHeight() {
 		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.GetMaxStateHistory()))
 	}
-	
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
-	if err != nil  {
+	if err != nil {
 		return nil, errors.Wrap(err, "persistence layer error")
 	}
 

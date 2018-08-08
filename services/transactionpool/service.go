@@ -1,7 +1,6 @@
 package transactionpool
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -29,10 +28,10 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrume
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	err := validateTransaction(input.SignedTransaction)
 	if err != nil {
-		s.reporting.Info(fmt.Sprintf("transaction is invalid [%v]", input.SignedTransaction))
+		s.reporting.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
 		return nil, err
 	}
-	s.reporting.Info(fmt.Sprintf("Adding new transaction [%v] to the pool", input.SignedTransaction))
+	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 
