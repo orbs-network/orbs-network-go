@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	)
+)
 
 var _ = Describe("Commit a State Diff", func() {
 

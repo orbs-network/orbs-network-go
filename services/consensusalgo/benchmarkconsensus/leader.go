@@ -2,7 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/block"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -96,7 +96,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPai
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
 		BlockHeight:   s.lastCommittedBlockHeight() + 1,
-		PrevBlockHash: block.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
+		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPai
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
 		BlockHeight:       s.lastCommittedBlockHeight() + 1,
-		PrevBlockHash:     block.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
+		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {

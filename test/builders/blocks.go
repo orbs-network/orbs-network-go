@@ -1,7 +1,7 @@
 package builders
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/block"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -86,8 +86,8 @@ func (b *blockPair) WithHeight(blockHeight primitives.BlockHeight) *blockPair {
 
 func (b *blockPair) WithPrevBlockHash(prevBlock *protocol.BlockPairContainer) *blockPair {
 	if prevBlock != nil {
-		b.txHeader.PrevBlockHashPtr = block.CalcTransactionsBlockHash(prevBlock.TransactionsBlock)
-		b.rxHeader.PrevBlockHashPtr = block.CalcResultsBlockHash(prevBlock.ResultsBlock)
+		b.txHeader.PrevBlockHashPtr = digest.CalcTransactionsBlockHash(prevBlock.TransactionsBlock)
+		b.rxHeader.PrevBlockHashPtr = digest.CalcResultsBlockHash(prevBlock.ResultsBlock)
 	}
 	return b
 }

@@ -1,10 +1,10 @@
-package block_test
+package digest_test
 
 import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"github.com/orbs-network/orbs-network-go/crypto/block"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -24,7 +24,7 @@ func getTransaction() *protocol.Transaction {
 
 func TestCalcTxHash(t *testing.T) {
 	tx := getTransaction()
-	hash := block.CalcTxHash(tx)
+	hash := digest.CalcTxHash(tx)
 	expectedHash, err := hex.DecodeString(ExpectedTransactionHashHex)
 	if err != nil {
 		t.Error(err)
@@ -36,7 +36,7 @@ func TestCalcTxHash(t *testing.T) {
 
 func TestCalcTxId(t *testing.T) {
 	tx := getTransaction()
-	txId := block.CalcTxId(tx)
+	txId := digest.CalcTxId(tx)
 
 	// use expected hash and littleEndian encoding of the TS
 	// leaving the implementation detail in the test as the encoding part is something the test should 'test'

@@ -1,7 +1,7 @@
 package builders
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/block"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
@@ -20,8 +20,8 @@ func BenchmarkConsensusBlockPair() *blockPair {
 }
 
 func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.TransactionsBlockHeader, rxHeaderBuilt *protocol.ResultsBlockHeader) {
-	txHash := block.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
-	rxHash := block.CalcResultsBlockHash(&protocol.ResultsBlockContainer{Header: rxHeaderBuilt})
+	txHash := digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
+	rxHash := digest.CalcResultsBlockHash(&protocol.ResultsBlockContainer{Header: rxHeaderBuilt})
 	xorHash := logic.CalcXor(txHash, rxHash)
 	sig, err := signature.SignEd25519(b.blockProofSigner, xorHash)
 	if err != nil {

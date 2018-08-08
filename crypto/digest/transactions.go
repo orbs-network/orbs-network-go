@@ -1,4 +1,4 @@
-package block
+package digest
 
 import (
 	"github.com/orbs-network/membuffers/go"
