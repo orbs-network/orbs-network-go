@@ -1,16 +1,16 @@
 package test
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-		"github.com/stretchr/testify/require"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 type harness struct {
@@ -36,7 +36,7 @@ func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) error {
 }
 
 func (h *harness) verifyMocks() error {
-	_, err := h. gossip.Verify()
+	_, err := h.gossip.Verify()
 	return err
 }
 
@@ -45,7 +45,7 @@ func NewHarness() *harness {
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 	service := transactionpool.NewTransactionPool(gossip, instrumentation.GetLogger())
 
-	return &harness{txpool:service, gossip:gossip}
+	return &harness{txpool: service, gossip: gossip}
 }
 
 func (h *harness) expectNoTransactionsToBeForwarded() {

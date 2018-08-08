@@ -25,6 +25,10 @@ type blockStorageConfig struct {
 	blockSyncCommitTimeoutMillisec time.Duration
 }
 
+type stateStorageConfig struct {
+	stateHistoryRetentionInBlockHeights uint64
+}
+
 type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
@@ -33,6 +37,7 @@ type hardcodedConfig struct {
 	*identity
 	*consensusConfig
 	*blockStorageConfig
+	*stateStorageConfig
 }
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -49,6 +54,7 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32,
 	blockSyncCommitTimeoutMillisec uint32,
+	stateHistoryRetentionInBlockHeights uint64,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -65,7 +71,9 @@ func NewHardCodedConfig(
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
 		},
+		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
 	}
+
 }
 
 func NewConsensusConfig(
@@ -79,8 +87,8 @@ func NewConsensusConfig(
 
 	return &consensusConfig{
 		identity: &identity{
-			nodePublicKey:                                nodePublicKey,
-			nodePrivateKey:                               nodePrivateKey,
+			nodePublicKey:  nodePublicKey,
+			nodePrivateKey: nodePrivateKey,
 		},
 		federationNodes:                              federationNodes,
 		constantConsensusLeader:                      constantConsensusLeader,
@@ -90,7 +98,11 @@ func NewConsensusConfig(
 }
 
 func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillisec:time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+	return &blockStorageConfig{blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+}
+
+func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {
+	return &stateStorageConfig{stateHistoryRetentionInBlockHeights: maxStateHistory}
 }
 
 func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
@@ -127,4 +139,8 @@ func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 
 func (c *blockStorageConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
 	return c.blockSyncCommitTimeoutMillisec
+}
+
+func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
+	return c.stateHistoryRetentionInBlockHeights
 }
