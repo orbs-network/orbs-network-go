@@ -16,13 +16,23 @@ type transaction struct {
 }
 
 func Transaction() *transaction {
+	keyPair := keys.Ed25519KeyPairForTests(1)
 	return &transaction{
-		signer: keys.Ed25519KeyPairForTests(1).PrivateKey(),
+		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				ContractName: "BenchmarkToken",
-				MethodName:   "transfer",
-				Timestamp:    primitives.TimestampNano(time.Now().UnixNano()),
+				ProtocolVersion: 1,
+				VirtualChainId:  primitives.VirtualChainId(42),
+				ContractName:    "BenchmarkToken",
+				MethodName:      "transfer",
+				Signer: &protocol.SignerBuilder{
+					Scheme: protocol.SIGNER_SCHEME_EDDSA,
+					Eddsa: &protocol.EdDSA01SignerBuilder{
+						NetworkType:     protocol.NETWORK_TYPE_TEST_NET,
+						SignerPublicKey: keyPair.PublicKey(),
+					},
+				},
+				Timestamp: primitives.TimestampNano(time.Now().UnixNano()),
 				InputArguments: []*protocol.MethodArgumentBuilder{
 					{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 10},
 				},
@@ -48,14 +58,15 @@ func (t *transaction) Builder() *protocol.SignedTransactionBuilder {
 	return t.builder
 }
 
-func (t *transaction) WithSignature(privateKey primitives.Ed25519PrivateKey) *transaction {
+func (t *transaction) WithSigner(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *transaction {
+	t.builder.Transaction.Signer.Eddsa.SignerPublicKey = publicKey
 	t.signer = privateKey
 	return t
 }
 
-func (t *transaction) WithInvalidSignature(privateKey primitives.Ed25519PrivateKey) *transaction {
-	t.signer = make([]byte, len(privateKey))
-	return t
+func (t *transaction) WithInvalidSigner(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *transaction {
+	corruptPrivateKey := make([]byte, len(privateKey))
+	return t.WithSigner(publicKey, corruptPrivateKey)
 }
 
 func (t *transaction) WithInvalidContent() *transaction {
