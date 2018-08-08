@@ -11,6 +11,7 @@ import (
 const (
 	ED25519_PUBLIC_KEY_SIZE  = 32
 	ED25519_PRIVATE_KEY_SIZE = 64
+	ED25519_SIGNATURE_SIZE   = 64
 )
 
 func SignEd25519(privateKey primitives.Ed25519PrivateKey, data []byte) (primitives.Ed25519Sig, error) {
