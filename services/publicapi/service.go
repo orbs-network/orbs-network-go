@@ -28,8 +28,8 @@ func NewPublicApi(
 }
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
-	s.reporting.Info("enter_send_transaction")
-	defer s.reporting.Info("exit_send_transaction")
+	s.reporting.Info("enter SendTransaction")
+	defer s.reporting.Info("exit SendTransaction")
 	//TODO leader should also propagate transactions to other nodes
 	tx := input.ClientRequest.SignedTransaction()
 	s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
@@ -42,8 +42,8 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 }
 
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
-	s.reporting.Info("enter_call_method")
-	defer s.reporting.Info("exit_call_method")
+	s.reporting.Info("enter CallMethod")
+	defer s.reporting.Info("exit CallMethod")
 	// TODO get block height for input ?
 	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: input.ClientRequest.Transaction(),

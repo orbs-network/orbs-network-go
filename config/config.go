@@ -23,7 +23,7 @@ type NodeConfig interface {
 	BlockSyncCommitTimeoutMillisec() time.Duration
 
 	// state storage
-	GetMaxStateHistory() uint64
+	StateHistoryRetentionInBlockHeights() uint64
 }
 
 type FederationNode interface {

@@ -36,7 +36,7 @@ func NewNode(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
-	maxStateHistory uint64,
+	stateHistoryRetentionInBlockHeights uint64,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
@@ -48,7 +48,7 @@ func NewNode(
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec,
 		blockSyncCommitTimeoutMillisec,
-		maxStateHistory,
+		stateHistoryRetentionInBlockHeights,
 	)
 
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
