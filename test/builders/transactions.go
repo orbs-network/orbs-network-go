@@ -64,6 +64,11 @@ func (t *transaction) WithSigner(publicKey primitives.Ed25519PublicKey, privateK
 	return t
 }
 
+func (t *transaction) WithTimestamp(timestamp primitives.TimestampNano) *transaction {
+	t.builder.Transaction.Timestamp = timestamp
+	return t
+}
+
 func (t *transaction) WithInvalidSigner(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *transaction {
 	corruptPrivateKey := make([]byte, len(privateKey))
 	return t.WithSigner(publicKey, corruptPrivateKey)
