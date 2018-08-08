@@ -63,6 +63,9 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	if input.BlockHeight + primitives.BlockHeight(s.config.GetMaxStateHistory()) <= s.lastCommittedBlockHeader.BlockHeight() {
 		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.GetMaxStateHistory()))
 	}
+	
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
 	if err != nil  {
