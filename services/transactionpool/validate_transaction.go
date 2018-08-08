@@ -18,7 +18,6 @@ type validationContext struct {
 	futureTimestampGrace        time.Duration
 	virtualChainId              primitives.VirtualChainId
 	transactionInPendingPool    transactionInPoolsCheck
-	transactionInCommittedPool  transactionInPoolsCheck
 }
 
 func validateTransaction(transaction *protocol.SignedTransaction, vctx validationContext) error {
@@ -29,7 +28,7 @@ func validateTransaction(transaction *protocol.SignedTransaction, vctx validatio
 		validateTransactionNotExpired(vctx),
 		validateTransactionNotInFuture(vctx),
 		validateTransactionVirtualChainId(vctx),
-		validateTransactionNotInPools(vctx),
+		validateTransactionNotInPendingPool(vctx),
 	}
 
 	for _, validate := range validators {
@@ -90,14 +89,10 @@ func validateTransactionVirtualChainId(vctx validationContext) validator {
 	}
 }
 
-func validateTransactionNotInPools(vctx validationContext) validator {
+func validateTransactionNotInPendingPool(vctx validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) error {
 		if vctx.transactionInPendingPool(transaction) {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION}
-		}
-
-		if vctx.transactionInCommittedPool(transaction) {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED}
 		}
 
 		return nil

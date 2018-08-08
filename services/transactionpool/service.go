@@ -8,24 +8,54 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-type txPool struct {
+type pendingTxPool struct {
 	transactions map[string]bool
 	lock         *sync.Mutex
 }
 
-func (p txPool) add(transaction *protocol.SignedTransaction) {
+func (p pendingTxPool) add(transaction *protocol.SignedTransaction) {
 	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.transactions[key] = true
 }
 
-func (p txPool) has(transaction *protocol.SignedTransaction) bool {
+func (p pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
 	ok, _ := p.transactions[key]
 	return ok
+}
+
+func (p pendingTxPool) remove(txhash primitives.Sha256) {
+	delete(p.transactions, txhash.KeyForMap())
+}
+
+type committedTxPool struct {
+	transactions map[string]*committedTransaction
+	lock         *sync.Mutex
+}
+
+func (p committedTxPool) add(receipt *protocol.TransactionReceipt) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.transactions[receipt.Txhash().KeyForMap()] = &committedTransaction{
+		receipt: receipt,
+	}
+}
+
+func (p committedTxPool) get(transaction *protocol.SignedTransaction) *committedTransaction {
+	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
+
+	tx := p.transactions[key]
+
+	return tx
+}
+
+type committedTransaction struct {
+	receipt *protocol.TransactionReceipt
 }
 
 type service struct {
@@ -33,7 +63,8 @@ type service struct {
 	gossip              gossiptopics.TransactionRelay
 	reporting           instrumentation.BasicLogger
 
-	pendingPool txPool
+	pendingPool   pendingTxPool
+	committedPool committedTxPool
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrumentation.BasicLogger) services.TransactionPool {
@@ -42,8 +73,13 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrume
 		gossip:              gossip,
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 
-		pendingPool: txPool{
+		pendingPool: pendingTxPool{
 			transactions: make(map[string]bool),
+			lock:         &sync.Mutex{},
+		},
+
+		committedPool: committedTxPool{
+			transactions: make(map[string]*committedTransaction),
 			lock:         &sync.Mutex{},
 		},
 	}
@@ -69,7 +105,12 @@ func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransa
 }
 
 func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
-	panic("Not implemented")
+	for _, receipt := range input.TransactionReceipts {
+		s.committedPool.add(receipt)
+		s.pendingPool.remove(receipt.Txhash())
+	}
+
+	return &services.CommitTransactionReceiptsOutput{}, nil
 }
 
 func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
@@ -85,8 +126,4 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 func (s *service) isTransactionInPendingPool(transaction *protocol.SignedTransaction) bool {
 	return s.pendingPool.has(transaction)
-}
-
-func (s *service) isTransactionInCommittedPool(transaction *protocol.SignedTransaction) bool {
-	return false //TODO really check
 }

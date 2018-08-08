@@ -16,18 +16,9 @@ const futureTimestampGrace = 3 * time.Minute
 
 var lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().Add(-5 * time.Second).UnixNano())
 
-func aValidationContextWithTransactionsInPools(transactionsInPendingPool transactions, transactionsInCommittedPool transactions) validationContext {
+func aValidationContextWithTransactionsInPools(transactionsInPendingPool transactions) validationContext {
 	isTxInPendingPool := func(tx *protocol.SignedTransaction) bool {
 		for _, t := range transactionsInPendingPool {
-			if tx.Equal(t) {
-				return true
-			}
-		}
-		return false
-	}
-
-	isTxInCommittedPool := func(tx *protocol.SignedTransaction) bool {
-		for _, t := range transactionsInCommittedPool {
 			if tx.Equal(t) {
 				return true
 			}
@@ -41,17 +32,22 @@ func aValidationContextWithTransactionsInPools(transactionsInPendingPool transac
 		futureTimestampGrace:        futureTimestampGrace,
 		virtualChainId:              primitives.VirtualChainId(42),
 		transactionInPendingPool:    isTxInPendingPool,
-		transactionInCommittedPool:  isTxInCommittedPool,
 	}
 }
 
 func aValidationContext() validationContext {
-	return aValidationContextWithTransactionsInPools(transactions{}, transactions{})
+	return aValidationContextWithTransactionsInPools(transactions{})
 }
 
 //TODO Verify pre order checks (like signature and subscription) by calling VirtualMachine.TransactionSetPreOrder.
 
+func futureTimeAfterGracePeriod() time.Time {
+	return time.Unix(0, int64(lastCommittedBlockTimestamp)).Add(futureTimestampGrace + 1*time.Minute)
+}
+
 func TestValidateTransaction_ValidTransaction(t *testing.T) {
+	t.Parallel()
+
 	require.NoError(t,
 		validateTransaction(builders.TransferTransaction().Build(), aValidationContext()),
 		"a valid transaction was rejected")
@@ -71,8 +67,10 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 		{"timestamp (created after the grace period for last committed block)", builders.TransferTransaction().WithTimestamp(futureTimeAfterGracePeriod())},
 		{"virtual chain id", builders.TransferTransaction().WithVirtualChainId(primitives.VirtualChainId(1))},
 	}
-	for _, test := range tests {
+	for i := range tests {
+		test := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			require.Error(t,
 				validateTransaction(test.txBuilder.Build(), aValidationContext()),
 				fmt.Sprintf("a transaction with an invalid %s was not rejected", test.name))
@@ -80,18 +78,12 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	}
 }
 
-func futureTimeAfterGracePeriod() time.Time {
-	return time.Unix(0, int64(lastCommittedBlockTimestamp)).Add(futureTimestampGrace + 1*time.Minute)
-}
-
-func TestValidateTransaction_DoesNotExistInPools(t *testing.T) {
+func TestValidateTransaction_DoesNotExistInPendingPool(t *testing.T) {
+	t.Parallel()
 	tx := builders.TransferTransaction().Build()
 
 	require.Error(t,
-		validateTransaction(tx, aValidationContextWithTransactionsInPools(transactions{tx}, transactions{})),
+		validateTransaction(tx, aValidationContextWithTransactionsInPools(transactions{tx})),
 		"a transaction that exists in the pending transaction pool was not rejected")
-
-	require.Error(t,
-		validateTransaction(tx, aValidationContextWithTransactionsInPools(transactions{}, transactions{tx})),
-		"a transaction that exists in the committed transaction pool was not rejected")
 }
+

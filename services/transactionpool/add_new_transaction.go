@@ -19,12 +19,20 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		futureTimestampGrace:        3 * time.Minute,
 		virtualChainId:              primitives.VirtualChainId(42),
 		transactionInPendingPool:    s.isTransactionInPendingPool,
-		transactionInCommittedPool:  s.isTransactionInCommittedPool,
 	}
 	err := validateTransaction(input.SignedTransaction, vctx)
 	if err != nil {
 		s.reporting.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
 		return nil, err
+	}
+
+	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
+		s.reporting.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
+		return &services.AddNewTransactionOutput{
+			TransactionReceipt: alreadyCommitted.receipt,
+			TransactionStatus: protocol.TRANSACTION_STATUS_COMMITTED,
+			//TODO other fields
+		}, nil
 	}
 
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
