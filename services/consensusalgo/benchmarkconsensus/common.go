@@ -1,7 +1,7 @@
 package benchmarkconsensus
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -27,14 +27,11 @@ func (s *service) saveToBlockStorage(blockPair *protocol.BlockPairContainer) err
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return nil
 	}
-	s.reporting.Info("Saving block to storage", instrumentation.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	s.reporting.Info("saving block to storage", instrumentation.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
@@ -48,11 +45,11 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 
 	// prev block hash ptr (if given)
 	if prevCommittedBlockPair != nil {
-		prevTxHash := crypto.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
+		prevTxHash := digest.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
 		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
 			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
 		}
-		prevRxHash := crypto.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
+		prevRxHash := digest.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
 		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
 			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
 		}
@@ -72,8 +69,8 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 }
 
 func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
-	txHash := crypto.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
-	rxHash := crypto.CalcResultsBlockHash(blockPair.ResultsBlock)
+	txHash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
+	rxHash := digest.CalcResultsBlockHash(blockPair.ResultsBlock)
 	xorHash := logic.CalcXor(txHash, rxHash)
 	return xorHash
 }

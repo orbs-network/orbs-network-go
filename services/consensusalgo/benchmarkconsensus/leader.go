@@ -2,7 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -24,13 +24,13 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 		}
 		select {
 		case <-ctx.Done():
-			s.reporting.Info("Consensus round run loop terminating with context")
+			s.reporting.Info("consensus round run loop terminating with context")
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			s.reporting.Info("Consensus round waking up after successfully voted block", instrumentation.BlockHeight(s.lastSuccessfullyVotedBlock))
+			s.reporting.Info("consensus round waking up after successfully voted block", instrumentation.BlockHeight(s.lastSuccessfullyVotedBlock))
 			continue
 		case <-time.After(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillisec()) * time.Millisecond):
-			s.reporting.Info("Consensus round waking up after retry timeout")
+			s.reporting.Info("consensus round waking up after retry timeout")
 			continue
 		}
 	}
@@ -84,46 +84,36 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
-		panic(err)
+		s.reporting.Error("leader failed to sign genesis block", instrumentation.Error(err))
+		return nil
 	}
 	return blockPair
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
-	s.reporting.Info("Generating new proposed block for height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()+1))
+	s.reporting.Info("generating new proposed block for height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
 		BlockHeight:   s.lastCommittedBlockHeight() + 1,
-		PrevBlockHash: crypto.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
+		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
 		return nil, err
-	}
-	if txOutput == nil || txOutput.TransactionsBlock == nil {
-		panic("invalid response consensusContext.RequestNewTransactionsBlock: missing TransactionsBlock")
-		// TODO: should we have these panics? because this is internal code
 	}
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
 		BlockHeight:       s.lastCommittedBlockHeight() + 1,
-		PrevBlockHash:     crypto.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
+		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
 		return nil, err
 	}
-	if rxOutput == nil || rxOutput.ResultsBlock == nil {
-		panic("invalid response from consensusContext.RequestNewResultsBlock: missing ResultsBlock")
-	}
 
 	// generate signed block
-	blockPair, err := s.leaderSignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
-	if err != nil {
-		return nil, err
-	}
-	return blockPair, nil
+	return s.leaderSignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
 }
 
 func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
@@ -173,7 +163,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	// validate the vote
 	err := s.leaderValidateVoteUnderMutex(sender, status)
 	if err != nil {
-		s.reporting.Error(err.Error()) // TODO: wrap with added context
+		s.reporting.Error("leader failed to validate vote", instrumentation.Error(err))
 		return
 	}
 
@@ -182,7 +172,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	s.reporting.Info("Valid vote arrived", instrumentation.Int("existing-votes", existingVotes), instrumentation.Int("required-votes", s.requiredQuorumSize()))
+	s.reporting.Info("valid vote arrived", instrumentation.Int("existing-votes", existingVotes), instrumentation.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() {
 		successfullyVotedBlock = s.lastCommittedBlockHeight()
 	}

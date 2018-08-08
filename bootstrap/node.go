@@ -36,6 +36,7 @@ func NewNode(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
+	stateHistoryRetentionInBlockHeights uint64,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
@@ -47,12 +48,13 @@ func NewNode(
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillisec,
 		blockSyncCommitTimeoutMillisec,
+		stateHistoryRetentionInBlockHeights,
 	)
 
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence()
-	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 

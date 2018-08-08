@@ -5,10 +5,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-type ErrInvalidTransaction struct {
+type ErrTransactionRejected struct {
 	TransactionStatus protocol.TransactionStatus
 }
 
-func (e *ErrInvalidTransaction) Error() string {
-	return fmt.Sprintf("Invalid Transaction: %v", e.TransactionStatus)
+func (e *ErrTransactionRejected) Error() string {
+	return fmt.Sprintf("transaction rejected: %s", e.TransactionStatus)
 }
