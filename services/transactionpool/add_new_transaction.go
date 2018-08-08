@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/go-errors/errors"
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
@@ -35,6 +36,10 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		}, nil
 	}
 
+	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
+		return nil, err
+	}
+
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 
@@ -48,3 +53,21 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	return &services.AddNewTransactionOutput{}, nil
 }
+
+func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
+	//TODO handle error from vm call
+	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+		SignedTransactions: transactions{transaction},
+	})
+
+	if len(preOrderCheckResults.PreOrderResults) != 1 {
+		return errors.Errorf("expected exactly one result from pre-order check, got %+v", preOrderCheckResults)
+	}
+
+	if preOrderCheckResults.PreOrderResults[0] != protocol.TRANSACTION_STATUS_PENDING {
+		return &ErrTransactionRejected{TransactionStatus:preOrderCheckResults.PreOrderResults[0]}
+	}
+
+	return nil
+}
+

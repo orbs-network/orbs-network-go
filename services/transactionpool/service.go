@@ -61,16 +61,18 @@ type committedTransaction struct {
 type service struct {
 	pendingTransactions chan *protocol.SignedTransaction
 	gossip              gossiptopics.TransactionRelay
+	virtualMachine services.VirtualMachine
 	reporting           instrumentation.BasicLogger
 
-	pendingPool   pendingTxPool
-	committedPool committedTxPool
+	pendingPool    pendingTxPool
+	committedPool  committedTxPool
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrumentation.BasicLogger) services.TransactionPool {
+func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, reporting instrumentation.BasicLogger) services.TransactionPool {
 	s := &service{
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 		gossip:              gossip,
+		virtualMachine:      virtualMachine,
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 
 		pendingPool: pendingTxPool{

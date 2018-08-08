@@ -98,3 +98,4 @@ func validateTransactionNotInPendingPool(vctx validationContext) validator {
 		return nil
 	}
 }
+

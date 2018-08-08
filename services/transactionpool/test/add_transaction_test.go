@@ -17,6 +17,7 @@ import (
 type harness struct {
 	txpool services.TransactionPool
 	gossip *gossiptopics.MockTransactionRelay
+	vm     *services.MockVirtualMachine
 }
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
@@ -59,12 +60,30 @@ func (h *harness) verifyMocks() error {
 	return err
 }
 
+func (h *harness) failPreOrderCheckFor(transaction *protocol.SignedTransaction, status protocol.TransactionStatus) {
+	h.vm.When("TransactionSetPreOrder", mock.AnyIf("input with expected transaction",
+		func(i interface{}) bool {
+			if input, ok := i.(*services.TransactionSetPreOrderInput); !ok {
+				panic("mock virtual machine invoked with bad input")
+			} else if len(input.SignedTransactions) != 1 { // TODO if we need to support more than one transaction, generalize and refactor
+				return false
+			} else {
+				return input.SignedTransactions[0].Equal(transaction)
+			}
+
+		})).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{status}}).Times(1)
+}
+
 func NewHarness() *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
-	service := transactionpool.NewTransactionPool(gossip, instrumentation.GetLogger())
 
-	return &harness{txpool: service, gossip: gossip}
+	virtualMachine := &services.MockVirtualMachine{}
+	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PENDING}})
+
+	service := transactionpool.NewTransactionPool(gossip, virtualMachine, instrumentation.GetLogger())
+
+	return &harness{txpool: service, gossip: gossip, vm: virtualMachine}
 }
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
@@ -89,6 +108,25 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 
 	require.Error(t, err, "an invalid transaction was added to the pool")
 	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
+}
+
+func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
+	h := NewHarness()
+	tx := builders.TransferTransaction().Build()
+	expectedStatus := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+
+	h.failPreOrderCheckFor(tx, expectedStatus)
+	h.ignoringForwardMessages()
+
+	err := h.addNewTransaction(tx)
+
+	require.Error(t, err, "an transaction that failed pre-order checks was added to the pool")
+	require.IsType(t, &transactionpool.ErrTransactionRejected{}, err, "error was not of the expected type")
+
+	typedError := err.(*transactionpool.ErrTransactionRejected)
+	require.Equal(t, expectedStatus, typedError.TransactionStatus, "error did not contain expected transaction status")
+
+	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 
 }
 
