@@ -46,7 +46,7 @@ func (t *TransferTransactionBuilder) WithAmount(amount uint64) *TransferTransact
 }
 
 func (t *TransferTransactionBuilder) WithInvalidContent() *TransferTransactionBuilder {
-	t.builder.Transaction.Timestamp = primitives.TimestampNano(time.Now().Add(35 * time.Minute).UnixNano())
+	t.builder.Transaction.Timestamp = primitives.TimestampNano(time.Now().Add(-100000 * time.Hour).UnixNano())
 	return t
 }
 
@@ -67,6 +67,18 @@ func (t *TransferTransactionBuilder) WithSigner(networkType protocol.SignerNetwo
 
 func (t *TransferTransactionBuilder) WithContract(name string) *TransferTransactionBuilder {
 	t.builder.Transaction.ContractName = primitives.ContractName(name)
+	return t
+}
+
+func (t *TransferTransactionBuilder) WithInvalidSignerScheme() *TransferTransactionBuilder {
+	t.builder.Transaction.Signer = &protocol.SignerBuilder{
+		Scheme: protocol.SIGNER_SCHEME_EDDSA + 10000,
+	}
+	return t
+}
+
+func (t *TransferTransactionBuilder) WithTimestamp(timestamp time.Time) *TransferTransactionBuilder {
+	t.builder.Transaction.Timestamp = primitives.TimestampNano(timestamp.UnixNano())
 	return t
 }
 

@@ -36,7 +36,7 @@ func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) error {
 }
 
 func (h *harness) verifyMocks() error {
-	_, err := h. gossip.Verify()
+	_, err := h.gossip.Verify()
 	return err
 }
 
