@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"sync"
 )
 
 type Config interface {
@@ -14,22 +15,32 @@ type Config interface {
 }
 
 type service struct {
-	persistence            adapter.StatePersistence
-	lastResultsBlockHeader *protocol.ResultsBlockHeader
-	config				   Config
+	config                  Config
+
+	mutex              		*sync.Mutex
+	persistence             adapter.StatePersistence
+	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
-		persistence:            persistence,
-		lastResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
-		config:					config,
+		config:                  config,
+		mutex: 					 &sync.Mutex{},
+		persistence:             persistence,
+		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
 	}
 }
 
 func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
+		panic("CommitStateDiff received corrupt args")
+	}
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	committedBlock := input.ResultsBlockHeader.BlockHeight()
-	if lastCommittedBlock := s.lastResultsBlockHeader.BlockHeight(); lastCommittedBlock+1 != committedBlock {
+	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != committedBlock {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
 
@@ -39,7 +50,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 		}
 	}
 
-	s.lastResultsBlockHeader = input.ResultsBlockHeader
+	s.lastCommittedBlockHeader = input.ResultsBlockHeader
 	height := committedBlock + 1
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: height}, nil
 }
@@ -49,8 +60,8 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	if input.BlockHeight + primitives.BlockHeight(s.config.GetMaxStateHistory()) <= s.lastResultsBlockHeader.BlockHeight() {
-		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastResultsBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.GetMaxStateHistory()))
+	if input.BlockHeight + primitives.BlockHeight(s.config.GetMaxStateHistory()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.GetMaxStateHistory()))
 	}
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
@@ -77,8 +88,8 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 
 func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
 	result := &services.GetStateStorageBlockHeightOutput{
-		LastCommittedBlockHeight:    s.lastResultsBlockHeader.BlockHeight(),
-		LastCommittedBlockTimestamp: s.lastResultsBlockHeader.Timestamp(),
+		LastCommittedBlockHeight:    s.lastCommittedBlockHeader.BlockHeight(),
+		LastCommittedBlockTimestamp: s.lastCommittedBlockHeader.Timestamp(),
 	}
 	return result, nil
 }
