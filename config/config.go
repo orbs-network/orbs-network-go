@@ -19,7 +19,7 @@ type NodeConfig interface {
 	// benchmark consensus
 	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
 
-	// digest storage
+	// block storage
 	BlockSyncCommitTimeoutMillisec() time.Duration
 }
 
