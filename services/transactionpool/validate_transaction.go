@@ -12,9 +12,10 @@ const ProtocolVersion = primitives.ProtocolVersion(1)
 type validator func(transaction *protocol.SignedTransaction) error
 
 type validationContext struct {
-	expiryWindow time.Duration
+	expiryWindow                time.Duration
 	lastCommittedBlockTimestamp primitives.TimestampNano
-	futureTimestampGrace time.Duration
+	futureTimestampGrace        time.Duration
+	virtualChainId              primitives.VirtualChainId
 }
 
 func validateTransaction(transaction *protocol.SignedTransaction, vctx validationContext) error {
@@ -24,6 +25,7 @@ func validateTransaction(transaction *protocol.SignedTransaction, vctx validatio
 		validateSignerAndContractName,
 		validateTransactionNotExpired(vctx),
 		validateTransactionNotInFuture(vctx),
+		validateTransactionVirtualChainId(vctx),
 	}
 
 	for _, validate := range validators {
@@ -70,6 +72,16 @@ func validateTransactionNotInFuture(vctx validationContext) validator {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIME_STAMP_WINDOW_EXCEEDED}
 		}
 
+		return nil
+	}
+}
+
+func validateTransactionVirtualChainId(vctx validationContext) validator {
+	return func(transaction *protocol.SignedTransaction) error {
+		if !transaction.Transaction().VirtualChainId().Equal(vctx.virtualChainId) {
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH}
+
+		}
 		return nil
 	}
 }

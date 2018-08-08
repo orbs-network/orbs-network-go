@@ -17,8 +17,8 @@ func TransferTransaction() *TransferTransactionBuilder {
 	return (&TransferTransactionBuilder{
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				MethodName:   "transfer",
-				Timestamp:    primitives.TimestampNano(time.Now().UnixNano()),
+				MethodName: "transfer",
+				Timestamp:  primitives.TimestampNano(time.Now().UnixNano()),
 				InputArguments: []*protocol.MethodArgumentBuilder{
 					{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 10},
 				},
@@ -27,10 +27,9 @@ func TransferTransaction() *TransferTransactionBuilder {
 	}).
 		WithSigner(protocol.NETWORK_TYPE_TEST_NET, primitives.Ed25519PublicKey(keys.Ed25519KeyPairForTests(1).PublicKey())).
 		WithContract("BenchmarkToken").
-		WithProtocolVersion(1)
+		WithProtocolVersion(1).
+		WithVirtualChainId(primitives.VirtualChainId(42))
 }
-
-
 
 func (t *TransferTransactionBuilder) Build() *protocol.SignedTransaction {
 	return t.builder.Build()
@@ -58,7 +57,7 @@ func (t *TransferTransactionBuilder) WithSigner(networkType protocol.SignerNetwo
 	t.builder.Transaction.Signer = &protocol.SignerBuilder{
 		Scheme: protocol.SIGNER_SCHEME_EDDSA,
 		Eddsa: &protocol.EdDSA01SignerBuilder{
-			NetworkType: networkType,
+			NetworkType:     networkType,
 			SignerPublicKey: publicKey,
 		},
 	}
@@ -82,3 +81,7 @@ func (t *TransferTransactionBuilder) WithTimestamp(timestamp time.Time) *Transfe
 	return t
 }
 
+func (t *TransferTransactionBuilder) WithVirtualChainId(virtualChainId primitives.VirtualChainId) *TransferTransactionBuilder {
+	t.builder.Transaction.VirtualChainId = virtualChainId
+	return t
+}

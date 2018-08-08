@@ -28,16 +28,13 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrume
 }
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
-	//On any failure, return the relevant error status and an empty receipt.
-	//For an already committed transaction, return the receipt.
-	lastCommittedBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano()) // TODO update from committed blocks
-	transactionExpirationWindow := 30 * time.Minute // TODO extract to config
-	futureTimestampGrace := 3 * time.Minute // TODO extract to config
 
+	//TODO extract to config
 	vctx := validationContext{
-		expiryWindow: transactionExpirationWindow,
-		lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
-		futureTimestampGrace: futureTimestampGrace,
+		expiryWindow:                30 * time.Minute,
+		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		futureTimestampGrace:        3 * time.Minute,
+		virtualChainId:              primitives.VirtualChainId(42),
 	}
 	err := validateTransaction(input.SignedTransaction, vctx)
 	if err != nil {
