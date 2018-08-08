@@ -31,3 +31,18 @@ func TestSdkReadStateWithoutTransientState(t *testing.T) {
 	h.verifyNativeProcessorCalled(t)
 	h.verifyStateStorageRead(t)
 }
+
+func TestSdkWriteStateWithoutTransientState(t *testing.T) {
+	h := newHarness()
+
+	h.expectStateStorageBlockHeightRequested(12)
+	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) {
+		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02})
+		require.Error(t, err, "handleSdkCall should fail")
+	})
+
+	h.runLocalMethod()
+
+	h.verifyStateStorageBlockHeightRequested(t)
+	h.verifyNativeProcessorCalled(t)
+}

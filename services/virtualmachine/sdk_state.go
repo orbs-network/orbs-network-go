@@ -42,5 +42,8 @@ func (s *service) handleSdkStateRead(context *executionContext, args []*protocol
 }
 
 func (s *service) handleSdkStateWrite(context *executionContext, args []*protocol.MethodArgument) ([]*protocol.MethodArgument, error) {
+	if context.transientState == nil {
+		return nil, errors.Errorf("write attempted without transient state: %v", args)
+	}
 	return nil, nil
 }

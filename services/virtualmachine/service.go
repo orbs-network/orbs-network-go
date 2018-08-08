@@ -84,7 +84,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 			return nil, err
 		}
 
-		contextId := s.allocateExecutionContext(blockHeight, input.Transaction.ContractName())
+		contextId := s.allocateExecutionContext(blockHeight, input.Transaction.ContractName(), false)
 
 		args := []*protocol.MethodArgument{}
 		for i := input.Transaction.InputArgumentsIterator(); i.HasNext(); {

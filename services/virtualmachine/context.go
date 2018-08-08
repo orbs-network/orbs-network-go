@@ -3,8 +3,9 @@ package virtualmachine
 import "github.com/orbs-network/orbs-spec/types/go/primitives"
 
 type executionContext struct {
-	blockHeight  primitives.BlockHeight
-	serviceStack []primitives.ContractName
+	blockHeight    primitives.BlockHeight
+	serviceStack   []primitives.ContractName
+	transientState *transientState
 }
 
 func (c *executionContext) serviceStackTop() primitives.ContractName {
@@ -14,13 +15,19 @@ func (c *executionContext) serviceStackTop() primitives.ContractName {
 	return c.serviceStack[len(c.serviceStack)-1]
 }
 
-func (s *service) allocateExecutionContext(blockHeight primitives.BlockHeight, callingService primitives.ContractName) (res primitives.ExecutionContextId) {
+func (s *service) allocateExecutionContext(blockHeight primitives.BlockHeight, callingService primitives.ContractName, withTransientState bool) (res primitives.ExecutionContextId) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	var transientState *transientState
+	if withTransientState {
+		transientState = newTransientState()
+	}
+
 	newContext := &executionContext{
-		blockHeight:  blockHeight,
-		serviceStack: []primitives.ContractName{callingService},
+		blockHeight:    blockHeight,
+		serviceStack:   []primitives.ContractName{callingService},
+		transientState: transientState,
 	}
 
 	// TODO: improve this mechanism because it wraps around
