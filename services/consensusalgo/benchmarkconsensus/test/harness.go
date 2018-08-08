@@ -58,7 +58,6 @@ func newHarness(
 		nodePublicKey, nodePrivateKey = nonLeaderKeyPair()
 	}
 
-
 	config := config.NewConsensusConfig(
 		federationNodes,
 		nodePublicKey,

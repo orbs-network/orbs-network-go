@@ -21,6 +21,9 @@ type NodeConfig interface {
 
 	// block storage
 	BlockSyncCommitTimeoutMillisec() time.Duration
+
+	// state storage
+	StateHistoryRetentionInBlockHeights() uint64
 }
 
 type FederationNode interface {
