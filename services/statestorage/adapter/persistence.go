@@ -6,6 +6,6 @@ import (
 )
 
 type StatePersistence interface {
-	WriteState(height primitives.BlockHeight, contract primitives.ContractName, stateDiffs *protocol.StateRecord) error // TODO: change this to an array as well since we do multiple writes in one transactions
+	WriteState(height primitives.BlockHeight, contractStateDiffs []*protocol.ContractStateDiff) error
 	ReadState(height primitives.BlockHeight, contract primitives.ContractName) (map[string]*protocol.StateRecord, error)
 }

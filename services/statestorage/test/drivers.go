@@ -107,6 +107,6 @@ type driverConfig struct {
 	historySize 	int
 }
 
-func (d *driverConfig) GetMaxStateHistory() uint64 {
+func (d *driverConfig) StateHistoryRetentionInBlockHeights() uint64 {
 	return uint64(d.historySize)
 }

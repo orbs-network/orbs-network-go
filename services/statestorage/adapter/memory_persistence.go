@@ -6,44 +6,54 @@ import (
 	"github.com/pkg/errors"
 	)
 
+type ContractState map[string]*protocol.StateRecord
+type StateVersion map[primitives.ContractName]ContractState
+
 type InMemoryStatePersistence struct {
 	stateWritten 	chan bool
-	stateDiffs   	map[primitives.BlockHeight]map[primitives.ContractName]map[string]*protocol.StateRecord
+	stateDiffs   	map[primitives.BlockHeight]StateVersion
 }
 
 func NewInMemoryStatePersistence() StatePersistence {
-	stateDiffsContract :=  map[primitives.ContractName]map[string]*protocol.StateRecord{primitives.ContractName("BenchmarkToken"): {}}
+	stateDiffsContract :=  map[primitives.ContractName]ContractState{primitives.ContractName("BenchmarkToken"): {}}
 
 	return &InMemoryStatePersistence{
 		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
-		stateDiffs:  map[primitives.BlockHeight]map[primitives.ContractName]map[string]*protocol.StateRecord{primitives.BlockHeight(0): stateDiffsContract},
+		stateDiffs:  map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
 		stateWritten: make(chan bool, 10),
 	}
 }
 
-func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, contract primitives.ContractName, stateDiff *protocol.StateRecord) error {
+func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, contractStateDiffs []*protocol.ContractStateDiff) error {
 	if _, ok := sp.stateDiffs[height]; !ok {
 		sp.stateDiffs[height] = sp.cloneCurrentStateDiff(height)
 	}
 
-	if _, ok := sp.stateDiffs[height][contract]; !ok {
-		sp.stateDiffs[height][contract] = map[string]*protocol.StateRecord{}
+	for _, stateDiffs := range contractStateDiffs {
+		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
+			sp.writeOneContract(height, stateDiffs.ContractName(), i.NextStateDiffs())
+		}
 	}
-
-	sp.stateDiffs[height][contract][stateDiff.Key().KeyForMap()] = stateDiff
 
 	sp.stateWritten <- true
 
 	return nil
 }
 
-func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.BlockHeight) map[primitives.ContractName]map[string]*protocol.StateRecord {
+func (sp *InMemoryStatePersistence) writeOneContract(height primitives.BlockHeight, contract primitives.ContractName, stateDiff *protocol.StateRecord) {
+	if _, ok := sp.stateDiffs[height][contract]; !ok {
+		sp.stateDiffs[height][contract] = map[string]*protocol.StateRecord{}
+	}
+	sp.stateDiffs[height][contract][stateDiff.Key().KeyForMap()] = stateDiff
+}
+
+func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.BlockHeight) StateVersion {
 	prevHeight := height - primitives.BlockHeight(1)
 	if _, ok := sp.stateDiffs[prevHeight]; !ok {
 		panic ("trying to commit blocks not in order")
 	}
 
-	newStore := map[primitives.ContractName]map[string]*protocol.StateRecord{}
+	newStore := StateVersion{}
 	for contract, contractStore := range sp.stateDiffs[prevHeight] {
 		newStateRecordStore := map[string]*protocol.StateRecord{}
 		for k, v := range contractStore {

@@ -11,7 +11,7 @@ import (
 )
 
 type Config interface {
-	GetMaxStateHistory() uint64
+	StateHistoryRetentionInBlockHeights() uint64
 }
 
 type service struct {
@@ -46,12 +46,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
 
-	for _, stateDiffs := range input.ContractStateDiffs {
-		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
-			s.persistence.WriteState(committedBlock, stateDiffs.ContractName(), i.NextStateDiffs())
-		}
-	}
-
+	s.persistence.WriteState(committedBlock, input.ContractStateDiffs)
 	s.lastCommittedBlockHeader = input.ResultsBlockHeader
 	height := committedBlock + 1
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: height}, nil
@@ -62,8 +57,8 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	if input.BlockHeight + primitives.BlockHeight(s.config.GetMaxStateHistory()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.GetMaxStateHistory()))
+	if input.BlockHeight + primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
 	}
 
 	s.mutex.Lock()
