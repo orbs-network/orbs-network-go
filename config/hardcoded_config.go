@@ -71,7 +71,7 @@ func NewHardCodedConfig(
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
 		},
-		stateStorageConfig: &stateStorageConfig{ stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
+		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
 	}
 
 }
@@ -87,8 +87,8 @@ func NewConsensusConfig(
 
 	return &consensusConfig{
 		identity: &identity{
-			nodePublicKey:                                nodePublicKey,
-			nodePrivateKey:                               nodePrivateKey,
+			nodePublicKey:  nodePublicKey,
+			nodePrivateKey: nodePrivateKey,
 		},
 		federationNodes:                              federationNodes,
 		constantConsensusLeader:                      constantConsensusLeader,
@@ -98,7 +98,7 @@ func NewConsensusConfig(
 }
 
 func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillisec:time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+	return &blockStorageConfig{blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
 }
 
 func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {

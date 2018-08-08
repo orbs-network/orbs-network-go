@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 )
 
 type driver struct {
-	service     services.StateStorage
-	history 	driverConfig
+	service services.StateStorage
+	history driverConfig
 }
 
 type keyValue struct {
@@ -28,7 +28,7 @@ func newStateStorageDriver(history int) *driver {
 
 	p := adapter.NewInMemoryStatePersistence()
 
-	return &driver{service: statestorage.NewStateStorage(&historySize, p), history : historySize}
+	return &driver{service: statestorage.NewStateStorage(&historySize, p), history: historySize}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
@@ -36,7 +36,7 @@ func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
 	return d.readSingleKeyFromHistory(h, contract, key)
 }
 
-func (d *driver) readSingleKeyFromHistory(history int, contract string, key string)  ([]byte, error) {
+func (d *driver) readSingleKeyFromHistory(history int, contract string, key string) ([]byte, error) {
 	out, err := d.readKeysFromHistory(history, contract, key)
 	if err != nil {
 		return nil, err
@@ -86,16 +86,16 @@ func (d *driver) commitStateDiff(state *services.CommitStateDiffInput) {
 
 func (d *driver) commitValuePairs(contract string, keyValues ...string) {
 	h, _, _ := d.getBlockHeightAndTimestamp()
-	d.commitValuePairsAtHeight(h + 1, contract, keyValues...)
+	d.commitValuePairsAtHeight(h+1, contract, keyValues...)
 }
 
 func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...string) {
-	if len(keyValues) % 2 != 0 {
+	if len(keyValues)%2 != 0 {
 		panic("expecting an array of key value pairs")
 	}
 	b := builders.ContractStateDiff().WithContractName(contract)
 
-	for i := 0; i < len(keyValues); i+=2 {
+	for i := 0; i < len(keyValues); i += 2 {
 		b.WithStringRecord(keyValues[i], keyValues[i+1])
 	}
 
@@ -104,7 +104,7 @@ func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...s
 }
 
 type driverConfig struct {
-	historySize 	int
+	historySize int
 }
 
 func (d *driverConfig) StateHistoryRetentionInBlockHeights() uint64 {

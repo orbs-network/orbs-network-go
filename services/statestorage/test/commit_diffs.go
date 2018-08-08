@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	)
+)
 
 var _ = Describe("Commit a State Diff", func() {
 
@@ -63,7 +63,7 @@ var _ = Describe("Commit a State Diff", func() {
 				output, err := d.readSingleKeyFromHistory(2, "contract1", "key1")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(output).To(BeEquivalentTo(v2))
-				output2, err := d.readSingleKeyFromHistory(2,"contract1", "key3")
+				output2, err := d.readSingleKeyFromHistory(2, "contract1", "key3")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(output2).To(BeEquivalentTo([]byte{}))
 			})

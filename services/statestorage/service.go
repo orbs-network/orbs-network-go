@@ -3,10 +3,10 @@ package statestorage
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"sync"
 )
 
@@ -15,18 +15,18 @@ type Config interface {
 }
 
 type service struct {
-	config                  Config
+	config Config
 
-	mutex              		*sync.Mutex
-	persistence             adapter.StatePersistence
+	mutex                    *sync.Mutex
+	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
-		config:                  config,
-		mutex: 					 &sync.Mutex{},
-		persistence:             persistence,
+		config:                   config,
+		mutex:                    &sync.Mutex{},
+		persistence:              persistence,
 		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
 	}
 }
@@ -57,7 +57,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	if input.BlockHeight + primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
 		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
 	}
 

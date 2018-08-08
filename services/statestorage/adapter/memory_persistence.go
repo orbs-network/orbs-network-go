@@ -4,22 +4,22 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
-	)
+)
 
 type ContractState map[string]*protocol.StateRecord
 type StateVersion map[primitives.ContractName]ContractState
 
 type InMemoryStatePersistence struct {
-	stateWritten 	chan bool
-	stateDiffs   	map[primitives.BlockHeight]StateVersion
+	stateWritten chan bool
+	stateDiffs   map[primitives.BlockHeight]StateVersion
 }
 
 func NewInMemoryStatePersistence() StatePersistence {
-	stateDiffsContract :=  map[primitives.ContractName]ContractState{primitives.ContractName("BenchmarkToken"): {}}
+	stateDiffsContract := map[primitives.ContractName]ContractState{primitives.ContractName("BenchmarkToken"): {}}
 
 	return &InMemoryStatePersistence{
 		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
-		stateDiffs:  map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
+		stateDiffs:   map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
 		stateWritten: make(chan bool, 10),
 	}
 }
@@ -50,7 +50,7 @@ func (sp *InMemoryStatePersistence) writeOneContract(height primitives.BlockHeig
 func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.BlockHeight) StateVersion {
 	prevHeight := height - primitives.BlockHeight(1)
 	if _, ok := sp.stateDiffs[prevHeight]; !ok {
-		panic ("trying to commit blocks not in order")
+		panic("trying to commit blocks not in order")
 	}
 
 	newStore := StateVersion{}
@@ -79,7 +79,7 @@ func (sp *InMemoryStatePersistence) clearOldStateDiffs(current) {
 }
 */
 
-func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName) (map[string]*protocol.StateRecord, error){
+func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName) (map[string]*protocol.StateRecord, error) {
 	if stateAtHeight, ok := sp.stateDiffs[height]; ok {
 		if contractStateDiff, ok := stateAtHeight[contract]; ok {
 			return contractStateDiff, nil
