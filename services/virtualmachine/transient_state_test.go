@@ -8,7 +8,7 @@ import (
 
 func requireDirtyPairs(t *testing.T, s *transientState, contract primitives.ContractName, expected []keyValuePair) {
 	d := []keyValuePair{}
-	s.forDirty("Contract1", func(key []byte, value []byte) {
+	s.forDirty(contract, func(key []byte, value []byte) {
 		d = append(d, keyValuePair{key, value, true})
 	})
 	require.ElementsMatch(t, expected, d, "dirty keys should be equal")
@@ -75,5 +75,28 @@ func TestTransientStateWriteDirtyReadKeys(t *testing.T) {
 		{[]byte{0x01}, []byte{0x22, 0x33}, true},
 		{[]byte{0x03}, []byte{0x55, 0x66}, true},
 		{[]byte{0x05}, []byte{0x99, 0xaa}, true},
+	})
+}
+
+func TestMergeTransientState(t *testing.T) {
+	s1 := newTransientState()
+	s1.setValue("Contract1", []byte{0x01}, []byte{0x22, 0x33}, true)
+	s1.setValue("Contract1", []byte{0x02}, []byte{0x44, 0x55}, true)
+
+	s2 := newTransientState()
+	s2.setValue("Contract1", []byte{0x02}, []byte{0x66, 0x77, 0x88}, true)
+	s2.setValue("Contract1", []byte{0x03}, []byte{0x99}, true)
+	s2.setValue("Contract2", []byte{0x01}, []byte{0xaa}, true)
+
+	s2.mergeIntoTransientState(s1)
+
+	requireDirtyPairs(t, s1, "Contract1", []keyValuePair{
+		{[]byte{0x01}, []byte{0x22, 0x33}, true},
+		{[]byte{0x02}, []byte{0x66, 0x77, 0x88}, true},
+		{[]byte{0x03}, []byte{0x99}, true},
+	})
+
+	requireDirtyPairs(t, s1, "Contract2", []keyValuePair{
+		{[]byte{0x01}, []byte{0xaa}, true},
 	})
 }

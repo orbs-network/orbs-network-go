@@ -65,6 +65,14 @@ func (t *transientState) forDirty(contract primitives.ContractName, f func(key [
 	}
 }
 
+func (t *transientState) mergeIntoTransientState(masterTransientState *transientState) {
+	for contractName, _ := range t.contracts {
+		t.forDirty(contractName, func(key []byte, value []byte) {
+			masterTransientState.setValue(contractName, key, value, true)
+		})
+	}
+}
+
 func keyForMap(key []byte) string {
 	return string(key) // TODO: improve to create a version without copy (unsafe cast)
 }

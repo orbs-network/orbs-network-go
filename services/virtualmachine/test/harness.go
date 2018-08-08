@@ -89,7 +89,7 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 
 func (h *harness) runLocalMethod() {
 	h.service.RunLocalMethod(&services.RunLocalMethodInput{
-		BlockHeight: 1,
+		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
 			Signer:         nil,
 			ContractName:   "ExampleContract",
@@ -99,14 +99,47 @@ func (h *harness) runLocalMethod() {
 	})
 }
 
-func (h *harness) expectNativeProcessorCalled(f func(primitives.ExecutionContextId)) {
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-		f(input.ContextId)
-		return &services.ProcessCallOutput{
-			OutputArguments: []*protocol.MethodArgument{},
-			CallResult:      protocol.EXECUTION_RESULT_SUCCESS,
-		}, nil
-	}).Times(1)
+type keyValuePair struct {
+	key   primitives.Ripmd160Sha256
+	value []byte
+}
+
+func (h *harness) processTransactionSet(numTransactions int) []*keyValuePair {
+	transactions := []*protocol.SignedTransaction{}
+	for i := 0; i < numTransactions; i++ {
+		tx := builders.Transaction().WithMethod("ExampleContract", "exampleMethod").Build()
+		transactions = append(transactions, tx)
+	}
+
+	output, _ := h.service.ProcessTransactionSet(&services.ProcessTransactionSetInput{
+		BlockHeight:        12,
+		SignedTransactions: transactions,
+	})
+	for _, contractStateDiffs := range output.ContractStateDiffs {
+		if contractStateDiffs.ContractName() == "ExampleContract" {
+			res := []*keyValuePair{}
+			for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
+				sd := i.NextStateDiffs()
+				res = append(res, &keyValuePair{sd.Key(), sd.Value()})
+			}
+			return res
+		}
+	}
+	return nil
+}
+
+// each f() given is a different transaction in the set
+func (h *harness) expectNativeProcessorCalled(fs ...func(primitives.ExecutionContextId) protocol.ExecutionResult) {
+	for i, _ := range fs {
+		i := i // needed for avoiding incorrect closure capture
+		h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+			callResult := fs[i](input.ContextId)
+			return &services.ProcessCallOutput{
+				OutputArguments: []*protocol.MethodArgument{},
+				CallResult:      callResult,
+			}, nil
+		}).Times(1)
+	}
 }
 
 func (h *harness) verifyNativeProcessorCalled(t *testing.T) {
@@ -150,4 +183,8 @@ func (h *harness) expectStateStorageRead(expectedHeight primitives.BlockHeight, 
 func (h *harness) verifyStateStorageRead(t *testing.T) {
 	ok, err := h.stateStorage.Verify()
 	require.True(t, ok, "did not read from state storage: %v", err)
+}
+
+func (h *harness) expectStateStorageNotRead() {
+	h.stateStorage.When("ReadKeys", mock.Any).Return(&services.ReadKeysOutput{}, nil).Times(0)
 }

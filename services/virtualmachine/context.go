@@ -1,11 +1,16 @@
 package virtualmachine
 
-import "github.com/orbs-network/orbs-spec/types/go/primitives"
+import (
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+)
 
 type executionContext struct {
-	blockHeight    primitives.BlockHeight
-	serviceStack   []primitives.ContractName
-	transientState *transientState
+	blockHeight         primitives.BlockHeight
+	serviceStack        []primitives.ContractName
+	transientState      *transientState
+	accessScope         protocol.ExecutionAccessScope
+	batchTransientState *transientState
 }
 
 func (c *executionContext) serviceStackTop() primitives.ContractName {
@@ -15,26 +20,33 @@ func (c *executionContext) serviceStackTop() primitives.ContractName {
 	return c.serviceStack[len(c.serviceStack)-1]
 }
 
-func (s *service) allocateExecutionContext(blockHeight primitives.BlockHeight, callingService primitives.ContractName, withTransientState bool) (res primitives.ExecutionContextId) {
+func (c *executionContext) serviceStackPush(service primitives.ContractName) {
+	c.serviceStack = append(c.serviceStack, service)
+}
+
+func (c *executionContext) serviceStackPop() {
+	if len(c.serviceStack) == 0 {
+		return
+	}
+	c.serviceStack = c.serviceStack[0 : len(c.serviceStack)-1]
+}
+
+func (s *service) allocateExecutionContext(blockHeight primitives.BlockHeight, accessScope protocol.ExecutionAccessScope) (primitives.ExecutionContextId, *executionContext) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var transientState *transientState
-	if withTransientState {
-		transientState = newTransientState()
-	}
-
 	newContext := &executionContext{
 		blockHeight:    blockHeight,
-		serviceStack:   []primitives.ContractName{callingService},
-		transientState: transientState,
+		serviceStack:   []primitives.ContractName{},
+		transientState: newTransientState(),
+		accessScope:    accessScope,
 	}
 
 	// TODO: improve this mechanism because it wraps around
 	s.lastContextId += 1
-	res = s.lastContextId
+	res := s.lastContextId
 	s.activeContexts[res] = newContext
-	return
+	return res, newContext
 }
 
 func (s *service) destroyExecutionContext(contextId primitives.ExecutionContextId) {
