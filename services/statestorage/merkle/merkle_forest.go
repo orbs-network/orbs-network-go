@@ -93,7 +93,6 @@ func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) RootId
 	return f.topRoot
 }
 
-// TODO - do we need to explicitly treat cases where value remains the same? avoid cloning etc...
 func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256)  *Node {
 	newNode := currentNode.clone()
 	if currentNode.path == path { // existing leaf node updated
