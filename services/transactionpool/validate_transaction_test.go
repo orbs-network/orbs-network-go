@@ -16,20 +16,44 @@ const futureTimestampGrace = 3 * time.Minute
 
 var lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().Add(-5 * time.Second).UnixNano())
 
-var vctx = validationContext{
-	expiryWindow:                expirationWindowInterval,
-	lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
-	futureTimestampGrace:        futureTimestampGrace,
-	virtualChainId:              primitives.VirtualChainId(42),
+func aValidationContextWithTransactionsInPools(transactionsInPendingPool transactions, transactionsInCommittedPool transactions) validationContext {
+	isTxInPendingPool := func(tx *protocol.SignedTransaction) bool {
+		for _, t := range transactionsInPendingPool {
+			if tx.Equal(t) {
+				return true
+			}
+		}
+		return false
+	}
+
+	isTxInCommittedPool := func(tx *protocol.SignedTransaction) bool {
+		for _, t := range transactionsInCommittedPool {
+			if tx.Equal(t) {
+				return true
+			}
+		}
+		return false
+	}
+
+	return validationContext{
+		expiryWindow:                expirationWindowInterval,
+		lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
+		futureTimestampGrace:        futureTimestampGrace,
+		virtualChainId:              primitives.VirtualChainId(42),
+		transactionInPendingPool:    isTxInPendingPool,
+		transactionInCommittedPool:  isTxInCommittedPool,
+	}
 }
 
-//TODO * Transaction (tx_id) doesn't already exist in the pending pool or committed pool (duplicate).
+func aValidationContext() validationContext {
+	return aValidationContextWithTransactionsInPools(transactions{}, transactions{})
+}
+
 //TODO Verify pre order checks (like signature and subscription) by calling VirtualMachine.TransactionSetPreOrder.
-//TODO assert signer scheme is Eddsa and public key is correct size
 
 func TestValidateTransaction_ValidTransaction(t *testing.T) {
 	require.NoError(t,
-		validateTransaction(builders.TransferTransaction().Build(), vctx),
+		validateTransaction(builders.TransferTransaction().Build(), aValidationContext()),
 		"a valid transaction was rejected")
 }
 
@@ -50,18 +74,24 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require.Error(t,
-				validateTransaction(test.txBuilder.Build(), vctx),
+				validateTransaction(test.txBuilder.Build(), aValidationContext()),
 				fmt.Sprintf("a transaction with an invalid %s was not rejected", test.name))
 		})
 	}
 }
 
-func TestValidateTransaction_InvalidTimestamp_InThePast(t *testing.T) {
-	tx := builders.TransferTransaction().WithTimestamp(time.Now().Add(expirationWindowInterval * -2)).Build()
-
-	require.Error(t, validateTransaction(tx, vctx), "a transaction that was created prior to the expiry window was not rejected")
-}
-
 func futureTimeAfterGracePeriod() time.Time {
 	return time.Unix(0, int64(lastCommittedBlockTimestamp)).Add(futureTimestampGrace + 1*time.Minute)
+}
+
+func TestValidateTransaction_DoesNotExistInPools(t *testing.T) {
+	tx := builders.TransferTransaction().Build()
+
+	require.Error(t,
+		validateTransaction(tx, aValidationContextWithTransactionsInPools(transactions{tx}, transactions{})),
+		"a transaction that exists in the pending transaction pool was not rejected")
+
+	require.Error(t,
+		validateTransaction(tx, aValidationContextWithTransactionsInPools(transactions{}, transactions{tx})),
+		"a transaction that exists in the committed transaction pool was not rejected")
 }

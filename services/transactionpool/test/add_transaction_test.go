@@ -27,6 +27,15 @@ func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction)
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
 }
 
+
+func (h *harness) expectNoTransactionsToBeForwarded() {
+	h.gossip.Never("BroadcastForwardedTransactions", mock.Any)
+}
+
+func (h *harness) ignoringForwardMessages() {
+	h.gossip.When("BroadcastForwardedTransactions", mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).AtLeast(0)
+}
+
 func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) error {
 	_, err := h.txpool.AddNewTransaction(&services.AddNewTransactionInput{
 		SignedTransaction: tx,
@@ -46,10 +55,6 @@ func NewHarness() *harness {
 	service := transactionpool.NewTransactionPool(gossip, instrumentation.GetLogger())
 
 	return &harness{txpool:service, gossip:gossip}
-}
-
-func (h *harness) expectNoTransactionsToBeForwarded() {
-	h.gossip.Never("BroadcastForwardedTransactions", mock.Any)
 }
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
@@ -76,3 +81,14 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
 
 }
+
+func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
+	h := NewHarness()
+
+	tx := builders.TransferTransaction().Build()
+	h.ignoringForwardMessages()
+
+	h.addNewTransaction(tx)
+	require.Error(t, h.addNewTransaction(tx), "a transaction was added twice to the pool")
+}
+

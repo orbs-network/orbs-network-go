@@ -10,12 +10,15 @@ import (
 const ProtocolVersion = primitives.ProtocolVersion(1)
 
 type validator func(transaction *protocol.SignedTransaction) error
+type transactionInPoolsCheck func(*protocol.SignedTransaction) bool
 
 type validationContext struct {
 	expiryWindow                time.Duration
 	lastCommittedBlockTimestamp primitives.TimestampNano
 	futureTimestampGrace        time.Duration
 	virtualChainId              primitives.VirtualChainId
+	transactionInPendingPool    transactionInPoolsCheck
+	transactionInCommittedPool  transactionInPoolsCheck
 }
 
 func validateTransaction(transaction *protocol.SignedTransaction, vctx validationContext) error {
@@ -26,6 +29,7 @@ func validateTransaction(transaction *protocol.SignedTransaction, vctx validatio
 		validateTransactionNotExpired(vctx),
 		validateTransactionNotInFuture(vctx),
 		validateTransactionVirtualChainId(vctx),
+		validateTransactionNotInPools(vctx),
 	}
 
 	for _, validate := range validators {
@@ -82,6 +86,20 @@ func validateTransactionVirtualChainId(vctx validationContext) validator {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH}
 
 		}
+		return nil
+	}
+}
+
+func validateTransactionNotInPools(vctx validationContext) validator {
+	return func(transaction *protocol.SignedTransaction) error {
+		if vctx.transactionInPendingPool(transaction) {
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION}
+		}
+
+		if vctx.transactionInCommittedPool(transaction) {
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED}
+		}
+
 		return nil
 	}
 }

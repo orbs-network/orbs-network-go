@@ -3,18 +3,37 @@ package transactionpool
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"sync"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 )
+
+type txPool struct {
+	transactions map[string]bool
+	lock         *sync.Mutex
+}
+
+func (p txPool) add(transaction *protocol.SignedTransaction) {
+	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.transactions[key] = true
+}
+
+func (p txPool) has(transaction *protocol.SignedTransaction) bool {
+	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
+	ok, _ := p.transactions[key]
+	return ok
+}
 
 type service struct {
 	pendingTransactions chan *protocol.SignedTransaction
 	gossip              gossiptopics.TransactionRelay
 	reporting           instrumentation.BasicLogger
+
+	pendingPool txPool
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrumentation.BasicLogger) services.TransactionPool {
@@ -22,37 +41,14 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, reporting instrume
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 		gossip:              gossip,
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
+
+		pendingPool: txPool{
+			transactions: make(map[string]bool),
+			lock:         &sync.Mutex{},
+		},
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s
-}
-
-func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
-
-	//TODO extract to config
-	vctx := validationContext{
-		expiryWindow:                30 * time.Minute,
-		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
-		futureTimestampGrace:        3 * time.Minute,
-		virtualChainId:              primitives.VirtualChainId(42),
-	}
-	err := validateTransaction(input.SignedTransaction, vctx)
-	if err != nil {
-		s.reporting.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
-		return nil, err
-	}
-
-	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
-		Message: &gossipmessages.ForwardedTransactionsMessage{
-
-			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
-		},
-	})
-
-	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
-	s.pendingTransactions <- input.SignedTransaction
-
-	return &services.AddNewTransactionOutput{}, nil
 }
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
@@ -85,4 +81,12 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 		s.pendingTransactions <- tx
 	}
 	return nil, nil
+}
+
+func (s *service) isTransactionInPendingPool(transaction *protocol.SignedTransaction) bool {
+	return s.pendingPool.has(transaction)
+}
+
+func (s *service) isTransactionInCommittedPool(transaction *protocol.SignedTransaction) bool {
+	return false //TODO really check
 }
