@@ -12,15 +12,63 @@ import (
 
 var _ = Describe("Merkle Forest", func() {
 	When("Verifying proofs", func() {
-		When("querying for merkle root of specific generation", func() {
-			It("returns the merkle root", func() {
+		When("querying for top generation", func() {
+			It("returns the current top", func() {
+				f := NewForest()
 
+				rootId := f.updateStringEntries("first", "val")
+				topRoot, err1 := f.GetTopRoot()
+				updatedRoot, err2 := f.GetRoot(rootId)
+
+				Expect(err1).ToNot(HaveOccurred())
+				Expect(err2).ToNot(HaveOccurred())
+				Expect(topRoot).To(BeEquivalentTo(updatedRoot))
 			})
 		})
 
-		When("querying for top generation", func() {
-			It("returns the current top", func() {
+		When("querying for merkle root of specific generation", func() {
+			It("returns the merkle root", func() {
+				f := NewForest()
+				f.updateStringEntries("first", "val")
 
+				topRootOf1, err1 := f.GetTopRoot()
+				f.updateStringEntries("second", "val")
+				rootOfOneAfterSecondUpdate, err2 := f.GetRoot(1)
+
+				Expect(err1).ToNot(HaveOccurred())
+				Expect(err2).ToNot(HaveOccurred())
+				Expect(topRootOf1).To(BeEquivalentTo(rootOfOneAfterSecondUpdate))
+			})
+		})
+
+		When("changing the state", func() {
+			It("merkle root changes", func() {
+				f := NewForest()
+				f.updateStringEntries("first", "val")
+
+				topRootOf1, err1 := f.GetTopRoot()
+				f.updateStringEntries("first", "val1")
+				topRootOf2, err2 := f.GetTopRoot()
+
+				Expect(err1).ToNot(HaveOccurred())
+				Expect(err2).ToNot(HaveOccurred())
+				Expect(topRootOf1).ToNot(BeEquivalentTo(topRootOf2))
+			})
+		})
+
+		When("reverting a change in the state", func() {
+			It("resets the root hash to the previous root hash", func() {
+				f := NewForest()
+
+				f.updateStringEntries("first", "val")
+				topRootOf1, err1 := f.GetTopRoot()
+				f.updateStringEntries("first", "val1")
+				f.updateStringEntries("first", "val")
+				topRootOf3, err2 := f.GetTopRoot()
+
+				Expect(err1).ToNot(HaveOccurred())
+				Expect(err2).ToNot(HaveOccurred())
+				Expect(topRootOf1).To(BeEquivalentTo(topRootOf3))
 			})
 		})
 
@@ -248,6 +296,7 @@ var _ = Describe("Merkle Forest", func() {
 						keyValue[var1[2]], keyValue[var1[2]+1],keyValue[var1[3]], keyValue[var1[3]+1],keyValue[var1[4]], keyValue[var1[4]+1])
 					root1, _ := f1.GetRoot(rootId1)
 					proof1, _ := f1.GetProof(rootId1, "", "bar1234")
+
 
 					f2 := NewForest()
 					rootId2 := f2.updateStringEntries(keyValue[var2[0]], keyValue[var2[0]+1],keyValue[var2[1]], keyValue[var2[1]+1],

@@ -94,17 +94,17 @@ func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) RootId
 }
 
 // TODO - do we need to explicitly treat cases where value remains the same? avoid cloning etc...
-func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256) (newNode *Node) {
-	newNode = currentNode.clone()
+func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256)  *Node {
+	newNode := currentNode.clone()
 	if currentNode.path == path { // existing leaf node updated
 		newNode.value = valueHash
-		return
+		return newNode
 	}
 
 	if strings.HasPrefix(path, currentNode.path) {
 		if !currentNode.hasValue() && !currentNode.hasChildren() { // this node has no children and no value, replace it
 			newNode = createNode(path, valueHash)
-			return
+			return newNode
 		}
 
 		branchSelector := path[len(currentNode.path)]
@@ -116,16 +116,15 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 			newChild = createNode(childPath, valueHash)
 		}
 		f.connectChildToParentAndSaveChild(newChild, newNode, branchSelector)
-		return
+		return newNode
 	}
 
 	if strings.HasPrefix(currentNode.path, path) { // "insert" a leaf node along the path of currentNode
-		newChild := newNode // my clone is now the new child
-		branchSelector := newChild.path[len(path)]
-		newChild.path = newChild.path[len(path)+1:]
-		newNode = createNode(path, valueHash)
-		f.connectChildToParentAndSaveChild(newChild, newNode, branchSelector)
-		return
+		branchSelector := newNode.path[len(path)]
+		newNode.path = newNode.path[len(path)+1:]
+		newParent := createNode(path, valueHash)
+		f.connectChildToParentAndSaveChild(newNode, newParent, branchSelector)
+		return newParent
 	}
 
 	// current node replaced by a new branch node, so that current node is one child and new node is second child
