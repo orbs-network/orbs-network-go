@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -16,9 +16,9 @@ func TestBenchmarkContractAddMethod(t *testing.T) {
 	call := processCallInput().WithMethod("BenchmarkContract", "add").WithArgs(uint64(12), uint64(27)).Build()
 
 	output, err := h.service.ProcessCall(call)
-	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, builders.MethodArguments(uint64(12+27)), output.OutputArguments, "call return args should be equal")
+	require.NoError(t, err, "call should succeed")
+	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	require.Equal(t, builders.MethodArguments(uint64(12+27)), output.OutputArguments, "call return args should be equal")
 }
 
 func TestBenchmarkContractSetGetMethods(t *testing.T) {
@@ -33,9 +33,9 @@ func TestBenchmarkContractSetGetMethods(t *testing.T) {
 	h.expectSdkCallMadeWithStateWrite()
 
 	output, err := h.service.ProcessCall(call)
-	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, builders.MethodArguments(), output.OutputArguments, "call return args should be equal")
+	require.NoError(t, err, "call should succeed")
+	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	require.Equal(t, builders.MethodArguments(), output.OutputArguments, "call return args should be equal")
 	h.verifySdkCallMade(t)
 
 	t.Log("Runs BenchmarkContract.get to read that value back from state")
@@ -44,8 +44,8 @@ func TestBenchmarkContractSetGetMethods(t *testing.T) {
 	h.expectSdkCallMadeWithStateRead(valueAsBytes)
 
 	output, err = h.service.ProcessCall(call)
-	assert.NoError(t, err, "call should succeed")
-	assert.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	assert.Equal(t, builders.MethodArguments(valueAsUint64), output.OutputArguments, "call return args should be equal")
+	require.NoError(t, err, "call should succeed")
+	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+	require.Equal(t, builders.MethodArguments(valueAsUint64), output.OutputArguments, "call return args should be equal")
 	h.verifySdkCallMade(t)
 }

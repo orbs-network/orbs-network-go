@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -10,7 +10,7 @@ func TestCallUnknownContractFails(t *testing.T) {
 	call := processCallInput().WithUnknownContract().Build()
 
 	_, err := h.service.ProcessCall(call)
-	assert.Error(t, err, "call should fail")
+	require.Error(t, err, "call should fail")
 }
 
 func TestCallUnknownMethodFails(t *testing.T) {
@@ -18,7 +18,7 @@ func TestCallUnknownMethodFails(t *testing.T) {
 	call := processCallInput().WithUnknownMethod().Build()
 
 	_, err := h.service.ProcessCall(call)
-	assert.Error(t, err, "call should fail")
+	require.Error(t, err, "call should fail")
 }
 
 func TestCallExternalMethodFromAnotherServiceSucceeds(t *testing.T) {
@@ -26,7 +26,7 @@ func TestCallExternalMethodFromAnotherServiceSucceeds(t *testing.T) {
 	call := processCallInput().WithExternalMethod().WithDifferentCallingService().Build()
 
 	_, err := h.service.ProcessCall(call)
-	assert.NoError(t, err, "call should succeed")
+	require.NoError(t, err, "call should succeed")
 }
 
 func TestCallInternalMethodFromSameServiceSucceeds(t *testing.T) {
@@ -34,7 +34,7 @@ func TestCallInternalMethodFromSameServiceSucceeds(t *testing.T) {
 	call := processCallInput().WithInternalMethod().WithSameCallingService().Build()
 
 	_, err := h.service.ProcessCall(call)
-	assert.NoError(t, err, "call should succeed")
+	require.NoError(t, err, "call should succeed")
 }
 
 func TestCallInternalMethodFromAnotherServiceFails(t *testing.T) {
@@ -42,7 +42,7 @@ func TestCallInternalMethodFromAnotherServiceFails(t *testing.T) {
 	call := processCallInput().WithInternalMethod().WithDifferentCallingService().Build()
 
 	_, err := h.service.ProcessCall(call)
-	assert.Error(t, err, "call should fail")
+	require.Error(t, err, "call should fail")
 }
 
 func TestCallInternalMethodFromAnotherServiceUnderSystemPermissionsSucceeds(t *testing.T) {
@@ -50,7 +50,7 @@ func TestCallInternalMethodFromAnotherServiceUnderSystemPermissionsSucceeds(t *t
 	call := processCallInput().WithInternalMethod().WithDifferentCallingService().WithSystemPermissions().Build()
 
 	_, err := h.service.ProcessCall(call)
-	assert.NoError(t, err, "call should succeed")
+	require.NoError(t, err, "call should succeed")
 }
 
 func TestCallWriteMethodWithWriteAccessSucceeds(t *testing.T) {
@@ -59,7 +59,7 @@ func TestCallWriteMethodWithWriteAccessSucceeds(t *testing.T) {
 	h.expectSdkCallMadeWithStateWrite()
 
 	_, err := h.service.ProcessCall(call)
-	assert.NoError(t, err, "call should succeed")
+	require.NoError(t, err, "call should succeed")
 }
 
 func TestCallWriteMethodWithoutWriteAccessFails(t *testing.T) {
@@ -67,5 +67,5 @@ func TestCallWriteMethodWithoutWriteAccessFails(t *testing.T) {
 	call := processCallInput().WithExternalWriteMethod().Build()
 
 	_, err := h.service.ProcessCall(call)
-	assert.Error(t, err, "call should fail")
+	require.Error(t, err, "call should fail")
 }

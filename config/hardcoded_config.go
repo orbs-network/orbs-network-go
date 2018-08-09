@@ -15,14 +15,23 @@ type identity struct {
 
 type consensusConfig struct {
 	*identity
-	federationNodes                              map[string]FederationNode
-	constantConsensusLeader                      primitives.Ed25519PublicKey
-	activeConsensusAlgo                          consensus.ConsensusAlgoType
-	benchmarkConsensusRoundRetryIntervalMillisec uint32
+	federationNodes                            map[string]FederationNode
+	constantConsensusLeader                    primitives.Ed25519PublicKey
+	activeConsensusAlgo                        consensus.ConsensusAlgoType
+	benchmarkConsensusRoundRetryIntervalMillis uint32
 }
 
 type blockStorageConfig struct {
-	blockSyncCommitTimeoutMillisec time.Duration
+	blockSyncCommitTimeoutMillis time.Duration
+}
+
+type consensusContextConfig struct {
+	belowMinimalBlockDelayMillis uint32
+	minimumTransactionsInBlock   int
+}
+
+type stateStorageConfig struct {
+	stateHistoryRetentionInBlockHeights uint64
 }
 
 type hardCodedFederationNode struct {
@@ -33,6 +42,8 @@ type hardcodedConfig struct {
 	*identity
 	*consensusConfig
 	*blockStorageConfig
+	*stateStorageConfig
+	*consensusContextConfig
 }
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -47,8 +58,11 @@ func NewHardCodedConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillisec uint32,
-	blockSyncCommitTimeoutMillisec uint32,
+	benchmarkConsensusRoundRetryIntervalMillis uint32,
+	blockSyncCommitTimeoutMillis uint32,
+	stateHistoryRetentionInBlockHeights uint64,
+	belowMinimalBlockDelayMillis uint32,
+	minimumTransactionsInBlock int,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -57,13 +71,18 @@ func NewHardCodedConfig(
 			nodePrivateKey: nodePrivateKey,
 		},
 		consensusConfig: &consensusConfig{
-			federationNodes:                              federationNodes,
-			constantConsensusLeader:                      constantConsensusLeader,
-			activeConsensusAlgo:                          activeConsensusAlgo,
-			benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
+			federationNodes:                            federationNodes,
+			constantConsensusLeader:                    constantConsensusLeader,
+			activeConsensusAlgo:                        activeConsensusAlgo,
+			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		blockStorageConfig: &blockStorageConfig{
-			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
+			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
+		},
+		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
+		consensusContextConfig: &consensusContextConfig{
+			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
+			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
 	}
 }
@@ -74,23 +93,34 @@ func NewConsensusConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillisec uint32,
+	benchmarkConsensusRoundRetryIntervalMillis uint32,
 ) *consensusConfig {
 
 	return &consensusConfig{
 		identity: &identity{
-			nodePublicKey:                                nodePublicKey,
-			nodePrivateKey:                               nodePrivateKey,
+			nodePublicKey:  nodePublicKey,
+			nodePrivateKey: nodePrivateKey,
 		},
-		federationNodes:                              federationNodes,
-		constantConsensusLeader:                      constantConsensusLeader,
-		activeConsensusAlgo:                          activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillisec: benchmarkConsensusRoundRetryIntervalMillisec,
+		federationNodes:                            federationNodes,
+		constantConsensusLeader:                    constantConsensusLeader,
+		activeConsensusAlgo:                        activeConsensusAlgo,
+		benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 	}
 }
 
-func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillisec:time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+func NewBlockStorageConfig(blockSyncCommitTimeoutMillis uint32) *blockStorageConfig {
+	return &blockStorageConfig{blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond}
+}
+
+func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {
+	return &consensusContextConfig{
+		belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
+		minimumTransactionsInBlock:   minimumTransactionsInBlock,
+	}
+}
+
+func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {
+	return &stateStorageConfig{stateHistoryRetentionInBlockHeights: maxStateHistory}
 }
 
 func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
@@ -117,14 +147,26 @@ func (c *consensusConfig) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
 }
 
-func (c *consensusConfig) BenchmarkConsensusRoundRetryIntervalMillisec() uint32 {
-	return c.benchmarkConsensusRoundRetryIntervalMillisec
+func (c *consensusConfig) BenchmarkConsensusRoundRetryIntervalMillis() uint32 {
+	return c.benchmarkConsensusRoundRetryIntervalMillis
 }
 
 func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return n.nodePublicKey
 }
 
-func (c *blockStorageConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
-	return c.blockSyncCommitTimeoutMillisec
+func (c *blockStorageConfig) BlockSyncCommitTimeoutMillis() time.Duration {
+	return c.blockSyncCommitTimeoutMillis
+}
+
+func (c *consensusContextConfig) BelowMinimalBlockDelayMillis() uint32 {
+	return c.belowMinimalBlockDelayMillis
+}
+
+func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
+	return c.minimumTransactionsInBlock
+}
+
+func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
+	return c.stateHistoryRetentionInBlockHeights
 }
