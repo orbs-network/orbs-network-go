@@ -98,8 +98,8 @@ func NewConsensusConfig(
 
 	return &consensusConfig{
 		identity: &identity{
-			nodePublicKey:                                nodePublicKey,
-			nodePrivateKey:                               nodePrivateKey,
+			nodePublicKey:  nodePublicKey,
+			nodePrivateKey: nodePrivateKey,
 		},
 		federationNodes:                            federationNodes,
 		constantConsensusLeader:                    constantConsensusLeader,
@@ -108,8 +108,8 @@ func NewConsensusConfig(
 	}
 }
 
-func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+func NewBlockStorageConfig(blockSyncCommitTimeoutMillis uint32) *blockStorageConfig {
+	return &blockStorageConfig{blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond}
 }
 
 func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {
