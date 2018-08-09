@@ -2,6 +2,7 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -10,6 +11,7 @@ import (
 
 type Config interface {
 	PendingPoolSizeInBytes() uint32
+	NodePublicKey() primitives.Ed25519PublicKey
 }
 
 type service struct {
@@ -17,6 +19,7 @@ type service struct {
 	gossip              gossiptopics.TransactionRelay
 	virtualMachine      services.VirtualMachine
 	reporting           instrumentation.BasicLogger
+	config              Config
 
 	pendingPool   *pendingTxPool
 	committedPool *committedTxPool
@@ -27,9 +30,10 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 		gossip:              gossip,
 		virtualMachine:      virtualMachine,
+		config:              config,
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 
-		pendingPool: NewPendingPool(config),
+		pendingPool:   NewPendingPool(config),
 		committedPool: NewCommittedPool(),
 	}
 	gossip.RegisterTransactionRelayHandler(s)

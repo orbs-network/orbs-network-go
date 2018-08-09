@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -14,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
+var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
 
 type harness struct {
 	txpool services.TransactionPool
@@ -26,6 +29,9 @@ func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction)
 	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			SignedTransactions: []*protocol.SignedTransaction{tx},
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: thisNodeKeyPair.PublicKey(),
+			}).Build(),
 		},
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
 }
@@ -76,16 +82,17 @@ func (h *harness) failPreOrderCheckFor(transaction *protocol.SignedTransaction, 
 }
 
 func newHarness() *harness {
-	return newHarnessWithConfig(config.NewTransactionPoolConfig(20 * 1024 * 1024))
+	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
-func newHarnessWithConfig(config transactionpool.Config) *harness {
+func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PENDING}})
 
+	config := config.NewTransactionPoolConfig(sizeLimit, thisNodeKeyPair.PublicKey())
 	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())
 
 	return &harness{txpool: service, gossip: gossip, vm: virtualMachine}
@@ -166,7 +173,7 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
-	h := newHarnessWithConfig(config.NewTransactionPoolConfig(1))
+	h := newHarnessWithSizeLimit(1)
 
 	h.expectNoTransactionsToBeForwarded()
 

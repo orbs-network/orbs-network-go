@@ -35,6 +35,7 @@ type stateStorageConfig struct {
 }
 
 type transactionPoolConfig struct {
+	*identity
 	pendingPoolSizeInBytes uint32
 }
 
@@ -125,8 +126,13 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32) *transactionPoolConfig {
-	return &transactionPoolConfig{pendingPoolSizeInBytes: pendingPoolSizeInBytes}
+func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
+	return &transactionPoolConfig{
+		identity: &identity{
+			nodePublicKey: nodePublicKey,
+		},
+		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
+	}
 }
 
 func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {

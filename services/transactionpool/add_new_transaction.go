@@ -47,14 +47,23 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	}
 	s.pendingTransactions <- input.SignedTransaction //TODO remove this
 
-	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
-		Message: &gossipmessages.ForwardedTransactionsMessage{
+	//TODO batch
+	s.forwardTransaction(input.SignedTransaction)
 
-			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
+	return &services.AddNewTransactionOutput{}, nil
+}
+
+func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
+	_, err := s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+		Message: &gossipmessages.ForwardedTransactionsMessage{
+			SignedTransactions: []*protocol.SignedTransaction{tx},
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+			}).Build(),
 		},
 	})
 
-	return &services.AddNewTransactionOutput{}, nil
+	return err
 }
 
 func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
