@@ -44,6 +44,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
 	s.reporting.Info("enter CallMethod")
 	defer s.reporting.Info("exit CallMethod")
+	// TODO get block height for input ?
 	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: input.ClientRequest.Transaction(),
 	})

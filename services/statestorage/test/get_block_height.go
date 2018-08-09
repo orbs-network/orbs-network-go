@@ -9,7 +9,7 @@ import (
 var _ = Describe("Getting Block Height", func() {
 	When("Init done", func() {
 		It("Returns an block height 0", func() {
-			d := newStateStorageDriver()
+			d := newStateStorageDriver(1)
 			height, timestamp, err := d.getBlockHeightAndTimestamp()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(height).To(Equal(0))
@@ -19,7 +19,7 @@ var _ = Describe("Getting Block Height", func() {
 
 	When("Block commits", func() {
 		It("Returns the current block height and timestamp", func() {
-			d := newStateStorageDriver()
+			d := newStateStorageDriver(1)
 			heightBefore, _, err := d.getBlockHeightAndTimestamp()
 			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithBlockTimestamp(6579).WithDiff(builders.ContractStateDiff().Build()).Build())
 			heightAfter, timestampAfter, err := d.getBlockHeightAndTimestamp()
@@ -33,7 +33,7 @@ var _ = Describe("Getting Block Height", func() {
 
 	When("Block fails to commits", func() {
 		It("Returns an block height of before", func() {
-			d := newStateStorageDriver()
+			d := newStateStorageDriver(1)
 			stateDiff := builders.ContractStateDiff().Build()
 			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(1).WithDiff(stateDiff).Build())
 			d.service.CommitStateDiff(CommitStateDiff().WithBlockHeight(2).WithDiff(stateDiff).Build())

@@ -31,11 +31,14 @@ func NewNode(
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	federationNodes map[string]config.FederationNode,
-	blockSyncCommitTimeoutMillisec uint32,
+	blockSyncCommitTimeoutMillis uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillisec uint32, // TODO: move all of the config from the ctor, it's a smell
+	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
+	stateHistoryRetentionInBlockHeights uint64,
+	belowMinimalBlockDelayMillis uint32,
+	minimumTransactionsInBlock int,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
@@ -45,14 +48,17 @@ func NewNode(
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillisec,
-		blockSyncCommitTimeoutMillisec,
+		benchmarkConsensusRoundRetryIntervalMillis,
+		blockSyncCommitTimeoutMillis,
+		stateHistoryRetentionInBlockHeights,
+		belowMinimalBlockDelayMillis,
+		minimumTransactionsInBlock,
 	)
 
 	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence()
-	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence(nodeConfig)
+	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
 
