@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 		"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type harness struct {
@@ -74,20 +75,24 @@ func (h *harness) failPreOrderCheckFor(transaction *protocol.SignedTransaction, 
 		})).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{status}}).Times(1)
 }
 
-func NewHarness() *harness {
+func newHarness() *harness {
+	return newHarnessWithConfig(config.NewTransactionPoolConfig(20 * 1024 * 1024))
+}
+
+func newHarnessWithConfig(config transactionpool.Config) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PENDING}})
 
-	service := transactionpool.NewTransactionPool(gossip, virtualMachine, instrumentation.GetLogger())
+	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())
 
 	return &harness{txpool: service, gossip: gossip, vm: virtualMachine}
 }
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
 	h.expectTransactionToBeForwarded(tx)
@@ -99,7 +104,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().WithInvalidContent().Build()
 	h.expectNoTransactionsToBeForwarded()
@@ -111,7 +116,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 	tx := builders.TransferTransaction().Build()
 	expectedStatus := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
 
@@ -131,7 +136,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 }
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
 	h.ignoringForwardMessages()
@@ -141,7 +146,7 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
 	h.ignoringForwardMessages()
@@ -157,3 +162,15 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
 	require.Equal(t, digest.CalcTxHash(tx.Transaction()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
 }
+
+func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
+	h := newHarnessWithConfig(config.NewTransactionPoolConfig(1))
+
+	h.expectNoTransactionsToBeForwarded()
+
+	err := h.addNewTransaction(builders.TransferTransaction().Build())
+
+	require.Error(t, err, "an transaction was added to a full pool")
+	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
+}
+

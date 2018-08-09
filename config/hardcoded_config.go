@@ -29,6 +29,10 @@ type stateStorageConfig struct {
 	stateHistoryRetentionInBlockHeights uint64
 }
 
+type transactionPoolConfig struct {
+	pendingPoolSizeInBytes uint32
+}
+
 type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
@@ -38,6 +42,7 @@ type hardcodedConfig struct {
 	*consensusConfig
 	*blockStorageConfig
 	*stateStorageConfig
+	*transactionPoolConfig
 }
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -72,6 +77,7 @@ func NewHardCodedConfig(
 			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
 		},
 		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
+		transactionPoolConfig: &transactionPoolConfig{pendingPoolSizeInBytes: 20 * 1024 * 1024},
 	}
 
 }
@@ -99,6 +105,10 @@ func NewConsensusConfig(
 
 func NewBlockStorageConfig(blockSyncCommitTimeoutMillisec uint32) *blockStorageConfig {
 	return &blockStorageConfig{blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond}
+}
+
+func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32) *transactionPoolConfig {
+	return &transactionPoolConfig{pendingPoolSizeInBytes:pendingPoolSizeInBytes}
 }
 
 func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {
@@ -143,4 +153,8 @@ func (c *blockStorageConfig) BlockSyncCommitTimeoutMillisec() time.Duration {
 
 func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
 	return c.stateHistoryRetentionInBlockHeights
+}
+
+func (c *transactionPoolConfig) PendingPoolSizeInBytes() uint32 {
+	return c.pendingPoolSizeInBytes
 }

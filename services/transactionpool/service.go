@@ -7,55 +7,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
-type pendingTxPool struct {
-	transactions map[string]bool
-	lock         *sync.Mutex
-}
-
-func (p pendingTxPool) add(transaction *protocol.SignedTransaction) {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.transactions[key] = true
-}
-
-func (p pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
-	ok, _ := p.transactions[key]
-	return ok
-}
-
-func (p pendingTxPool) remove(txhash primitives.Sha256) {
-	delete(p.transactions, txhash.KeyForMap())
-}
-
-type committedTxPool struct {
-	transactions map[string]*committedTransaction
-	lock         *sync.Mutex
-}
-
-func (p committedTxPool) add(receipt *protocol.TransactionReceipt) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.transactions[receipt.Txhash().KeyForMap()] = &committedTransaction{
-		receipt: receipt,
-	}
-}
-
-func (p committedTxPool) get(transaction *protocol.SignedTransaction) *committedTransaction {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
-
-	tx := p.transactions[key]
-
-	return tx
-}
-
-type committedTransaction struct {
-	receipt *protocol.TransactionReceipt
+type Config interface {
+	PendingPoolSizeInBytes() uint32
 }
 
 type service struct {
@@ -68,7 +23,7 @@ type service struct {
 	committedPool  committedTxPool
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, reporting instrumentation.BasicLogger) services.TransactionPool {
+func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
 	s := &service{
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 		gossip:              gossip,
@@ -76,6 +31,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 
 		pendingPool: pendingTxPool{
+			config: config,
 			transactions: make(map[string]bool),
 			lock:         &sync.Mutex{},
 		},

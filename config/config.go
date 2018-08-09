@@ -24,6 +24,9 @@ type NodeConfig interface {
 
 	// state storage
 	StateHistoryRetentionInBlockHeights() uint64
+
+	// transaction pool
+	PendingPoolSizeInBytes() uint32
 }
 
 type FederationNode interface {

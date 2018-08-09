@@ -51,7 +51,7 @@ func NewNodeLogic(
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
 
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, processors, crosschainConnectors, reporting)
-	transactionPool := transactionpool.NewTransactionPool(gossip, virtualMachine, reporting)
+	transactionPool := transactionpool.NewTransactionPool(gossip, virtualMachine, nodeConfig, reporting)
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
 	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
 
