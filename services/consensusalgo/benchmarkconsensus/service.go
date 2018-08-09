@@ -23,7 +23,7 @@ type Config interface {
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
+	BenchmarkConsensusRoundRetryIntervalMillis() uint32
 }
 
 type service struct {

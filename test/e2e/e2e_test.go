@@ -66,6 +66,8 @@ var _ = Describe("The Orbs Network", func() {
 				2*1000,
 				gossipTransport,
 				5,
+				300,
+				0,
 			)
 
 			// To let node start up properly, otherwise in Docker we get connection refused
