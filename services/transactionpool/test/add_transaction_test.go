@@ -1,16 +1,16 @@
 package test
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/stretchr/testify/require"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/stretchr/testify/require"
+	"testing"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 )
 

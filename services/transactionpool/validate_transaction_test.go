@@ -7,8 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"time"
+		"time"
 )
 
 const expirationWindowInterval = 30 * time.Minute
@@ -53,6 +52,7 @@ func TestValidateTransaction_ValidTransaction(t *testing.T) {
 		"a valid transaction was rejected")
 }
 
+//TODO talk to TalKol about Invalid Signer
 func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -60,8 +60,7 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	}{
 		{"protocol version", builders.TransferTransaction().WithProtocolVersion(ProtocolVersion + 1)},
 		{"signer scheme", builders.TransferTransaction().WithInvalidSignerScheme()},
-		{"empty signer public key", builders.TransferTransaction().WithSigner(protocol.NETWORK_TYPE_TEST_NET, primitives.Ed25519PublicKey([]byte{}))},
-		{"signer public key (wrong length)", builders.TransferTransaction().WithSigner(protocol.NETWORK_TYPE_TEST_NET, keys.Ed25519KeyPairForTests(1).PublicKey()[1:])},
+		{"signer public key (wrong length)", builders.TransferTransaction().WithInvalidPublicKey()},
 		{"contract name", builders.TransferTransaction().WithContract("")},
 		{"timestamp (created prior to the expiry window)", builders.TransferTransaction().WithTimestamp(time.Now().Add(expirationWindowInterval * -2))},
 		{"timestamp (created after the grace period for last committed block)", builders.TransferTransaction().WithTimestamp(futureTimeAfterGracePeriod())},
