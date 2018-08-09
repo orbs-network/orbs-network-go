@@ -2,6 +2,8 @@ package test
 
 import (
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -11,8 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"testing"
-		"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type harness struct {
@@ -38,12 +38,12 @@ func (h *harness) ignoringForwardMessages() {
 	h.gossip.When("BroadcastForwardedTransactions", mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).AtLeast(0)
 }
 
-func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) error {
-	_, err := h.txpool.AddNewTransaction(&services.AddNewTransactionInput{
+func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) (*services.AddNewTransactionOutput, error) {
+	out, err := h.txpool.AddNewTransaction(&services.AddNewTransactionInput{
 		SignedTransaction: tx,
 	})
 
-	return err
+	return out, err
 }
 
 func (h *harness) reportTransactionAsCommitted(transaction *protocol.SignedTransaction) {
@@ -97,7 +97,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	tx := builders.TransferTransaction().Build()
 	h.expectTransactionToBeForwarded(tx)
 
-	err := h.addNewTransaction(tx)
+	_, err := h.addNewTransaction(tx)
 
 	require.NoError(t, err, "a valid transaction was not added to pool")
 	require.NoError(t, h.verifyMocks(), "mock gossip was not called as expected")
@@ -109,7 +109,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	tx := builders.TransferTransaction().WithInvalidContent().Build()
 	h.expectNoTransactionsToBeForwarded()
 
-	err := h.addNewTransaction(tx)
+	_, err := h.addNewTransaction(tx)
 
 	require.Error(t, err, "an invalid transaction was added to the pool")
 	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
@@ -123,7 +123,10 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 	h.failPreOrderCheckFor(tx, expectedStatus)
 	h.ignoringForwardMessages()
 
-	err := h.addNewTransaction(tx)
+	out, err := h.addNewTransaction(tx)
+	//TODO assert block height and timestamp from empty receipt as per spec
+
+	require.NotNil(t, out, "output must not be nil even on errors")
 
 	require.Error(t, err, "an transaction that failed pre-order checks was added to the pool")
 	require.IsType(t, &transactionpool.ErrTransactionRejected{}, err, "error was not of the expected type")
@@ -142,7 +145,8 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 	h.ignoringForwardMessages()
 
 	h.addNewTransaction(tx)
-	require.Error(t, h.addNewTransaction(tx), "a transaction was added twice to the pool")
+	_, err := h.addNewTransaction(tx)
+	require.Error(t, err, "a transaction was added twice to the pool")
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
@@ -154,12 +158,10 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	h.addNewTransaction(tx)
 	h.reportTransactionAsCommitted(tx)
 
-	receipt, err := h.txpool.AddNewTransaction(&services.AddNewTransactionInput{
-		SignedTransaction: tx,
-	})
+	receipt, err := h.addNewTransaction(tx)
 
 	require.NoError(t, err, "a committed transaction that was added again was wrongly rejected")
-	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
+	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
 	require.Equal(t, digest.CalcTxHash(tx.Transaction()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
 }
 
@@ -169,9 +171,8 @@ func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	h.expectNoTransactionsToBeForwarded()
 
 	tx := builders.TransferTransaction().Build()
-	err := h.addNewTransaction(tx)
+	_, err := h.addNewTransaction(tx)
 
 	require.Error(t, err, "a transaction was added to a full pool")
 	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
 }
-

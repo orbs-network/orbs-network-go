@@ -1,13 +1,13 @@
 package transactionpool
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/stretchr/testify/require"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"fmt"
-		"time"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 const expirationWindowInterval = 30 * time.Minute
@@ -56,7 +56,7 @@ func TestValidateTransaction_ValidTransaction(t *testing.T) {
 func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	tests := []struct {
 		name      string
-		txBuilder *builders.TransferTransactionBuilder
+		txBuilder *builders.TransactionBuilder
 	}{
 		{"protocol version", builders.TransferTransaction().WithProtocolVersion(ProtocolVersion + 1)},
 		{"signer scheme", builders.TransferTransaction().WithInvalidSignerScheme()},
@@ -85,4 +85,3 @@ func TestValidateTransaction_DoesNotExistInPendingPool(t *testing.T) {
 		validateTransaction(tx, aValidationContextWithTransactionsInPools(transactions{tx})),
 		"a transaction that exists in the pending transaction pool was not rejected")
 }
-

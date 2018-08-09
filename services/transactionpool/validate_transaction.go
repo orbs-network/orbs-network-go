@@ -1,10 +1,10 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"time"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 const ProtocolVersion = primitives.ProtocolVersion(1)
@@ -22,7 +22,7 @@ type validationContext struct {
 
 func validateTransaction(transaction *protocol.SignedTransaction, vctx validationContext) error {
 	//TODO can we create the list of validators once on system startup; this will save on performance in the critical path
-	validators := []validator {
+	validators := []validator{
 		validateProtocolVersion,
 		validateSignerAndContractName,
 		validateTransactionNotExpired(vctx),
@@ -71,7 +71,7 @@ func validateTransactionNotExpired(vctx validationContext) validator {
 
 func validateTransactionNotInFuture(vctx validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) error {
-		if transaction.Transaction().Timestamp() > vctx.lastCommittedBlockTimestamp + primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds()) {
+		if transaction.Transaction().Timestamp() > vctx.lastCommittedBlockTimestamp+primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds()) {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIME_STAMP_WINDOW_EXCEEDED}
 		}
 
@@ -98,4 +98,3 @@ func validateTransactionNotInPendingPool(vctx validationContext) validator {
 		return nil
 	}
 }
-

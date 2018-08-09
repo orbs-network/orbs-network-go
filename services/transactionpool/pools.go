@@ -1,14 +1,14 @@
 package transactionpool
 
 import (
-	"sync"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"sync"
 )
 
 type pendingTransaction struct {
-	size	uint32
+	size uint32
 }
 
 type pendingTxPool struct {
@@ -25,7 +25,7 @@ func (p pendingTxPool) add(transaction *protocol.SignedTransaction) error {
 	defer p.lock.Unlock()
 	size := uint32(len(transaction.Raw()))
 
-	if p.currentSizeInBytes + size > p.config.PendingPoolSizeInBytes() {
+	if p.currentSizeInBytes+size > p.config.PendingPoolSizeInBytes() {
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED} //TODO change to TRANSACTION_STATUS_REJECTED_CONGESTION
 	}
 

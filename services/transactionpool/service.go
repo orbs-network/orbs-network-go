@@ -16,11 +16,11 @@ type Config interface {
 type service struct {
 	pendingTransactions chan *protocol.SignedTransaction
 	gossip              gossiptopics.TransactionRelay
-	virtualMachine services.VirtualMachine
+	virtualMachine      services.VirtualMachine
 	reporting           instrumentation.BasicLogger
 
-	pendingPool    pendingTxPool
-	committedPool  committedTxPool
+	pendingPool   pendingTxPool
+	committedPool committedTxPool
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
@@ -31,7 +31,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 
 		pendingPool: pendingTxPool{
-			config: config,
+			config:       config,
 			transactions: make(map[string]*pendingTransaction),
 			lock:         &sync.Mutex{},
 		},

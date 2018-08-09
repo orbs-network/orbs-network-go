@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-		"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"testing"
 	"time"
 )

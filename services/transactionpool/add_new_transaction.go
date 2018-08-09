@@ -1,14 +1,14 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
@@ -24,20 +24,20 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	err := validateTransaction(input.SignedTransaction, vctx)
 	if err != nil {
 		s.reporting.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
-		return nil, err
+		return s.anEmptyReceipt(), err
 	}
 
 	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
 		s.reporting.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
 		return &services.AddNewTransactionOutput{
 			TransactionReceipt: alreadyCommitted.receipt,
-			TransactionStatus: protocol.TRANSACTION_STATUS_COMMITTED,
+			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED,
 			//TODO other fields
 		}, nil
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
-		return nil, err
+		return s.anEmptyReceipt(), err
 	}
 
 	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
@@ -68,9 +68,12 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 	}
 
 	if preOrderCheckResults.PreOrderResults[0] != protocol.TRANSACTION_STATUS_PENDING {
-		return &ErrTransactionRejected{TransactionStatus:preOrderCheckResults.PreOrderResults[0]}
+		return &ErrTransactionRejected{TransactionStatus: preOrderCheckResults.PreOrderResults[0]}
 	}
 
 	return nil
 }
 
+func (s *service) anEmptyReceipt() *services.AddNewTransactionOutput {
+	return &services.AddNewTransactionOutput{}
+}

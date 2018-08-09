@@ -17,13 +17,17 @@ type NodeConfig interface {
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 
 	// benchmark consensus
-	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
+	BenchmarkConsensusRoundRetryIntervalMillis() uint32
 
 	// block storage
-	BlockSyncCommitTimeoutMillisec() time.Duration
+	BlockSyncCommitTimeoutMillis() time.Duration
 
 	// state storage
 	StateHistoryRetentionInBlockHeights() uint64
+
+	// consensus context
+	BelowMinimalBlockDelayMillis() uint32
+	MinimumTransactionsInBlock() int
 
 	// transaction pool
 	PendingPoolSizeInBytes() uint32

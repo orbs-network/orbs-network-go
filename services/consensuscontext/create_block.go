@@ -10,26 +10,24 @@ import (
 
 func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
 
-	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
-		MaxNumberOfTransactions: 1,
-	})
-
+	var maxNumberOfTransactions uint32 = 1
+	proposedTransactions, err := s.fetchTransactions(maxNumberOfTransactions, s.config.MinimumTransactionsInBlock(), s.config.BelowMinimalBlockDelayMillis())
 	if err != nil {
 		return nil, err
 	}
+	txCount := len(proposedTransactions.SignedTransactions)
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
 			ProtocolVersion:       blockstorage.ProtocolVersion,
 			BlockHeight:           blockHeight,
 			PrevBlockHashPtr:      prevBlockHash,
-			NumSignedTransactions: uint32(len(proposedTransactions.SignedTransactions)),
+			NumSignedTransactions: uint32(txCount),
 		}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
 		SignedTransactions: proposedTransactions.SignedTransactions,
 		BlockProof:         nil,
 	}
-
 	return txBlock, nil
 }
 
@@ -56,6 +54,5 @@ func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlo
 		ContractStateDiffs:  output.ContractStateDiffs,
 		BlockProof:          nil,
 	}
-
 	return rxBlock, nil
 }
