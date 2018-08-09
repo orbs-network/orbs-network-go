@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// protocol.SignedTransaction
+const DEFAULT_TEST_VIRTUAL_CHAIN_ID = primitives.VirtualChainId(42)
 
 type TransactionBuilder struct {
 	signer  primitives.Ed25519PrivateKey
@@ -22,7 +22,7 @@ func TransferTransaction() *TransactionBuilder {
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
 				ProtocolVersion: 1,
-				VirtualChainId:  primitives.VirtualChainId(42),
+				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    "BenchmarkToken",
 				MethodName:      "transfer",
 				Signer: &protocol.SignerBuilder{

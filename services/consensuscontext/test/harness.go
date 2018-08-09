@@ -1,16 +1,16 @@
 package test
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"testing"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 type harness struct {
@@ -40,7 +40,7 @@ func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactions
 	}
 
 	for i := 0; i < numTransactionsToReturn; i++ {
-		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmount(uint64(i+1) * 10).Build())
+		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmount(uint64(i+1)*10).Build())
 	}
 
 	h.transactionPool.When("GetTransactionsForOrdering", mock.Any).Return(output, nil).Times(1)

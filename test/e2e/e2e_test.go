@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -18,7 +19,6 @@ import (
 	"os"
 	"testing"
 	"time"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 )
 
 type E2EConfig struct {
@@ -75,7 +75,6 @@ var _ = Describe("The Orbs Network", func() {
 			time.Sleep(100 * time.Millisecond)
 		}
 
-
 		tx := builders.TransferTransaction().WithAmount(17).Builder()
 
 		_ = sendTransaction(tx)
@@ -100,7 +99,7 @@ var _ = Describe("The Orbs Network", func() {
 func sendTransaction(txBuilder *protocol.SignedTransactionBuilder) *services.SendTransactionOutput {
 	input := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: txBuilder,
-		}).Build()
+	}).Build()
 
 	return &services.SendTransactionOutput{ClientResponse: client.SendTransactionResponseReader(httpPost(input, "send-transaction"))}
 }

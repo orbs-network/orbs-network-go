@@ -1,8 +1,8 @@
 package test
 
 import (
-	"testing"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
@@ -45,4 +45,3 @@ func TestRetryWhenNotEnoughTransactionsPendingOnTransactionPool(t *testing.T) {
 
 	h.verifyTransactionsRequestedFromTransactionPool(t)
 }
-

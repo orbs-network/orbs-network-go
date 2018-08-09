@@ -1,14 +1,14 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
 type pendingTxPool struct {
@@ -61,11 +61,11 @@ type committedTransaction struct {
 type service struct {
 	pendingTransactions chan *protocol.SignedTransaction
 	gossip              gossiptopics.TransactionRelay
-	virtualMachine services.VirtualMachine
+	virtualMachine      services.VirtualMachine
 	reporting           instrumentation.BasicLogger
 
-	pendingPool    pendingTxPool
-	committedPool  committedTxPool
+	pendingPool   pendingTxPool
+	committedPool committedTxPool
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, reporting instrumentation.BasicLogger) services.TransactionPool {

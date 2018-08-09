@@ -1,14 +1,14 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
@@ -31,7 +31,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		s.reporting.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
 		return &services.AddNewTransactionOutput{
 			TransactionReceipt: alreadyCommitted.receipt,
-			TransactionStatus: protocol.TRANSACTION_STATUS_COMMITTED,
+			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED,
 			//TODO other fields
 		}, nil
 	}
@@ -65,9 +65,8 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 	}
 
 	if preOrderCheckResults.PreOrderResults[0] != protocol.TRANSACTION_STATUS_PENDING {
-		return &ErrTransactionRejected{TransactionStatus:preOrderCheckResults.PreOrderResults[0]}
+		return &ErrTransactionRejected{TransactionStatus: preOrderCheckResults.PreOrderResults[0]}
 	}
 
 	return nil
 }
-
