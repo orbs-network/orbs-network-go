@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -113,6 +114,15 @@ func (b *blockPair) WithTransactions(num uint32) *blockPair {
 	return b
 }
 
+func (b *blockPair) WithReceiptsForTransactions() *blockPair {
+	b.receipts = make([]*protocol.TransactionReceipt, 0, len(b.transactions))
+	for _, t := range b.transactions {
+		b.receipts = append(b.receipts, TransactionReceipt().WithTransaction(t.Transaction()).Build())
+	}
+	b.rxHeader.NumTransactionReceipts = uint32(len(b.transactions))
+	return b
+}
+
 func (b *blockPair) WithReceipts(num uint32) *blockPair {
 	b.receipts = make([]*protocol.TransactionReceipt, 0, num)
 	for i := uint32(0); i < num; i++ {
@@ -128,6 +138,23 @@ func (b *blockPair) WithStateDiffs(num uint32) *blockPair {
 		b.sdiffs = append(b.sdiffs, ContractStateDiff().Build())
 	}
 	b.rxHeader.NumContractStateDiffs = num
+	return b
+}
+
+func (b *blockPair) WithTimestampBloomFilter() *blockPair {
+	bf := bloom.New(len(b.transactions))
+	for _, t := range b.transactions {
+		bf.Add(t.Transaction().Timestamp())
+	}
+
+	b.rxHeader.TimestampBloomFilter = bf.Raw()
+	return b
+}
+
+func (b *blockPair) WithTimestampNow() *blockPair {
+	timeToUse := primitives.TimestampNano(time.Now().UnixNano())
+	b.txHeader.Timestamp = timeToUse
+	b.rxHeader.Timestamp = timeToUse
 	return b
 }
 

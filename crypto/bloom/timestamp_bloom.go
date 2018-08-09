@@ -39,7 +39,7 @@ func countPowerOfTwoBit(n uint32) uint8 {
 	return c
 }
 
-func New(size int32) *TimestampBloomFilter {
+func New(size int) *TimestampBloomFilter {
 	roundedSize := nextHighPowerOfTwo(uint32(size))
 	ts := &TimestampBloomFilter{
 		bitset:   make([]bool, roundedSize),
@@ -76,20 +76,20 @@ func (bf *TimestampBloomFilter) BitCount() uint8 {
 	return bf.bitCount
 }
 
-func (bf *TimestampBloomFilter) hash(v uint64) uint64 {
+func (bf *TimestampBloomFilter) hash(v primitives.TimestampNano) uint64 {
 	// using fnv-1 and fnv-1a, we hash and dump the leftmost bits (in theory more false positives, but we are in a low entropy, can probably come up with something quicker even
 	hash := FNVMagicNumber ^ v
 	hash <<= 64 - bf.bitCount
 	loc := hash >> (64 - bf.bitCount)
-	return loc
+	return uint64(loc)
 }
 
-func (bf *TimestampBloomFilter) Add(timeStamp uint64) {
+func (bf *TimestampBloomFilter) Add(timeStamp primitives.TimestampNano) {
 	loc := bf.hash(timeStamp)
 	bf.bitset[loc] = true
 }
 
-func (bf *TimestampBloomFilter) Test(timeStamp uint64) bool {
+func (bf *TimestampBloomFilter) Test(timeStamp primitives.TimestampNano) bool {
 	loc := bf.hash(timeStamp)
 	return bf.bitset[loc]
 }

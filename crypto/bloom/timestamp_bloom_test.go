@@ -3,12 +3,13 @@ package bloom_test
 import (
 	"bytes"
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"testing"
 	"time"
 )
 
 type tsbfNewTrio struct {
-	input    int32
+	input    int
 	size     uint32
 	bitCount uint8
 }
@@ -20,7 +21,7 @@ var newTestTable = []tsbfNewTrio{
 	{input: 1024, size: 1024, bitCount: 10},
 }
 
-var nanoForRaw = []uint64{
+var nanoForRaw = []primitives.TimestampNano{
 	1533731643509419667,
 	1533731643509435135,
 	1533731643509465891,
@@ -46,7 +47,7 @@ func TestNew(t *testing.T) {
 
 func TestTimestampBloomFilter_Add(t *testing.T) {
 	x := bloom.New(16)
-	t1 := uint64(time.Now().UnixNano())
+	t1 := primitives.TimestampNano(time.Now().UnixNano())
 	x.Add(t1)
 	if !x.Test(t1) {
 		t.Errorf("bloom filter failed, value should have been in the filter")
@@ -55,7 +56,7 @@ func TestTimestampBloomFilter_Add(t *testing.T) {
 
 func TestTimestampBloomFilter_AddAndTestInvalid(t *testing.T) {
 	x := bloom.New(16)
-	t1 := uint64(time.Now().UnixNano())
+	t1 := primitives.TimestampNano(time.Now().UnixNano())
 	x.Add(t1)
 	if !x.Test(t1) {
 		t.Errorf("bloom filter failed, value should have been in the filter")
