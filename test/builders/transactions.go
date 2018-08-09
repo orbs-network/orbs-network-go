@@ -10,14 +10,14 @@ import (
 
 // protocol.SignedTransaction
 
-type TransferTransactionBuilder struct {
+type TransactionBuilder struct {
 	signer  primitives.Ed25519PrivateKey
 	builder *protocol.SignedTransactionBuilder
 }
 
-func TransferTransaction() *TransferTransactionBuilder {
+func TransferTransaction() *TransactionBuilder {
 	keyPair := keys.Ed25519KeyPairForTests(1)
-	return &TransferTransactionBuilder{
+	return &TransactionBuilder{
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
@@ -41,7 +41,7 @@ func TransferTransaction() *TransferTransactionBuilder {
 	}
 }
 
-func (t *TransferTransactionBuilder) Build() *protocol.SignedTransaction {
+func (t *TransactionBuilder) Build() *protocol.SignedTransaction {
 	t.builder.Signature = make([]byte, signature.ED25519_SIGNATURE_SIZE)
 	signedTransaction := t.builder.Build()
 	sig, err := signature.SignEd25519(t.signer, signedTransaction.Transaction().Raw())
@@ -52,24 +52,24 @@ func (t *TransferTransactionBuilder) Build() *protocol.SignedTransaction {
 	return signedTransaction
 }
 
-func (t *TransferTransactionBuilder) Builder() *protocol.SignedTransactionBuilder {
+func (t *TransactionBuilder) Builder() *protocol.SignedTransactionBuilder {
 	signedTransaction := t.Build()
 	t.builder.Signature = signedTransaction.Signature()
 	return t.builder
 }
 
-func (t *TransferTransactionBuilder) WithSigner(keyPair keys.Ed25519KeyPair) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithSigner(keyPair keys.Ed25519KeyPair) *TransactionBuilder {
 	t.builder.Transaction.Signer.Eddsa.SignerPublicKey = keyPair.PublicKey()
 	t.signer = keyPair.PrivateKey()
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithTimestamp(timestamp time.Time) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithTimestamp(timestamp time.Time) *TransactionBuilder {
 	t.builder.Transaction.Timestamp = primitives.TimestampNano(timestamp.UnixNano())
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithInvalidSigner() *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithInvalidSigner() *TransactionBuilder {
 	keyPair := keys.Ed25519KeyPairForTests(1)
 	corruptPrivateKey := make([]byte, len(keyPair.PrivateKey()))
 	t.builder.Transaction.Signer.Eddsa.SignerPublicKey = keyPair.PublicKey()
@@ -77,52 +77,52 @@ func (t *TransferTransactionBuilder) WithInvalidSigner() *TransferTransactionBui
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithInvalidPublicKey() *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithInvalidPublicKey() *TransactionBuilder {
 	keyPair := keys.Ed25519KeyPairForTests(1)
 	t.builder.Transaction.Signer.Eddsa.SignerPublicKey = keyPair.PublicKey()[1:]
 	t.signer = keyPair.PrivateKey()
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithInvalidContent() *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithInvalidContent() *TransactionBuilder {
 	t.builder.Transaction.Timestamp = primitives.TimestampNano(time.Now().Add(35 * time.Minute).UnixNano())
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithMethod(contractName primitives.ContractName, methodName primitives.MethodName) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithMethod(contractName primitives.ContractName, methodName primitives.MethodName) *TransactionBuilder {
 	t.builder.Transaction.ContractName = contractName
 	t.builder.Transaction.MethodName = methodName
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithArgs(args ...interface{}) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithArgs(args ...interface{}) *TransactionBuilder {
 	t.builder.Transaction.InputArguments = MethodArgumentsBuilders(args...)
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithAmount(amount uint64) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithAmount(amount uint64) *TransactionBuilder {
 	t.builder.Transaction.InputArguments[0].Uint64Value = amount
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithProtocolVersion(v primitives.ProtocolVersion) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithProtocolVersion(v primitives.ProtocolVersion) *TransactionBuilder {
 	t.builder.Transaction.ProtocolVersion = v
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithContract(name string) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithContract(name string) *TransactionBuilder {
 	t.builder.Transaction.ContractName = primitives.ContractName(name)
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithInvalidSignerScheme() *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithInvalidSignerScheme() *TransactionBuilder {
 	t.builder.Transaction.Signer = &protocol.SignerBuilder{
 		Scheme: protocol.SIGNER_SCHEME_EDDSA + 10000,
 	}
 	return t
 }
 
-func (t *TransferTransactionBuilder) WithVirtualChainId(virtualChainId primitives.VirtualChainId) *TransferTransactionBuilder {
+func (t *TransactionBuilder) WithVirtualChainId(virtualChainId primitives.VirtualChainId) *TransactionBuilder {
 	t.builder.Transaction.VirtualChainId = virtualChainId
 	return t
 }

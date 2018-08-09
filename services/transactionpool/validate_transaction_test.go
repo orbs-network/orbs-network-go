@@ -56,7 +56,7 @@ func TestValidateTransaction_ValidTransaction(t *testing.T) {
 func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	tests := []struct {
 		name      string
-		txBuilder *builders.TransferTransactionBuilder
+		txBuilder *builders.TransactionBuilder
 	}{
 		{"protocol version", builders.TransferTransaction().WithProtocolVersion(ProtocolVersion + 1)},
 		{"signer scheme", builders.TransferTransaction().WithInvalidSignerScheme()},
