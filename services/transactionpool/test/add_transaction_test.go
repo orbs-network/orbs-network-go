@@ -118,8 +118,10 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 	h.failPreOrderCheckFor(tx, expectedStatus)
 	h.ignoringForwardMessages()
 
-	_, err := h.addNewTransaction(tx)
+	out, err := h.addNewTransaction(tx)
 	//TODO assert block height and timestamp from empty receipt as per spec
+
+	require.NotNil(t, out, "output must not be nil even on errors")
 
 	require.Error(t, err, "an transaction that failed pre-order checks was added to the pool")
 	require.IsType(t, &transactionpool.ErrTransactionRejected{}, err, "error was not of the expected type")
