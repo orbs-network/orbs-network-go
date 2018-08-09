@@ -7,6 +7,21 @@ import (
 	"sync"
 )
 
+func NewPendingPool(config Config) *pendingTxPool {
+	return &pendingTxPool{
+		config:       config,
+		transactions: make(map[string]*pendingTransaction),
+		lock:         &sync.Mutex{},
+	}
+}
+
+func NewCommittedPool() *committedTxPool {
+	return &committedTxPool{
+		transactions: make(map[string]*committedTransaction),
+		lock:         &sync.Mutex{},
+	}
+}
+
 type pendingTransaction struct {
 	size uint32
 }
@@ -19,22 +34,22 @@ type pendingTxPool struct {
 	config Config
 }
 
-func (p pendingTxPool) add(transaction *protocol.SignedTransaction) error {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
+func (p *pendingTxPool) add(transaction *protocol.SignedTransaction) (primitives.Sha256, error) {
+	key := digest.CalcTxHash(transaction.Transaction())
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	size := uint32(len(transaction.Raw()))
 
 	if p.currentSizeInBytes+size > p.config.PendingPoolSizeInBytes() {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED} //TODO change to TRANSACTION_STATUS_REJECTED_CONGESTION
+		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED} //TODO change to TRANSACTION_STATUS_REJECTED_CONGESTION
 	}
 
 	p.currentSizeInBytes += size
-	p.transactions[key] = &pendingTransaction{size}
-	return nil
+	p.transactions[key.KeyForMap()] = &pendingTransaction{size}
+	return key, nil
 }
 
-func (p pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
+func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
@@ -42,13 +57,13 @@ func (p pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	return ok
 }
 
-func (p pendingTxPool) remove(txhash primitives.Sha256) {
+func (p *pendingTxPool) remove(txhash primitives.Sha256) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	_, ok := p.transactions[txhash.KeyForMap()]
+	pendingTx, ok := p.transactions[txhash.KeyForMap()]
 	if ok {
 		delete(p.transactions, txhash.KeyForMap())
-		//p.currentSizeInBytes -= pendingTx.size
+		p.currentSizeInBytes -= pendingTx.size
 	}
 }
 
@@ -57,7 +72,7 @@ type committedTxPool struct {
 	lock         *sync.Mutex
 }
 
-func (p committedTxPool) add(receipt *protocol.TransactionReceipt) {
+func (p *committedTxPool) add(receipt *protocol.TransactionReceipt) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.transactions[receipt.Txhash().KeyForMap()] = &committedTransaction{
@@ -65,7 +80,7 @@ func (p committedTxPool) add(receipt *protocol.TransactionReceipt) {
 	}
 }
 
-func (p committedTxPool) get(transaction *protocol.SignedTransaction) *committedTransaction {
+func (p *committedTxPool) get(transaction *protocol.SignedTransaction) *committedTransaction {
 	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
 
 	tx := p.transactions[key]

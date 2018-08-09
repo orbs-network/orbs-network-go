@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"sync"
 )
 
 type Config interface {
@@ -19,8 +18,8 @@ type service struct {
 	virtualMachine      services.VirtualMachine
 	reporting           instrumentation.BasicLogger
 
-	pendingPool   pendingTxPool
-	committedPool committedTxPool
+	pendingPool   *pendingTxPool
+	committedPool *committedTxPool
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
@@ -30,16 +29,8 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 		virtualMachine:      virtualMachine,
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 
-		pendingPool: pendingTxPool{
-			config:       config,
-			transactions: make(map[string]*pendingTransaction),
-			lock:         &sync.Mutex{},
-		},
-
-		committedPool: committedTxPool{
-			transactions: make(map[string]*committedTransaction),
-			lock:         &sync.Mutex{},
-		},
+		pendingPool: NewPendingPool(config),
+		committedPool: NewCommittedPool(),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s
