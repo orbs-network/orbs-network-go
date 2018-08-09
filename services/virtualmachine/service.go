@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
-	"sync"
 )
 
 type service struct {
@@ -20,9 +19,7 @@ type service struct {
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
 	reporting            instrumentation.BasicLogger
 
-	mutex          *sync.RWMutex
-	activeContexts map[primitives.ExecutionContextId]*executionContext
-	lastContextId  primitives.ExecutionContextId
+	contexts *executionContextProvider
 }
 
 func NewVirtualMachine(
@@ -40,8 +37,7 @@ func NewVirtualMachine(
 		stateStorage:         stateStorage,
 		reporting:            reporting.For(instrumentation.Service("virtual-machine")),
 
-		mutex:          &sync.RWMutex{},
-		activeContexts: make(map[primitives.ExecutionContextId]*executionContext),
+		contexts: newExecutionContextProvider(),
 	}
 
 	for _, processor := range processors {
@@ -53,65 +49,18 @@ func NewVirtualMachine(
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 
+	// TODO: until we integrate the acceptance to pass through the "correct" implementation we need this escape hatch to move the tests forward
 	if len(input.SignedTransactions) > 0 && input.SignedTransactions[0].Transaction().ContractName() == "ExampleContract" {
 
-		batchTransientState := newTransientState()
-
-		for _, signedTransaction := range input.SignedTransactions {
-
-			contextId, executionContext := s.allocateExecutionContext(input.BlockHeight, protocol.ACCESS_SCOPE_READ_WRITE)
-			defer s.destroyExecutionContext(contextId)
-
-			executionContext.serviceStackPush(signedTransaction.Transaction().ContractName())
-			executionContext.batchTransientState = batchTransientState
-
-			// TODO: might need to change protos to avoid this copy
-			args := []*protocol.MethodArgument{}
-			for i := signedTransaction.Transaction().InputArgumentsIterator(); i.HasNext(); {
-				args = append(args, i.NextInputArguments())
-			}
-			output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
-				ContextId:         contextId,
-				ContractName:      signedTransaction.Transaction().ContractName(),
-				MethodName:        signedTransaction.Transaction().MethodName(),
-				InputArguments:    args,
-				AccessScope:       protocol.ACCESS_SCOPE_READ_WRITE,
-				PermissionScope:   protocol.PERMISSION_SCOPE_SERVICE, // TODO: improve
-				CallingService:    signedTransaction.Transaction().ContractName(),
-				TransactionSigner: signedTransaction.Transaction().Signer(),
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			if output.CallResult == protocol.EXECUTION_RESULT_SUCCESS {
-				executionContext.transientState.mergeIntoTransientState(batchTransientState)
-			}
-
-		}
-
-		contractStateDiffs := []*protocol.ContractStateDiff{}
-		for contractName, _ := range batchTransientState.contracts {
-			stateDiffs := []*protocol.StateRecordBuilder{}
-			batchTransientState.forDirty(contractName, func(key []byte, value []byte) {
-				stateDiffs = append(stateDiffs, &protocol.StateRecordBuilder{
-					Key:   key,
-					Value: value,
-				})
-			})
-			if len(stateDiffs) > 0 {
-				contractStateDiffs = append(contractStateDiffs, (&protocol.ContractStateDiffBuilder{
-					ContractName: contractName,
-					StateDiffs:   stateDiffs,
-				}).Build())
-			}
+		stateDiffs, err := s.processTransactionSet(input.BlockHeight, input.SignedTransactions)
+		if err != nil {
+			return nil, err
 		}
 
 		return &services.ProcessTransactionSetOutput{
 			TransactionReceipts: nil,
-			ContractStateDiffs:  contractStateDiffs,
+			ContractStateDiffs:  stateDiffs,
 		}, nil
-
 	}
 
 	var state []*protocol.StateRecordBuilder
@@ -138,6 +87,7 @@ func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInp
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
 
+	// TODO: until we integrate the acceptance to pass through the "correct" implementation we need this escape hatch to move the tests forward
 	if input.Transaction.ContractName() == "ExampleContract" {
 
 		blockHeight, blockTimestamp, err := s.getRecentBlockHeight()
@@ -145,33 +95,20 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 			return nil, err
 		}
 
-		contextId, executionContext := s.allocateExecutionContext(blockHeight, protocol.ACCESS_SCOPE_READ_ONLY)
-		defer s.destroyExecutionContext(contextId)
-
-		executionContext.serviceStackPush(input.Transaction.ContractName())
-
-		// TODO: might need to change protos to avoid this copy
-		args := []*protocol.MethodArgument{}
-		for i := input.Transaction.InputArgumentsIterator(); i.HasNext(); {
-			args = append(args, i.NextInputArguments())
-		}
-		output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
-			ContextId:         contextId,
-			ContractName:      input.Transaction.ContractName(),
-			MethodName:        input.Transaction.MethodName(),
-			InputArguments:    args,
-			AccessScope:       protocol.ACCESS_SCOPE_READ_ONLY,
-			PermissionScope:   protocol.PERMISSION_SCOPE_SERVICE, // TODO: improve
-			CallingService:    input.Transaction.ContractName(),
-			TransactionSigner: input.Transaction.Signer(),
-		})
+		callResult, outputArgs, err := s.runLocalMethod(
+			blockHeight,
+			input.Transaction.ContractName(),
+			input.Transaction.MethodName(),
+			input.Transaction.InputArgumentsIterator(),
+			input.Transaction.Signer(),
+		)
 		if err != nil {
 			return nil, err
 		}
 
 		return &services.RunLocalMethodOutput{
-			CallResult:              output.CallResult,
-			OutputArguments:         output.OutputArguments,
+			CallResult:              callResult,
+			OutputArguments:         outputArgs,
 			ReferenceBlockHeight:    blockHeight,
 			ReferenceBlockTimestamp: blockTimestamp,
 		}, nil
@@ -213,7 +150,7 @@ func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.H
 	var output []*protocol.MethodArgument
 	var err error
 
-	executionContext := s.loadExecutionContext(input.ContextId)
+	executionContext := s.contexts.loadExecutionContext(input.ContextId)
 	if executionContext == nil {
 		return nil, errors.Errorf("invalid execution context %s", input.ContextId)
 	}
@@ -228,6 +165,7 @@ func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.H
 	if err != nil {
 		return nil, err
 	}
+
 	return &handlers.HandleSdkCallOutput{
 		OutputArguments: output,
 	}, nil

@@ -3,6 +3,7 @@ package virtualmachine
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"sync"
 )
 
 type executionContext struct {
@@ -31,9 +32,22 @@ func (c *executionContext) serviceStackPop() {
 	c.serviceStack = c.serviceStack[0 : len(c.serviceStack)-1]
 }
 
-func (s *service) allocateExecutionContext(blockHeight primitives.BlockHeight, accessScope protocol.ExecutionAccessScope) (primitives.ExecutionContextId, *executionContext) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+type executionContextProvider struct {
+	mutex          *sync.RWMutex
+	activeContexts map[primitives.ExecutionContextId]*executionContext
+	lastContextId  primitives.ExecutionContextId
+}
+
+func newExecutionContextProvider() *executionContextProvider {
+	return &executionContextProvider{
+		mutex:          &sync.RWMutex{},
+		activeContexts: make(map[primitives.ExecutionContextId]*executionContext),
+	}
+}
+
+func (cp *executionContextProvider) allocateExecutionContext(blockHeight primitives.BlockHeight, accessScope protocol.ExecutionAccessScope) (primitives.ExecutionContextId, *executionContext) {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
 
 	newContext := &executionContext{
 		blockHeight:    blockHeight,
@@ -42,23 +56,23 @@ func (s *service) allocateExecutionContext(blockHeight primitives.BlockHeight, a
 		accessScope:    accessScope,
 	}
 
-	// TODO: improve this mechanism because it wraps around
-	s.lastContextId += 1
-	res := s.lastContextId
-	s.activeContexts[res] = newContext
+	// TODO: improve this mechanism because it wraps around on overflow
+	cp.lastContextId += 1
+	res := cp.lastContextId
+	cp.activeContexts[res] = newContext
 	return res, newContext
 }
 
-func (s *service) destroyExecutionContext(contextId primitives.ExecutionContextId) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (cp *executionContextProvider) destroyExecutionContext(contextId primitives.ExecutionContextId) {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
 
-	delete(s.activeContexts, contextId)
+	delete(cp.activeContexts, contextId)
 }
 
-func (s *service) loadExecutionContext(contextId primitives.ExecutionContextId) *executionContext {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+func (cp *executionContextProvider) loadExecutionContext(contextId primitives.ExecutionContextId) *executionContext {
+	cp.mutex.RLock()
+	defer cp.mutex.RUnlock()
 
-	return s.activeContexts[contextId]
+	return cp.activeContexts[contextId]
 }
