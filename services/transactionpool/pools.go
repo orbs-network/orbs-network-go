@@ -26,7 +26,7 @@ func (p pendingTxPool) add(transaction *protocol.SignedTransaction) error {
 	size := uint32(len(transaction.Raw()))
 
 	if p.currentSizeInBytes + size > p.config.PendingPoolSizeInBytes() {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED} //TODO add status "pending pool is full"
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED} //TODO change to TRANSACTION_STATUS_REJECTED_CONGESTION
 	}
 
 	p.currentSizeInBytes += size
