@@ -11,7 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
+		"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
 type harness struct {
@@ -49,7 +49,7 @@ func (h *harness) reportTransactionAsCommitted(transaction *protocol.SignedTrans
 	h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
 		TransactionReceipts: []*protocol.TransactionReceipt{
 			(&protocol.TransactionReceiptBuilder{
-				Txhash: hash.CalcSha256(transaction.Raw()),
+				Txhash: digest.CalcTxHash(transaction.Transaction()),
 			}).Build(),
 		},
 	})
@@ -155,5 +155,5 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 
 	require.NoError(t, err, "a committed transaction that was added again was wrongly rejected")
 	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
-	require.Equal(t, hash.CalcSha256(tx.Raw()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
+	require.Equal(t, digest.CalcTxHash(tx.Transaction()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
 }

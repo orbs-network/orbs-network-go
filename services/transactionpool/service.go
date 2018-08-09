@@ -7,8 +7,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
 type pendingTxPool struct {
@@ -17,14 +17,14 @@ type pendingTxPool struct {
 }
 
 func (p pendingTxPool) add(transaction *protocol.SignedTransaction) {
-	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
+	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.transactions[key] = true
 }
 
 func (p pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
-	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
+	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
 	ok, _ := p.transactions[key]
 	return ok
 }
@@ -47,7 +47,7 @@ func (p committedTxPool) add(receipt *protocol.TransactionReceipt) {
 }
 
 func (p committedTxPool) get(transaction *protocol.SignedTransaction) *committedTransaction {
-	key := hash.CalcSha256(transaction.Raw()).KeyForMap()
+	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
 
 	tx := p.transactions[key]
 
