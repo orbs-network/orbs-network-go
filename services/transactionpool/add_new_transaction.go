@@ -24,7 +24,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	err := validateTransaction(input.SignedTransaction, vctx)
 	if err != nil {
 		s.reporting.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
-		return nil, err
+		return s.anEmptyReceipt(), err
 	}
 
 	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
@@ -37,7 +37,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
-		return nil, err
+		return s.anEmptyReceipt(), err
 	}
 
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
@@ -69,4 +69,8 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 	}
 
 	return nil
+}
+
+func (s *service) anEmptyReceipt() *services.AddNewTransactionOutput {
+	return &services.AddNewTransactionOutput{}
 }
