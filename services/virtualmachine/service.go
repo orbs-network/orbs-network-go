@@ -95,13 +95,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 			return nil, err
 		}
 
-		callResult, outputArgs, err := s.runLocalMethod(
-			blockHeight,
-			input.Transaction.ContractName(),
-			input.Transaction.MethodName(),
-			input.Transaction.InputArgumentsIterator(),
-			input.Transaction.Signer(),
-		)
+		callResult, outputArgs, err := s.runLocalMethod(blockHeight, input.Transaction)
 		if err != nil {
 			return nil, err
 		}

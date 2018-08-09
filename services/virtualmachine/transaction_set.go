@@ -8,13 +8,13 @@ import (
 
 func (s *service) processTransactionSet(
 	blockHeight primitives.BlockHeight,
-	transactions []*protocol.SignedTransaction,
+	signedTransactions []*protocol.SignedTransaction,
 ) ([]*protocol.ContractStateDiff, error) {
 
 	// create batch transient state
 	batchTransientState := newTransientState()
 
-	for _, signedTransaction := range transactions {
+	for _, signedTransaction := range signedTransactions {
 
 		// create execution context
 		contextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, protocol.ACCESS_SCOPE_READ_WRITE)
