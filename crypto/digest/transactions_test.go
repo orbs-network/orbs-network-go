@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ const (
 )
 
 func getTransaction() *protocol.Transaction {
-	timeOfTransaction := primitives.TimestampNano(time.Date(2018, 01, 01, 0, 0, 0, 0, time.UTC).UnixNano())
+	timeOfTransaction := time.Date(2018, 01, 01, 0, 0, 0, 0, time.UTC)
 	tx := builders.TransferTransaction().WithAmount(10).WithTimestamp(timeOfTransaction).Build()
 	return tx.Transaction()
 }

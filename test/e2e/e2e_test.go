@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -74,13 +75,7 @@ var _ = Describe("The Orbs Network", func() {
 			time.Sleep(100 * time.Millisecond)
 		}
 
-		tx := &protocol.TransactionBuilder{
-			ContractName: "BenchmarkToken",
-			MethodName:   "transfer",
-			InputArguments: []*protocol.MethodArgumentBuilder{
-				{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 17},
-			},
-		}
+		tx := builders.TransferTransaction().WithAmount(17).Builder()
 
 		_ = sendTransaction(tx)
 
@@ -101,11 +96,10 @@ var _ = Describe("The Orbs Network", func() {
 	}, 10)
 })
 
-func sendTransaction(txBuilder *protocol.TransactionBuilder) *services.SendTransactionOutput {
+func sendTransaction(txBuilder *protocol.SignedTransactionBuilder) *services.SendTransactionOutput {
 	input := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: &protocol.SignedTransactionBuilder{
-			Transaction: txBuilder,
-		}}).Build()
+		SignedTransaction: txBuilder,
+	}).Build()
 
 	return &services.SendTransactionOutput{ClientResponse: client.SendTransactionResponseReader(httpPost(input, "send-transaction"))}
 }
