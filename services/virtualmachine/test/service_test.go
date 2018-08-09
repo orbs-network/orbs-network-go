@@ -16,10 +16,10 @@ func TestSdkUnknownContract(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) protocol.ExecutionResult {
+	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		_, err := h.handleSdkCall(contextId, "UnknownContract", "read")
 		require.Error(t, err, "handleSdkCall should fail")
-		return protocol.EXECUTION_RESULT_SUCCESS
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
 
 	h.runLocalMethod()

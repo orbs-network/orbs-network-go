@@ -31,7 +31,10 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	if s.contractRepository == nil {
-		return nil, errors.New("contractRepository is not initialized")
+		return &services.ProcessCallOutput{
+			OutputArguments: nil,
+			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+		}, errors.New("contractRepository is not initialized")
 	}
 
 	// retrieve code

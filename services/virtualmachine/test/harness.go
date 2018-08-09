@@ -87,8 +87,8 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod() {
-	h.service.RunLocalMethod(&services.RunLocalMethodInput{
+func (h *harness) runLocalMethod() (protocol.ExecutionResult, primitives.BlockHeight, error) {
+	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
 			Signer:         nil,
@@ -97,6 +97,7 @@ func (h *harness) runLocalMethod() {
 			InputArguments: []*protocol.MethodArgumentBuilder{},
 		}).Build(),
 	})
+	return output.CallResult, output.ReferenceBlockHeight, err
 }
 
 type keyValuePair struct {
@@ -104,7 +105,7 @@ type keyValuePair struct {
 	value []byte
 }
 
-func (h *harness) processTransactionSet(numTransactions int) []*keyValuePair {
+func (h *harness) processTransactionSet(numTransactions int) ([]protocol.ExecutionResult, []*keyValuePair) {
 	transactions := []*protocol.SignedTransaction{}
 	for i := 0; i < numTransactions; i++ {
 		tx := builders.Transaction().WithMethod("ExampleContract", "exampleMethod").Build()
@@ -115,29 +116,37 @@ func (h *harness) processTransactionSet(numTransactions int) []*keyValuePair {
 		BlockHeight:        12,
 		SignedTransactions: transactions,
 	})
+
+	results := []protocol.ExecutionResult{}
+	for _, transactionReceipt := range output.TransactionReceipts {
+		result := transactionReceipt.ExecutionResult()
+		results = append(results, result)
+	}
+
+	keyValuePairs := []*keyValuePair{}
 	for _, contractStateDiffs := range output.ContractStateDiffs {
-		if contractStateDiffs.ContractName() == "ExampleContract" {
-			res := []*keyValuePair{}
-			for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
-				sd := i.NextStateDiffs()
-				res = append(res, &keyValuePair{sd.Key(), sd.Value()})
-			}
-			return res
+		if contractStateDiffs.ContractName() != "ExampleContract" {
+			panic("unexpected contract")
+		}
+		for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
+			sd := i.NextStateDiffs()
+			keyValuePairs = append(keyValuePairs, &keyValuePair{sd.Key(), sd.Value()})
 		}
 	}
-	return nil
+
+	return results, keyValuePairs
 }
 
 // each f() given is a different transaction in the set
-func (h *harness) expectNativeProcessorCalled(fs ...func(primitives.ExecutionContextId) protocol.ExecutionResult) {
+func (h *harness) expectNativeProcessorCalled(fs ...func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
 	for i, _ := range fs {
 		i := i // needed for avoiding incorrect closure capture
 		h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-			callResult := fs[i](input.ContextId)
+			callResult, err := fs[i](input.ContextId)
 			return &services.ProcessCallOutput{
 				OutputArguments: []*protocol.MethodArgument{},
 				CallResult:      callResult,
-			}, nil
+			}, err
 		}).Times(1)
 	}
 }

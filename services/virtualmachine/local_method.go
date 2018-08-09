@@ -1,6 +1,7 @@
 package virtualmachine
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -40,8 +41,8 @@ func (s *service) runLocalMethod(
 		TransactionSigner: transaction.Signer(),
 	})
 	if err != nil {
-		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, err
+		s.reporting.Info("runLocalMethod process transaction failed", instrumentation.Error(err), instrumentation.Stringable("transaction", transaction))
 	}
 
-	return output.CallResult, output.OutputArguments, nil
+	return output.CallResult, output.OutputArguments, err
 }
