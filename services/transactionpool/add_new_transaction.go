@@ -40,16 +40,19 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return nil, err
 	}
 
+	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
+	if err := s.pendingPool.add(input.SignedTransaction); err != nil {
+		return nil, err
+
+	}
+	s.pendingTransactions <- input.SignedTransaction //TODO remove this
+
 	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 
 			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
 		},
 	})
-
-	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
-	s.pendingTransactions <- input.SignedTransaction //TODO remove this
-	s.pendingPool.add(input.SignedTransaction)
 
 	return &services.AddNewTransactionOutput{}, nil
 }

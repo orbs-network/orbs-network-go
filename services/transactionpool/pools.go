@@ -7,27 +7,49 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-type pendingTxPool struct {
-	transactions map[string]bool
-	lock         *sync.Mutex
-	config       Config
+type pendingTransaction struct {
+	size	uint32
 }
 
-func (p pendingTxPool) add(transaction *protocol.SignedTransaction) {
+type pendingTxPool struct {
+	currentSizeInBytes uint32
+	transactions       map[string]*pendingTransaction
+	lock               *sync.Mutex
+
+	config Config
+}
+
+func (p pendingTxPool) add(transaction *protocol.SignedTransaction) error {
 	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	p.transactions[key] = true
+	size := uint32(len(transaction.Raw()))
+
+	if p.currentSizeInBytes + size > p.config.PendingPoolSizeInBytes() {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED} //TODO add status "pending pool is full"
+	}
+
+	p.currentSizeInBytes += size
+	p.transactions[key] = &pendingTransaction{size}
+	return nil
 }
 
 func (p pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
-	ok, _ := p.transactions[key]
+	_, ok := p.transactions[key]
 	return ok
 }
 
 func (p pendingTxPool) remove(txhash primitives.Sha256) {
-	delete(p.transactions, txhash.KeyForMap())
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	_, ok := p.transactions[txhash.KeyForMap()]
+	if ok {
+		delete(p.transactions, txhash.KeyForMap())
+		//p.currentSizeInBytes -= pendingTx.size
+	}
 }
 
 type committedTxPool struct {
@@ -54,4 +76,3 @@ func (p committedTxPool) get(transaction *protocol.SignedTransaction) *committed
 type committedTransaction struct {
 	receipt *protocol.TransactionReceipt
 }
-

@@ -168,9 +168,10 @@ func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 
 	h.expectNoTransactionsToBeForwarded()
 
-	err := h.addNewTransaction(builders.TransferTransaction().Build())
+	tx := builders.TransferTransaction().Build()
+	err := h.addNewTransaction(tx)
 
-	require.Error(t, err, "an transaction was added to a full pool")
+	require.Error(t, err, "a transaction was added to a full pool")
 	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
 }
 

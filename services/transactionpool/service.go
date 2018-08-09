@@ -32,7 +32,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 
 		pendingPool: pendingTxPool{
 			config: config,
-			transactions: make(map[string]bool),
+			transactions: make(map[string]*pendingTransaction),
 			lock:         &sync.Mutex{},
 		},
 
