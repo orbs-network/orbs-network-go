@@ -65,6 +65,7 @@ var _ = Describe("The Orbs Network", func() {
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				2*1000,
 				gossipTransport,
+				5,
 				300,
 				0,
 			)

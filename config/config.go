@@ -22,6 +22,9 @@ type NodeConfig interface {
 	// block storage
 	BlockSyncCommitTimeoutMillis() time.Duration
 
+	// state storage
+	StateHistoryRetentionInBlockHeights() uint64
+
 	// consensus context
 	BelowMinimalBlockDelayMillis() uint32
 	MinimumTransactionsInBlock() int

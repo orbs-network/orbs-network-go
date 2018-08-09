@@ -30,6 +30,10 @@ type consensusContextConfig struct {
 	minimumTransactionsInBlock   int
 }
 
+type stateStorageConfig struct {
+	stateHistoryRetentionInBlockHeights uint64
+}
+
 type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
@@ -38,6 +42,7 @@ type hardcodedConfig struct {
 	*identity
 	*consensusConfig
 	*blockStorageConfig
+	*stateStorageConfig
 	*consensusContextConfig
 }
 
@@ -55,6 +60,7 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
+	stateHistoryRetentionInBlockHeights uint64,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) NodeConfig {
@@ -73,6 +79,7 @@ func NewHardCodedConfig(
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
 		},
+		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
 		consensusContextConfig: &consensusContextConfig{
 			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
@@ -91,8 +98,8 @@ func NewConsensusConfig(
 
 	return &consensusConfig{
 		identity: &identity{
-			nodePublicKey:  nodePublicKey,
-			nodePrivateKey: nodePrivateKey,
+			nodePublicKey:                                nodePublicKey,
+			nodePrivateKey:                               nodePrivateKey,
 		},
 		federationNodes:                            federationNodes,
 		constantConsensusLeader:                    constantConsensusLeader,
@@ -110,6 +117,10 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 		belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
 		minimumTransactionsInBlock:   minimumTransactionsInBlock,
 	}
+}
+
+func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {
+	return &stateStorageConfig{stateHistoryRetentionInBlockHeights: maxStateHistory}
 }
 
 func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
@@ -154,4 +165,8 @@ func (c *consensusContextConfig) BelowMinimalBlockDelayMillis() uint32 {
 
 func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
 	return c.minimumTransactionsInBlock
+}
+
+func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
+	return c.stateHistoryRetentionInBlockHeights
 }
