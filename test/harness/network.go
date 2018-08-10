@@ -32,6 +32,7 @@ func WithAlgos(algos ...consensus.ConsensusAlgoType) []consensus.ConsensusAlgoTy
 }
 
 type AcceptanceTestNetwork interface {
+	Description() string
 	GossipTransport() gossipAdapter.TamperingTransport
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
@@ -42,6 +43,7 @@ type AcceptanceTestNetwork interface {
 type acceptanceTestNetwork struct {
 	nodes           []networkNode
 	gossipTransport gossipAdapter.TamperingTransport
+	description     string
 }
 
 type networkNode struct {
@@ -56,6 +58,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 
 	testLogger := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
 	testLogger.Info("creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
+	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
@@ -100,7 +103,12 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 	return &acceptanceTestNetwork{
 		nodes:           nodes,
 		gossipTransport: sharedTamperingTransport,
+		description:     description,
 	}
+}
+
+func (n *acceptanceTestNetwork) Description() string {
+	return n.description
 }
 
 func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {

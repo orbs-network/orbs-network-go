@@ -194,7 +194,11 @@ func (f *Field) Value() interface{} {
 	case FloatType:
 		return f.Float
 	case ErrorType:
-		return f.Error.Error()
+		if f.Error != nil {
+			return f.Error.Error()
+		} else {
+			return "<nil>"
+		}
 	}
 
 	return nil

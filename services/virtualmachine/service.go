@@ -1,11 +1,8 @@
 package virtualmachine
 
 import (
-	"encoding/binary"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -48,95 +45,37 @@ func NewVirtualMachine(
 }
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-
-	// TODO: until we integrate the acceptance to pass through the "correct" implementation we need this escape hatch to move the tests forward
-	if len(input.SignedTransactions) > 0 && input.SignedTransactions[0].Transaction().ContractName() == "ExampleContract" {
-
-		stateDiffs, err := s.processTransactionSet(input.BlockHeight, input.SignedTransactions)
-		if err != nil {
-			return nil, err
-		}
-
-		return &services.ProcessTransactionSetOutput{
-			TransactionReceipts: nil,
-			ContractStateDiffs:  stateDiffs,
-		}, nil
-	}
-
-	var state []*protocol.StateRecordBuilder
-	for _, i := range input.SignedTransactions {
-		byteArray := make([]byte, 8)
-		binary.LittleEndian.PutUint64(byteArray, uint64(i.Transaction().InputArgumentsIterator().NextInputArguments().Uint64Value()))
-		transactionStateDiff := &protocol.StateRecordBuilder{
-			Key:   primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", uint64(input.BlockHeight))),
-			Value: byteArray,
-		}
-		state = append(state, transactionStateDiff)
-	}
-	csdi := []*protocol.ContractStateDiff{(&protocol.ContractStateDiffBuilder{ContractName: "BenchmarkToken", StateDiffs: state}).Build()}
-	s.stateStorage.CommitStateDiff(
-		&services.CommitStateDiffInput{
-			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: input.BlockHeight}).Build(),
-			ContractStateDiffs: csdi})
+	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
+	receipts, stateDiffs := s.processTransactionSet(previousBlockHeight, input.SignedTransactions)
+	s.reporting.Info("processed transaction set", instrumentation.BlockHeight(input.BlockHeight), instrumentation.Int("num-receipts", len(receipts)), instrumentation.Int("num-contract-state-diffs", len(stateDiffs)))
 
 	return &services.ProcessTransactionSetOutput{
-		TransactionReceipts: nil, // TODO
-		ContractStateDiffs:  csdi,
+		TransactionReceipts: receipts,
+		ContractStateDiffs:  stateDiffs,
 	}, nil
 }
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
-
-	// TODO: until we integrate the acceptance to pass through the "correct" implementation we need this escape hatch to move the tests forward
-	if input.Transaction.ContractName() == "ExampleContract" {
-
-		blockHeight, blockTimestamp, err := s.getRecentBlockHeight()
-		if err != nil {
-			return nil, err
-		}
-
-		callResult, outputArgs, err := s.runLocalMethod(blockHeight, input.Transaction)
-		if err != nil {
-			return nil, err
-		}
-
+	blockHeight, blockTimestamp, err := s.getRecentBlockHeight()
+	if err != nil {
 		return &services.RunLocalMethodOutput{
-			CallResult:              callResult,
-			OutputArguments:         outputArgs,
+			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArguments:         []*protocol.MethodArgument{},
 			ReferenceBlockHeight:    blockHeight,
 			ReferenceBlockTimestamp: blockTimestamp,
-		}, nil
+		}, err
 	}
 
-	// TODO XXX this implementation bakes an implementation of an arbitraty contract function.
-	// The function scans a set of keys derived from the current block height and sums up all their values.
+	callResult, outputArgs, err := s.runLocalMethod(blockHeight, input.Transaction)
+	// TODO: when we change the protos for RunLocalMethodOutput make the output args easily stringable for logging
+	s.reporting.Info("ran local method", instrumentation.BlockHeight(blockHeight), instrumentation.Stringable("result", callResult), instrumentation.Error(err))
 
-	// todo get list of keys to read from "hard codded contract func"
-	blockHeight, _ := s.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
-	keys := make([]primitives.Ripmd160Sha256, 0, blockHeight.LastCommittedBlockHeight)
-	for i := uint64(0); i < uint64(blockHeight.LastCommittedBlockHeight)+uint64(1); i++ {
-		keys = append(keys, primitives.Ripmd160Sha256(fmt.Sprintf("balance%v", i)))
-	}
-
-	sum := uint64(0)
-	readKeys := &services.ReadKeysInput{BlockHeight: blockHeight.LastCommittedBlockHeight, ContractName: "BenchmarkToken", Keys: keys}
-	if results, err := s.stateStorage.ReadKeys(readKeys); err != nil {
-		// Todo handle error gracefully
-	} else {
-		for _, t := range results.StateRecords {
-			if len(t.Value()) > 0 {
-				sum += binary.LittleEndian.Uint64(t.Value())
-			}
-		}
-	}
-	arg := (&protocol.MethodArgumentBuilder{
-		Name:        "balance",
-		Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE,
-		Uint64Value: sum,
-	}).Build()
 	return &services.RunLocalMethodOutput{
-		OutputArguments: []*protocol.MethodArgument{arg},
-	}, nil
+		CallResult:              callResult,
+		OutputArguments:         outputArgs,
+		ReferenceBlockHeight:    blockHeight,
+		ReferenceBlockTimestamp: blockTimestamp,
+	}, err
 }
 
 func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
