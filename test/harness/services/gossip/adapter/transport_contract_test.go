@@ -1,68 +1,48 @@
 package adapter
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"testing"
+	"github.com/stretchr/testify/require"
 )
 
-func TestContract(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gossip Transport Contract")
+func TestContract_SendBroadcast(t *testing.T) {
+
+	t.Run("TamperingTransport", broadcastTest(aTamperingTransport))
+	t.Run("MemberlistTransport", broadcastTest(aMemberlistTransport))
 }
 
-var _ = Describe("Tampering Transport", func() {
-	assertContractOf(aTamperingTransport)
-})
+func TestContract_SendToList(t *testing.T) {
+	t.Skipf("TODO implement")
+}
 
-var _ = Describe("Memberlist Transport", func() {
-	assertContractOf(aMemberlistTransport)
-})
+func TestContract_SendToAllButList(t *testing.T) {
+	t.Skipf("TODO implement")
+}
 
-func assertContractOf(makeContext func() *transportContractContext) {
+func broadcastTest(makeContext func() *transportContractContext) func(*testing.T) {
 
-	/* // TODO: add me
-	When("unicasting a message", func() {
+	return func(t *testing.T) {
+		t.Parallel()
+		c := makeContext()
 
-		It("reaches only the intended recipient", func() {
-			c := makeContext()
-			header := (&gossipmessages.HeaderBuilder{
-				RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-				Topic: gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
-				TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
-				NumPayloads: 0,
-			}).Build()
-			payloads := [][]byte{}
-			c.l2.expect(header, payloads)
-			c.transport.Send(header, payloads)
-			c.verify()
-		})
-	})
-	*/
+		data := &adapter.TransportData{
+			SenderPublicKey: c.publicKeys[3],
+			RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+			Payloads:        [][]byte{{0x71, 0x72, 0x73}},
+		}
 
-	When("broadcasting a message", func() {
-		It("reaches all recipients except the sender", func() {
-			c := makeContext()
+		c.listeners[0].expectReceive(data.Payloads)
+		c.listeners[1].expectReceive(data.Payloads)
+		c.listeners[2].expectReceive(data.Payloads)
+		c.listeners[3].expectNotReceive()
 
-			data := &adapter.TransportData{
-				SenderPublicKey: c.publicKeys[3],
-				RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-				Payloads:        [][]byte{{0x71, 0x72, 0x73}},
-			}
-
-			c.listeners[0].expectReceive(data.Payloads)
-			c.listeners[1].expectReceive(data.Payloads)
-			c.listeners[2].expectReceive(data.Payloads)
-			c.listeners[3].expectNotReceive()
-
-			c.transports[3].Send(data)
-			c.verify()
-		})
-	})
+		c.transports[3].Send(data)
+		c.verify(t)
+	}
 }
 
 type transportContractContext struct {
@@ -109,8 +89,8 @@ func aMemberlistTransport() *transportContractContext {
 	return res
 }
 
-func (c *transportContractContext) verify() {
+func (c *transportContractContext) verify(t *testing.T) {
 	for _, mockListener := range c.listeners {
-		Eventually(mockListener).Should(test.ExecuteAsPlanned())
+		require.NoError(t, test.EventuallyVerify(mockListener))
 	}
 }
