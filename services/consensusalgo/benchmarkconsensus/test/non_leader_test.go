@@ -16,6 +16,7 @@ func newNonLeaderHarness(t *testing.T, ctx context.Context) *harness {
 }
 
 func TestNonLeaderInit(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 
@@ -24,6 +25,7 @@ func TestNonLeaderInit(t *testing.T) {
 }
 
 func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(false)
 		h.expectNewBlockProposalNotRequested()
@@ -34,6 +36,7 @@ func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 }
 
 func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -49,6 +52,7 @@ func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 }
 
 func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -72,6 +76,7 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 }
 
 func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -102,6 +107,7 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -117,6 +123,7 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -140,6 +147,7 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresBadSignature(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 
@@ -157,6 +165,7 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 
