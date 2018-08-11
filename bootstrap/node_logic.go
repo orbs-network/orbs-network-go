@@ -41,7 +41,6 @@ func NewNodeLogic(
 ) NodeLogic {
 
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
-	transactionPool := transactionpool.NewTransactionPool(gossip, reporting)
 	stateStorage := statestorage.NewStateStorage(nodeConfig, statePersistence)
 	blockStorage := blockstorage.NewBlockStorage(nodeConfig, blockPersistence, stateStorage, reporting)
 
@@ -52,8 +51,9 @@ func NewNodeLogic(
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
 
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, processors, crosschainConnectors, reporting)
+	transactionPool := transactionpool.NewTransactionPool(gossip, virtualMachine, reporting)
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
-	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil)
+	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
