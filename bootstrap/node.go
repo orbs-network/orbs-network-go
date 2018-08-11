@@ -37,6 +37,7 @@ func NewNode(
 	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 	stateHistoryRetentionInBlockHeights uint64,
+	querySyncGraceBlockDist uint64,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) Node {
@@ -51,6 +52,7 @@ func NewNode(
 		benchmarkConsensusRoundRetryIntervalMillis,
 		blockSyncCommitTimeoutMillis,
 		stateHistoryRetentionInBlockHeights,
+		querySyncGraceBlockDist,
 		belowMinimalBlockDelayMillis,
 		minimumTransactionsInBlock,
 	)

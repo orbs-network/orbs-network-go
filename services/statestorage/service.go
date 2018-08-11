@@ -12,6 +12,7 @@ import (
 
 type Config interface {
 	StateHistoryRetentionInBlockHeights() uint64
+	//QuerySyncGraceBlockDist() uint64
 }
 
 type service struct {

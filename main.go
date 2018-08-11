@@ -44,6 +44,7 @@ func main() {
 		2*1000,
 		gossipTransport,
 		5,
+		3,
 		300,
 		2,
 	).WaitUntilShutdown()

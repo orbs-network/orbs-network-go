@@ -21,10 +21,17 @@ type keyValue struct {
 }
 
 func newStateStorageDriver(history int) *driver {
+	return newStateStorageDriverWithGrace(history, 0)
+}
+
+func newStateStorageDriverWithGrace(history int, graceBlockDiff int) *driver {
 	if history <= 0 {
 		history = 1
 	}
-	historySize := driverConfig{history}
+	historySize := driverConfig{
+		history,
+		graceBlockDiff,
+	}
 
 	p := adapter.NewInMemoryStatePersistence()
 
@@ -105,8 +112,13 @@ func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...s
 
 type driverConfig struct {
 	historySize int
+	querySyncGraceBlockDist int
 }
 
 func (d *driverConfig) StateHistoryRetentionInBlockHeights() uint64 {
 	return uint64(d.historySize)
+}
+
+func (d *driverConfig) QuerySyncGraceBlockDist() uint64 {
+	return uint64(d.querySyncGraceBlockDist)
 }

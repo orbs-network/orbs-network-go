@@ -32,6 +32,7 @@ type consensusContextConfig struct {
 
 type stateStorageConfig struct {
 	stateHistoryRetentionInBlockHeights uint64
+	querySyncGraceBlockDist uint64
 }
 
 type hardCodedFederationNode struct {
@@ -61,6 +62,7 @@ func NewHardCodedConfig(
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
 	stateHistoryRetentionInBlockHeights uint64,
+	querySyncGraceBlockDist uint64,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) NodeConfig {
@@ -79,7 +81,10 @@ func NewHardCodedConfig(
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
 		},
-		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
+		stateStorageConfig: &stateStorageConfig{
+			stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights,
+			querySyncGraceBlockDist: querySyncGraceBlockDist,
+		},
 		consensusContextConfig: &consensusContextConfig{
 			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
@@ -119,8 +124,11 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {
-	return &stateStorageConfig{stateHistoryRetentionInBlockHeights: maxStateHistory}
+func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64) *stateStorageConfig {
+	return &stateStorageConfig{
+		stateHistoryRetentionInBlockHeights: maxStateHistory,
+		querySyncGraceBlockDist: graceBlockDist,
+	}
 }
 
 func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
@@ -169,4 +177,8 @@ func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
 
 func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
 	return c.stateHistoryRetentionInBlockHeights
+}
+
+func (c *stateStorageConfig) QuerySyncGraceBlockDist() uint64 {
+	return c.querySyncGraceBlockDist
 }
