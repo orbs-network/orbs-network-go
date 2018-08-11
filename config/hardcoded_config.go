@@ -22,7 +22,10 @@ type consensusConfig struct {
 }
 
 type blockStorageConfig struct {
-	blockSyncCommitTimeoutMillis time.Duration
+	blockSyncCommitTimeoutMillis                     time.Duration
+	blockTransactionReceiptQueryStartGraceSec        time.Duration
+	blockTransactionReceiptQueryEndGraceSec          time.Duration
+	blockTransactionReceiptQueryTransactionExpireSec time.Duration
 }
 
 type consensusContextConfig struct {
@@ -60,6 +63,9 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
+	blockTransactionReceiptQueryStartGraceSec uint32,
+	blockTransactionReceiptQueryEndGraceSec uint32,
+	blockTransactionReceiptQueryTransactionExpireSec uint32,
 	stateHistoryRetentionInBlockHeights uint64,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
@@ -77,7 +83,10 @@ func NewHardCodedConfig(
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		blockStorageConfig: &blockStorageConfig{
-			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
+			blockSyncCommitTimeoutMillis:                     time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
+			blockTransactionReceiptQueryStartGraceSec:        time.Duration(blockTransactionReceiptQueryStartGraceSec) * time.Second,
+			blockTransactionReceiptQueryEndGraceSec:          time.Duration(blockTransactionReceiptQueryEndGraceSec) * time.Second,
+			blockTransactionReceiptQueryTransactionExpireSec: time.Duration(blockTransactionReceiptQueryTransactionExpireSec) * time.Second,
 		},
 		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
 		consensusContextConfig: &consensusContextConfig{
@@ -108,8 +117,13 @@ func NewConsensusConfig(
 	}
 }
 
-func NewBlockStorageConfig(blockSyncCommitTimeoutMillis uint32) *blockStorageConfig {
-	return &blockStorageConfig{blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond}
+func NewBlockStorageConfig(blockSyncCommitTimeoutMillis, blockTransactionReceiptQueryStartGraceSec, blockTransactionReceiptQueryEndGraceSec, blockTransactionReceiptQueryTransactionExpireSec uint32) *blockStorageConfig {
+	return &blockStorageConfig{
+		blockSyncCommitTimeoutMillis:                     time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
+		blockTransactionReceiptQueryStartGraceSec:        time.Duration(blockTransactionReceiptQueryStartGraceSec) * time.Second,
+		blockTransactionReceiptQueryEndGraceSec:          time.Duration(blockTransactionReceiptQueryEndGraceSec) * time.Second,
+		blockTransactionReceiptQueryTransactionExpireSec: time.Duration(blockTransactionReceiptQueryTransactionExpireSec) * time.Second,
+	}
 }
 
 func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {
@@ -157,6 +171,16 @@ func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 
 func (c *blockStorageConfig) BlockSyncCommitTimeoutMillis() time.Duration {
 	return c.blockSyncCommitTimeoutMillis
+}
+
+func (c *blockStorageConfig) BlockTransactionReceiptQueryStartGraceSec() time.Duration {
+	return c.blockTransactionReceiptQueryStartGraceSec
+}
+func (c *blockStorageConfig) BlockTransactionReceiptQueryEndGraceSec() time.Duration {
+	return c.blockTransactionReceiptQueryEndGraceSec
+}
+func (c *blockStorageConfig) BlockTransactionReceiptQueryTransactionExpireSec() time.Duration {
+	return c.blockTransactionReceiptQueryTransactionExpireSec
 }
 
 func (c *consensusContextConfig) BelowMinimalBlockDelayMillis() uint32 {
