@@ -2,10 +2,7 @@ package bloom
 
 import "github.com/orbs-network/orbs-spec/types/go/primitives"
 
-// this bf works on time stamps, and more specifically, the time stamps intervals - we know that the set of numbers will be relatively small - the difference between blocks
-// so if bA has closed at 20180101-12:00:00 and bB closed at 20180101-12:00:30 (30 seconds later) the bf can only contain the time intervals in between the values,
-// ensuring small entropy. usually blocks will be closed in less than a second, a full 32bit uint will hold 4.29 seconds of nanosecond interval (ts is UnixNano()),
-// so the performance here should be very high with very little false positive
+// this is a work in progress as we decide on the right course of action with oded and research
 type TimestampBloomFilter struct {
 	bitset   []bool
 	size     uint32 // size of bf
@@ -112,10 +109,20 @@ func boolSliceToByte(slice []bool) byte {
 }
 
 func (bf *TimestampBloomFilter) Raw() primitives.BloomFilter {
-	byteCount := int(bf.size / 8)
+	var byteCount int
+	if bf.size <= 8 {
+		byteCount = 1
+	} else {
+		byteCount = int(bf.size / 8)
+	}
+
 	output := make([]byte, 0, byteCount)
 	for i := 0; i < byteCount; i++ {
-		boolSlice := bf.bitset[i*8 : (i+1)*8]
+		endOfSlice := (i + 1) * 8
+		if endOfSlice > len(bf.bitset) {
+			endOfSlice = len(bf.bitset)
+		}
+		boolSlice := bf.bitset[i*8 : endOfSlice]
 		b := boolSliceToByte(boolSlice)
 		output = append(output, b)
 	}

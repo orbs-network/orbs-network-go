@@ -17,7 +17,7 @@ var _ = Describe("Block Storage", func() {
 				driver := NewDriver()
 				driver.expectCommitStateDiff()
 
-				block := builders.BlockPair().Build()
+				block := builders.BlockPair().WithTimestampBloomFilter().Build()
 				driver.commitBlock(block)
 
 				out, err := driver.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{

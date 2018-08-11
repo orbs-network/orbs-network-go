@@ -1,8 +1,8 @@
 package blockstorage
 
 import (
-	"errors"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/pkg/errors"
 	"sync"
 	"time"
 )
@@ -195,6 +196,33 @@ func (s *service) createEmptyTransactionReceiptResult() *services.GetTransaction
 }
 
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
+	start := input.TransactionTimestamp - primitives.TimestampNano(s.config.BlockTransactionReceiptQueryStartGraceSec().Nanoseconds())
+	end := input.TransactionTimestamp + primitives.TimestampNano((s.config.BlockTransactionReceiptQueryEndGraceSec() + s.config.BlockTransactionReceiptQueryTransactionExpireSec()).Nanoseconds())
+
+	blocksToSearch := s.persistence.ReadAllBlocksByTimeRange(start, end)
+	if blocksToSearch == nil {
+		return nil, errors.Errorf("failed to search for blocks from %d to %d", start, end)
+	}
+
+	if len(blocksToSearch) == 0 {
+		return s.createEmptyTransactionReceiptResult(), nil
+	}
+
+	for _, b := range blocksToSearch {
+		tbf := bloom.NewFromRaw(b.ResultsBlock.Header.TimestampBloomFilter())
+		if tbf.Test(input.TransactionTimestamp) {
+			for _, txr := range b.ResultsBlock.TransactionReceipts {
+				if txr.Txhash().Equal(input.Txhash) {
+					return &services.GetTransactionReceiptOutput{
+						TransactionReceipt: txr,
+						BlockHeight:        b.ResultsBlock.Header.BlockHeight(),
+						BlockTimestamp:     b.ResultsBlock.Header.Timestamp(),
+					}, nil
+				}
+			}
+		}
+	}
+
 	return s.createEmptyTransactionReceiptResult(), nil
 }
 

@@ -97,6 +97,17 @@ func TestTimestampBloomFilter_Raw(t *testing.T) {
 	}
 }
 
+func TestTimestampBloomFilter_Raw_Small(t *testing.T) {
+	x := bloom.New(1)
+	x.Add(nanoForRaw[0])
+
+	expected := []byte{1}
+
+	if !bytes.Equal(expected, x.Raw()) {
+		t.Errorf("raw did not output the expected byte state")
+	}
+}
+
 func TestNewFromRaw(t *testing.T) {
 	x := bloom.New(16)
 	for _, ts := range nanoForRaw {
