@@ -111,7 +111,7 @@ func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...s
 }
 
 type driverConfig struct {
-	historySize int
+	historySize             int
 	querySyncGraceBlockDist int
 }
 
