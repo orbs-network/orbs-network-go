@@ -48,6 +48,21 @@ func (bp *inMemoryBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContain
 	return bp.blockPairs
 }
 
+func (bp *inMemoryBlockPersistence) ReadAllBlocksByTimeRange(start, end primitives.TimestampNano) []*protocol.BlockPairContainer {
+	if end < start {
+		return nil
+	}
+	var relevantBlocks []*protocol.BlockPairContainer
+	interval := end - start
+	for _, b := range bp.blockPairs {
+		delta := end - b.TransactionsBlock.Header.Timestamp()
+		if delta > 0 && interval > delta {
+			relevantBlocks = append(relevantBlocks, b)
+		}
+	}
+	return relevantBlocks
+}
+
 func (bp *inMemoryBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
 	for _, bp := range bp.blockPairs {
 		if bp.TransactionsBlock.Header.BlockHeight() == height {
