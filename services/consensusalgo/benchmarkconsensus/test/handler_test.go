@@ -10,7 +10,7 @@ import (
 func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
-		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
 
@@ -31,7 +31,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
-		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
 
@@ -56,7 +56,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
-		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 2 without hash pointer")
 
@@ -73,7 +73,7 @@ func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
-		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 2 with bad signature")
 
@@ -81,7 +81,7 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 		b2 := builders.BlockPair().
 			WithHeight(2).
 			WithPrevBlockHash(b1).
-			WithInvalidBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey).
+			WithInvalidBenchmarkConsensusBlockProof(leaderKeyPair()).
 			Build()
 
 		err := h.handleBlockConsensus(b2, b1)
@@ -94,8 +94,7 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
-		otherNonLeaderPublicKey, otherNonLeaderPrivateKey := otherNonLeaderKeyPair()
-		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderPublicKey, otherNonLeaderPrivateKey)
+		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 2 from non leader")
 

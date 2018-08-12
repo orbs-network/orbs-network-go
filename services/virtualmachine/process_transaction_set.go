@@ -27,6 +27,7 @@ func (s *service) processTransactionSet(
 		executionContext.serviceStackPush(signedTransaction.Transaction().ContractName())
 		executionContext.batchTransientState = batchTransientState
 
+		// execute the call
 		// TODO: might need to change protos to avoid this copy
 		args := []*protocol.MethodArgument{}
 		for i := signedTransaction.Transaction().InputArgumentsIterator(); i.HasNext(); {

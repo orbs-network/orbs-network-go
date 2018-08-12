@@ -25,6 +25,7 @@ func (s *service) runLocalMethod(
 	defer s.contexts.destroyExecutionContext(contextId)
 	executionContext.serviceStackPush(transaction.ContractName())
 
+	// execute the call
 	// TODO: might need to change protos to avoid this copy
 	args := []*protocol.MethodArgument{}
 	for i := transaction.InputArgumentsIterator(); i.HasNext(); {

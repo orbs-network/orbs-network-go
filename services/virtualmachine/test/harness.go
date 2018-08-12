@@ -128,3 +128,11 @@ func (h *harness) processTransactionSet(contractNames []primitives.ContractName)
 
 	return results, resultKeyValuePairsPerContract
 }
+
+func (h *harness) transactionSetPreOrder(signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {
+	output, err := h.service.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+		BlockHeight:        12,
+		SignedTransactions: signedTransactions,
+	})
+	return output.PreOrderResults, err
+}

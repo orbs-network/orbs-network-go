@@ -47,7 +47,7 @@ func NewVirtualMachine(
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 	receipts, stateDiffs := s.processTransactionSet(previousBlockHeight, input.SignedTransactions)
-	s.reporting.Info("processed transaction set", instrumentation.BlockHeight(input.BlockHeight), instrumentation.Int("num-receipts", len(receipts)), instrumentation.Int("num-contract-state-diffs", len(stateDiffs)))
+	s.reporting.Info("processed transaction set", instrumentation.BlockHeight(previousBlockHeight), instrumentation.Int("num-receipts", len(receipts)), instrumentation.Int("num-contract-state-diffs", len(stateDiffs)))
 
 	return &services.ProcessTransactionSetOutput{
 		TransactionReceipts: receipts,
@@ -79,16 +79,25 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 }
 
 func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 
-	//TODO this is a stub to make AddNewTransaction pass. Remove when real implementation arrives
-	numOfTransactions := len(input.SignedTransactions)
-	results := make([]protocol.TransactionStatus, numOfTransactions, numOfTransactions)
-	for i := range results {
-		results[i] = protocol.TRANSACTION_STATUS_PENDING
+	// check subscription
+	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
+	err := s.callGlobalPreOrderContract(previousBlockHeight)
+	if err != nil {
+		for i := 0; i < len(statuses); i++ {
+			statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
+		}
+	} else {
+		// check signatures
+		err = s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 	}
+
+	s.reporting.Info("performed pre order checks", instrumentation.Error(err), instrumentation.BlockHeight(previousBlockHeight), instrumentation.Int("num-statuses", len(statuses)))
+
 	return &services.TransactionSetPreOrderOutput{
-		PreOrderResults: results,
-	}, nil
+		PreOrderResults: statuses,
+	}, err
 }
 
 func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
