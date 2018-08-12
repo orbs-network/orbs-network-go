@@ -125,6 +125,6 @@ func (d *driverConfig) QuerySyncGraceBlockDist() uint64 {
 	return uint64(d.querySyncGraceBlockDist)
 }
 
-func (d *driverConfig) QuerySyncGraceTimeoutMillis() uint64 {
+func (d *driverConfig) QueryGraceTimeoutMillis() uint64 {
 	return uint64(d.querySyncGraceTimeoutMillis)
 }

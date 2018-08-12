@@ -14,7 +14,7 @@ import (
 type Config interface {
 	StateHistoryRetentionInBlockHeights() uint64
 	QuerySyncGraceBlockDist() uint64
-	QuerySyncGraceTimeoutMillis() uint64
+	QueryGraceTimeoutMillis() uint64
 }
 
 type service struct {
@@ -101,6 +101,18 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	return output, nil
 }
 
+func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
+	result := &services.GetStateStorageBlockHeightOutput{
+		LastCommittedBlockHeight:    s.lastCommittedBlockHeader.BlockHeight(),
+		LastCommittedBlockTimestamp: s.lastCommittedBlockHeader.Timestamp(),
+	}
+	return result, nil
+}
+
+func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+	panic("Not implemented")
+}
+
 func (s *service) checkBlockHeightWithGrace(requestedHeight primitives.BlockHeight) bool {
 	currentHeight := s.lastCommittedBlockHeader.BlockHeight()
 	if currentHeight >= requestedHeight { // requested block already committed
@@ -112,7 +124,7 @@ func (s *service) checkBlockHeightWithGrace(requestedHeight primitives.BlockHeig
 		return false
 	}
 
-	timeout := time.NewTimer(time.Duration(s.config.QuerySyncGraceTimeoutMillis()) * time.Millisecond)
+	timeout := time.NewTimer(time.Duration(s.config.QueryGraceTimeoutMillis()) * time.Millisecond)
 	defer timeout.Stop()
 
 	for s.lastCommittedBlockHeader.BlockHeight() < requestedHeight { // sit on latch until desired height or t.o.
@@ -123,16 +135,4 @@ func (s *service) checkBlockHeightWithGrace(requestedHeight primitives.BlockHeig
 		}
 	}
 	return true
-}
-
-func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
-	result := &services.GetStateStorageBlockHeightOutput{
-		LastCommittedBlockHeight:    s.lastCommittedBlockHeader.BlockHeight(),
-		LastCommittedBlockTimestamp: s.lastCommittedBlockHeader.Timestamp(),
-	}
-	return result, nil
-}
-
-func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	panic("Not implemented")
 }
