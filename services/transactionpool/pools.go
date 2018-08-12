@@ -23,7 +23,8 @@ func NewCommittedPool() *committedTxPool {
 }
 
 type pendingTransaction struct {
-	size uint32
+	size             uint32
+	gatewayPublicKey primitives.Ed25519PublicKey
 }
 
 type pendingTxPool struct {
@@ -34,7 +35,7 @@ type pendingTxPool struct {
 	config Config
 }
 
-func (p *pendingTxPool) add(transaction *protocol.SignedTransaction) (primitives.Sha256, error) {
+func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, error) {
 	key := digest.CalcTxHash(transaction.Transaction())
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -45,7 +46,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction) (primitives
 	}
 
 	p.currentSizeInBytes += size
-	p.transactions[key.KeyForMap()] = &pendingTransaction{size}
+	p.transactions[key.KeyForMap()] = &pendingTransaction{size: size, gatewayPublicKey: gatewayPublicKey}
 	return key, nil
 }
 
@@ -57,14 +58,17 @@ func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	return ok
 }
 
-func (p *pendingTxPool) remove(txhash primitives.Sha256) {
+func (p *pendingTxPool) remove(txhash primitives.Sha256) *pendingTransaction {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	pendingTx, ok := p.transactions[txhash.KeyForMap()]
 	if ok {
 		delete(p.transactions, txhash.KeyForMap())
 		p.currentSizeInBytes -= pendingTx.size
+		return pendingTx
 	}
+
+	return nil
 }
 
 type committedTxPool struct {

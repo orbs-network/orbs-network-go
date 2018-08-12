@@ -41,7 +41,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	}
 
 	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
-	if _, err := s.pendingPool.add(input.SignedTransaction); err != nil {
+	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodePublicKey()); err != nil {
 		return nil, err
 
 	}

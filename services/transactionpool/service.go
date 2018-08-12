@@ -15,11 +15,12 @@ type Config interface {
 }
 
 type service struct {
-	pendingTransactions chan *protocol.SignedTransaction
-	gossip              gossiptopics.TransactionRelay
-	virtualMachine      services.VirtualMachine
-	reporting           instrumentation.BasicLogger
-	config              Config
+	pendingTransactions        chan *protocol.SignedTransaction
+	gossip                     gossiptopics.TransactionRelay
+	virtualMachine             services.VirtualMachine
+	transactionResultsHandlers []handlers.TransactionResultsHandler
+	reporting                  instrumentation.BasicLogger
+	config                     Config
 
 	lastCommittedBlockHeight primitives.BlockHeight
 	pendingPool              *pendingTxPool
@@ -58,29 +59,8 @@ func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransa
 	panic("Not implemented")
 }
 
-func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
-	if input.LastCommittedBlockHeight != s.lastCommittedBlockHeight+1 {
-		return &services.CommitTransactionReceiptsOutput{
-			NextDesiredBlockHeight:   s.lastCommittedBlockHeight + 1,
-			LastCommittedBlockHeight: s.lastCommittedBlockHeight,
-		}, nil
-	}
-
-	for _, receipt := range input.TransactionReceipts {
-		s.committedPool.add(receipt)
-		s.pendingPool.remove(receipt.Txhash())
-	}
-
-	s.lastCommittedBlockHeight = input.LastCommittedBlockHeight
-
-	return &services.CommitTransactionReceiptsOutput{
-		NextDesiredBlockHeight:   s.lastCommittedBlockHeight + 1,
-		LastCommittedBlockHeight: s.lastCommittedBlockHeight,
-	}, nil
-}
-
 func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
-	panic("Not implemented")
+	s.transactionResultsHandlers = append(s.transactionResultsHandlers, handler)
 }
 
 func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {

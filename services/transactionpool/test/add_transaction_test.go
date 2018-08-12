@@ -10,6 +10,7 @@ import (
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
+	t.Parallel()
 	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
@@ -18,10 +19,11 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	_, err := h.addNewTransaction(tx)
 
 	require.NoError(t, err, "a valid transaction was not added to pool")
-	require.NoError(t, h.verifyMocks(), "mock gossip was not called as expected")
+	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
+	t.Parallel()
 	h := newHarness()
 
 	tx := builders.TransferTransaction().WithInvalidContent().Build()
@@ -30,10 +32,11 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	_, err := h.addNewTransaction(tx)
 
 	require.Error(t, err, "an invalid transaction was added to the pool")
-	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
+	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
+	t.Parallel()
 	h := newHarness()
 	tx := builders.TransferTransaction().Build()
 	expectedStatus := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
@@ -57,6 +60,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 }
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
+	t.Parallel()
 	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
@@ -65,25 +69,34 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 	h.addNewTransaction(tx)
 	_, err := h.addNewTransaction(tx)
 	require.Error(t, err, "a transaction was added twice to the pool")
+
+	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
+	t.Parallel()
 	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
 	h.ignoringForwardMessages()
+	h.ignoringTransactionResults()
 
 	h.addNewTransaction(tx)
-	h.reportTransactionAsCommitted(tx)
+	h.assumeBlockStorageAtHeight(1)
+	_, err := h.reportTransactionsAsCommitted(tx)
+	require.NoError(t, err, "committing a transaction returned an unexpected error")
 
 	receipt, err := h.addNewTransaction(tx)
 
 	require.NoError(t, err, "a committed transaction that was added again was wrongly rejected")
 	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
 	require.Equal(t, digest.CalcTxHash(tx.Transaction()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
+
+	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
+	t.Parallel()
 	h := newHarnessWithSizeLimit(1)
 
 	h.expectNoTransactionsToBeForwarded()
@@ -92,5 +105,5 @@ func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	_, err := h.addNewTransaction(tx)
 
 	require.Error(t, err, "a transaction was added to a full pool")
-	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
+	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }
