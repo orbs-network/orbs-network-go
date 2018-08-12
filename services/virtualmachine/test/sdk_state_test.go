@@ -27,7 +27,7 @@ func TestSdkReadStateWithLocalMethodReadOnlyAccess(t *testing.T) {
 		require.NoError(t, err, "handleSdkCall should not fail")
 		require.Equal(t, []byte{0x02}, res[0].BytesValue(), "handleSdkCall result should be equal")
 
-		t.Log("Second read should be cached")
+		t.Log("Second read should be from cache")
 
 		res, err = h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")
@@ -63,6 +63,33 @@ func TestSdkWriteStateWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.verifyNativeProcessorCalled(t)
 }
 
+func TestSdkReadStateWithTransactionSetReadWriteAccess(t *testing.T) {
+	h := newHarness()
+
+	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("First read should reach state storage")
+
+		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, []byte{0x02}, res[0].BytesValue(), "handleSdkCall result should be equal")
+
+		t.Log("Second read should be from cache")
+
+		res, err = h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, []byte{0x02}, res[0].BytesValue(), "handleSdkCall result should be equal")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	})
+	h.expectStateStorageRead(11, []byte{0x01}, []byte{0x02})
+
+	_, sd := h.processTransactionSet([]primitives.ContractName{"ExampleContract"})
+	require.ElementsMatch(t, sd["ExampleContract"], []*keyValuePair{}, "processTransactionSet returned contract state diffs should be empty")
+
+	h.verifyNativeProcessorCalled(t)
+	h.verifyStateStorageRead(t)
+}
+
 func TestSdkWriteStateWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
 
@@ -95,8 +122,56 @@ func TestSdkWriteStateWithTransactionSetReadWriteAccess(t *testing.T) {
 	h.expectStateStorageNotRead()
 
 	_, sd := h.processTransactionSet([]primitives.ContractName{"ExampleContract", "ExampleContract"})
-	require.ElementsMatch(t, sd, []*keyValuePair{
+	require.ElementsMatch(t, sd["ExampleContract"], []*keyValuePair{
 		{[]byte{0x01}, []byte{0x05, 0x06}},
+	}, "processTransactionSet returned contract state diffs should match")
+
+	h.verifyNativeProcessorCalled(t)
+	h.verifyStateStorageRead(t)
+}
+
+func TestSdkWriteStateOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
+	h := newHarness()
+
+	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Transaction 1: write to key in first contract")
+
+		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02})
+		require.NoError(t, err, "handleSdkCall should succeed")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	}, func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Transaction 2: write to same key in second contract")
+
+		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x03, 0x04})
+		require.NoError(t, err, "handleSdkCall should succeed")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	}, func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Transaction 3: read from first contract")
+
+		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, []byte{0x02}, res[0].BytesValue(), "handleSdkCall result should be equal")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	}, func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Transaction 4: read from second contract")
+
+		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, []byte{0x03, 0x04}, res[0].BytesValue(), "handleSdkCall result should be equal")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	})
+	h.expectStateStorageNotRead()
+
+	_, sd := h.processTransactionSet([]primitives.ContractName{"ExampleContract", "AnotherContract", "ExampleContract", "AnotherContract"})
+	require.ElementsMatch(t, sd["ExampleContract"], []*keyValuePair{
+		{[]byte{0x01}, []byte{0x02}},
+	}, "processTransactionSet returned contract state diffs should match")
+	require.ElementsMatch(t, sd["AnotherContract"], []*keyValuePair{
+		{[]byte{0x01}, []byte{0x03, 0x04}},
 	}, "processTransactionSet returned contract state diffs should match")
 
 	h.verifyNativeProcessorCalled(t)
@@ -138,7 +213,7 @@ func TestSdkWriteStateIgnoredWithTransactionSetHavingFailedTransactions(t *testi
 	h.expectStateStorageNotRead()
 
 	_, sd := h.processTransactionSet([]primitives.ContractName{"ExampleContract", "ExampleContract", "ExampleContract"})
-	require.ElementsMatch(t, sd, []*keyValuePair{
+	require.ElementsMatch(t, sd["ExampleContract"], []*keyValuePair{
 		{[]byte{0x01}, []byte{0x02}},
 	}, "processTransactionSet returned contract state diffs should match")
 
