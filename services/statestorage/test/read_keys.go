@@ -1,9 +1,9 @@
 package test
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"fmt"
 	"time"
 )
 
@@ -167,12 +167,12 @@ var _ bool = Describe("Reading a Key", func() {
 					//TODO - replace this with an intrusive test to see our goroutine is blocking on the latch
 					time.Sleep(50 * time.Millisecond)
 					for ; currentHeight < futureHeightWithinGrace; currentHeight++ {
-						d.commitValuePairsAtHeight(currentHeight + 1, "contract", "foo", fmt.Sprintf("%v",currentHeight + 1))
+						d.commitValuePairsAtHeight(currentHeight+1, "contract", "foo", fmt.Sprintf("%v", currentHeight+1))
 					}
 
-					data := <- result
+					data := <-result
 
-					Expect(data).To(BeEquivalentTo(fmt.Sprintf("%v",futureHeightWithinGrace)))
+					Expect(data).To(BeEquivalentTo(fmt.Sprintf("%v", futureHeightWithinGrace)))
 
 					close(done)
 				}, 5)

@@ -33,7 +33,7 @@ type consensusContextConfig struct {
 type stateStorageConfig struct {
 	stateHistoryRetentionInBlockHeights uint64
 	querySyncGraceBlockDist             uint64
-	querySyncGraceTimeoutMillis		    uint64
+	querySyncGraceTimeoutMillis         uint64
 }
 
 type hardCodedFederationNode struct {
@@ -86,7 +86,7 @@ func NewHardCodedConfig(
 		stateStorageConfig: &stateStorageConfig{
 			stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights,
 			querySyncGraceBlockDist:             querySyncGraceBlockDist,
-			querySyncGraceTimeoutMillis:		 querySyncGraceTimeoutMillis,
+			querySyncGraceTimeoutMillis:         querySyncGraceTimeoutMillis,
 		},
 		consensusContextConfig: &consensusContextConfig{
 			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
@@ -131,7 +131,7 @@ func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64, graceT
 	return &stateStorageConfig{
 		stateHistoryRetentionInBlockHeights: maxStateHistory,
 		querySyncGraceBlockDist:             graceBlockDist,
-		querySyncGraceTimeoutMillis:		 graceTimeoutMillis,
+		querySyncGraceTimeoutMillis:         graceTimeoutMillis,
 	}
 }
 
@@ -187,6 +187,6 @@ func (c *stateStorageConfig) QuerySyncGraceBlockDist() uint64 {
 	return c.querySyncGraceBlockDist
 }
 
-func (c* stateStorageConfig) QuerySyncGraceTimeoutMillis() uint64 {
+func (c *stateStorageConfig) QuerySyncGraceTimeoutMillis() uint64 {
 	return c.querySyncGraceTimeoutMillis
 }

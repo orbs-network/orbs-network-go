@@ -108,18 +108,18 @@ func (s *service) checkBlockHeightWithGrace(requestedHeight primitives.BlockHeig
 	}
 
 	graceDist := primitives.BlockHeight(s.config.QuerySyncGraceBlockDist())
-	if currentHeight < requestedHeight - graceDist { // requested block too far ahead, no grace
+	if currentHeight < requestedHeight-graceDist { // requested block too far ahead, no grace
 		return false
 	}
 
 	timeout := time.NewTimer(time.Duration(s.config.QuerySyncGraceTimeoutMillis()) * time.Millisecond)
 	defer timeout.Stop()
 
-	for ; s.lastCommittedBlockHeader.BlockHeight() < requestedHeight; { // sit on latch until desired height or t.o.
+	for s.lastCommittedBlockHeader.BlockHeight() < requestedHeight { // sit on latch until desired height or t.o.
 		select {
-			case <-timeout.C:
-				return false
-			case <-s.nextBlockLatch:
+		case <-timeout.C:
+			return false
+		case <-s.nextBlockLatch:
 		}
 	}
 	return true
