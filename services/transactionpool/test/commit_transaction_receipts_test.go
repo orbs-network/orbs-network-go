@@ -36,11 +36,15 @@ func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *tes
 
 	h.addNewTransaction(myTx1)
 	h.addNewTransaction(myTx2)
-	h.handleForwardFrom(otherTx, otherNodeKeyPair.PublicKey())
+	h.handleForwardFrom(otherNodeKeyPair.PublicKey(), otherTx)
 
 	h.assumeBlockStorageAtHeight(1)
 	h.expectTransactionResultsCallbackFor(myTx1, myTx2)
 	h.reportTransactionsAsCommitted(myTx1, myTx2, otherTx)
 
 	require.NoError(t, h.verifyMocks(), "Mocks were not executed as planned")
+}
+
+func TestCommitTransactionReceiptsIgnoresExpiredBlocks(t *testing.T) {
+	t.Skipf("TODO: ignore blocks with an expired timestamp")
 }

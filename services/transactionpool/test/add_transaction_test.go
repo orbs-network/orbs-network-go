@@ -17,7 +17,6 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	h.expectTransactionToBeForwarded(tx)
 
 	_, err := h.addNewTransaction(tx)
-
 	require.NoError(t, err, "a valid transaction was not added to pool")
 	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }

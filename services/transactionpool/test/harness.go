@@ -95,11 +95,11 @@ func (h *harness) failPreOrderCheckFor(transaction *protocol.SignedTransaction, 
 		})).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{status}}).Times(1)
 }
 
-func (h *harness) handleForwardFrom(tx *protocol.SignedTransaction, sender primitives.Ed25519PublicKey) {
+func (h *harness) handleForwardFrom(sender primitives.Ed25519PublicKey, transactions ...*protocol.SignedTransaction) {
 	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender:             (&gossipmessages.SenderSignatureBuilder{SenderPublicKey: sender}).Build(),
-			SignedTransactions: []*protocol.SignedTransaction{tx},
+			SignedTransactions: transactions,
 		},
 	})
 }

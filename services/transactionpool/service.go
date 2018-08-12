@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 type Config interface {
@@ -43,10 +44,18 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 }
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
+	timeout := time.After(100 * time.Millisecond)
 	out := &services.GetTransactionsForOrderingOutput{}
-	out.SignedTransactions = make([]*protocol.SignedTransaction, input.MaxNumberOfTransactions)
-	for i := uint32(0); i < input.MaxNumberOfTransactions; i++ {
-		out.SignedTransactions[i] = <-s.pendingTransactions
+	for {
+		select {
+		case <-timeout:
+			return out, nil
+		case tx := <-s.pendingTransactions:
+			out.SignedTransactions = append(out.SignedTransactions, tx)
+			if uint32(len(out.SignedTransactions)) == input.MaxNumberOfTransactions {
+				return out, nil
+			}
+		}
 	}
 	return out, nil
 }
@@ -64,8 +73,13 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 }
 
 func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+
+	//TODO verify message signature
 	for _, tx := range input.Message.SignedTransactions {
-		s.pendingTransactions <- tx
+		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err == nil {
+			//TODO this channel needs to go
+			s.pendingTransactions <- tx
+		}
 	}
 	return nil, nil
 }

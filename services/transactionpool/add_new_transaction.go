@@ -54,6 +54,12 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 }
 
 func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
+	// TODO sign
+	//sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	_, err := s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			SignedTransactions: []*protocol.SignedTransaction{tx},
