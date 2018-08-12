@@ -90,9 +90,18 @@ func printParam(builder *strings.Builder, param *Field) {
 }
 
 func cut(i int, params []*Field) []*Field {
-	params[i] = params[len(params)-1] // Replace it with the last one.
+	copy(params[i:], params[i+1:])
+	params[len(params)-1] = nil
 	params = params[:len(params)-1]
 	return params
+}
+
+func extractParamByTypePrintAndRemove(params []*Field, ft FieldType, builder *strings.Builder) (*Field, []*Field) {
+	return extractParamByType(params, ft, true, true, builder)
+}
+
+func extractParamByTypeAndRemove(params []*Field, ft FieldType) (*Field, []*Field) {
+	return extractParamByType(params, ft, false, true, nil)
 }
 
 func extractParamByType(params []*Field, ft FieldType, shouldPrint, shouldRemove bool, builder *strings.Builder) (*Field, []*Field) {
@@ -123,10 +132,10 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	builder.WriteString(message)
 	builder.WriteString(SPACE)
 
-	_, params = extractParamByType(params, NodeType, true, true, &builder)
-	_, params = extractParamByType(params, ServiceType, true, true, &builder)
-	functionParam, params := extractParamByType(params, FunctionType, false, true, nil)
-	sourceParam, params := extractParamByType(params, SourceType, false, true, nil)
+	_, params = extractParamByTypePrintAndRemove(params, NodeType, &builder)
+	_, params = extractParamByTypePrintAndRemove(params, ServiceType, &builder)
+	functionParam, params := extractParamByTypeAndRemove(params, FunctionType)
+	sourceParam, params := extractParamByTypeAndRemove(params, SourceType)
 
 	for _, param := range params {
 		printParam(&builder, param)
