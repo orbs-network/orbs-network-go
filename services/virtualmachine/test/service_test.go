@@ -12,12 +12,12 @@ func TestInit(t *testing.T) {
 	h.verifyHandlerRegistrations(t)
 }
 
-func TestSdkUnknownContract(t *testing.T) {
+func TestSdkUnknownOperation(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
 	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
-		_, err := h.handleSdkCall(contextId, "UnknownContract", "read")
+		_, err := h.handleSdkCall(contextId, "Sdk.UnknownOperation", "read")
 		require.Error(t, err, "handleSdkCall should fail")
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})

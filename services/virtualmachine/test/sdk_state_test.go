@@ -9,14 +9,14 @@ import (
 	"testing"
 )
 
-func TestSdkReadWithoutContext(t *testing.T) {
+func TestSdkStateReadWithoutContext(t *testing.T) {
 	h := newHarness()
 
 	_, err := h.handleSdkCall(999, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
 	require.Error(t, err, "handleSdkCall should fail")
 }
 
-func TestSdkReadStateWithLocalMethodReadOnlyAccess(t *testing.T) {
+func TestSdkStateReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
@@ -44,7 +44,7 @@ func TestSdkReadStateWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkWriteStateWithLocalMethodReadOnlyAccess(t *testing.T) {
+func TestSdkStateWriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
@@ -63,7 +63,7 @@ func TestSdkWriteStateWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.verifyNativeProcessorCalled(t)
 }
 
-func TestSdkReadStateWithTransactionSetReadWriteAccess(t *testing.T) {
+func TestSdkStateReadWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
 
 	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
@@ -90,7 +90,7 @@ func TestSdkReadStateWithTransactionSetReadWriteAccess(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkWriteStateWithTransactionSetReadWriteAccess(t *testing.T) {
+func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
 
 	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
@@ -130,7 +130,7 @@ func TestSdkWriteStateWithTransactionSetReadWriteAccess(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkWriteStateOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
+func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 	h := newHarness()
 
 	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
@@ -178,7 +178,7 @@ func TestSdkWriteStateOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkWriteStateIgnoredWithTransactionSetHavingFailedTransactions(t *testing.T) {
+func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testing.T) {
 	h := newHarness()
 
 	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
