@@ -28,6 +28,9 @@ type NodeConfig interface {
 	// consensus context
 	BelowMinimalBlockDelayMillis() uint32
 	MinimumTransactionsInBlock() int
+
+	// transaction pool
+	PendingPoolSizeInBytes() uint32
 }
 
 type FederationNode interface {

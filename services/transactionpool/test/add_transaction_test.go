@@ -9,9 +9,8 @@ import (
 	"testing"
 )
 
-
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
 	h.expectTransactionToBeForwarded(tx)
@@ -23,7 +22,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().WithInvalidContent().Build()
 	h.expectNoTransactionsToBeForwarded()
@@ -35,7 +34,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 	tx := builders.TransferTransaction().Build()
 	expectedStatus := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
 
@@ -58,7 +57,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 }
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
 	h.ignoringForwardMessages()
@@ -69,7 +68,7 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
 	h.ignoringForwardMessages()
@@ -82,4 +81,16 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	require.NoError(t, err, "a committed transaction that was added again was wrongly rejected")
 	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
 	require.Equal(t, digest.CalcTxHash(tx.Transaction()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
+}
+
+func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
+	h := newHarnessWithSizeLimit(1)
+
+	h.expectNoTransactionsToBeForwarded()
+
+	tx := builders.TransferTransaction().Build()
+	_, err := h.addNewTransaction(tx)
+
+	require.Error(t, err, "a transaction was added to a full pool")
+	require.NoError(t, h.verifyMocks(), "mock gossip was not called (as expected)")
 }

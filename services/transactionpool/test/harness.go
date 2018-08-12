@@ -1,15 +1,17 @@
 package test
 
 import (
+	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/services/transactionpool"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type harness struct {
@@ -18,10 +20,15 @@ type harness struct {
 	vm     *services.MockVirtualMachine
 }
 
+var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
+
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
 
 	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: thisNodeKeyPair.PublicKey(),
+			}).Build(),
 			SignedTransactions: []*protocol.SignedTransaction{tx},
 		},
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
@@ -76,20 +83,25 @@ func (h *harness) failPreOrderCheckFor(transaction *protocol.SignedTransaction, 
 func (h *harness) handleForwardFrom(tx *protocol.SignedTransaction, sender primitives.Ed25519PublicKey) {
 	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
-			Sender: (&gossipmessages.SenderSignatureBuilder{SenderPublicKey: sender}).Build(),
+			Sender:             (&gossipmessages.SenderSignatureBuilder{SenderPublicKey: sender}).Build(),
 			SignedTransactions: []*protocol.SignedTransaction{tx},
 		},
 	})
 }
 
-func NewHarness() *harness {
+func newHarness() *harness {
+	return newHarnessWithSizeLimit(20 * 1024 * 1024)
+}
+
+func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PENDING}})
 
-	service := transactionpool.NewTransactionPool(gossip, virtualMachine, instrumentation.GetLogger())
+	config := config.NewTransactionPoolConfig(sizeLimit, thisNodeKeyPair.PublicKey())
+	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())
 
 	return &harness{txpool: service, gossip: gossip, vm: virtualMachine}
 }

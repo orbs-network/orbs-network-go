@@ -1,14 +1,13 @@
 package test
 
 import (
-	"testing"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
-	"github.com/orbs-network/orbs-network-go/test/builders"
+	"testing"
 )
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
-	h := NewHarness()
+	h := newHarness()
 
 	out, err := h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
 		LastCommittedBlockHeight: 3,
