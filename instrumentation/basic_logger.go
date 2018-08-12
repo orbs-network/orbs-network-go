@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-const NanosecondsInASecond = 1000000000
-
 type BasicLogger interface {
 	Log(level string, message string, params ...*Field)
 	Info(message string, params ...*Field)

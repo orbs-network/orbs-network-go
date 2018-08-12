@@ -19,7 +19,7 @@ func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
-	logLine["timestamp"] = float64(time.Now().UTC().UnixNano()) / NanosecondsInASecond
+	logLine["timestamp"] = time.Now().UTC().UnixNano()
 	logLine["message"] = message
 
 	for _, param := range params {
@@ -111,19 +111,9 @@ func extractParamByType(params []*Field, ft FieldType, shouldPrint, shouldRemove
 }
 
 func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
-	logLine := make(map[string]interface{})
-
-	logLine["level"] = level
-	logLine["timestamp"] = float64(time.Now().UTC().UnixNano()) / NanosecondsInASecond
-	logLine["message"] = message
-
-	for _, param := range params {
-		logLine[param.Key] = param.Value()
-	}
-
 	builder := strings.Builder{}
 
-	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
+	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.999999Z07:00")
 
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
