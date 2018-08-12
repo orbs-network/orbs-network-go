@@ -24,6 +24,8 @@ type NodeConfig interface {
 
 	// state storage
 	StateHistoryRetentionInBlockHeights() uint64
+	QuerySyncGraceBlockDist() uint64
+	QuerySyncGraceTimeoutMillis() uint64
 
 	// consensus context
 	BelowMinimalBlockDelayMillis() uint32

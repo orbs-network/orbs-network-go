@@ -38,6 +38,7 @@ func NewNode(
 	transport gossipAdapter.Transport,
 	stateHistoryRetentionInBlockHeights uint64,
 	querySyncGraceBlockDist uint64,
+	querySyncGraceTimeoutMillis uint64,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) Node {
@@ -53,6 +54,7 @@ func NewNode(
 		blockSyncCommitTimeoutMillis,
 		stateHistoryRetentionInBlockHeights,
 		querySyncGraceBlockDist,
+		querySyncGraceTimeoutMillis,
 		belowMinimalBlockDelayMillis,
 		minimumTransactionsInBlock,
 	)

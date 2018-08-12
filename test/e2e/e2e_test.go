@@ -69,6 +69,7 @@ var _ = Describe("The Orbs Network", func() {
 				5,
 				3,
 				300,
+				300,
 				0,
 			)
 
