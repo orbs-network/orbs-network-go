@@ -130,5 +130,5 @@ func TestCustomLogFormatter(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("some-int-value=12"))
 	Expect(stdout).To(ContainSubstring("function=instrumentation.TestCustomLogFormatter.func1"))
 	Expect(stdout).To(ContainSubstring("source="))
-	Expect(stdout).To(ContainSubstring("orbs-network/orbs-network-go/instrumentation/basic_logger_test.go"))
+	Expect(stdout).To(ContainSubstring("instrumentation/basic_logger_test.go"))
 }

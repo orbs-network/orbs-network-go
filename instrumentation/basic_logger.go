@@ -26,10 +26,11 @@ type BasicLogger interface {
 }
 
 type basicLogger struct {
-	output       io.Writer
-	formatter    LogFormatter
-	prefixes     []*Field
-	nestingLevel int
+	output                io.Writer
+	formatter             LogFormatter
+	prefixes              []*Field
+	nestingLevel          int
+	sourceRootPrefixIndex int
 }
 
 type FieldType uint8
@@ -130,7 +131,25 @@ func BlockHeight(value primitives.BlockHeight) *Field {
 	return &Field{Key: "blockHeight", String: value.String(), Type: StringType}
 }
 
-func getCaller(level int) (function string, source string) {
+func GetLogger(params ...*Field) BasicLogger {
+	logger := &basicLogger{prefixes: params, nestingLevel: 4, output: os.Stdout, formatter: NewJsonFormatter()}
+
+	fpcs := make([]uintptr, 1)
+	n := runtime.Callers(logger.nestingLevel, fpcs)
+	if n != 0 {
+		fun := runtime.FuncForPC(fpcs[0] - 1)
+		if fun != nil {
+			file, _ := fun.FileLine(fpcs[0] - 1)
+			if l := strings.Index(file, "orbs-network-go/"); l > -1 {
+				logger.sourceRootPrefixIndex = l + len("orbs-network-go/")
+			}
+		}
+	}
+
+	return logger
+}
+
+func (b *basicLogger) getCaller(level int) (function string, source string) {
 	fpcs := make([]uintptr, 1)
 
 	// skip levels to get to the caller of logger function
@@ -150,13 +169,7 @@ func getCaller(level int) (function string, source string) {
 	if lastSlashOfName > 0 {
 		fName = fName[lastSlashOfName+1:]
 	}
-	return fName, fmt.Sprintf("%s:%d", file, line)
-}
-
-func GetLogger(params ...*Field) BasicLogger {
-	logger := &basicLogger{prefixes: params, nestingLevel: 4, output: os.Stdout, formatter: NewJsonFormatter()}
-
-	return logger
+	return fName, fmt.Sprintf("%s:%d", file[b.sourceRootPrefixIndex:], line)
 }
 
 func (b *basicLogger) Prefixes() []*Field {
@@ -201,7 +214,7 @@ func (f *Field) Value() interface{} {
 }
 
 func (b *basicLogger) Log(level string, message string, params ...*Field) {
-	function, source := getCaller(b.nestingLevel)
+	function, source := b.getCaller(b.nestingLevel)
 
 	enrichmentParams := []*Field{
 		Function(function),
