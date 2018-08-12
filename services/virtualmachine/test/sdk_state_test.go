@@ -37,7 +37,7 @@ func TestSdkReadStateWithLocalMethodReadOnlyAccess(t *testing.T) {
 	})
 	h.expectStateStorageRead(12, []byte{0x01}, []byte{0x02})
 
-	h.runLocalMethod()
+	h.runLocalMethod("ExampleContract")
 
 	h.verifyStateStorageBlockHeightRequested(t)
 	h.verifyNativeProcessorCalled(t)
@@ -57,7 +57,7 @@ func TestSdkWriteStateWithLocalMethodReadOnlyAccess(t *testing.T) {
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, errors.New("unexpected error")
 	})
 
-	h.runLocalMethod()
+	h.runLocalMethod("ExampleContract")
 
 	h.verifyStateStorageBlockHeightRequested(t)
 	h.verifyNativeProcessorCalled(t)
@@ -94,7 +94,7 @@ func TestSdkWriteStateWithTransactionSetReadWriteAccess(t *testing.T) {
 	})
 	h.expectStateStorageNotRead()
 
-	_, sd := h.processTransactionSet(2)
+	_, sd := h.processTransactionSet([]primitives.ContractName{"ExampleContract", "ExampleContract"})
 	require.ElementsMatch(t, sd, []*keyValuePair{
 		{[]byte{0x01}, []byte{0x05, 0x06}},
 	}, "processTransactionSet returned contract state diffs should match")
@@ -137,7 +137,7 @@ func TestSdkWriteStateIgnoredWithTransactionSetHavingFailedTransactions(t *testi
 	})
 	h.expectStateStorageNotRead()
 
-	_, sd := h.processTransactionSet(3)
+	_, sd := h.processTransactionSet([]primitives.ContractName{"ExampleContract", "ExampleContract", "ExampleContract"})
 	require.ElementsMatch(t, sd, []*keyValuePair{
 		{[]byte{0x01}, []byte{0x02}},
 	}, "processTransactionSet returned contract state diffs should match")

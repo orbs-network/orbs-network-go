@@ -22,7 +22,7 @@ func TestSdkUnknownContract(t *testing.T) {
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
 
-	h.runLocalMethod()
+	h.runLocalMethod("ExampleContract")
 
 	h.verifyStateStorageBlockHeightRequested(t)
 	h.verifyNativeProcessorCalled(t)

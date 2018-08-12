@@ -21,7 +21,7 @@ func TestProcessTransactionSetSuccess(t *testing.T) {
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
 
-	results, _ := h.processTransactionSet(2)
+	results, _ := h.processTransactionSet([]primitives.ContractName{"ExampleContract", "ExampleContract"})
 	require.ElementsMatch(t, results, []protocol.ExecutionResult{
 		protocol.EXECUTION_RESULT_SUCCESS,
 		protocol.EXECUTION_RESULT_SUCCESS,
@@ -43,7 +43,7 @@ func TestProcessTransactionSetWithErrors(t *testing.T) {
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, errors.New("unexpected error")
 	})
 
-	results, _ := h.processTransactionSet(2)
+	results, _ := h.processTransactionSet([]primitives.ContractName{"ExampleContract", "ExampleContract"})
 	require.ElementsMatch(t, results, []protocol.ExecutionResult{
 		protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
 		protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,

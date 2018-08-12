@@ -87,12 +87,12 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod() (protocol.ExecutionResult, primitives.BlockHeight, error) {
+func (h *harness) runLocalMethod(contractName primitives.ContractName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
 	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
 			Signer:         nil,
-			ContractName:   "ExampleContract",
+			ContractName:   contractName,
 			MethodName:     "exampleMethod",
 			InputArguments: []*protocol.MethodArgumentBuilder{},
 		}).Build(),
@@ -105,10 +105,13 @@ type keyValuePair struct {
 	value []byte
 }
 
-func (h *harness) processTransactionSet(numTransactions int) ([]protocol.ExecutionResult, []*keyValuePair) {
+func (h *harness) processTransactionSet(contractNames []primitives.ContractName) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
+	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
+
 	transactions := []*protocol.SignedTransaction{}
-	for i := 0; i < numTransactions; i++ {
-		tx := builders.Transaction().WithMethod("ExampleContract", "exampleMethod").Build()
+	for _, contractName := range contractNames {
+		resultKeyValuePairsPerContract[contractName] = []*keyValuePair{}
+		tx := builders.Transaction().WithMethod(contractName, "exampleMethod").Build()
 		transactions = append(transactions, tx)
 	}
 
@@ -123,18 +126,18 @@ func (h *harness) processTransactionSet(numTransactions int) ([]protocol.Executi
 		results = append(results, result)
 	}
 
-	keyValuePairs := []*keyValuePair{}
 	for _, contractStateDiffs := range output.ContractStateDiffs {
-		if contractStateDiffs.ContractName() != "ExampleContract" {
-			panic("unexpected contract")
+		contractName := contractStateDiffs.ContractName()
+		if _, found := resultKeyValuePairsPerContract[contractName]; !found {
+			panic(fmt.Sprintf("unexpected contract %s", contractStateDiffs.ContractName()))
 		}
 		for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
 			sd := i.NextStateDiffs()
-			keyValuePairs = append(keyValuePairs, &keyValuePair{sd.Key(), sd.Value()})
+			resultKeyValuePairsPerContract[contractName] = append(resultKeyValuePairsPerContract[contractName], &keyValuePair{sd.Key(), sd.Value()})
 		}
 	}
 
-	return results, keyValuePairs
+	return results, resultKeyValuePairsPerContract
 }
 
 // each f() given is a different transaction in the set

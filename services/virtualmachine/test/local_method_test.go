@@ -16,7 +16,7 @@ func TestRunLocalMethodSuccess(t *testing.T) {
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
 
-	result, refHeight, err := h.runLocalMethod()
+	result, refHeight, err := h.runLocalMethod("ExampleContract")
 	require.NoError(t, err, "run local method should not fail")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
 	require.EqualValues(t, 12, refHeight)
@@ -33,7 +33,7 @@ func TestRunLocalMethodContractError(t *testing.T) {
 		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, errors.New("contract error")
 	})
 
-	result, refHeight, err := h.runLocalMethod()
+	result, refHeight, err := h.runLocalMethod("ExampleContract")
 	require.Error(t, err, "run local method should fail")
 	require.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, result, "run local method should return contract error")
 	require.EqualValues(t, 12, refHeight)
@@ -50,7 +50,7 @@ func TestRunLocalMethodUnexpectedError(t *testing.T) {
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, errors.New("unexpected error")
 	})
 
-	result, refHeight, err := h.runLocalMethod()
+	result, refHeight, err := h.runLocalMethod("ExampleContract")
 	require.Error(t, err, "run local method should fail")
 	require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
 	require.EqualValues(t, 12, refHeight)
