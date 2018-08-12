@@ -64,8 +64,9 @@ type service struct {
 	virtualMachine      services.VirtualMachine
 	reporting           instrumentation.BasicLogger
 
-	pendingPool   pendingTxPool
-	committedPool committedTxPool
+	lastCommittedBlockHeight primitives.BlockHeight
+	pendingPool              pendingTxPool
+	committedPool            committedTxPool
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, reporting instrumentation.BasicLogger) services.TransactionPool {
@@ -107,12 +108,24 @@ func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransa
 }
 
 func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+	if input.LastCommittedBlockHeight != s.lastCommittedBlockHeight + 1 {
+		return &services.CommitTransactionReceiptsOutput{
+			NextDesiredBlockHeight: s.lastCommittedBlockHeight + 1,
+			LastCommittedBlockHeight: s.lastCommittedBlockHeight,
+		}, nil
+	}
+
 	for _, receipt := range input.TransactionReceipts {
 		s.committedPool.add(receipt)
 		s.pendingPool.remove(receipt.Txhash())
 	}
 
-	return &services.CommitTransactionReceiptsOutput{}, nil
+	s.lastCommittedBlockHeight = input.LastCommittedBlockHeight
+
+	return &services.CommitTransactionReceiptsOutput{
+		NextDesiredBlockHeight: s.lastCommittedBlockHeight + 1,
+		LastCommittedBlockHeight: s.lastCommittedBlockHeight,
+	}, nil
 }
 
 func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
