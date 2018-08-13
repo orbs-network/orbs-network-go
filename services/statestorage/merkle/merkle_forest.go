@@ -19,8 +19,10 @@ type Node struct {
 	value    primitives.Sha256
 	branches [256]primitives.MerkleSha256
 }
+
 var emptyNode = &Node{value: zeroValueHash}
 var emptyNodeHash = emptyNode.hash()
+
 func createNode(path string, valueHash primitives.Sha256) *Node {
 	return &Node{
 		path:     path,
@@ -43,13 +45,13 @@ func (n *Node) clone() *Node {
 		value:    n.value, // TODO - copy?
 		branches: newBranches,
 	}
-	for k,v := range n.branches {
+	for k, v := range n.branches {
 		result.branches[k] = v // TODO - copy?
 	}
 	return result
 }
 func (n *Node) hasChildren() bool {
-	for _,v := range n.branches {
+	for _, v := range n.branches {
 		if len(v) != 0 {
 			return true
 		}
@@ -93,7 +95,7 @@ func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) RootId
 	return f.topRoot
 }
 
-func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256)  *Node {
+func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256) *Node {
 	newNode := currentNode.clone()
 	if currentNode.path == path { // existing leaf node updated
 		newNode.value = valueHash
@@ -128,7 +130,8 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 
 	// current node replaced by a new branch node, so that current node is one child and new node is second child
 	i := 0
-	for i = 0; i < len(currentNode.path) && i < len(path) && currentNode.path[i] == path[i]; i++ {}
+	for i = 0; i < len(currentNode.path) && i < len(path) && currentNode.path[i] == path[i]; i++ {
+	}
 	newCommonPath := path[:i]
 	newParent := createNode(newCommonPath, zeroValueHash)
 	newChild := createNode(path[i+1:], valueHash)
@@ -151,11 +154,11 @@ func (f *Forest) Update(rootId RootId, diffs []*protocol.ContractStateDiff) Root
 	return f.topRoot
 }
 
-func (f *Forest) updateStringEntries(keyValues ...string) RootId{
-	if len(keyValues) % 2 != 0 {
+func (f *Forest) updateStringEntries(keyValues ...string) RootId {
+	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
-	for i := 0; i < len(keyValues); i = i+2 {
+	for i := 0; i < len(keyValues); i = i + 2 {
 		f.addSingleEntry(keyValues[i], hash.CalcSha256([]byte(keyValues[i+1])))
 	}
 	return f.topRoot
@@ -231,4 +234,3 @@ func determineValueHashByProof(proof Proof, path string, parentHash primitives.M
 	return determineValueHashByProof(proof[1:], path[len(node.path)+1:], nextHash)
 
 }
-

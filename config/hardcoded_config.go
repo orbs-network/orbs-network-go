@@ -26,7 +26,7 @@ type blockStorageConfig struct {
 }
 
 type stateStorageConfig struct {
-	stateHistoryRetentionInBlockHeights	uint64
+	stateHistoryRetentionInBlockHeights uint64
 }
 
 type hardCodedFederationNode struct {
@@ -54,7 +54,7 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillisec uint32,
 	blockSyncCommitTimeoutMillisec uint32,
-	stateHistoryRetentionInBlockHeights	uint64,
+	stateHistoryRetentionInBlockHeights uint64,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -71,7 +71,7 @@ func NewHardCodedConfig(
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillisec: time.Duration(blockSyncCommitTimeoutMillisec) * time.Millisecond,
 		},
-		stateStorageConfig: &stateStorageConfig{ stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights },
+		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
 	}
 
 }

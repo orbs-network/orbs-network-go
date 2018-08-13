@@ -3,8 +3,8 @@ package statestorage
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
@@ -17,7 +17,7 @@ type Config interface {
 
 type service struct {
 	config Config
-	merkle                 *merkle.Forest
+	merkle *merkle.Forest
 
 	mutex                    *sync.Mutex
 	persistence              adapter.StatePersistence
@@ -27,9 +27,9 @@ type service struct {
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
 		config:                   config,
-		merkle:                 merkle.NewForest(),
+		merkle:                   merkle.NewForest(),
 		mutex:                    &sync.Mutex{},
-		persistence:            persistence,
+		persistence:              persistence,
 		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
 	}
 }
