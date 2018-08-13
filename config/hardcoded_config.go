@@ -22,7 +22,7 @@ type consensusConfig struct {
 }
 
 type crossServiceConfig struct {
-	queryGraceTimeoutMillis             uint64
+	queryGraceTimeoutMillis uint64
 }
 
 type blockStorageConfig struct {
@@ -35,6 +35,7 @@ type consensusContextConfig struct {
 }
 
 type stateStorageConfig struct {
+	*crossServiceConfig
 	stateHistoryRetentionInBlockHeights uint64
 	querySyncGraceBlockDist             uint64
 }
@@ -85,7 +86,7 @@ func NewHardCodedConfig(
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis:             queryGraceTimeoutMillis,
+			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
 		},
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
@@ -133,16 +134,13 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64) *stateStorageConfig {
+func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64, graceTimeoutMillis uint64) *stateStorageConfig {
 	return &stateStorageConfig{
 		stateHistoryRetentionInBlockHeights: maxStateHistory,
 		querySyncGraceBlockDist:             graceBlockDist,
-	}
-}
-
-func NewCrossServiceConfig(graceTimeoutMillis uint64) *crossServiceConfig {
-	return &crossServiceConfig{
-		queryGraceTimeoutMillis:             graceTimeoutMillis,
+		crossServiceConfig: &crossServiceConfig{
+			queryGraceTimeoutMillis: graceTimeoutMillis,
+		},
 	}
 }
 

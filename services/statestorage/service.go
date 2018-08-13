@@ -24,7 +24,7 @@ type service struct {
 	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 
-	nextBlockLatch chan int
+	blockTracker *BlockTracker
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
@@ -33,7 +33,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence) servic
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
 		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
-		nextBlockLatch:           make(chan int),
+		blockTracker:             NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
 	}
 }
 
@@ -56,9 +56,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	s.lastCommittedBlockHeader = input.ResultsBlockHeader
 	height := committedBlock + 1
 
-	prevLatch := s.nextBlockLatch
-	s.nextBlockLatch = make(chan int)
-	close(prevLatch)
+	s.blockTracker.IncrementHeight()
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: height}, nil
 }
@@ -72,8 +70,8 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
 	}
 
-	if !s.checkBlockHeightWithGrace(input.BlockHeight) {
-		return nil, fmt.Errorf("unsupported block height: block %v is not yet committed", input.BlockHeight)
+	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
 	s.mutex.RLock()
@@ -111,28 +109,4 @@ func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBloc
 
 func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
 	panic("Not implemented")
-}
-
-func (s *service) checkBlockHeightWithGrace(requestedHeight primitives.BlockHeight) bool {
-	currentHeight := s.lastCommittedBlockHeader.BlockHeight()
-	if currentHeight >= requestedHeight { // requested block already committed
-		return true
-	}
-
-	graceDist := primitives.BlockHeight(s.config.QuerySyncGraceBlockDist())
-	if currentHeight < requestedHeight-graceDist { // requested block too far ahead, no grace
-		return false
-	}
-
-	timeout := time.NewTimer(time.Duration(s.config.QueryGraceTimeoutMillis()) * time.Millisecond)
-	defer timeout.Stop()
-
-	for s.lastCommittedBlockHeader.BlockHeight() < requestedHeight { // sit on latch until desired height or t.o.
-		select {
-		case <-timeout.C:
-			return false
-		case <-s.nextBlockLatch:
-		}
-	}
-	return true
 }

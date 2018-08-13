@@ -20,16 +20,16 @@ type keyValue struct {
 	value []byte
 }
 
-func newStateStorageDriver(history int) *driver {
-	return newStateStorageDriverWithGrace(history, 0, 0)
+func newStateStorageDriver(numOfStateRevisionsToRetain int) *driver {
+	return newStateStorageDriverWithGrace(numOfStateRevisionsToRetain, 0, 0)
 }
 
-func newStateStorageDriverWithGrace(history int, graceBlockDiff int, graceTimeoutMillis int) *driver {
-	if history <= 0 {
-		history = 1
+func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain int, graceBlockDiff int, graceTimeoutMillis int) *driver {
+	if numOfStateRevisionsToRetain <= 0 {
+		numOfStateRevisionsToRetain = 1
 	}
 	historySize := driverConfig{
-		history,
+		numOfStateRevisionsToRetain,
 		graceBlockDiff,
 		graceTimeoutMillis,
 	}
@@ -41,11 +41,11 @@ func newStateStorageDriverWithGrace(history int, graceBlockDiff int, graceTimeou
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
 	h, _, _ := d.getBlockHeightAndTimestamp()
-	return d.readSingleKeyFromHistory(h, contract, key)
+	return d.readSingleKeyFromRevision(h, contract, key)
 }
 
-func (d *driver) readSingleKeyFromHistory(history int, contract string, key string) ([]byte, error) {
-	out, err := d.readKeysFromHistory(history, contract, key)
+func (d *driver) readSingleKeyFromRevision(revision int, contract string, key string) ([]byte, error) {
+	out, err := d.readKeysFromRevision(revision, contract, key)
 	if err != nil {
 		return nil, err
 	}
@@ -54,15 +54,15 @@ func (d *driver) readSingleKeyFromHistory(history int, contract string, key stri
 
 func (d *driver) readKeys(contract string, keys ...string) ([]*keyValue, error) {
 	h, _, _ := d.getBlockHeightAndTimestamp()
-	return d.readKeysFromHistory(h, contract, keys...)
+	return d.readKeysFromRevision(h, contract, keys...)
 }
 
-func (d *driver) readKeysFromHistory(history int, contract string, keys ...string) ([]*keyValue, error) {
+func (d *driver) readKeysFromRevision(revision int, contract string, keys ...string) ([]*keyValue, error) {
 	ripmdKeys := make([]primitives.Ripmd160Sha256, 0, len(keys))
 	for _, key := range keys {
 		ripmdKeys = append(ripmdKeys, primitives.Ripmd160Sha256(key))
 	}
-	out, err := d.service.ReadKeys(&services.ReadKeysInput{BlockHeight: primitives.BlockHeight(history), ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
+	out, err := d.service.ReadKeys(&services.ReadKeysInput{BlockHeight: primitives.BlockHeight(revision), ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
 
 	if err != nil {
 		return nil, err

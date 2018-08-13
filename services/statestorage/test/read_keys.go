@@ -1,10 +1,8 @@
 package test
 
 import (
-	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ bool = Describe("Reading a Key", func() {
@@ -90,11 +88,11 @@ var _ bool = Describe("Reading a Key", func() {
 				d.commitValuePairsAtHeight(1, "contract", key, v1)
 				d.commitValuePairsAtHeight(2, "contract", key, v2)
 
-				historical, err := d.readSingleKeyFromHistory(1, "contract", key)
+				historical, err := d.readSingleKeyFromRevision(1, "contract", key)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(historical).To(BeEquivalentTo(v1))
 
-				current, err := d.readSingleKeyFromHistory(2, "contract", key)
+				current, err := d.readSingleKeyFromRevision(2, "contract", key)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(current).To(BeEquivalentTo(v2))
 			})
@@ -107,75 +105,8 @@ var _ bool = Describe("Reading a Key", func() {
 				d.commitValuePairsAtHeight(1, "contract", key, "bar")
 				d.commitValuePairsAtHeight(2, "contract", key, "foo")
 
-				_, err := d.readSingleKeyFromHistory(1, "contract", key)
+				_, err := d.readSingleKeyFromRevision(1, "contract", key)
 				Expect(err).To(HaveOccurred())
-			})
-		})
-		When("Reading in the far future", func() {
-			It("fails", func() {
-				key := "foo"
-				graceDistance := 10
-				d := newStateStorageDriverWithGrace(1, graceDistance, 10)
-				d.commitValuePairsAtHeight(11, "contract", key, "bar")
-
-				_, err := d.readSingleKeyFromHistory(100, "contract", key)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-		When("Reading from future block height within grace distance", func() {
-			When("Block not committed before timeout", func() {
-				It("returns an error after timeout", func(done Done) {
-					graceDistance := 10
-					timeoutMillis := 250
-					d := newStateStorageDriverWithGrace(1, graceDistance, timeoutMillis)
-
-					d.commitValuePairs("contract", "foo", "bar")
-					futureHeightWithinGrace := 1 + graceDistance
-
-					ts := time.Now()
-					data, err := d.readKeysFromHistory(futureHeightWithinGrace, "contract", "foo")
-
-					//TODO - replace this with an intrusive test to check that a timeout has occurred and reduce timeoutMillis
-					timeouts := ((time.Now().UnixNano() - ts.UnixNano()) / 1000000) / int64(timeoutMillis)
-
-					Expect(timeouts).To(BeEquivalentTo(1))
-					Expect(err).To(HaveOccurred())
-					Expect(data).To(BeNil())
-
-					close(done)
-				}, 5)
-			})
-			When("Block committed with state diff before timeout", func() {
-				It("blocks and returns the state per new block", func(done Done) {
-					graceDistance := 10
-					d := newStateStorageDriverWithGrace(1, graceDistance, 1000)
-
-					currentHeight := 0
-					futureHeightWithinGrace := currentHeight + graceDistance
-
-					result := make(chan []byte)
-
-					go func() {
-						defer GinkgoRecover()
-
-						data, err := d.readSingleKeyFromHistory(futureHeightWithinGrace, "contract", "foo")
-
-						Expect(err).ToNot(HaveOccurred())
-						result <- data
-					}()
-
-					//TODO - replace this with an intrusive test to see our goroutine is blocking on the latch
-					time.Sleep(50 * time.Millisecond)
-					for ; currentHeight < futureHeightWithinGrace; currentHeight++ {
-						d.commitValuePairsAtHeight(currentHeight+1, "contract", "foo", fmt.Sprintf("%v", currentHeight+1))
-					}
-
-					data := <-result
-
-					Expect(data).To(BeEquivalentTo(fmt.Sprintf("%v", futureHeightWithinGrace)))
-
-					close(done)
-				}, 5)
 			})
 		})
 	})
