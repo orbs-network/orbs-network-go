@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"io"
 	"os"
+	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -83,6 +84,29 @@ func String(key string, value string) *Field {
 
 func Stringable(key string, value fmt.Stringer) *Field {
 	return &Field{Key: key, String: value.String(), Type: StringType}
+}
+
+func StringableSlice(key string, values interface{}) *Field {
+	builder := strings.Builder{}
+	builder.WriteString("[")
+
+	switch reflect.TypeOf(values).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(values)
+
+		for i := 0; i < s.Len(); i++ {
+			if stringer, ok := s.Index(i).Interface().(fmt.Stringer); ok {
+				builder.WriteString(stringer.String())
+				if i < s.Len()-1 {
+					builder.WriteString(",")
+				}
+			}
+		}
+	}
+
+	builder.WriteString("]")
+
+	return &Field{Key: key, String: builder.String(), Type: StringType}
 }
 
 func Int(key string, value int) *Field {
