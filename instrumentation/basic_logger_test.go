@@ -155,7 +155,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("Service initialized"))
 	Expect(stdout).To(ContainSubstring("node=node1"))
 	Expect(stdout).To(ContainSubstring("service=public-api"))
-	Expect(stdout).To(ContainSubstring("blockHeight=270f"))
+	Expect(stdout).To(ContainSubstring("block-height=270f"))
 	Expect(stdout).To(ContainSubstring("vchainId=7b"))
 	Expect(stdout).To(ContainSubstring("bytes=gDp"))
 	Expect(stdout).To(ContainSubstring("some-int-value=12"))

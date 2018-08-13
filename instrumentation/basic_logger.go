@@ -150,7 +150,7 @@ func Error(value error) *Field {
 }
 
 func BlockHeight(value primitives.BlockHeight) *Field {
-	return &Field{Key: "blockHeight", String: value.String(), Type: StringType}
+	return &Field{Key: "block-height", String: value.String(), Type: StringType}
 }
 
 func GetLogger(params ...*Field) BasicLogger {
@@ -255,7 +255,7 @@ func (b *basicLogger) Info(message string, params ...*Field) {
 }
 
 func (b *basicLogger) Error(message string, params ...*Field) {
-	b.Log("info", message, params...)
+	b.Log("error", message, params...)
 }
 
 func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
