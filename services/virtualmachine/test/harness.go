@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -22,7 +23,6 @@ type harness struct {
 }
 
 func newHarness() *harness {
-
 	log := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
 
 	blockStorage := &services.MockBlockStorage{}
@@ -77,6 +77,10 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 }
 
 func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
+	// deployment related
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED_READ_ONLY.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
+	h.expectNativeContractInfoRequested(contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
+
 	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
@@ -104,6 +108,10 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 
 	transactions := []*protocol.SignedTransaction{}
 	for _, contractAndMethod := range contractAndMethods {
+		// deployment related
+		h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
+		h.expectNativeContractInfoRequested(contractAndMethod.contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
+
 		resultKeyValuePairsPerContract[contractAndMethod.contractName] = []*keyValuePair{}
 		tx := builders.Transaction().WithMethod(contractAndMethod.contractName, contractAndMethod.methodName).Build()
 		transactions = append(transactions, tx)

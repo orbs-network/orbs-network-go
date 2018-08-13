@@ -39,15 +39,18 @@ func (s *service) handleSdkStateRead(context *executionContext, args []*protocol
 	}
 	key := args[0].BytesValue()
 
+	// get current running service
+	currentService, _ := context.serviceStackTop()
+
 	// try from transient state first
-	value, found := context.transientState.getValue(context.serviceStackTop(), key)
+	value, found := context.transientState.getValue(currentService, key)
 	if found {
 		return value, nil
 	}
 
 	// try from batch transient state first
 	if context.batchTransientState != nil {
-		value, found = context.batchTransientState.getValue(context.serviceStackTop(), key)
+		value, found = context.batchTransientState.getValue(currentService, key)
 		if found {
 			return value, nil
 		}
@@ -56,7 +59,7 @@ func (s *service) handleSdkStateRead(context *executionContext, args []*protocol
 	// cache miss to state storage
 	output, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{
 		BlockHeight:  context.blockHeight,
-		ContractName: context.serviceStackTop(),
+		ContractName: currentService,
 		Keys:         []primitives.Ripmd160Sha256{key},
 	})
 	if err != nil {
@@ -68,7 +71,7 @@ func (s *service) handleSdkStateRead(context *executionContext, args []*protocol
 	value = output.StateRecords[0].Value()
 
 	// store in transient state (cache)
-	context.transientState.setValue(context.serviceStackTop(), key, value, false)
+	context.transientState.setValue(currentService, key, value, false)
 
 	return value, nil
 }
@@ -84,9 +87,12 @@ func (s *service) handleSdkStateWrite(context *executionContext, args []*protoco
 	key := args[0].BytesValue()
 	value := args[1].BytesValue()
 
+	// get current running service
+	currentService, _ := context.serviceStackTop()
+
 	// write to transient state
 	// TODO: maybe compare with getValue to see the value actually changed
-	context.transientState.setValue(context.serviceStackTop(), key, value, true)
+	context.transientState.setValue(currentService, key, value, true)
 
 	return nil
 }

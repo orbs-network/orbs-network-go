@@ -44,17 +44,6 @@ func NewVirtualMachine(
 	return s
 }
 
-func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
-	receipts, stateDiffs := s.processTransactionSet(previousBlockHeight, input.SignedTransactions)
-	s.reporting.Info("processed transaction set", instrumentation.BlockHeight(previousBlockHeight), instrumentation.Int("num-receipts", len(receipts)), instrumentation.Int("num-contract-state-diffs", len(stateDiffs)))
-
-	return &services.ProcessTransactionSetOutput{
-		TransactionReceipts: receipts,
-		ContractStateDiffs:  stateDiffs,
-	}, nil
-}
-
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
 	blockHeight, blockTimestamp, err := s.getRecentBlockHeight()
 	if err != nil {
@@ -66,9 +55,8 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 		}, err
 	}
 
-	callResult, outputArgs, err := s.runLocalMethod(blockHeight, input.Transaction)
-	// TODO: when we change the protos for RunLocalMethodOutput make the output args easily stringable for logging
-	s.reporting.Info("ran local method", instrumentation.BlockHeight(blockHeight), instrumentation.Stringable("result", callResult), instrumentation.Error(err))
+	s.reporting.Info("running local method", instrumentation.Stringable("contract", input.Transaction.ContractName()), instrumentation.Stringable("method", input.Transaction.MethodName()), instrumentation.BlockHeight(blockHeight))
+	callResult, outputArgs, err := s.runMethod(blockHeight, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 
 	return &services.RunLocalMethodOutput{
 		CallResult:              callResult,
@@ -78,11 +66,23 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 	}, err
 }
 
+func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
+
+	s.reporting.Info("processing transaction set", instrumentation.Int("num-transactions", len(input.SignedTransactions)))
+	receipts, stateDiffs := s.processTransactionSet(previousBlockHeight, input.SignedTransactions)
+
+	return &services.ProcessTransactionSetOutput{
+		TransactionReceipts: receipts,
+		ContractStateDiffs:  stateDiffs,
+	}, nil
+}
+
 func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
+	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
 	// check subscription
-	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 	err := s.callGlobalPreOrderContract(previousBlockHeight)
 	if err != nil {
 		for i := 0; i < len(statuses); i++ {

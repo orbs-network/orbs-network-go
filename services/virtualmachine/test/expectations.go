@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -41,7 +42,7 @@ func (h *harness) verifyNativeContractMethodCalled(t *testing.T) {
 	require.True(t, ok, "did not call processor: %v", err)
 }
 
-func (h *harness) expectSystemContractCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, returnError error) {
+func (h *harness) expectSystemContractCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, returnError error, returnArgs ...interface{}) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
@@ -49,9 +50,13 @@ func (h *harness) expectSystemContractCalled(expectedContractName primitives.Con
 			input.MethodName == expectedMethodName
 	}
 
+	callResult := protocol.EXECUTION_RESULT_SUCCESS
+	if returnError != nil {
+		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
+	}
 	outputToReturn := &services.ProcessCallOutput{
-		OutputArguments: []*protocol.MethodArgument{},
-		CallResult:      protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
+		OutputArguments: builders.MethodArguments(returnArgs...),
+		CallResult:      callResult,
 	}
 
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(outputToReturn, returnError).Times(1)
@@ -62,7 +67,7 @@ func (h *harness) verifySystemContractCalled(t *testing.T) {
 	require.True(t, ok, "did not call processor for system contract: %v", err)
 }
 
-func (h *harness) expectNativeContractInfoRequested(expectedContractName primitives.ContractName, returnError error) {
+func (h *harness) expectNativeContractInfoRequested(expectedContractName primitives.ContractName, returnPermission protocol.ExecutionPermissionScope, returnError error) {
 	contractMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.GetContractInfoInput)
 		return ok &&
@@ -70,7 +75,7 @@ func (h *harness) expectNativeContractInfoRequested(expectedContractName primiti
 	}
 
 	outputToReturn := &services.GetContractInfoOutput{
-		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+		PermissionScope: returnPermission,
 	}
 
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).Times(1)

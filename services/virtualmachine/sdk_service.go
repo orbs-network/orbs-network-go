@@ -44,19 +44,27 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 	serviceName := args[0].StringValue()
 	methodName := args[1].StringValue()
 
+	// get info about the called contract
+	serviceInfo, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(&services.GetContractInfoInput{
+		ContractName: primitives.ContractName(serviceName),
+	})
+	if err != nil {
+		return err
+	}
+
 	// modify execution context
-	callingService := context.serviceStackTop()
-	context.serviceStackPush(primitives.ContractName(serviceName))
+	callingService, callingServicePermission := context.serviceStackTop()
+	context.serviceStackPush(primitives.ContractName(serviceName), serviceInfo.PermissionScope)
 	defer context.serviceStackPop()
 
 	// execute the call
-	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+	_, err = s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
 		ContextId:         context.contextId,
 		ContractName:      primitives.ContractName(serviceName),
 		MethodName:        primitives.MethodName(methodName),
 		InputArguments:    []*protocol.MethodArgument{}, // TODO: support args
 		AccessScope:       context.accessScope,
-		PermissionScope:   protocol.PERMISSION_SCOPE_SERVICE, // TODO: kill this arg
+		PermissionScope:   callingServicePermission,
 		CallingService:    callingService,
 		TransactionSigner: nil,
 	})
@@ -64,5 +72,5 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 		s.reporting.Info("Sdk.Service.CallMethod failed", instrumentation.Error(err), instrumentation.Stringable("caller", callingService), instrumentation.Stringable("callee", primitives.ContractName(serviceName)))
 	}
 
-	return err
+	return err // TODO: support result
 }

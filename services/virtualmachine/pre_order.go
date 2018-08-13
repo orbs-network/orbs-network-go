@@ -8,24 +8,27 @@ import (
 )
 
 func (s *service) callGlobalPreOrderContract(blockHeight primitives.BlockHeight) error {
-	contractName := globalpreorder.CONTRACT.Name
-	methodName := globalpreorder.METHOD_APPROVE.Name
-	contractPermissions := globalpreorder.CONTRACT.Permission
+	systemContractName := globalpreorder.CONTRACT.Name
+	systemMethodName := globalpreorder.METHOD_APPROVE.Name
+	systemContractPermissions := globalpreorder.CONTRACT.Permission
 
 	// create execution context
 	contextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, protocol.ACCESS_SCOPE_READ_ONLY)
 	defer s.contexts.destroyExecutionContext(contextId)
-	executionContext.serviceStackPush(contractName)
+
+	// modify execution context
+	executionContext.serviceStackPush(systemContractName, systemContractPermissions)
+	defer executionContext.serviceStackPop()
 
 	// execute the call
 	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
 		ContextId:         contextId,
-		ContractName:      contractName,
-		MethodName:        methodName,
+		ContractName:      systemContractName,
+		MethodName:        systemMethodName,
 		InputArguments:    []*protocol.MethodArgument{},
 		AccessScope:       protocol.ACCESS_SCOPE_READ_ONLY,
-		PermissionScope:   contractPermissions, // TODO: kill this argument https://github.com/orbs-network/orbs-spec/issues/64
-		CallingService:    contractName,
+		PermissionScope:   systemContractPermissions,
+		CallingService:    systemContractName,
 		TransactionSigner: nil,
 	})
 

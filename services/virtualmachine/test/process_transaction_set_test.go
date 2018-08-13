@@ -13,12 +13,10 @@ func TestProcessTransactionSetSuccess(t *testing.T) {
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 1: successful")
-
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
 	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 2: successful")
-
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
 
@@ -39,12 +37,10 @@ func TestProcessTransactionSetWithErrors(t *testing.T) {
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 1: failed (contract error)")
-
 		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, errors.New("contract error")
 	})
 	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 2: failed (unexpected error)")
-
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, errors.New("unexpected error")
 	})
 

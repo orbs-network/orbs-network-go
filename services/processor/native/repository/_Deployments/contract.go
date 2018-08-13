@@ -11,8 +11,8 @@ var CONTRACT = types.ContractInfo{
 	Permission: protocol.PERMISSION_SCOPE_SYSTEM,
 	Methods: []types.MethodInfo{
 		METHOD_INIT,
+		METHOD_IS_SERVICE_DEPLOYED_READ_ONLY,
 		METHOD_IS_SERVICE_DEPLOYED,
-		METHOD_LOAD,
 	},
 	InitSingleton: newContract,
 }
@@ -38,28 +38,28 @@ func (c *contract) _init(ctx types.Context) error {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_IS_SERVICE_DEPLOYED = types.MethodInfo{
-	Name:           "isServiceDeployed",
+var METHOD_IS_SERVICE_DEPLOYED_READ_ONLY = types.MethodInfo{
+	Name:           "isServiceDeployedReadOnly",
 	External:       true,
 	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
-	Implementation: (*contract).isServiceDeployed,
+	Implementation: (*contract).isServiceDeployedReadOnly,
 }
 
-func (c *contract) isServiceDeployed(ctx types.Context, serviceName string) (uint32, error) {
+func (c *contract) isServiceDeployedReadOnly(ctx types.Context, serviceName string) (uint32, error) {
 	return c.State.ReadUint32ByKey(ctx, serviceName+".Processor")
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_LOAD = types.MethodInfo{
-	Name:           "loadService",
+var METHOD_IS_SERVICE_DEPLOYED = types.MethodInfo{
+	Name:           "isServiceDeployed",
 	External:       true,
 	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
-	Implementation: (*contract).loadService,
+	Implementation: (*contract).isServiceDeployed,
 }
 
-func (c *contract) loadService(ctx types.Context, serviceName string) (uint32, error) {
-	processorType, err := c.isServiceDeployed(ctx, serviceName)
+func (c *contract) isServiceDeployed(ctx types.Context, serviceName string) (uint32, error) {
+	processorType, err := c.isServiceDeployedReadOnly(ctx, serviceName)
 	if err == nil {
 		return processorType, nil
 	}

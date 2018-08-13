@@ -6,24 +6,30 @@ import (
 	"sync"
 )
 
+type serviceAndPermission struct {
+	service    primitives.ContractName
+	permission protocol.ExecutionPermissionScope
+}
+
 type executionContext struct {
 	contextId           primitives.ExecutionContextId
 	blockHeight         primitives.BlockHeight
-	serviceStack        []primitives.ContractName
+	serviceStack        []*serviceAndPermission
 	transientState      *transientState
 	accessScope         protocol.ExecutionAccessScope
 	batchTransientState *transientState
 }
 
-func (c *executionContext) serviceStackTop() primitives.ContractName {
+func (c *executionContext) serviceStackTop() (primitives.ContractName, protocol.ExecutionPermissionScope) {
 	if len(c.serviceStack) == 0 {
-		return ""
+		return "", 0
 	}
-	return c.serviceStack[len(c.serviceStack)-1]
+	res := c.serviceStack[len(c.serviceStack)-1]
+	return res.service, res.permission
 }
 
-func (c *executionContext) serviceStackPush(service primitives.ContractName) {
-	c.serviceStack = append(c.serviceStack, service)
+func (c *executionContext) serviceStackPush(service primitives.ContractName, servicePermission protocol.ExecutionPermissionScope) {
+	c.serviceStack = append(c.serviceStack, &serviceAndPermission{service, servicePermission})
 }
 
 func (c *executionContext) serviceStackPop() {
@@ -52,7 +58,7 @@ func (cp *executionContextProvider) allocateExecutionContext(blockHeight primiti
 
 	newContext := &executionContext{
 		blockHeight:    blockHeight,
-		serviceStack:   []primitives.ContractName{},
+		serviceStack:   []*serviceAndPermission{},
 		transientState: newTransientState(),
 		accessScope:    accessScope,
 	}
