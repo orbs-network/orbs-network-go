@@ -12,7 +12,7 @@ func TestRunLocalMethodSuccess(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
 
@@ -22,14 +22,14 @@ func TestRunLocalMethodSuccess(t *testing.T) {
 	require.EqualValues(t, 12, refHeight)
 
 	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 }
 
 func TestRunLocalMethodContractError(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, errors.New("contract error")
 	})
 
@@ -39,14 +39,14 @@ func TestRunLocalMethodContractError(t *testing.T) {
 	require.EqualValues(t, 12, refHeight)
 
 	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 }
 
 func TestRunLocalMethodUnexpectedError(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, errors.New("unexpected error")
 	})
 
@@ -56,5 +56,5 @@ func TestRunLocalMethodUnexpectedError(t *testing.T) {
 	require.EqualValues(t, 12, refHeight)
 
 	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 }

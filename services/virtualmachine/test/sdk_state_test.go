@@ -20,7 +20,7 @@ func TestSdkStateReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("First read should reach state storage")
 
 		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
@@ -40,7 +40,7 @@ func TestSdkStateReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.runLocalMethod("Contract1", "method1")
 
 	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 	h.verifyStateStorageRead(t)
 }
 
@@ -48,7 +48,7 @@ func TestSdkStateWriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Attempt to write without proper access")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02})
@@ -60,13 +60,13 @@ func TestSdkStateWriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.runLocalMethod("Contract1", "method1")
 
 	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 }
 
 func TestSdkStateReadWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
 
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("First read should reach state storage")
 
 		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
@@ -88,14 +88,14 @@ func TestSdkStateReadWithTransactionSetReadWriteAccess(t *testing.T) {
 	})
 	require.ElementsMatch(t, sd["Contract1"], []*keyValuePair{}, "processTransactionSet returned contract state diffs should be empty")
 
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 	h.verifyStateStorageRead(t)
 }
 
 func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
 
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 1: first write should change in transient state")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02})
@@ -108,7 +108,7 @@ func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 2: first write should replace in transient state")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x05, 0x06})
@@ -132,14 +132,14 @@ func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
 		{[]byte{0x01}, []byte{0x05, 0x06}},
 	}, "processTransactionSet returned contract state diffs should match")
 
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 	h.verifyStateStorageRead(t)
 }
 
 func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 	h := newHarness()
 
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 1: write to key in first contract")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02})
@@ -147,7 +147,7 @@ func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 2: write to same key in second contract")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x03, 0x04})
@@ -155,7 +155,7 @@ func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 3: read from first contract")
 
 		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
@@ -164,7 +164,7 @@ func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectContractMethodCalled("Contract2", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract2", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 4: read from second contract")
 
 		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
@@ -188,14 +188,14 @@ func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 		{[]byte{0x01}, []byte{0x03, 0x04}},
 	}, "processTransactionSet returned contract state diffs should match")
 
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 	h.verifyStateStorageRead(t)
 }
 
 func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testing.T) {
 	h := newHarness()
 
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 1 (successful): first write should change in transient state")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02})
@@ -203,7 +203,7 @@ func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testi
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 2 (failed): write should be ignored")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x03, 0x04})
@@ -217,7 +217,7 @@ func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testi
 
 		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, errors.New("contract error")
 	})
-	h.expectContractMethodCalled("Contract1", "method3", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method3", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 3 (successful): read should return last successful write")
 
 		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
@@ -237,6 +237,6 @@ func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testi
 		{[]byte{0x01}, []byte{0x02}},
 	}, "processTransactionSet returned contract state diffs should match")
 
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 	h.verifyStateStorageRead(t)
 }

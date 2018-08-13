@@ -16,7 +16,7 @@ func TestSdkUnknownOperation(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		_, err := h.handleSdkCall(contextId, "Sdk.UnknownOperation", "read")
 		require.Error(t, err, "handleSdkCall should fail")
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
@@ -25,5 +25,5 @@ func TestSdkUnknownOperation(t *testing.T) {
 	h.runLocalMethod("Contract1", "method1")
 
 	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyContractMethodCalled(t)
+	h.verifyNativeContractMethodCalled(t)
 }

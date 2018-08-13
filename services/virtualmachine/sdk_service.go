@@ -1,6 +1,7 @@
 package virtualmachine
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -40,8 +41,26 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 	if len(args) != 2 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() {
 		return errors.Errorf("invalid SDK service callMethod args: %v", args)
 	}
-	//serviceName := args[0].StringValue()
-	//methodName := args[1].StringValue()
+	serviceName := args[0].StringValue()
+	methodName := args[1].StringValue()
 
-	return nil
+	// modify execution context
+	callingService := context.serviceStackTop()
+
+	// execute the call
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+		ContextId:         context.contextId,
+		ContractName:      primitives.ContractName(serviceName),
+		MethodName:        primitives.MethodName(methodName),
+		InputArguments:    []*protocol.MethodArgument{}, // TODO: support args
+		AccessScope:       context.accessScope,
+		PermissionScope:   protocol.PERMISSION_SCOPE_SERVICE, // TODO: kill this arg
+		CallingService:    callingService,
+		TransactionSigner: nil,
+	})
+	if err != nil {
+		s.reporting.Info("Sdk.Service.CallMethod failed", instrumentation.Error(err), instrumentation.Stringable("caller", callingService), instrumentation.Stringable("callee", primitives.ContractName(serviceName)))
+	}
+
+	return err
 }

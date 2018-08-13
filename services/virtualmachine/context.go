@@ -7,6 +7,7 @@ import (
 )
 
 type executionContext struct {
+	contextId           primitives.ExecutionContextId
 	blockHeight         primitives.BlockHeight
 	serviceStack        []primitives.ContractName
 	transientState      *transientState
@@ -58,9 +59,10 @@ func (cp *executionContextProvider) allocateExecutionContext(blockHeight primiti
 
 	// TODO: improve this mechanism because it wraps around on overflow
 	cp.lastContextId += 1
-	res := cp.lastContextId
-	cp.activeContexts[res] = newContext
-	return res, newContext
+	newContextId := cp.lastContextId
+	newContext.contextId = newContextId
+	cp.activeContexts[newContextId] = newContext
+	return newContextId, newContext
 }
 
 func (cp *executionContextProvider) destroyExecutionContext(contextId primitives.ExecutionContextId) {

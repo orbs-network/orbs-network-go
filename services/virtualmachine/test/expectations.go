@@ -19,7 +19,7 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) expectContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
+func (h *harness) expectNativeContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
@@ -36,7 +36,7 @@ func (h *harness) expectContractMethodCalled(expectedContractName primitives.Con
 	}).Times(1)
 }
 
-func (h *harness) verifyContractMethodCalled(t *testing.T) {
+func (h *harness) verifyNativeContractMethodCalled(t *testing.T) {
 	ok, err := h.processors[protocol.PROCESSOR_TYPE_NATIVE].Verify()
 	require.True(t, ok, "did not call processor: %v", err)
 }
@@ -62,7 +62,7 @@ func (h *harness) verifySystemContractCalled(t *testing.T) {
 	require.True(t, ok, "did not call processor for system contract: %v", err)
 }
 
-func (h *harness) expectContractInfoRequested(expectedContractName primitives.ContractName, returnError error) {
+func (h *harness) expectNativeContractInfoRequested(expectedContractName primitives.ContractName, returnError error) {
 	contractMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.GetContractInfoInput)
 		return ok &&
@@ -76,7 +76,7 @@ func (h *harness) expectContractInfoRequested(expectedContractName primitives.Co
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
 }
 
-func (h *harness) verifyContractInfoRequested(t *testing.T) {
+func (h *harness) verifyNativeContractInfoRequested(t *testing.T) {
 	ok, err := h.processors[protocol.PROCESSOR_TYPE_NATIVE].Verify()
 	require.True(t, ok, "did not request contract info: %v", err)
 }
