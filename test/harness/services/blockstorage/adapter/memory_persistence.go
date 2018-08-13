@@ -48,7 +48,7 @@ func (bp *inMemoryBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContain
 	return bp.blockPairs
 }
 
-func (bp *inMemoryBlockPersistence) ReadAllBlocksByTimeRange(start, end primitives.TimestampNano) []*protocol.BlockPairContainer {
+func (bp *inMemoryBlockPersistence) GetBlocksByTimeRange(start, end primitives.TimestampNano) []*protocol.BlockPairContainer {
 	if end < start {
 		return nil
 	}

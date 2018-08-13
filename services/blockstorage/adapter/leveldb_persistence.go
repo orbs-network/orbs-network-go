@@ -27,7 +27,7 @@ func (bp *levelDbBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContaine
 	return bp.blockPairs
 }
 
-func (bp *levelDbBlockPersistence) ReadAllBlocksByTimeRange(start, end primitives.TimestampNano) []*protocol.BlockPairContainer {
+func (bp *levelDbBlockPersistence) GetBlocksByTimeRange(start, end primitives.TimestampNano) []*protocol.BlockPairContainer {
 	panic("not implemented")
 }
 

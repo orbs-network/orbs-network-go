@@ -199,7 +199,7 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 	start := input.TransactionTimestamp - primitives.TimestampNano(s.config.BlockTransactionReceiptQueryStartGraceSec().Nanoseconds())
 	end := input.TransactionTimestamp + primitives.TimestampNano((s.config.BlockTransactionReceiptQueryEndGraceSec() + s.config.BlockTransactionReceiptQueryTransactionExpireSec()).Nanoseconds())
 
-	blocksToSearch := s.persistence.ReadAllBlocksByTimeRange(start, end)
+	blocksToSearch := s.persistence.GetBlocksByTimeRange(start, end)
 	if blocksToSearch == nil {
 		return nil, errors.Errorf("failed to search for blocks from %d to %d", start, end)
 	}
