@@ -76,13 +76,13 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod(contractName primitives.ContractName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
+func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
 	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
 			Signer:         nil,
 			ContractName:   contractName,
-			MethodName:     "exampleMethod",
+			MethodName:     methodName,
 			InputArguments: []*protocol.MethodArgumentBuilder{},
 		}).Build(),
 	})
@@ -94,18 +94,18 @@ type keyValuePair struct {
 	value []byte
 }
 
-type contractMethod struct {
+type contractAndMethod struct {
 	contractName primitives.ContractName
 	methodName   primitives.MethodName
 }
 
-func (h *harness) processTransactionSet(contractNames []primitives.ContractName) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
+func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
-	for _, contractName := range contractNames {
-		resultKeyValuePairsPerContract[contractName] = []*keyValuePair{}
-		tx := builders.Transaction().WithMethod(contractName, "exampleMethod").Build()
+	for _, contractAndMethod := range contractAndMethods {
+		resultKeyValuePairsPerContract[contractAndMethod.contractName] = []*keyValuePair{}
+		tx := builders.Transaction().WithMethod(contractAndMethod.contractName, contractAndMethod.methodName).Build()
 		transactions = append(transactions, tx)
 	}
 

@@ -13,7 +13,7 @@ func TestSdkServiceIsNative(t *testing.T) {
 	h := newHarness()
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeProcessorCalled(func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+	h.expectContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("First isNative on unknown contract")
 
 		_, err := h.handleSdkCall(contextId, native.SDK_SERVICE_CONTRACT_NAME, "isNative", "UnknownContract")
@@ -29,9 +29,9 @@ func TestSdkServiceIsNative(t *testing.T) {
 	h.expectContractInfoRequested("UnknownContract", errors.New("unknown contract"))
 	h.expectContractInfoRequested("NativeContract", nil)
 
-	h.runLocalMethod("ExampleContract")
+	h.runLocalMethod("Contract1", "method1")
 
 	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyNativeProcessorCalled(t)
+	h.verifyContractMethodCalled(t)
 	h.verifyContractInfoRequested(t)
 }

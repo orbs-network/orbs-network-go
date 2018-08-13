@@ -19,21 +19,24 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-// each f() given is a different transaction in the set
-func (h *harness) expectNativeProcessorCalled(fs ...func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
-	for i, _ := range fs {
-		i := i // needed for avoiding incorrect closure capture
-		h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-			callResult, err := fs[i](input.ContextId)
-			return &services.ProcessCallOutput{
-				OutputArguments: []*protocol.MethodArgument{},
-				CallResult:      callResult,
-			}, err
-		}).Times(1)
+func (h *harness) expectContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
+	contractMethodMatcher := func(i interface{}) bool {
+		input, ok := i.(*services.ProcessCallInput)
+		return ok &&
+			input.ContractName == expectedContractName &&
+			input.MethodName == expectedMethodName
 	}
+
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+		callResult, err := contractFunction(input.ContextId)
+		return &services.ProcessCallOutput{
+			OutputArguments: []*protocol.MethodArgument{},
+			CallResult:      callResult,
+		}, err
+	}).Times(1)
 }
 
-func (h *harness) verifyNativeProcessorCalled(t *testing.T) {
+func (h *harness) verifyContractMethodCalled(t *testing.T) {
 	ok, err := h.processors[protocol.PROCESSOR_TYPE_NATIVE].Verify()
 	require.True(t, ok, "did not call processor: %v", err)
 }
