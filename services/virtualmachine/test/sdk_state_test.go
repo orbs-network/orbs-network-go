@@ -35,7 +35,7 @@ func TestSdkStateReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectStateStorageRead(12, []byte{0x01}, []byte{0x02})
+	h.expectStateStorageRead(12, "Contract1", []byte{0x01}, []byte{0x02})
 
 	h.runLocalMethod("Contract1", "method1")
 
@@ -81,7 +81,7 @@ func TestSdkStateReadWithTransactionSetReadWriteAccess(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectStateStorageRead(11, []byte{0x01}, []byte{0x02})
+	h.expectStateStorageRead(11, "Contract1", []byte{0x01}, []byte{0x02})
 
 	_, sd := h.processTransactionSet([]*contractAndMethod{
 		{"Contract1", "method1"},

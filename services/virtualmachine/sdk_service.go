@@ -46,6 +46,8 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 
 	// modify execution context
 	callingService := context.serviceStackTop()
+	context.serviceStackPush(primitives.ContractName(serviceName))
+	defer context.serviceStackPop()
 
 	// execute the call
 	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{

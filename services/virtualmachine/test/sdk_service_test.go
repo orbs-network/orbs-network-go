@@ -36,19 +36,19 @@ func TestSdkServiceIsNative(t *testing.T) {
 	h.verifyNativeContractInfoRequested(t)
 }
 
-func TestSdkServiceCallUnknownContractFails(t *testing.T) {
+func TestSdkServiceCallMethodFailingCall(t *testing.T) {
 	h := newHarness()
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
-		t.Log("CallMethod on unknown contract")
+		t.Log("CallMethod on failing contract")
 
-		_, err := h.handleSdkCall(contextId, native.SDK_SERVICE_CONTRACT_NAME, "callMethod", "UnknownContract", "unknownMethod")
+		_, err := h.handleSdkCall(contextId, native.SDK_SERVICE_CONTRACT_NAME, "callMethod", "FailingContract", "method1")
 		require.Error(t, err, "handleSdkCall should fail")
 
 		return protocol.EXECUTION_RESULT_SUCCESS, nil
 	})
-	h.expectNativeContractMethodCalled("UnknownContract", "unknownMethod", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
-		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, errors.New("contract not found")
+	h.expectNativeContractMethodCalled("FailingContract", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, errors.New("call error")
 	})
 
 	h.processTransactionSet([]*contractAndMethod{
@@ -56,4 +56,80 @@ func TestSdkServiceCallUnknownContractFails(t *testing.T) {
 	})
 
 	h.verifyNativeContractMethodCalled(t)
+}
+
+func TestSdkServiceCallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T) {
+	h := newHarness()
+
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Write to key in first contract")
+
+		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02, 0x03})
+		require.NoError(t, err, "handleSdkCall should succeed")
+
+		t.Log("CallMethod on a the same contract")
+
+		_, err = h.handleSdkCall(contextId, native.SDK_SERVICE_CONTRACT_NAME, "callMethod", "Contract1", "method2")
+		require.NoError(t, err, "handleSdkCall should succeed")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	})
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Read the same key in the first contract")
+
+		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, []byte{0x02, 0x03}, res[0].BytesValue(), "handleSdkCall result should be equal")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	})
+	h.expectStateStorageNotRead()
+
+	h.processTransactionSet([]*contractAndMethod{
+		{"Contract1", "method1"},
+	})
+
+	h.verifyNativeContractMethodCalled(t)
+	h.verifyStateStorageRead(t)
+}
+
+func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
+	h := newHarness()
+
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Write to key in first contract")
+
+		_, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "write", []byte{0x01}, []byte{0x02, 0x03})
+		require.NoError(t, err, "handleSdkCall should succeed")
+
+		t.Log("CallMethod on a different contract")
+
+		_, err = h.handleSdkCall(contextId, native.SDK_SERVICE_CONTRACT_NAME, "callMethod", "Contract2", "method1")
+		require.NoError(t, err, "handleSdkCall should succeed")
+
+		t.Log("Read the same key in the first contract after the call")
+
+		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, []byte{0x02, 0x03}, res[0].BytesValue(), "handleSdkCall result should be equal")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	})
+	h.expectNativeContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		t.Log("Read the same key in the second contract")
+
+		res, err := h.handleSdkCall(contextId, native.SDK_STATE_CONTRACT_NAME, "read", []byte{0x01})
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, []byte{0x04, 0x05, 0x06}, res[0].BytesValue(), "handleSdkCall result should be equal")
+
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	})
+	h.expectStateStorageRead(11, "Contract2", []byte{0x01}, []byte{0x04, 0x05, 0x06})
+
+	h.processTransactionSet([]*contractAndMethod{
+		{"Contract1", "method1"},
+	})
+
+	h.verifyNativeContractMethodCalled(t)
+	h.verifyStateStorageRead(t)
 }

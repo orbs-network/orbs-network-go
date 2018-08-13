@@ -95,11 +95,12 @@ func (h *harness) verifyStateStorageBlockHeightRequested(t *testing.T) {
 	require.True(t, ok, "did not read from state storage: %v", err)
 }
 
-func (h *harness) expectStateStorageRead(expectedHeight primitives.BlockHeight, expectedKey []byte, returnValue []byte) {
+func (h *harness) expectStateStorageRead(expectedHeight primitives.BlockHeight, expectedContractName primitives.ContractName, expectedKey []byte, returnValue []byte) {
 	stateReadMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ReadKeysInput)
 		return ok &&
 			input.BlockHeight == expectedHeight &&
+			input.ContractName == expectedContractName &&
 			len(input.Keys) == 1 &&
 			input.Keys[0].Equal(expectedKey)
 	}
