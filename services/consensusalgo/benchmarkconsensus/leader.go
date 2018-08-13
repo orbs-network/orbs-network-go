@@ -2,7 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -29,7 +29,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			s.reporting.Info("consensus round waking up after successfully voted block", instrumentation.BlockHeight(s.lastSuccessfullyVotedBlock))
 			continue
-		case <-time.After(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillisec()) * time.Millisecond):
+		case <-time.After(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillis()) * time.Millisecond):
 			s.reporting.Info("consensus round waking up after retry timeout")
 			continue
 		}
@@ -96,7 +96,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPai
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
 		BlockHeight:   s.lastCommittedBlockHeight() + 1,
-		PrevBlockHash: crypto.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
+		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPai
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
 		BlockHeight:       s.lastCommittedBlockHeight() + 1,
-		PrevBlockHash:     crypto.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
+		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {

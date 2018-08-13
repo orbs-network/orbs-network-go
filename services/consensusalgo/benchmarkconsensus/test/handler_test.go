@@ -8,6 +8,7 @@ import (
 )
 
 func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -29,6 +30,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 }
 
 func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -54,6 +56,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -71,6 +74,7 @@ func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderPublicKey, leaderPrivateKey)
@@ -92,6 +96,7 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newNonLeaderHarness(t, ctx)
 		otherNonLeaderPublicKey, otherNonLeaderPrivateKey := otherNonLeaderKeyPair()

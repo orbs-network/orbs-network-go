@@ -99,7 +99,16 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 }
 
 func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
-	panic("Not implemented")
+
+	//TODO this is a stub to make AddNewTransaction pass. Remove when real implementation arrives
+	numOfTransactions := len(input.SignedTransactions)
+	results := make([]protocol.TransactionStatus, numOfTransactions, numOfTransactions)
+	for i := range results {
+		results[i] = protocol.TRANSACTION_STATUS_PENDING
+	}
+	return &services.TransactionSetPreOrderOutput{
+		PreOrderResults: results,
+	}, nil
 }
 
 func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
