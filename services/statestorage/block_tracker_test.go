@@ -22,14 +22,16 @@ func TestWaitForBlockWithinGraceFailsAfterTimeout(t *testing.T) {
 
 func TestWaitForBlockWithinGraceReturnsWhenRequestedBlockHeightAdvancesBeforeTimeout(t *testing.T) {
 	tracker := NewBlockTracker(1, 2, 1*time.Second)
+	tracker.enteredSelectSignalForTests = make(chan int)
 
 	doneWait := make(chan error)
 	go func() {
 		doneWait <- tracker.WaitForBlock(3)
 	}()
 
-	time.Sleep(5 * time.Millisecond)
+	<-tracker.enteredSelectSignalForTests
 	tracker.IncrementHeight()
+	require.Equal(t, 2, <-tracker.enteredSelectSignalForTests, "did not block before the second increment")
 	tracker.IncrementHeight()
 
 	require.NoError(t, <-doneWait, "did not return as expected")
@@ -37,6 +39,7 @@ func TestWaitForBlockWithinGraceReturnsWhenRequestedBlockHeightAdvancesBeforeTim
 
 func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 	tracker := NewBlockTracker(1, 1, 1*time.Second)
+	tracker.enteredSelectSignalForTests = make(chan int)
 
 	doneWait := make(chan error)
 	waiter := func() {
@@ -45,7 +48,9 @@ func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 	go waiter()
 	go waiter()
 
-	time.Sleep(5 * time.Millisecond)
+	selectIterationsBeforeIncrement := <-tracker.enteredSelectSignalForTests
+	require.NotZero(t, selectIterationsBeforeIncrement, "did not enter select before returning")
+
 	tracker.IncrementHeight()
 
 	require.NoError(t, <-doneWait, "first waiter did not return as expected")
