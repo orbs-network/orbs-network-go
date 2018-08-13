@@ -22,6 +22,7 @@ func NewNativeProcessor() services.Processor {
 func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
 	baseContract := types.NewBaseContract(
 		&stateSdk{handler},
+		&serviceSdk{handler},
 	)
 	s.contractRepository = make(map[primitives.ContractName]types.Contract)
 	for _, contract := range repository.Contracts {
@@ -76,6 +77,19 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}, contractErr
 }
 
-func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) (*services.DeployNativeServiceOutput, error) {
-	panic("Not implemented")
+func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
+	if s.contractRepository == nil {
+		return nil, errors.New("contractRepository is not initialized")
+	}
+
+	// retrieve code
+	contractInfo, _, err := s.retrieveContractFromRepository(input.ContractName, "_init")
+	if err != nil {
+		return nil, err
+	}
+
+	// result
+	return &services.GetContractInfoOutput{
+		PermissionScope: contractInfo.Permission,
+	}, nil
 }

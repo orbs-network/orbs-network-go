@@ -79,7 +79,7 @@ func (s *service) handleSdkStateWrite(context *executionContext, args []*protoco
 	}
 
 	if len(args) != 2 || !args[0].IsTypeBytesValue() || !args[1].IsTypeBytesValue() {
-		return errors.Errorf("invalid SDK state read args: %v", args)
+		return errors.Errorf("invalid SDK state write args: %v", args)
 	}
 	key := args[0].BytesValue()
 	value := args[1].BytesValue()

@@ -9,7 +9,7 @@ import (
 
 func TestCallWithNoArgsAndNoReturn(t *testing.T) {
 	h := newHarness()
-	call := processCallInput().WithMethod("BenchmarkContract", "_init").Build()
+	call := processCallInput().WithMethod("BenchmarkContract", "nop").Build()
 
 	output, err := h.service.ProcessCall(call)
 	require.NoError(t, err, "call should succeed")

@@ -94,6 +94,11 @@ type keyValuePair struct {
 	value []byte
 }
 
+type contractMethod struct {
+	contractName primitives.ContractName
+	methodName   primitives.MethodName
+}
+
 func (h *harness) processTransactionSet(contractNames []primitives.ContractName) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 

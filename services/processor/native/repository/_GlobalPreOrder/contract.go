@@ -26,7 +26,7 @@ type contract struct{ *types.BaseContract }
 var METHOD_INIT = types.MethodInfo{
 	Name:           "_init",
 	External:       false,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract)._init,
 }
 

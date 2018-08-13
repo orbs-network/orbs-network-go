@@ -59,6 +59,25 @@ func (h *harness) verifySystemContractCalled(t *testing.T) {
 	require.True(t, ok, "did not call processor for system contract: %v", err)
 }
 
+func (h *harness) expectContractInfoRequested(expectedContractName primitives.ContractName, returnError error) {
+	contractMatcher := func(i interface{}) bool {
+		input, ok := i.(*services.GetContractInfoInput)
+		return ok &&
+			input.ContractName == expectedContractName
+	}
+
+	outputToReturn := &services.GetContractInfoOutput{
+		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+	}
+
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
+}
+
+func (h *harness) verifyContractInfoRequested(t *testing.T) {
+	ok, err := h.processors[protocol.PROCESSOR_TYPE_NATIVE].Verify()
+	require.True(t, ok, "did not request contract info: %v", err)
+}
+
 func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.BlockHeight) {
 	outputToReturn := &services.GetStateStorageBlockHeightOutput{
 		LastCommittedBlockHeight:    returnValue,

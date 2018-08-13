@@ -112,6 +112,8 @@ func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.H
 	switch input.ContractName {
 	case native.SDK_STATE_CONTRACT_NAME:
 		output, err = s.handleSdkStateCall(executionContext, input.MethodName, input.InputArguments)
+	case native.SDK_SERVICE_CONTRACT_NAME:
+		output, err = s.handleSdkServiceCall(executionContext, input.MethodName, input.InputArguments)
 	default:
 		return nil, errors.Errorf("unknown SDK call type: %s", input.ContractName)
 	}
