@@ -8,7 +8,7 @@ import (
 )
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
-	driver := NewDriver()
+	driver := NewDriver(t)
 	block := builders.BlockPair().Build()
 
 	_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
@@ -16,8 +16,7 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	block := builders.BlockPair().Build()
 
 	block.TransactionsBlock.Header.MutateProtocolVersion(998)
@@ -42,8 +41,7 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	driver.commitBlock(builders.BlockPair().Build())
@@ -55,8 +53,7 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	driver.commitBlock(builders.BlockPair().Build())

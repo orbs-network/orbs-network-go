@@ -9,8 +9,7 @@ import (
 )
 
 func TestReturnTransactionBlockHeader(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -26,8 +25,7 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 
 // FIXME time out
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -52,7 +50,7 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
-	driver := NewDriver()
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -75,8 +73,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -91,8 +88,7 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 
 // FIXME time out
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -118,8 +114,7 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()

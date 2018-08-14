@@ -11,8 +11,7 @@ import (
 )
 
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().WithTimestampBloomFilter().Build()
@@ -32,8 +31,7 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 // TODO return transaction receipt while the transaction timestamp is in the future (and too far ahead to be in the grace
 
 func TestReturnTransactionReceipt(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampBloomFilter().WithTimestampNow().Build()

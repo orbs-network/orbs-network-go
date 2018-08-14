@@ -9,8 +9,7 @@ import (
 )
 
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 
 	driver.expectCommitStateDiff()
 
@@ -33,8 +32,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 }
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 
 	driver.expectCommitStateDiff()
 
@@ -59,8 +57,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 }
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 
 	_, err := driver.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -68,8 +65,7 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 }
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 
 	blockPair := builders.BlockPair().Build()
 
@@ -85,8 +81,7 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 
 	driver.expectCommitStateDiff()
 
@@ -102,8 +97,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 }
 
 func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
-	driver := NewDriver()
-	driver.t = t
+	driver := NewDriver(t)
 	driver.expectCommitStateDiff()
 
 	driver.commitBlock(builders.BlockPair().Build())

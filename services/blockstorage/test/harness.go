@@ -1,7 +1,6 @@
 package test
 
 import (
-	. "github.com/onsi/gomega"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -44,12 +43,7 @@ func (d *driver) numOfWrittenBlocks() int {
 func (d *driver) getLastBlockHeight() *services.GetLastCommittedBlockHeightOutput {
 	out, err := d.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
 
-	//FIXME: get rid of Gingko
-	if d.t == nil {
-		Expect(err).ToNot(HaveOccurred())
-	} else {
-		require.NoError(d.t, err)
-	}
+	require.NoError(d.t, err)
 	return out
 }
 
@@ -61,8 +55,8 @@ func (d *driver) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }
 
-func NewDriver() *driver {
-	d := &driver{}
+func NewDriver(t *testing.T) *driver {
+	d := &driver{t: t}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
 	d.blockStorage = blockstorage.NewBlockStorage(config.NewBlockStorageConfig(70, 5, 5, 30*60), d.storageAdapter, d.stateStorage, instrumentation.GetLogger())
