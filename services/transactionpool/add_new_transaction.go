@@ -2,29 +2,23 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
-	"time"
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 
-	//TODO extract to config
-	vctx := validationContext{
-		expiryWindow:                30 * time.Minute,
-		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
-		futureTimestampGrace:        3 * time.Minute,
-		virtualChainId:              primitives.VirtualChainId(42),
-		transactionInPendingPool:    s.isTransactionInPendingPool,
-	}
-	err := validateTransaction(input.SignedTransaction, vctx)
+	err := s.createValidationContext().validateTransaction(input.SignedTransaction)
 	if err != nil {
 		s.log.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
 		return s.anEmptyReceipt(), err
+	}
+
+	if s.pendingPool.has(input.SignedTransaction) {
+		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION}
 	}
 
 	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {

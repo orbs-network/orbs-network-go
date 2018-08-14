@@ -33,6 +33,9 @@ type NodeConfig interface {
 
 	// transaction pool
 	PendingPoolSizeInBytes() uint32
+	TransactionExpirationWindowInSeconds() uint32
+	FutureTimestampGraceInSeconds() uint32
+	VirtualChainId() primitives.VirtualChainId
 }
 
 type FederationNode interface {

@@ -11,6 +11,7 @@ import (
 )
 
 var pk = keys.Ed25519KeyPairForTests(8).PublicKey()
+var transactionExpirationInSeconds = uint32(1800)
 
 func TestPendingTransactionPool_TracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
 	t.Parallel()
@@ -89,8 +90,6 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedLimitAndRetainsOrdering(t *t
 	//require.Equal(t, []*protocol.SignedTransaction{tx3, tx1}, txSet, "got transaction set in wrong order") TODO re-enable when we decide on ordering (timestamp vs arrival)
 }
 
-//TODO size of transaction set does not exceed limit
-
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
 		p.add(tx, pk)
@@ -98,5 +97,5 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 }
 
 func makePendingPool() *pendingTxPool {
-	return NewPendingPool(config.NewTransactionPoolConfig(100000, pk))
+	return NewPendingPool(config.NewTransactionPoolConfig(100000, transactionExpirationInSeconds, pk))
 }

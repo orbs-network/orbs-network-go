@@ -11,6 +11,7 @@ import (
 type identity struct {
 	nodePublicKey  primitives.Ed25519PublicKey
 	nodePrivateKey primitives.Ed25519PrivateKey
+	virtualChainId primitives.VirtualChainId
 }
 
 type consensusConfig struct {
@@ -42,7 +43,9 @@ type stateStorageConfig struct {
 
 type transactionPoolConfig struct {
 	*identity
-	pendingPoolSizeInBytes uint32
+	pendingPoolSizeInBytes               uint32
+	transactionExpirationWindowInSeconds uint32
+	futureTimestampGraceInSeconds		 uint32
 }
 
 type hardCodedFederationNode struct {
@@ -84,6 +87,7 @@ func NewHardCodedConfig(
 		identity: &identity{
 			nodePublicKey:  nodePublicKey,
 			nodePrivateKey: nodePrivateKey,
+			virtualChainId: 42,
 		},
 		consensusConfig: &consensusConfig{
 			federationNodes:                            federationNodes,
@@ -105,7 +109,11 @@ func NewHardCodedConfig(
 			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
-		transactionPoolConfig: &transactionPoolConfig{pendingPoolSizeInBytes: 20 * 1024 * 1024},
+		transactionPoolConfig: &transactionPoolConfig{
+			pendingPoolSizeInBytes: 20 * 1024 * 1024,
+			transactionExpirationWindowInSeconds: 1800,
+			futureTimestampGraceInSeconds: 180,
+		},
 	}
 }
 
@@ -122,6 +130,7 @@ func NewConsensusConfig(
 		identity: &identity{
 			nodePublicKey:  nodePublicKey,
 			nodePrivateKey: nodePrivateKey,
+			virtualChainId: 42,
 		},
 		federationNodes:                            federationNodes,
 		constantConsensusLeader:                    constantConsensusLeader,
@@ -141,12 +150,14 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
+func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindowInSeconds uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
 	return &transactionPoolConfig{
 		identity: &identity{
 			nodePublicKey: nodePublicKey,
+			virtualChainId: 42,
 		},
 		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
+		transactionExpirationWindowInSeconds: transactionExpirationWindowInSeconds,
 	}
 }
 
@@ -166,6 +177,10 @@ func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
 
 func (c *identity) NodePrivateKey() primitives.Ed25519PrivateKey {
 	return c.nodePrivateKey
+}
+
+func (c *identity) VirtualChainId() primitives.VirtualChainId {
+	return c.virtualChainId
 }
 
 func (c *consensusConfig) NetworkSize(asOfBlock uint64) uint32 {
@@ -218,4 +233,12 @@ func (c *crossServiceConfig) QueryGraceTimeoutMillis() uint64 {
 
 func (c *transactionPoolConfig) PendingPoolSizeInBytes() uint32 {
 	return c.pendingPoolSizeInBytes
+}
+
+func (c *transactionPoolConfig) TransactionExpirationWindowInSeconds() uint32 {
+	return c.transactionExpirationWindowInSeconds
+}
+
+func (c *transactionPoolConfig) FutureTimestampGraceInSeconds() uint32 {
+	return c.futureTimestampGraceInSeconds
 }

@@ -27,6 +27,7 @@ type harness struct {
 
 var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
 var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
+var transactionExpirationWindowInSeconds = uint32(1800)
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
 
@@ -141,7 +142,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	virtualMachine := &services.MockVirtualMachine{}
 	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PENDING}})
 
-	config := config.NewTransactionPoolConfig(sizeLimit, thisNodeKeyPair.PublicKey())
+	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
 	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}

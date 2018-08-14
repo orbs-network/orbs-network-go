@@ -4,15 +4,18 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 type Config interface {
-	PendingPoolSizeInBytes() uint32
 	NodePublicKey() primitives.Ed25519PublicKey
+	PendingPoolSizeInBytes() uint32
+	TransactionExpirationWindowInSeconds() uint32
+	FutureTimestampGraceInSeconds() uint32
+	VirtualChainId() primitives.VirtualChainId
 }
 
 type service struct {
@@ -43,9 +46,18 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	out := &services.GetTransactionsForOrderingOutput{}
-	out.SignedTransactions = s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
+	transactions := s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
+	vctx := s.createValidationContext()
 
-	//TODO remove the following as soon as block storage can call CommitTransactionReceipts
+	for _, tx := range transactions {
+		if err := vctx.validateTransaction(tx); err != nil {
+			s.log.Info("dropping invalid transaction", instrumentation.Error(err), instrumentation.Stringable("transaction", tx))
+		} else {
+			out.SignedTransactions = append(out.SignedTransactions, tx)
+		}
+	}
+
+	// START OF THROWAWAY CODE TODO remove the following as soon as block storage can call CommitTransactionReceipts
 	for _, tx := range out.SignedTransactions {
 		s.pendingPool.remove(digest.CalcTxHash(tx.Transaction()))
 	}
@@ -77,6 +89,11 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 	return nil, nil
 }
 
-func (s *service) isTransactionInPendingPool(transaction *protocol.SignedTransaction) bool {
-	return s.pendingPool.has(transaction)
+func (s *service) createValidationContext() *validationContext {
+	return &validationContext{
+		expiryWindow:                time.Duration(s.config.TransactionExpirationWindowInSeconds()) * time.Second,
+		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
+		virtualChainId:              s.config.VirtualChainId(),
+	}
 }
