@@ -40,18 +40,36 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return s.anEmptyReceipt(), err
 	}
 
-	s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
-		Message: &gossipmessages.ForwardedTransactionsMessage{
+	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
+	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodePublicKey()); err != nil {
+		return nil, err
 
-			SignedTransactions: []*protocol.SignedTransaction{input.SignedTransaction},
+	}
+	s.pendingTransactions <- input.SignedTransaction //TODO remove this
+
+	//TODO batch
+	s.forwardTransaction(input.SignedTransaction)
+
+	return &services.AddNewTransactionOutput{}, nil
+}
+
+func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
+	// TODO sign
+	//sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	_, err := s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+		Message: &gossipmessages.ForwardedTransactionsMessage{
+			SignedTransactions: []*protocol.SignedTransaction{tx},
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+			}).Build(),
 		},
 	})
 
-	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
-	s.pendingTransactions <- input.SignedTransaction //TODO remove this
-	s.pendingPool.add(input.SignedTransaction)
-
-	return &services.AddNewTransactionOutput{}, nil
+	return err
 }
 
 func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
