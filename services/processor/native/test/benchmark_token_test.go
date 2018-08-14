@@ -53,12 +53,12 @@ func TestBenchmarkTokenTransferThenGetBalance(t *testing.T) {
 	h.verifySdkCallMade(t)
 }
 
-func TestBenchmarkTokenTransferZeroAmountFails(t *testing.T) {
+func TestBenchmarkTokenTransferLargeAmountFails(t *testing.T) {
 	h := newHarness()
 
-	t.Log("Runs BenchmarkToken.transfer zero amount")
+	t.Log("Runs BenchmarkToken.transfer large amount")
 
-	call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(uint64(0)).WithWriteAccess().Build()
+	call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(uint64(9999)).WithWriteAccess().Build()
 
 	output, err := h.service.ProcessCall(call)
 	require.Error(t, err, "call should fail")

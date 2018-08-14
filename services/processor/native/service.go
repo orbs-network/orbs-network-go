@@ -1,6 +1,7 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -11,17 +12,24 @@ import (
 )
 
 type service struct {
+	reporting instrumentation.BasicLogger
+
 	contractRepository map[primitives.ContractName]types.Contract
 }
 
-func NewNativeProcessor() services.Processor {
-	return &service{}
+func NewNativeProcessor(
+	reporting instrumentation.BasicLogger,
+) services.Processor {
+	return &service{
+		reporting: reporting.For(instrumentation.Service("processor-native")),
+	}
 }
 
 // runs once on system initialization (called by the virtual machine constructor)
 func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
 	baseContract := types.NewBaseContract(
 		&stateSdk{handler},
+		&serviceSdk{handler},
 	)
 	s.contractRepository = make(map[primitives.ContractName]types.Contract)
 	for _, contract := range repository.Contracts {
@@ -31,7 +39,10 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	if s.contractRepository == nil {
-		return nil, errors.New("contractRepository is not initialized")
+		return &services.ProcessCallOutput{
+			OutputArguments: nil,
+			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+		}, errors.New("contractRepository is not initialized")
 	}
 
 	// retrieve code
@@ -73,6 +84,19 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}, contractErr
 }
 
-func (s *service) DeployNativeService(input *services.DeployNativeServiceInput) (*services.DeployNativeServiceOutput, error) {
-	panic("Not implemented")
+func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
+	if s.contractRepository == nil {
+		return nil, errors.New("contractRepository is not initialized")
+	}
+
+	// retrieve code
+	contractInfo, _, err := s.retrieveContractFromRepository(input.ContractName, "_init")
+	if err != nil {
+		return nil, err
+	}
+
+	// result
+	return &services.GetContractInfoOutput{
+		PermissionScope: contractInfo.Permission,
+	}, nil
 }

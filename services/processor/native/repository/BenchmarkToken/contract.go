@@ -12,7 +12,7 @@ var CONTRACT = types.ContractInfo{
 	Methods: []types.MethodInfo{
 		METHOD_INIT,
 		METHOD_TRANSFER,
-		METHOD_GETBALANCE,
+		METHOD_GET_BALANCE,
 	},
 	InitSingleton: newContract,
 }
@@ -28,7 +28,7 @@ type contract struct{ *types.BaseContract }
 var METHOD_INIT = types.MethodInfo{
 	Name:           "_init",
 	External:       false,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract)._init,
 }
 
@@ -46,8 +46,8 @@ var METHOD_TRANSFER = types.MethodInfo{
 }
 
 func (c *contract) transfer(ctx types.Context, amount uint64) error {
-	if amount <= 0 {
-		return fmt.Errorf("cannot transfer negative or zero amount: %d", amount)
+	if amount > 1000 {
+		return fmt.Errorf("cannot transfer amounts above 1000: %d", amount)
 	}
 	balance, err := c.State.ReadUint64ByKey(ctx, "total-balance")
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *contract) transfer(ctx types.Context, amount uint64) error {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_GETBALANCE = types.MethodInfo{
+var METHOD_GET_BALANCE = types.MethodInfo{
 	Name:           "getBalance",
 	External:       true,
 	Access:         protocol.ACCESS_SCOPE_READ_ONLY,

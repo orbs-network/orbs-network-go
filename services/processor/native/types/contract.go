@@ -8,14 +8,17 @@ type Contract interface {
 }
 
 type BaseContract struct {
-	State StateSdk
+	State   StateSdk
+	Service ServiceSdk
 }
 
 func NewBaseContract(
 	state StateSdk,
+	service ServiceSdk,
 ) *BaseContract {
 
 	return &BaseContract{
-		State: state,
+		State:   state,
+		Service: service,
 	}
 }

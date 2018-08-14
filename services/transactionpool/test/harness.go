@@ -129,7 +129,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
-	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PENDING}})
+	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID}})
 
 	config := config.NewTransactionPoolConfig(sizeLimit, thisNodeKeyPair.PublicKey())
 	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())

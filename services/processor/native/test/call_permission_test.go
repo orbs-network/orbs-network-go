@@ -1,71 +1,73 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestCallUnknownContractFails(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithUnknownContract().Build()
+func TestProcessCallPermissions(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            *services.ProcessCallInput
+		expectedError    bool
+		expectedSdkWrite bool
+	}{
+		{
+			name:          "UnknownContractFails",
+			input:         processCallInput().WithUnknownContract().Build(),
+			expectedError: true,
+		},
+		{
+			name:          "UnknownMethodFails",
+			input:         processCallInput().WithUnknownMethod().Build(),
+			expectedError: true,
+		},
+		{
+			name:          "ExternalMethodFromAnotherServiceSucceeds",
+			input:         processCallInput().WithExternalMethod().WithDifferentCallingService().Build(),
+			expectedError: false,
+		},
+		{
+			name:          "InternalMethodFromSameServiceSucceeds",
+			input:         processCallInput().WithInternalMethod().WithSameCallingService().Build(),
+			expectedError: false,
+		},
+		{
+			name:          "InternalMethodFromAnotherServiceFails",
+			input:         processCallInput().WithInternalMethod().WithDifferentCallingService().Build(),
+			expectedError: true,
+		},
+		{
+			name:          "InternalMethodFromAnotherServiceUnderSystemPermissionsSucceeds",
+			input:         processCallInput().WithInternalMethod().WithDifferentCallingService().WithSystemPermissions().Build(),
+			expectedError: false,
+		},
+		{
+			name:             "WriteMethodWithWriteAccessSucceeds",
+			input:            processCallInput().WithExternalWriteMethod().WithWriteAccess().Build(),
+			expectedError:    false,
+			expectedSdkWrite: true,
+		},
+		{
+			name:          "WriteMethodWithoutWriteAccessFails",
+			input:         processCallInput().WithExternalWriteMethod().Build(),
+			expectedError: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness()
+			if test.expectedSdkWrite {
+				h.expectSdkCallMadeWithStateWrite()
+			}
 
-	_, err := h.service.ProcessCall(call)
-	require.Error(t, err, "call should fail")
-}
-
-func TestCallUnknownMethodFails(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithUnknownMethod().Build()
-
-	_, err := h.service.ProcessCall(call)
-	require.Error(t, err, "call should fail")
-}
-
-func TestCallExternalMethodFromAnotherServiceSucceeds(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithExternalMethod().WithDifferentCallingService().Build()
-
-	_, err := h.service.ProcessCall(call)
-	require.NoError(t, err, "call should succeed")
-}
-
-func TestCallInternalMethodFromSameServiceSucceeds(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithInternalMethod().WithSameCallingService().Build()
-
-	_, err := h.service.ProcessCall(call)
-	require.NoError(t, err, "call should succeed")
-}
-
-func TestCallInternalMethodFromAnotherServiceFails(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithInternalMethod().WithDifferentCallingService().Build()
-
-	_, err := h.service.ProcessCall(call)
-	require.Error(t, err, "call should fail")
-}
-
-func TestCallInternalMethodFromAnotherServiceUnderSystemPermissionsSucceeds(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithInternalMethod().WithDifferentCallingService().WithSystemPermissions().Build()
-
-	_, err := h.service.ProcessCall(call)
-	require.NoError(t, err, "call should succeed")
-}
-
-func TestCallWriteMethodWithWriteAccessSucceeds(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithExternalWriteMethod().WithWriteAccess().Build()
-	h.expectSdkCallMadeWithStateWrite()
-
-	_, err := h.service.ProcessCall(call)
-	require.NoError(t, err, "call should succeed")
-}
-
-func TestCallWriteMethodWithoutWriteAccessFails(t *testing.T) {
-	h := newHarness()
-	call := processCallInput().WithExternalWriteMethod().Build()
-
-	_, err := h.service.ProcessCall(call)
-	require.Error(t, err, "call should fail")
+			_, err := h.service.ProcessCall(test.input)
+			if test.expectedError {
+				require.Error(t, err, "call should fail")
+			} else {
+				require.NoError(t, err, "call should succeed")
+			}
+		})
+	}
 }
