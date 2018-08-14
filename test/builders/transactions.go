@@ -41,6 +41,10 @@ func TransferTransaction() *TransactionBuilder {
 	}
 }
 
+func Transaction() *TransactionBuilder {
+	return TransferTransaction()
+}
+
 func (t *TransactionBuilder) Build() *protocol.SignedTransaction {
 	t.builder.Signature = make([]byte, signature.ED25519_SIGNATURE_SIZE)
 	signedTransaction := t.builder.Build()

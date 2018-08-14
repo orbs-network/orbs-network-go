@@ -4,10 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/pkg/errors"
 )
 
 type service struct {
@@ -16,6 +18,8 @@ type service struct {
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
 	reporting            instrumentation.BasicLogger
+
+	contexts *executionContextProvider
 }
 
 func NewVirtualMachine(
@@ -32,6 +36,8 @@ func NewVirtualMachine(
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
 		reporting:            reporting.For(instrumentation.Service("virtual-machine")),
+
+		contexts: newExecutionContextProvider(),
 	}
 
 	for _, processor := range processors {
@@ -42,6 +48,20 @@ func NewVirtualMachine(
 }
 
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+
+	// TODO: until we integrate the acceptance to pass through the "correct" implementation we need this escape hatch to move the tests forward
+	if len(input.SignedTransactions) > 0 && input.SignedTransactions[0].Transaction().ContractName() == "ExampleContract" {
+
+		stateDiffs, err := s.processTransactionSet(input.BlockHeight, input.SignedTransactions)
+		if err != nil {
+			return nil, err
+		}
+
+		return &services.ProcessTransactionSetOutput{
+			TransactionReceipts: nil,
+			ContractStateDiffs:  stateDiffs,
+		}, nil
+	}
 
 	var state []*protocol.StateRecordBuilder
 	for _, i := range input.SignedTransactions {
@@ -66,6 +86,27 @@ func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInp
 }
 
 func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
+
+	// TODO: until we integrate the acceptance to pass through the "correct" implementation we need this escape hatch to move the tests forward
+	if input.Transaction.ContractName() == "ExampleContract" {
+
+		blockHeight, blockTimestamp, err := s.getRecentBlockHeight()
+		if err != nil {
+			return nil, err
+		}
+
+		callResult, outputArgs, err := s.runLocalMethod(blockHeight, input.Transaction)
+		if err != nil {
+			return nil, err
+		}
+
+		return &services.RunLocalMethodOutput{
+			CallResult:              callResult,
+			OutputArguments:         outputArgs,
+			ReferenceBlockHeight:    blockHeight,
+			ReferenceBlockTimestamp: blockTimestamp,
+		}, nil
+	}
 
 	// TODO XXX this implementation bakes an implementation of an arbitraty contract function.
 	// The function scans a set of keys derived from the current block height and sums up all their values.
@@ -112,5 +153,26 @@ func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderI
 }
 
 func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
-	panic("Not implemented")
+	var output []*protocol.MethodArgument
+	var err error
+
+	executionContext := s.contexts.loadExecutionContext(input.ContextId)
+	if executionContext == nil {
+		return nil, errors.Errorf("invalid execution context %s", input.ContextId)
+	}
+
+	switch input.ContractName {
+	case native.SDK_STATE_CONTRACT_NAME:
+		output, err = s.handleSdkStateCall(executionContext, input.MethodName, input.InputArguments)
+	default:
+		return nil, errors.Errorf("unknown SDK call type: %s", input.ContractName)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &handlers.HandleSdkCallOutput{
+		OutputArguments: output,
+	}, nil
 }
