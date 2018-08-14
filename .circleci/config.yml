@@ -5,9 +5,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run:
-        command: ./docker-build.sh
-        no_output_timeout: 30m
+      - run: ./docker-build.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker-tag.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
