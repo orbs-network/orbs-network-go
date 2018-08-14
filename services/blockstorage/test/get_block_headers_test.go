@@ -71,7 +71,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 	}
 
 	err := <-timeoutError
-	require.Error(t, err, "operation timed out")
+	require.EqualError(t, err, "operation timed out")
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
@@ -138,5 +138,5 @@ func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	}
 
 	err := <-timeoutError
-	require.Error(t, err, "operation timed out")
+	require.EqualError(t, err, "operation timed out")
 }

@@ -48,7 +48,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 	driver.expectCommitStateDiff() // TODO: this line should be removed, it's added here due to convoluted sync mechanism in acceptance test where we wait until block is written to block persistence where instead we need to wait on block written to state persistence
 
 	_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
-	require.Errorf(t, err, "could not write a block")
+	require.EqualError(t, err, "could not write a block")
 
 	driver.verifyMocks()
 
@@ -64,7 +64,7 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 
 	_, err := driver.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
-	require.Error(t, err, "protocol version mismatch")
+	require.EqualError(t, err, "protocol version mismatch")
 }
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
@@ -96,7 +96,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 
 	_, err := driver.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
 
-	require.Error(t, err, "block already in storage, timestamp mismatch")
+	require.EqualError(t, err, "block already in storage, timestamp mismatch")
 	require.EqualValues(t, driver.numOfWrittenBlocks(), 1)
 	driver.verifyMocks()
 }
@@ -109,7 +109,7 @@ func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 	driver.commitBlock(builders.BlockPair().Build())
 
 	_, err := driver.commitBlock(builders.BlockPair().WithHeight(1000).Build())
-	require.Error(t, err, "block height is 1000, expected 2")
+	require.EqualError(t, err, "block height is 1000, expected 2")
 	require.EqualValues(t, driver.numOfWrittenBlocks(), 1)
 	driver.verifyMocks()
 }
