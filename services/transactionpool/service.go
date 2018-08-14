@@ -1,13 +1,13 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
 type Config interface {
@@ -43,7 +43,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	out := &services.GetTransactionsForOrderingOutput{}
-	out.SignedTransactions = s.pendingPool.getBatch(input.MaxNumberOfTransactions)
+	out.SignedTransactions = s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
 
 	//TODO remove the following as soon as block storage can call CommitTransactionReceipts
 	for _, tx := range out.SignedTransactions {

@@ -4,8 +4,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"sync"
 	"sort"
+	"sync"
 )
 
 func NewPendingPool(config Config) *pendingTxPool {
@@ -77,13 +77,16 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256) *pendingTransaction {
 	return nil
 }
 
-func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32) []*protocol.SignedTransaction {
+func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) []*protocol.SignedTransaction {
 	txs := make([]*protocol.SignedTransaction, 0, maxNumOfTransactions)
+	accumulatedSize := uint32(0)
 	for _, tx := range p.transactions {
-		txs = append(txs, tx.transaction)
-		if uint32(len(txs)) == maxNumOfTransactions {
+		accumulatedSize += tx.sizeInBytes
+		if uint32(len(txs)) >= maxNumOfTransactions || (sizeLimitInBytes > 0 && accumulatedSize > sizeLimitInBytes) {
 			break
 		}
+
+		txs = append(txs, tx.transaction)
 	}
 
 	sort.Slice(txs, func(i, j int) bool {

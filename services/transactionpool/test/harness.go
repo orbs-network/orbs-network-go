@@ -56,7 +56,7 @@ func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) (*services.A
 	return out, err
 }
 
-func (h *harness) addTransactions(txs... *protocol.SignedTransaction) {
+func (h *harness) addTransactions(txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
 		h.addNewTransaction(tx)
 	}
@@ -124,6 +124,10 @@ func (h *harness) ignoringTransactionResults() {
 func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 	h.lastBlockHeight = height
 	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
+}
+
+func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+	return h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{MaxNumberOfTransactions: maxNumOfTransactions, MaxTransactionsSetSizeKb: 1024})
 }
 
 func newHarness() *harness {
