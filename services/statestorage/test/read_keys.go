@@ -88,11 +88,11 @@ var _ bool = Describe("Reading a Key", func() {
 				d.commitValuePairsAtHeight(1, "contract", key, v1)
 				d.commitValuePairsAtHeight(2, "contract", key, v2)
 
-				historical, err := d.readSingleKeyFromHistory(1, "contract", key)
+				historical, err := d.readSingleKeyFromRevision(1, "contract", key)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(historical).To(BeEquivalentTo(v1))
 
-				current, err := d.readSingleKeyFromHistory(2, "contract", key)
+				current, err := d.readSingleKeyFromRevision(2, "contract", key)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(current).To(BeEquivalentTo(v2))
 			})
@@ -105,18 +105,7 @@ var _ bool = Describe("Reading a Key", func() {
 				d.commitValuePairsAtHeight(1, "contract", key, "bar")
 				d.commitValuePairsAtHeight(2, "contract", key, "foo")
 
-				_, err := d.readSingleKeyFromHistory(1, "contract", key)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-		When("Reading in the far future", func() {
-			It("fails", func() {
-				key := "foo"
-
-				d := newStateStorageDriver(1)
-				d.commitValuePairsAtHeight(1, "contract", key, "bar")
-
-				_, err := d.readSingleKeyFromHistory(100, "contract", key)
+				_, err := d.readSingleKeyFromRevision(1, "contract", key)
 				Expect(err).To(HaveOccurred())
 			})
 		})

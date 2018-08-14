@@ -60,10 +60,10 @@ var _ = Describe("Commit a State Diff", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.NextDesiredBlockHeight).To(BeEquivalentTo(3))
 
-				output, err := d.readSingleKeyFromHistory(2, "contract1", "key1")
+				output, err := d.readSingleKeyFromRevision(2, "contract1", "key1")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(output).To(BeEquivalentTo(v2))
-				output2, err := d.readSingleKeyFromHistory(2, "contract1", "key3")
+				output2, err := d.readSingleKeyFromRevision(2, "contract1", "key3")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(output2).To(BeEquivalentTo([]byte{}))
 			})

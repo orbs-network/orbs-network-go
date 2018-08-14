@@ -29,7 +29,7 @@ func aValidationContextWithTransactionsInPools(transactionsInPendingPool transac
 		expiryWindow:                expirationWindowInterval,
 		lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
 		futureTimestampGrace:        futureTimestampGrace,
-		virtualChainId:              primitives.VirtualChainId(42),
+		virtualChainId:              builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 		transactionInPendingPool:    isTxInPendingPool,
 	}
 }

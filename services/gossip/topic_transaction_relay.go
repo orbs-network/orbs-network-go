@@ -25,8 +25,9 @@ func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTr
 		RecipientMode:    gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	payloads := make([][]byte, 0, 1+len(input.Message.SignedTransactions))
+	payloads := make([][]byte, 0, 2+len(input.Message.SignedTransactions))
 	payloads = append(payloads, header.Raw())
+	payloads = append(payloads, input.Message.Sender.Raw())
 	for _, tx := range input.Message.SignedTransactions {
 		payloads = append(payloads, tx.Raw())
 	}
@@ -39,8 +40,10 @@ func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTr
 }
 
 func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, payloads [][]byte) {
-	txs := make([]*protocol.SignedTransaction, 0, len(payloads))
-	for _, payload := range payloads {
+	txs := make([]*protocol.SignedTransaction, 0, len(payloads)-1)
+	senderSignature := gossipmessages.SenderSignatureReader(payloads[0])
+
+	for _, payload := range payloads[1:] {
 		tx := protocol.SignedTransactionReader(payload)
 		txs = append(txs, tx)
 	}
@@ -48,6 +51,7 @@ func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, p
 	for _, l := range s.transactionHandlers {
 		l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 			Message: &gossipmessages.ForwardedTransactionsMessage{
+				Sender:             senderSignature,
 				SignedTransactions: txs,
 			},
 		})
