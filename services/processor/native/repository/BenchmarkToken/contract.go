@@ -46,8 +46,8 @@ var METHOD_TRANSFER = types.MethodInfo{
 }
 
 func (c *contract) transfer(ctx types.Context, amount uint64) error {
-	if amount <= 0 {
-		return fmt.Errorf("cannot transfer negative or zero amount: %d", amount)
+	if amount > 1000 {
+		return fmt.Errorf("cannot transfer amounts above 1000: %d", amount)
 	}
 	balance, err := c.State.ReadUint64ByKey(ctx, "total-balance")
 	if err != nil {

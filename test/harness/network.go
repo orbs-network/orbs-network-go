@@ -33,6 +33,7 @@ func WithAlgos(algos ...consensus.ConsensusAlgoType) []consensus.ConsensusAlgoTy
 
 type AcceptanceTestNetwork interface {
 	Description() string
+	DeployBenchmarkToken()
 	GossipTransport() gossipAdapter.TamperingTransport
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
@@ -119,6 +120,13 @@ func (n *acceptanceTestNetwork) BlockPersistence(nodeIndex int) blockStorageAdap
 	return n.nodes[nodeIndex].blockPersistence
 }
 
+func (n *acceptanceTestNetwork) DeployBenchmarkToken() {
+	n.SendTransfer(0, 0) // deploy BenchmarkToken by running an empty transaction
+	for i, _ := range n.nodes {
+		n.BlockPersistence(i).WaitForBlocks(1)
+	}
+}
+
 func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
@@ -130,7 +138,7 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 			ClientRequest: request,
 		})
 		if err != nil {
-			// TODO: handle error
+			panic(fmt.Sprintf("error in transfer: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
 	}()
@@ -148,7 +156,7 @@ func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.
 			ClientRequest: request,
 		})
 		if err != nil {
-			// TODO: handle error
+			panic(fmt.Sprintf("error in invalid transfer: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
 	}()
@@ -169,7 +177,7 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 			ClientRequest: request,
 		})
 		if err != nil {
-			// TODO: handle error
+			panic(fmt.Sprintf("error in get balance: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()

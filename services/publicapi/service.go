@@ -49,8 +49,7 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 		Transaction: input.ClientRequest.Transaction(),
 	})
 	if err != nil {
-		//TODO: Return graceful output on error
-		return nil, nil
+		return nil, err
 	}
 	var oa []*protocol.MethodArgumentBuilder
 	for _, arg := range rlm.OutputArguments {

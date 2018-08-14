@@ -85,7 +85,12 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
+			response := callMethod(m).ClientResponse.OutputArgumentsIterator()
+			if response.HasNext() {
+				return response.NextOutputArguments().Uint64Value()
+			} else {
+				return 0
+			}
 		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {

@@ -12,6 +12,8 @@ import (
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
+		network.DeployBenchmarkToken()
+
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 
 		network.SendTransfer(0, 17)
@@ -33,6 +35,8 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+
+		network.DeployBenchmarkToken()
 
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 

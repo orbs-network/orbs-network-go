@@ -46,7 +46,11 @@ var METHOD_IS_SERVICE_DEPLOYED_READ_ONLY = types.MethodInfo{
 }
 
 func (c *contract) isServiceDeployedReadOnly(ctx types.Context, serviceName string) (uint32, error) {
-	return c.State.ReadUint32ByKey(ctx, serviceName+".Processor")
+	processorType, err := c.State.ReadUint32ByKey(ctx, serviceName+".Processor")
+	if err == nil && processorType == 0 {
+		err = errors.New("service not deployed")
+	}
+	return processorType, err
 }
 
 ///////////////////////////////////////////////////////////////////////////
