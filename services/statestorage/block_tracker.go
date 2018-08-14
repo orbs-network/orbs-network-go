@@ -39,7 +39,7 @@ func (t *BlockTracker) IncrementHeight() {
 	close(prevLatch)
 }
 
-func (t *BlockTracker) getCurrentHeightAndLatchAtomic() (uint64, chan struct{}) {
+func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
@@ -49,7 +49,7 @@ func (t *BlockTracker) getCurrentHeightAndLatchAtomic() (uint64, chan struct{}) 
 func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) error {
 
 	rh := uint64(requestedHeight)
-	ch, cl := t.getCurrentHeightAndLatchAtomic()
+	ch, cl := t.readAtomicHeightAndLatch()
 
 	if ch >= rh { // requested block already committed
 		return nil
@@ -62,12 +62,13 @@ func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) erro
 	timer := time.NewTimer(t.timeout)
 	defer timer.Stop()
 
-	for ; ch < rh; ch, cl = t.getCurrentHeightAndLatchAtomic() { // sit on latch until desired height or t.o.
+	for ch < rh { // sit on latch until desired height or t.o.
 		t.notifyEnterSelectForTests()
 		select {
 		case <-timer.C:
 			return errors.Errorf("timed out waiting for block at height %v", requestedHeight)
 		case <-cl:
+			ch, cl = t.readAtomicHeightAndLatch()
 		}
 	}
 	return nil
