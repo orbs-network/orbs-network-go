@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
@@ -9,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"testing"
 )
 
 type harness struct {
@@ -63,18 +63,9 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) verifyHandlerRegistrations(t *testing.T) {
-	for key, processor := range h.processors {
-		ok, err := processor.Verify()
-		if !ok {
-			t.Fatal("Did not register with processor", key.String(), ":", err)
-		}
-	}
-}
-
-func (h *harness) handleSdkCall(contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
 	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:      0,
+		ContextId:      contextId,
 		ContractName:   contractName,
 		MethodName:     methodName,
 		InputArguments: builders.MethodArguments(args...),
@@ -83,4 +74,57 @@ func (h *harness) handleSdkCall(contractName primitives.ContractName, methodName
 		return nil, err
 	}
 	return output.OutputArguments, nil
+}
+
+func (h *harness) runLocalMethod(contractName primitives.ContractName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
+	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
+		BlockHeight: 0,
+		Transaction: (&protocol.TransactionBuilder{
+			Signer:         nil,
+			ContractName:   contractName,
+			MethodName:     "exampleMethod",
+			InputArguments: []*protocol.MethodArgumentBuilder{},
+		}).Build(),
+	})
+	return output.CallResult, output.ReferenceBlockHeight, err
+}
+
+type keyValuePair struct {
+	key   primitives.Ripmd160Sha256
+	value []byte
+}
+
+func (h *harness) processTransactionSet(contractNames []primitives.ContractName) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
+	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
+
+	transactions := []*protocol.SignedTransaction{}
+	for _, contractName := range contractNames {
+		resultKeyValuePairsPerContract[contractName] = []*keyValuePair{}
+		tx := builders.Transaction().WithMethod(contractName, "exampleMethod").Build()
+		transactions = append(transactions, tx)
+	}
+
+	output, _ := h.service.ProcessTransactionSet(&services.ProcessTransactionSetInput{
+		BlockHeight:        12,
+		SignedTransactions: transactions,
+	})
+
+	results := []protocol.ExecutionResult{}
+	for _, transactionReceipt := range output.TransactionReceipts {
+		result := transactionReceipt.ExecutionResult()
+		results = append(results, result)
+	}
+
+	for _, contractStateDiffs := range output.ContractStateDiffs {
+		contractName := contractStateDiffs.ContractName()
+		if _, found := resultKeyValuePairsPerContract[contractName]; !found {
+			panic(fmt.Sprintf("unexpected contract %s", contractStateDiffs.ContractName()))
+		}
+		for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
+			sd := i.NextStateDiffs()
+			resultKeyValuePairsPerContract[contractName] = append(resultKeyValuePairsPerContract[contractName], &keyValuePair{sd.Key(), sd.Value()})
+		}
+	}
+
+	return results, resultKeyValuePairsPerContract
 }

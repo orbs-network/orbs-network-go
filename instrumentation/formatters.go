@@ -80,7 +80,11 @@ func printParam(builder *strings.Builder, param *Field) {
 	case FloatType:
 		value = strconv.FormatFloat(param.Float, 'f', 24, -1)
 	case ErrorType:
-		value = param.Error.Error()
+		if param.Error != nil {
+			value = param.Error.Error()
+		} else {
+			value = "<nil>"
+		}
 	}
 
 	builder.WriteString(param.Key)
