@@ -9,24 +9,26 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 type driver struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter adapter.InMemoryBlockPersistence
 	blockStorage   services.BlockStorage
+	t              *testing.T
 }
 
 func (d *driver) expectCommitStateDiff() {
 	csdOut := &services.CommitStateDiffOutput{}
 
 	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(1)
-
 }
 
 func (d *driver) verifyMocks() {
 	_, err := d.stateStorage.Verify()
-	Expect(err).ToNot(HaveOccurred())
+	require.NoError(d.t, err)
 }
 
 func (d *driver) commitBlock(blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
@@ -41,7 +43,13 @@ func (d *driver) numOfWrittenBlocks() int {
 
 func (d *driver) getLastBlockHeight() *services.GetLastCommittedBlockHeightOutput {
 	out, err := d.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
-	Expect(err).ToNot(HaveOccurred())
+
+	//FIXME: get rid of Gingko
+	if d.t == nil {
+		Expect(err).ToNot(HaveOccurred())
+	} else {
+		require.NoError(d.t, err)
+	}
 	return out
 }
 
