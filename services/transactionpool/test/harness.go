@@ -88,20 +88,6 @@ func (h *harness) verifyMocks() error {
 	return nil
 }
 
-func (h *harness) failPreOrderCheckFor(transaction *protocol.SignedTransaction, status protocol.TransactionStatus) {
-	h.vm.When("TransactionSetPreOrder", mock.AnyIf("input with expected transaction",
-		func(i interface{}) bool {
-			if input, ok := i.(*services.TransactionSetPreOrderInput); !ok {
-				panic("mock virtual machine invoked with bad input")
-			} else if len(input.SignedTransactions) != 1 { // TODO if we need to support more than one transaction, generalize and refactor
-				return false
-			} else {
-				return input.SignedTransactions[0].Equal(transaction)
-			}
-
-		})).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{status}}).Times(1)
-}
-
 func (h *harness) handleForwardFrom(sender primitives.Ed25519PublicKey, transactions ...*protocol.SignedTransaction) {
 	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
@@ -131,6 +117,28 @@ func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*serv
 	return h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{MaxNumberOfTransactions: maxNumOfTransactions, MaxTransactionsSetSizeKb: 1024})
 }
 
+func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
+	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
+		for i, tx := range input.SignedTransactions {
+			if failOn(tx) {
+				statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+			} else {
+				statuses[i] = protocol.TRANSACTION_STATUS_PENDING
+			}
+		}
+		return &services.TransactionSetPreOrderOutput{
+			PreOrderResults: statuses,
+		}, nil
+	})
+}
+
+func (h *harness) passAllPreOrderChecks() {
+	h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
+		return false
+	})
+}
+
 func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
@@ -140,7 +148,6 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
-	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PENDING}})
 
 	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
 	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())
@@ -148,12 +155,16 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
 
-	return &harness{
+	h := &harness{
 		txpool: service,
 		gossip: gossip,
 		vm:     virtualMachine,
 		trh:    transactionResultHandler,
 	}
+
+	h.passAllPreOrderChecks()
+
+	return h
 }
 
 func asReceipts(transactions []*protocol.SignedTransaction) []*protocol.TransactionReceipt {

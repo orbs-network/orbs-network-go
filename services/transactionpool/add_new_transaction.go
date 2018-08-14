@@ -69,6 +69,7 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 	//TODO handle error from vm call
 	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
 		SignedTransactions: transactions{transaction},
+		//TODO send block height
 	})
 
 	if len(preOrderCheckResults.PreOrderResults) != 1 {

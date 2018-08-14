@@ -38,9 +38,10 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 	t.Parallel()
 	h := newHarness()
 	tx := builders.TransferTransaction().Build()
-	expectedStatus := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+	h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
+		return t == tx
+	})
 
-	h.failPreOrderCheckFor(tx, expectedStatus)
 	h.ignoringForwardMessages()
 
 	out, err := h.addNewTransaction(tx)
@@ -52,7 +53,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 	require.IsType(t, &transactionpool.ErrTransactionRejected{}, err, "error was not of the expected type")
 
 	typedError := err.(*transactionpool.ErrTransactionRejected)
-	require.Equal(t, expectedStatus, typedError.TransactionStatus, "error did not contain expected transaction status")
+	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER, typedError.TransactionStatus, "error did not contain expected transaction status")
 
 	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 

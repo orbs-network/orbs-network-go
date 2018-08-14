@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-//TODO does not include expired transactions
 //TODO blocks and waits for grace (use blocktracker?)
 //TODO fails for block too far away
 //TODO does not return already committed transactions
 
 func TestGetTransactionsForOrderingReturnsAFIFOTransactionSet(t *testing.T) {
+	t.Parallel()
 	h := newHarness()
 	h.ignoringForwardMessages()
 
@@ -32,6 +32,7 @@ func TestGetTransactionsForOrderingReturnsAFIFOTransactionSet(t *testing.T) {
 }
 
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
+	t.Parallel()
 	h := newHarness()
 
 	validTx := builders.TransferTransaction().Build()
@@ -44,5 +45,28 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 
 	require.NoError(t, err, "expected transaction set but got an error")
 	require.Equal(t, []*protocol.SignedTransaction{validTx}, txSet.SignedTransactions, "got an expired transaction")
-
 }
+
+
+func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t *testing.T) {
+	t.Parallel()
+	h := newHarness()
+	h.ignoringForwardMessages()
+
+	tx1 := builders.TransferTransaction().Build()
+	tx2 := builders.TransferTransaction().Build()
+	tx3 := builders.TransferTransaction().Build()
+	tx4 := builders.TransferTransaction().Build()
+
+	h.addTransactions(tx1, tx2, tx3, tx4)
+
+	h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
+		return tx == tx1 || tx == tx3
+	});
+
+	txSet, err := h.getTransactionsForOrdering(4)
+
+	require.NoError(t, err, "expected transaction set but got an error")
+	require.ElementsMatch(t, []*protocol.SignedTransaction{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
+}
+
