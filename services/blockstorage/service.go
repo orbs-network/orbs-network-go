@@ -196,12 +196,14 @@ func (s *service) createEmptyTransactionReceiptResult() *services.GetTransaction
 }
 
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
-	start := input.TransactionTimestamp - primitives.TimestampNano(s.config.BlockTransactionReceiptQueryStartGraceSec().Nanoseconds())
-	end := input.TransactionTimestamp + primitives.TimestampNano((s.config.BlockTransactionReceiptQueryEndGraceSec() + s.config.BlockTransactionReceiptQueryTransactionExpireSec()).Nanoseconds())
-
-	blocksToSearch := s.persistence.GetBlocksByTimeRange(start, end)
+	searchRules := adapter.BlockSearchRules{
+		EndGraceNano:          s.config.BlockTransactionReceiptQueryEndGraceSec().Nanoseconds(),
+		StartGraceNano:        s.config.BlockTransactionReceiptQueryStartGraceSec().Nanoseconds(),
+		TransactionExpireNano: s.config.BlockTransactionReceiptQueryTransactionExpireSec().Nanoseconds(),
+	}
+	blocksToSearch := s.persistence.GetReceiptRelevantBlocks(input.TransactionTimestamp, searchRules)
 	if blocksToSearch == nil {
-		return nil, errors.Errorf("failed to search for blocks from %d to %d", start, end)
+		return nil, errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
 	}
 
 	if len(blocksToSearch) == 0 {

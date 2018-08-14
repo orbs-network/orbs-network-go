@@ -5,10 +5,16 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
+type BlockSearchRules struct {
+	StartGraceNano        int64
+	EndGraceNano          int64
+	TransactionExpireNano int64
+}
+
 type BlockPersistence interface {
 	WriteBlock(blockPairs *protocol.BlockPairContainer) error
 	ReadAllBlocks() []*protocol.BlockPairContainer
-	GetBlocksByTimeRange(start, end primitives.TimestampNano) []*protocol.BlockPairContainer
+	GetReceiptRelevantBlocks(txTimeStamp primitives.TimestampNano, rules BlockSearchRules) []*protocol.BlockPairContainer
 	GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error)
 	GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error)
 }
