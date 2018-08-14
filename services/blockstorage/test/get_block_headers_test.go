@@ -18,9 +18,9 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 	output, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: 1})
 
 	require.NoError(t, err)
-	require.EqualValues(t, output.TransactionsBlockHeader, block.TransactionsBlock.Header)
-	require.EqualValues(t, output.TransactionsBlockMetadata, block.TransactionsBlock.Metadata)
-	require.EqualValues(t, output.TransactionsBlockProof, block.TransactionsBlock.BlockProof)
+	require.EqualValues(t, block.TransactionsBlock.Header, output.TransactionsBlockHeader)
+	require.EqualValues(t, block.TransactionsBlock.Metadata, output.TransactionsBlockMetadata)
+	require.EqualValues(t, block.TransactionsBlock.BlockProof, output.TransactionsBlockProof)
 }
 
 // FIXME time out
@@ -43,10 +43,10 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 		driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 	}
 
-	require.EqualValues(t, driver.getLastBlockHeight().LastCommittedBlockHeight, blockHeightInTheFuture+1)
+	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight)
 
 	output := <-result
-	require.EqualValues(t, output.TransactionsBlockHeader.BlockHeight(), blockHeightInTheFuture)
+	require.EqualValues(t, blockHeightInTheFuture, output.TransactionsBlockHeader.BlockHeight())
 }
 
 func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
@@ -82,8 +82,8 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 	output, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: 1})
 
 	require.NoError(t, err)
-	require.EqualValues(t, output.ResultsBlockHeader, block.ResultsBlock.Header)
-	require.EqualValues(t, output.ResultsBlockProof, block.ResultsBlock.BlockProof)
+	require.EqualValues(t, block.ResultsBlock.Header, output.ResultsBlockHeader)
+	require.EqualValues(t, block.ResultsBlock.BlockProof, output.ResultsBlockProof)
 }
 
 // FIXME time out
@@ -106,11 +106,11 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 		driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 	}
 
-	require.EqualValues(t, driver.getLastBlockHeight().LastCommittedBlockHeight, blockHeightInTheFuture+1)
+	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight)
 
 	output := <-result
 
-	require.EqualValues(t, output.ResultsBlockHeader.BlockHeight(), blockHeightInTheFuture)
+	require.EqualValues(t, blockHeightInTheFuture, output.ResultsBlockHeader.BlockHeight())
 }
 
 func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {

@@ -24,8 +24,8 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Nil(t, out.TransactionReceipt)
-	require.EqualValues(t, out.BlockHeight, 1)
-	require.EqualValues(t, out.BlockTimestamp, block.ResultsBlock.Header.Timestamp())
+	require.EqualValues(t, 1, out.BlockHeight)
+	require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp)
 }
 
 // TODO return transaction receipt while the transaction timestamp is in the future (and too far ahead to be in the grace
@@ -53,9 +53,9 @@ func TestReturnTransactionReceipt(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, out.TransactionReceipt)
-	require.EqualValues(t, out.TransactionReceipt.Txhash(), txHash)
-	require.EqualValues(t, out.BlockHeight, 1)
-	require.EqualValues(t, out.BlockTimestamp, block.ResultsBlock.Header.Timestamp())
+	require.EqualValues(t, txHash, out.TransactionReceipt.Txhash())
+	require.EqualValues(t, 1, out.BlockHeight)
+	require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp)
 }
 
 // TODO return transaction receipt while the transaction timestamp is outside the grace (regular)

@@ -19,14 +19,14 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 	_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
 
 	require.NoError(t, err)
-	require.EqualValues(t, driver.numOfWrittenBlocks(), 1)
+	require.EqualValues(t, 1, driver.numOfWrittenBlocks())
 
 	driver.verifyMocks()
 
 	lastCommittedBlockHeight := driver.getLastBlockHeight()
 
-	require.EqualValues(t, lastCommittedBlockHeight.LastCommittedBlockHeight, primitives.BlockHeight(blockHeight))
-	require.EqualValues(t, lastCommittedBlockHeight.LastCommittedBlockTimestamp, primitives.TimestampNano(blockCreated.UnixNano()))
+	require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight)
+	require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp)
 
 	// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
 }
@@ -40,7 +40,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 	blockHeight := primitives.BlockHeight(1)
 
 	driver.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
-	require.EqualValues(t, driver.numOfWrittenBlocks(), 1)
+	require.EqualValues(t, 1, driver.numOfWrittenBlocks())
 
 	driver.failNextBlocks()
 	driver.expectCommitStateDiff() // TODO: this line should be removed, it's added here due to convoluted sync mechanism in acceptance test where we wait until block is written to block persistence where instead we need to wait on block written to state persistence
@@ -52,8 +52,8 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 
 	lastCommittedBlockHeight := driver.getLastBlockHeight()
 
-	require.EqualValues(t, lastCommittedBlockHeight.LastCommittedBlockHeight, blockHeight)
-	require.EqualValues(t, lastCommittedBlockHeight.LastCommittedBlockTimestamp, blockCreated.UnixNano())
+	require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight)
+	require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp)
 }
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
@@ -76,7 +76,7 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 
 	require.NoError(t, err)
 
-	require.EqualValues(t, driver.numOfWrittenBlocks(), 1)
+	require.EqualValues(t, 1, driver.numOfWrittenBlocks())
 	driver.verifyMocks()
 }
 
