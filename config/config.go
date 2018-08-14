@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"time"
 )
 
 type NodeConfig interface {
@@ -10,13 +11,25 @@ type NodeConfig interface {
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	QueryGraceTimeoutMillis() uint64
 
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 
 	// benchmark consensus
-	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
+	BenchmarkConsensusRoundRetryIntervalMillis() uint32
+
+	// block storage
+	BlockSyncCommitTimeoutMillis() time.Duration
+
+	// state storage
+	StateHistoryRetentionInBlockHeights() uint64
+	QuerySyncGraceBlockDist() uint64
+
+	// consensus context
+	BelowMinimalBlockDelayMillis() uint32
+	MinimumTransactionsInBlock() int
 }
 
 type FederationNode interface {

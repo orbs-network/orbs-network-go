@@ -25,7 +25,7 @@ func (m *mockListener) expectReceive(payloads [][]byte) {
 }
 
 func (m *mockListener) expectNotReceive() {
-	m.WhenOnTransportMessageReceived(mock.Any).Return().Times(0)
+	m.Never("OnTransportMessageReceived", mock.Any)
 }
 
 func (m *mockListener) WhenOnTransportMessageReceived(arg interface{}) *mock.MockFunction {

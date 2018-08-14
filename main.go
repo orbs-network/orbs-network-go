@@ -38,9 +38,15 @@ func main() {
 		nodePublicKey,
 		nodePrivateKey,
 		federationNodes,
+		70,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		2*1000,
 		gossipTransport,
+		5,
+		3,
+		300,
+		300,
+		2,
 	).WaitUntilShutdown()
 }

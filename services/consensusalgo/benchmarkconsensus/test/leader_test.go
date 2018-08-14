@@ -16,6 +16,7 @@ func newLeaderHarnessWaitingForCommittedMessages(t *testing.T, ctx context.Conte
 }
 
 func TestLeaderInit(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
@@ -25,6 +26,7 @@ func TestLeaderInit(t *testing.T) {
 }
 
 func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
@@ -51,6 +53,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 }
 
 func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
@@ -75,6 +78,7 @@ func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 }
 
 func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
@@ -101,6 +105,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 }
 
 func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
@@ -117,6 +122,7 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 }
 
 func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
@@ -133,6 +139,7 @@ func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
 }
 
 func TestLeaderIgnoresOldConfirmations(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
@@ -158,6 +165,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 }
 
 func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 

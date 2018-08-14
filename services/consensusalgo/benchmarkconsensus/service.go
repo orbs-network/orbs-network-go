@@ -23,7 +23,7 @@ type Config interface {
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	BenchmarkConsensusRoundRetryIntervalMillisec() uint32
+	BenchmarkConsensusRoundRetryIntervalMillis() uint32
 }
 
 type service struct {
@@ -56,7 +56,7 @@ func NewBenchmarkConsensusAlgo(
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		reporting:        reporting.For(instrumentation.String("consensus-algo", "benchmark")),
+		reporting:        reporting.For(instrumentation.Service("consensus-algo-benchmark")),
 		config:           config,
 
 		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
@@ -79,17 +79,10 @@ func NewBenchmarkConsensusAlgo(
 }
 
 func (s *service) HandleBlockConsensus(input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-	if input.BlockPair == nil || input.PrevCommittedBlockPair == nil {
-		panic("HandleBlockConsensus received corrupt args")
-	}
-	err := s.handleBlockConsensusFromHandler(input.BlockType, input.BlockPair, input.PrevCommittedBlockPair)
-	return nil, err
+	return nil, s.handleBlockConsensusFromHandler(input.BlockType, input.BlockPair, input.PrevCommittedBlockPair)
 }
 
 func (s *service) HandleBenchmarkConsensusCommit(input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
-	if input.Message == nil || input.Message.BlockPair == nil {
-		panic("HandleBenchmarkConsensusCommit received corrupt args")
-	}
 	if !s.isLeader {
 		s.nonLeaderHandleCommit(input.Message.BlockPair)
 	}
@@ -97,9 +90,6 @@ func (s *service) HandleBenchmarkConsensusCommit(input *gossiptopics.BenchmarkCo
 }
 
 func (s *service) HandleBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
-	if input.Message == nil || input.Message.Sender == nil || input.Message.Status == nil {
-		panic("HandleBenchmarkConsensusCommitted received corrupt args")
-	}
 	if s.isLeader {
 		s.leaderHandleCommittedVote(input.Message.Sender, input.Message.Status)
 	}
