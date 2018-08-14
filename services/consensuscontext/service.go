@@ -39,7 +39,7 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 	}
 
 	// TODO: add reporting mechanism to this service and convert this print to it
-	fmt.Printf("created Transactions block: %s\n", txBlock.String())
+	fmt.Printf("created Transactions block num-transactions=%d block=%s\n", len(txBlock.SignedTransactions), txBlock.String())
 
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
