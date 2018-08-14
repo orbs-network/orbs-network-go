@@ -45,7 +45,7 @@ type transactionPoolConfig struct {
 	*identity
 	pendingPoolSizeInBytes               uint32
 	transactionExpirationWindowInSeconds uint32
-	futureTimestampGraceInSeconds		 uint32
+	futureTimestampGraceInSeconds        uint32
 }
 
 type hardCodedFederationNode struct {
@@ -110,9 +110,9 @@ func NewHardCodedConfig(
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
 		transactionPoolConfig: &transactionPoolConfig{
-			pendingPoolSizeInBytes: 20 * 1024 * 1024,
+			pendingPoolSizeInBytes:               20 * 1024 * 1024,
 			transactionExpirationWindowInSeconds: 1800,
-			futureTimestampGraceInSeconds: 180,
+			futureTimestampGraceInSeconds:        180,
 		},
 	}
 }
@@ -153,10 +153,10 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindowInSeconds uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
 	return &transactionPoolConfig{
 		identity: &identity{
-			nodePublicKey: nodePublicKey,
+			nodePublicKey:  nodePublicKey,
 			virtualChainId: 42,
 		},
-		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
+		pendingPoolSizeInBytes:               pendingPoolSizeInBytes,
 		transactionExpirationWindowInSeconds: transactionExpirationWindowInSeconds,
 	}
 }

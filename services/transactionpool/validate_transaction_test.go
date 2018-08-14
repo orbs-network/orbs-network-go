@@ -61,4 +61,3 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 		})
 	}
 }
-

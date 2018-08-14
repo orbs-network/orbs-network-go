@@ -36,7 +36,7 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	h := newHarness()
 
 	validTx := builders.TransferTransaction().Build()
-	expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(transactionExpirationWindowInSeconds + 60) * time.Second)).Build()
+	expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(transactionExpirationWindowInSeconds+60) * time.Second)).Build()
 
 	// we use forward rather than add to simulate a scenario where a byzantine node submitted invalid transactions
 	h.handleForwardFrom(otherNodeKeyPair.PublicKey(), validTx, expiredTx)
@@ -46,7 +46,6 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	require.NoError(t, err, "expected transaction set but got an error")
 	require.Equal(t, []*protocol.SignedTransaction{validTx}, txSet.SignedTransactions, "got an expired transaction")
 }
-
 
 func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t *testing.T) {
 	t.Parallel()
@@ -62,11 +61,10 @@ func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t 
 
 	h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
 		return tx == tx1 || tx == tx3
-	});
+	})
 
 	txSet, err := h.getTransactionsForOrdering(4)
 
 	require.NoError(t, err, "expected transaction set but got an error")
 	require.ElementsMatch(t, []*protocol.SignedTransaction{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
 }
-
