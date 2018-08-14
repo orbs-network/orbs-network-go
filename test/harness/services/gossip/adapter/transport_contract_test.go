@@ -5,8 +5,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"testing"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestContract_SendBroadcast(t *testing.T) {
