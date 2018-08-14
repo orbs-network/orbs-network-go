@@ -1,149 +1,142 @@
 package test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
-var _ = Describe("Block storage", func() {
-	When("asked to provide transactions block header", func() {
-		It("returns transactions block header", func() {
-			driver := NewDriver()
-			driver.expectCommitStateDiff()
+func TestReturnTransactionBlockHeader(t *testing.T) {
+	driver := NewDriver()
+	driver.t = t
+	driver.expectCommitStateDiff()
 
-			block := builders.BlockPair().Build()
-			driver.commitBlock(block)
+	block := builders.BlockPair().Build()
+	driver.commitBlock(block)
 
-			output, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: 1})
+	output, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: 1})
 
-			Expect(err).ToNot(HaveOccurred())
-			Expect(output.TransactionsBlockHeader).To(Equal(block.TransactionsBlock.Header))
-			Expect(output.TransactionsBlockMetadata).To(Equal(block.TransactionsBlock.Metadata))
-			Expect(output.TransactionsBlockProof).To(Equal(block.TransactionsBlock.BlockProof))
-		})
+	require.NoError(t, err)
+	require.EqualValues(t, output.TransactionsBlockHeader, block.TransactionsBlock.Header)
+	require.EqualValues(t, output.TransactionsBlockMetadata, block.TransactionsBlock.Metadata)
+	require.EqualValues(t, output.TransactionsBlockProof, block.TransactionsBlock.BlockProof)
+}
 
-		It("blocks if requested block is in near future", func(done Done) {
-			driver := NewDriver()
-			driver.expectCommitStateDiff()
+// FIXME time out
+func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
+	driver := NewDriver()
+	driver.t = t
+	driver.expectCommitStateDiff()
 
-			block := builders.BlockPair().Build()
-			driver.commitBlock(block)
+	block := builders.BlockPair().Build()
+	driver.commitBlock(block)
 
-			result := make(chan *services.GetTransactionsBlockHeaderOutput)
-			blockHeightInTheFuture := primitives.BlockHeight(5)
+	result := make(chan *services.GetTransactionsBlockHeaderOutput)
+	blockHeightInTheFuture := primitives.BlockHeight(5)
 
-			go func() {
-				output, _ := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
-				result <- output
-			}()
+	go func() {
+		output, _ := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
+		result <- output
+	}()
 
-			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
-				driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
-			}
+	for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
+		driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+	}
 
-			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(BeEquivalentTo(blockHeightInTheFuture + 1))
+	require.EqualValues(t, driver.getLastBlockHeight().LastCommittedBlockHeight, blockHeightInTheFuture+1)
 
-			output := <-result
-			Expect(output.TransactionsBlockHeader.BlockHeight()).To(Equal(blockHeightInTheFuture))
+	output := <-result
+	require.EqualValues(t, output.TransactionsBlockHeader.BlockHeight(), blockHeightInTheFuture)
+}
 
-			close(done)
-		}, 100)
+func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
+	driver := NewDriver()
+	driver.expectCommitStateDiff()
 
-		It("returns error if operation times out", func(done Done) {
-			driver := NewDriver()
-			driver.expectCommitStateDiff()
+	block := builders.BlockPair().Build()
+	driver.commitBlock(block)
 
-			block := builders.BlockPair().Build()
-			driver.commitBlock(block)
+	timeoutError := make(chan error)
+	blockHeightInTheFuture := primitives.BlockHeight(5)
 
-			timeoutError := make(chan error)
-			blockHeightInTheFuture := primitives.BlockHeight(5)
+	go func() {
+		_, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
+		timeoutError <- err
+	}()
 
-			go func() {
-				_, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
-				timeoutError <- err
-			}()
+	for i := primitives.BlockHeight(2); i <= 4; i++ {
+		driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
+	}
 
-			for i := primitives.BlockHeight(2); i <= 4; i++ {
-				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
-			}
+	err := <-timeoutError
+	require.Error(t, err, "operation timed out")
+}
 
-			err := <-timeoutError
-			Expect(err).To(MatchError("operation timed out"))
+func TestReturnResultsBlockHeader(t *testing.T) {
+	driver := NewDriver()
+	driver.t = t
+	driver.expectCommitStateDiff()
 
-			close(done)
-		}, 100)
-	})
+	block := builders.BlockPair().Build()
+	driver.commitBlock(block)
 
-	When("asked to provide results block header", func() {
-		It("returns results block header", func() {
-			driver := NewDriver()
-			driver.expectCommitStateDiff()
+	output, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: 1})
 
-			block := builders.BlockPair().Build()
-			driver.commitBlock(block)
+	require.NoError(t, err)
+	require.EqualValues(t, output.ResultsBlockHeader, block.ResultsBlock.Header)
+	require.EqualValues(t, output.ResultsBlockProof, block.ResultsBlock.BlockProof)
+}
 
-			output, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: 1})
+// FIXME time out
+func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
+	driver := NewDriver()
+	driver.t = t
+	driver.expectCommitStateDiff()
 
-			Expect(err).ToNot(HaveOccurred())
-			Expect(output.ResultsBlockHeader).To(Equal(block.ResultsBlock.Header))
-			Expect(output.ResultsBlockProof).To(Equal(block.ResultsBlock.BlockProof))
-		})
+	block := builders.BlockPair().Build()
+	driver.commitBlock(block)
 
-		It("blocks if requested block is in near future", func(done Done) {
-			driver := NewDriver()
-			driver.expectCommitStateDiff()
+	result := make(chan *services.GetResultsBlockHeaderOutput)
+	blockHeightInTheFuture := primitives.BlockHeight(5)
 
-			block := builders.BlockPair().Build()
-			driver.commitBlock(block)
+	go func() {
+		output, _ := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
+		result <- output
+	}()
 
-			result := make(chan *services.GetResultsBlockHeaderOutput)
-			blockHeightInTheFuture := primitives.BlockHeight(5)
+	for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
+		driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
+	}
 
-			go func() {
-				output, _ := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
-				result <- output
-			}()
+	require.EqualValues(t, driver.getLastBlockHeight().LastCommittedBlockHeight, blockHeightInTheFuture+1)
 
-			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture+1; i++ {
-				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
-			}
+	output := <-result
 
-			Expect(driver.getLastBlockHeight().LastCommittedBlockHeight).To(Equal(blockHeightInTheFuture + 1))
+	require.EqualValues(t, output.ResultsBlockHeader.BlockHeight(), blockHeightInTheFuture)
+}
 
-			output := <-result
+func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
+	driver := NewDriver()
+	driver.t = t
+	driver.expectCommitStateDiff()
 
-			Expect(output.ResultsBlockHeader.BlockHeight()).To(Equal(blockHeightInTheFuture))
+	block := builders.BlockPair().Build()
+	driver.commitBlock(block)
 
-			close(done)
-		}, 100)
+	timeoutError := make(chan error)
+	blockHeightInTheFuture := primitives.BlockHeight(5)
 
-		It("returns error if operation times out", func(done Done) {
-			driver := NewDriver()
-			driver.expectCommitStateDiff()
+	go func() {
+		_, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
+		timeoutError <- err
+	}()
 
-			block := builders.BlockPair().Build()
-			driver.commitBlock(block)
+	for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture-1; i++ {
+		driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
+	}
 
-			timeoutError := make(chan error)
-			blockHeightInTheFuture := primitives.BlockHeight(5)
-
-			go func() {
-				_, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
-				timeoutError <- err
-			}()
-
-			for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture-1; i++ {
-				driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
-			}
-
-			err := <-timeoutError
-			Expect(err).To(MatchError("operation timed out"))
-
-			close(done)
-		}, 100)
-	})
-})
+	err := <-timeoutError
+	require.Error(t, err, "operation timed out")
+}
