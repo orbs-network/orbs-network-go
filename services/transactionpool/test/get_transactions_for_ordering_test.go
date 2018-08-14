@@ -12,25 +12,6 @@ import (
 //TODO fails for block too far away
 //TODO does not return already committed transactions
 
-func TestGetTransactionsForOrderingReturnsAFIFOTransactionSet(t *testing.T) {
-	t.Parallel()
-	h := newHarness()
-	h.ignoringForwardMessages()
-
-	now := time.Now()
-	tx1 := builders.TransferTransaction().WithTimestamp(now.Add(-3 * time.Second)).Build()
-	tx2 := builders.TransferTransaction().WithTimestamp(now.Add(-2 * time.Second)).Build()
-	tx3 := builders.TransferTransaction().WithTimestamp(now.Add(-4 * time.Second)).Build()
-
-	h.addTransactions(tx1, tx2, tx3)
-
-	txSet, err := h.getTransactionsForOrdering(3)
-
-	require.NoError(t, err, "expected transaction set but got an error")
-	require.Len(t, txSet.SignedTransactions, 3, "expected 3 transactions but got %v transactions: %s", len(txSet.SignedTransactions), txSet)
-	require.Equal(t, []*protocol.SignedTransaction{tx3, tx1, tx2}, txSet.SignedTransactions, "got transaction set in wrong order")
-}
-
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	t.Parallel()
 	h := newHarness()

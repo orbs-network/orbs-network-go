@@ -69,7 +69,7 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
 		expiryWindow:                time.Duration(s.config.TransactionExpirationWindowInSeconds()) * time.Second,
-		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()), //TODO use real time stamp
 		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
 		virtualChainId:              s.config.VirtualChainId(),
 	}
