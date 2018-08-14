@@ -5,13 +5,14 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
+	"sort"
 )
 
 func NewPendingPool(config Config) *pendingTxPool {
 	return &pendingTxPool{
 		config:       config,
 		transactions: make(map[string]*pendingTransaction),
-		lock:         &sync.Mutex{},
+		lock:         &sync.RWMutex{},
 	}
 }
 
@@ -23,14 +24,15 @@ func NewCommittedPool() *committedTxPool {
 }
 
 type pendingTransaction struct {
-	size             uint32
+	sizeInBytes      uint32
 	gatewayPublicKey primitives.Ed25519PublicKey
+	transaction      *protocol.SignedTransaction
 }
 
 type pendingTxPool struct {
 	currentSizeInBytes uint32
 	transactions       map[string]*pendingTransaction
-	lock               *sync.Mutex
+	lock               *sync.RWMutex
 
 	config Config
 }
@@ -46,13 +48,17 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	}
 
 	p.currentSizeInBytes += size
-	p.transactions[key.KeyForMap()] = &pendingTransaction{size: size, gatewayPublicKey: gatewayPublicKey}
+	p.transactions[key.KeyForMap()] = &pendingTransaction{
+		transaction:      transaction,
+		sizeInBytes:      size,
+		gatewayPublicKey: gatewayPublicKey,
+	}
 	return key, nil
 }
 
 func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
 	_, ok := p.transactions[key]
 	return ok
@@ -64,11 +70,27 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256) *pendingTransaction {
 	pendingTx, ok := p.transactions[txhash.KeyForMap()]
 	if ok {
 		delete(p.transactions, txhash.KeyForMap())
-		p.currentSizeInBytes -= pendingTx.size
+		p.currentSizeInBytes -= pendingTx.sizeInBytes
 		return pendingTx
 	}
 
 	return nil
+}
+
+func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32) []*protocol.SignedTransaction {
+	txs := make([]*protocol.SignedTransaction, 0, maxNumOfTransactions)
+	for _, tx := range p.transactions {
+		txs = append(txs, tx.transaction)
+		if uint32(len(txs)) == maxNumOfTransactions {
+			break
+		}
+	}
+
+	sort.Slice(txs, func(i, j int) bool {
+		return txs[i].Transaction().Timestamp() < txs[j].Transaction().Timestamp()
+	})
+
+	return txs
 }
 
 type committedTxPool struct {

@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
 type Config interface {
@@ -16,11 +16,10 @@ type Config interface {
 }
 
 type service struct {
-	pendingTransactions        chan *protocol.SignedTransaction
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
 	transactionResultsHandlers []handlers.TransactionResultsHandler
-	reporting                  instrumentation.BasicLogger
+	log                        instrumentation.BasicLogger
 	config                     Config
 
 	lastCommittedBlockHeight primitives.BlockHeight
@@ -30,11 +29,10 @@ type service struct {
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
 	s := &service{
-		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
-		gossip:              gossip,
-		virtualMachine:      virtualMachine,
-		config:              config,
-		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
+		gossip:         gossip,
+		virtualMachine: virtualMachine,
+		config:         config,
+		log:            reporting.For(instrumentation.Service("transaction-pool")),
 
 		pendingPool:   NewPendingPool(config),
 		committedPool: NewCommittedPool(),
@@ -44,19 +42,15 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 }
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
-	timeout := time.After(100 * time.Millisecond)
 	out := &services.GetTransactionsForOrderingOutput{}
-	for {
-		select {
-		case <-timeout:
-			return out, nil
-		case tx := <-s.pendingTransactions:
-			out.SignedTransactions = append(out.SignedTransactions, tx)
-			if uint32(len(out.SignedTransactions)) == input.MaxNumberOfTransactions {
-				return out, nil
-			}
-		}
+	out.SignedTransactions = s.pendingPool.getBatch(input.MaxNumberOfTransactions)
+
+	//TODO remove the following as soon as block storage can call CommitTransactionReceipts
+	for _, tx := range out.SignedTransactions {
+		s.pendingPool.remove(digest.CalcTxHash(tx.Transaction()))
 	}
+	// END OF THROWAWAY CODE
+
 	return out, nil
 }
 
@@ -76,9 +70,8 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 	//TODO verify message signature
 	for _, tx := range input.Message.SignedTransactions {
-		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err == nil {
-			//TODO this channel needs to go
-			s.pendingTransactions <- tx
+		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err != nil {
+			s.log.Error("error adding forwarded transaction to pending pool", instrumentation.Error(err), instrumentation.Stringable("transaction", tx))
 		}
 	}
 	return nil, nil

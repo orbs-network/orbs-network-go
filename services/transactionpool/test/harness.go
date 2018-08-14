@@ -56,6 +56,12 @@ func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) (*services.A
 	return out, err
 }
 
+func (h *harness) addTransactions(txs... *protocol.SignedTransaction) {
+	for _, tx := range txs {
+		h.addNewTransaction(tx)
+	}
+}
+
 func (h *harness) reportTransactionsAsCommitted(transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
 	return h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
 		LastCommittedBlockHeight: h.lastBlockHeight,

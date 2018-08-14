@@ -23,12 +23,12 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	}
 	err := validateTransaction(input.SignedTransaction, vctx)
 	if err != nil {
-		s.reporting.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
+		s.log.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
 		return s.anEmptyReceipt(), err
 	}
 
 	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
-		s.reporting.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
+		s.log.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
 		return &services.AddNewTransactionOutput{
 			TransactionReceipt: alreadyCommitted.receipt,
 			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED,
@@ -40,13 +40,12 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return s.anEmptyReceipt(), err
 	}
 
-	s.reporting.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
+	s.log.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
 	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodePublicKey()); err != nil {
+		s.log.Error("error adding transaction to pending pool", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
 		return nil, err
 
 	}
-	s.pendingTransactions <- input.SignedTransaction //TODO remove this
-
 	//TODO batch
 	s.forwardTransaction(input.SignedTransaction)
 
