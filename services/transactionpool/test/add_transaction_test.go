@@ -51,7 +51,6 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 	h.goToBlock(blockHeight, blockTime)
 
 	out, err := h.addNewTransaction(tx)
-	//TODO assert block height and timestamp from empty receipt as per spec
 
 	require.NotNil(t, out, "output must not be nil even on errors")
 	require.Equal(t, blockHeight, out.BlockHeight)

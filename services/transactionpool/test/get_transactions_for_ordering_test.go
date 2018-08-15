@@ -9,9 +9,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-//TODO blocks and waits for grace (use blocktracker?)
-//TODO fails for block too far away
-
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	t.Parallel()
 	h := newHarness()

@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"time"
+	"log"
 )
 
 type harness struct {
@@ -121,6 +122,9 @@ func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*serv
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+		if input.BlockHeight != h.lastBlockHeight {
+			log.Panicf("expected block height %v, got %v", h.lastBlockHeight, input.BlockHeight)
+		}
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 		for i, tx := range input.SignedTransactions {
 			if failOn(tx) {
@@ -150,6 +154,7 @@ func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.
 		})
 		currentBlock = out.NextDesiredBlockHeight
 	}
+	h.lastBlockHeight = height
 }
 
 func newHarness() *harness {
