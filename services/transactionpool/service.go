@@ -2,7 +2,7 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/services/statestorage"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -31,7 +31,7 @@ type service struct {
 	lastCommittedBlockTimestamp primitives.TimestampNano
 	pendingPool                 *pendingTxPool
 	committedPool               *committedTxPool
-	blockTracker                *statestorage.BlockTracker
+	blockTracker                *synchronization.BlockTracker
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
@@ -43,7 +43,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 
 		pendingPool:   NewPendingPool(config),
 		committedPool: NewCommittedPool(),
-		blockTracker:  statestorage.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
+		blockTracker:  synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s

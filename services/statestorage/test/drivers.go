@@ -3,12 +3,12 @@ package test
 import (
 	"bytes"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type driver struct {
@@ -107,5 +107,3 @@ func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...s
 	contractStateDiff := b.Build()
 	d.commitStateDiff(CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
 }
-
-
