@@ -24,7 +24,7 @@ type harness struct {
 }
 
 func newHarness() *harness {
-	log := instrumentation.GetLogger().WithOutput(instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
 	blockStorage := &services.MockBlockStorage{}
 	stateStorage := &services.MockStateStorage{}

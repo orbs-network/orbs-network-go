@@ -58,7 +58,7 @@ type networkNode struct {
 
 func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
 
-	testLogger := instrumentation.GetLogger().WithOutput(instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	testLogger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 	fmt.Printf("\n\n")
 	testLogger.Info("creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)

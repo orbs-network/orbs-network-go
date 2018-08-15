@@ -63,7 +63,7 @@ func newHarness(
 		5,
 	)
 
-	log := instrumentation.GetLogger().WithOutput(instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)

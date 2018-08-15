@@ -59,7 +59,7 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 }
 
 func newHarness() *harness {
-	log := instrumentation.GetLogger().WithOutput(instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
 	transactionPool := &services.MockTransactionPool{}
 

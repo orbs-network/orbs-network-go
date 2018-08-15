@@ -19,11 +19,11 @@ type BasicLogger interface {
 	For(params ...*Field) BasicLogger
 	Meter(name string, params ...*Field) BasicMeter
 	Prefixes() []*Field
-	WithOutput(writer ...BasicOutput) BasicLogger
+	WithOutput(writer ...Output) BasicLogger
 }
 
 type basicLogger struct {
-	outputs               []BasicOutput
+	outputs               []Output
 	prefixes              []*Field
 	nestingLevel          int
 	sourceRootPrefixIndex int
@@ -150,7 +150,7 @@ func GetLogger(params ...*Field) BasicLogger {
 	logger := &basicLogger{
 		prefixes:     params,
 		nestingLevel: 4,
-		outputs:      []BasicOutput{&basicOutput{output: os.Stdout, formatter: NewJsonFormatter()}},
+		outputs:      []Output{&basicOutput{output: os.Stdout, formatter: NewJsonFormatter()}},
 	}
 
 	fpcs := make([]uintptr, 1)
@@ -269,7 +269,7 @@ func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
 	return &basicMeter{name: name, start: time.Now().UnixNano(), logger: meterLogger, params: params}
 }
 
-func (b *basicLogger) WithOutput(writers ...BasicOutput) BasicLogger {
+func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {
 	b.outputs = writers
 	return b
 }

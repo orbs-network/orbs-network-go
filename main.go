@@ -22,8 +22,8 @@ func getLogger(path string) instrumentation.BasicLogger {
 		panic(err)
 	}
 
-	stdoutOutput := instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter())
-	fileOutput := instrumentation.Output(logFile)
+	stdoutOutput := instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter())
+	fileOutput := instrumentation.NewOutput(logFile)
 
 	return instrumentation.GetLogger().WithOutput(stdoutOutput, fileOutput)
 }

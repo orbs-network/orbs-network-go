@@ -43,7 +43,7 @@ func TestSimpleLogger(t *testing.T) {
 	RegisterTestingT(t)
 
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer))
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer))
 		serviceLogger.Info("Service initialized")
 	})
 
@@ -63,7 +63,7 @@ func TestNestedLogger(t *testing.T) {
 	RegisterTestingT(t)
 
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer))
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer))
 		txId := instrumentation.String("txId", "1234567")
 		txFlowLogger := serviceLogger.For(instrumentation.String("flow", TransactionFlow))
 		txFlowLogger.Info(TransactionAccepted, txId, instrumentation.Bytes("payload", []byte{1, 2, 3, 99}))
@@ -93,7 +93,7 @@ func TestStringableSlice(t *testing.T) {
 	receipts = append(receipts, builders.TransactionReceipt().Build())
 
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer))
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer))
 		serviceLogger.Info("StringableSlice test", instrumentation.StringableSlice("a-collection", receipts))
 	})
 
@@ -126,7 +126,7 @@ func TestStringableSliceCustomFormat(t *testing.T) {
 	transactions = append(transactions, builders.TransferTransaction().Build())
 
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 		serviceLogger.Info("StringableSlice HR test", instrumentation.StringableSlice("a-collection", transactions))
 	})
 
@@ -148,7 +148,7 @@ func TestMeter(t *testing.T) {
 	RegisterTestingT(t)
 
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer))
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer))
 		txId := instrumentation.String("txId", "1234567")
 		txFlowLogger := serviceLogger.For(instrumentation.String("flow", TransactionFlow))
 		meter := txFlowLogger.Meter("tx-process-time", txId)
@@ -178,7 +178,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	RegisterTestingT(t)
 
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 		serviceLogger.Info("Service initialized", instrumentation.Int("some-int-value", 12), instrumentation.BlockHeight(primitives.BlockHeight(9999)), instrumentation.Bytes("bytes", []byte{2, 3, 99}), instrumentation.Stringable("vchainId", primitives.VirtualChainId(123)))
 	})
 
@@ -206,7 +206,7 @@ func TestMultipleOutputs(t *testing.T) {
 	fileOutput, _ := os.Create(filename)
 
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer), instrumentation.Output(fileOutput))
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer), instrumentation.NewOutput(fileOutput))
 		serviceLogger.Info("Service initialized")
 	})
 
@@ -229,7 +229,7 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 
 	Expect(func() {
 		captureStdout(func(writer io.Writer) {
-			serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer).WithFormatter(instrumentation.NewHumanReadableFormatter()), instrumentation.Output(fileOutput))
+			serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.NewOutput(writer).WithFormatter(instrumentation.NewHumanReadableFormatter()), instrumentation.NewOutput(fileOutput))
 			serviceLogger.Info("Service initialized")
 		})
 	}).NotTo(Panic())

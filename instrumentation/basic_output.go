@@ -2,10 +2,10 @@ package instrumentation
 
 import "io"
 
-type BasicOutput interface {
+type Output interface {
 	Output() io.Writer
 	Formatter() LogFormatter
-	WithFormatter(f LogFormatter) BasicOutput
+	WithFormatter(f LogFormatter) Output
 }
 
 type basicOutput struct {
@@ -21,11 +21,11 @@ func (out *basicOutput) Output() io.Writer {
 	return out.output
 }
 
-func (out *basicOutput) WithFormatter(f LogFormatter) BasicOutput {
+func (out *basicOutput) WithFormatter(f LogFormatter) Output {
 	out.formatter = f
 	return out
 }
 
-func Output(writer io.Writer) BasicOutput {
+func NewOutput(writer io.Writer) Output {
 	return &basicOutput{NewJsonFormatter(), writer}
 }
