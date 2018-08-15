@@ -1,8 +1,8 @@
 package consensuscontext
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 type Config interface {
@@ -15,6 +15,7 @@ type service struct {
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
 	config          Config
+	reporting       instrumentation.BasicLogger
 }
 
 func NewConsensusContext(
@@ -22,6 +23,7 @@ func NewConsensusContext(
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
 	config Config,
+	reporting instrumentation.BasicLogger,
 ) services.ConsensusContext {
 
 	return &service{
@@ -29,6 +31,7 @@ func NewConsensusContext(
 		virtualMachine:  virtualMachine,
 		stateStorage:    stateStorage,
 		config:          config,
+		reporting:       reporting.For(instrumentation.Service("consensus-context")),
 	}
 }
 
@@ -38,8 +41,7 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 		return nil, err
 	}
 
-	// TODO: add reporting mechanism to this service and convert this print to it
-	fmt.Printf("created Transactions block num-transactions=%d block=%s\n", len(txBlock.SignedTransactions), txBlock.String())
+	s.reporting.Info("created Transactions block", instrumentation.Int("num-transactions", len(txBlock.SignedTransactions)), instrumentation.String("block", txBlock.String()))
 
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
@@ -52,8 +54,7 @@ func (s *service) RequestNewResultsBlock(input *services.RequestNewResultsBlockI
 		return nil, err
 	}
 
-	// TODO: add reporting mechanism to this service and convert this print to it
-	fmt.Printf("created Results block: %s\n", rxBlock.String())
+	s.reporting.Info("created Results block", instrumentation.String("results-block", rxBlock.String()))
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,

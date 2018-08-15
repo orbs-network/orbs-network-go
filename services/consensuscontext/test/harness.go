@@ -65,7 +65,7 @@ func newHarness() *harness {
 	serviceConfig := config.NewConsensusContextConfig(300, 2)
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
-		serviceConfig)
+		serviceConfig, log)
 
 	return &harness{
 		transactionPool: transactionPool,
