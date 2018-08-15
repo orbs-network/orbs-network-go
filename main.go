@@ -12,16 +12,17 @@ import (
 	"strings"
 )
 
-func getLogFile(path string) (*os.File, error) {
+func getLogger(path string) instrumentation.BasicLogger {
 	if path == "" {
 		path = "./orbs-network.log"
 	}
 
-	if file, err := os.Open(path); err != nil {
-		return file, nil
+	logFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
 	}
 
-	return os.Create(path)
+	return instrumentation.GetLogger().WithOutput(os.Stdout, logFile)
 }
 
 func main() {
@@ -36,12 +37,7 @@ func main() {
 	httpAddress := ":" + strconv.FormatInt(port, 10)
 	logPath := os.Getenv("LOG_PATH")
 
-	logFile, err := getLogFile(logPath)
-	if err != nil {
-		panic(err)
-	}
-
-	logger := instrumentation.GetLogger().WithOutput(os.Stdout, logFile)
+	logger := getLogger(logPath)
 
 	// TODO: move this code to the config we decided to add, the HardCodedConfig stuff is just placeholder
 	federationNodes := make(map[string]config.FederationNode)
