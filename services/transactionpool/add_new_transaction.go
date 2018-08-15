@@ -76,7 +76,7 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 		return errors.Errorf("expected exactly one result from pre-order check, got %+v", preOrderCheckResults)
 	}
 
-	if preOrderCheckResults.PreOrderResults[0] != protocol.TRANSACTION_STATUS_PENDING {
+	if preOrderCheckResults.PreOrderResults[0] != protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
 		return &ErrTransactionRejected{TransactionStatus: preOrderCheckResults.PreOrderResults[0]}
 	}
 

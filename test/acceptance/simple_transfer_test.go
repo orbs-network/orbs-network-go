@@ -12,18 +12,20 @@ import (
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
-		// leader is nodeIndex 0, validator is nodeIndex 1
+		network.DeployBenchmarkToken()
+
+		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 
 		network.SendTransfer(0, 19)
 		network.SendInvalidTransfer(0)
 		network.SendTransfer(0, 22)
 
-		t.Log("Waiting for node 0 blocks")
+		t.Log("waiting for leader blocks")
 
 		network.BlockPersistence(0).WaitForBlocks(2)
 		require.EqualValues(t, 41, <-network.CallGetBalance(0), "getBalance result on leader")
 
-		t.Log("Waiting for node 1 blocks")
+		t.Log("waiting for non leader blocks")
 
 		network.BlockPersistence(1).WaitForBlocks(2)
 		require.EqualValues(t, 41, <-network.CallGetBalance(1), "getBalance result on non leader")
@@ -34,7 +36,9 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
-		// leader is nodeIndex 0, validator is nodeIndex 1
+		network.DeployBenchmarkToken()
+
+		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 
 		pausedTxForwards := network.GossipTransport().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		network.SendTransfer(1, 17)

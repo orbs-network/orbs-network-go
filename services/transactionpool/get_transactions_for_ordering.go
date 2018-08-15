@@ -32,8 +32,7 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 	})
 
 	for i := range transactionsForPreOrder {
-		//TODO change to status ok when Tal's PR is merged
-		if preOrderResults.PreOrderResults[i] == protocol.TRANSACTION_STATUS_PENDING {
+		if preOrderResults.PreOrderResults[i] == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
 			out.SignedTransactions = append(out.SignedTransactions, transactionsForPreOrder[i])
 		}
 	}

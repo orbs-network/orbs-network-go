@@ -124,7 +124,7 @@ func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransactio
 			if failOn(tx) {
 				statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
 			} else {
-				statuses[i] = protocol.TRANSACTION_STATUS_PENDING
+				statuses[i] = protocol.TRANSACTION_STATUS_PRE_ORDER_VALID
 			}
 		}
 		return &services.TransactionSetPreOrderOutput{

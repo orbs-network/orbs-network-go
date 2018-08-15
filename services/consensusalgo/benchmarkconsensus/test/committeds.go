@@ -67,9 +67,9 @@ func (c *committed) Build() (res []*gossipmessages.BenchmarkConsensusCommittedMe
 			keyPair = keys.Ed25519KeyPairForTests(i + networkSize)
 		}
 		if c.invalidSignatures {
-			res = append(res, aCommitted.WithInvalidSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build())
+			res = append(res, aCommitted.WithInvalidSenderSignature(keyPair).Build())
 		} else {
-			res = append(res, aCommitted.WithSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey()).Build())
+			res = append(res, aCommitted.WithSenderSignature(keyPair).Build())
 		}
 	}
 	return
