@@ -9,15 +9,17 @@ import (
 	"strings"
 )
 
-type RootId uint64
+type TrieId uint64
 type Proof []*Node
+
+const trieRadix = 256 // base of the merkle trie. TODO change to 16
 
 var zeroValueHash = hash.CalcSha256([]byte{})
 
 type Node struct {
-	path     string
+	path     string // TODO replace with []byte + parity bool when moving to trieRadix = 16
 	value    primitives.Sha256
-	branches [256]primitives.MerkleSha256
+	branches [trieRadix]primitives.MerkleSha256
 }
 
 var emptyNode = &Node{value: zeroValueHash}
@@ -27,18 +29,19 @@ func createNode(path string, valueHash primitives.Sha256) *Node {
 	return &Node{
 		path:     path,
 		value:    valueHash,
-		branches: [256]primitives.MerkleSha256{},
+		branches: [trieRadix]primitives.MerkleSha256{},
 	}
 }
 func (n *Node) hasValue() bool {
 	return !zeroValueHash.Equal(n.value)
 }
 func (n *Node) hash() primitives.MerkleSha256 {
+	// TODO replace this with membuffers serialization. Sprintf should not reach production
 	serializedNode := fmt.Sprintf("%+v", n)
 	return primitives.MerkleSha256(hash.CalcSha256([]byte(serializedNode)))
 }
 func (n *Node) clone() *Node {
-	newBranches := [256]primitives.MerkleSha256{}
+	newBranches := [trieRadix]primitives.MerkleSha256{}
 	copy(newBranches[:], n.branches[:])
 	result := &Node{
 		path:     n.path,
@@ -60,22 +63,26 @@ func (n *Node) hasChildren() bool {
 }
 
 type Forest struct {
-	roots   map[RootId]primitives.MerkleSha256
+	roots   map[TrieId]primitives.MerkleSha256
 	nodes   map[string]*Node
-	topRoot RootId
+	topRoot TrieId
 }
 
 func NewForest() *Forest {
 	return &Forest{
-		roots: map[RootId]primitives.MerkleSha256{0: emptyNodeHash},
+		roots: map[TrieId]primitives.MerkleSha256{0: emptyNodeHash},
 		nodes: map[string]*Node{emptyNodeHash.KeyForMap(): emptyNode},
 	}
 }
 
-func (f *Forest) GetRoot(height RootId) (primitives.MerkleSha256, error) {
-	return f.roots[height], nil
+// return the merkle trie root hash for one trie in f.
+// typically there is a merkle trie per committed block, reflecting the state snapshot for each block height.
+func (f *Forest) GetRootHash(trieId TrieId) (primitives.MerkleSha256, error) {
+	return f.roots[trieId], nil
 }
-func (f *Forest) GetTopRoot() (primitives.MerkleSha256, error) {
+
+// return the merkle trie root hash for the last committed block
+func (f *Forest) GetTopRootHash() (primitives.MerkleSha256, error) {
 	return f.roots[f.topRoot], nil
 }
 
@@ -85,7 +92,7 @@ func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, s
 	f.nodes[childHash.KeyForMap()] = childNode
 }
 
-func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) RootId {
+func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) TrieId {
 	currentRoot := f.nodes[f.roots[f.topRoot].KeyForMap()]
 	newRoot := f.add(currentRoot, path, valueHash)
 	sha256s := newRoot.hash()
@@ -142,7 +149,8 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 	return newParent
 }
 
-func (f *Forest) Update(rootId RootId, diffs []*protocol.ContractStateDiff) RootId {
+// appends diffs to the top trie building new nodes as needed and returns the new trie id
+func (f *Forest) Update(diffs []*protocol.ContractStateDiff) TrieId {
 	for _, diff := range diffs {
 		contract := diff.StringContractName()
 		for i := diff.StateDiffsIterator(); i.HasNext(); {
@@ -154,7 +162,7 @@ func (f *Forest) Update(rootId RootId, diffs []*protocol.ContractStateDiff) Root
 	return f.topRoot
 }
 
-func (f *Forest) updateStringEntries(keyValues ...string) RootId {
+func (f *Forest) updateStringEntries(keyValues ...string) TrieId {
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
@@ -164,9 +172,10 @@ func (f *Forest) updateStringEntries(keyValues ...string) RootId {
 	return f.topRoot
 }
 
-func (f *Forest) GetProof(rootId RootId, contract string, key string) (Proof, error) {
+// extract and return a verifiable proof for the value of key in the state snapshot reflected by trieId (corresponding to some block height)
+func (f *Forest) GetProof(trieId TrieId, contract string, key string) (Proof, error) {
 	fullPath := contract + key
-	root := f.roots[rootId]
+	root := f.roots[trieId]
 	currentNode, exists := f.nodes[root.KeyForMap()]
 	proof := make(Proof, 0, 10)
 	proof = append(proof, currentNode)
@@ -187,10 +196,11 @@ func (f *Forest) GetProof(rootId RootId, contract string, key string) (Proof, er
 	return proof, nil
 }
 
-func (f *Forest) Verify(rootId RootId, proof Proof, contract string, key string, value string) (bool, error) {
+// returns true if the proof and merkle rootHash validates value for key. false if it confirms value does not match, and error if the proof is faulty
+func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, contract string, key string, value string) (bool, error) {
 	//TODO split the case where we compare against zero value - to simplify determineValueHashByProof
 	valueSha256 := hash.CalcSha256([]byte(value))
-	expectedHash, err := determineValueHashByProof(proof, contract+key, f.roots[rootId])
+	expectedHash, err := determineValueHashByProof(proof, contract+key, rootHash)
 	if err != nil {
 		return false, err
 	}

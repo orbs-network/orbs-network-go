@@ -57,7 +57,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	}
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
-	s.merkle.Update(merkle.RootId(committedBlock), input.ContractStateDiffs)
+	s.merkle.Update(input.ContractStateDiffs)
 	s.persistence.WriteState(committedBlock, input.ContractStateDiffs)
 
 	s.lastCommittedBlockHeader = input.ResultsBlockHeader
@@ -115,7 +115,7 @@ func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBloc
 }
 
 func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	value, _ := s.merkle.GetRoot(merkle.RootId(input.BlockHeight))
+	value, _ := s.merkle.GetRootHash(merkle.TrieId(input.BlockHeight))
 
 	output := &services.GetStateHashOutput{StateRootHash: value}
 

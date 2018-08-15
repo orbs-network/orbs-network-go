@@ -10,14 +10,15 @@ import (
 	"strings"
 )
 
-func verifyProof(f *Forest, rootId RootId, proof Proof, contract string, key string, value string, exists bool) {
-	verified, err := f.Verify(rootId, proof, contract, key, value)
+func verifyProof(f *Forest, trieId TrieId, proof Proof, contract string, key string, value string, exists bool) {
+	rootHash, _ := f.GetRootHash(trieId)
+	verified, err := f.Verify(rootHash, proof, contract, key, value)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(verified).To(Equal(exists))
 
 }
 
-func getProofExpectHeight(f *Forest, rootId RootId, contract string, key string, expectedHeight int) Proof {
+func getProofExpectHeight(f *Forest, rootId TrieId, contract string, key string, expectedHeight int) Proof {
 	proof, err := f.GetProof(rootId, contract, key)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(len(proof)).To(Equal(expectedHeight))
@@ -31,8 +32,8 @@ var _ = Describe("Merkle Forest", func() {
 				f := NewForest()
 
 				rootId := f.updateStringEntries("first", "val")
-				topRoot, err1 := f.GetTopRoot()
-				updatedRoot, err2 := f.GetRoot(rootId)
+				topRoot, err1 := f.GetTopRootHash()
+				updatedRoot, err2 := f.GetRootHash(rootId)
 
 				Expect(err1).ToNot(HaveOccurred())
 				Expect(err2).ToNot(HaveOccurred())
@@ -45,9 +46,9 @@ var _ = Describe("Merkle Forest", func() {
 				f := NewForest()
 				f.updateStringEntries("first", "val")
 
-				topRootOf1, err1 := f.GetTopRoot()
+				topRootOf1, err1 := f.GetTopRootHash()
 				f.updateStringEntries("second", "val")
-				rootOfOneAfterSecondUpdate, err2 := f.GetRoot(1)
+				rootOfOneAfterSecondUpdate, err2 := f.GetRootHash(1)
 
 				Expect(err1).ToNot(HaveOccurred())
 				Expect(err2).ToNot(HaveOccurred())
@@ -60,9 +61,9 @@ var _ = Describe("Merkle Forest", func() {
 				f := NewForest()
 				f.updateStringEntries("first", "val")
 
-				topRootOf1, err1 := f.GetTopRoot()
+				topRootOf1, err1 := f.GetTopRootHash()
 				f.updateStringEntries("first", "val1")
-				topRootOf2, err2 := f.GetTopRoot()
+				topRootOf2, err2 := f.GetTopRootHash()
 
 				Expect(err1).ToNot(HaveOccurred())
 				Expect(err2).ToNot(HaveOccurred())
@@ -75,10 +76,10 @@ var _ = Describe("Merkle Forest", func() {
 				f := NewForest()
 
 				f.updateStringEntries("first", "val")
-				topRootOf1, err1 := f.GetTopRoot()
+				topRootOf1, err1 := f.GetTopRootHash()
 				f.updateStringEntries("first", "val1")
 				f.updateStringEntries("first", "val")
-				topRootOf3, err2 := f.GetTopRoot()
+				topRootOf3, err2 := f.GetTopRootHash()
 
 				Expect(err1).ToNot(HaveOccurred())
 				Expect(err2).ToNot(HaveOccurred())
@@ -107,7 +108,7 @@ var _ = Describe("Merkle Forest", func() {
 					f := NewForest()
 
 					rootId := f.updateStringEntries("bar", "baz")
-					Expect(rootId).To(Equal(RootId(1)))
+					Expect(rootId).To(Equal(TrieId(1)))
 
 					getProofExpectHeight(f, rootId, "", "bar", 1)
 				})
@@ -120,13 +121,13 @@ var _ = Describe("Merkle Forest", func() {
 					r1 := diffContract.WithStringRecord("bar1", "baz").Build()
 					k1 := r1.StateDiffsIterator().NextStateDiffs().StringKey()
 					v1 := r1.StateDiffsIterator().NextStateDiffs().StringValue()
-					f.Update(1, []*protocol.ContractStateDiff{r1})
+					f.Update([]*protocol.ContractStateDiff{r1})
 
 					diffContract = builders.ContractStateDiff().WithContractName("foo")
 					r2 := diffContract.WithStringRecord("bar2", "qux").Build()
 					k2 := r2.StateDiffsIterator().NextStateDiffs().StringKey()
 					v2 := r2.StateDiffsIterator().NextStateDiffs().StringValue()
-					f.Update(2, []*protocol.ContractStateDiff{r2})
+					f.Update([]*protocol.ContractStateDiff{r2})
 
 					proof := getProofExpectHeight(f, 1, "foo", k1, 1)
 					verifyProof(f, 1, proof, "foo", k1, v1, true)
@@ -248,13 +249,13 @@ var _ = Describe("Merkle Forest", func() {
 					f1 := NewForest()
 					rootId1 := f1.updateStringEntries(keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
 						keyValue[var1[2]], keyValue[var1[2]+1], keyValue[var1[3]], keyValue[var1[3]+1], keyValue[var1[4]], keyValue[var1[4]+1])
-					root1, _ := f1.GetRoot(rootId1)
+					root1, _ := f1.GetRootHash(rootId1)
 					proof1, _ := f1.GetProof(rootId1, "", "bar1234")
 
 					f2 := NewForest()
 					rootId2 := f2.updateStringEntries(keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
 						keyValue[var2[2]], keyValue[var2[2]+1], keyValue[var2[3]], keyValue[var2[3]+1], keyValue[var2[4]], keyValue[var2[4]+1])
-					root2, _ := f2.GetRoot(rootId2)
+					root2, _ := f2.GetRootHash(rootId2)
 					proof2, _ := f2.GetProof(rootId2, "", "bar1234")
 
 					Expect(rootId2).To(Equal(rootId1))
@@ -265,7 +266,7 @@ var _ = Describe("Merkle Forest", func() {
 					f3 := NewForest()
 					rootId3 := f3.updateStringEntries(keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
 						keyValue[var3[2]], keyValue[var3[2]+1], keyValue[var3[3]], keyValue[var3[3]+1], keyValue[var3[4]], keyValue[var3[4]+1])
-					root3, _ := f3.GetRoot(rootId3)
+					root3, _ := f3.GetRootHash(rootId3)
 					proof3, _ := f3.GetProof(rootId3, "", "bar1234")
 
 					Expect(rootId2).To(Equal(rootId3))
@@ -280,7 +281,7 @@ var _ = Describe("Merkle Forest", func() {
 	})
 })
 
-//TODO - updateStringEntries should advance RootId only by one
+//TODO - updateStringEntries should advance TrieId only by one
 //TODO - updateStringEntries - the bulk update version (optimize node access)
 //TODO - Radix 16
 //TODO - parity
@@ -345,5 +346,5 @@ func (f *Forest) testForestIntegrity() {
 	for _, root := range f.roots {
 		Expect(f.nodes[root.KeyForMap()]).ToNot(BeEmpty())
 	}
-	Expect(f.topRoot).To(Equal(f.roots[RootId(len(f.roots))-1]))
+	Expect(f.topRoot).To(Equal(f.roots[TrieId(len(f.roots))-1]))
 }
