@@ -182,15 +182,15 @@ func TestClearReadUint32ByKey(t *testing.T) {
 
 func createStateSdk() *stateSdk {
 	return &stateSdk{
-		handler: &contractSdkCallHandlerStub{make(map[string]*protocol.MethodArgument, 0)},
+		handler: &contractSdkStateCallHandlerStub{make(map[string]*protocol.MethodArgument, 0)},
 	}
 }
 
-type contractSdkCallHandlerStub struct {
+type contractSdkStateCallHandlerStub struct {
 	store map[string]*protocol.MethodArgument
 }
 
-func (c *contractSdkCallHandlerStub) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
+func (c *contractSdkStateCallHandlerStub) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
 	switch input.MethodName {
 	case "read":
 		return &handlers.HandleSdkCallOutput{

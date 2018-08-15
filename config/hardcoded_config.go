@@ -21,6 +21,10 @@ type consensusConfig struct {
 	benchmarkConsensusRoundRetryIntervalMillis uint32
 }
 
+type crossServiceConfig struct {
+	queryGraceTimeoutMillis uint64
+}
+
 type blockStorageConfig struct {
 	blockSyncCommitTimeoutMillis time.Duration
 }
@@ -31,7 +35,14 @@ type consensusContextConfig struct {
 }
 
 type stateStorageConfig struct {
+	*crossServiceConfig
 	stateHistoryRetentionInBlockHeights uint64
+	querySyncGraceBlockDist             uint64
+}
+
+type transactionPoolConfig struct {
+	*identity
+	pendingPoolSizeInBytes uint32
 }
 
 type hardCodedFederationNode struct {
@@ -41,9 +52,11 @@ type hardCodedFederationNode struct {
 type hardcodedConfig struct {
 	*identity
 	*consensusConfig
+	*crossServiceConfig
 	*blockStorageConfig
 	*stateStorageConfig
 	*consensusContextConfig
+	*transactionPoolConfig
 }
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -61,6 +74,8 @@ func NewHardCodedConfig(
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
 	stateHistoryRetentionInBlockHeights uint64,
+	querySyncGraceBlockDist uint64,
+	queryGraceTimeoutMillis uint64,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) NodeConfig {
@@ -76,14 +91,21 @@ func NewHardCodedConfig(
 			activeConsensusAlgo:                        activeConsensusAlgo,
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
+		crossServiceConfig: &crossServiceConfig{
+			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
+		},
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
 		},
-		stateStorageConfig: &stateStorageConfig{stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights},
+		stateStorageConfig: &stateStorageConfig{
+			stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights,
+			querySyncGraceBlockDist:             querySyncGraceBlockDist,
+		},
 		consensusContextConfig: &consensusContextConfig{
 			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
+		transactionPoolConfig: &transactionPoolConfig{pendingPoolSizeInBytes: 20 * 1024 * 1024},
 	}
 }
 
@@ -119,8 +141,23 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewStateStorageConfig(maxStateHistory uint64) *stateStorageConfig {
-	return &stateStorageConfig{stateHistoryRetentionInBlockHeights: maxStateHistory}
+func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
+	return &transactionPoolConfig{
+		identity: &identity{
+			nodePublicKey: nodePublicKey,
+		},
+		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
+	}
+}
+
+func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64, graceTimeoutMillis uint64) *stateStorageConfig {
+	return &stateStorageConfig{
+		stateHistoryRetentionInBlockHeights: maxStateHistory,
+		querySyncGraceBlockDist:             graceBlockDist,
+		crossServiceConfig: &crossServiceConfig{
+			queryGraceTimeoutMillis: graceTimeoutMillis,
+		},
+	}
 }
 
 func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
@@ -169,4 +206,16 @@ func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
 
 func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
 	return c.stateHistoryRetentionInBlockHeights
+}
+
+func (c *transactionPoolConfig) PendingPoolSizeInBytes() uint32 {
+	return c.pendingPoolSizeInBytes
+}
+
+func (c *stateStorageConfig) QuerySyncGraceBlockDist() uint64 {
+	return c.querySyncGraceBlockDist
+}
+
+func (c *crossServiceConfig) QueryGraceTimeoutMillis() uint64 {
+	return c.queryGraceTimeoutMillis
 }

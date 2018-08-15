@@ -225,6 +225,11 @@ func (f *Field) Value() interface{} {
 	case FloatType:
 		return f.Float
 	case ErrorType:
+		if f.Error != nil {
+			return f.Error.Error()
+		} else {
+			return "<nil>"
+		}
 		return f.Error.Error()
 	case StringArrayType:
 		return f.StringArray

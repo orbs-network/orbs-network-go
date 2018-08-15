@@ -6,8 +6,7 @@ import (
 )
 
 const iterationsEventually = 100
-const iterationsConsistently = 20
-
+const iterationsConsistently = 100
 const interval = 5 * time.Millisecond
 
 func Eventually(f func() bool) bool {

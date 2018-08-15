@@ -1,99 +1,61 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"sync"
+	"time"
 )
 
-type pendingTxPool struct {
-	transactions map[string]bool
-	lock         *sync.Mutex
-}
-
-func (p pendingTxPool) add(transaction *protocol.SignedTransaction) {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.transactions[key] = true
-}
-
-func (p pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
-	ok, _ := p.transactions[key]
-	return ok
-}
-
-func (p pendingTxPool) remove(txhash primitives.Sha256) {
-	delete(p.transactions, txhash.KeyForMap())
-}
-
-type committedTxPool struct {
-	transactions map[string]*committedTransaction
-	lock         *sync.Mutex
-}
-
-func (p committedTxPool) add(receipt *protocol.TransactionReceipt) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.transactions[receipt.Txhash().KeyForMap()] = &committedTransaction{
-		receipt: receipt,
-	}
-}
-
-func (p committedTxPool) get(transaction *protocol.SignedTransaction) *committedTransaction {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
-
-	tx := p.transactions[key]
-
-	return tx
-}
-
-type committedTransaction struct {
-	receipt *protocol.TransactionReceipt
+type Config interface {
+	PendingPoolSizeInBytes() uint32
+	NodePublicKey() primitives.Ed25519PublicKey
 }
 
 type service struct {
-	pendingTransactions chan *protocol.SignedTransaction
-	gossip              gossiptopics.TransactionRelay
-	virtualMachine      services.VirtualMachine
-	reporting           instrumentation.BasicLogger
+	pendingTransactions        chan *protocol.SignedTransaction
+	gossip                     gossiptopics.TransactionRelay
+	virtualMachine             services.VirtualMachine
+	transactionResultsHandlers []handlers.TransactionResultsHandler
+	reporting                  instrumentation.BasicLogger
+	config                     Config
 
-	pendingPool   pendingTxPool
-	committedPool committedTxPool
+	lastCommittedBlockHeight primitives.BlockHeight
+	pendingPool              *pendingTxPool
+	committedPool            *committedTxPool
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, reporting instrumentation.BasicLogger) services.TransactionPool {
+func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
 	s := &service{
 		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
 		gossip:              gossip,
 		virtualMachine:      virtualMachine,
+		config:              config,
 		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
 
-		pendingPool: pendingTxPool{
-			transactions: make(map[string]bool),
-			lock:         &sync.Mutex{},
-		},
-
-		committedPool: committedTxPool{
-			transactions: make(map[string]*committedTransaction),
-			lock:         &sync.Mutex{},
-		},
+		pendingPool:   NewPendingPool(config),
+		committedPool: NewCommittedPool(),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s
 }
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
+	timeout := time.After(100 * time.Millisecond)
 	out := &services.GetTransactionsForOrderingOutput{}
-	out.SignedTransactions = make([]*protocol.SignedTransaction, input.MaxNumberOfTransactions)
-	for i := uint32(0); i < input.MaxNumberOfTransactions; i++ {
-		out.SignedTransactions[i] = <-s.pendingTransactions
+	for {
+		select {
+		case <-timeout:
+			return out, nil
+		case tx := <-s.pendingTransactions:
+			out.SignedTransactions = append(out.SignedTransactions, tx)
+			if uint32(len(out.SignedTransactions)) == input.MaxNumberOfTransactions {
+				return out, nil
+			}
+		}
 	}
 	return out, nil
 }
@@ -106,22 +68,18 @@ func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransa
 	panic("Not implemented")
 }
 
-func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
-	for _, receipt := range input.TransactionReceipts {
-		s.committedPool.add(receipt)
-		s.pendingPool.remove(receipt.Txhash())
-	}
-
-	return &services.CommitTransactionReceiptsOutput{}, nil
-}
-
 func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
-	panic("Not implemented")
+	s.transactionResultsHandlers = append(s.transactionResultsHandlers, handler)
 }
 
 func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+
+	//TODO verify message signature
 	for _, tx := range input.Message.SignedTransactions {
-		s.pendingTransactions <- tx
+		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err == nil {
+			//TODO this channel needs to go
+			s.pendingTransactions <- tx
+		}
 	}
 	return nil, nil
 }
