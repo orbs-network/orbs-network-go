@@ -82,11 +82,7 @@ func printParam(builder *strings.Builder, param *Field) {
 	case ErrorType:
 		value = param.Error.Error()
 	case StringArrayType:
-		x := make(map[int]string)
-		for i, v := range param.StringArray {
-			x[i] = v
-		}
-		json, err := json.MarshalIndent(x, "", " ")
+		json, err := json.MarshalIndent(param.StringArray, "", "\t")
 		if err != nil {
 			value = ""
 		} else {

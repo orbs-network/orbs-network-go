@@ -107,7 +107,11 @@ func TestStringableSlice(t *testing.T) {
 	Expect(jsonMap["source"]).NotTo(BeEmpty())
 	Expect(jsonMap["timestamp"]).NotTo(BeNil())
 	Expect(jsonMap["a-collection"]).ToNot(Equal("[]"))
-	Expect(fmt.Sprint(jsonMap["a-collection"])).To(Equal("[{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],} {Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],}]"))
+
+	Expect(jsonMap["a-collection"]).To(Equal([]interface{}{
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],}",
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],}",
+	}))
 }
 
 func TestStringableSliceCustomFormat(t *testing.T) {
@@ -131,7 +135,8 @@ func TestStringableSliceCustomFormat(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("StringableSlice HR test"))
 	Expect(stdout).To(ContainSubstring("node=node1"))
 	Expect(stdout).To(ContainSubstring("service=public-api"))
-	Expect(stdout).To(ContainSubstring("a-collection="))
+	Expect(stdout).To(ContainSubstring("a-collection=["))
+	Expect(stdout).To(ContainSubstring("{Transaction:{ProtocolVersion:1,"))
 	Expect(stdout).To(ContainSubstring("function=instrumentation_test.TestStringableSliceCustomFormat.func1"))
 	Expect(stdout).To(ContainSubstring("source="))
 	Expect(stdout).To(ContainSubstring("instrumentation/basic_logger_test.go"))
