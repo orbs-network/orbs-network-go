@@ -16,7 +16,7 @@ type InMemoryStatePersistence struct {
 	snapshots map[primitives.BlockHeight]StateVersion
 }
 
-func NewInMemoryStatePersistence() StatePersistence {
+func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 	stateDiffsContract := map[primitives.ContractName]ContractState{primitives.ContractName("BenchmarkToken"): {}}
 
 	return &InMemoryStatePersistence{
