@@ -162,22 +162,25 @@ func newHarness() *harness {
 }
 
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
+	ts := primitives.TimestampNano(time.Now().UnixNano())
+
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 
 	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
-	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())
+	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
 
 	h := &harness{
-		txpool: service,
-		gossip: gossip,
-		vm:     virtualMachine,
-		trh:    transactionResultHandler,
+		txpool:             service,
+		gossip:             gossip,
+		vm:                 virtualMachine,
+		trh:                transactionResultHandler,
+		lastBlockTimestamp: ts,
 	}
 
 	h.passAllPreOrderChecks()

@@ -45,7 +45,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	size := sizeOf(transaction)
 
 	if p.currentSizeInBytes+size > p.config.PendingPoolSizeInBytes() {
-		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED} //TODO change to TRANSACTION_STATUS_REJECTED_CONGESTION
+		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_CONGESTION}
 	}
 
 	key := digest.CalcTxHash(transaction.Transaction())

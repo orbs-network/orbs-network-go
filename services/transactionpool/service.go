@@ -34,16 +34,21 @@ type service struct {
 	blockTracker                *synchronization.BlockTracker
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
+func NewTransactionPool(gossip gossiptopics.TransactionRelay,
+	virtualMachine services.VirtualMachine,
+	config Config,
+	log instrumentation.BasicLogger,
+	initialTimestamp primitives.TimestampNano) services.TransactionPool {
 	s := &service{
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
 		config:         config,
-		log:            reporting.For(instrumentation.Service("transaction-pool")),
+		log:            log.For(instrumentation.Service("transaction-pool")),
 
-		pendingPool:   NewPendingPool(config),
-		committedPool: NewCommittedPool(),
-		blockTracker:  synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
+		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
+		pendingPool:                 NewPendingPool(config),
+		committedPool:               NewCommittedPool(),
+		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s
@@ -75,7 +80,7 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
 		expiryWindow:                time.Duration(s.config.TransactionExpirationWindowInSeconds()) * time.Second,
-		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()), //TODO use real time stamp
+		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
 		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
 		virtualChainId:              s.config.VirtualChainId(),
 	}

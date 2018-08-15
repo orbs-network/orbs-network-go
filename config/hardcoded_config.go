@@ -159,6 +159,7 @@ func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirati
 		},
 		pendingPoolSizeInBytes:               pendingPoolSizeInBytes,
 		transactionExpirationWindowInSeconds: transactionExpirationWindowInSeconds,
+		futureTimestampGraceInSeconds:        180,
 	}
 }
 

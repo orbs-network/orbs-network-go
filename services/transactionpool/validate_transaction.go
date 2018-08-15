@@ -68,7 +68,8 @@ func validateTransactionNotExpired(vctx *validationContext) validator {
 
 func validateTransactionNotInFuture(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) error {
-		if transaction.Transaction().Timestamp() > vctx.lastCommittedBlockTimestamp+primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds()) {
+		tsWithGrace := vctx.lastCommittedBlockTimestamp + primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds())
+		if transaction.Transaction().Timestamp() > tsWithGrace {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
 		}
 
