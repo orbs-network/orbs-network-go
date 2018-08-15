@@ -37,6 +37,7 @@ type AcceptanceTestNetwork interface {
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
 	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
+	DumpState()
 }
 
 type acceptanceTestNetwork struct {
@@ -67,7 +68,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 	}
 
 	nodes := make([]networkNode, numNodes)
-	for i, _ := range nodes {
+	for i := range nodes {
 		nodes[i].index = i
 		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 		nodeName := fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
@@ -169,4 +170,11 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()
 	return ch
+}
+
+func (n *acceptanceTestNetwork) DumpState() {
+	testLogger := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	for i := range n.nodes {
+		testLogger.Info("state dump", instrumentation.Int("node", i), instrumentation.String("data", n.nodes[i].statePersistence.Dump()))
+	}
 }
