@@ -78,7 +78,7 @@ func printParam(builder *strings.Builder, param *Field) {
 	case BytesType:
 		value = string(base58.Encode(param.Bytes))
 	case FloatType:
-		value = strconv.FormatFloat(param.Float, 'f', 24, -1)
+		value = strconv.FormatFloat(param.Float, 'f', -1, 64)
 	case ErrorType:
 		if param.Error != nil {
 			value = param.Error.Error()
