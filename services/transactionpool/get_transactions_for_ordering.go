@@ -8,6 +8,11 @@ import (
 )
 
 func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
+
+	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+		return nil, err
+	}
+
 	out := &services.GetTransactionsForOrderingOutput{}
 	transactions := s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
 	vctx := s.createValidationContext()

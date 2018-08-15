@@ -25,6 +25,8 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 
 	s.lastCommittedBlockHeight = input.LastCommittedBlockHeight
 
+	s.blockTracker.IncrementHeight()
+
 	for _, handler := range s.transactionResultsHandlers {
 		handler.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
 			BlockHeight:         s.lastCommittedBlockHeight,

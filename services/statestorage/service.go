@@ -13,7 +13,7 @@ import (
 
 type Config interface {
 	StateHistoryRetentionInBlockHeights() uint64
-	QuerySyncGraceBlockDist() uint64
+	QuerySyncGraceBlockDist() uint16
 	QueryGraceTimeoutMillis() uint64
 }
 

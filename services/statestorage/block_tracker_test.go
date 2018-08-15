@@ -20,6 +20,13 @@ func TestWaitForBlockWithinGraceFailsAfterTimeout(t *testing.T) {
 	require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
 }
 
+func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
+
+	tracker := NewBlockTracker(0, 5, 1*time.Millisecond)
+	err := tracker.WaitForBlock(2)
+	require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
+}
+
 func TestWaitForBlockWithinGraceReturnsWhenRequestedBlockHeightAdvancesBeforeTimeout(t *testing.T) {
 	tracker := NewBlockTracker(1, 2, 1*time.Second)
 	tracker.enteredSelectSignalForTests = make(chan int)

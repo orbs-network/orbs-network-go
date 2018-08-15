@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"time"
+	"github.com/orbs-network/orbs-network-go/services/statestorage"
 )
 
 type Config interface {
@@ -15,6 +16,9 @@ type Config interface {
 	TransactionExpirationWindowInSeconds() uint32
 	FutureTimestampGraceInSeconds() uint32
 	VirtualChainId() primitives.VirtualChainId
+	QuerySyncGraceBlockDist() uint16
+	QueryGraceTimeoutMillis() uint64
+
 }
 
 type service struct {
@@ -27,6 +31,7 @@ type service struct {
 	lastCommittedBlockHeight primitives.BlockHeight
 	pendingPool              *pendingTxPool
 	committedPool            *committedTxPool
+	blockTracker 			 *statestorage.BlockTracker
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
@@ -38,6 +43,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine ser
 
 		pendingPool:   NewPendingPool(config),
 		committedPool: NewCommittedPool(),
+		blockTracker:  statestorage.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s

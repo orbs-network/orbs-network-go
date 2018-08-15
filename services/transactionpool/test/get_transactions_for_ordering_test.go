@@ -6,11 +6,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 //TODO blocks and waits for grace (use blocktracker?)
 //TODO fails for block too far away
-//TODO does not return already committed transactions
 
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	t.Parallel()
@@ -48,4 +48,36 @@ func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t 
 
 	require.NoError(t, err, "expected transaction set but got an error")
 	require.ElementsMatch(t, []*protocol.SignedTransaction{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
+}
+
+func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
+	t.Parallel()
+	h := newHarness()
+
+	_, err := h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+		BlockHeight: 2,
+		MaxNumberOfTransactions: 1,
+	})
+
+	require.EqualError(t, err, "timed out waiting for block at height 2", "did not time out")
+}
+
+func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
+	t.Parallel()
+	h := newHarness()
+
+	doneWait := make(chan error)
+	go func() {
+		_, err := h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+			BlockHeight:             1,
+			MaxNumberOfTransactions: 1,
+		})
+		doneWait <- err
+	}()
+
+	h.assumeBlockStorageAtHeight(1)
+	h.ignoringTransactionResults()
+	h.reportTransactionsAsCommitted()
+
+	require.NoError(t, <-doneWait, "did not resolve after block has been committed")
 }

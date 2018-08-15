@@ -114,7 +114,9 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 }
 
 func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
-	return h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{MaxNumberOfTransactions: maxNumOfTransactions, MaxTransactionsSetSizeKb: 1024})
+	return h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+		MaxNumberOfTransactions: maxNumOfTransactions,
+	})
 }
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {

@@ -24,6 +24,7 @@ type consensusConfig struct {
 
 type crossServiceConfig struct {
 	queryGraceTimeoutMillis uint64
+	querySyncGraceBlockDist uint16
 }
 
 type blockStorageConfig struct {
@@ -38,11 +39,11 @@ type consensusContextConfig struct {
 type stateStorageConfig struct {
 	*crossServiceConfig
 	stateHistoryRetentionInBlockHeights uint64
-	querySyncGraceBlockDist             uint64
 }
 
 type transactionPoolConfig struct {
 	*identity
+	*crossServiceConfig
 	pendingPoolSizeInBytes               uint32
 	transactionExpirationWindowInSeconds uint32
 	futureTimestampGraceInSeconds        uint32
@@ -77,7 +78,7 @@ func NewHardCodedConfig(
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
 	stateHistoryRetentionInBlockHeights uint64,
-	querySyncGraceBlockDist uint64,
+	querySyncGraceBlockDist uint16,
 	queryGraceTimeoutMillis uint64,
 	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
@@ -97,13 +98,13 @@ func NewHardCodedConfig(
 		},
 		crossServiceConfig: &crossServiceConfig{
 			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
+			querySyncGraceBlockDist: querySyncGraceBlockDist,
 		},
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
 		},
 		stateStorageConfig: &stateStorageConfig{
 			stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights,
-			querySyncGraceBlockDist:             querySyncGraceBlockDist,
 		},
 		consensusContextConfig: &consensusContextConfig{
 			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
@@ -156,6 +157,10 @@ func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirati
 			nodePublicKey:  nodePublicKey,
 			virtualChainId: 42,
 		},
+		crossServiceConfig: &crossServiceConfig{
+			queryGraceTimeoutMillis: 100,
+			querySyncGraceBlockDist: 5,
+		},
 		pendingPoolSizeInBytes:               pendingPoolSizeInBytes,
 		transactionExpirationWindowInSeconds: transactionExpirationWindowInSeconds,
 	}
@@ -164,7 +169,6 @@ func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirati
 func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64, graceTimeoutMillis uint64) *stateStorageConfig {
 	return &stateStorageConfig{
 		stateHistoryRetentionInBlockHeights: maxStateHistory,
-		querySyncGraceBlockDist:             graceBlockDist,
 		crossServiceConfig: &crossServiceConfig{
 			queryGraceTimeoutMillis: graceTimeoutMillis,
 		},
@@ -223,7 +227,7 @@ func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
 	return c.stateHistoryRetentionInBlockHeights
 }
 
-func (c *stateStorageConfig) QuerySyncGraceBlockDist() uint64 {
+func (c *crossServiceConfig) QuerySyncGraceBlockDist() uint16 {
 	return c.querySyncGraceBlockDist
 }
 

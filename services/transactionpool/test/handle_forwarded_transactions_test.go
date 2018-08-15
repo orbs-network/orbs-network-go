@@ -31,5 +31,4 @@ func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
 	h.handleForwardFrom(otherNodeKeyPair.PublicKey(), tx1)
 	out, _ := h.getTransactionsForOrdering(1)
 	require.Equal(t, 0, len(out.SignedTransactions), "forwarded transaction was added to full pool")
-
 }

@@ -37,19 +37,19 @@ func (t *BlockTracker) IncrementHeight() {
 
 func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) error {
 
-	rh := uint64(requestedHeight)
-	if t.currentHeight >= rh { // requested block already committed
+	rh := int64(requestedHeight)
+	if int64(t.currentHeight) >= rh { // requested block already committed
 		return nil
 	}
 
-	if t.currentHeight < rh-t.graceDistance { // requested block too far ahead, no grace
+	if int64(t.currentHeight) < rh-int64(t.graceDistance) { // requested block too far ahead, no grace
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
 	timer := time.NewTimer(t.timeout)
 	defer timer.Stop()
 
-	for t.currentHeight < rh { // sit on latch until desired height or t.o.
+	for int64(t.currentHeight) < rh { // sit on latch until desired height or t.o.
 		t.notifyEnterSelectForTests()
 		select {
 		case <-timer.C:
