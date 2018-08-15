@@ -219,6 +219,22 @@ func TestMultipleOutputs(t *testing.T) {
 	checkOutput(fileContents)
 }
 
+func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
+	RegisterTestingT(t)
+
+	filename := "/tmp/test-multiple-outputs"
+	os.RemoveAll(filename)
+
+	fileOutput, _ := os.Create(filename)
+
+	Expect(func() {
+		captureStdout(func(writer io.Writer) {
+			serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(instrumentation.Output(writer).WithFormatter(instrumentation.NewHumanReadableFormatter()), instrumentation.Output(fileOutput))
+			serviceLogger.Info("Service initialized")
+		})
+	}).NotTo(Panic())
+}
+
 func checkOutput(output string) {
 	jsonMap := parseOutput(output)
 
