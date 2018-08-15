@@ -49,23 +49,21 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	committedBlock := input.ResultsBlockHeader.BlockHeight()
-	fmt.Printf("trying to commit state diff for block height %d, num contract state diffs %d\n", committedBlock, len(input.ContractStateDiffs)) // TODO: move this to reporting mechanism
+	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
+	fmt.Printf("trying to commit state diff for block height %d, num contract state diffs %d\n", commitBlockHeight, len(input.ContractStateDiffs)) // TODO: move this to reporting mechanism
 
-	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != committedBlock {
+	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != commitBlockHeight {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
 	s.merkle.Update(input.ContractStateDiffs)
-	s.persistence.WriteState(committedBlock, input.ContractStateDiffs)
+	s.persistence.WriteState(commitBlockHeight, input.ContractStateDiffs)
 
 	s.lastCommittedBlockHeader = input.ResultsBlockHeader
-	height := committedBlock + 1
-
 	s.blockTracker.IncrementHeight()
 
-	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: height}, nil
+	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
