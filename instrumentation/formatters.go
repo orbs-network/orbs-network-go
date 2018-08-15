@@ -81,6 +81,17 @@ func printParam(builder *strings.Builder, param *Field) {
 		value = strconv.FormatFloat(param.Float, 'f', 24, -1)
 	case ErrorType:
 		value = param.Error.Error()
+	case StringArrayType:
+		x := make(map[int]string)
+		for i, v := range param.StringArray {
+			x[i] = v
+		}
+		json, err := json.MarshalIndent(x, "", " ")
+		if err != nil {
+			value = ""
+		} else {
+			value = string(json)
+		}
 	}
 
 	builder.WriteString(param.Key)

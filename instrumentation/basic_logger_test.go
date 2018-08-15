@@ -86,16 +86,14 @@ func TestNestedLogger(t *testing.T) {
 func TestStringableSlice(t *testing.T) {
 	RegisterTestingT(t)
 
-	var transactions []*protocol.SignedTransaction
+	var receipts []*protocol.TransactionReceipt
 
-	transactions = append(transactions, builders.TransferTransaction().Build())
-	transactions = append(transactions, builders.TransferTransaction().Build())
-	transactions = append(transactions, builders.TransferTransaction().Build())
-	transactions = append(transactions, builders.TransferTransaction().Build())
+	receipts = append(receipts, builders.TransactionReceipt().Build())
+	receipts = append(receipts, builders.TransactionReceipt().Build())
 
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(writer)
-		serviceLogger.Info("StringableSlice test", instrumentation.StringableSlice("a collection", transactions))
+		serviceLogger.Info("StringableSlice test", instrumentation.StringableSlice("a-collection", receipts))
 	})
 
 	fmt.Println(stdout)
@@ -108,7 +106,36 @@ func TestStringableSlice(t *testing.T) {
 	Expect(jsonMap["message"]).To(Equal("StringableSlice test"))
 	Expect(jsonMap["source"]).NotTo(BeEmpty())
 	Expect(jsonMap["timestamp"]).NotTo(BeNil())
-	Expect(jsonMap["a collection"]).ToNot(Equal("[]"))
+	Expect(jsonMap["a-collection"]).ToNot(Equal("[]"))
+	Expect(fmt.Sprint(jsonMap["a-collection"])).To(Equal("[{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],} {Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],}]"))
+}
+
+func TestStringableSliceCustomFormat(t *testing.T) {
+	RegisterTestingT(t)
+
+	var transactions []*protocol.SignedTransaction
+
+	transactions = append(transactions, builders.TransferTransaction().Build())
+	transactions = append(transactions, builders.TransferTransaction().Build())
+	transactions = append(transactions, builders.TransferTransaction().Build())
+	transactions = append(transactions, builders.TransferTransaction().Build())
+
+	stdout := captureStdout(func(writer io.Writer) {
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(writer).WithFormatter(instrumentation.NewHumanReadableFormatter())
+		serviceLogger.Info("StringableSlice HR test", instrumentation.StringableSlice("a-collection", transactions))
+	})
+
+	fmt.Println(stdout)
+
+	Expect(stdout).To(HavePrefix("info"))
+	Expect(stdout).To(ContainSubstring("StringableSlice HR test"))
+	Expect(stdout).To(ContainSubstring("node=node1"))
+	Expect(stdout).To(ContainSubstring("service=public-api"))
+	Expect(stdout).To(ContainSubstring("a-collection="))
+	Expect(stdout).To(ContainSubstring("function=instrumentation_test.TestStringableSliceCustomFormat.func1"))
+	Expect(stdout).To(ContainSubstring("source="))
+	Expect(stdout).To(ContainSubstring("instrumentation/basic_logger_test.go"))
+
 }
 
 func TestMeter(t *testing.T) {

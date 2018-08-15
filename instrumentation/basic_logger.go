@@ -46,18 +46,19 @@ const (
 	FloatType
 	FunctionType
 	SourceType
+	StringArrayType
 )
 
 type Field struct {
 	Key  string
 	Type FieldType
 
-	String string
-	Int    int64
-	Uint   uint64
-	Bytes  []byte
-
-	Float float64
+	String      string
+	StringArray []string
+	Int         int64
+	Uint        uint64
+	Bytes       []byte
+	Float       float64
 
 	Error error
 }
@@ -87,26 +88,21 @@ func Stringable(key string, value fmt.Stringer) *Field {
 }
 
 func StringableSlice(key string, values interface{}) *Field {
-	builder := strings.Builder{}
-	builder.WriteString("[")
-
+	var strings []string
 	switch reflect.TypeOf(values).Kind() {
 	case reflect.Slice:
 		s := reflect.ValueOf(values)
 
+		strings = make([]string, 0, s.Len())
+
 		for i := 0; i < s.Len(); i++ {
 			if stringer, ok := s.Index(i).Interface().(fmt.Stringer); ok {
-				builder.WriteString(stringer.String())
-				if i < s.Len()-1 {
-					builder.WriteString(",")
-				}
+				strings = append(strings, stringer.String())
 			}
 		}
 	}
 
-	builder.WriteString("]")
-
-	return &Field{Key: key, String: builder.String(), Type: StringType}
+	return &Field{Key: key, StringArray: strings, Type: StringArrayType}
 }
 
 func Int(key string, value int) *Field {
@@ -230,6 +226,8 @@ func (f *Field) Value() interface{} {
 		return f.Float
 	case ErrorType:
 		return f.Error.Error()
+	case StringArrayType:
+		return f.StringArray
 	}
 
 	return nil
