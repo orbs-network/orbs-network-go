@@ -28,10 +28,11 @@ type service struct {
 	log                        instrumentation.BasicLogger
 	config                     Config
 
-	lastCommittedBlockHeight primitives.BlockHeight
-	pendingPool              *pendingTxPool
-	committedPool            *committedTxPool
-	blockTracker 			 *statestorage.BlockTracker
+	lastCommittedBlockHeight    primitives.BlockHeight
+	lastCommittedBlockTimestamp primitives.TimestampNano
+	pendingPool                 *pendingTxPool
+	committedPool               *committedTxPool
+	blockTracker                *statestorage.BlockTracker
 }
 
 func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {

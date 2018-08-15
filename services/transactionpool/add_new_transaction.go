@@ -14,7 +14,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	err := s.createValidationContext().validateTransaction(input.SignedTransaction)
 	if err != nil {
 		s.log.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
-		return s.anEmptyReceipt(), err
+		return s.addTransactionOutputFor(nil, err.(*ErrTransactionRejected).TransactionStatus), err
 	}
 
 	if s.pendingPool.has(input.SignedTransaction) {
@@ -23,15 +23,11 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
 		s.log.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
-		return &services.AddNewTransactionOutput{
-			TransactionReceipt: alreadyCommitted.receipt,
-			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED,
-			//TODO other fields
-		}, nil
+		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
-		return s.anEmptyReceipt(), err
+		return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER), err
 	}
 
 	s.log.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
@@ -43,7 +39,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	//TODO batch
 	s.forwardTransaction(input.SignedTransaction)
 
-	return &services.AddNewTransactionOutput{}, nil
+	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
 func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
@@ -83,6 +79,11 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 	return nil
 }
 
-func (s *service) anEmptyReceipt() *services.AddNewTransactionOutput {
-	return &services.AddNewTransactionOutput{}
+func (s *service) addTransactionOutputFor(maybeReceipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.AddNewTransactionOutput {
+	return &services.AddNewTransactionOutput{
+		TransactionReceipt: maybeReceipt,
+		TransactionStatus: status,
+		BlockHeight: s.lastCommittedBlockHeight,
+		BlockTimestamp: s.lastCommittedBlockTimestamp,
+	}
 }

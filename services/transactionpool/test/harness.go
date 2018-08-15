@@ -140,6 +140,17 @@ func (h *harness) passAllPreOrderChecks() {
 		return false
 	})
 }
+func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.TimestampNano) {
+	h.ignoringTransactionResults()
+	currentBlock := primitives.BlockHeight(0)
+	for currentBlock <= height {
+		out, _ := h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+			LastCommittedBlockHeight: currentBlock,
+			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: currentBlock, Timestamp: timestamp}).Build(),
+		})
+		currentBlock = out.NextDesiredBlockHeight
+	}
+}
 
 func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)

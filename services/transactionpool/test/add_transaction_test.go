@@ -7,6 +7,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"time"
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
@@ -44,10 +46,16 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 
 	h.ignoringForwardMessages()
 
+	blockHeight := primitives.BlockHeight(3)
+	blockTime := primitives.TimestampNano(time.Now().UnixNano())
+	h.goToBlock(blockHeight, blockTime)
+
 	out, err := h.addNewTransaction(tx)
 	//TODO assert block height and timestamp from empty receipt as per spec
 
 	require.NotNil(t, out, "output must not be nil even on errors")
+	require.Equal(t, blockHeight, out.BlockHeight)
+	require.Equal(t, blockTime, out.BlockTimestamp)
 
 	require.Error(t, err, "an transaction that failed pre-order checks was added to the pool")
 	require.IsType(t, &transactionpool.ErrTransactionRejected{}, err, "error was not of the expected type")
