@@ -196,7 +196,8 @@ func (f *Forest) GetProof(trieId TrieId, contract string, key string) (Proof, er
 	return proof, nil
 }
 
-// returns true if the proof and merkle rootHash validates value for key. false if it confirms value does not match, and error if the proof is faulty
+// return true if proof and merkle rootHash validate value for key. false if it confirms value does not match key
+// return an error if the proof is inconsistent internally, or, with key, value or rootHash
 func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, contract string, key string, value string) (bool, error) {
 	//TODO split the case where we compare against zero value - to simplify determineValueHashByProof
 	valueSha256 := hash.CalcSha256([]byte(value))
