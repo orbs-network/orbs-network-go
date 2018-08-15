@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"io"
 	"os"
 	"reflect"
 	"runtime"
@@ -20,13 +19,11 @@ type BasicLogger interface {
 	For(params ...*Field) BasicLogger
 	Meter(name string, params ...*Field) BasicMeter
 	Prefixes() []*Field
-	WithOutput(writer io.Writer) BasicLogger
-	WithFormatter(formatter LogFormatter) BasicLogger
+	WithOutput(writer ...Output) BasicLogger
 }
 
 type basicLogger struct {
-	output                io.Writer
-	formatter             LogFormatter
+	outputs               []Output
 	prefixes              []*Field
 	nestingLevel          int
 	sourceRootPrefixIndex int
@@ -150,7 +147,11 @@ func BlockHeight(value primitives.BlockHeight) *Field {
 }
 
 func GetLogger(params ...*Field) BasicLogger {
-	logger := &basicLogger{prefixes: params, nestingLevel: 4, output: os.Stdout, formatter: NewJsonFormatter()}
+	logger := &basicLogger{
+		prefixes:     params,
+		nestingLevel: 4,
+		outputs:      []Output{&basicOutput{output: os.Stdout, formatter: NewJsonFormatter()}},
+	}
 
 	fpcs := make([]uintptr, 1)
 	n := runtime.Callers(logger.nestingLevel, fpcs)
@@ -196,7 +197,7 @@ func (b *basicLogger) Prefixes() []*Field {
 
 func (b *basicLogger) For(params ...*Field) BasicLogger {
 	prefixes := append(b.prefixes, params...)
-	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel, output: b.output, formatter: b.formatter}
+	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel, outputs: b.outputs}
 }
 
 func (b *basicLogger) Metric(metric string, params ...*Field) {
@@ -249,8 +250,10 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	enrichmentParams = append(enrichmentParams, b.prefixes...)
 	enrichmentParams = append(enrichmentParams, params...)
 
-	logLine := b.formatter.FormatRow(level, message, enrichmentParams...)
-	fmt.Fprintln(b.output, logLine)
+	for _, output := range b.outputs {
+		logLine := output.Formatter().FormatRow(level, message, enrichmentParams...)
+		fmt.Fprintln(output.Output(), logLine)
+	}
 }
 
 func (b *basicLogger) Info(message string, params ...*Field) {
@@ -262,16 +265,11 @@ func (b *basicLogger) Error(message string, params ...*Field) {
 }
 
 func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
-	meterLogger := &basicLogger{nestingLevel: 5, prefixes: b.prefixes, output: b.output, formatter: b.formatter}
+	meterLogger := &basicLogger{nestingLevel: 5, prefixes: b.prefixes, outputs: b.outputs}
 	return &basicMeter{name: name, start: time.Now().UnixNano(), logger: meterLogger, params: params}
 }
 
-func (b *basicLogger) WithOutput(writer io.Writer) BasicLogger {
-	b.output = writer
-	return b
-}
-
-func (b *basicLogger) WithFormatter(formatter LogFormatter) BasicLogger {
-	b.formatter = formatter
+func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {
+	b.outputs = writers
 	return b
 }

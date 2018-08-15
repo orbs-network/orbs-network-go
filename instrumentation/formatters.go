@@ -78,7 +78,7 @@ func printParam(builder *strings.Builder, param *Field) {
 	case BytesType:
 		value = string(base58.Encode(param.Bytes))
 	case FloatType:
-		value = strconv.FormatFloat(param.Float, 'f', 24, -1)
+		value = strconv.FormatFloat(param.Float, 'f', -1, 64)
 	case ErrorType:
 		if param.Error != nil {
 			value = param.Error.Error()
@@ -143,12 +143,15 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	builder.WriteString(message)
 	builder.WriteString(SPACE)
 
-	_, params = extractParamByTypePrintAndRemove(params, NodeType, &builder)
-	_, params = extractParamByTypePrintAndRemove(params, ServiceType, &builder)
-	functionParam, params := extractParamByTypeAndRemove(params, FunctionType)
-	sourceParam, params := extractParamByTypeAndRemove(params, SourceType)
+	var newParams = make([]*Field, len(params))
+	copy(newParams, params)
 
-	for _, param := range params {
+	_, newParams = extractParamByTypePrintAndRemove(newParams, NodeType, &builder)
+	_, newParams = extractParamByTypePrintAndRemove(newParams, ServiceType, &builder)
+	functionParam, newParams := extractParamByTypeAndRemove(newParams, FunctionType)
+	sourceParam, newParams := extractParamByTypeAndRemove(newParams, SourceType)
+
+	for _, param := range newParams {
 		printParam(&builder, param)
 	}
 
