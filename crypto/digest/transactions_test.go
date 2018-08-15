@@ -22,6 +22,7 @@ func getTransaction() *protocol.Transaction {
 }
 
 func TestCalcTxHash(t *testing.T) {
+	// If this test fails it probably means the builder (executed by getTransaction() has changed
 	tx := getTransaction()
 	hash := digest.CalcTxHash(tx)
 	expectedHash, err := hex.DecodeString(ExpectedTransactionHashHex)
