@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -32,7 +33,7 @@ func captureStdout(f func(writer io.Writer)) string {
 	return buf.String()
 }
 
-func parseStdout(input string) map[string]interface{} {
+func parseOutput(input string) map[string]interface{} {
 	jsonMap := make(map[string]interface{})
 	_ = json.Unmarshal([]byte(input), &jsonMap)
 	return jsonMap
@@ -47,7 +48,7 @@ func TestSimpleLogger(t *testing.T) {
 	})
 
 	fmt.Println(stdout)
-	jsonMap := parseStdout(stdout)
+	jsonMap := parseOutput(stdout)
 
 	Expect(jsonMap["level"]).To(Equal("info"))
 	Expect(jsonMap["node"]).To(Equal("node1"))
@@ -69,7 +70,7 @@ func TestNestedLogger(t *testing.T) {
 	})
 
 	fmt.Println(stdout)
-	jsonMap := parseStdout(stdout)
+	jsonMap := parseOutput(stdout)
 
 	Expect(jsonMap["level"]).To(Equal("info"))
 	Expect(jsonMap["node"]).To(Equal("node1"))
@@ -97,7 +98,7 @@ func TestStringableSlice(t *testing.T) {
 	})
 
 	fmt.Println(stdout)
-	jsonMap := parseStdout(stdout)
+	jsonMap := parseOutput(stdout)
 
 	Expect(jsonMap["level"]).To(Equal("info"))
 	Expect(jsonMap["node"]).To(Equal("node1"))
@@ -158,7 +159,7 @@ func TestMeter(t *testing.T) {
 
 	fmt.Println(stdout)
 
-	jsonMap := parseStdout(stdout)
+	jsonMap := parseOutput(stdout)
 
 	Expect(jsonMap["level"]).To(Equal("metric"))
 	Expect(jsonMap["node"]).To(Equal("node1"))
@@ -194,4 +195,35 @@ func TestCustomLogFormatter(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("function=instrumentation_test.TestCustomLogFormatter.func1"))
 	Expect(stdout).To(ContainSubstring("source="))
 	Expect(stdout).To(ContainSubstring("instrumentation/basic_logger_test.go"))
+}
+
+func TestMultipleOutputs(t *testing.T) {
+	RegisterTestingT(t)
+
+	filename := "/tmp/test-multiple-outputs"
+	os.RemoveAll(filename)
+
+	fileOutput, _ := os.Create(filename)
+
+	stdout := captureStdout(func(writer io.Writer) {
+		serviceLogger := instrumentation.GetLogger(instrumentation.Node("node1"), instrumentation.Service("public-api")).WithOutput(writer, fileOutput)
+		serviceLogger.Info("Service initialized")
+	})
+
+	rawFile, _ := ioutil.ReadFile(filename)
+	fileContents := string(rawFile)
+
+	fmt.Println(fileContents)
+
+	Expect(stdout).To(Equal(fileContents))
+
+	jsonMap := parseOutput(fileContents)
+
+	Expect(jsonMap["level"]).To(Equal("info"))
+	Expect(jsonMap["node"]).To(Equal("node1"))
+	Expect(jsonMap["service"]).To(Equal("public-api"))
+	Expect(jsonMap["function"]).To(Equal("instrumentation_test.TestMultipleOutputs.func1"))
+	Expect(jsonMap["message"]).To(Equal("Service initialized"))
+	Expect(jsonMap["source"]).NotTo(BeEmpty())
+	Expect(jsonMap["timestamp"]).NotTo(BeNil())
 }
