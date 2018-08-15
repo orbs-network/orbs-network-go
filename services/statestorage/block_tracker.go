@@ -3,16 +3,17 @@ package statestorage
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
 type BlockTracker struct {
-	currentHeight uint64
-	graceDistance uint64
+	graceDistance uint16
 	timeout       time.Duration
 
-	latch chan struct{}
+	mutex         sync.RWMutex
+	currentHeight int64
+	latch         chan struct{}
 
 	// following fields are for tests only
 	enteredSelectSignalForTests chan int
@@ -21,40 +22,53 @@ type BlockTracker struct {
 
 func NewBlockTracker(startingHeight uint64, graceDist uint16, timeout time.Duration) *BlockTracker {
 	return &BlockTracker{
-		currentHeight: startingHeight,
-		graceDistance: uint64(graceDist),
+		currentHeight: int64(startingHeight),
+		graceDistance: graceDist,
 		timeout:       timeout,
 		latch:         make(chan struct{}),
 	}
 }
 
 func (t *BlockTracker) IncrementHeight() {
-	atomic.AddUint64(&t.currentHeight, 1) // increment atomically in case two goroutines commit concurrently
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	t.currentHeight++
 	prevLatch := t.latch
 	t.latch = make(chan struct{})
 	close(prevLatch)
 }
 
+func (t *BlockTracker) readAtomicHeightAndLatch() (int64, chan struct{}) {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
+	return t.currentHeight, t.latch
+}
+
 func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) error {
 
-	rh := int64(requestedHeight)
-	if int64(t.currentHeight) >= rh { // requested block already committed
+	requestedHeightInt := int64(requestedHeight)
+	currentHeight, currentLatch := t.readAtomicHeightAndLatch()
+
+	if currentHeight >= requestedHeightInt { // requested block already committed
 		return nil
 	}
 
-	if int64(t.currentHeight) < rh-int64(t.graceDistance) { // requested block too far ahead, no grace
+	if currentHeight < requestedHeightInt-int64(t.graceDistance) { // requested block too far ahead, no grace
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
 	timer := time.NewTimer(t.timeout)
 	defer timer.Stop()
 
-	for int64(t.currentHeight) < rh { // sit on latch until desired height or t.o.
+	for currentHeight < requestedHeightInt {
 		t.notifyEnterSelectForTests()
 		select {
 		case <-timer.C:
 			return errors.Errorf("timed out waiting for block at height %v", requestedHeight)
-		case <-t.latch:
+		case <-currentLatch:
+			currentHeight, currentLatch = t.readAtomicHeightAndLatch()
 		}
 	}
 	return nil
