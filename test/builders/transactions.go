@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -41,10 +42,15 @@ func TransferTransaction() *TransactionBuilder {
 	}
 }
 
+func Transaction() *TransactionBuilder {
+	return TransferTransaction()
+}
+
 func (t *TransactionBuilder) Build() *protocol.SignedTransaction {
 	t.builder.Signature = make([]byte, signature.ED25519_SIGNATURE_SIZE)
 	signedTransaction := t.builder.Build()
-	sig, err := signature.SignEd25519(t.signer, signedTransaction.Transaction().Raw())
+	txHash := digest.CalcTxHash(signedTransaction.Transaction())
+	sig, err := signature.SignEd25519(t.signer, txHash)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +64,7 @@ func (t *TransactionBuilder) Builder() *protocol.SignedTransactionBuilder {
 	return t.builder
 }
 
-func (t *TransactionBuilder) WithSigner(keyPair keys.Ed25519KeyPair) *TransactionBuilder {
+func (t *TransactionBuilder) WithEd25519Signer(keyPair *keys.Ed25519KeyPair) *TransactionBuilder {
 	t.builder.Transaction.Signer.Eddsa.SignerPublicKey = keyPair.PublicKey()
 	t.signer = keyPair.PrivateKey()
 	return t
@@ -69,8 +75,7 @@ func (t *TransactionBuilder) WithTimestamp(timestamp time.Time) *TransactionBuil
 	return t
 }
 
-func (t *TransactionBuilder) WithInvalidSigner() *TransactionBuilder {
-	keyPair := keys.Ed25519KeyPairForTests(1)
+func (t *TransactionBuilder) WithInvalidEd25519Signer(keyPair *keys.Ed25519KeyPair) *TransactionBuilder {
 	corruptPrivateKey := make([]byte, len(keyPair.PrivateKey()))
 	t.builder.Transaction.Signer.Eddsa.SignerPublicKey = keyPair.PublicKey()
 	t.signer = corruptPrivateKey

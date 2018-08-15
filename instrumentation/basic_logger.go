@@ -6,12 +6,11 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"io"
 	"os"
+	"reflect"
 	"runtime"
 	"strings"
 	"time"
 )
-
-const NanosecondsInASecond = 1000000000
 
 type BasicLogger interface {
 	Log(level string, message string, params ...*Field)
@@ -26,10 +25,11 @@ type BasicLogger interface {
 }
 
 type basicLogger struct {
-	output       io.Writer
-	formatter    LogFormatter
-	prefixes     []*Field
-	nestingLevel int
+	output                io.Writer
+	formatter             LogFormatter
+	prefixes              []*Field
+	nestingLevel          int
+	sourceRootPrefixIndex int
 }
 
 type FieldType uint8
@@ -46,18 +46,19 @@ const (
 	FloatType
 	FunctionType
 	SourceType
+	StringArrayType
 )
 
 type Field struct {
 	Key  string
 	Type FieldType
 
-	String string
-	Int    int64
-	Uint   uint64
-	Bytes  []byte
-
-	Float float64
+	String      string
+	StringArray []string
+	Int         int64
+	Uint        uint64
+	Bytes       []byte
+	Float       float64
 
 	Error error
 }
@@ -84,6 +85,24 @@ func String(key string, value string) *Field {
 
 func Stringable(key string, value fmt.Stringer) *Field {
 	return &Field{Key: key, String: value.String(), Type: StringType}
+}
+
+func StringableSlice(key string, values interface{}) *Field {
+	var strings []string
+	switch reflect.TypeOf(values).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(values)
+
+		strings = make([]string, 0, s.Len())
+
+		for i := 0; i < s.Len(); i++ {
+			if stringer, ok := s.Index(i).Interface().(fmt.Stringer); ok {
+				strings = append(strings, stringer.String())
+			}
+		}
+	}
+
+	return &Field{Key: key, StringArray: strings, Type: StringArrayType}
 }
 
 func Int(key string, value int) *Field {
@@ -127,10 +146,28 @@ func Error(value error) *Field {
 }
 
 func BlockHeight(value primitives.BlockHeight) *Field {
-	return &Field{Key: "blockHeight", String: value.String(), Type: StringType}
+	return &Field{Key: "block-height", String: value.String(), Type: StringType}
 }
 
-func getCaller(level int) (function string, source string) {
+func GetLogger(params ...*Field) BasicLogger {
+	logger := &basicLogger{prefixes: params, nestingLevel: 4, output: os.Stdout, formatter: NewJsonFormatter()}
+
+	fpcs := make([]uintptr, 1)
+	n := runtime.Callers(logger.nestingLevel, fpcs)
+	if n != 0 {
+		fun := runtime.FuncForPC(fpcs[0] - 1)
+		if fun != nil {
+			file, _ := fun.FileLine(fpcs[0] - 1)
+			if l := strings.Index(file, "orbs-network-go/"); l > -1 {
+				logger.sourceRootPrefixIndex = l + len("orbs-network-go/")
+			}
+		}
+	}
+
+	return logger
+}
+
+func (b *basicLogger) getCaller(level int) (function string, source string) {
 	fpcs := make([]uintptr, 1)
 
 	// skip levels to get to the caller of logger function
@@ -150,13 +187,7 @@ func getCaller(level int) (function string, source string) {
 	if lastSlashOfName > 0 {
 		fName = fName[lastSlashOfName+1:]
 	}
-	return fName, fmt.Sprintf("%s:%d", file, line)
-}
-
-func GetLogger(params ...*Field) BasicLogger {
-	logger := &basicLogger{prefixes: params, nestingLevel: 4, output: os.Stdout, formatter: NewJsonFormatter()}
-
-	return logger
+	return fName, fmt.Sprintf("%s:%d", file[b.sourceRootPrefixIndex:], line)
 }
 
 func (b *basicLogger) Prefixes() []*Field {
@@ -194,14 +225,21 @@ func (f *Field) Value() interface{} {
 	case FloatType:
 		return f.Float
 	case ErrorType:
+		if f.Error != nil {
+			return f.Error.Error()
+		} else {
+			return "<nil>"
+		}
 		return f.Error.Error()
+	case StringArrayType:
+		return f.StringArray
 	}
 
 	return nil
 }
 
 func (b *basicLogger) Log(level string, message string, params ...*Field) {
-	function, source := getCaller(b.nestingLevel)
+	function, source := b.getCaller(b.nestingLevel)
 
 	enrichmentParams := []*Field{
 		Function(function),
@@ -220,7 +258,7 @@ func (b *basicLogger) Info(message string, params ...*Field) {
 }
 
 func (b *basicLogger) Error(message string, params ...*Field) {
-	b.Log("info", message, params...)
+	b.Log("error", message, params...)
 }
 
 func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {

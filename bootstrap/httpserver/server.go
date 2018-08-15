@@ -62,7 +62,11 @@ func (s *server) createRouter() http.Handler {
 		}
 
 		result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
-		r.writeMessageOrError(result.ClientResponse, err)
+		if result != nil {
+			r.writeMessageOrError(result.ClientResponse, err)
+		} else {
+			r.writeMessageOrError(nil, err)
+		}
 	})
 
 	router := http.NewServeMux()
@@ -97,7 +101,11 @@ func (r *response) reportErrorOnInvalidRequest(m membuffers.Message) bool {
 func (r *response) writeMessageOrError(message membuffers.Message, err error) {
 	//TODO handle errors
 	r.writer.Header().Set("Content-Type", "application/octet-stream")
-	r.writer.Write(message.Raw())
+	if err != nil {
+		r.writer.Write([]byte(err.Error()))
+	} else {
+		r.writer.Write(message.Raw())
+	}
 }
 
 func (s *server) handler(handler func(bytes []byte, r *response)) http.Handler {

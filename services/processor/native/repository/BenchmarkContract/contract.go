@@ -11,14 +11,15 @@ var CONTRACT = types.ContractInfo{
 	Permission: protocol.PERMISSION_SCOPE_SERVICE,
 	Methods: []types.MethodInfo{
 		METHOD_INIT,
+		METHOD_NOP,
 		METHOD_ADD,
 		METHOD_SET,
 		METHOD_GET,
-		METHOD_ARGTYPES,
+		METHOD_ARG_TYPES,
 		METHOD_THROW,
 		METHOD_PANIC,
-		METHOD_INVALID_NOERROR,
-		METHOD_INVALID_NOCONTEXT,
+		METHOD_INVALID_NO_ERROR,
+		METHOD_INVALID_NO_CONTEXT,
 	},
 	InitSingleton: newContract,
 }
@@ -34,11 +35,24 @@ type contract struct{ *types.BaseContract }
 var METHOD_INIT = types.MethodInfo{
 	Name:           "_init",
 	External:       false,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract)._init,
 }
 
 func (c *contract) _init(ctx types.Context) error {
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+var METHOD_NOP = types.MethodInfo{
+	Name:           "nop",
+	External:       false,
+	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Implementation: (*contract).nop,
+}
+
+func (c *contract) nop(ctx types.Context) error {
 	return nil
 }
 
@@ -83,7 +97,7 @@ func (c *contract) get(ctx types.Context) (uint64, error) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_ARGTYPES = types.MethodInfo{
+var METHOD_ARG_TYPES = types.MethodInfo{
 	Name:           "argTypes",
 	External:       true,
 	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
@@ -122,7 +136,7 @@ func (c *contract) panic(ctx types.Context) error {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_INVALID_NOERROR = types.MethodInfo{
+var METHOD_INVALID_NO_ERROR = types.MethodInfo{
 	Name:           "invalidNoError",
 	External:       true,
 	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
@@ -135,7 +149,7 @@ func (c *contract) invalidNoError(ctx types.Context) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_INVALID_NOCONTEXT = types.MethodInfo{
+var METHOD_INVALID_NO_CONTEXT = types.MethodInfo{
 	Name:           "invalidNoContext",
 	External:       true,
 	Access:         protocol.ACCESS_SCOPE_READ_ONLY,

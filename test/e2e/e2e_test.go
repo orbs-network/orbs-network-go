@@ -62,6 +62,9 @@ var _ = Describe("The Orbs Network", func() {
 				nodeKeyPair.PrivateKey(),
 				map[string]config.FederationNode{nodeKeyPair.PublicKey().KeyForMap(): config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())},
 				70,
+				5,
+				5,
+				30*60,
 				nodeKeyPair.PublicKey(), // we are the leader
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				2*1000,
@@ -87,7 +90,12 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
+			response := callMethod(m).ClientResponse.OutputArgumentsIterator()
+			if response.HasNext() {
+				return response.NextOutputArguments().Uint64Value()
+			} else {
+				return 0
+			}
 		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {

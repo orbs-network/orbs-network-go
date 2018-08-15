@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
@@ -17,6 +18,11 @@ func TransactionReceipt() *receipt {
 			ExecutionResult: protocol.EXECUTION_RESULT_SUCCESS,
 		},
 	}
+}
+
+func (r *receipt) WithTransaction(t *protocol.Transaction) *receipt {
+	r.builder.Txhash = digest.CalcTxHash(t)
+	return r
 }
 
 func (r *receipt) Build() *protocol.TransactionReceipt {
