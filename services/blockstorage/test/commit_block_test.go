@@ -9,7 +9,7 @@ import (
 )
 
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 
 	driver.expectCommitStateDiff()
 
@@ -21,9 +21,9 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 1, driver.numOfWrittenBlocks())
 
-	driver.verifyMocks()
+	driver.verifyMocks(t)
 
-	lastCommittedBlockHeight := driver.getLastBlockHeight()
+	lastCommittedBlockHeight := driver.getLastBlockHeight(t)
 
 	require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight, "block height in storage should be the same")
 	require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestampe in storage should be the same")
@@ -32,7 +32,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 }
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 
 	driver.expectCommitStateDiff()
 
@@ -48,16 +48,16 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 	_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
 	require.EqualError(t, err, "could not write a block", "error should be returned if storage fails")
 
-	driver.verifyMocks()
+	driver.verifyMocks(t)
 
-	lastCommittedBlockHeight := driver.getLastBlockHeight()
+	lastCommittedBlockHeight := driver.getLastBlockHeight(t)
 
 	require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight, "block height should not update as storage was unavailable")
 	require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestamp should not update as storage was unavailable")
 }
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 
 	_, err := driver.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -65,7 +65,7 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 }
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 
 	blockPair := builders.BlockPair().Build()
 
@@ -77,11 +77,11 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 
 	require.EqualValues(t, 1, driver.numOfWrittenBlocks(), "block should be written only once")
-	driver.verifyMocks()
+	driver.verifyMocks(t)
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 
 	driver.expectCommitStateDiff()
 
@@ -93,11 +93,11 @@ func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 
 	require.EqualError(t, err, "block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
 	require.EqualValues(t, 1, driver.numOfWrittenBlocks(), "only one block should have been written")
-	driver.verifyMocks()
+	driver.verifyMocks(t)
 }
 
 func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 	driver.expectCommitStateDiff()
 
 	driver.commitBlock(builders.BlockPair().Build())
@@ -105,5 +105,5 @@ func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 	_, err := driver.commitBlock(builders.BlockPair().WithHeight(1000).Build())
 	require.EqualError(t, err, "block height is 1000, expected 2", "block height was mutate to be invalid, should return an error")
 	require.EqualValues(t, 1, driver.numOfWrittenBlocks(), "only one block should have been written")
-	driver.verifyMocks()
+	driver.verifyMocks(t)
 }

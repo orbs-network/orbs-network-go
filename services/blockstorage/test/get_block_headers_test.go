@@ -9,7 +9,7 @@ import (
 )
 
 func TestReturnTransactionBlockHeader(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -25,7 +25,7 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 
 // FIXME time out
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -43,14 +43,14 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 		driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 	}
 
-	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight, "verify the test executed fully")
+	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight(t).LastCommittedBlockHeight, "verify the test executed fully")
 
 	output := <-result
 	require.EqualValues(t, blockHeightInTheFuture, output.TransactionsBlockHeader.BlockHeight(), "block height should be 'in the future'")
 }
 
 func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -73,7 +73,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -88,7 +88,7 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 
 // FIXME time out
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
@@ -106,7 +106,7 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 		driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 	}
 
-	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight, "verify the test executed fully")
+	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight(t).LastCommittedBlockHeight, "verify the test executed fully")
 
 	output := <-result
 
@@ -114,7 +114,7 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
-	driver := NewDriver(t)
+	driver := NewDriver()
 	driver.expectCommitStateDiff()
 
 	block := builders.BlockPair().Build()
