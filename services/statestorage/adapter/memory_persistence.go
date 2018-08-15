@@ -100,7 +100,7 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	output := strings.Builder{}
 	output.WriteString("{")
 	for _, currentBlock := range blockHeights {
-		output.WriteString(fmt.Sprintf("Height_%v:{", currentBlock))
+		output.WriteString(fmt.Sprintf("height_%v:{", currentBlock))
 		contracts := make([]primitives.ContractName, 0, len(sp.snapshots[currentBlock]))
 		for c := range sp.snapshots[currentBlock] {
 			contracts = append(contracts, c)
@@ -122,7 +122,7 @@ func (sp *InMemoryStatePersistence) Dump() string {
 			}
 			output.WriteString("},")
 		}
-		output.WriteString("}")
+		output.WriteString("},")
 	}
 	output.WriteString("}")
 	return output.String()
