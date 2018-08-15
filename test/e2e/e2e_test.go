@@ -57,7 +57,7 @@ var _ = Describe("The Orbs Network", func() {
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
 			nodeKeyPair := keys.Ed25519KeyPairForTests(0)
-			logger := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+			logger := instrumentation.GetLogger().WithOutput(instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 			node = bootstrap.NewNode(
 				":8080",
 				nodeKeyPair.PublicKey(),

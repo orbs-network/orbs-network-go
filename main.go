@@ -22,7 +22,10 @@ func getLogger(path string) instrumentation.BasicLogger {
 		panic(err)
 	}
 
-	return instrumentation.GetLogger().WithOutput(os.Stdout, logFile)
+	stdoutOutput := instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter())
+	fileOutput := instrumentation.Output(logFile)
+
+	return instrumentation.GetLogger().WithOutput(stdoutOutput, fileOutput)
 }
 
 func main() {

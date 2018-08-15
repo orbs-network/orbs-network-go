@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
@@ -17,7 +18,7 @@ type harness struct {
 }
 
 func newHarness() *harness {
-	log := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	log := instrumentation.GetLogger().WithOutput(instrumentation.Output(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 
