@@ -113,6 +113,11 @@ func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBloc
 }
 
 func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+
+	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
+	}
+
 	value, _ := s.merkle.GetRootHash(merkle.TrieId(input.BlockHeight))
 
 	output := &services.GetStateHashOutput{StateRootHash: value}
