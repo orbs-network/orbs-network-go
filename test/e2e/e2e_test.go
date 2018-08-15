@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -56,6 +57,7 @@ var _ = Describe("The Orbs Network", func() {
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
 			nodeKeyPair := keys.Ed25519KeyPairForTests(0)
+			logger := instrumentation.GetLogger() //.WithFormatter(instrumentation.NewHumanReadableFormatter())
 			node = bootstrap.NewNode(
 				":8080",
 				nodeKeyPair.PublicKey(),
@@ -67,6 +69,7 @@ var _ = Describe("The Orbs Network", func() {
 				30*60,
 				nodeKeyPair.PublicKey(), // we are the leader
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+				logger,
 				2*1000,
 				gossipTransport,
 				5,

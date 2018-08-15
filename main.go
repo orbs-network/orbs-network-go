@@ -4,12 +4,25 @@ import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"os"
 	"strconv"
 	"strings"
 )
+
+func getLogFile(path string) (*os.File, error) {
+	if path == "" {
+		path = "./orbs-network.log"
+	}
+
+	if file, err := os.Open(path); err != nil {
+		return file, nil
+	}
+
+	return os.Create(path)
+}
 
 func main() {
 	// TODO: change this to a config like HardCodedConfig that takes config from env or json
@@ -21,6 +34,14 @@ func main() {
 	federationNodePublicKeys := strings.Split(os.Getenv("FEDERATION_NODES"), ",")
 	consensusLeader, _ := hex.DecodeString(os.Getenv("CONSENSUS_LEADER"))
 	httpAddress := ":" + strconv.FormatInt(port, 10)
+	logPath := os.Getenv("LOG_PATH")
+
+	logFile, err := getLogFile(logPath)
+	if err != nil {
+		panic(err)
+	}
+
+	logger := instrumentation.GetLogger().WithOutput(os.Stdout, logFile)
 
 	// TODO: move this code to the config we decided to add, the HardCodedConfig stuff is just placeholder
 	federationNodes := make(map[string]config.FederationNode)
@@ -44,6 +65,7 @@ func main() {
 		30*60,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+		logger,
 		2*1000,
 		gossipTransport,
 		5,
