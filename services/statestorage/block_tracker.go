@@ -48,27 +48,27 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 
 func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) error {
 
-	rh := uint64(requestedHeight)
-	ch, cl := t.readAtomicHeightAndLatch()
+	requestedHeightUint := uint64(requestedHeight)
+	currentHeight, currentLatch := t.readAtomicHeightAndLatch()
 
-	if ch >= rh { // requested block already committed
+	if currentHeight >= requestedHeightUint { // requested block already committed
 		return nil
 	}
 
-	if ch < rh-t.graceDistance { // requested block too far ahead, no grace
+	if currentHeight < requestedHeightUint-t.graceDistance { // requested block too far ahead, no grace
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
 	timer := time.NewTimer(t.timeout)
 	defer timer.Stop()
 
-	for ch < rh { // sit on latch until desired height or t.o.
+	for currentHeight < requestedHeightUint {
 		t.notifyEnterSelectForTests()
 		select {
 		case <-timer.C:
 			return errors.Errorf("timed out waiting for block at height %v", requestedHeight)
-		case <-cl:
-			ch, cl = t.readAtomicHeightAndLatch()
+		case <-currentLatch:
+			currentHeight, currentLatch = t.readAtomicHeightAndLatch()
 		}
 	}
 	return nil
