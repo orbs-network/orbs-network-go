@@ -1,6 +1,7 @@
 package consensuscontext
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -37,6 +38,9 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 		return nil, err
 	}
 
+	// TODO: add reporting mechanism to this service and convert this print to it
+	fmt.Printf("created Transactions block num-transactions=%d block=%s\n", len(txBlock.SignedTransactions), txBlock.String())
+
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
 	}, nil
@@ -47,6 +51,9 @@ func (s *service) RequestNewResultsBlock(input *services.RequestNewResultsBlockI
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: add reporting mechanism to this service and convert this print to it
+	fmt.Printf("created Results block: %s\n", rxBlock.String())
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,
