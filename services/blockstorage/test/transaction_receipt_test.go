@@ -22,10 +22,10 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 		TransactionTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 	})
 
-	require.NoError(t, err)
-	require.Nil(t, out.TransactionReceipt)
-	require.EqualValues(t, 1, out.BlockHeight)
-	require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp)
+	require.NoError(t, err, "transaction not found happy flow")
+	require.Nil(t, out.TransactionReceipt, "represents an empty receipt")
+	require.EqualValues(t, 1, out.BlockHeight, "last block height")
+	require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp, "last block timestamp")
 }
 
 // TODO return transaction receipt while the transaction timestamp is in the future (and too far ahead to be in the grace
@@ -51,11 +51,11 @@ func TestReturnTransactionReceipt(t *testing.T) {
 		TransactionTimestamp: tx.Timestamp(),
 	})
 
-	require.NoError(t, err)
-	require.NotNil(t, out.TransactionReceipt)
-	require.EqualValues(t, txHash, out.TransactionReceipt.Txhash())
-	require.EqualValues(t, 1, out.BlockHeight)
-	require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp)
+	require.NoError(t, err, "receipt should be found in this flow")
+	require.NotNil(t, out.TransactionReceipt, "receipt should be found in this flow")
+	require.EqualValues(t, txHash, out.TransactionReceipt.Txhash(), "receipt should have the tx hash we looked for")
+	require.EqualValues(t, 1, out.BlockHeight, "receipt should have the block height of the block containing the transaction")
+	require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp, "receipt should have the timestamp of the block containing the transaction")
 }
 
 // TODO return transaction receipt while the transaction timestamp is outside the grace (regular)

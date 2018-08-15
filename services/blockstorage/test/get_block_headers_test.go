@@ -17,10 +17,10 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 
 	output, err := driver.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{BlockHeight: 1})
 
-	require.NoError(t, err)
-	require.EqualValues(t, block.TransactionsBlock.Header, output.TransactionsBlockHeader)
-	require.EqualValues(t, block.TransactionsBlock.Metadata, output.TransactionsBlockMetadata)
-	require.EqualValues(t, block.TransactionsBlock.BlockProof, output.TransactionsBlockProof)
+	require.NoError(t, err, "this is a happy flow test")
+	require.EqualValues(t, block.TransactionsBlock.Header, output.TransactionsBlockHeader, "block header data should be as committed")
+	require.EqualValues(t, block.TransactionsBlock.Metadata, output.TransactionsBlockMetadata, "block header data should be as committed")
+	require.EqualValues(t, block.TransactionsBlock.BlockProof, output.TransactionsBlockProof, "block header data should be as committed")
 }
 
 // FIXME time out
@@ -43,10 +43,10 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 		driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 	}
 
-	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight)
+	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight, "verify the test executed fully")
 
 	output := <-result
-	require.EqualValues(t, blockHeightInTheFuture, output.TransactionsBlockHeader.BlockHeight())
+	require.EqualValues(t, blockHeightInTheFuture, output.TransactionsBlockHeader.BlockHeight(), "block height should be 'in the future'")
 }
 
 func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
@@ -69,7 +69,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 	}
 
 	err := <-timeoutError
-	require.EqualError(t, err, "operation timed out")
+	require.EqualError(t, err, "operation timed out", "expect a timeout as the requested block height never reached")
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
@@ -81,9 +81,9 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 
 	output, err := driver.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{BlockHeight: 1})
 
-	require.NoError(t, err)
-	require.EqualValues(t, block.ResultsBlock.Header, output.ResultsBlockHeader)
-	require.EqualValues(t, block.ResultsBlock.BlockProof, output.ResultsBlockProof)
+	require.NoError(t, err, "results block happy flow")
+	require.EqualValues(t, block.ResultsBlock.Header, output.ResultsBlockHeader, "block header data should be as committed")
+	require.EqualValues(t, block.ResultsBlock.BlockProof, output.ResultsBlockProof, "block header data should be as committed")
 }
 
 // FIXME time out
@@ -106,11 +106,11 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 		driver.commitBlock(builders.BlockPair().WithHeight(i).Build())
 	}
 
-	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight)
+	require.EqualValues(t, blockHeightInTheFuture+1, driver.getLastBlockHeight().LastCommittedBlockHeight, "verify the test executed fully")
 
 	output := <-result
 
-	require.EqualValues(t, blockHeightInTheFuture, output.ResultsBlockHeader.BlockHeight())
+	require.EqualValues(t, blockHeightInTheFuture, output.ResultsBlockHeader.BlockHeight(), "block height should be 'in the future'")
 }
 
 func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
@@ -133,5 +133,5 @@ func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	}
 
 	err := <-timeoutError
-	require.EqualError(t, err, "operation timed out")
+	require.EqualError(t, err, "operation timed out", "expect a timeout as the requested block height never reached")
 }
