@@ -2,12 +2,12 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"time"
-	"github.com/orbs-network/orbs-network-go/services/statestorage"
 )
 
 type Config interface {
@@ -18,7 +18,6 @@ type Config interface {
 	VirtualChainId() primitives.VirtualChainId
 	QuerySyncGraceBlockDist() uint16
 	QueryGraceTimeoutMillis() uint64
-
 }
 
 type service struct {

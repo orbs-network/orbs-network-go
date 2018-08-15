@@ -1,10 +1,10 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
 )
 
 func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {

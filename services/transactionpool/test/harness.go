@@ -13,8 +13,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
 	"log"
+	"time"
 )
 
 type harness struct {
@@ -150,7 +150,7 @@ func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.
 	for currentBlock <= height {
 		out, _ := h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
 			LastCommittedBlockHeight: currentBlock,
-			ResultsBlockHeader: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: currentBlock, Timestamp: timestamp}).Build(),
+			ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{BlockHeight: currentBlock, Timestamp: timestamp}).Build(),
 		})
 		currentBlock = out.NextDesiredBlockHeight
 	}

@@ -4,10 +4,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"time"
 )
 

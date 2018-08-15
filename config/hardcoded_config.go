@@ -38,7 +38,7 @@ type consensusContextConfig struct {
 
 type stateStorageConfig struct {
 	*crossServiceConfig
-	stateHistoryRetentionInBlockHeights uint64
+	stateHistoryRetentionInBlockHeights uint16
 }
 
 type transactionPoolConfig struct {
@@ -77,10 +77,6 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
-	stateHistoryRetentionInBlockHeights uint64,
-	querySyncGraceBlockDist uint16,
-	queryGraceTimeoutMillis uint64,
-	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) NodeConfig {
 
@@ -97,17 +93,17 @@ func NewHardCodedConfig(
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
-			querySyncGraceBlockDist: querySyncGraceBlockDist,
+			queryGraceTimeoutMillis: 300,
+			querySyncGraceBlockDist: 3,
 		},
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillis: time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
 		},
 		stateStorageConfig: &stateStorageConfig{
-			stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights,
+			stateHistoryRetentionInBlockHeights: 5,
 		},
 		consensusContextConfig: &consensusContextConfig{
-			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
+			belowMinimalBlockDelayMillis: 300,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
 		transactionPoolConfig: &transactionPoolConfig{
@@ -166,11 +162,12 @@ func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirati
 	}
 }
 
-func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64, graceTimeoutMillis uint64) *stateStorageConfig {
+func NewStateStorageConfig(maxStateHistory uint16, graceBlockDist uint16, graceTimeoutMillis uint64) *stateStorageConfig {
 	return &stateStorageConfig{
 		stateHistoryRetentionInBlockHeights: maxStateHistory,
 		crossServiceConfig: &crossServiceConfig{
 			queryGraceTimeoutMillis: graceTimeoutMillis,
+			querySyncGraceBlockDist: graceBlockDist,
 		},
 	}
 }
@@ -223,7 +220,7 @@ func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
 	return c.minimumTransactionsInBlock
 }
 
-func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
+func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint16 {
 	return c.stateHistoryRetentionInBlockHeights
 }
 

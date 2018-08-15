@@ -66,11 +66,7 @@ var _ = Describe("The Orbs Network", func() {
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				2*1000,
 				gossipTransport,
-				5,
 				3,
-				300,
-				300,
-				1,
 			)
 
 			// To let node start up properly, otherwise in Docker we get connection refused

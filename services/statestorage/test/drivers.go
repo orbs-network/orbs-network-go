@@ -8,11 +8,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-network-go/config"
 )
 
 type driver struct {
 	service services.StateStorage
-	history driverConfig
 }
 
 type keyValue struct {
@@ -20,23 +20,20 @@ type keyValue struct {
 	value []byte
 }
 
-func newStateStorageDriver(numOfStateRevisionsToRetain int) *driver {
+func newStateStorageDriver(numOfStateRevisionsToRetain uint16) *driver {
 	return newStateStorageDriverWithGrace(numOfStateRevisionsToRetain, 0, 0)
 }
 
-func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain int, graceBlockDiff int, graceTimeoutMillis int) *driver {
+func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint16, graceBlockDiff uint16, graceTimeoutMillis uint64) *driver {
 	if numOfStateRevisionsToRetain <= 0 {
 		numOfStateRevisionsToRetain = 1
 	}
-	historySize := driverConfig{
-		numOfStateRevisionsToRetain,
-		graceBlockDiff,
-		graceTimeoutMillis,
-	}
+
+	conf := config.NewStateStorageConfig(numOfStateRevisionsToRetain, graceBlockDiff, graceTimeoutMillis)
 
 	p := adapter.NewInMemoryStatePersistence()
 
-	return &driver{service: statestorage.NewStateStorage(&historySize, p), history: historySize}
+	return &driver{service: statestorage.NewStateStorage(conf, p)}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
@@ -111,20 +108,4 @@ func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...s
 	d.commitStateDiff(CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
 }
 
-type driverConfig struct {
-	historySize                 int
-	querySyncGraceBlockDist     int
-	querySyncGraceTimeoutMillis int
-}
 
-func (d *driverConfig) StateHistoryRetentionInBlockHeights() uint64 {
-	return uint64(d.historySize)
-}
-
-func (d *driverConfig) QuerySyncGraceBlockDist() uint64 {
-	return uint64(d.querySyncGraceBlockDist)
-}
-
-func (d *driverConfig) QueryGraceTimeoutMillis() uint64 {
-	return uint64(d.querySyncGraceTimeoutMillis)
-}

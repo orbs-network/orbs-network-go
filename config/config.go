@@ -24,7 +24,7 @@ type NodeConfig interface {
 	BlockSyncCommitTimeoutMillis() time.Duration
 
 	// state storage
-	StateHistoryRetentionInBlockHeights() uint64
+	StateHistoryRetentionInBlockHeights() uint16
 	QuerySyncGraceBlockDist() uint16
 
 	// consensus context

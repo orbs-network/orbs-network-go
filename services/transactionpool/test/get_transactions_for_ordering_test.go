@@ -3,10 +3,10 @@ package test
 import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
@@ -52,7 +52,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 	h := newHarness()
 
 	_, err := h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
-		BlockHeight: 2,
+		BlockHeight:             2,
 		MaxNumberOfTransactions: 1,
 	})
 
