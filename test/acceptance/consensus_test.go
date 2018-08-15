@@ -9,6 +9,7 @@ import (
 )
 
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
+	t.Skipf("Skipping Lean Helix tests until lean-helix-go submodule is integrated")
 	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX), func(network harness.AcceptanceTestNetwork) {
 
 		prePrepareLatch := network.GossipTransport().LatchOn(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))

@@ -10,7 +10,8 @@ import (
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	// TODO Add CONSENSUS_ALGO_TYPE_LEAN_HELIX when lean-helix-go submodule is integrated
+	harness.WithNetwork(2, harness.WithAlgos(/*consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, */consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		// leader is nodeIndex 0, validator is nodeIndex 1
 

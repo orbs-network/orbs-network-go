@@ -63,6 +63,7 @@ var _ = Describe("The Orbs Network", func() {
 				map[string]config.FederationNode{nodeKeyPair.PublicKey().KeyForMap(): config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())},
 				70,
 				nodeKeyPair.PublicKey(), // we are the leader
+				// TODO Revert to CONSENSUS_ALGO_TYPE_LEAN_HELIX when lean-helix-go submodule is integrated
 				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				2*1000,
 				gossipTransport,

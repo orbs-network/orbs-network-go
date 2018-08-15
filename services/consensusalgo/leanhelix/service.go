@@ -42,6 +42,8 @@ func NewLeanHelixConsensusAlgo(
 	config Config,
 ) services.ConsensusAlgoLeanHelix {
 
+	panic("Don't use this - will be replaced by lean-helix-go submodule")
+
 	s := &service{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
