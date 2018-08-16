@@ -16,13 +16,17 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"testing"
 )
 
-func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
+func WithNetwork(t *testing.T, numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
 	for _, consensusAlgo := range consensusAlgos {
 		test.WithContext(func(ctx context.Context) {
 			network := NewTestNetwork(ctx, numNodes, consensusAlgo)
 			f(network)
+			if t.Failed() { // avoid serializing state if test succeeded
+				network.DumpState()
+			}
 		})
 	}
 }

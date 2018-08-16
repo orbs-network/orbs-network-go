@@ -9,7 +9,7 @@ import (
 )
 
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
-	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX), func(network harness.AcceptanceTestNetwork) {
+	harness.WithNetwork(t, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -34,7 +34,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	harness.WithNetwork(t,2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 

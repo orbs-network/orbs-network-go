@@ -10,7 +10,7 @@ import (
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	harness.WithNetwork(t, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -29,14 +29,11 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 
 		network.BlockPersistence(1).WaitForBlocks(2)
 		require.EqualValues(t, 39, <-network.CallGetBalance(1), "getBalance result on non leader")
-
-		network.DumpState()
-
 	})
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	harness.WithNetwork(2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	harness.WithNetwork(t, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -53,8 +50,5 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		require.EqualValues(t, 17, <-network.CallGetBalance(0), "eventual getBalance result on leader")
 		network.BlockPersistence(1).WaitForBlocks(1)
 		require.EqualValues(t, 17, <-network.CallGetBalance(1), "eventual getBalance result on non leader")
-
-		network.DumpState()
-
 	})
 }
