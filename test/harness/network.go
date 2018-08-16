@@ -43,6 +43,7 @@ type AcceptanceTestNetwork interface {
 	Description() string
 	DeployBenchmarkToken()
 	GossipTransport() gossipAdapter.TamperingTransport
+	PublicApi(nodeIndex int) services.PublicApi
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
 	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
@@ -128,6 +129,10 @@ func (n *acceptanceTestNetwork) Description() string {
 
 func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {
 	return n.gossipTransport
+}
+
+func (n *acceptanceTestNetwork) PublicApi(nodeIndex int) services.PublicApi {
+	return n.nodes[nodeIndex].nodeLogic.PublicApi()
 }
 
 func (n *acceptanceTestNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {

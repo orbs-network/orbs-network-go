@@ -9,14 +9,9 @@ import (
 	"time"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
-
 	"context"
 	"os"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
@@ -25,10 +20,16 @@ import (
 	"bytes"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/go-errors/errors"
+	"github.com/orbs-network/orbs-network-go/test/harness"
 )
 
 var testLogger = instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
+//TODO: 1. move sendTransactionJson and callMethodJson to jsonapi package (and omit the json suffix)
+//TODO: 2. create runnable in json api: orbs-json-client [--send-transaction | --call-method]=<json> --public-key=<pubkey> --private-key=<privkey> --server-url=<http://....>
+//TODO: 3. this test should use aforementioned runnable, sending the jsons as strings
+//TODO: 4. move startSambusac into its own runnable main, taking --port=8080 argument
+//TODO: 5. the sambusac server itself should run inside a docker container, as another runnable
 func TestSambusacFlow(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e tests in short mode")
@@ -56,7 +57,7 @@ func TestSambusacFlow(t *testing.T) {
 	require.NoError(t, err, "error calling send_transfer")
 	require.NotNil(t, sendTransactionOutput.TransactionReceipt.Txhash, "got empty txhash")
 
-	time.Sleep(2 * time.Second) //TODO remove when public api blocks on tx
+	time.Sleep(500 * time.Millisecond) //TODO remove when public api blocks on tx
 
 	getBalanceJson := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
@@ -67,7 +68,7 @@ func TestSambusacFlow(t *testing.T) {
 	require.NoError(t, err, "error calling call_method")
 
 	require.Len(t, callMethodOutput.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
-	require.Equal(t, 42, callMethodOutput.OutputArguments[0].Uint64Value, "expected balance to equal 42")
+	require.EqualValues(t, 42, callMethodOutput.OutputArguments[0].Uint64Value, "expected balance to equal 42")
 }
 
 func sendTransactionJson(transferJson *jsonapi.Transaction, keyPair *keys.Ed25519KeyPair, serverUrl string) (*jsonapi.SendTransactionOutput, error) {
@@ -123,55 +124,19 @@ type Sambusac struct {
 }
 
 func startSambusac(serverAddress string, pathToContracts string) *Sambusac {
-	nodeKeyPair := keys.Ed25519KeyPairForTests(0)
-	nodeName := fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
-
-	federationNodes := make(map[string]config.FederationNode)
-	publicKey := nodeKeyPair.PublicKey()
-	federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
-
-	config := config.NewHardCodedConfig(
-		federationNodes,
-		nodeKeyPair.PublicKey(),
-		nodeKeyPair.PrivateKey(),
-		nodeKeyPair.PublicKey(),
-		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-		50, //TODO reduce to 1 milli
-		70,
-		5,
-		5,
-		30*60,
-		5,
-		3,
-		300,
-		300,
-		1,
-	)
-
-	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence()
-	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
-	transport := gossipAdapter.NewTamperingTransport()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	node := bootstrap.NewNodeLogic(
-		ctx,
-		transport,
-		blockPersistence,
-		statePersistence,
-		testLogger.For(instrumentation.Node(nodeName)),
-		config,
-	)
+	network := harness.NewTestNetwork(ctx, 3, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
-	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, node.PublicApi())
+	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
 
 	s := &Sambusac{
 		ctxCancel: cancel,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
-		logic: node,
 		httpServer: httpServer,
 	}
 
-	go s.WaitUntilShutdown()
+	go s.WaitUntilShutdown() //TODO remove 'go' and block
 
 	return s
 }
