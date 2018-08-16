@@ -22,6 +22,7 @@ func getTransaction() *protocol.Transaction {
 }
 
 func TestCalcTxHash(t *testing.T) {
+	// If this test fails it probably means the builder (executed by getTransaction() has changed
 	tx := getTransaction()
 	hash := digest.CalcTxHash(tx)
 	expectedHash, err := hex.DecodeString(ExpectedTransactionHashHex)
@@ -51,5 +52,22 @@ func TestCalcTxId(t *testing.T) {
 	if !bytes.Equal(txId, expectedId) {
 		t.Errorf("txid came out wrong, expected %x, got %x", expectedId, txId)
 	}
+}
 
+func BenchmarkCalcTxHash(b *testing.B) {
+	b.StopTimer()
+	tx := getTransaction()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		digest.CalcTxHash(tx)
+	}
+}
+
+func BenchmarkCalcTxId(b *testing.B) {
+	b.StopTimer()
+	tx := getTransaction()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		digest.CalcTxId(tx)
+	}
 }
