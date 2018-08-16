@@ -3,6 +3,7 @@ package statestorage
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -19,22 +20,24 @@ type Config interface {
 }
 
 type service struct {
-	config Config
+	config       Config
+	merkle       *merkle.Forest
+	blockTracker *synchronization.BlockTracker
 
 	mutex                    *sync.RWMutex
 	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
-
-	blockTracker *synchronization.BlockTracker
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
-		config:                   config,
+		config:       config,
+		merkle:       merkle.NewForest(),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
+
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
 		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
-		blockTracker:             synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
 	}
 }
 
@@ -46,20 +49,21 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	committedBlock := input.ResultsBlockHeader.BlockHeight()
-	fmt.Printf("trying to commit state diff for block height %d, num contract state diffs %d\n", committedBlock, len(input.ContractStateDiffs)) // TODO: move this to reporting mechanism
+	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
+	fmt.Printf("trying to commit state diff for block height %d, num contract state diffs %d\n", commitBlockHeight, len(input.ContractStateDiffs)) // TODO: move this to reporting mechanism
 
-	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != committedBlock {
+	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != commitBlockHeight {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
 
-	s.persistence.WriteState(committedBlock, input.ContractStateDiffs)
-	s.lastCommittedBlockHeader = input.ResultsBlockHeader
-	height := committedBlock + 1
+	// if updating state records fails downstream the merkle tree entries will not bother us
+	s.merkle.Update(input.ContractStateDiffs)
+	s.persistence.WriteState(commitBlockHeight, input.ContractStateDiffs)
 
+	s.lastCommittedBlockHeader = input.ResultsBlockHeader
 	s.blockTracker.IncrementHeight()
 
-	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: height}, nil
+	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
@@ -101,6 +105,9 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 }
 
 func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
 	result := &services.GetStateStorageBlockHeightOutput{
 		LastCommittedBlockHeight:    s.lastCommittedBlockHeader.BlockHeight(),
 		LastCommittedBlockTimestamp: s.lastCommittedBlockHeader.Timestamp(),
@@ -109,5 +116,14 @@ func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBloc
 }
 
 func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	panic("Not implemented")
+
+	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
+	}
+
+	value, _ := s.merkle.GetRootHash(merkle.TrieId(input.BlockHeight))
+
+	output := &services.GetStateHashOutput{StateRootHash: value}
+
+	return output, nil
 }
