@@ -14,7 +14,6 @@ const (
 
 func TestCalcSha256(t *testing.T) {
 	h := hash.CalcSha256(someData)
-	//
 	if h.String() != ExpectedSha256 {
 		t.Errorf("sha256 failed expected %s got %s", ExpectedSha256, h)
 	}
