@@ -19,7 +19,7 @@ func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
-	logLine["timestamp"] = float64(time.Now().UTC().UnixNano()) / NanosecondsInASecond
+	logLine["timestamp"] = time.Now().UTC().UnixNano()
 	logLine["message"] = message
 
 	for _, param := range params {
@@ -78,12 +78,19 @@ func printParam(builder *strings.Builder, param *Field) {
 	case BytesType:
 		value = string(base58.Encode(param.Bytes))
 	case FloatType:
-		value = strconv.FormatFloat(param.Float, 'f', 24, -1)
+		value = strconv.FormatFloat(param.Float, 'f', -1, 64)
 	case ErrorType:
 		if param.Error != nil {
 			value = param.Error.Error()
 		} else {
 			value = "<nil>"
+		}
+	case StringArrayType:
+		json, err := json.MarshalIndent(param.StringArray, "", "\t")
+		if err != nil {
+			value = ""
+		} else {
+			value = string(json)
 		}
 	}
 
@@ -94,9 +101,18 @@ func printParam(builder *strings.Builder, param *Field) {
 }
 
 func cut(i int, params []*Field) []*Field {
-	params[i] = params[len(params)-1] // Replace it with the last one.
+	copy(params[i:], params[i+1:])
+	params[len(params)-1] = nil
 	params = params[:len(params)-1]
 	return params
+}
+
+func extractParamByTypePrintAndRemove(params []*Field, ft FieldType, builder *strings.Builder) (*Field, []*Field) {
+	return extractParamByType(params, ft, true, true, builder)
+}
+
+func extractParamByTypeAndRemove(params []*Field, ft FieldType) (*Field, []*Field) {
+	return extractParamByType(params, ft, false, true, nil)
 }
 
 func extractParamByType(params []*Field, ft FieldType, shouldPrint, shouldRemove bool, builder *strings.Builder) (*Field, []*Field) {
@@ -115,19 +131,9 @@ func extractParamByType(params []*Field, ft FieldType, shouldPrint, shouldRemove
 }
 
 func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
-	logLine := make(map[string]interface{})
-
-	logLine["level"] = level
-	logLine["timestamp"] = float64(time.Now().UTC().UnixNano()) / NanosecondsInASecond
-	logLine["message"] = message
-
-	for _, param := range params {
-		logLine[param.Key] = param.Value()
-	}
-
 	builder := strings.Builder{}
 
-	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
+	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.999999Z07:00")
 
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
@@ -137,12 +143,15 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	builder.WriteString(message)
 	builder.WriteString(SPACE)
 
-	_, params = extractParamByType(params, NodeType, true, true, &builder)
-	_, params = extractParamByType(params, ServiceType, true, true, &builder)
-	functionParam, params := extractParamByType(params, FunctionType, false, true, nil)
-	sourceParam, params := extractParamByType(params, SourceType, false, true, nil)
+	var newParams = make([]*Field, len(params))
+	copy(newParams, params)
 
-	for _, param := range params {
+	_, newParams = extractParamByTypePrintAndRemove(newParams, NodeType, &builder)
+	_, newParams = extractParamByTypePrintAndRemove(newParams, ServiceType, &builder)
+	functionParam, newParams := extractParamByTypeAndRemove(newParams, FunctionType)
+	sourceParam, newParams := extractParamByTypeAndRemove(newParams, SourceType)
+
+	for _, param := range newParams {
 		printParam(&builder, param)
 	}
 
