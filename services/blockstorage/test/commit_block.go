@@ -44,7 +44,6 @@ var _ = Describe("Committing a block", func() {
 		Expect(driver.numOfWrittenBlocks()).To(Equal(1))
 
 		driver.failNextBlocks()
-		driver.expectCommitStateDiff() // TODO: this line should be removed, it's added here due to convoluted sync mechanism in acceptance test where we wait until block is written to block persistence where instead we need to wait on block written to state persistence
 
 		_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
 		Expect(err).To(MatchError("could not write a block"))

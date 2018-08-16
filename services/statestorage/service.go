@@ -3,6 +3,7 @@ package statestorage
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -24,7 +25,7 @@ type service struct {
 	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 
-	blockTracker *BlockTracker
+	blockTracker *synchronization.BlockTracker
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
@@ -33,7 +34,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence) servic
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
 		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
-		blockTracker:             NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
+		blockTracker:             synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
 	}
 }
 

@@ -1,9 +1,11 @@
 package adapter
 
 import (
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type ContractState map[string]*protocol.StateRecord
@@ -12,15 +14,17 @@ type StateVersion map[primitives.ContractName]ContractState
 type InMemoryStatePersistence struct {
 	stateWritten chan bool
 	stateDiffs   map[primitives.BlockHeight]StateVersion
+	blockTracker *synchronization.BlockTracker
 }
 
-func NewInMemoryStatePersistence() StatePersistence {
+func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 	stateDiffsContract := map[primitives.ContractName]ContractState{primitives.ContractName("BenchmarkToken"): {}}
 
 	return &InMemoryStatePersistence{
 		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
 		stateDiffs:   map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
 		stateWritten: make(chan bool, 10),
+		blockTracker: synchronization.NewBlockTracker(0, 100, time.Duration(5*time.Second)),
 	}
 }
 
@@ -34,6 +38,8 @@ func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, co
 			sp.writeOneContract(height, stateDiffs.ContractName(), i.NextStateDiffs())
 		}
 	}
+
+	sp.blockTracker.IncrementHeight()
 
 	sp.stateWritten <- true
 
@@ -89,4 +95,8 @@ func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, con
 	} else {
 		return nil, errors.Errorf("block %v does not exist in snapshot history", height)
 	}
+}
+
+func (sp *InMemoryStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) {
+	sp.blockTracker.WaitForBlock(height)
 }
