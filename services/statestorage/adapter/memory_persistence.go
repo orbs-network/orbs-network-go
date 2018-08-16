@@ -2,10 +2,12 @@ package adapter
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"sort"
+	"time"
 	"strings"
 )
 
@@ -14,6 +16,7 @@ type StateVersion map[primitives.ContractName]ContractState
 
 type InMemoryStatePersistence struct {
 	snapshots map[primitives.BlockHeight]StateVersion
+	blockTracker *synchronization.BlockTracker
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
@@ -22,6 +25,7 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 	return &InMemoryStatePersistence{
 		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
 		snapshots: map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
+		blockTracker: synchronization.NewBlockTracker(0, 100, time.Duration(5*time.Second)),
 	}
 }
 
@@ -35,6 +39,8 @@ func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, co
 			sp.writeOneContract(height, stateDiffs.ContractName(), i.NextStateDiffs())
 		}
 	}
+
+	sp.blockTracker.IncrementHeight()
 
 	return nil
 }
@@ -126,4 +132,8 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	}
 	output.WriteString("}")
 	return output.String()
+}
+
+func (sp *InMemoryStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) {
+	sp.blockTracker.WaitForBlock(height)
 }

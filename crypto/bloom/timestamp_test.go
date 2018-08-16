@@ -120,3 +120,27 @@ func TestNewFromRaw(t *testing.T) {
 		t.Error("serialization from raw failed")
 	}
 }
+
+func BenchmarkFillTSBloom(b *testing.B) {
+	b.StopTimer()
+	x := bloom.New(16)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		x.Add(nanoForRaw[0])
+	}
+}
+
+func BenchmarkTestTSBloom(b *testing.B) {
+	b.StopTimer()
+	x := bloom.New(16)
+	for _, ts := range nanoForRaw {
+		x.Add(ts)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		r := x.Test(nanoForRaw[3])
+		if !r {
+			b.Error("bloom filter failed, value should have been in the filter")
+		}
+	}
+}
