@@ -1,8 +1,8 @@
 package consensuscontext
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 type Config interface {

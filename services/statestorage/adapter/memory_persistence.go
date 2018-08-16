@@ -7,15 +7,15 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"sort"
-	"time"
 	"strings"
+	"time"
 )
 
 type ContractState map[string]*protocol.StateRecord
 type StateVersion map[primitives.ContractName]ContractState
 
 type InMemoryStatePersistence struct {
-	snapshots map[primitives.BlockHeight]StateVersion
+	snapshots    map[primitives.BlockHeight]StateVersion
 	blockTracker *synchronization.BlockTracker
 }
 
@@ -24,7 +24,7 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 
 	return &InMemoryStatePersistence{
 		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
-		snapshots: map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
+		snapshots:    map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
 		blockTracker: synchronization.NewBlockTracker(0, 100, time.Duration(5*time.Second)),
 	}
 }

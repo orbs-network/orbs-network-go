@@ -12,13 +12,13 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"testing"
 	"os"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"testing"
 )
 
 func WithNetwork(t *testing.T, numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
