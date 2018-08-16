@@ -1,4 +1,4 @@
-package statestorage
+package synchronization
 
 import (
 	"github.com/stretchr/testify/require"

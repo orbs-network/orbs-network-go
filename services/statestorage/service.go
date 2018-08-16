@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"sync"
 	"time"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 )
 
 type Config interface {
@@ -26,14 +27,14 @@ type service struct {
 	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 
-	blockTracker *BlockTracker
+	blockTracker *synchronization.BlockTracker
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
 	return &service{
 		config:       config,
 		merkle:       merkle.NewForest(),
-		blockTracker: NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
