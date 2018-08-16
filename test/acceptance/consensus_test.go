@@ -39,24 +39,30 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 
 		network.DeployBenchmarkToken()
 
-		committedLatch := network.GossipTransport().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 		committedTamper := network.GossipTransport().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+		committedLatch := network.GossipTransport().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+
 		<-network.SendTransfer(0, 0)
 
 		committedLatch.Wait()
-		<-network.SendTransfer(0, 17)
+		committedLatch.Remove()
 
+		tx := <-network.SendTransfer(0, 17)
+
+		committedLatch = network.GossipTransport().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 		committedLatch.Wait()
+		committedLatch.Wait()
+
 		require.EqualValues(t, 0, <-network.CallGetBalance(0), "initial getBalance result on leader")
 		require.EqualValues(t, 0, <-network.CallGetBalance(1), "initial getBalance result on non leader")
 
-		committedTamper.Release()
 		committedLatch.Remove()
+		committedTamper.Release()
 
-		network.BlockPersistence(0).WaitForBlocks(2)
+		network.WaitForTransactionInState(0, tx.TransactionReceipt().Txhash())
 		require.EqualValues(t, 17, <-network.CallGetBalance(0), "eventual getBalance result on leader")
 
-		network.BlockPersistence(1).WaitForBlocks(2)
+		network.WaitForTransactionInState(1, tx.TransactionReceipt().Txhash())
 		require.EqualValues(t, 17, <-network.CallGetBalance(1), "eventual getBalance result on non leader")
 
 	})

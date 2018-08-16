@@ -15,8 +15,8 @@ type ContractState map[string]*protocol.StateRecord
 type StateVersion map[primitives.ContractName]ContractState
 
 type InMemoryStatePersistence struct {
-	snapshots    map[primitives.BlockHeight]StateVersion
-	blockTracker *synchronization.BlockTracker
+	snapshots            map[primitives.BlockHeight]StateVersion
+	blockTrackerForTests *synchronization.BlockTracker
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
@@ -24,8 +24,8 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 
 	return &InMemoryStatePersistence{
 		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
-		snapshots:    map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
-		blockTracker: synchronization.NewBlockTracker(0, 100, time.Duration(5*time.Second)),
+		snapshots:            map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
+		blockTrackerForTests: synchronization.NewBlockTracker(0, 99999999, time.Duration(1*time.Hour)),
 	}
 }
 
@@ -40,7 +40,7 @@ func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, co
 		}
 	}
 
-	sp.blockTracker.IncrementHeight()
+	sp.blockTrackerForTests.IncrementHeight()
 
 	return nil
 }
@@ -134,6 +134,6 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	return output.String()
 }
 
-func (sp *InMemoryStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) {
-	sp.blockTracker.WaitForBlock(height)
+func (sp *InMemoryStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) error {
+	return sp.blockTrackerForTests.WaitForBlock(height)
 }

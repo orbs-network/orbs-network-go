@@ -125,7 +125,10 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 
 func (n *acceptanceTestNetwork) WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256) {
 	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(txhash)
-	n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(blockHeight)
+	err := n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(blockHeight)
+	if err != nil {
+		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
+	}
 }
 
 func (n *acceptanceTestNetwork) Description() string {
@@ -141,9 +144,9 @@ func (n *acceptanceTestNetwork) BlockPersistence(nodeIndex int) blockStorageAdap
 }
 
 func (n *acceptanceTestNetwork) DeployBenchmarkToken() {
-	n.SendTransfer(0, 0) // deploy BenchmarkToken by running an empty transaction
-	for i, _ := range n.nodes {
-		n.BlockPersistence(i).WaitForBlocks(1)
+	tx := <-n.SendTransfer(0, 0) // deploy BenchmarkToken by running an empty transaction
+	for i := range n.nodes {
+		n.WaitForTransactionInState(i, tx.TransactionReceipt().Txhash())
 	}
 }
 

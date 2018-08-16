@@ -8,11 +8,11 @@ import (
 )
 
 type BlockTracker struct {
-	graceDistance uint64
+	graceDistance primitives.BlockHeight
 	timeout       time.Duration
 
 	mutex         sync.RWMutex
-	currentHeight uint64
+	currentHeight primitives.BlockHeight
 	latch         chan struct{}
 
 	// following fields are for tests only
@@ -20,10 +20,10 @@ type BlockTracker struct {
 	selectIterationsForTests    int
 }
 
-func NewBlockTracker(startingHeight uint64, graceDist uint16, timeout time.Duration) *BlockTracker {
+func NewBlockTracker(startingHeight primitives.BlockHeight, graceDistance primitives.BlockHeight, timeout time.Duration) *BlockTracker {
 	return &BlockTracker{
 		currentHeight: startingHeight,
-		graceDistance: uint64(graceDist),
+		graceDistance: graceDistance,
 		timeout:       timeout,
 		latch:         make(chan struct{}),
 	}
@@ -39,7 +39,7 @@ func (t *BlockTracker) IncrementHeight() {
 	close(prevLatch)
 }
 
-func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
+func (t *BlockTracker) readAtomicHeightAndLatch() (primitives.BlockHeight, chan struct{}) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
@@ -48,21 +48,20 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 
 func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) error {
 
-	requestedHeightUint := uint64(requestedHeight)
 	currentHeight, currentLatch := t.readAtomicHeightAndLatch()
 
-	if currentHeight >= requestedHeightUint { // requested block already committed
+	if currentHeight >= requestedHeight { // requested block already committed
 		return nil
 	}
 
-	if currentHeight < requestedHeightUint-t.graceDistance { // requested block too far ahead, no grace
+	if currentHeight+t.graceDistance < requestedHeight { // requested block too far ahead, no grace
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
 	timer := time.NewTimer(t.timeout)
 	defer timer.Stop()
 
-	for currentHeight < requestedHeightUint {
+	for currentHeight < requestedHeight {
 		t.notifyEnterSelectForTests()
 		select {
 		case <-timer.C:

@@ -33,7 +33,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence) servic
 	return &service{
 		config:       config,
 		merkle:       merkle.NewForest(),
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
+		blockTracker: synchronization.NewBlockTracker(0, primitives.BlockHeight(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
