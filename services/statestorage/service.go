@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"sync"
 	"time"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 )
 
 type Config interface {
@@ -20,14 +20,13 @@ type Config interface {
 }
 
 type service struct {
-	config Config
-	merkle *merkle.Forest
+	config       Config
+	merkle       *merkle.Forest
+	blockTracker *synchronization.BlockTracker
 
 	mutex                    *sync.RWMutex
 	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
-
-	blockTracker *synchronization.BlockTracker
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
@@ -106,6 +105,9 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 }
 
 func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
 	result := &services.GetStateStorageBlockHeightOutput{
 		LastCommittedBlockHeight:    s.lastCommittedBlockHeader.BlockHeight(),
 		LastCommittedBlockTimestamp: s.lastCommittedBlockHeader.Timestamp(),
