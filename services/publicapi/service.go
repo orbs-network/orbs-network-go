@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -36,7 +37,12 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 		SignedTransaction: tx,
 	})
 
-	response := &client.SendTransactionResponseBuilder{}
+	//TODO this is terrible, delete and make it right (shaiy)
+	response := &client.SendTransactionResponseBuilder{
+		TransactionReceipt: &protocol.TransactionReceiptBuilder{
+			Txhash: digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction()),
+		},
+	}
 
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}, nil
 }

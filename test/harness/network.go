@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -40,6 +41,7 @@ type AcceptanceTestNetwork interface {
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
 	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
+	WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256)
 }
 
 type acceptanceTestNetwork struct {
@@ -52,14 +54,14 @@ type networkNode struct {
 	index            int
 	config           config.NodeConfig
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.StatePersistence
+	statePersistence *stateStorageAdapter.InMemoryStatePersistence
 	nodeLogic        bootstrap.NodeLogic
 }
 
 func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
 
 	testLogger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
-	fmt.Printf("\n\n")
+	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
@@ -91,8 +93,8 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			30*60,
 			5,
 			3,
-			300,
-			300,
+			1,
+			1,
 			1,
 		)
 
@@ -114,6 +116,11 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 		gossipTransport: sharedTamperingTransport,
 		description:     description,
 	}
+}
+
+func (n *acceptanceTestNetwork) WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256) {
+	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(txhash)
+	n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(blockHeight)
 }
 
 func (n *acceptanceTestNetwork) Description() string {
