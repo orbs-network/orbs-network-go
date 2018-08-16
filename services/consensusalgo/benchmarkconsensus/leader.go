@@ -65,6 +65,10 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 		return err
 	}
 
+	if s.config.NetworkSize(0) == 1 {
+		s.successfullyVotedBlocks <- s.lastCommittedBlockHeight()
+	}
+
 	return nil
 }
 
