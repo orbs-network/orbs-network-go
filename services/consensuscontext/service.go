@@ -41,7 +41,7 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 		return nil, err
 	}
 
-	s.reporting.Info("created Transactions block", instrumentation.Int("num-transactions", len(txBlock.SignedTransactions)), instrumentation.Stringable("block", txBlock))
+	s.reporting.Info("created Transactions block", instrumentation.Int("num-transactions", len(txBlock.SignedTransactions)), instrumentation.Stringable("transactions-block", txBlock))
 
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
