@@ -1,7 +1,6 @@
 package test
 
 import (
-	. "github.com/onsi/gomega"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
@@ -9,6 +8,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 type driver struct {
@@ -21,12 +22,11 @@ func (d *driver) expectCommitStateDiff() {
 	csdOut := &services.CommitStateDiffOutput{}
 
 	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(1)
-
 }
 
-func (d *driver) verifyMocks() {
+func (d *driver) verifyMocks(t *testing.T) {
 	_, err := d.stateStorage.Verify()
-	Expect(err).ToNot(HaveOccurred())
+	require.NoError(t, err)
 }
 
 func (d *driver) commitBlock(blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
@@ -39,9 +39,10 @@ func (d *driver) numOfWrittenBlocks() int {
 	return len(d.storageAdapter.ReadAllBlocks())
 }
 
-func (d *driver) getLastBlockHeight() *services.GetLastCommittedBlockHeightOutput {
+func (d *driver) getLastBlockHeight(t *testing.T) *services.GetLastCommittedBlockHeightOutput {
 	out, err := d.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
-	Expect(err).ToNot(HaveOccurred())
+
+	require.NoError(t, err)
 	return out
 }
 
@@ -57,7 +58,7 @@ func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
-	d.blockStorage = blockstorage.NewBlockStorage(config.NewBlockStorageConfig(70), d.storageAdapter, d.stateStorage, instrumentation.GetLogger())
+	d.blockStorage = blockstorage.NewBlockStorage(config.NewBlockStorageConfig(70, 5, 5, 30*60), d.storageAdapter, d.stateStorage, instrumentation.GetLogger())
 
 	return d
 }
