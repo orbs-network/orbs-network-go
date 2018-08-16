@@ -34,6 +34,7 @@ func NewNode(
 	blockSyncCommitTimeoutMillis uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	logger instrumentation.BasicLogger,
 	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 	minimumTransactionsInBlock int,
@@ -51,12 +52,12 @@ func NewNode(
 		minimumTransactionsInBlock,
 	)
 
-	logger := instrumentation.GetLogger(instrumentation.Node(nodePublicKey.String()))
+	nodeLogger := logger.For(instrumentation.Node(nodePublicKey.String()))
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence()
 	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
-	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, logger, nodeConfig)
-	httpServer := httpserver.NewHttpServer(httpAddress, logger, nodeLogic.PublicApi())
+	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, nodeLogger, nodeConfig)
+	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
 
 	return &node{
 		logic:        nodeLogic,

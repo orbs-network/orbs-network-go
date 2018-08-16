@@ -23,8 +23,6 @@ func aValidationContext() *validationContext {
 	}
 }
 
-//TODO Verify pre order checks (like signature and subscription) by calling VirtualMachine.TransactionSetPreOrder.
-
 func futureTimeAfterGracePeriod() time.Time {
 	return time.Unix(0, int64(lastCommittedBlockTimestamp)).Add(futureTimestampGrace + 1*time.Minute)
 }
