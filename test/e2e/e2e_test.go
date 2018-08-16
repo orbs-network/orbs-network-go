@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -56,6 +57,7 @@ var _ = Describe("The Orbs Network", func() {
 		// TODO: kill me - why do we need this override?
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
+
 			federationNodes := make(map[string]config.FederationNode)
 			leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 			for i := 0; i < 3; i++ {
@@ -63,16 +65,21 @@ var _ = Describe("The Orbs Network", func() {
 				federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())
 			}
 
+			logger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+
 			for i := 0; i < 3; i++ {
 				nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 				node := bootstrap.NewNode(
 					fmt.Sprintf(":%d", 8080+i),
 					nodeKeyPair.PublicKey(),
 					nodeKeyPair.PrivateKey(),
-					federationNodes,
-					70,
-					leaderKeyPair.PublicKey(), // we are the leader
+					federationNodes, 70,
+					5,
+					5,
+					30*60,
+					leaderKeyPair.PublicKey(),
 					consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+					logger,
 					2*1000,
 					gossipTransport,
 					5,
@@ -99,7 +106,12 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
+			response := callMethod(m).ClientResponse.OutputArgumentsIterator()
+			if response.HasNext() {
+				return response.NextOutputArguments().Uint64Value()
+			} else {
+				return 0
+			}
 		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {

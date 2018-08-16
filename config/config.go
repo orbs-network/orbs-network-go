@@ -22,6 +22,9 @@ type NodeConfig interface {
 
 	// block storage
 	BlockSyncCommitTimeoutMillis() time.Duration
+	BlockTransactionReceiptQueryStartGraceSec() time.Duration
+	BlockTransactionReceiptQueryEndGraceSec() time.Duration
+	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
 
 	// state storage
 	StateHistoryRetentionInBlockHeights() uint64
@@ -30,6 +33,9 @@ type NodeConfig interface {
 	// consensus context
 	BelowMinimalBlockDelayMillis() uint32
 	MinimumTransactionsInBlock() int
+
+	// transaction pool
+	PendingPoolSizeInBytes() uint32
 }
 
 type FederationNode interface {

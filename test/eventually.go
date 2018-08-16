@@ -5,11 +5,12 @@ import (
 	"time"
 )
 
-const iterations = 20
+const iterationsEventually = 100
+const iterationsConsistently = 100
 const interval = 5 * time.Millisecond
 
 func Eventually(f func() bool) bool {
-	for i := 0; i < iterations; i++ {
+	for i := 0; i < iterationsEventually; i++ {
 		if f() {
 			return true
 		}
@@ -19,7 +20,7 @@ func Eventually(f func() bool) bool {
 }
 
 func Consistently(f func() bool) bool {
-	for i := 0; i < iterations; i++ {
+	for i := 0; i < iterationsConsistently; i++ {
 		if !f() {
 			return false
 		}

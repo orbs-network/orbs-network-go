@@ -28,6 +28,10 @@ type Ed25519KeyPair struct {
 	privateKey primitives.Ed25519PrivateKey
 }
 
+func NewEd25519KeyPair(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *Ed25519KeyPair {
+	return &Ed25519KeyPair{publicKey, privateKey}
+}
+
 func Ed25519KeyPairForTests(setIndex int) *Ed25519KeyPair {
 	if setIndex > len(ed25519KeyPairs) {
 		return nil

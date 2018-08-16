@@ -7,12 +7,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"os"
 	"testing"
 )
 
@@ -27,19 +27,16 @@ type harness struct {
 	service          services.ConsensusAlgoBenchmark
 }
 
-func leaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
-	keyPair := keys.Ed25519KeyPairForTests(0)
-	return keyPair.PublicKey(), keyPair.PrivateKey()
+func leaderKeyPair() *keys.Ed25519KeyPair {
+	return keys.Ed25519KeyPairForTests(0)
 }
 
-func nonLeaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
-	keyPair := keys.Ed25519KeyPairForTests(1)
-	return keyPair.PublicKey(), keyPair.PrivateKey()
+func nonLeaderKeyPair() *keys.Ed25519KeyPair {
+	return keys.Ed25519KeyPairForTests(1)
 }
 
-func otherNonLeaderKeyPair() (primitives.Ed25519PublicKey, primitives.Ed25519PrivateKey) {
-	keyPair := keys.Ed25519KeyPairForTests(2)
-	return keyPair.PublicKey(), keyPair.PrivateKey()
+func otherNonLeaderKeyPair() *keys.Ed25519KeyPair {
+	return keys.Ed25519KeyPairForTests(2)
 }
 
 func newHarness(
@@ -52,22 +49,21 @@ func newHarness(
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 	}
 
-	leaderPublicKey, leaderPrivateKey := leaderKeyPair()
-	nodePublicKey, nodePrivateKey := leaderPublicKey, leaderPrivateKey
+	nodeKeyPair := leaderKeyPair()
 	if !isLeader {
-		nodePublicKey, nodePrivateKey = nonLeaderKeyPair()
+		nodeKeyPair = nonLeaderKeyPair()
 	}
 
 	config := config.NewConsensusConfig(
 		federationNodes,
-		nodePublicKey,
-		nodePrivateKey,
-		leaderPublicKey,
+		nodeKeyPair.PublicKey(),
+		nodeKeyPair.PrivateKey(),
+		leaderKeyPair().PublicKey(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		5,
 	)
 
-	log := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
