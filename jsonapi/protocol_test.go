@@ -1,23 +1,23 @@
 package jsonapi
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
-	"github.com/orbs-network/orbs-network-go/test"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestJsonMarshallUnmarshallMethodArgument(t *testing.T) {
 
 	arg := &MethodArgument{
-		Name: "arg1",
-		Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+		Name:        "arg1",
+		Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
 		Uint64Value: 1,
 		Uint32Value: 2,
 		StringValue: "3",
-		BytesValue: []byte("foobar"),
+		BytesValue:  []byte("foobar"),
 	}
 
 	jsonBytes, err := json.Marshal(arg)
@@ -33,18 +33,18 @@ func TestJsonMarshallUnmarshallMethodArgument(t *testing.T) {
 func TestJsonMarshallUnmarshallSendTransactionRequest(t *testing.T) {
 
 	arg := MethodArgument{
-		Name: "arg1",
-		Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+		Name:        "arg1",
+		Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
 		Uint64Value: 1,
 		Uint32Value: 2,
 		StringValue: "3",
-		BytesValue: []byte("foobar"),
+		BytesValue:  []byte("foobar"),
 	}
 
 	req := &Transaction{
 		ContractName: "contract",
-		MethodName: "method",
-		Arguments: []MethodArgument{arg},
+		MethodName:   "method",
+		Arguments:    []MethodArgument{arg},
 	}
 
 	jsonBytes, err := json.Marshal(&req)
@@ -68,9 +68,9 @@ func ExampleJsonApi() {
 	}
 
 	req := &Transaction{
-		ContractName:    "contract",
-		MethodName:      "method",
-		Arguments:       []MethodArgument{arg},
+		ContractName: "contract",
+		MethodName:   "method",
+		Arguments:    []MethodArgument{arg},
 	}
 
 	jsonBytes, _ := json.Marshal(&req)
