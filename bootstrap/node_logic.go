@@ -53,7 +53,7 @@ func NewNodeLogic(
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, processors, crosschainConnectors, reporting)
 	transactionPool := transactionpool.NewTransactionPool(gossip, virtualMachine, nodeConfig, reporting)
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
-	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig)
+	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig, reporting)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
