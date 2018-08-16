@@ -1,26 +1,26 @@
 package e2e
 
 import (
-	"testing"
-	"net/http"
-	"io/ioutil"
-	"fmt"
-	"github.com/stretchr/testify/require"
-	"time"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"context"
-	"os"
-	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
-	"sync"
-	"github.com/orbs-network/orbs-network-go/jsonapi"
 	"bytes"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"context"
+	"fmt"
 	"github.com/go-errors/errors"
+	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/jsonapi"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/stretchr/testify/require"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"sync"
+	"testing"
+	"time"
 )
 
 var testLogger = instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
@@ -47,9 +47,9 @@ func TestSambusacFlow(t *testing.T) {
 
 	transferJson := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
-		MethodName: "transfer",
+		MethodName:   "transfer",
 		Arguments: []jsonapi.MethodArgument{
-			{Name:"amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 42},
+			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 42},
 		},
 	}
 
@@ -131,9 +131,9 @@ func startSambusac(serverAddress string, pathToContracts string) *Sambusac {
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
 
 	s := &Sambusac{
-		ctxCancel: cancel,
+		ctxCancel:    cancel,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
-		httpServer: httpServer,
+		httpServer:   httpServer,
 	}
 
 	go s.WaitUntilShutdown() //TODO remove 'go' and block
@@ -152,7 +152,3 @@ func (n *Sambusac) WaitUntilShutdown() {
 	n.shutdownCond.Wait()
 	n.shutdownCond.L.Unlock()
 }
-
-
-
-
