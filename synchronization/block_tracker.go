@@ -8,11 +8,11 @@ import (
 )
 
 type BlockTracker struct {
-	graceDistance uint16
+	graceDistance uint16 // this is not primitives.BlockHeight on purpose, to indicate that grace distance should be small
 	timeout       time.Duration
 
 	mutex         sync.RWMutex
-	currentHeight int64
+	currentHeight int64 // this is not primitves.BlockHeight so as to avoid unnecessary casts
 	latch         chan struct{}
 
 	// following fields are for tests only

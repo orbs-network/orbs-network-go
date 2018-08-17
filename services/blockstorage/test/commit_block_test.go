@@ -43,7 +43,6 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 	require.EqualValues(t, 1, driver.numOfWrittenBlocks())
 
 	driver.failNextBlocks()
-	driver.expectCommitStateDiff() // TODO: this line should be removed, it's added here due to convoluted sync mechanism in acceptance test where we wait until block is written to block persistence where instead we need to wait on block written to state persistence
 
 	_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
 	require.EqualError(t, err, "could not write a block", "error should be returned if storage fails")

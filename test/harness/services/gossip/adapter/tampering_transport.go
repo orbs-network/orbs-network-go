@@ -240,5 +240,5 @@ func (o *latchingTamperer) Remove() {
 }
 
 func (o *latchingTamperer) Wait() {
-	o.cond.Wait()
+	o.cond.Wait() // TODO: change cond to channel close
 }

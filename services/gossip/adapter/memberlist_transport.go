@@ -129,7 +129,8 @@ func (t *MemberlistTransport) PrintPeers() {
 
 func (t *MemberlistTransport) Send(data *TransportData) error {
 	if data.RecipientMode != gossipmessages.RECIPIENT_LIST_MODE_BROADCAST {
-		panic("Not implemented")
+		//FIXME once we will be able to lookup a node name, replace with t.list.SendReliable(): https://godoc.org/github.com/hashicorp/memberlist#Memberlist.SendReliable
+		fmt.Println("WARNING: Gossip: should not broadast targeted messages to everyone")
 	}
 	rawMessage := encodeByteArray(data.Payloads)
 	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: rawMessage})

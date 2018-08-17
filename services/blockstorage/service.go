@@ -67,12 +67,6 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 		return nil, err
 	}
 
-	// TODO: this part should be moved after persistence.WriteBlock, it's moved here due to convoluted sync mechanism in acceptance test where we wait until block is written to block persistence where instead we need to wait on block written to state persistence
-	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
-		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
-		s.reporting.Error("intra-node sync to state storage failed", instrumentation.Error(err))
-	}
-
 	if err := s.persistence.WriteBlock(input.BlockPair); err != nil {
 		return nil, err
 	}
@@ -80,6 +74,11 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	s.updateLastCommittedBlock(input.BlockPair)
 
 	s.reporting.Info("Committed a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
+
+	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
+		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
+		s.reporting.Error("intra-node sync to state storage failed", instrumentation.Error(err))
+	}
 
 	return nil, nil
 }

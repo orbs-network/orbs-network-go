@@ -144,3 +144,41 @@ func TestVerifyEd25519InvalidPublicKey(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkSignEd25519(b *testing.B) {
+	kp := keys.Ed25519KeyPairForTests(1)
+	for i := 0; i < b.N; i++ {
+		if _, err := SignEd25519(kp.PrivateKey(), someDataToSign); err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+func BenchmarkVerifyEd25519(b *testing.B) {
+	b.StopTimer()
+	kp := keys.Ed25519KeyPairForTests(1)
+
+	if sig, err := SignEd25519(kp.PrivateKey(), someDataToSign); err != nil {
+		b.Error(err)
+	} else {
+		b.StartTimer()
+		for i := 0; i < b.N; i++ {
+			if !VerifyEd25519(kp.PublicKey(), someDataToSign, sig) {
+				b.Error("verification failed")
+			}
+		}
+	}
+}
+
+func BenchmarkSignAndVerifyEd25519(b *testing.B) {
+	kp := keys.Ed25519KeyPairForTests(1)
+	for i := 0; i < b.N; i++ {
+		if sig, err := SignEd25519(kp.PrivateKey(), someDataToSign); err != nil {
+			b.Error(err)
+		} else {
+			if !VerifyEd25519(kp.PublicKey(), someDataToSign, sig) {
+				b.Error("verification failed")
+			}
+		}
+	}
+}

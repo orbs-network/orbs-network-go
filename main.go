@@ -46,7 +46,7 @@ func main() {
 	federationNodes := make(map[string]config.FederationNode)
 	for _, federationNodePublicKey := range federationNodePublicKeys {
 		publicKey, _ := hex.DecodeString(federationNodePublicKey)
-		federationNodes[string(nodePublicKey)] = config.NewHardCodedFederationNode(publicKey)
+		federationNodes[string(publicKey)] = config.NewHardCodedFederationNode(publicKey)
 	}
 
 	// TODO: change MemberlistGossipConfig to the standard config mechanism
@@ -60,7 +60,7 @@ func main() {
 		federationNodes,
 		70,
 		consensusLeader,
-		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		logger,
 		2*1000,
 		gossipTransport,
