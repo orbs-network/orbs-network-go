@@ -94,6 +94,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			1,
 			70,
 			1,
+			1,
 		)
 
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence()

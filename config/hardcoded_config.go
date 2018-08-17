@@ -81,6 +81,7 @@ func NewHardCodedConfig(
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
 	minimumTransactionsInBlock int,
+	belowMinimalBlockDelayMillis uint32,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -96,7 +97,7 @@ func NewHardCodedConfig(
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: 300,
+			queryGraceTimeoutMillis: 100,
 			querySyncGraceBlockDist: 3,
 		},
 		blockStorageConfig: &blockStorageConfig{
@@ -109,7 +110,7 @@ func NewHardCodedConfig(
 			stateHistoryRetentionInBlockHeights: 5,
 		},
 		consensusContextConfig: &consensusContextConfig{
-			belowMinimalBlockDelayMillis: 300,
+			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
 		transactionPoolConfig: &transactionPoolConfig{

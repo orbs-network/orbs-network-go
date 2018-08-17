@@ -50,6 +50,7 @@ func NewNode(
 		benchmarkConsensusRoundRetryIntervalMillis,
 		blockSyncCommitTimeoutMillis,
 		minimumTransactionsInBlock,
+		20, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
 	)
 
 	nodeLogger := logger.For(instrumentation.Node(nodePublicKey.String()))

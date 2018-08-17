@@ -80,7 +80,7 @@ var _ = Describe("The Orbs Network", func() {
 					logger,
 					2*1000,
 					gossipTransport,
-					3,
+					1,
 				)
 
 				nodes = append(nodes, node)
