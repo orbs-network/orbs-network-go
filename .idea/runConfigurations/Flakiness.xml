@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Flakiness" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="orbs-network-go" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <go_parameters value="-i" />
+    <parameters value="-test.count 300 -test.failfast" />
+    <framework value="gotest" />
+    <kind value="PACKAGE" />
+    <package value="github.com/orbs-network/orbs-network-go/test/acceptance" />
+    <directory value="$PROJECT_DIR$/" />
+    <filePath value="$PROJECT_DIR$/" />
+    <method v="2" />
+  </configuration>
+</component>

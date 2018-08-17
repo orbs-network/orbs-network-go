@@ -6,23 +6,29 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"os"
+	"testing"
 )
 
-func WithNetwork(numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
+func WithNetwork(t *testing.T, numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
 	for _, consensusAlgo := range consensusAlgos {
 		test.WithContext(func(ctx context.Context) {
 			network := NewTestNetwork(ctx, numNodes, consensusAlgo)
 			f(network)
+			if t.Failed() { // avoid serializing state if test succeeded
+				network.DumpState()
+			}
 		})
 	}
 }
@@ -32,30 +38,37 @@ func WithAlgos(algos ...consensus.ConsensusAlgoType) []consensus.ConsensusAlgoTy
 }
 
 type AcceptanceTestNetwork interface {
+	Description() string
+	DeployBenchmarkToken()
 	GossipTransport() gossipAdapter.TamperingTransport
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
 	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
+	DumpState()
+	WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256)
 }
 
 type acceptanceTestNetwork struct {
 	nodes           []networkNode
 	gossipTransport gossipAdapter.TamperingTransport
+	description     string
 }
 
 type networkNode struct {
 	index            int
 	config           config.NodeConfig
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.StatePersistence
+	statePersistence stateStorageAdapter.InMemoryStatePersistence
 	nodeLogic        bootstrap.NodeLogic
 }
 
 func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
 
-	testLogger := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	testLogger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
+	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
@@ -67,7 +80,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 	}
 
 	nodes := make([]networkNode, numNodes)
-	for i, _ := range nodes {
+	for i := range nodes {
 		nodes[i].index = i
 		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 		nodeName := fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
@@ -81,10 +94,13 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			1,
 			70,
 			5,
+			5,
+			30*60,
+			5,
 			3,
-			300,
-			300,
-			0,
+			1,
+			1,
+			1,
 		)
 
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence()
@@ -95,7 +111,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			sharedTamperingTransport,
 			nodes[i].blockPersistence,
 			nodes[i].statePersistence,
-			instrumentation.GetLogger().For(instrumentation.Node(nodeName)).WithFormatter(instrumentation.NewHumanReadableFormatter()),
+			testLogger.For(instrumentation.Node(nodeName)),
 			nodes[i].config,
 		)
 	}
@@ -103,7 +119,20 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 	return &acceptanceTestNetwork{
 		nodes:           nodes,
 		gossipTransport: sharedTamperingTransport,
+		description:     description,
 	}
+}
+
+func (n *acceptanceTestNetwork) WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256) {
+	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(txhash)
+	err := n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(blockHeight)
+	if err != nil {
+		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
+	}
+}
+
+func (n *acceptanceTestNetwork) Description() string {
+	return n.description
 }
 
 func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTransport {
@@ -112,6 +141,13 @@ func (n *acceptanceTestNetwork) GossipTransport() gossipAdapter.TamperingTranspo
 
 func (n *acceptanceTestNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
 	return n.nodes[nodeIndex].blockPersistence
+}
+
+func (n *acceptanceTestNetwork) DeployBenchmarkToken() {
+	tx := <-n.SendTransfer(0, 0) // deploy BenchmarkToken by running an empty transaction
+	for i := range n.nodes {
+		n.WaitForTransactionInState(i, tx.TransactionReceipt().Txhash())
+	}
 }
 
 func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
@@ -125,7 +161,7 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 			ClientRequest: request,
 		})
 		if err != nil {
-			// TODO: handle error
+			panic(fmt.Sprintf("error in transfer: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
 	}()
@@ -143,7 +179,7 @@ func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.
 			ClientRequest: request,
 		})
 		if err != nil {
-			// TODO: handle error
+			panic(fmt.Sprintf("error in invalid transfer: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
 	}()
@@ -164,9 +200,16 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 			ClientRequest: request,
 		})
 		if err != nil {
-			// TODO: handle error
+			panic(fmt.Sprintf("error in get balance: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
 	}()
 	return ch
+}
+
+func (n *acceptanceTestNetwork) DumpState() {
+	testLogger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	for i := range n.nodes {
+		testLogger.Info("state dump", instrumentation.Int("node", i), instrumentation.String("data", n.nodes[i].statePersistence.Dump()))
+	}
 }

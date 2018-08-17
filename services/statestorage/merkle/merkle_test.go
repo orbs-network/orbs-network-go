@@ -1,4 +1,4 @@
-package test
+package merkle
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -8,5 +8,5 @@ import (
 
 func TestComponent(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "BlockStorage Component Suite")
+	RunSpecs(t, "Merkel Forest Component Suite")
 }

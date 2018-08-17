@@ -8,6 +8,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
+// process call
+
 type processCall struct {
 	input *services.ProcessCallInput
 }
@@ -55,7 +57,7 @@ func (p *processCall) WithMethod(contractName primitives.ContractName, methodNam
 
 func (p *processCall) WithInternalMethod() *processCall {
 	p.input.ContractName = "BenchmarkContract"
-	p.input.MethodName = "_init"
+	p.input.MethodName = "nop"
 	return p
 }
 
@@ -109,4 +111,38 @@ func handleSdkCallOutput(args []*protocol.MethodArgument) *handlers.HandleSdkCal
 	return &handlers.HandleSdkCallOutput{
 		OutputArguments: args,
 	}
+}
+
+// get contract info
+
+type getContractInfo struct {
+	input *services.GetContractInfoInput
+}
+
+func getContractInfoInput() *getContractInfo {
+	p := &getContractInfo{
+		input: &services.GetContractInfoInput{
+			ContractName: "BenchmarkContract",
+		},
+	}
+	return p
+}
+
+func (p *getContractInfo) Build() *services.GetContractInfoInput {
+	return p.input
+}
+
+func (p *getContractInfo) WithUnknownContract() *getContractInfo {
+	p.input.ContractName = "UnknownContract"
+	return p
+}
+
+func (p *getContractInfo) WithSystemService() *getContractInfo {
+	p.input.ContractName = "_Deployments"
+	return p
+}
+
+func (p *getContractInfo) WithRegularService() *getContractInfo {
+	p.input.ContractName = "BenchmarkContract"
+	return p
 }

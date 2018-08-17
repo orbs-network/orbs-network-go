@@ -1,15 +1,17 @@
 package test
 
 import (
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"testing"
+	"os"
 )
 
 type harness struct {
@@ -22,8 +24,7 @@ type harness struct {
 }
 
 func newHarness() *harness {
-
-	log := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
 	blockStorage := &services.MockBlockStorage{}
 	stateStorage := &services.MockStateStorage{}
@@ -63,18 +64,9 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) verifyHandlerRegistrations(t *testing.T) {
-	for key, processor := range h.processors {
-		ok, err := processor.Verify()
-		if !ok {
-			t.Fatal("Did not register with processor", key.String(), ":", err)
-		}
-	}
-}
-
-func (h *harness) handleSdkCall(contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
 	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:      0,
+		ContextId:      contextId,
 		ContractName:   contractName,
 		MethodName:     methodName,
 		InputArguments: builders.MethodArguments(args...),
@@ -83,4 +75,78 @@ func (h *harness) handleSdkCall(contractName primitives.ContractName, methodName
 		return nil, err
 	}
 	return output.OutputArguments, nil
+}
+
+func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
+	// deployment related
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED_READ_ONLY.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
+	h.expectNativeContractInfoRequested(contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
+
+	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
+		BlockHeight: 0,
+		Transaction: (&protocol.TransactionBuilder{
+			Signer:         nil,
+			ContractName:   contractName,
+			MethodName:     methodName,
+			InputArguments: []*protocol.MethodArgumentBuilder{},
+		}).Build(),
+	})
+	return output.CallResult, output.ReferenceBlockHeight, err
+}
+
+type keyValuePair struct {
+	key   primitives.Ripmd160Sha256
+	value []byte
+}
+
+type contractAndMethod struct {
+	contractName primitives.ContractName
+	methodName   primitives.MethodName
+}
+
+func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
+	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
+
+	transactions := []*protocol.SignedTransaction{}
+	for _, contractAndMethod := range contractAndMethods {
+		// deployment related
+		h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
+		h.expectNativeContractInfoRequested(contractAndMethod.contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
+
+		resultKeyValuePairsPerContract[contractAndMethod.contractName] = []*keyValuePair{}
+		tx := builders.Transaction().WithMethod(contractAndMethod.contractName, contractAndMethod.methodName).Build()
+		transactions = append(transactions, tx)
+	}
+
+	output, _ := h.service.ProcessTransactionSet(&services.ProcessTransactionSetInput{
+		BlockHeight:        12,
+		SignedTransactions: transactions,
+	})
+
+	results := []protocol.ExecutionResult{}
+	for _, transactionReceipt := range output.TransactionReceipts {
+		result := transactionReceipt.ExecutionResult()
+		results = append(results, result)
+	}
+
+	for _, contractStateDiffs := range output.ContractStateDiffs {
+		contractName := contractStateDiffs.ContractName()
+		if _, found := resultKeyValuePairsPerContract[contractName]; !found {
+			panic(fmt.Sprintf("unexpected contract %s", contractStateDiffs.ContractName()))
+		}
+		for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
+			sd := i.NextStateDiffs()
+			resultKeyValuePairsPerContract[contractName] = append(resultKeyValuePairsPerContract[contractName], &keyValuePair{sd.Key(), sd.Value()})
+		}
+	}
+
+	return results, resultKeyValuePairsPerContract
+}
+
+func (h *harness) transactionSetPreOrder(signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {
+	output, err := h.service.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+		BlockHeight:        12,
+		SignedTransactions: signedTransactions,
+	})
+	return output.PreOrderResults, err
 }

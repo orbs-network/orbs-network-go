@@ -16,7 +16,7 @@ import (
 
 func BenchmarkConsensusBlockPair() *blockPair {
 	keyPair := keys.Ed25519KeyPairForTests(0)
-	return BlockPair().WithBenchmarkConsensusBlockProof(keyPair.PublicKey(), keyPair.PrivateKey())
+	return BlockPair().WithBenchmarkConsensusBlockProof(keyPair)
 }
 
 func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.TransactionsBlockHeader, rxHeaderBuilt *protocol.ResultsBlockHeader) {
@@ -30,8 +30,8 @@ func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.Tr
 	b.rxProof.BenchmarkConsensus.Sender.Signature = sig
 }
 
-func (b *blockPair) WithBenchmarkConsensusBlockProof(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *blockPair {
-	b.blockProofSigner = privateKey
+func (b *blockPair) WithBenchmarkConsensusBlockProof(keyPair *keys.Ed25519KeyPair) *blockPair {
+	b.blockProofSigner = keyPair.PrivateKey()
 	b.txProof = &protocol.TransactionsBlockProofBuilder{
 		Type:               protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{},
@@ -40,7 +40,7 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(publicKey primitives.Ed2551
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
 			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
-				SenderPublicKey: publicKey,
+				SenderPublicKey: keyPair.PublicKey(),
 				Signature:       nil,
 			},
 		},
@@ -48,9 +48,10 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(publicKey primitives.Ed2551
 	return b
 }
 
-func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *blockPair {
-	corruptPrivateKey := make([]byte, len(privateKey))
-	return b.WithBenchmarkConsensusBlockProof(publicKey, corruptPrivateKey)
+func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(keyPair *keys.Ed25519KeyPair) *blockPair {
+	corruptPrivateKey := make([]byte, len(keyPair.PrivateKey()))
+	corruptKeyPair := keys.NewEd25519KeyPair(keyPair.PublicKey(), corruptPrivateKey)
+	return b.WithBenchmarkConsensusBlockProof(corruptKeyPair)
 }
 
 // gossipmessages.BenchmarkConsensusCommittedMessage
@@ -72,7 +73,7 @@ func BenchmarkConsensusCommittedMessage() *committed {
 			Signature:       nil,
 		},
 	}
-	return c.WithSenderSignature(keyPair.PublicKey(), keyPair.PrivateKey())
+	return c.WithSenderSignature(keyPair)
 }
 
 func (c *committed) WithLastCommittedHeight(blockHeight primitives.BlockHeight) *committed {
@@ -80,15 +81,16 @@ func (c *committed) WithLastCommittedHeight(blockHeight primitives.BlockHeight) 
 	return c
 }
 
-func (c *committed) WithSenderSignature(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *committed {
-	c.messageSigner = privateKey
-	c.sender.SenderPublicKey = publicKey
+func (c *committed) WithSenderSignature(keyPair *keys.Ed25519KeyPair) *committed {
+	c.messageSigner = keyPair.PrivateKey()
+	c.sender.SenderPublicKey = keyPair.PublicKey()
 	return c
 }
 
-func (c *committed) WithInvalidSenderSignature(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *committed {
-	corruptPrivateKey := make([]byte, len(privateKey))
-	return c.WithSenderSignature(publicKey, corruptPrivateKey)
+func (c *committed) WithInvalidSenderSignature(keyPair *keys.Ed25519KeyPair) *committed {
+	corruptPrivateKey := make([]byte, len(keyPair.PrivateKey()))
+	corruptKeyPair := keys.NewEd25519KeyPair(keyPair.PublicKey(), corruptPrivateKey)
+	return c.WithSenderSignature(corruptKeyPair)
 }
 
 func (c *committed) Build() *gossipmessages.BenchmarkConsensusCommittedMessage {

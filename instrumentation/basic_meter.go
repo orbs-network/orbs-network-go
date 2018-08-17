@@ -21,7 +21,7 @@ type BasicMeter interface {
 
 func (m *basicMeter) Done() {
 	m.end = time.Now().UnixNano()
-	diff := float64(m.end-m.start) / NanosecondsInASecond
+	diff := time.Duration(m.end - m.start)
 
 	var names []string
 	for _, prefix := range m.logger.Prefixes() {
@@ -34,6 +34,6 @@ func (m *basicMeter) Done() {
 	names = append(names, m.name)
 	metricName := strings.Join(names, "-")
 
-	metricParams := append(m.params, Float64("process-time", diff))
+	metricParams := append(m.params, Float64("process-time", diff.Seconds()))
 	m.logger.Metric(metricName, metricParams...)
 }

@@ -2,11 +2,13 @@ package e2e
 
 import (
 	"bytes"
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -50,29 +52,45 @@ func getConfig() E2EConfig {
 
 var _ = Describe("The Orbs Network", func() {
 	It("accepts a transaction and reflects the state change after it is committed", func(done Done) {
-		var node bootstrap.Node
+		var nodes []bootstrap.Node
 
 		// TODO: kill me - why do we need this override?
 		if getConfig().Bootstrap {
 			gossipTransport := gossipAdapter.NewTamperingTransport()
-			nodeKeyPair := keys.Ed25519KeyPairForTests(0)
-			node = bootstrap.NewNode(
-				":8080",
-				nodeKeyPair.PublicKey(),
-				nodeKeyPair.PrivateKey(),
-				map[string]config.FederationNode{nodeKeyPair.PublicKey().KeyForMap(): config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())},
-				70,
-				nodeKeyPair.PublicKey(), // we are the leader
-				// TODO Revert to CONSENSUS_ALGO_TYPE_LEAN_HELIX when lean-helix-go submodule is integrated
-				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
-				2*1000,
-				gossipTransport,
-				5,
-				3,
-				300,
-				300,
-				0,
-			)
+
+			federationNodes := make(map[string]config.FederationNode)
+			leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+			for i := 0; i < 3; i++ {
+				nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+				federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())
+			}
+
+			logger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+
+			for i := 0; i < 3; i++ {
+				nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+				node := bootstrap.NewNode(
+					fmt.Sprintf(":%d", 8080+i),
+					nodeKeyPair.PublicKey(),
+					nodeKeyPair.PrivateKey(),
+					federationNodes, 70,
+					5,
+					5,
+					30*60,
+					leaderKeyPair.PublicKey(),
+					consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+					logger,
+					2*1000,
+					gossipTransport,
+					5,
+					3,
+					300,
+					300,
+					0,
+				)
+
+				nodes = append(nodes, node)
+			}
 
 			// To let node start up properly, otherwise in Docker we get connection refused
 			time.Sleep(100 * time.Millisecond)
@@ -88,11 +106,18 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			return callMethod(m).ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
+			response := callMethod(m).ClientResponse.OutputArgumentsIterator()
+			if response.HasNext() {
+				return response.NextOutputArguments().Uint64Value()
+			} else {
+				return 0
+			}
 		}).Should(BeEquivalentTo(17))
 
 		if getConfig().Bootstrap {
-			node.GracefulShutdown(1 * time.Second)
+			for _, node := range nodes {
+				node.GracefulShutdown(1 * time.Second)
+			}
 		}
 
 		close(done)

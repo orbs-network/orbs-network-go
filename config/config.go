@@ -22,6 +22,9 @@ type NodeConfig interface {
 
 	// block storage
 	BlockSyncCommitTimeoutMillis() time.Duration
+	BlockTransactionReceiptQueryStartGraceSec() time.Duration
+	BlockTransactionReceiptQueryEndGraceSec() time.Duration
+	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
 
 	// state storage
 	StateHistoryRetentionInBlockHeights() uint64

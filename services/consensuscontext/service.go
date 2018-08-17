@@ -1,6 +1,7 @@
 package consensuscontext
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -14,6 +15,7 @@ type service struct {
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
 	config          Config
+	reporting       instrumentation.BasicLogger
 }
 
 func NewConsensusContext(
@@ -21,6 +23,7 @@ func NewConsensusContext(
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
 	config Config,
+	reporting instrumentation.BasicLogger,
 ) services.ConsensusContext {
 
 	return &service{
@@ -28,6 +31,7 @@ func NewConsensusContext(
 		virtualMachine:  virtualMachine,
 		stateStorage:    stateStorage,
 		config:          config,
+		reporting:       reporting.For(instrumentation.Service("consensus-context")),
 	}
 }
 
@@ -36,6 +40,8 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 	if err != nil {
 		return nil, err
 	}
+
+	s.reporting.Info("created Transactions block", instrumentation.Int("num-transactions", len(txBlock.SignedTransactions)), instrumentation.Stringable("transactions-block", txBlock))
 
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
@@ -47,6 +53,8 @@ func (s *service) RequestNewResultsBlock(input *services.RequestNewResultsBlockI
 	if err != nil {
 		return nil, err
 	}
+
+	s.reporting.Info("created Results block", instrumentation.Stringable("results-block", rxBlock))
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,

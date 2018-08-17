@@ -6,7 +6,11 @@ docker build -f Dockerfile.build -t orbs:build .
 
 docker run --name orbs_build orbs:build sleep 1
 
-docker cp orbs_build:/go/src/github.com/orbs-network/orbs-network-go/main .
+export SRC=/go/src/github.com/orbs-network/orbs-network-go
+
+docker cp orbs_build:$SRC/main .
+docker cp orbs_build:$SRC/e2e.test .
 
 docker build -f Dockerfile.export -t orbs:export .
 
+docker build -f Dockerfile.e2e -t orbs:e2e .

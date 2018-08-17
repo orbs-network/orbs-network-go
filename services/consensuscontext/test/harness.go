@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
@@ -58,15 +59,14 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 }
 
 func newHarness() *harness {
-
-	log := instrumentation.GetLogger().WithFormatter(instrumentation.NewHumanReadableFormatter())
+	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
 
 	transactionPool := &services.MockTransactionPool{}
 
 	serviceConfig := config.NewConsensusContextConfig(300, 2)
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
-		serviceConfig)
+		serviceConfig, log)
 
 	return &harness{
 		transactionPool: transactionPool,
