@@ -12,7 +12,7 @@ type BlockTracker struct {
 	timeout       time.Duration
 
 	mutex         sync.RWMutex
-	currentHeight int64 // this is not primitves.BlockHeight so as to avoid unnecessary casts
+	currentHeight uint64 // this is not primitves.BlockHeight so as to avoid unnecessary casts
 	latch         chan struct{}
 
 	// following fields are for tests only
@@ -22,7 +22,7 @@ type BlockTracker struct {
 
 func NewBlockTracker(startingHeight uint64, graceDist uint16, timeout time.Duration) *BlockTracker {
 	return &BlockTracker{
-		currentHeight: int64(startingHeight),
+		currentHeight: startingHeight,
 		graceDistance: graceDist,
 		timeout:       timeout,
 		latch:         make(chan struct{}),
@@ -39,7 +39,7 @@ func (t *BlockTracker) IncrementHeight() {
 	close(prevLatch)
 }
 
-func (t *BlockTracker) readAtomicHeightAndLatch() (int64, chan struct{}) {
+func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
@@ -48,21 +48,21 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (int64, chan struct{}) {
 
 func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) error {
 
-	requestedHeightInt := int64(requestedHeight)
+	requestedHeightUint := uint64(requestedHeight)
 	currentHeight, currentLatch := t.readAtomicHeightAndLatch()
 
-	if currentHeight >= requestedHeightInt { // requested block already committed
+	if currentHeight >= requestedHeightUint { // requested block already committed
 		return nil
 	}
 
-	if currentHeight < requestedHeightInt-int64(t.graceDistance) { // requested block too far ahead, no grace
+	if currentHeight + uint64(t.graceDistance) < requestedHeightUint { // requested block too far ahead, no grace
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
 	timer := time.NewTimer(t.timeout)
 	defer timer.Stop()
 
-	for currentHeight < requestedHeightInt {
+	for currentHeight < requestedHeightUint {
 		t.notifyEnterSelectForTests()
 		select {
 		case <-timer.C:
