@@ -11,6 +11,7 @@ import (
 type identity struct {
 	nodePublicKey  primitives.Ed25519PublicKey
 	nodePrivateKey primitives.Ed25519PrivateKey
+	virtualChainId primitives.VirtualChainId
 }
 
 type consensusConfig struct {
@@ -23,6 +24,7 @@ type consensusConfig struct {
 
 type crossServiceConfig struct {
 	queryGraceTimeoutMillis uint64
+	querySyncGraceBlockDist uint16
 }
 
 type blockStorageConfig struct {
@@ -39,13 +41,15 @@ type consensusContextConfig struct {
 
 type stateStorageConfig struct {
 	*crossServiceConfig
-	stateHistoryRetentionInBlockHeights uint64
-	querySyncGraceBlockDist             uint64
+	stateHistoryRetentionInBlockHeights uint16
 }
 
 type transactionPoolConfig struct {
 	*identity
-	pendingPoolSizeInBytes uint32
+	*crossServiceConfig
+	pendingPoolSizeInBytes               uint32
+	transactionExpirationWindowInSeconds uint32
+	futureTimestampGraceInSeconds        uint32
 }
 
 type hardCodedFederationNode struct {
@@ -76,13 +80,6 @@ func NewHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	blockSyncCommitTimeoutMillis uint32,
-	blockTransactionReceiptQueryStartGraceSec uint32,
-	blockTransactionReceiptQueryEndGraceSec uint32,
-	blockTransactionReceiptQueryTransactionExpireSec uint32,
-	stateHistoryRetentionInBlockHeights uint64,
-	querySyncGraceBlockDist uint64,
-	queryGraceTimeoutMillis uint64,
-	belowMinimalBlockDelayMillis uint32,
 	minimumTransactionsInBlock int,
 ) NodeConfig {
 
@@ -90,6 +87,7 @@ func NewHardCodedConfig(
 		identity: &identity{
 			nodePublicKey:  nodePublicKey,
 			nodePrivateKey: nodePrivateKey,
+			virtualChainId: 42,
 		},
 		consensusConfig: &consensusConfig{
 			federationNodes:                            federationNodes,
@@ -98,23 +96,27 @@ func NewHardCodedConfig(
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
+			queryGraceTimeoutMillis: 300,
+			querySyncGraceBlockDist: 3,
 		},
 		blockStorageConfig: &blockStorageConfig{
 			blockSyncCommitTimeoutMillis:                     time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
-			blockTransactionReceiptQueryStartGraceSec:        time.Duration(blockTransactionReceiptQueryStartGraceSec) * time.Second,
-			blockTransactionReceiptQueryEndGraceSec:          time.Duration(blockTransactionReceiptQueryEndGraceSec) * time.Second,
-			blockTransactionReceiptQueryTransactionExpireSec: time.Duration(blockTransactionReceiptQueryTransactionExpireSec) * time.Second,
+			blockTransactionReceiptQueryStartGraceSec:        time.Duration(5) * time.Second,
+			blockTransactionReceiptQueryEndGraceSec:          time.Duration(5) * time.Second,
+			blockTransactionReceiptQueryTransactionExpireSec: time.Duration(180) * time.Second,
 		},
 		stateStorageConfig: &stateStorageConfig{
-			stateHistoryRetentionInBlockHeights: stateHistoryRetentionInBlockHeights,
-			querySyncGraceBlockDist:             querySyncGraceBlockDist,
+			stateHistoryRetentionInBlockHeights: 5,
 		},
 		consensusContextConfig: &consensusContextConfig{
-			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
+			belowMinimalBlockDelayMillis: 300,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
-		transactionPoolConfig: &transactionPoolConfig{pendingPoolSizeInBytes: 20 * 1024 * 1024},
+		transactionPoolConfig: &transactionPoolConfig{
+			pendingPoolSizeInBytes:               20 * 1024 * 1024,
+			transactionExpirationWindowInSeconds: 1800,
+			futureTimestampGraceInSeconds:        180,
+		},
 	}
 }
 
@@ -131,6 +133,7 @@ func NewConsensusConfig(
 		identity: &identity{
 			nodePublicKey:  nodePublicKey,
 			nodePrivateKey: nodePrivateKey,
+			virtualChainId: 42,
 		},
 		federationNodes:                            federationNodes,
 		constantConsensusLeader:                    constantConsensusLeader,
@@ -155,21 +158,28 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
+func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindowInSeconds uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
 	return &transactionPoolConfig{
 		identity: &identity{
-			nodePublicKey: nodePublicKey,
+			nodePublicKey:  nodePublicKey,
+			virtualChainId: 42,
 		},
-		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
+		crossServiceConfig: &crossServiceConfig{
+			queryGraceTimeoutMillis: 100,
+			querySyncGraceBlockDist: 5,
+		},
+		pendingPoolSizeInBytes:               pendingPoolSizeInBytes,
+		transactionExpirationWindowInSeconds: transactionExpirationWindowInSeconds,
+		futureTimestampGraceInSeconds:        180,
 	}
 }
 
-func NewStateStorageConfig(maxStateHistory uint64, graceBlockDist uint64, graceTimeoutMillis uint64) *stateStorageConfig {
+func NewStateStorageConfig(maxStateHistory uint16, graceBlockDist uint16, graceTimeoutMillis uint64) *stateStorageConfig {
 	return &stateStorageConfig{
 		stateHistoryRetentionInBlockHeights: maxStateHistory,
-		querySyncGraceBlockDist:             graceBlockDist,
 		crossServiceConfig: &crossServiceConfig{
 			queryGraceTimeoutMillis: graceTimeoutMillis,
+			querySyncGraceBlockDist: graceBlockDist,
 		},
 	}
 }
@@ -180,6 +190,10 @@ func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
 
 func (c *identity) NodePrivateKey() primitives.Ed25519PrivateKey {
 	return c.nodePrivateKey
+}
+
+func (c *identity) VirtualChainId() primitives.VirtualChainId {
+	return c.virtualChainId
 }
 
 func (c *consensusConfig) NetworkSize(asOfBlock uint64) uint32 {
@@ -228,18 +242,26 @@ func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
 	return c.minimumTransactionsInBlock
 }
 
-func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint64 {
+func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint16 {
 	return c.stateHistoryRetentionInBlockHeights
+}
+
+func (c *crossServiceConfig) QuerySyncGraceBlockDist() uint16 {
+	return c.querySyncGraceBlockDist
+}
+
+func (c *crossServiceConfig) QueryGraceTimeoutMillis() uint64 {
+	return c.queryGraceTimeoutMillis
 }
 
 func (c *transactionPoolConfig) PendingPoolSizeInBytes() uint32 {
 	return c.pendingPoolSizeInBytes
 }
 
-func (c *stateStorageConfig) QuerySyncGraceBlockDist() uint64 {
-	return c.querySyncGraceBlockDist
+func (c *transactionPoolConfig) TransactionExpirationWindowInSeconds() uint32 {
+	return c.transactionExpirationWindowInSeconds
 }
 
-func (c *crossServiceConfig) QueryGraceTimeoutMillis() uint64 {
-	return c.queryGraceTimeoutMillis
+func (c *transactionPoolConfig) FutureTimestampGraceInSeconds() uint32 {
+	return c.futureTimestampGraceInSeconds
 }

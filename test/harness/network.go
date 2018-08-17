@@ -93,13 +93,6 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			consensusAlgo,
 			1,
 			70,
-			5,
-			5,
-			30*60,
-			5,
-			3,
-			1,
-			1,
 			1,
 		)
 

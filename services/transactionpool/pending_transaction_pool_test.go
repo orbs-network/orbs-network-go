@@ -4,13 +4,16 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 var pk = keys.Ed25519KeyPairForTests(8).PublicKey()
+var transactionExpirationInSeconds = uint32(1800)
 
-func TestPendingTransactionPool_TracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
+func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
+	t.Parallel()
 	p := makePendingPool()
 	require.Zero(t, p.currentSizeInBytes, "New pending pool created with non-zero size")
 
@@ -29,21 +32,85 @@ func TestPendingTransactionPool_TracksSizesOfTransactionsAddedAndRemoved(t *test
 	require.Zero(t, p.currentSizeInBytes, "pending pool size did not reflect removal of tx2")
 }
 
-func TestPendingTransactionPool_AddRemove(t *testing.T) {
+func TestPendingTransactionPoolAddRemove(t *testing.T) {
+	t.Parallel()
 	p := makePendingPool()
 	tx1 := builders.TransferTransaction().Build()
 
 	k, _ := p.add(tx1, pk)
-	require.True(t, p.has(tx1), "pending pool did not add tx1")
+	require.True(t, p.has(tx1), "has() returned false for an added item")
+	require.Len(t, p.getBatch(1, 0), 1, "getBatch() did not return an added item")
 
 	p.remove(k)
-	require.False(t, p.has(tx1), "pending pool did not remove tx1")
+	require.False(t, p.has(tx1), "has() returned true for removed item")
+	require.Empty(t, p.getBatch(1, 0), "getBatch() returned a removed item")
 
 	require.NotPanics(t, func() {
 		p.remove(k)
 	}, "removing a key that does not exist resulted in a panic")
 }
 
+func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransaction(t *testing.T) {
+	t.Parallel()
+	p := makePendingPool()
+
+	add(p, builders.TransferTransaction().Build(), builders.TransferTransaction().Build())
+
+	txSet := p.getBatch(3, 0)
+
+	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
+}
+
+func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimit(t *testing.T) {
+	t.Parallel()
+	p := makePendingPool()
+
+	tx1 := builders.TransferTransaction().Build()
+	tx2 := builders.TransferTransaction().Build()
+	add(p, tx1, tx2, builders.TransferTransaction().Build())
+
+	slightlyMoreThanTwoTransactionsInBytes := uint32(len(tx1.Raw()) + len(tx2.Raw()) + 1)
+	txSet := p.getBatch(3, slightlyMoreThanTwoTransactionsInBytes)
+
+	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
+}
+
+func TestPendingTransactionPoolGetBatchDoesNotExceedLimit(t *testing.T) {
+	t.Parallel()
+	p := makePendingPool()
+
+	tx1 := builders.TransferTransaction().Build()
+	tx2 := builders.TransferTransaction().Build()
+	tx3 := builders.TransferTransaction().Build()
+	add(p, tx1, tx2, tx3)
+
+	txSet := p.getBatch(2, 0)
+
+	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
+}
+
+func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
+	t.Parallel()
+	p := makePendingPool()
+
+	// create 50 transactions so as to minimize the chance of randomly returning transactions in the expected order
+	transactions := make([]*protocol.SignedTransaction, 50, 50)
+	for i := 0; i < len(transactions); i++ {
+		transactions[i] = builders.TransferTransaction().Build()
+		add(p, transactions[i])
+	}
+
+	txSet := p.getBatch(uint32(len(transactions)), 0)
+
+	require.Equal(t, transactions, txSet, "got transactions in wrong order")
+}
+
+func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
+	for _, tx := range txs {
+		p.add(tx, pk)
+	}
+}
+
 func makePendingPool() *pendingTxPool {
-	return NewPendingPool(config.NewTransactionPoolConfig(100000, pk))
+	return NewPendingPool(config.NewTransactionPoolConfig(100000, transactionExpirationInSeconds, pk))
 }

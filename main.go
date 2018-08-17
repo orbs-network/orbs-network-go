@@ -59,18 +59,11 @@ func main() {
 		nodePrivateKey,
 		federationNodes,
 		70,
-		5,
-		5,
-		30*60,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		logger,
 		2*1000,
 		gossipTransport,
-		5,
-		3,
-		300,
-		300,
 		2,
 	).WaitUntilShutdown()
 }
