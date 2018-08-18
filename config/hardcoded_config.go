@@ -72,14 +72,54 @@ func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) Feder
 	}
 }
 
-func NewHardCodedConfig(
+func ForProduction(
 	federationNodes map[string]FederationNode,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
-	blockSyncCommitTimeoutMillis uint32,
+	minimumTransactionsInBlock int,
+) NodeConfig {
+
+	return newHardCodedConfig(
+		federationNodes,
+		nodePublicKey,
+		nodePrivateKey,
+		constantConsensusLeader,
+		activeConsensusAlgo,
+		benchmarkConsensusRoundRetryIntervalMillis,
+		minimumTransactionsInBlock,
+		20) // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
+
+}
+
+func ForAcceptanceTests(
+	federationNodes map[string]FederationNode,
+	nodePublicKey primitives.Ed25519PublicKey,
+	nodePrivateKey primitives.Ed25519PrivateKey,
+	constantConsensusLeader primitives.Ed25519PublicKey,
+	activeConsensusAlgo consensus.ConsensusAlgoType,
+) NodeConfig {
+
+	return newHardCodedConfig(
+		federationNodes,
+		nodePublicKey,
+		nodePrivateKey,
+		constantConsensusLeader,
+		activeConsensusAlgo,
+		1,
+		1,
+		1)
+}
+
+func newHardCodedConfig(
+	federationNodes map[string]FederationNode,
+	nodePublicKey primitives.Ed25519PublicKey,
+	nodePrivateKey primitives.Ed25519PrivateKey,
+	constantConsensusLeader primitives.Ed25519PublicKey,
+	activeConsensusAlgo consensus.ConsensusAlgoType,
+	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	minimumTransactionsInBlock int,
 	belowMinimalBlockDelayMillis uint32,
 ) NodeConfig {
@@ -101,10 +141,10 @@ func NewHardCodedConfig(
 			querySyncGraceBlockDist: 3,
 		},
 		blockStorageConfig: &blockStorageConfig{
-			blockSyncCommitTimeoutMillis:                     time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
-			blockTransactionReceiptQueryStartGraceSec:        time.Duration(5) * time.Second,
-			blockTransactionReceiptQueryEndGraceSec:          time.Duration(5) * time.Second,
-			blockTransactionReceiptQueryTransactionExpireSec: time.Duration(180) * time.Second,
+			blockSyncCommitTimeoutMillis:                     70 * time.Millisecond,
+			blockTransactionReceiptQueryStartGraceSec:        5 * time.Second,
+			blockTransactionReceiptQueryEndGraceSec:          5 * time.Second,
+			blockTransactionReceiptQueryTransactionExpireSec: 180 * time.Second,
 		},
 		stateStorageConfig: &stateStorageConfig{
 			stateHistoryRetentionInBlockHeights: 5,
