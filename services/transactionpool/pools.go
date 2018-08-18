@@ -81,8 +81,8 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256) *pendingTransaction {
 	return nil
 }
 
-func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) []*protocol.SignedTransaction {
-	txs := make([]*protocol.SignedTransaction, 0, maxNumOfTransactions)
+func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions {
+	txs := make(Transactions, 0, maxNumOfTransactions)
 	accumulatedSize := uint32(0)
 	e := p.transactionList.Back()
 	for {
@@ -128,6 +128,11 @@ func (p *committedTxPool) get(transaction *protocol.SignedTransaction) *committe
 	tx := p.transactions[key]
 
 	return tx
+}
+
+func (p *committedTxPool) has(txHash primitives.Sha256) bool {
+	_, ok := p.transactions[txHash.KeyForMap()]
+	return ok
 }
 
 type committedTransaction struct {

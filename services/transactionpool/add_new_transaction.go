@@ -51,7 +51,7 @@ func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
 
 	_, err := s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
-			SignedTransactions: []*protocol.SignedTransaction{tx},
+			SignedTransactions: Transactions{tx},
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: s.config.NodePublicKey(),
 			}).Build(),
@@ -64,7 +64,7 @@ func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
 func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
 	//TODO handle error from vm call
 	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
-		SignedTransactions: transactions{transaction},
+		SignedTransactions: Transactions{transaction},
 		BlockHeight:        s.lastCommittedBlockHeight,
 	})
 

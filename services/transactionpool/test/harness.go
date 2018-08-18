@@ -37,7 +37,7 @@ func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction)
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
 			}).Build(),
-			SignedTransactions: []*protocol.SignedTransaction{tx},
+			SignedTransactions: transactionpool.Transactions{tx},
 		},
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
 }
@@ -157,6 +157,15 @@ func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.
 	h.lastBlockHeight = height
 }
 
+func (h *harness) validateTransactionsForOrdering(blockHeight primitives.BlockHeight, txs ... *protocol.SignedTransaction) error {
+	_, err := h.txpool.ValidateTransactionsForOrdering(&services.ValidateTransactionsForOrderingInput{
+		BlockHeight: blockHeight,
+		SignedTransactions: txs,
+	})
+
+	return err
+}
+
 func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
@@ -188,7 +197,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	return h
 }
 
-func asReceipts(transactions []*protocol.SignedTransaction) []*protocol.TransactionReceipt {
+func asReceipts(transactions transactionpool.Transactions) []*protocol.TransactionReceipt {
 	var receipts []*protocol.TransactionReceipt
 	for _, tx := range transactions {
 		receipts = append(receipts, (&protocol.TransactionReceiptBuilder{

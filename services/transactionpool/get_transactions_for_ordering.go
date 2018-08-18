@@ -17,7 +17,7 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 	transactions := s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
 	vctx := s.createValidationContext()
 
-	transactionsForPreOrder := make([]*protocol.SignedTransaction, 0, input.MaxNumberOfTransactions)
+	transactionsForPreOrder := make(Transactions, 0, input.MaxNumberOfTransactions)
 	for _, tx := range transactions {
 		if err := vctx.validateTransaction(tx); err != nil {
 			s.log.Info("dropping invalid transaction", instrumentation.Error(err), instrumentation.Stringable("transaction", tx))

@@ -94,7 +94,7 @@ func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
 	p := makePendingPool()
 
 	// create 50 transactions so as to minimize the chance of randomly returning transactions in the expected order
-	transactions := make([]*protocol.SignedTransaction, 50, 50)
+	transactions := make(Transactions, 50, 50)
 	for i := 0; i < len(transactions); i++ {
 		transactions[i] = builders.TransferTransaction().Build()
 		add(p, transactions[i])

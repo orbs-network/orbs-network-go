@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 )
 
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
@@ -44,7 +45,7 @@ func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t 
 	txSet, err := h.getTransactionsForOrdering(4)
 
 	require.NoError(t, err, "expected transaction set but got an error")
-	require.ElementsMatch(t, []*protocol.SignedTransaction{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
+	require.ElementsMatch(t, transactionpool.Transactions{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
 }
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {

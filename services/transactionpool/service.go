@@ -8,6 +8,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"time"
+	"github.com/go-errors/errors"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type Config interface {
@@ -59,7 +63,35 @@ func (s *service) GetCommittedTransactionReceipt(input *services.GetCommittedTra
 }
 
 func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
-	panic("Not implemented")
+	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+		return nil, err
+	}
+
+	vctx := s.createValidationContext()
+
+	for _, tx := range input.SignedTransactions {
+		txHash := digest.CalcTxHash(tx.Transaction())
+		if s.committedPool.has(txHash) {
+			return nil, errors.Errorf("transaction with hash %s already committed", txHash)
+		}
+
+		if err := vctx.validateTransaction(tx); err != nil {
+			return nil, errors.WrapPrefix(err, fmt.Sprintf("transaction with hash %s is invalid", txHash), 0)
+		}
+	}
+
+	//TODO handle error from vm
+	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+		SignedTransactions: input.SignedTransactions,
+		BlockHeight:        s.lastCommittedBlockHeight,
+	})
+
+	for i, tx := range input.SignedTransactions {
+		if status := preOrderResults.PreOrderResults[i]; status != protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
+			return nil, errors.Errorf("transaction with hash %s failed pre-order checks with status %s", digest.CalcTxHash(tx.Transaction()), status)
+		}
+	}
+	return &services.ValidateTransactionsForOrderingOutput{}, nil
 }
 
 func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
