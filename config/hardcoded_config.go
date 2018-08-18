@@ -90,7 +90,8 @@ func ForProduction(
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillis,
 		minimumTransactionsInBlock,
-		20) // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
+		20, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
+		100)
 
 }
 
@@ -110,6 +111,7 @@ func ForAcceptanceTests(
 		activeConsensusAlgo,
 		1,
 		1,
+		1,
 		1)
 }
 
@@ -122,6 +124,7 @@ func newHardCodedConfig(
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
 	minimumTransactionsInBlock int,
 	belowMinimalBlockDelayMillis uint32,
+	queryGraceTimeoutMillis uint64,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -137,7 +140,7 @@ func newHardCodedConfig(
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: 100,
+			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
 			querySyncGraceBlockDist: 3,
 		},
 		blockStorageConfig: &blockStorageConfig{
