@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -21,7 +22,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION}
 	}
 
-	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
+	if alreadyCommitted := s.committedPool.get(digest.CalcTxHash(input.SignedTransaction.Transaction())); alreadyCommitted != nil {
 		s.log.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}

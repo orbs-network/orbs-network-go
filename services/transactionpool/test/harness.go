@@ -157,9 +157,9 @@ func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.
 	h.lastBlockHeight = height
 }
 
-func (h *harness) validateTransactionsForOrdering(blockHeight primitives.BlockHeight, txs ... *protocol.SignedTransaction) error {
+func (h *harness) validateTransactionsForOrdering(blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
 	_, err := h.txpool.ValidateTransactionsForOrdering(&services.ValidateTransactionsForOrderingInput{
-		BlockHeight: blockHeight,
+		BlockHeight:        blockHeight,
 		SignedTransactions: txs,
 	})
 

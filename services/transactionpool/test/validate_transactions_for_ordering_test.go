@@ -1,12 +1,12 @@
 package test
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/stretchr/testify/require"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
@@ -76,6 +76,3 @@ func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *test
 		"did not reject block height too far in the future")
 
 }
-
-
-

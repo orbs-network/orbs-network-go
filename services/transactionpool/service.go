@@ -1,17 +1,17 @@
 package transactionpool
 
 import (
+	"fmt"
+	"github.com/go-errors/errors"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"time"
-	"github.com/go-errors/errors"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"fmt"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 type Config interface {
@@ -59,7 +59,15 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay,
 }
 
 func (s *service) GetCommittedTransactionReceipt(input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
-	panic("Not implemented")
+	if tx := s.pendingPool.get(input.Txhash); tx != nil {
+		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_PENDING), nil
+	}
+
+	if tx := s.committedPool.get(input.Txhash); tx != nil {
+		return s.getTxResult(tx.receipt, protocol.TRANSACTION_STATUS_COMMITTED), nil
+	}
+
+	return s.getTxResult(nil, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND), nil
 }
 
 func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
@@ -115,5 +123,14 @@ func (s *service) createValidationContext() *validationContext {
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
 		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
 		virtualChainId:              s.config.VirtualChainId(),
+	}
+}
+
+func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.GetCommittedTransactionReceiptOutput {
+	return &services.GetCommittedTransactionReceiptOutput{
+		TransactionStatus:  status,
+		TransactionReceipt: receipt,
+		BlockHeight:        s.lastCommittedBlockHeight,
+		BlockTimestamp:     s.lastCommittedBlockTimestamp,
 	}
 }

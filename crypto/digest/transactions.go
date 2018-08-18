@@ -12,9 +12,13 @@ func CalcTxHash(transaction *protocol.Transaction) primitives.Sha256 {
 }
 
 func CalcTxId(transaction *protocol.Transaction) []byte {
+	return GenerateTxId(CalcTxHash(transaction), transaction.Timestamp())
+}
+
+func GenerateTxId(hash primitives.Sha256, ts primitives.TimestampNano) []byte {
 	result := make([]byte, 8+32)
-	membuffers.WriteUint64(result, uint64(transaction.Timestamp()))
-	copy(result[8:], CalcTxHash(transaction))
+	membuffers.WriteUint64(result, uint64(ts))
+	copy(result[8:], hash)
 
 	return result
 }

@@ -109,6 +109,14 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 	return txs
 }
 
+func (p *pendingTxPool) get(txHash primitives.Sha256) *protocol.SignedTransaction {
+	if ptx, ok := p.transactionsByHash[txHash.KeyForMap()]; ok {
+		return ptx.transaction
+	}
+
+	return nil
+}
+
 type committedTxPool struct {
 	transactions map[string]*committedTransaction
 	lock         *sync.Mutex
@@ -122,8 +130,8 @@ func (p *committedTxPool) add(receipt *protocol.TransactionReceipt) {
 	}
 }
 
-func (p *committedTxPool) get(transaction *protocol.SignedTransaction) *committedTransaction {
-	key := digest.CalcTxHash(transaction.Transaction()).KeyForMap()
+func (p *committedTxPool) get(txHash primitives.Sha256) *committedTransaction {
+	key := txHash.KeyForMap()
 
 	tx := p.transactions[key]
 
