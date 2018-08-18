@@ -49,7 +49,7 @@ type transactionPoolConfig struct {
 	*crossServiceConfig
 	pendingPoolSizeInBytes            uint32
 	transactionExpirationWindow       time.Duration
-	futureTimestampGraceInSeconds     uint32
+	futureTimestampGrace              time.Duration
 	pendingPoolClearExpiredInterval   time.Duration
 	committedPoolClearExpiredInterval time.Duration
 }
@@ -116,7 +116,7 @@ func NewHardCodedConfig(
 		},
 		transactionPoolConfig: &transactionPoolConfig{
 			pendingPoolSizeInBytes:            20 * 1024 * 1024,
-			futureTimestampGraceInSeconds:     180,
+			futureTimestampGrace:              3 * time.Minute,
 			transactionExpirationWindow:       30 * time.Minute,
 			pendingPoolClearExpiredInterval:   10 * time.Second,
 			committedPoolClearExpiredInterval: 30 * time.Second,
@@ -173,7 +173,7 @@ func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirati
 			querySyncGraceBlockDist: 5,
 		},
 		pendingPoolSizeInBytes:            pendingPoolSizeInBytes,
-		futureTimestampGraceInSeconds:     180,
+		futureTimestampGrace:              3 * time.Minute,
 		transactionExpirationWindow:       transactionExpirationWindow,
 		pendingPoolClearExpiredInterval:   10 * time.Second,
 		committedPoolClearExpiredInterval: 30 * time.Second,
@@ -268,8 +268,8 @@ func (c *transactionPoolConfig) TransactionExpirationWindow() time.Duration {
 	return c.transactionExpirationWindow
 }
 
-func (c *transactionPoolConfig) FutureTimestampGraceInSeconds() uint32 {
-	return c.futureTimestampGraceInSeconds
+func (c *transactionPoolConfig) FutureTimestampGrace() time.Duration {
+	return c.futureTimestampGrace
 }
 
 func (c *transactionPoolConfig) PendingPoolClearExpiredInterval() time.Duration {

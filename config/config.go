@@ -38,7 +38,7 @@ type NodeConfig interface {
 	// transaction pool
 	PendingPoolSizeInBytes() uint32
 	TransactionExpirationWindow() time.Duration
-	FutureTimestampGraceInSeconds() uint32
+	FutureTimestampGrace() time.Duration
 	PendingPoolClearExpiredInterval() time.Duration
 	CommittedPoolClearExpiredInterval() time.Duration
 }
