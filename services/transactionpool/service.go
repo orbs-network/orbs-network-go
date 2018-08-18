@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-errors/errors"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -17,11 +18,13 @@ import (
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	PendingPoolSizeInBytes() uint32
-	TransactionExpirationWindowInSeconds() uint32
+	TransactionExpirationWindow() time.Duration
 	FutureTimestampGraceInSeconds() uint32
 	VirtualChainId() primitives.VirtualChainId
 	QuerySyncGraceBlockDist() uint16
 	QueryGraceTimeoutMillis() uint64
+	PendingPoolClearExpiredInterval() time.Duration
+	CommittedPoolClearExpiredInterval() time.Duration
 }
 
 type service struct {
@@ -38,7 +41,8 @@ type service struct {
 	blockTracker                *synchronization.BlockTracker
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay,
+func NewTransactionPool(ctx context.Context,
+	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	config Config,
 	log instrumentation.BasicLogger,
@@ -54,7 +58,13 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay,
 		committedPool:               NewCommittedPool(),
 		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
 	}
+
 	gossip.RegisterTransactionRelayHandler(s)
+
+	//TODO supervise
+	startCleaningProcess(ctx, config.CommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool)
+	startCleaningProcess(ctx, config.PendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool)
+
 	return s
 }
 
@@ -119,7 +129,7 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
-		expiryWindow:                time.Duration(s.config.TransactionExpirationWindowInSeconds()) * time.Second,
+		expiryWindow:                s.config.TransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
 		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
 		virtualChainId:              s.config.VirtualChainId(),
@@ -133,4 +143,27 @@ func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status proto
 		BlockHeight:        s.lastCommittedBlockHeight,
 		BlockTimestamp:     s.lastCommittedBlockTimestamp,
 	}
+}
+
+type cleaner interface {
+	clearTransactionsOlderThan(time time.Time)
+}
+
+// TODO supervise
+func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner) chan struct{} {
+	stopped := make(chan struct{})
+	ticker := time.NewTicker(tickInterval())
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				close(stopped)
+				return
+			case <-ticker.C:
+				c.clearTransactionsOlderThan(time.Now().Add(-1 * expiration()))
+			}
+		}
+
+	}()
+	return stopped
 }

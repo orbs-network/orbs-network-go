@@ -58,7 +58,10 @@ func validateSignerAndContractName(transaction *protocol.SignedTransaction) erro
 
 func validateTransactionNotExpired(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) error {
-		if time.Unix(0, int64(transaction.Transaction().Timestamp())).Before(time.Now().Add(vctx.expiryWindow * -1)) {
+		txTime := time.Unix(0, int64(transaction.Transaction().Timestamp()))
+		expiryTime := time.Now().Add(vctx.expiryWindow * -1)
+		println(txTime.String(), "\t", expiryTime.String())
+		if txTime.Before(expiryTime) {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
 		}
 

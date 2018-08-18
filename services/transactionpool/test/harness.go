@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -28,7 +29,7 @@ type harness struct {
 
 var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
 var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
-var transactionExpirationWindowInSeconds = uint32(1800)
+var transactionExpirationWindow = 30 * time.Minute
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
 
@@ -171,6 +172,8 @@ func newHarness() *harness {
 }
 
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
+	ctx := context.Background()
+
 	ts := primitives.TimestampNano(time.Now().UnixNano())
 
 	gossip := &gossiptopics.MockTransactionRelay{}
@@ -178,8 +181,8 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
-	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger(), ts)
+	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair.PublicKey())
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, config, instrumentation.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)

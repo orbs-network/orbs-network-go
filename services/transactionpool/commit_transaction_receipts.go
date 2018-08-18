@@ -2,9 +2,11 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
@@ -18,10 +20,13 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 	var myReceipts []*protocol.TransactionReceipt
 
 	for _, receipt := range input.TransactionReceipts {
-		s.committedPool.add(receipt)
-		if removedTx := s.pendingPool.remove(receipt.Txhash()); s.originatedFromMyPublicApi(removedTx) {
+		removedTx := s.pendingPool.remove(receipt.Txhash())
+		if s.originatedFromMyPublicApi(removedTx) {
 			myReceipts = append(myReceipts, receipt)
 		}
+
+		s.committedPool.add(receipt, timestampOrNow(removedTx))
+
 	}
 
 	s.lastCommittedBlockHeight = input.ResultsBlockHeader.BlockHeight()
@@ -43,6 +48,13 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 		NextDesiredBlockHeight:   s.lastCommittedBlockHeight + 1,
 		LastCommittedBlockHeight: s.lastCommittedBlockHeight,
 	}, nil
+}
+func timestampOrNow(tx *pendingTransaction) primitives.TimestampNano {
+	if tx != nil {
+		return tx.transaction.Transaction().Timestamp()
+	} else {
+		return primitives.TimestampNano(time.Now().UnixNano())
+	}
 }
 
 func (s *service) originatedFromMyPublicApi(removedTx *pendingTransaction) bool {

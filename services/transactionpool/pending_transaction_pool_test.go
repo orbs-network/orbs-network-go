@@ -7,10 +7,11 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 var pk = keys.Ed25519KeyPairForTests(8).PublicKey()
-var transactionExpirationInSeconds = uint32(1800)
+var transactionExpirationWindow = 30 * time.Minute
 
 func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
 	t.Parallel()
@@ -105,6 +106,22 @@ func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
 	require.Equal(t, transactions, txSet, "got transactions in wrong order")
 }
 
+func TestPendingTransactionPoolClearsExpiredTransactions(t *testing.T) {
+	t.Parallel()
+	p := makePendingPool()
+
+	tx1 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-5 * time.Minute)).Build()
+	tx2 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-29 * time.Minute)).Build()
+	tx3 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-31 * time.Minute)).Build()
+	add(p, tx1, tx2, tx3)
+
+	p.clearTransactionsOlderThan(time.Now().Add(-30 * time.Minute))
+
+	require.True(t, p.has(tx1), "cleared non-expired transaction")
+	require.True(t, p.has(tx2), "cleared non-expired transaction")
+	require.False(t, p.has(tx3), "did not clear expired transaction")
+}
+
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
 		p.add(tx, pk)
@@ -112,5 +129,5 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 }
 
 func makePendingPool() *pendingTxPool {
-	return NewPendingPool(config.NewTransactionPoolConfig(100000, transactionExpirationInSeconds, pk))
+	return NewPendingPool(config.NewTransactionPoolConfig(100000, transactionExpirationWindow, pk))
 }

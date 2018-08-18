@@ -47,9 +47,11 @@ type stateStorageConfig struct {
 type transactionPoolConfig struct {
 	*identity
 	*crossServiceConfig
-	pendingPoolSizeInBytes               uint32
-	transactionExpirationWindowInSeconds uint32
-	futureTimestampGraceInSeconds        uint32
+	pendingPoolSizeInBytes            uint32
+	transactionExpirationWindow       time.Duration
+	futureTimestampGraceInSeconds     uint32
+	pendingPoolClearExpiredInterval   time.Duration
+	committedPoolClearExpiredInterval time.Duration
 }
 
 type hardCodedFederationNode struct {
@@ -113,9 +115,11 @@ func NewHardCodedConfig(
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
 		transactionPoolConfig: &transactionPoolConfig{
-			pendingPoolSizeInBytes:               20 * 1024 * 1024,
-			transactionExpirationWindowInSeconds: 1800,
-			futureTimestampGraceInSeconds:        180,
+			pendingPoolSizeInBytes:            20 * 1024 * 1024,
+			futureTimestampGraceInSeconds:     180,
+			transactionExpirationWindow:       30 * time.Minute,
+			pendingPoolClearExpiredInterval:   10 * time.Second,
+			committedPoolClearExpiredInterval: 30 * time.Second,
 		},
 	}
 }
@@ -158,7 +162,7 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindowInSeconds uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
+func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindow time.Duration, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
 	return &transactionPoolConfig{
 		identity: &identity{
 			nodePublicKey:  nodePublicKey,
@@ -168,9 +172,11 @@ func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirati
 			queryGraceTimeoutMillis: 100,
 			querySyncGraceBlockDist: 5,
 		},
-		pendingPoolSizeInBytes:               pendingPoolSizeInBytes,
-		transactionExpirationWindowInSeconds: transactionExpirationWindowInSeconds,
-		futureTimestampGraceInSeconds:        180,
+		pendingPoolSizeInBytes:            pendingPoolSizeInBytes,
+		futureTimestampGraceInSeconds:     180,
+		transactionExpirationWindow:       transactionExpirationWindow,
+		pendingPoolClearExpiredInterval:   10 * time.Second,
+		committedPoolClearExpiredInterval: 30 * time.Second,
 	}
 }
 
@@ -258,10 +264,18 @@ func (c *transactionPoolConfig) PendingPoolSizeInBytes() uint32 {
 	return c.pendingPoolSizeInBytes
 }
 
-func (c *transactionPoolConfig) TransactionExpirationWindowInSeconds() uint32 {
-	return c.transactionExpirationWindowInSeconds
+func (c *transactionPoolConfig) TransactionExpirationWindow() time.Duration {
+	return c.transactionExpirationWindow
 }
 
 func (c *transactionPoolConfig) FutureTimestampGraceInSeconds() uint32 {
 	return c.futureTimestampGraceInSeconds
+}
+
+func (c *transactionPoolConfig) PendingPoolClearExpiredInterval() time.Duration {
+	return c.pendingPoolClearExpiredInterval
+}
+
+func (c *transactionPoolConfig) CommittedPoolClearExpiredInterval() time.Duration {
+	return c.committedPoolClearExpiredInterval
 }

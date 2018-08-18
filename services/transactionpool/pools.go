@@ -6,8 +6,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
+	"time"
 )
 
+//TODO we don't need all of Config, narrow the interface
 func NewPendingPool(config Config) *pendingTxPool {
 	return &pendingTxPool{
 		config:             config,
@@ -117,16 +119,37 @@ func (p *pendingTxPool) get(txHash primitives.Sha256) *protocol.SignedTransactio
 	return nil
 }
 
+func (p *pendingTxPool) clearTransactionsOlderThan(time time.Time) {
+	p.lock.RLock()
+	e := p.transactionList.Back()
+	p.lock.RUnlock()
+
+	for {
+		if e == nil {
+			break
+		}
+
+		tx := e.Value.(*protocol.SignedTransaction)
+
+		e = e.Prev()
+
+		if int64(tx.Transaction().Timestamp()) < time.UnixNano() {
+			p.remove(digest.CalcTxHash(tx.Transaction()))
+		}
+	}
+}
+
 type committedTxPool struct {
 	transactions map[string]*committedTransaction
 	lock         *sync.Mutex
 }
 
-func (p *committedTxPool) add(receipt *protocol.TransactionReceipt) {
+func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, ts primitives.TimestampNano) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.transactions[receipt.Txhash().KeyForMap()] = &committedTransaction{
-		receipt: receipt,
+		receipt:   receipt,
+		timestamp: ts,
 	}
 }
 
@@ -143,8 +166,20 @@ func (p *committedTxPool) has(txHash primitives.Sha256) bool {
 	return ok
 }
 
+func (p *committedTxPool) clearTransactionsOlderThan(time time.Time) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	for _, tx := range p.transactions {
+		if int64(tx.timestamp) < time.UnixNano() {
+			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
+		}
+	}
+}
+
 type committedTransaction struct {
-	receipt *protocol.TransactionReceipt
+	receipt   *protocol.TransactionReceipt
+	timestamp primitives.TimestampNano
 }
 
 func sizeOf(transaction *protocol.SignedTransaction) uint32 {

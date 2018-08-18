@@ -15,7 +15,7 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	h := newHarness()
 
 	validTx := builders.TransferTransaction().Build()
-	expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(transactionExpirationWindowInSeconds+60) * time.Second)).Build()
+	expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(transactionExpirationWindow+60) * time.Second)).Build()
 
 	// we use forward rather than add to simulate a scenario where a byzantine node submitted invalid transactions
 	h.handleForwardFrom(otherNodeKeyPair.PublicKey(), validTx, expiredTx)

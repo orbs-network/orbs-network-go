@@ -10,6 +10,7 @@ type NodeConfig interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
+	VirtualChainId() primitives.VirtualChainId
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	QueryGraceTimeoutMillis() uint64
 
@@ -36,9 +37,10 @@ type NodeConfig interface {
 
 	// transaction pool
 	PendingPoolSizeInBytes() uint32
-	TransactionExpirationWindowInSeconds() uint32
+	TransactionExpirationWindow() time.Duration
 	FutureTimestampGraceInSeconds() uint32
-	VirtualChainId() primitives.VirtualChainId
+	PendingPoolClearExpiredInterval() time.Duration
+	CommittedPoolClearExpiredInterval() time.Duration
 }
 
 type FederationNode interface {
