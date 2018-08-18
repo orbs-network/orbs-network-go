@@ -1,7 +1,7 @@
 package native
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -12,16 +12,16 @@ import (
 )
 
 type service struct {
-	reporting instrumentation.BasicLogger
+	reporting log.BasicLogger
 
 	contractRepository map[primitives.ContractName]types.Contract
 }
 
 func NewNativeProcessor(
-	reporting instrumentation.BasicLogger,
+	reporting log.BasicLogger,
 ) services.Processor {
 	return &service{
-		reporting: reporting.For(instrumentation.Service("processor-native")),
+		reporting: reporting.For(log.Service("processor-native")),
 	}
 }
 

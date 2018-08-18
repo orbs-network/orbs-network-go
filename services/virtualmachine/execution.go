@@ -2,7 +2,7 @@ package virtualmachine
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -22,7 +22,7 @@ func (s *service) runMethod(
 	// get deployment info
 	processor, contractPermission, err := s.getServiceDeployment(executionContext, transaction.ContractName())
 	if err != nil {
-		s.reporting.Info("get deployment for contract failed", instrumentation.Error(err), instrumentation.Stringable("transaction", transaction))
+		s.reporting.Info("get deployment for contract failed", log.Error(err), log.Stringable("transaction", transaction))
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, err
 	}
 
@@ -48,7 +48,7 @@ func (s *service) runMethod(
 		TransactionSigner: transaction.Signer(),
 	})
 	if err != nil {
-		s.reporting.Info("transaction execution failed", instrumentation.Stringable("result", output.CallResult), instrumentation.Error(err), instrumentation.Stringable("transaction", transaction))
+		s.reporting.Info("transaction execution failed", log.Stringable("result", output.CallResult), log.Error(err), log.Stringable("transaction", transaction))
 	}
 
 	if batchTransientState != nil && output.CallResult == protocol.EXECUTION_RESULT_SUCCESS {
@@ -71,7 +71,7 @@ func (s *service) processTransactionSet(
 
 	for _, signedTransaction := range signedTransactions {
 
-		s.reporting.Info("processing transaction", instrumentation.Stringable("contract", signedTransaction.Transaction().ContractName()), instrumentation.Stringable("method", signedTransaction.Transaction().MethodName()), instrumentation.BlockHeight(blockHeight))
+		s.reporting.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(blockHeight))
 		callResult, outputArgs, _ := s.runMethod(blockHeight, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 
 		receipt := s.encodeTransactionReceipt(signedTransaction.Transaction(), callResult, outputArgs)

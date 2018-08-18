@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
@@ -34,7 +34,7 @@ func NewNode(
 	blockSyncCommitTimeoutMillis uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	logger instrumentation.BasicLogger,
+	logger log.BasicLogger,
 	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
 	minimumTransactionsInBlock int,
@@ -52,7 +52,7 @@ func NewNode(
 		minimumTransactionsInBlock,
 	)
 
-	nodeLogger := logger.For(instrumentation.Node(nodePublicKey.String()))
+	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence()
 	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()

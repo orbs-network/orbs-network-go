@@ -1,4 +1,4 @@
-package instrumentation
+package log
 
 import (
 	"encoding/json"

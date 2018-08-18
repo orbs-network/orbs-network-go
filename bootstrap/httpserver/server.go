@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/orbs-network/membuffers/go"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -18,13 +18,13 @@ type HttpServer interface {
 
 type server struct {
 	httpServer *http.Server
-	reporting  instrumentation.BasicLogger
+	reporting  log.BasicLogger
 	publicApi  services.PublicApi
 }
 
-func NewHttpServer(address string, reporting instrumentation.BasicLogger, publicApi services.PublicApi) HttpServer {
+func NewHttpServer(address string, reporting log.BasicLogger, publicApi services.PublicApi) HttpServer {
 	server := &server{
-		reporting: reporting.For(instrumentation.String("subsystem", "http-server")),
+		reporting: reporting.For(log.String("subsystem", "http-server")),
 		publicApi: publicApi,
 	}
 
@@ -34,7 +34,7 @@ func NewHttpServer(address string, reporting instrumentation.BasicLogger, public
 	}
 
 	go func() {
-		reporting.Info("Starting server on address", instrumentation.String("address", address))
+		reporting.Info("Starting server on address", log.String("address", address))
 		server.httpServer.ListenAndServe() //TODO error on failed startup
 	}()
 
@@ -79,9 +79,9 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown(context.TODO()) //TODO timeout context
 }
 
-func report(reporting instrumentation.BasicLogger, h http.Handler) http.Handler {
+func report(reporting log.BasicLogger, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		meter := reporting.Meter("request-process-time", instrumentation.String("url", r.URL.String()))
+		meter := reporting.Meter("request-process-time", log.String("url", r.URL.String()))
 		defer meter.Done()
 		h.ServeHTTP(w, r)
 	})
@@ -112,7 +112,7 @@ func (s *server) handler(handler func(bytes []byte, r *response)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			s.reporting.Info("could not read http request body", instrumentation.Error(err))
+			s.reporting.Info("could not read http request body", log.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return

@@ -1,7 +1,7 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -24,7 +24,7 @@ type service struct {
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
 	transactionResultsHandlers []handlers.TransactionResultsHandler
-	log                        instrumentation.BasicLogger
+	logger                     log.BasicLogger
 	config                     Config
 
 	lastCommittedBlockHeight    primitives.BlockHeight
@@ -37,13 +37,13 @@ type service struct {
 func NewTransactionPool(gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	config Config,
-	log instrumentation.BasicLogger,
+	logger log.BasicLogger,
 	initialTimestamp primitives.TimestampNano) services.TransactionPool {
 	s := &service{
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
 		config:         config,
-		log:            log.For(instrumentation.Service("transaction-pool")),
+		logger:         logger.For(log.Service("transaction-pool")),
 
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
 		pendingPool:                 NewPendingPool(config),
@@ -71,7 +71,7 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 	//TODO verify message signature
 	for _, tx := range input.Message.SignedTransactions {
 		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err != nil {
-			s.log.Error("error adding forwarded transaction to pending pool", instrumentation.Error(err), instrumentation.Stringable("transaction", tx))
+			s.logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx))
 		}
 	}
 	return nil, nil

@@ -3,7 +3,7 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -30,7 +30,7 @@ type service struct {
 	gossip           gossiptopics.BenchmarkConsensus
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
-	reporting        instrumentation.BasicLogger
+	reporting        log.BasicLogger
 	config           Config
 
 	isLeader           bool
@@ -48,7 +48,7 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	reporting instrumentation.BasicLogger,
+	reporting log.BasicLogger,
 	config Config,
 ) services.ConsensusAlgoBenchmark {
 
@@ -56,7 +56,7 @@ func NewBenchmarkConsensusAlgo(
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		reporting:        reporting.For(instrumentation.Service("consensus-algo-benchmark")),
+		reporting:        reporting.For(log.Service("consensus-algo-benchmark")),
 		config:           config,
 
 		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
