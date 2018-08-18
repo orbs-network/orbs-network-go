@@ -54,7 +54,7 @@ func NewTransactionPool(ctx context.Context,
 		log:            log.For(instrumentation.Service("transaction-pool")),
 
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
-		pendingPool:                 NewPendingPool(config),
+		pendingPool:                 NewPendingPool(config.PendingPoolSizeInBytes),
 		committedPool:               NewCommittedPool(),
 		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
 	}

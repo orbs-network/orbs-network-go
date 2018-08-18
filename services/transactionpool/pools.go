@@ -10,12 +10,12 @@ import (
 )
 
 //TODO we don't need all of Config, narrow the interface
-func NewPendingPool(config Config) *pendingTxPool {
+func NewPendingPool(pendingPoolSizeInBytes func() uint32) *pendingTxPool {
 	return &pendingTxPool{
-		config:             config,
-		transactionsByHash: make(map[string]*pendingTransaction),
-		transactionList:    list.New(),
-		lock:               &sync.RWMutex{},
+		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
+		transactionsByHash:     make(map[string]*pendingTransaction),
+		transactionList:        list.New(),
+		lock:                   &sync.RWMutex{},
 	}
 }
 
@@ -38,7 +38,7 @@ type pendingTxPool struct {
 	transactionList    *list.List
 	lock               *sync.RWMutex
 
-	config Config
+	pendingPoolSizeInBytes func() uint32
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, error) {
@@ -46,7 +46,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	defer p.lock.Unlock()
 	size := sizeOf(transaction)
 
-	if p.currentSizeInBytes+size > p.config.PendingPoolSizeInBytes() {
+	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
 		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_CONGESTION}
 	}
 

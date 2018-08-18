@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var tickInterval = func() time.Duration { return 10 * time.Microsecond }
+var tickInterval = func() time.Duration { return 100 * time.Microsecond }
 var expiration = func() time.Duration { return 30 * time.Minute }
 
 func TestStopsWhenContextIsCancelled(t *testing.T) {

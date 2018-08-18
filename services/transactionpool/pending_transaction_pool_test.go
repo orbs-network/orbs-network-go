@@ -1,7 +1,6 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -129,5 +128,5 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 }
 
 func makePendingPool() *pendingTxPool {
-	return NewPendingPool(config.NewTransactionPoolConfig(100000, transactionExpirationWindow, pk))
+	return NewPendingPool(func() uint32 { return 100000 })
 }
