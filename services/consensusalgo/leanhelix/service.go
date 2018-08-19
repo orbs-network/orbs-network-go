@@ -10,6 +10,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
 	"time"
+	"fmt"
+	"github.com/orbs-network/lean-helix-go/go/leanhelix"
 )
 
 type Config interface {
@@ -17,6 +19,12 @@ type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+}
+
+// TODO Eventually remove all code except Init() which calls the external lean-helix-go submodule
+func Init() {
+	s := leanhelix.NewLeanHelix()
+	fmt.Println(s)
 }
 
 type service struct {
