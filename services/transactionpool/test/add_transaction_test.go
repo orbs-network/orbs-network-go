@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
@@ -16,7 +17,8 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
-	h.expectTransactionToBeForwarded(tx)
+	sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), tx.Raw())
+	h.expectTransactionToBeForwarded(tx, sig)
 
 	_, err := h.addNewTransaction(tx)
 	require.NoError(t, err, "a valid transaction was not added to pool")

@@ -36,7 +36,7 @@ func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *tes
 
 	h.addNewTransaction(myTx1)
 	h.addNewTransaction(myTx2)
-	h.handleForwardFrom(otherNodeKeyPair.PublicKey(), otherTx)
+	h.handleForwardFrom(otherNodeKeyPair, otherTx)
 
 	h.assumeBlockStorageAtHeight(1)
 	h.expectTransactionResultsCallbackFor(myTx1, myTx2)

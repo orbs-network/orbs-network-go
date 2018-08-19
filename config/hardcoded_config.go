@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 )
 
 //TODO introduce FileSystemConfig
@@ -162,10 +163,11 @@ func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTrans
 	}
 }
 
-func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindow time.Duration, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
+func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindow time.Duration, nodeKeyPair *keys.Ed25519KeyPair) *transactionPoolConfig {
 	return &transactionPoolConfig{
 		identity: &identity{
-			nodePublicKey:  nodePublicKey,
+			nodePublicKey:  nodeKeyPair.PublicKey(),
+			nodePrivateKey:  nodeKeyPair.PrivateKey(),
 			virtualChainId: 42,
 		},
 		crossServiceConfig: &crossServiceConfig{

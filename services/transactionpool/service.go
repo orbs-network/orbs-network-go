@@ -13,10 +13,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"time"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
+	NodePrivateKey() primitives.Ed25519PrivateKey
 	PendingPoolSizeInBytes() uint32
 	VirtualChainId() primitives.VirtualChainId
 	QuerySyncGraceBlockDist() uint16
@@ -118,9 +120,20 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 
 func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 
-	//TODO verify message signature
+	//TODO this is copying and needs to go away pending issue #119
+	var allTransactions []byte
 	for _, tx := range input.Message.SignedTransactions {
-		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err != nil {
+		allTransactions = append(allTransactions, tx.Raw()...)
+	}
+
+	sender := input.Message.Sender
+	if !signature.VerifyEd25519(sender.SenderPublicKey(), allTransactions, sender.Signature()) {
+		s.log.Error("invalid signature in relay message", instrumentation.Bytes("sender", sender.SenderPublicKey()))
+		return nil, nil
+	}
+
+	for _, tx := range input.Message.SignedTransactions {
+		if _, err := s.pendingPool.add(tx, sender.SenderPublicKey()); err != nil {
 			s.log.Error("error adding forwarded transaction to pending pool", instrumentation.Error(err), instrumentation.Stringable("transaction", tx))
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
@@ -38,23 +39,28 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	}
 	//TODO batch
-	s.forwardTransaction(input.SignedTransaction)
+	if err := s.forwardTransaction(input.SignedTransaction); err != nil {
+		s.log.Error("error forwarding transaction via gossip", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
+
+		return  nil, err
+	}
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
 func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
 	// TODO sign
-	//sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
-	//if err != nil {
-	//	return nil, err
-	//}
+	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), tx.Raw())
+	if err != nil {
+		return err
+	}
 
-	_, err := s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+	_, err = s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			SignedTransactions: Transactions{tx},
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: s.config.NodePublicKey(),
+				Signature: sig,
 			}).Build(),
 		},
 	})

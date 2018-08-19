@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-//TODO we don't need all of Config, narrow the interface
 func NewPendingPool(pendingPoolSizeInBytes func() uint32) *pendingTxPool {
 	return &pendingTxPool{
 		pendingPoolSizeInBytes: pendingPoolSizeInBytes,

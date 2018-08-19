@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"log"
 	"time"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 type harness struct {
@@ -31,12 +32,13 @@ var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
 var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
 var transactionExpirationWindow = 30 * time.Minute
 
-func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
+func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
 
 	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
+				Signature: sig,
 			}).Build(),
 			SignedTransactions: transactionpool.Transactions{tx},
 		},
@@ -90,10 +92,25 @@ func (h *harness) verifyMocks() error {
 	return nil
 }
 
-func (h *harness) handleForwardFrom(sender primitives.Ed25519PublicKey, transactions ...*protocol.SignedTransaction) {
+func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+
+	//TODO this is copying and needs to go away pending issue #119
+	var allTransactions []byte
+	for _, tx := range transactions {
+		allTransactions = append(allTransactions, tx.Raw()...)
+	}
+
+	sig, err := signature.SignEd25519(sender.PrivateKey(), allTransactions)
+	if err != nil {
+		panic(err)
+	}
+
 	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
-			Sender:             (&gossipmessages.SenderSignatureBuilder{SenderPublicKey: sender}).Build(),
+			Sender:             (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: sender.PublicKey(),
+				Signature: sig,
+			}).Build(),
 			SignedTransactions: transactions,
 		},
 	})
@@ -181,7 +198,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair.PublicKey())
+	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
 	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, config, instrumentation.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
