@@ -121,15 +121,14 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 
 	//TODO this is copying and needs to go away pending issue #119
+	sender := input.Message.Sender
 	var allTransactions []byte
 	for _, tx := range input.Message.SignedTransactions {
 		allTransactions = append(allTransactions, tx.Raw()...)
 	}
 
-	sender := input.Message.Sender
 	if !signature.VerifyEd25519(sender.SenderPublicKey(), allTransactions, sender.Signature()) {
-		s.logger.Error("invalid signature in relay message", log.Bytes("sender", sender.SenderPublicKey()))
-		return nil, nil
+		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderPublicKey())
 	}
 
 	for _, tx := range input.Message.SignedTransactions {
