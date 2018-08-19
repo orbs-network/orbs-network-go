@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"testing"
 )
 
 func ExampleMessagePredicate_sender() {
@@ -59,7 +60,8 @@ func ExampleMessagePredicate_payloadSize() {
 	// got message larger than 100 bytes
 }
 
-func ExampleLeanHelixMessage() {
+func TestExampleLeanHelixMessage(t *testing.T) {
+	t.Skipf("Skipping Lean Helix tests until lean-helix-go submodule is integrated")
 	pred := LeanHelixMessage(consensus.LEAN_HELIX_COMMIT)
 
 	printMessage := func(msgType consensus.LeanHelixMessageType) {

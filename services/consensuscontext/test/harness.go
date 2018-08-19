@@ -4,7 +4,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -16,7 +16,7 @@ import (
 
 type harness struct {
 	transactionPool *services.MockTransactionPool
-	reporting       instrumentation.BasicLogger
+	reporting       log.BasicLogger
 	service         services.ConsensusContext
 	config          consensuscontext.Config
 }
@@ -59,7 +59,7 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 }
 
 func newHarness() *harness {
-	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	transactionPool := &services.MockTransactionPool{}
 

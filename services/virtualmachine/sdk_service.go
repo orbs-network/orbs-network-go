@@ -1,7 +1,7 @@
 package virtualmachine
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -69,7 +69,7 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 		TransactionSigner: nil,
 	})
 	if err != nil {
-		s.reporting.Info("Sdk.Service.CallMethod failed", instrumentation.Error(err), instrumentation.Stringable("caller", callingService), instrumentation.Stringable("callee", primitives.ContractName(serviceName)))
+		s.reporting.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("caller", callingService), log.Stringable("callee", primitives.ContractName(serviceName)))
 	}
 
 	return err // TODO: support result

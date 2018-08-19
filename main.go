@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"os"
@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-func getLogger(path string) instrumentation.BasicLogger {
+func getLogger(path string) log.BasicLogger {
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -22,10 +22,10 @@ func getLogger(path string) instrumentation.BasicLogger {
 		panic(err)
 	}
 
-	stdoutOutput := instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter())
-	fileOutput := instrumentation.NewOutput(logFile)
+	stdoutOutput := log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter())
+	fileOutput := log.NewOutput(logFile)
 
-	return instrumentation.GetLogger().WithOutput(stdoutOutput, fileOutput)
+	return log.GetLogger().WithOutput(stdoutOutput, fileOutput)
 }
 
 func main() {
@@ -58,12 +58,11 @@ func main() {
 		nodePublicKey,
 		nodePrivateKey,
 		federationNodes,
-		70,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		logger,
-		2*1000,
 		gossipTransport,
+		2*1000,
 		2,
 	).WaitUntilShutdown()
 }

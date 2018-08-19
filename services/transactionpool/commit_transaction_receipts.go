@@ -1,7 +1,7 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -42,7 +42,7 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 		})
 	}
 
-	s.log.Info("committed transaction receipts for block height", instrumentation.BlockHeight(s.lastCommittedBlockHeight))
+	s.logger.Info("committed transaction receipts for block height", log.BlockHeight(s.lastCommittedBlockHeight))
 
 	return &services.CommitTransactionReceiptsOutput{
 		NextDesiredBlockHeight:   s.lastCommittedBlockHeight + 1,

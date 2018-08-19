@@ -1,7 +1,7 @@
 package native
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -67,7 +67,7 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	}
 
 	// execute the call
-	s.reporting.Info("processor executing contract", instrumentation.Stringable("contract", contractInfo.Name), instrumentation.Stringable("method", methodInfo.Name))
+	s.reporting.Info("processor executing contract", log.Stringable("contract", contractInfo.Name), log.Stringable("method", methodInfo.Name))
 	contractValue := reflect.ValueOf(s.contractRepository[contractInfo.Name])
 	contextValue := reflect.ValueOf(ctx)
 	inValues := append([]reflect.Value{contractValue, contextValue}, argValues...)
