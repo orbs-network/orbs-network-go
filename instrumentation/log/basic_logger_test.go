@@ -66,7 +66,7 @@ func TestNestedLogger(t *testing.T) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
 		txFlowLogger := serviceLogger.For(log.String("flow", TransactionFlow))
-		txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99}))
+		txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99, 250}))
 	})
 
 	fmt.Println(stdout)
@@ -81,7 +81,7 @@ func TestNestedLogger(t *testing.T) {
 	Expect(jsonMap["timestamp"]).NotTo(BeNil())
 	Expect(jsonMap["txId"]).To(Equal("1234567"))
 	Expect(jsonMap["flow"]).To(Equal(TransactionFlow))
-	Expect(jsonMap["payload"]).To(Equal("MlZmV0E="))
+	Expect(jsonMap["payload"]).To(Equal("01020363fa"))
 }
 
 func TestStringableSlice(t *testing.T) {

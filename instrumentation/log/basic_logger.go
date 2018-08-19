@@ -1,8 +1,8 @@
 package log
 
 import (
+	"encoding/hex"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/crypto/base58"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"os"
 	"reflect"
@@ -222,7 +222,7 @@ func (f *Field) Value() interface{} {
 	case UintType:
 		return f.Uint
 	case BytesType:
-		return base58.Encode(f.Bytes)
+		return hex.EncodeToString(f.Bytes)
 	case FloatType:
 		return f.Float
 	case ErrorType:
