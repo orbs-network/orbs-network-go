@@ -1,24 +1,18 @@
 package adapter
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
-var _ = Describe("Reading a Key", func() {
-	When("not providing a contract name", func() {
-		It("Returns an error", func() {
-			d := NewInMemoryStatePersistence()
-			_, err := d.ReadState(0, "")
-			Expect(err).To(MatchError("missing contract name"))
-		})
-	})
+func TestReadStateWithNonExistingBlockHeight(t *testing.T) {
+	d := NewInMemoryStatePersistence()
+	_, err := d.ReadState(1, "foo")
+	require.EqualError(t, err, "block 1 does not exist in snapshot history", "did not fail with error")
+}
 
-	When("providing a non existing contract", func() {
-		It("Returns an error", func() {
-			d := NewInMemoryStatePersistence()
-			_, err := d.ReadState(0, "foo")
-			Expect(err).To(HaveOccurred())
-		})
-	})
-})
+func TestReadStateWithNonExistingContractName(t *testing.T) {
+	d := NewInMemoryStatePersistence()
+	_, err := d.ReadState(0, "foo")
+	require.EqualError(t, err, "contract foo does not exist", "did not fail with error")
+}

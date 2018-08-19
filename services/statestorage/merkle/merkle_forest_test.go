@@ -3,283 +3,231 @@ package merkle
 import (
 	"encoding/base64"
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 	"strings"
+	"testing"
 )
 
-func verifyProof(f *Forest, trieId TrieId, proof Proof, contract string, key string, value string, exists bool) {
+func verifyProof(t *testing.T, f *Forest, trieId TrieId, proof Proof, contract string, key string, value string, exists bool) {
 	rootHash, _ := f.GetRootHash(trieId)
 	verified, err := f.Verify(rootHash, proof, contract, key, value)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(verified).To(Equal(exists))
-
+	require.NoError(t, err, "proof verification failed")
+	require.Equal(t, exists, verified, "proof verification returned unexpected result")
 }
 
-func getProofExpectHeight(f *Forest, rootId TrieId, contract string, key string, expectedHeight int) Proof {
+func getProofExpectHeight(t *testing.T, f *Forest, rootId TrieId, contract string, key string, expectedHeight int) Proof {
 	proof, err := f.GetProof(rootId, contract, key)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(len(proof)).To(Equal(expectedHeight))
+	require.NoError(t, err, "failed with error: %s", err)
+	require.Equal(t, expectedHeight, len(proof), "unexpected proof length")
 	return proof
 }
 
-var _ = Describe("Merkle Forest", func() {
-	When("Verifying proofs", func() {
-		When("querying for top generation", func() {
-			It("returns the current top", func() {
-				f := NewForest()
+func TestGetTopRootHash(t *testing.T) {
+	f := NewForest()
 
-				rootId := f.updateStringEntries("first", "val")
-				topRoot, err1 := f.GetTopRootHash()
-				updatedRoot, err2 := f.GetRootHash(rootId)
+	rootId := f.updateStringEntries("first", "val")
+	topRoot, err1 := f.GetTopRootHash()
+	updatedRoot, err2 := f.GetRootHash(rootId)
 
-				Expect(err1).ToNot(HaveOccurred())
-				Expect(err2).ToNot(HaveOccurred())
-				Expect(topRoot).To(BeEquivalentTo(updatedRoot))
-			})
-		})
+	require.NoError(t, err1, "GetTopHash failed with error")
+	require.NoError(t, err2, "GetRootHash failed with error")
+	require.Equal(t, updatedRoot, topRoot, "GetTopRootHash did not match GetRootHash with rootId %v", rootId)
+}
 
-		When("querying for merkle root of specific generation", func() {
-			It("returns the merkle root", func() {
-				f := NewForest()
-				f.updateStringEntries("first", "val")
+func TestGetPastRootHash(t *testing.T) {
+	f := NewForest()
 
-				topRootOf1, err1 := f.GetTopRootHash()
-				f.updateStringEntries("second", "val")
-				rootOfOneAfterSecondUpdate, err2 := f.GetRootHash(1)
+	f.updateStringEntries("first", "val")
+	topRootOf1, err1 := f.GetTopRootHash()
+	f.updateStringEntries("second", "val")
+	rootOfOneAfterSecondUpdate, err2 := f.GetRootHash(1)
 
-				Expect(err1).ToNot(HaveOccurred())
-				Expect(err2).ToNot(HaveOccurred())
-				Expect(topRootOf1).To(BeEquivalentTo(rootOfOneAfterSecondUpdate))
-			})
-		})
+	require.NoError(t, err1, "GetTopHash failed in first call")
+	require.NoError(t, err2, "GetTopHash failed in second call")
+	require.Equal(t, rootOfOneAfterSecondUpdate, topRootOf1, "GetRootHash did not return expected hash")
+}
 
-		When("changing the state", func() {
-			It("merkle root changes", func() {
-				f := NewForest()
-				f.updateStringEntries("first", "val")
+func TestRootChangeAfterStateChange(t *testing.T) {
+	f := NewForest()
 
-				topRootOf1, err1 := f.GetTopRootHash()
-				f.updateStringEntries("first", "val1")
-				topRootOf2, err2 := f.GetTopRootHash()
+	f.updateStringEntries("first", "val")
+	topRootOf1, err1 := f.GetTopRootHash()
+	f.updateStringEntries("first", "val1")
+	topRootOf2, err2 := f.GetTopRootHash()
 
-				Expect(err1).ToNot(HaveOccurred())
-				Expect(err2).ToNot(HaveOccurred())
-				Expect(topRootOf1).ToNot(BeEquivalentTo(topRootOf2))
-			})
-		})
+	require.NoError(t, err1, "GetTopHash failed in first call")
+	require.NoError(t, err2, "GetTopHash failed in second call")
+	require.NotEqual(t, topRootOf1, topRootOf2, "root hash did not change after state change")
+}
 
-		When("reverting a change in the state", func() {
-			It("resets the root hash to the previous root hash", func() {
-				f := NewForest()
+func TestRevertingStateChangeRevertsMerkleRoot(t *testing.T) {
+	f := NewForest()
 
-				f.updateStringEntries("first", "val")
-				topRootOf1, err1 := f.GetTopRootHash()
-				f.updateStringEntries("first", "val1")
-				f.updateStringEntries("first", "val")
-				topRootOf3, err2 := f.GetTopRootHash()
+	f.updateStringEntries("first", "val")
+	topRootOf1, err1 := f.GetTopRootHash()
+	f.updateStringEntries("first", "val1")
+	f.updateStringEntries("first", "val")
+	topRootOf3, err2 := f.GetTopRootHash()
 
-				Expect(err1).ToNot(HaveOccurred())
-				Expect(err2).ToNot(HaveOccurred())
-				Expect(topRootOf1).To(BeEquivalentTo(topRootOf3))
-			})
-		})
+	require.NoError(t, err1, "GetTopHash failed in first call")
+	require.NoError(t, err2, "GetTopHash failed in second call")
+	require.Equal(t, topRootOf1, topRootOf3, "root hash did not revert back after resetting state")
+}
 
-		When("querying a value", func() {
-			When("there are no entries", func() {
-				It("verifies the value is not there", func() {
-					f := NewForest()
-					key := "imNotHere"
-					contract := "foo"
-					proof := getProofExpectHeight(f, 0, contract, key, 1)
-					verifyProof(f, 0, proof, contract, key, "", true)
-					verifyProof(f, 0, proof, contract, key, "non-zero", false)
-				})
-			})
-		})
-	})
+func TestValidProofForMissingKey(t *testing.T) {
+	f := NewForest()
+	key := "imNotHere"
+	contract := "foo"
+	proof := getProofExpectHeight(t, f, 0, contract, key, 1)
+	verifyProof(t, f, 0, proof, contract, key, "", true)
+	verifyProof(t, f, 0, proof, contract, key, "non-zero", false)
 
-	When("Building Trees", func() {
-		When("Adding Single Node in every iteration", func() {
-			When("adding first node", func() {
-				It("becomes the new root", func() {
-					f := NewForest()
+}
 
-					rootId := f.updateStringEntries("bar", "baz")
-					Expect(rootId).To(Equal(TrieId(1)))
+func TestAddSingleEntryToEmptyTree(t *testing.T) {
+	f := NewForest()
+	rootId := f.updateStringEntries("bar", "baz")
+	require.Equal(t, TrieId(1), rootId, "unexpected root id")
 
-					getProofExpectHeight(f, rootId, "", "bar", 1)
-				})
-			})
-			When("updating forest with ContractStateDiff", func() {
-				It("becomes the new root", func() {
-					f := NewForest()
+	getProofExpectHeight(t, f, rootId, "", "bar", 1)
+}
 
-					diffContract := builders.ContractStateDiff().WithContractName("foo")
-					r1 := diffContract.WithStringRecord("bar1", "baz").Build()
-					k1 := r1.StateDiffsIterator().NextStateDiffs().StringKey()
-					v1 := r1.StateDiffsIterator().NextStateDiffs().StringValue()
-					f.Update([]*protocol.ContractStateDiff{r1})
+func TestProofValidationAfterBatchStateUpdate(t *testing.T) {
+	f := NewForest()
+	diffContract := builders.ContractStateDiff().WithContractName("foo")
+	r1 := diffContract.WithStringRecord("bar1", "baz").Build()
+	k1 := r1.StateDiffsIterator().NextStateDiffs().StringKey()
+	v1 := r1.StateDiffsIterator().NextStateDiffs().StringValue()
+	f.Update([]*protocol.ContractStateDiff{r1})
 
-					diffContract = builders.ContractStateDiff().WithContractName("foo")
-					r2 := diffContract.WithStringRecord("bar2", "qux").Build()
-					k2 := r2.StateDiffsIterator().NextStateDiffs().StringKey()
-					v2 := r2.StateDiffsIterator().NextStateDiffs().StringValue()
-					f.Update([]*protocol.ContractStateDiff{r2})
+	diffContract = builders.ContractStateDiff().WithContractName("foo")
+	r2 := diffContract.WithStringRecord("bar2", "qux").Build()
+	k2 := r2.StateDiffsIterator().NextStateDiffs().StringKey()
+	v2 := r2.StateDiffsIterator().NextStateDiffs().StringValue()
+	f.Update([]*protocol.ContractStateDiff{r2})
 
-					proof := getProofExpectHeight(f, 1, "foo", k1, 1)
-					verifyProof(f, 1, proof, "foo", k1, v1, true)
+	proof := getProofExpectHeight(t, f, 1, "foo", k1, 1)
+	verifyProof(t, f, 1, proof, "foo", k1, v1, true)
 
-					proof = getProofExpectHeight(f, 1, "foo", k2, 1)
-					verifyProof(f, 1, proof, "foo", k2, v2, false)
+	proof = getProofExpectHeight(t, f, 1, "foo", k2, 1)
+	verifyProof(t, f, 1, proof, "foo", k2, v2, false)
 
-					proof = getProofExpectHeight(f, 2, "foo", k2, 2)
-					verifyProof(f, 2, proof, "foo", k2, v2, true)
+	proof = getProofExpectHeight(t, f, 2, "foo", k2, 2)
+	verifyProof(t, f, 2, proof, "foo", k2, v2, true)
 
-					proof = getProofExpectHeight(f, 2, "foo", k1, 2)
-					verifyProof(f, 2, proof, "foo", k1, v1, true)
-				})
-			})
-			When("updating the root value twice", func() {
-				It("for each generation we can obtain a proof for the correct version, both proofs are single nodes", func() {
-					f := NewForest()
+	proof = getProofExpectHeight(t, f, 2, "foo", k1, 2)
+	verifyProof(t, f, 2, proof, "foo", k1, v1, true)
+}
 
-					rootId := f.updateStringEntries("bar1", "baz1", "bar1", "baz2")
+func TestProofValidationForTwoRevisionsOfSameKey(t *testing.T) {
+	f := NewForest()
+	rootId := f.updateStringEntries("bar1", "baz1", "bar1", "baz2")
 
-					proof := getProofExpectHeight(f, rootId-1, "", "bar1", 1)
-					verifyProof(f, rootId-1, proof, "", "bar1", "baz1", true)
+	proof := getProofExpectHeight(t, f, rootId-1, "", "bar1", 1)
+	verifyProof(t, f, rootId-1, proof, "", "bar1", "baz1", true)
 
-					proof = getProofExpectHeight(f, rootId, "", "bar1", 1)
-					verifyProof(f, rootId, proof, "", "bar1", "baz2", true)
-				})
-			})
-			When("extending a leaf-node that has empty value (and no branches)", func() {
-				It("empty node is replaced", func() {
-					f := NewForest()
+	proof = getProofExpectHeight(t, f, rootId, "", "bar1", 1)
+	verifyProof(t, f, rootId, proof, "", "bar1", "baz2", true)
+}
 
-					rootId := f.updateStringEntries("ba", "zoo", "bar", "", "baron", "Hello")
+func TestExtendingLeafNodeWithNoBranchesAndNoValue(t *testing.T) {
+	f := NewForest()
+	rootId := f.updateStringEntries("ba", "zoo", "bar", "", "baron", "Hello")
 
-					proof := getProofExpectHeight(f, rootId, "", "baron", 2)
-					Expect(len(proof)).To(Equal(2))
-				})
-			})
-			When("extending a tree by a second key longer by 1 character", func() {
-				It("becomes the new leaf", func() {
-					f := NewForest()
+	proof := getProofExpectHeight(t, f, rootId, "", "baron", 2)
+	require.Equal(t, 2, len(proof))
+}
 
-					rootId := f.updateStringEntries("bar", "baz", "bar1", "qux")
+func TestExtendingKeyPathByOneChar(t *testing.T) {
+	f := NewForest()
+	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux")
 
-					proof := getProofExpectHeight(f, rootId, "", "bar1", 2)
-					verifyProof(f, 2, proof, "", "bar1", "qux", true)
-				})
-			})
-			When("extending a two level tree by yet another key longer by 1 char", func() {
-				It("becomes the new leaf", func() {
-					f := NewForest()
+	proof := getProofExpectHeight(t, f, rootId, "", "bar1", 2)
+	verifyProof(t, f, 2, proof, "", "bar1", "qux", true)
+}
 
-					rootId := f.updateStringEntries("bar", "baz", "bar123", "qux", "bar1234", "quux")
+func TestExtendingKeyPathBySeveralChars(t *testing.T) {
+	f := NewForest()
 
-					proof := getProofExpectHeight(f, rootId, "", "bar1234", 3)
-					verifyProof(f, rootId, proof, "", "bar1234", "quux", true)
-				})
-			})
-			When("extending a two level tree by yet another key longer by many chars", func() {
-				It("becomes the new leaf", func() {
-					f := NewForest()
+	rootId := f.updateStringEntries("bar", "baz", "bar12", "qux", "bar123456789", "quux")
 
-					rootId := f.updateStringEntries("bar", "baz", "bar12", "qux", "bar123456789", "quux")
+	proof := getProofExpectHeight(t, f, rootId, "", "bar123456789", 3)
+	verifyProof(t, f, rootId, proof, "", "bar123456789", "quux", true)
+}
 
-					proof := getProofExpectHeight(f, rootId, "", "bar123456789", 3)
-					verifyProof(f, rootId, proof, "", "bar123456789", "quux", true)
-				})
-			})
-			When("extending a two level tree by yet another key which can use the same branching node", func() {
-				It("becomes the new leaf", func() {
-					f := NewForest()
+func TestAddSiblingNode(t *testing.T) {
+	f := NewForest()
+	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bar2", "quux")
 
-					rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bar2", "quux")
+	proof := getProofExpectHeight(t, f, rootId, "", "bar2", 2)
+	verifyProof(t, f, rootId, proof, "", "bar2", "quux", true)
+}
 
-					proof := getProofExpectHeight(f, rootId, "", "bar2", 2)
-					verifyProof(f, rootId, proof, "", "bar2", "quux", true)
-				})
-			})
-			When("adding new key-value that splits a upper level branch into two levels", func() {
-				It("becomes the new root", func() {
-					f := NewForest()
+func TestAddPathToCauseBranchingAlongExistingPath(t *testing.T) {
+	f := NewForest()
+	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bad", "quux")
 
-					rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bad", "quux")
+	proof := getProofExpectHeight(t, f, rootId, "", "bad", 2)
+	verifyProof(t, f, rootId, proof, "", "bad", "quux", true)
+}
 
-					proof := getProofExpectHeight(f, rootId, "", "bad", 2)
-					verifyProof(f, rootId, proof, "", "bad", "quux", true)
-				})
-			})
-			When("adding new key-value that replaces a leaf in a two levels tree", func() {
-				It("replace the leaf value", func() {
-					f := NewForest()
+func TestReplaceExistingValueBelowDivergingPaths(t *testing.T) {
+	f := NewForest()
+	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bad", "quux", "bar1", "zoo")
 
-					rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bad", "quux", "bar1", "zoo")
+	proof := getProofExpectHeight(t, f, rootId, "", "bar1", 3)
+	verifyProof(t, f, rootId, proof, "", "bar1", "zoo", true)
+	verifyProof(t, f, rootId, proof, "", "bar1", "qux", false)
+}
 
-					proof := getProofExpectHeight(f, rootId, "", "bar1", 3)
-					verifyProof(f, rootId, proof, "", "bar1", "zoo", true)
-					verifyProof(f, rootId, proof, "", "bar1", "qux", false)
-				})
-			})
-			When("adding new key-value that is prefix of existing root", func() {
-				It("becomes the new root", func() {
-					f := NewForest()
+func TestAddPathToCauseNewLeafAlongExistingPath(t *testing.T) {
+	f := NewForest()
 
-					rootId := f.updateStringEntries("baron", "Hirsch", "bar", "Hello")
+	rootId := f.updateStringEntries("baron", "Hirsch", "bar", "Hello")
 
-					proof := getProofExpectHeight(f, rootId, "", "bar", 1)
-					verifyProof(f, rootId, proof, "", "bar", "Hello", true)
+	proof := getProofExpectHeight(t, f, rootId, "", "bar", 1)
+	verifyProof(t, f, rootId, proof, "", "bar", "Hello", true)
 
-					proof = getProofExpectHeight(f, rootId, "", "baron", 2)
-					verifyProof(f, rootId, proof, "", "baron", "Hirsch", true)
-				})
-			})
-			When("adding same nodes in different order", func() {
-				It("get same tree", func() {
-					keyValue := []string{"bar", "baz", "bar123", "qux", "bar1234", "quux", "bad", "foo", "bank", "hello"}
-					var1 := []int{2, 6, 0, 8, 4}
-					var2 := []int{8, 4, 0, 2, 6}
-					var3 := []int{8, 6, 4, 2, 0}
+	proof = getProofExpectHeight(t, f, rootId, "", "baron", 2)
+	verifyProof(t, f, rootId, proof, "", "baron", "Hirsch", true)
+}
 
-					f1 := NewForest()
-					rootId1 := f1.updateStringEntries(keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
-						keyValue[var1[2]], keyValue[var1[2]+1], keyValue[var1[3]], keyValue[var1[3]+1], keyValue[var1[4]], keyValue[var1[4]+1])
-					root1, _ := f1.GetRootHash(rootId1)
-					proof1, _ := f1.GetProof(rootId1, "", "bar1234")
+func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
+	keyValue := []string{"bar", "baz", "bar123", "qux", "bar1234", "quux", "bad", "foo", "bank", "hello"}
+	var1 := []int{2, 6, 0, 8, 4}
+	var2 := []int{8, 4, 0, 2, 6}
+	var3 := []int{8, 6, 4, 2, 0}
 
-					f2 := NewForest()
-					rootId2 := f2.updateStringEntries(keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
-						keyValue[var2[2]], keyValue[var2[2]+1], keyValue[var2[3]], keyValue[var2[3]+1], keyValue[var2[4]], keyValue[var2[4]+1])
-					root2, _ := f2.GetRootHash(rootId2)
-					proof2, _ := f2.GetProof(rootId2, "", "bar1234")
+	f1 := NewForest()
+	rootId1 := f1.updateStringEntries(keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
+		keyValue[var1[2]], keyValue[var1[2]+1], keyValue[var1[3]], keyValue[var1[3]+1], keyValue[var1[4]], keyValue[var1[4]+1])
+	root1, _ := f1.GetRootHash(rootId1)
+	proof1, _ := f1.GetProof(rootId1, "", "bar1234")
 
-					Expect(rootId2).To(Equal(rootId1))
-					Expect(root2).To(Equal(root1))
-					Expect(len(proof2)).To(Equal(len(proof1)))
-					Expect(proof2[3].hash()).To(Equal(proof1[3].hash()))
+	f2 := NewForest()
+	rootId2 := f2.updateStringEntries(keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
+		keyValue[var2[2]], keyValue[var2[2]+1], keyValue[var2[3]], keyValue[var2[3]+1], keyValue[var2[4]], keyValue[var2[4]+1])
+	root2, _ := f2.GetRootHash(rootId2)
+	proof2, _ := f2.GetProof(rootId2, "", "bar1234")
 
-					f3 := NewForest()
-					rootId3 := f3.updateStringEntries(keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
-						keyValue[var3[2]], keyValue[var3[2]+1], keyValue[var3[3]], keyValue[var3[3]+1], keyValue[var3[4]], keyValue[var3[4]+1])
-					root3, _ := f3.GetRootHash(rootId3)
-					proof3, _ := f3.GetProof(rootId3, "", "bar1234")
+	require.Equal(t, rootId1, rootId2, "unexpected different rootId")
+	require.Equal(t, root1, root2, "unexpected different root hash")
+	require.Equal(t, len(proof1), len(proof2), "unexpected different tree depth / proof lengths")
+	require.Equal(t, proof1[3].hash(), proof2[3].hash(), "unexpected different leaf node hash")
 
-					Expect(rootId2).To(Equal(rootId3))
-					Expect(root2).To(Equal(root3))
-					Expect(len(proof2)).To(Equal(len(proof3)))
-					Expect(proof2[3].hash()).To(Equal(proof3[3].hash()))
-				})
-			})
+	f3 := NewForest()
+	rootId3 := f3.updateStringEntries(keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
+		keyValue[var3[2]], keyValue[var3[2]+1], keyValue[var3[3]], keyValue[var3[3]+1], keyValue[var3[4]], keyValue[var3[4]+1])
+	root3, _ := f3.GetRootHash(rootId3)
+	proof3, _ := f3.GetProof(rootId3, "", "bar1234")
 
-		})
-
-	})
-})
+	require.Equal(t, rootId2, rootId3, "unexpected different rootId")
+	require.Equal(t, root2, root3, "unexpected different root hash")
+	require.Equal(t, len(proof2), len(proof3), "unexpected different tree depth / proof lengths")
+	require.Equal(t, proof2[3].hash(), proof3[3].hash(), "unexpected different leaf node hash")
+}
 
 //TODO - updateStringEntries should advance TrieId only by one
 //TODO - updateStringEntries - the bulk update version (optimize node access)
@@ -339,12 +287,12 @@ func (p *Proof) dump() {
 }
 
 // TODO - this just checks there are no data integrity in our forest integrity
-func (f *Forest) testForestIntegrity() {
+func (f *Forest) testForestIntegrity(t *testing.T) {
 	for h, n := range f.nodes {
-		Expect(h).To(Equal(n.hash().KeyForMap()))
+		require.Equal(t, n.hash().KeyForMap(), h, "node key is not true hash code")
 	}
 	for _, root := range f.roots {
-		Expect(f.nodes[root.KeyForMap()]).ToNot(BeEmpty())
+		require.Contains(t, f.nodes, root.KeyForMap(), "missing child node")
 	}
-	Expect(f.topRoot).To(Equal(f.roots[TrieId(len(f.roots))-1]))
+	require.Equal(t, f.roots[TrieId(len(f.roots))-1], f.topRoot, "top root is not the most recent root")
 }
