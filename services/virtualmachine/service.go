@@ -1,7 +1,7 @@
 package virtualmachine
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -14,7 +14,7 @@ type service struct {
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
-	reporting            instrumentation.BasicLogger
+	reporting            log.BasicLogger
 
 	contexts *executionContextProvider
 }
@@ -24,7 +24,7 @@ func NewVirtualMachine(
 	stateStorage services.StateStorage,
 	processors map[protocol.ProcessorType]services.Processor,
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector,
-	reporting instrumentation.BasicLogger,
+	reporting log.BasicLogger,
 ) services.VirtualMachine {
 
 	s := &service{
@@ -32,7 +32,7 @@ func NewVirtualMachine(
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
-		reporting:            reporting.For(instrumentation.Service("virtual-machine")),
+		reporting:            reporting.For(log.Service("virtual-machine")),
 
 		contexts: newExecutionContextProvider(),
 	}
@@ -55,7 +55,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 		}, err
 	}
 
-	s.reporting.Info("running local method", instrumentation.Stringable("contract", input.Transaction.ContractName()), instrumentation.Stringable("method", input.Transaction.MethodName()), instrumentation.BlockHeight(blockHeight))
+	s.reporting.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
 	callResult, outputArgs, err := s.runMethod(blockHeight, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 
 	return &services.RunLocalMethodOutput{
@@ -69,7 +69,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
-	s.reporting.Info("processing transaction set", instrumentation.Int("num-transactions", len(input.SignedTransactions)))
+	s.reporting.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
 	receipts, stateDiffs := s.processTransactionSet(previousBlockHeight, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
@@ -93,7 +93,7 @@ func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderI
 		err = s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 	}
 
-	s.reporting.Info("performed pre order checks", instrumentation.Error(err), instrumentation.BlockHeight(previousBlockHeight), instrumentation.Int("num-statuses", len(statuses)))
+	s.reporting.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
 
 	return &services.TransactionSetPreOrderOutput{
 		PreOrderResults: statuses,

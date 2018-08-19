@@ -3,7 +3,7 @@ package bootstrap
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
@@ -38,7 +38,7 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
-	reporting instrumentation.BasicLogger,
+	reporting log.BasicLogger,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 

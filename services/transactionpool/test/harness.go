@@ -4,7 +4,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"log"
 	"time"
 )
 
@@ -123,7 +122,8 @@ func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*serv
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 		if input.BlockHeight != h.lastBlockHeight {
-			log.Panicf("expected block height %v, got %v", h.lastBlockHeight, input.BlockHeight)
+			log.GetLogger().Error("Invalid block height", log.Uint64("expected-block-height", h.lastBlockHeight.KeyForMap()), log.Uint64("actual-block-height", input.BlockHeight.KeyForMap()))
+			panic("Invalid block height")
 		}
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 		for i, tx := range input.SignedTransactions {
@@ -170,7 +170,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	virtualMachine := &services.MockVirtualMachine{}
 
 	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
-	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger(), ts)
+	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, log.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)

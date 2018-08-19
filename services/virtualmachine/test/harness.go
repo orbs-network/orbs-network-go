@@ -3,7 +3,7 @@ package test
 import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -19,12 +19,12 @@ type harness struct {
 	stateStorage         *services.MockStateStorage
 	processors           map[protocol.ProcessorType]*services.MockProcessor
 	crosschainConnectors map[protocol.CrosschainConnectorType]*services.MockCrosschainConnector
-	reporting            instrumentation.BasicLogger
+	reporting            log.BasicLogger
 	service              services.VirtualMachine
 }
 
 func newHarness() *harness {
-	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	blockStorage := &services.MockBlockStorage{}
 	stateStorage := &services.MockStateStorage{}
