@@ -21,11 +21,15 @@ import (
 	"testing"
 )
 
-func WithNetwork(t *testing.T, numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
+func WithNetwork(t *testing.T, testId string, numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
 	for _, consensusAlgo := range consensusAlgos {
 		test.WithContext(func(ctx context.Context) {
-			network := NewTestNetwork(ctx, numNodes, consensusAlgo)
+			testId += "-" + consensusAlgo.String()
+
+			network := NewTestNetwork(ctx, numNodes, consensusAlgo, testId)
 			f(network)
+
+			//FIXME never actually fails
 			if t.Failed() { // avoid serializing state if test succeeded
 				network.DumpState()
 			}
@@ -63,9 +67,8 @@ type networkNode struct {
 	nodeLogic        bootstrap.NodeLogic
 }
 
-func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
-
-	testLogger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType, testId string) AcceptanceTestNetwork {
+	testLogger := log.GetLogger(log.String("_test-id", testId)).WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)

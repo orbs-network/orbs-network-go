@@ -5,12 +5,17 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
+	"math/rand"
+	"strconv"
 	"testing"
 )
 
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	t.Skip("putting lean helix on hold until external library is integrated")
-	harness.WithNetwork(t, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX), func(network harness.AcceptanceTestNetwork) {
+	testId := "acceptance-LeanHelixLeaderGetsValidationsBeforeCommit-" + strconv.FormatUint(rand.Uint64(), 10)
+	defer harness.ReportTestId(t, testId)
+
+	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -35,8 +40,10 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	harness.WithNetwork(t, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	testId := "acceptance-BenchmarkConsensusLeaderGetsVotesBeforeNextBlock-" + strconv.FormatUint(rand.Uint64(), 10)
+	defer harness.ReportTestId(t, testId)
 
+	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 		network.DeployBenchmarkToken()
 
 		committedTamper := network.GossipTransport().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
