@@ -85,15 +85,12 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 		nodeName := fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 
-		nodes[i].config = config.NewHardCodedConfig(
+		nodes[i].config = config.ForAcceptanceTests(
 			federationNodes,
 			nodeKeyPair.PublicKey(),
 			nodeKeyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
-			1,
-			70,
-			1,
 		)
 
 		nodes[i].statePersistence = stateStorageAdapter.NewInMemoryStatePersistence()

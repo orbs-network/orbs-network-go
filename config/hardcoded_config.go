@@ -72,15 +72,16 @@ func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) Feder
 	}
 }
 
-func NewHardCodedConfig(
+func newHardCodedConfig(
 	federationNodes map[string]FederationNode,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
-	blockSyncCommitTimeoutMillis uint32,
 	minimumTransactionsInBlock int,
+	belowMinimalBlockDelayMillis uint32,
+	queryGraceTimeoutMillis uint64,
 ) NodeConfig {
 
 	return &hardcodedConfig{
@@ -96,20 +97,20 @@ func NewHardCodedConfig(
 			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
 		},
 		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: 300,
+			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
 			querySyncGraceBlockDist: 3,
 		},
 		blockStorageConfig: &blockStorageConfig{
-			blockSyncCommitTimeoutMillis:                     time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
-			blockTransactionReceiptQueryStartGraceSec:        time.Duration(5) * time.Second,
-			blockTransactionReceiptQueryEndGraceSec:          time.Duration(5) * time.Second,
-			blockTransactionReceiptQueryTransactionExpireSec: time.Duration(180) * time.Second,
+			blockSyncCommitTimeoutMillis:                     70 * time.Millisecond,
+			blockTransactionReceiptQueryStartGraceSec:        5 * time.Second,
+			blockTransactionReceiptQueryEndGraceSec:          5 * time.Second,
+			blockTransactionReceiptQueryTransactionExpireSec: 180 * time.Second,
 		},
 		stateStorageConfig: &stateStorageConfig{
 			stateHistoryRetentionInBlockHeights: 5,
 		},
 		consensusContextConfig: &consensusContextConfig{
-			belowMinimalBlockDelayMillis: 300,
+			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
 			minimumTransactionsInBlock:   minimumTransactionsInBlock,
 		},
 		transactionPoolConfig: &transactionPoolConfig{

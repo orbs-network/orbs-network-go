@@ -31,24 +31,22 @@ func NewNode(
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	federationNodes map[string]config.FederationNode,
-	blockSyncCommitTimeoutMillis uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	logger log.BasicLogger,
-	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	transport gossipAdapter.Transport,
+	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	minimumTransactionsInBlock int,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	nodeConfig := config.NewHardCodedConfig(
+	nodeConfig := config.ForProduction(
 		federationNodes,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillis,
-		blockSyncCommitTimeoutMillis,
 		minimumTransactionsInBlock,
 	)
 

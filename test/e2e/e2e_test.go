@@ -74,13 +74,12 @@ var _ = Describe("The Orbs Network", func() {
 					nodeKeyPair.PublicKey(),
 					nodeKeyPair.PrivateKey(),
 					federationNodes,
-					70,
 					leaderKeyPair.PublicKey(),
 					consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 					logger,
-					2*1000,
 					gossipTransport,
-					3,
+					2*1000,
+					1,
 				)
 
 				nodes = append(nodes, node)
