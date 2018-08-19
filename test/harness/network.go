@@ -24,9 +24,7 @@ import (
 func WithNetwork(t *testing.T, testId string, numNodes uint32, consensusAlgos []consensus.ConsensusAlgoType, f func(network AcceptanceTestNetwork)) {
 	for _, consensusAlgo := range consensusAlgos {
 		test.WithContext(func(ctx context.Context) {
-			testId += "-" + consensusAlgo.String()
-
-			network := NewTestNetwork(ctx, numNodes, consensusAlgo, testId)
+			network := NewTestNetwork(ctx, numNodes, consensusAlgo, testId+"-"+consensusAlgo.String())
 			f(network)
 
 			//FIXME never actually fails

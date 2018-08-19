@@ -15,7 +15,7 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 	testId := "acceptance-LeaderCommitsTransactionsAndSkipsInvalidOnes-" + strconv.FormatUint(rand.Uint64(), 10)
 	defer harness.ReportTestId(t, testId)
 
-	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -43,7 +43,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 	testId := "acceptance-LeaderCommitsTransactionsAndSkipsInvalidOnes-" + strconv.FormatUint(rand.Uint64(), 10)
 	defer harness.ReportTestId(t, testId)
 
-	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
