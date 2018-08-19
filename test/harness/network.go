@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -65,9 +65,9 @@ type networkNode struct {
 
 func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensus.ConsensusAlgoType) AcceptanceTestNetwork {
 
-	testLogger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	testLogger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	testLogger.Info("===========================================================================")
-	testLogger.Info("creating acceptance test network", instrumentation.String("consensus", consensusAlgo.String()), instrumentation.Uint32("num-nodes", numNodes))
+	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
@@ -101,7 +101,7 @@ func NewTestNetwork(ctx context.Context, numNodes uint32, consensusAlgo consensu
 			sharedTamperingTransport,
 			nodes[i].blockPersistence,
 			nodes[i].statePersistence,
-			testLogger.For(instrumentation.Node(nodeName)),
+			testLogger.For(log.Node(nodeName)),
 			nodes[i].config,
 		)
 	}
@@ -198,8 +198,8 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 }
 
 func (n *acceptanceTestNetwork) DumpState() {
-	testLogger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	testLogger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	for i := range n.nodes {
-		testLogger.Info("state dump", instrumentation.Int("node", i), instrumentation.String("data", n.nodes[i].statePersistence.Dump()))
+		testLogger.Info("state dump", log.Int("node", i), log.String("data", n.nodes[i].statePersistence.Dump()))
 	}
 }

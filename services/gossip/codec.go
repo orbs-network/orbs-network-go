@@ -1,7 +1,7 @@
 package gossip
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 )
@@ -10,7 +10,7 @@ const NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR = 5 // txHeader, txMetadata, rxHeade
 
 func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		return nil, errors.Errorf("codec failed to encode block pair due to missing fields", instrumentation.Stringable("block-pair", blockPair))
+		return nil, errors.Errorf("codec failed to encode block pair due to missing fields", log.Stringable("block-pair", blockPair))
 	}
 
 	payloads := make([][]byte, 0, NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR+
@@ -24,7 +24,7 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 		blockPair.TransactionsBlock.BlockProof == nil ||
 		blockPair.ResultsBlock.Header == nil ||
 		blockPair.ResultsBlock.BlockProof == nil {
-		return nil, errors.Errorf("codec failed to encode block pair due to missing fields", instrumentation.Stringable("block-pair", blockPair))
+		return nil, errors.Errorf("codec failed to encode block pair due to missing fields", log.Stringable("block-pair", blockPair))
 	}
 
 	payloads = append(payloads, blockPair.TransactionsBlock.Header.Raw())
@@ -49,7 +49,7 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 
 func decodeBlockPair(payloads [][]byte) (*protocol.BlockPairContainer, error) {
 	if len(payloads) < NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
-		return nil, errors.Errorf("codec failed to decode block pair due to missing payloads", instrumentation.Int("num-payloads", len(payloads)))
+		return nil, errors.Errorf("codec failed to decode block pair due to missing payloads", log.Int("num-payloads", len(payloads)))
 	}
 
 	txBlockHeader := protocol.TransactionsBlockHeaderReader(payloads[0])
@@ -61,7 +61,7 @@ func decodeBlockPair(payloads [][]byte) (*protocol.BlockPairContainer, error) {
 
 	expectedPayloads := NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR + txBlockHeader.NumSignedTransactions() + rxBlockHeader.NumTransactionReceipts() + rxBlockHeader.NumContractStateDiffs()
 	if uint32(len(payloads)) < expectedPayloads {
-		return nil, errors.Errorf("codec failed to decode block pair due to missing payloads", instrumentation.Int("num-payloads", len(payloads)), instrumentation.Uint32("expected-payloads", expectedPayloads))
+		return nil, errors.Errorf("codec failed to decode block pair due to missing payloads", log.Int("num-payloads", len(payloads)), log.Uint32("expected-payloads", expectedPayloads))
 	}
 
 	txs := make([]*protocol.SignedTransaction, 0, txBlockHeader.NumSignedTransactions())

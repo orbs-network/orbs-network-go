@@ -1,7 +1,7 @@
 package gossip
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -15,18 +15,18 @@ type Config interface {
 
 type service struct {
 	config                     Config
-	reporting                  instrumentation.BasicLogger
+	reporting                  log.BasicLogger
 	transport                  adapter.Transport
 	transactionHandlers        []gossiptopics.TransactionRelayHandler
 	leanHelixHandlers          []gossiptopics.LeanHelixHandler
 	benchmarkConsensusHandlers []gossiptopics.BenchmarkConsensusHandler
 }
 
-func NewGossip(transport adapter.Transport, config Config, reporting instrumentation.BasicLogger) services.Gossip {
+func NewGossip(transport adapter.Transport, config Config, reporting log.BasicLogger) services.Gossip {
 	s := &service{
 		transport: transport,
 		config:    config,
-		reporting: reporting.For(instrumentation.Service("gossip")),
+		reporting: reporting.For(log.Service("gossip")),
 	}
 	transport.RegisterListener(s, s.config.NodePublicKey())
 	return s
@@ -39,10 +39,10 @@ func (s *service) OnTransportMessageReceived(payloads [][]byte) {
 	}
 	header := gossipmessages.HeaderReader(payloads[0])
 	if !header.IsValid() {
-		s.reporting.Error("transport header is corrupt", instrumentation.Bytes("header", payloads[0]))
+		s.reporting.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
 		return
 	}
-	s.reporting.Info("transport message received", instrumentation.Stringable("header", header))
+	s.reporting.Info("transport message received", log.Stringable("header", header))
 	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		s.receivedTransactionRelayMessage(header, payloads[1:])

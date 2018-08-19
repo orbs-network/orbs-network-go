@@ -1,7 +1,7 @@
 package leanhelix
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -24,7 +24,7 @@ type service struct {
 	blockStorage     services.BlockStorage
 	transactionPool  services.TransactionPool
 	consensusContext services.ConsensusContext
-	reporting        instrumentation.BasicLogger
+	reporting        log.BasicLogger
 	config           Config
 
 	lastCommittedBlockHeight primitives.BlockHeight
@@ -38,16 +38,18 @@ func NewLeanHelixConsensusAlgo(
 	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
 	consensusContext services.ConsensusContext,
-	reporting instrumentation.BasicLogger,
+	reporting log.BasicLogger,
 	config Config,
 ) services.ConsensusAlgoLeanHelix {
+
+	panic("Don't use this - will be replaced by lean-helix-go submodule")
 
 	s := &service{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		transactionPool:  transactionPool,
 		consensusContext: consensusContext,
-		reporting:        reporting.For(instrumentation.Service("consensus-algo-lean-helix")),
+		reporting:        reporting.For(log.Service("consensus-algo-lean-helix")),
 		config:           config,
 		lastCommittedBlockHeight: 0, // TODO: improve startup
 		blocksForRounds:          make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
@@ -91,12 +93,12 @@ func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInp
 func (s *service) consensusRoundRunLoop() {
 
 	for {
-		s.reporting.Info("entered consensus round with last committed block height", instrumentation.BlockHeight(s.lastCommittedBlockHeight))
+		s.reporting.Info("entered consensus round with last committed block height", log.BlockHeight(s.lastCommittedBlockHeight))
 
 		// see if we need to propose a new block
 		err := s.leaderProposeNextBlockIfNeeded()
 		if err != nil {
-			s.reporting.Error("leader failed to propose next block", instrumentation.Error(err))
+			s.reporting.Error("leader failed to propose next block", log.Error(err))
 			continue
 		}
 
@@ -107,7 +109,7 @@ func (s *service) consensusRoundRunLoop() {
 		if activeBlock != nil {
 			err := s.leaderCollectVotesForBlock(activeBlock)
 			if err != nil {
-				s.reporting.Error("leader failed to collect votes for block", instrumentation.Error(err))
+				s.reporting.Error("leader failed to collect votes for block", log.Error(err))
 				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff
 				continue
 			}

@@ -1,7 +1,7 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -13,7 +13,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	err := s.createValidationContext().validateTransaction(input.SignedTransaction)
 	if err != nil {
-		s.log.Info("transaction is invalid", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
+		s.logger.Info("transaction is invalid", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
 		return s.addTransactionOutputFor(nil, err.(*ErrTransactionRejected).TransactionStatus), err
 	}
 
@@ -22,7 +22,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	}
 
 	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
-		s.log.Info("transaction already committed", instrumentation.Stringable("transaction", input.SignedTransaction))
+		s.logger.Info("transaction already committed", log.Stringable("transaction", input.SignedTransaction))
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
@@ -30,9 +30,9 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER), err
 	}
 
-	s.log.Info("adding new transaction to the pool", instrumentation.Stringable("transaction", input.SignedTransaction))
+	s.logger.Info("adding new transaction to the pool", log.Stringable("transaction", input.SignedTransaction))
 	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodePublicKey()); err != nil {
-		s.log.Error("error adding transaction to pending pool", instrumentation.Error(err), instrumentation.Stringable("transaction", input.SignedTransaction))
+		s.logger.Error("error adding transaction to pending pool", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
 		return nil, err
 
 	}

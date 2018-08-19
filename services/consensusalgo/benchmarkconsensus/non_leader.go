@@ -3,7 +3,7 @@ package benchmarkconsensus
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -16,12 +16,12 @@ func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) 
 
 	err := s.nonLeaderValidateBlockUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error("non leader failed to validate block", instrumentation.Error(err))
+		s.reporting.Error("non leader failed to validate block", log.Error(err))
 		return
 	}
 	err = s.nonLeaderCommitAndReplyUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error("non leader failed to commit and reply vote", instrumentation.Error(err))
+		s.reporting.Error("non leader failed to commit and reply vote", log.Error(err))
 		return
 	}
 }
@@ -83,7 +83,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
-	s.reporting.Info("replying committed with last committed height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()), instrumentation.Stringable("signed-data", signedData))
+	s.reporting.Info("replying committed with last committed height", log.BlockHeight(s.lastCommittedBlockHeight()), log.Stringable("signed-data", signedData))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: recipient,
 		Message:            message,

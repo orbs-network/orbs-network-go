@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -65,7 +65,7 @@ var _ = Describe("The Orbs Network", func() {
 				federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())
 			}
 
-			logger := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+			logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 			for i := 0; i < 3; i++ {
 				nodeKeyPair := keys.Ed25519KeyPairForTests(i)
