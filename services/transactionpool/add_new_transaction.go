@@ -48,7 +48,6 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 }
 
 func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
-	// TODO sign
 	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), tx.Raw())
 	if err != nil {
 		return err
