@@ -73,20 +73,14 @@ var _ = Describe("The Orbs Network", func() {
 					fmt.Sprintf(":%d", 8080+i),
 					nodeKeyPair.PublicKey(),
 					nodeKeyPair.PrivateKey(),
-					federationNodes, 70,
-					5,
-					5,
-					30*60,
+					federationNodes,
+					70,
 					leaderKeyPair.PublicKey(),
 					consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 					logger,
 					2*1000,
 					gossipTransport,
-					5,
 					3,
-					300,
-					300,
-					0,
 				)
 
 				nodes = append(nodes, node)

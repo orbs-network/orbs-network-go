@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -23,7 +24,10 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 		}
 	}
 
-	s.lastCommittedBlockHeight = input.LastCommittedBlockHeight
+	s.lastCommittedBlockHeight = input.ResultsBlockHeader.BlockHeight()
+	s.lastCommittedBlockTimestamp = input.ResultsBlockHeader.Timestamp()
+
+	s.blockTracker.IncrementHeight()
 
 	for _, handler := range s.transactionResultsHandlers {
 		handler.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
@@ -32,6 +36,8 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 			TransactionReceipts: myReceipts,
 		})
 	}
+
+	s.log.Info("committed transaction receipts for block height", instrumentation.BlockHeight(s.lastCommittedBlockHeight))
 
 	return &services.CommitTransactionReceiptsOutput{
 		NextDesiredBlockHeight:   s.lastCommittedBlockHeight + 1,

@@ -25,7 +25,7 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 	return &InMemoryStatePersistence{
 		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
 		snapshots:            map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
-		blockTrackerForTests: synchronization.NewBlockTracker(0, 99999999, time.Duration(1*time.Hour)),
+		blockTrackerForTests: synchronization.NewBlockTracker(0, 64000, time.Duration(1*time.Hour)),
 	}
 }
 

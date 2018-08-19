@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"log"
 	"time"
 )
 
@@ -27,6 +28,7 @@ type harness struct {
 
 var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
 var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
+var transactionExpirationWindowInSeconds = uint32(1800)
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
 
@@ -56,6 +58,12 @@ func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) (*services.A
 	return out, err
 }
 
+func (h *harness) addTransactions(txs ...*protocol.SignedTransaction) {
+	for _, tx := range txs {
+		h.addNewTransaction(tx)
+	}
+}
+
 func (h *harness) reportTransactionsAsCommitted(transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
 	return h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
 		LastCommittedBlockHeight: h.lastBlockHeight,
@@ -79,20 +87,6 @@ func (h *harness) verifyMocks() error {
 	}
 
 	return nil
-}
-
-func (h *harness) failPreOrderCheckFor(transaction *protocol.SignedTransaction, status protocol.TransactionStatus) {
-	h.vm.When("TransactionSetPreOrder", mock.AnyIf("input with expected transaction",
-		func(i interface{}) bool {
-			if input, ok := i.(*services.TransactionSetPreOrderInput); !ok {
-				panic("mock virtual machine invoked with bad input")
-			} else if len(input.SignedTransactions) != 1 { // TODO if we need to support more than one transaction, generalize and refactor
-				return false
-			} else {
-				return input.SignedTransactions[0].Equal(transaction)
-			}
-
-		})).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{status}}).Times(1)
 }
 
 func (h *harness) handleForwardFrom(sender primitives.Ed25519PublicKey, transactions ...*protocol.SignedTransaction) {
@@ -120,29 +114,78 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
 }
 
+func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+	return h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+		MaxNumberOfTransactions: maxNumOfTransactions,
+	})
+}
+
+func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
+	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+		if input.BlockHeight != h.lastBlockHeight {
+			log.Panicf("expected block height %v, got %v", h.lastBlockHeight, input.BlockHeight)
+		}
+		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
+		for i, tx := range input.SignedTransactions {
+			if failOn(tx) {
+				statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+			} else {
+				statuses[i] = protocol.TRANSACTION_STATUS_PRE_ORDER_VALID
+			}
+		}
+		return &services.TransactionSetPreOrderOutput{
+			PreOrderResults: statuses,
+		}, nil
+	})
+}
+
+func (h *harness) passAllPreOrderChecks() {
+	h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
+		return false
+	})
+}
+func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.TimestampNano) {
+	h.ignoringTransactionResults()
+	currentBlock := primitives.BlockHeight(0)
+	for currentBlock <= height {
+		out, _ := h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+			LastCommittedBlockHeight: currentBlock,
+			ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{BlockHeight: currentBlock, Timestamp: timestamp}).Build(),
+		})
+		currentBlock = out.NextDesiredBlockHeight
+	}
+	h.lastBlockHeight = height
+}
+
 func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
+	ts := primitives.TimestampNano(time.Now().UnixNano())
+
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
-	virtualMachine.When("TransactionSetPreOrder", mock.Any).Return(&services.TransactionSetPreOrderOutput{PreOrderResults: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID}})
 
-	config := config.NewTransactionPoolConfig(sizeLimit, thisNodeKeyPair.PublicKey())
-	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger())
+	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
+	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, instrumentation.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
 
-	return &harness{
-		txpool: service,
-		gossip: gossip,
-		vm:     virtualMachine,
-		trh:    transactionResultHandler,
+	h := &harness{
+		txpool:             service,
+		gossip:             gossip,
+		vm:                 virtualMachine,
+		trh:                transactionResultHandler,
+		lastBlockTimestamp: ts,
 	}
+
+	h.passAllPreOrderChecks()
+
+	return h
 }
 
 func asReceipts(transactions []*protocol.SignedTransaction) []*protocol.TransactionReceipt {
