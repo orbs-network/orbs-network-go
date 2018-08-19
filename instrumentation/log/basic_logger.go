@@ -197,7 +197,7 @@ func (b *basicLogger) Prefixes() []*Field {
 
 func (b *basicLogger) For(params ...*Field) BasicLogger {
 	prefixes := append(b.prefixes, params...)
-	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel, outputs: b.outputs}
+	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel, outputs: b.outputs, sourceRootPrefixIndex: b.sourceRootPrefixIndex}
 }
 
 func (b *basicLogger) Metric(metric string, params ...*Field) {
