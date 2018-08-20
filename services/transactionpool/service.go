@@ -3,8 +3,8 @@ package transactionpool
 import (
 	"context"
 	"fmt"
-	"github.com/go-errors/errors"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -12,8 +12,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/pkg/errors"
 	"time"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 type Config interface {
@@ -96,7 +96,7 @@ func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransa
 		}
 
 		if err := vctx.validateTransaction(tx); err != nil {
-			return nil, errors.WrapPrefix(err, fmt.Sprintf("transaction with hash %s is invalid", txHash), 0)
+			return nil, errors.Wrap(err, fmt.Sprintf("transaction with hash %s is invalid", txHash))
 		}
 	}
 
