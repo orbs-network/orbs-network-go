@@ -20,7 +20,7 @@ func verifyProof(t *testing.T, f *Forest, trieId TrieId, proof Proof, contract s
 func getProofExpectHeight(t *testing.T, f *Forest, rootId TrieId, contract string, key string, expectedHeight int) Proof {
 	proof, err := f.GetProof(rootId, contract, key)
 	require.NoError(t, err, "failed with error: %s", err)
-	require.Equal(t, expectedHeight, len(proof), "unexpected proof length")
+	require.Len(t, proof, expectedHeight, "unexpected proof length of %v found %v", expectedHeight, len(proof))
 	return proof
 }
 
@@ -137,7 +137,7 @@ func TestExtendingLeafNodeWithNoBranchesAndNoValue(t *testing.T) {
 	rootId := f.updateStringEntries("ba", "zoo", "bar", "", "baron", "Hello")
 
 	proof := getProofExpectHeight(t, f, rootId, "", "baron", 2)
-	require.Equal(t, 2, len(proof))
+	require.Len(t, proof, 2, "expected proof of 2 nodes. found %v", len(proof))
 }
 
 func TestExtendingKeyPathByOneChar(t *testing.T) {
