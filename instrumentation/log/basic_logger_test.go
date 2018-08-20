@@ -179,7 +179,7 @@ func TestCustomLogFormatter(t *testing.T) {
 
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer).WithFormatter(log.NewHumanReadableFormatter()))
-		serviceLogger.Info("Service initialized", log.Int("some-int-value", 12), log.BlockHeight(primitives.BlockHeight(9999)), log.Bytes("bytes", []byte{2, 3, 99}), log.Stringable("vchainId", primitives.VirtualChainId(123)))
+		serviceLogger.Info("Service initialized", log.Int("some-int-value", 12), log.BlockHeight(primitives.BlockHeight(9999)), log.Bytes("bytes", []byte{2, 3, 99}), log.Stringable("vchainId", primitives.VirtualChainId(123)), log.String("_test-id", "hello"), log.String("_underscore", "wow"))
 	})
 
 	fmt.Println(stdout)
@@ -195,6 +195,8 @@ func TestCustomLogFormatter(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("function=log_test.TestCustomLogFormatter.func1"))
 	Expect(stdout).To(ContainSubstring("source="))
 	Expect(stdout).To(ContainSubstring("log/basic_logger_test.go"))
+	Expect(stdout).To(ContainSubstring("_test-id=hello"))
+	Expect(stdout).To(ContainSubstring("_underscore=wow"))
 }
 
 func TestMultipleOutputs(t *testing.T) {
