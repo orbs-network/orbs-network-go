@@ -3,11 +3,10 @@ package bootstrap
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
-	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelix"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -18,8 +17,10 @@ import (
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type NodeLogic interface {
@@ -36,7 +37,7 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
-	reporting instrumentation.BasicLogger,
+	reporting log.BasicLogger,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
@@ -51,12 +52,14 @@ func NewNodeLogic(
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
 
 	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, processors, crosschainConnectors, reporting)
-	transactionPool := transactionpool.NewTransactionPool(gossip, virtualMachine, nodeConfig, reporting)
+	transactionPool := transactionpool.NewTransactionPool(gossip, virtualMachine, nodeConfig, reporting, primitives.TimestampNano(time.Now().UnixNano()))
 	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
-	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig)
+	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig, reporting)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
-	consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
+
+	// TODO: Restore this when lean-helix-go submodule is integrated
+	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossip, blockStorage, consensusContext, reporting, nodeConfig))
 
 	return &nodeLogic{

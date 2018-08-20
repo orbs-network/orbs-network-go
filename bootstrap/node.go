@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
@@ -31,42 +31,26 @@ func NewNode(
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	federationNodes map[string]config.FederationNode,
-	blockSyncCommitTimeoutMillis uint32,
-	blockTransactionReceiptQueryStartGraceSec uint32,
-	blockTransactionReceiptQueryEndGraceSec uint32,
-	blockTransactionReceiptQueryTransactionExpireSec uint32,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	logger instrumentation.BasicLogger,
-	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
+	logger log.BasicLogger,
 	transport gossipAdapter.Transport,
-	stateHistoryRetentionInBlockHeights uint64,
-	querySyncGraceBlockDist uint64,
-	querySyncGraceTimeoutMillis uint64,
-	belowMinimalBlockDelayMillis uint32,
+	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
 	minimumTransactionsInBlock int,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	nodeConfig := config.NewHardCodedConfig(
+	nodeConfig := config.ForProduction(
 		federationNodes,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillis,
-		blockSyncCommitTimeoutMillis,
-		blockTransactionReceiptQueryStartGraceSec,
-		blockTransactionReceiptQueryEndGraceSec,
-		blockTransactionReceiptQueryTransactionExpireSec,
-		stateHistoryRetentionInBlockHeights,
-		querySyncGraceBlockDist,
-		querySyncGraceTimeoutMillis,
-		belowMinimalBlockDelayMillis,
 		minimumTransactionsInBlock,
 	)
 
-	nodeLogger := logger.For(instrumentation.Node(nodePublicKey.String()))
+	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
 
 	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence()
 	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()

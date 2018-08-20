@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -18,7 +18,7 @@ type harness struct {
 }
 
 func newHarness() *harness {
-	log := instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 

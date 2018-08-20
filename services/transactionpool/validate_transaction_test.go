@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -15,30 +14,14 @@ const futureTimestampGrace = 3 * time.Minute
 
 var lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().Add(-5 * time.Second).UnixNano())
 
-func aValidationContextWithTransactionsInPools(transactionsInPendingPool transactions) validationContext {
-	isTxInPendingPool := func(tx *protocol.SignedTransaction) bool {
-		for _, t := range transactionsInPendingPool {
-			if tx.Equal(t) {
-				return true
-			}
-		}
-		return false
-	}
-
-	return validationContext{
+func aValidationContext() *validationContext {
+	return &validationContext{
 		expiryWindow:                expirationWindowInterval,
 		lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
 		futureTimestampGrace:        futureTimestampGrace,
 		virtualChainId:              builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-		transactionInPendingPool:    isTxInPendingPool,
 	}
 }
-
-func aValidationContext() validationContext {
-	return aValidationContextWithTransactionsInPools(transactions{})
-}
-
-//TODO Verify pre order checks (like signature and subscription) by calling VirtualMachine.TransactionSetPreOrder.
 
 func futureTimeAfterGracePeriod() time.Time {
 	return time.Unix(0, int64(lastCommittedBlockTimestamp)).Add(futureTimestampGrace + 1*time.Minute)
@@ -48,7 +31,7 @@ func TestValidateTransaction_ValidTransaction(t *testing.T) {
 	t.Parallel()
 
 	require.NoError(t,
-		validateTransaction(builders.TransferTransaction().Build(), aValidationContext()),
+		aValidationContext().validateTransaction(builders.TransferTransaction().Build()),
 		"a valid transaction was rejected")
 }
 
@@ -71,17 +54,8 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			require.Error(t,
-				validateTransaction(test.txBuilder.Build(), aValidationContext()),
+				aValidationContext().validateTransaction(test.txBuilder.Build()),
 				fmt.Sprintf("a transaction with an invalid %s was not rejected", test.name))
 		})
 	}
-}
-
-func TestValidateTransaction_DoesNotExistInPendingPool(t *testing.T) {
-	t.Parallel()
-	tx := builders.TransferTransaction().Build()
-
-	require.Error(t,
-		validateTransaction(tx, aValidationContextWithTransactionsInPools(transactions{tx})),
-		"a transaction that exists in the pending transaction pool was not rejected")
 }

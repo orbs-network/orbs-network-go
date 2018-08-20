@@ -27,8 +27,8 @@ type NodeConfig interface {
 	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
 
 	// state storage
-	StateHistoryRetentionInBlockHeights() uint64
-	QuerySyncGraceBlockDist() uint64
+	StateHistoryRetentionInBlockHeights() uint16
+	QuerySyncGraceBlockDist() uint16
 
 	// consensus context
 	BelowMinimalBlockDelayMillis() uint32
@@ -36,6 +36,9 @@ type NodeConfig interface {
 
 	// transaction pool
 	PendingPoolSizeInBytes() uint32
+	TransactionExpirationWindowInSeconds() uint32
+	FutureTimestampGraceInSeconds() uint32
+	VirtualChainId() primitives.VirtualChainId
 }
 
 type FederationNode interface {

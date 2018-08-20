@@ -1,9 +1,9 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -11,53 +11,47 @@ import (
 )
 
 type Config interface {
-	PendingPoolSizeInBytes() uint32
 	NodePublicKey() primitives.Ed25519PublicKey
+	PendingPoolSizeInBytes() uint32
+	TransactionExpirationWindowInSeconds() uint32
+	FutureTimestampGraceInSeconds() uint32
+	VirtualChainId() primitives.VirtualChainId
+	QuerySyncGraceBlockDist() uint16
+	QueryGraceTimeoutMillis() uint64
 }
 
 type service struct {
-	pendingTransactions        chan *protocol.SignedTransaction
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
 	transactionResultsHandlers []handlers.TransactionResultsHandler
-	reporting                  instrumentation.BasicLogger
+	logger                     log.BasicLogger
 	config                     Config
 
-	lastCommittedBlockHeight primitives.BlockHeight
-	pendingPool              *pendingTxPool
-	committedPool            *committedTxPool
+	lastCommittedBlockHeight    primitives.BlockHeight
+	lastCommittedBlockTimestamp primitives.TimestampNano
+	pendingPool                 *pendingTxPool
+	committedPool               *committedTxPool
+	blockTracker                *synchronization.BlockTracker
 }
 
-func NewTransactionPool(gossip gossiptopics.TransactionRelay, virtualMachine services.VirtualMachine, config Config, reporting instrumentation.BasicLogger) services.TransactionPool {
+func NewTransactionPool(gossip gossiptopics.TransactionRelay,
+	virtualMachine services.VirtualMachine,
+	config Config,
+	logger log.BasicLogger,
+	initialTimestamp primitives.TimestampNano) services.TransactionPool {
 	s := &service{
-		pendingTransactions: make(chan *protocol.SignedTransaction, 10),
-		gossip:              gossip,
-		virtualMachine:      virtualMachine,
-		config:              config,
-		reporting:           reporting.For(instrumentation.Service("transaction-pool")),
+		gossip:         gossip,
+		virtualMachine: virtualMachine,
+		config:         config,
+		logger:         logger.For(log.Service("transaction-pool")),
 
-		pendingPool:   NewPendingPool(config),
-		committedPool: NewCommittedPool(),
+		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
+		pendingPool:                 NewPendingPool(config),
+		committedPool:               NewCommittedPool(),
+		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s
-}
-
-func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
-	timeout := time.After(100 * time.Millisecond)
-	out := &services.GetTransactionsForOrderingOutput{}
-	for {
-		select {
-		case <-timeout:
-			return out, nil
-		case tx := <-s.pendingTransactions:
-			out.SignedTransactions = append(out.SignedTransactions, tx)
-			if uint32(len(out.SignedTransactions)) == input.MaxNumberOfTransactions {
-				return out, nil
-			}
-		}
-	}
-	return out, nil
 }
 
 func (s *service) GetCommittedTransactionReceipt(input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
@@ -76,14 +70,18 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 	//TODO verify message signature
 	for _, tx := range input.Message.SignedTransactions {
-		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err == nil {
-			//TODO this channel needs to go
-			s.pendingTransactions <- tx
+		if _, err := s.pendingPool.add(tx, input.Message.Sender.SenderPublicKey()); err != nil {
+			s.logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx))
 		}
 	}
 	return nil, nil
 }
 
-func (s *service) isTransactionInPendingPool(transaction *protocol.SignedTransaction) bool {
-	return s.pendingPool.has(transaction)
+func (s *service) createValidationContext() *validationContext {
+	return &validationContext{
+		expiryWindow:                time.Duration(s.config.TransactionExpirationWindowInSeconds()) * time.Second,
+		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
+		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
+		virtualChainId:              s.config.VirtualChainId(),
+	}
 }

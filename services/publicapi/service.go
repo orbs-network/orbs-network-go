@@ -1,7 +1,8 @@
 package publicapi
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -11,19 +12,19 @@ import (
 type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
-	reporting       instrumentation.BasicLogger
+	reporting       log.BasicLogger
 }
 
 func NewPublicApi(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
-	reporting instrumentation.BasicLogger,
+	reporting log.BasicLogger,
 ) services.PublicApi {
 
 	return &service{
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
-		reporting:       reporting.For(instrumentation.Service("public-api")),
+		reporting:       reporting.For(log.Service("public-api")),
 	}
 }
 
@@ -36,7 +37,12 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 		SignedTransaction: tx,
 	})
 
-	response := &client.SendTransactionResponseBuilder{}
+	//TODO this is terrible, delete and make it right (shaiy)
+	response := &client.SendTransactionResponseBuilder{
+		TransactionReceipt: &protocol.TransactionReceiptBuilder{
+			Txhash: digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction()),
+		},
+	}
 
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}, nil
 }

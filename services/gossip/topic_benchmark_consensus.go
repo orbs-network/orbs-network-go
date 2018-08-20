@@ -1,7 +1,7 @@
 package gossip
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -67,7 +67,7 @@ func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkC
 	}).Build()
 
 	if input.Message.Status == nil {
-		return nil, errors.Errorf("cannot encode BenchmarkConsensusCommittedMessage", instrumentation.Stringable("message", input.Message))
+		return nil, errors.Errorf("cannot encode BenchmarkConsensusCommittedMessage", log.Stringable("message", input.Message))
 	}
 	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), input.Message.Sender.Raw()}
 

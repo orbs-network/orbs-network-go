@@ -3,7 +3,7 @@ package blockstorage
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -33,18 +33,18 @@ type service struct {
 
 	config Config
 
-	reporting               instrumentation.BasicLogger
+	reporting               log.BasicLogger
 	consensusBlocksHandlers []handlers.ConsensusBlocksHandler
 
 	lastCommittedBlock *protocol.BlockPairContainer
 	lastBlockLock      *sync.Mutex
 }
 
-func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting instrumentation.BasicLogger) services.BlockStorage {
+func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting log.BasicLogger) services.BlockStorage {
 	return &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
-		reporting:     reporting.For(instrumentation.Service("block-storage")),
+		reporting:     reporting.For(log.Service("block-storage")),
 		config:        config,
 		lastBlockLock: &sync.Mutex{},
 	}
@@ -52,7 +52,7 @@ func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateS
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
-	s.reporting.Info("Trying to commit a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
+	s.reporting.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
@@ -67,19 +67,18 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 		return nil, err
 	}
 
-	// TODO: this part should be moved after persistence.WriteBlock, it's moved here due to convoluted sync mechanism in acceptance test where we wait until block is written to block persistence where instead we need to wait on block written to state persistence
-	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
-		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
-		s.reporting.Error("intra-node sync to state storage failed", instrumentation.Error(err))
-	}
-
 	if err := s.persistence.WriteBlock(input.BlockPair); err != nil {
 		return nil, err
 	}
 
 	s.updateLastCommittedBlock(input.BlockPair)
 
-	s.reporting.Info("Committed a block", instrumentation.BlockHeight(txBlockHeader.BlockHeight()))
+	s.reporting.Info("Committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+
+	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
+		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
+		s.reporting.Error("intra-node sync to state storage failed", log.Error(err))
+	}
 
 	return nil, nil
 }
@@ -271,11 +270,11 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 	if txBlockHeader.BlockHeight() <= currentBlockHeight {
 		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "block already in storage, timestamp mismatch"
-			s.reporting.Error(errorMessage, instrumentation.BlockHeight(currentBlockHeight))
+			s.reporting.Error(errorMessage, log.BlockHeight(currentBlockHeight))
 			return false, errors.New(errorMessage)
 		}
 
-		s.reporting.Info("block already in storage, skipping", instrumentation.BlockHeight(currentBlockHeight))
+		s.reporting.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight))
 		return false, nil
 	}
 
@@ -306,13 +305,13 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	// FIXME we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
 		errorMessage := "protocol version mismatch"
-		s.reporting.Error(errorMessage, instrumentation.String("expected", "1"), instrumentation.Stringable("received", txBlockHeader.ProtocolVersion()))
+		s.reporting.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
 	}
 
 	if rsBlockHeader.ProtocolVersion() != ProtocolVersion {
 		errorMessage := "protocol version mismatch"
-		s.reporting.Error(errorMessage, instrumentation.String("expected", "1"), instrumentation.Stringable("received", txBlockHeader.ProtocolVersion()))
+		s.reporting.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
 	}
 

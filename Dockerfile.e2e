@@ -1,0 +1,7 @@
+FROM busybox
+
+ADD ./e2e.test /opt/orbs/
+
+WORKDIR /opt/orbs
+
+CMD ./e2e.test

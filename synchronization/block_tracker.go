@@ -1,4 +1,4 @@
-package statestorage
+package synchronization
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -8,11 +8,11 @@ import (
 )
 
 type BlockTracker struct {
-	graceDistance uint64
+	graceDistance uint16 // this is not primitives.BlockHeight on purpose, to indicate that grace distance should be small
 	timeout       time.Duration
 
 	mutex         sync.RWMutex
-	currentHeight uint64
+	currentHeight uint64 // this is not primitves.BlockHeight so as to avoid unnecessary casts
 	latch         chan struct{}
 
 	// following fields are for tests only
@@ -23,7 +23,7 @@ type BlockTracker struct {
 func NewBlockTracker(startingHeight uint64, graceDist uint16, timeout time.Duration) *BlockTracker {
 	return &BlockTracker{
 		currentHeight: startingHeight,
-		graceDistance: uint64(graceDist),
+		graceDistance: graceDist,
 		timeout:       timeout,
 		latch:         make(chan struct{}),
 	}
@@ -55,7 +55,7 @@ func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) erro
 		return nil
 	}
 
-	if currentHeight < requestedHeightUint-t.graceDistance { // requested block too far ahead, no grace
+	if currentHeight+uint64(t.graceDistance) < requestedHeightUint { // requested block too far ahead, no grace
 		return errors.Errorf("requested future block outside of grace range")
 	}
 

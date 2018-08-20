@@ -1,4 +1,4 @@
-package statestorage
+package synchronization
 
 import (
 	"github.com/stretchr/testify/require"
@@ -16,6 +16,13 @@ func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
 func TestWaitForBlockWithinGraceFailsAfterTimeout(t *testing.T) {
 
 	tracker := NewBlockTracker(1, 1, 1*time.Millisecond)
+	err := tracker.WaitForBlock(2)
+	require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
+}
+
+func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
+
+	tracker := NewBlockTracker(0, 5, 1*time.Millisecond)
 	err := tracker.WaitForBlock(2)
 	require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
 }

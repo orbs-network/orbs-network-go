@@ -38,15 +38,11 @@ func (d gossipDelegate) NodeMeta(limit int) []byte {
 func (d gossipDelegate) NotifyMsg(rawMessage []byte) {
 	// No need to queue, we can dispatch right here
 	payloads := decodeByteArray(rawMessage)
-	fmt.Printf("Gossip: message received by %s, %v\n", d.Name, payloads)
 	d.parent.receive(payloads)
 }
 
 func (d gossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 	broadcasts := d.OutgoingMessages.GetBroadcasts(overhead, limit)
-	if len(broadcasts) > 0 {
-		fmt.Println("Outgoing messages", len(broadcasts))
-	}
 	return broadcasts
 }
 
@@ -129,7 +125,8 @@ func (t *MemberlistTransport) PrintPeers() {
 
 func (t *MemberlistTransport) Send(data *TransportData) error {
 	if data.RecipientMode != gossipmessages.RECIPIENT_LIST_MODE_BROADCAST {
-		panic("Not implemented")
+		//FIXME once we will be able to lookup a node name, replace with t.list.SendReliable(): https://godoc.org/github.com/hashicorp/memberlist#Memberlist.SendReliable
+		fmt.Println("WARNING: Gossip: should not broadast targeted messages to everyone")
 	}
 	rawMessage := encodeByteArray(data.Payloads)
 	t.delegate.OutgoingMessages.QueueBroadcast(&broadcast{msg: rawMessage})
@@ -138,7 +135,6 @@ func (t *MemberlistTransport) Send(data *TransportData) error {
 }
 
 func (t *MemberlistTransport) receive(payloads [][]byte) {
-	fmt.Println("Gossip: triggering listeners")
 	for _, l := range t.listeners {
 		l.OnTransportMessageReceived(payloads)
 	}

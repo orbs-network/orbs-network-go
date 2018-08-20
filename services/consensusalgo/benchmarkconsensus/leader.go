@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -27,7 +27,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 			s.reporting.Info("consensus round run loop terminating with context")
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			s.reporting.Info("consensus round waking up after successfully voted block", instrumentation.BlockHeight(s.lastSuccessfullyVotedBlock))
+			s.reporting.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
 			continue
 		case <-time.After(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillis()) * time.Millisecond):
 			s.reporting.Info("consensus round waking up after retry timeout")
@@ -88,14 +88,14 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
-		s.reporting.Error("leader failed to sign genesis block", instrumentation.Error(err))
+		s.reporting.Error("leader failed to sign genesis block", log.Error(err))
 		return nil
 	}
 	return blockPair
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
-	s.reporting.Info("generating new proposed block for height", instrumentation.BlockHeight(s.lastCommittedBlockHeight()+1))
+	s.reporting.Info("generating new proposed block for height", log.BlockHeight(s.lastCommittedBlockHeight()+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
@@ -167,7 +167,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	// validate the vote
 	err := s.leaderValidateVoteUnderMutex(sender, status)
 	if err != nil {
-		s.reporting.Error("leader failed to validate vote", instrumentation.Error(err))
+		s.reporting.Error("leader failed to validate vote", log.Error(err))
 		return
 	}
 
@@ -176,7 +176,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	s.reporting.Info("valid vote arrived", instrumentation.Int("existing-votes", existingVotes), instrumentation.Int("required-votes", s.requiredQuorumSize()))
+	s.reporting.Info("valid vote arrived", log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() {
 		successfullyVotedBlock = s.lastCommittedBlockHeight()
 	}
