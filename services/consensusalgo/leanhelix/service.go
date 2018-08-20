@@ -1,6 +1,8 @@
 package leanhelix
 
 import (
+	"fmt"
+	"github.com/orbs-network/lean-helix-go/go/leanhelix"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -10,8 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
 	"time"
-	"fmt"
-	"github.com/orbs-network/lean-helix-go/go/leanhelix"
 )
 
 type Config interface {
