@@ -18,7 +18,7 @@ func NewLevelDbBlockPersistence() BlockPersistence {
 
 func (bp *levelDbBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) error {
 	bp.blockPairs = append(bp.blockPairs, blockPair)
-	bp.blockWritten <- true
+	//bp.blockWritten <- true
 
 	return nil
 }

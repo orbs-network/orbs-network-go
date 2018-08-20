@@ -66,7 +66,7 @@ func TestNestedLogger(t *testing.T) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
 		txFlowLogger := serviceLogger.For(log.String("flow", TransactionFlow))
-		txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99}))
+		txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99, 250}))
 	})
 
 	fmt.Println(stdout)
@@ -81,7 +81,7 @@ func TestNestedLogger(t *testing.T) {
 	Expect(jsonMap["timestamp"]).NotTo(BeNil())
 	Expect(jsonMap["txId"]).To(Equal("1234567"))
 	Expect(jsonMap["flow"]).To(Equal(TransactionFlow))
-	Expect(jsonMap["payload"]).To(Equal("MlZmV0E="))
+	Expect(jsonMap["payload"]).To(Equal("01020363fa"))
 }
 
 func TestStringableSlice(t *testing.T) {
@@ -179,7 +179,7 @@ func TestCustomLogFormatter(t *testing.T) {
 
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer).WithFormatter(log.NewHumanReadableFormatter()))
-		serviceLogger.Info("Service initialized", log.Int("some-int-value", 12), log.BlockHeight(primitives.BlockHeight(9999)), log.Bytes("bytes", []byte{2, 3, 99}), log.Stringable("vchainId", primitives.VirtualChainId(123)))
+		serviceLogger.Info("Service initialized", log.Int("some-int-value", 12), log.BlockHeight(primitives.BlockHeight(9999)), log.Bytes("bytes", []byte{2, 3, 99}), log.Stringable("vchainId", primitives.VirtualChainId(123)), log.String("_test-id", "hello"), log.String("_underscore", "wow"))
 	})
 
 	fmt.Println(stdout)
@@ -195,6 +195,8 @@ func TestCustomLogFormatter(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("function=log_test.TestCustomLogFormatter.func1"))
 	Expect(stdout).To(ContainSubstring("source="))
 	Expect(stdout).To(ContainSubstring("log/basic_logger_test.go"))
+	Expect(stdout).To(ContainSubstring("_test-id=hello"))
+	Expect(stdout).To(ContainSubstring("_underscore=wow"))
 }
 
 func TestMultipleOutputs(t *testing.T) {
