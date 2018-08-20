@@ -145,7 +145,7 @@ func extractParamByConditionAndRemove(params []*Field, condition func(param *Fie
 func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
 	builder := strings.Builder{}
 
-	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.999999Z07:00")
+	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
