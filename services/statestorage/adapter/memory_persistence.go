@@ -49,6 +49,12 @@ func (sp *InMemoryStatePersistence) writeOneContract(height primitives.BlockHeig
 	if _, ok := sp.snapshots[height][contract]; !ok {
 		sp.snapshots[height][contract] = map[string]*protocol.StateRecord{}
 	}
+
+	if len(stateDiff.Value()) == 0 {
+		delete(sp.snapshots[height][contract], stateDiff.Key().KeyForMap())
+		return
+	}
+
 	sp.snapshots[height][contract][stateDiff.Key().KeyForMap()] = stateDiff
 }
 

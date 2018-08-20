@@ -71,16 +71,16 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
-	}
-
 	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
+	}
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
 	if err != nil {
