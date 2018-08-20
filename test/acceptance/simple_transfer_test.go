@@ -52,8 +52,13 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		pausedTxForwards := network.GossipTransport().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		tx := <-network.SendTransfer(1, 17)
 
-		network.BlockPersistence(0).WaitForBlocks(2)
-		network.BlockPersistence(1).WaitForBlocks(2)
+		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(2); err != nil {
+			t.Errorf("failed waiting for block on node 0: %s", err)
+		}
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(2); err != nil {
+			t.Errorf("failed waiting for block on node 1: %s", err)
+
+		}
 
 		require.EqualValues(t, 0, <-network.CallGetBalance(0), "initial getBalance result on leader")
 		require.EqualValues(t, 0, <-network.CallGetBalance(1), "initial getBalance result on non leader")
