@@ -19,7 +19,7 @@ func TestReadStateWithNonExistingContractName(t *testing.T) {
 	require.EqualError(t, err, "contract foo does not exist", "did not fail with error")
 }
 
-func TestWriteState(t *testing.T) {
+func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
 	d := NewInMemoryStatePersistence()
 
 	d.WriteState(1, []*protocol.ContractStateDiff{builders.ContractStateDiff().WithContractName("foo").WithStringRecord("foo", "bar").Build()})
