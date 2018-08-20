@@ -13,8 +13,7 @@ import (
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 
-	err := s.createValidationContext().validateTransaction(input.SignedTransaction)
-	if err != nil {
+	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
 		s.logger.Info("transaction is invalid", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
 		return s.addTransactionOutputFor(nil, err.(*ErrTransactionRejected).TransactionStatus), err
 	}
@@ -49,7 +48,6 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 }
 
 func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
-	// TODO sign
 	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), tx.Raw())
 	if err != nil {
 		return err
