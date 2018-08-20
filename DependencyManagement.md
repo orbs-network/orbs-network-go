@@ -34,6 +34,13 @@ Add new dependency pointing to a certain commit:
 
 `manul -I github.com/username/repo=COMMIT-HASH`
 
+
+Commit and push the resulting changes to `.gitmodules` file and the `/vendor/path/to/your/dependency` link.
+
+After you commit and push, verify the new dependecy appears under /vendor on github.com (make sure to switch to your branch to see it).
+
+
+
 ## Updating dependency to point to a certain commit
 
 Running `manul -U github.com/username/repo=COMMIT-HASH` will change the submodules version to the one you just set. Note that this will automatically checkout the correct version as well, so after running the update command you are in actual working with the updated version.
