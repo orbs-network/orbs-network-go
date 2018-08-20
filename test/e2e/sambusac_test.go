@@ -1,31 +1,27 @@
 package e2e
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"github.com/go-errors/errors"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/jsonapi"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"net/http"
+	"math/rand"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 )
 
-var testLogger = instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+var testLogger = log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
-//TODO: 1. move sendTransactionJson and callMethodJson to jsonapi package (and omit the json suffix)
 //TODO: 2. create runnable in json api: orbs-json-client [--send-transaction | --call-method]=<json> --public-key=<pubkey> --private-key=<privkey> --server-url=<http://....>
 //TODO: 3. this test should use aforementioned runnable, sending the jsons as strings
 //TODO: 4. move startSambusac into its own runnable main, taking --port=8080 argument
@@ -53,7 +49,7 @@ func TestSambusacFlow(t *testing.T) {
 		},
 	}
 
-	sendTransactionOutput, err := sendTransactionJson(transferJson, keyPair, serverUrl)
+	sendTransactionOutput, err := jsonapi.SendTransaction(transferJson, keyPair, serverUrl)
 	require.NoError(t, err, "error calling send_transfer")
 	require.NotNil(t, sendTransactionOutput.TransactionReceipt.Txhash, "got empty txhash")
 
@@ -64,56 +60,11 @@ func TestSambusacFlow(t *testing.T) {
 		MethodName:   "getBalance",
 	}
 
-	callMethodOutput, err := CallMethodJson(getBalanceJson, serverUrl)
+	callMethodOutput, err := jsonapi.CallMethod(getBalanceJson, serverUrl)
 	require.NoError(t, err, "error calling call_method")
 
 	require.Len(t, callMethodOutput.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
 	require.EqualValues(t, 42, callMethodOutput.OutputArguments[0].Uint64Value, "expected balance to equal 42")
-}
-
-func sendTransactionJson(transferJson *jsonapi.Transaction, keyPair *keys.Ed25519KeyPair, serverUrl string) (*jsonapi.SendTransactionOutput, error) {
-	tx, err := jsonapi.ConvertAndSignTransaction(transferJson, keyPair)
-	testLogger.Info("sending transaction", instrumentation.Stringable("transaction", tx.Build()))
-	sendTransactionRequest := (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()
-	res, err := http.Post(serverUrl+"/api/send-transaction", "application/octet-stream", bytes.NewReader(sendTransactionRequest.Raw()))
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got unexpected http status code %s", res.StatusCode)
-	}
-
-	bytes, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return jsonapi.ConvertSendTransactionOutput(client.SendTransactionResponseReader(bytes)), err
-}
-
-func CallMethodJson(transferJson *jsonapi.Transaction, serverUrl string) (*jsonapi.CallMethodOutput, error) {
-	tx := jsonapi.ConvertTransaction(transferJson)
-	testLogger.Info("calling method", instrumentation.Stringable("transaction", tx.Build()))
-	request := (&client.CallMethodRequestBuilder{Transaction: tx}).Build()
-	res, err := http.Post(serverUrl+"/api/call-method", "application/octet-stream", bytes.NewReader(request.Raw()))
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got unexpected http status code %s", res.StatusCode)
-	}
-
-	bytes, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return jsonapi.ConvertCallMethodOutput(client.CallMethodResponseReader(bytes)), err
-
 }
 
 type Sambusac struct {
@@ -126,7 +77,8 @@ type Sambusac struct {
 func startSambusac(serverAddress string, pathToContracts string) *Sambusac {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	network := harness.NewTestNetwork(ctx, 3, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+	testId := "e2e-sambusac-dev-server-starter-" + strconv.FormatUint(rand.Uint64(), 10)
+	network := harness.NewTestNetwork(ctx, 3, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, testId)
 
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
 

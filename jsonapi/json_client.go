@@ -1,13 +1,18 @@
 package jsonapi
 
 import (
+	"bytes"
+	"github.com/go-errors/errors"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"io/ioutil"
+	"net/http"
 	"time"
 )
 
@@ -111,4 +116,49 @@ func convertMethodArgument(arg *protocol.MethodArgument) MethodArgument {
 		methodArg.BytesValue = arg.BytesValue()
 	}
 	return methodArg
+}
+
+func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, serverUrl string) (*SendTransactionOutput, error) {
+	tx, err := ConvertAndSignTransaction(transferJson, keyPair)
+
+	log.GetLogger().Info("sending transaction", log.Stringable("transaction", tx.Build()))
+	sendTransactionRequest := (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()
+	res, err := http.Post(serverUrl+"/api/send-transaction", "application/octet-stream", bytes.NewReader(sendTransactionRequest.Raw()))
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got unexpected http status code %s", res.StatusCode)
+	}
+
+	bytes, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	//
+	return ConvertSendTransactionOutput(client.SendTransactionResponseReader(bytes)), err
+}
+
+func CallMethod(transferJson *Transaction, serverUrl string) (*CallMethodOutput, error) {
+	tx := ConvertTransaction(transferJson)
+	log.GetLogger().Info("calling method", log.Stringable("transaction", tx.Build()))
+	request := (&client.CallMethodRequestBuilder{Transaction: tx}).Build()
+	res, err := http.Post(serverUrl+"/api/call-method", "application/octet-stream", bytes.NewReader(request.Raw()))
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got unexpected http status code %s", res.StatusCode)
+	}
+
+	bytes, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return ConvertCallMethodOutput(client.CallMethodResponseReader(bytes)), err
 }
