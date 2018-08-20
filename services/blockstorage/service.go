@@ -118,32 +118,14 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 	}, nil
 }
 
-func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (*services.GetTransactionsBlockHeaderOutput, error) {
-	currentBlockHeight := s.lastCommittedBlockHeight()
-	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
-		// TODO try to remove this type of polling in the future: https://github.com/orbs-network/orbs-network-go/issues/54
-		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillis())
-		defer timeout.Stop()
-		tick := time.NewTicker(10 * time.Millisecond)
-		defer tick.Stop()
+func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (result *services.GetTransactionsBlockHeaderOutput, err error) {
+	err = s.persistence.GetBlockTracker().WaitForBlock(input.BlockHeight)
 
-		for {
-			select {
-			case <-timeout.C:
-				return nil, errors.New("operation timed out")
-			case <-tick.C:
-				if input.BlockHeight <= s.lastCommittedBlockHeight() {
-					lookupResult, err := s.loadTransactionsBlockHeader(input.BlockHeight)
-
-					if err == nil {
-						return lookupResult, nil
-					}
-				}
-			}
-		}
+	if err == nil {
+		return s.loadTransactionsBlockHeader(input.BlockHeight)
 	}
 
-	return s.loadTransactionsBlockHeader(input.BlockHeight)
+	return nil, err
 }
 
 func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
@@ -160,30 +142,13 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 }
 
 func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
-	currentBlockHeight := s.lastCommittedBlockHeight()
-	if input.BlockHeight > currentBlockHeight && input.BlockHeight-currentBlockHeight <= 5 {
-		timeout := time.NewTimer(s.config.BlockSyncCommitTimeoutMillis())
-		defer timeout.Stop()
-		tick := time.NewTicker(10 * time.Millisecond)
-		defer tick.Stop()
+	err = s.persistence.GetBlockTracker().WaitForBlock(input.BlockHeight)
 
-		for {
-			select {
-			case <-timeout.C:
-				return nil, errors.New("operation timed out")
-			case <-tick.C:
-				if input.BlockHeight <= s.lastCommittedBlockHeight() {
-					lookupResult, err := s.loadResultsBlockHeader(input.BlockHeight)
-
-					if err == nil {
-						return lookupResult, nil
-					}
-				}
-			}
-		}
+	if err == nil {
+		return s.loadResultsBlockHeader(input.BlockHeight)
 	}
 
-	return s.loadResultsBlockHeader(input.BlockHeight)
+	return nil, err
 }
 
 func (s *service) createEmptyTransactionReceiptResult() *services.GetTransactionReceiptOutput {
