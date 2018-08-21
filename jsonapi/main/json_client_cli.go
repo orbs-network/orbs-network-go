@@ -8,8 +8,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/jsonapi"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -32,11 +32,8 @@ func main() {
 	if *sendTransactionPtr != "" {
 		logger.Info("sending transaction")
 
-	} else if *callMethodPtr != "" {
-		logger.Info("calling method")
-
 		tx := &jsonapi.Transaction{}
-		if err := json.Unmarshal([]byte(*callMethodPtr), tx); err != nil {
+		if err := json.Unmarshal([]byte(*sendTransactionPtr), tx); err != nil {
 			logger.Error("could not unpack json", log.Error(err))
 		}
 
@@ -44,26 +41,66 @@ func main() {
 		keyPair := keys.Ed25519KeyPairForTests(1)
 
 		signedTxBuilder, _ := jsonapi.ConvertAndSignTransaction(tx, keyPair)
+		//signedTx := signedTxBuilder.Build()
+		//logger.Info("tx", log.Stringable("transaction", signedTx))
 
-		response, err := httpPost(signedTxBuilder.Build().Raw(), *apiEndpointPtr, "call-method")
+		//logger.Info("Read tx as protocol.SignedTransactionReader", log.Stringable("transaction", protocol.SignedTransactionReader(signedTx.Raw())))
+
+		bytes, err := httpPost(signedTxBuilder, *apiEndpointPtr, "send-transaction")
+		output := jsonapi.ConvertCallMethodOutput(client.CallMethodResponseReader(bytes))
 
 		if err != nil {
 			logger.Error("api call error", log.Error(err))
 		}
 
-		logger.Info("received call method response", log.Stringable("response", response))
+		logger.Info("received call method response", log.Stringable("result", output.CallResult), log.BlockHeight(output.BlockHeight), log.StringableSlice("output-args", output.OutputArguments))
+
+	} else if *callMethodPtr != "" {
+		logger.Info("calling method")
+
+		signedTxBuilder := buildTransaction(logger, []byte(*callMethodPtr))
+		callAPI(logger, *apiEndpointPtr, "call-method", signedTxBuilder)
 	}
 }
 
-func httpPost(raw []byte, apiEndpoint string, method string) (*services.CallMethodOutput, error) {
-	res, err := http.Post(apiEndpoint+method, "application/octet-stream", bytes.NewReader(raw))
+func buildTransaction(logger log.BasicLogger, source []byte) *protocol.SignedTransactionBuilder {
+	tx := &jsonapi.Transaction{}
+	if err := json.Unmarshal(source, tx); err != nil {
+		logger.Error("could not unpack json", log.Error(err))
+	}
 
-	if err == nil {
+	logger.Info("method argument", log.String("method-argument", fmt.Sprintf("%v", tx)))
+	keyPair := keys.Ed25519KeyPairForTests(1)
+
+	signedTxBuilder, _ := jsonapi.ConvertAndSignTransaction(tx, keyPair)
+	return signedTxBuilder
+}
+
+func callAPI(logger log.BasicLogger, apiEndpoint string, apiMethod string, txBuilder *protocol.SignedTransactionBuilder) {
+	logger.Info("Read tx as client.SendTransactionRequestReader", log.Stringable("transaction", protocol.SignedTransactionReader(txBuilder.Build().Raw())))
+	bytes, err := httpPost(txBuilder, apiEndpoint, apiMethod)
+	output := jsonapi.ConvertCallMethodOutput(client.CallMethodResponseReader(bytes))
+
+	if err != nil {
+		logger.Error("api call error", log.Error(err))
+	}
+
+	logger.Info("received call method response", log.Stringable("result", output.CallResult), log.BlockHeight(output.BlockHeight), log.StringableSlice("output-args", output.OutputArguments))
+}
+
+func httpPost(txBuilder *protocol.SignedTransactionBuilder, apiEndpoint string, method string) ([]byte, error) {
+	input := (&client.SendTransactionRequestBuilder{
+		SignedTransaction: txBuilder,
+	}).Build()
+
+	res, err := http.Post(apiEndpoint+method, "application/octet-stream", bytes.NewReader(input.Raw()))
+
+	if err != nil {
 		return nil, err
 	}
 
 	bytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 
-	return &services.CallMethodOutput{ClientResponse: client.CallMethodResponseReader(bytes)}, nil
+	return bytes, nil
 }
