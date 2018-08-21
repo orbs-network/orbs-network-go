@@ -30,10 +30,14 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 		prePrepareTamper.Release()
 		prePrepareLatch.Remove()
 
-		network.BlockPersistence(0).WaitForBlocks(1)
+		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(1); err != nil {
+			t.Errorf("waiting for block on node 0 failed: %s", err)
+		}
 		require.EqualValues(t, 17, <-network.CallGetBalance(0), "eventual getBalance result on leader")
 
-		network.BlockPersistence(1).WaitForBlocks(1)
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(1); err != nil {
+			t.Errorf("waiting for block on node 1 failed: %s", err)
+		}
 		require.EqualValues(t, 17, <-network.CallGetBalance(1), "eventual getBalance result on non leader")
 
 	})

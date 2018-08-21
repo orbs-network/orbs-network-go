@@ -5,9 +5,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"sync"
@@ -52,7 +52,7 @@ func NewNode(
 
 	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
 
-	blockPersistence := blockStorageAdapter.NewLevelDbBlockPersistence()
+	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
 	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, nodeLogger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
