@@ -8,7 +8,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 )
+
+func updateStringEntries(f *Forest, keyValues ...string) TrieId {
+	if len(keyValues)%2 != 0 {
+		panic("expected key value pairs")
+	}
+	for i := 0; i < len(keyValues); i = i + 2 {
+		f.addSingleEntry(keyValues[i], hash.CalcSha256([]byte(keyValues[i+1])))
+	}
+	return f.topRoot
+}
 
 func verifyProof(t *testing.T, f *Forest, trieId TrieId, proof Proof, contract string, key string, value string, exists bool) {
 	rootHash, _ := f.GetRootHash(trieId)
@@ -17,7 +28,7 @@ func verifyProof(t *testing.T, f *Forest, trieId TrieId, proof Proof, contract s
 	require.Equal(t, exists, verified, "proof verification returned unexpected result")
 }
 
-func getProofExpectHeight(t *testing.T, f *Forest, rootId TrieId, contract string, key string, expectedHeight int) Proof {
+func getProofRequireHeight(t *testing.T, f *Forest, rootId TrieId, contract string, key string, expectedHeight int) Proof {
 	proof, err := f.GetProof(rootId, contract, key)
 	require.NoError(t, err, "failed with error: %s", err)
 	require.Len(t, proof, expectedHeight, "unexpected proof length of %v found %v", expectedHeight, len(proof))
@@ -27,7 +38,7 @@ func getProofExpectHeight(t *testing.T, f *Forest, rootId TrieId, contract strin
 func TestGetTopRootHash(t *testing.T) {
 	f := NewForest()
 
-	rootId := f.updateStringEntries("first", "val")
+	rootId := updateStringEntries(f, "first", "val")
 	topRoot, err1 := f.GetTopRootHash()
 	updatedRoot, err2 := f.GetRootHash(rootId)
 
@@ -39,9 +50,9 @@ func TestGetTopRootHash(t *testing.T) {
 func TestGetPastRootHash(t *testing.T) {
 	f := NewForest()
 
-	f.updateStringEntries("first", "val")
+	updateStringEntries(f, "first", "val")
 	topRootOf1, err1 := f.GetTopRootHash()
-	f.updateStringEntries("second", "val")
+	updateStringEntries(f, "second", "val")
 	rootOfOneAfterSecondUpdate, err2 := f.GetRootHash(1)
 
 	require.NoError(t, err1, "GetTopHash failed in first call")
@@ -52,9 +63,9 @@ func TestGetPastRootHash(t *testing.T) {
 func TestRootChangeAfterStateChange(t *testing.T) {
 	f := NewForest()
 
-	f.updateStringEntries("first", "val")
+	updateStringEntries(f, "first", "val")
 	topRootOf1, err1 := f.GetTopRootHash()
-	f.updateStringEntries("first", "val1")
+	updateStringEntries(f, "first", "val1")
 	topRootOf2, err2 := f.GetTopRootHash()
 
 	require.NoError(t, err1, "GetTopHash failed in first call")
@@ -65,10 +76,10 @@ func TestRootChangeAfterStateChange(t *testing.T) {
 func TestRevertingStateChangeRevertsMerkleRoot(t *testing.T) {
 	f := NewForest()
 
-	f.updateStringEntries("first", "val")
+	updateStringEntries(f, "first", "val")
 	topRootOf1, err1 := f.GetTopRootHash()
-	f.updateStringEntries("first", "val1")
-	f.updateStringEntries("first", "val")
+	updateStringEntries(f, "first", "val1")
+	updateStringEntries(f, "first", "val")
 	topRootOf3, err2 := f.GetTopRootHash()
 
 	require.NoError(t, err1, "GetTopHash failed in first call")
@@ -80,7 +91,7 @@ func TestValidProofForMissingKey(t *testing.T) {
 	f := NewForest()
 	key := "imNotHere"
 	contract := "foo"
-	proof := getProofExpectHeight(t, f, 0, contract, key, 1)
+	proof := getProofRequireHeight(t, f, 0, contract, key, 1)
 	verifyProof(t, f, 0, proof, contract, key, "", true)
 	verifyProof(t, f, 0, proof, contract, key, "non-zero", false)
 
@@ -88,10 +99,10 @@ func TestValidProofForMissingKey(t *testing.T) {
 
 func TestAddSingleEntryToEmptyTree(t *testing.T) {
 	f := NewForest()
-	rootId := f.updateStringEntries("bar", "baz")
+	rootId := updateStringEntries(f, "bar", "baz")
 	require.Equal(t, TrieId(1), rootId, "unexpected root id")
 
-	getProofExpectHeight(t, f, rootId, "", "bar", 1)
+	getProofRequireHeight(t, f, rootId, "", "bar", 1)
 }
 
 func TestProofValidationAfterBatchStateUpdate(t *testing.T) {
@@ -108,76 +119,75 @@ func TestProofValidationAfterBatchStateUpdate(t *testing.T) {
 	v2 := r2.StateDiffsIterator().NextStateDiffs().StringValue()
 	f.Update([]*protocol.ContractStateDiff{r2})
 
-	proof := getProofExpectHeight(t, f, 1, "foo", k1, 1)
+	proof := getProofRequireHeight(t, f, 1, "foo", k1, 1)
 	verifyProof(t, f, 1, proof, "foo", k1, v1, true)
 
-	proof = getProofExpectHeight(t, f, 1, "foo", k2, 1)
+	proof = getProofRequireHeight(t, f, 1, "foo", k2, 1)
 	verifyProof(t, f, 1, proof, "foo", k2, v2, false)
 
-	proof = getProofExpectHeight(t, f, 2, "foo", k2, 2)
+	proof = getProofRequireHeight(t, f, 2, "foo", k2, 2)
 	verifyProof(t, f, 2, proof, "foo", k2, v2, true)
 
-	proof = getProofExpectHeight(t, f, 2, "foo", k1, 2)
+	proof = getProofRequireHeight(t, f, 2, "foo", k1, 2)
 	verifyProof(t, f, 2, proof, "foo", k1, v1, true)
 }
 
 func TestProofValidationForTwoRevisionsOfSameKey(t *testing.T) {
 	f := NewForest()
-	rootId := f.updateStringEntries("bar1", "baz1", "bar1", "baz2")
+	rootId := updateStringEntries(f, "bar1", "baz1", "bar1", "baz2")
 
-	proof := getProofExpectHeight(t, f, rootId-1, "", "bar1", 1)
+	proof := getProofRequireHeight(t, f, rootId-1, "", "bar1", 1)
 	verifyProof(t, f, rootId-1, proof, "", "bar1", "baz1", true)
 
-	proof = getProofExpectHeight(t, f, rootId, "", "bar1", 1)
+	proof = getProofRequireHeight(t, f, rootId, "", "bar1", 1)
 	verifyProof(t, f, rootId, proof, "", "bar1", "baz2", true)
 }
 
 func TestExtendingLeafNodeWithNoBranchesAndNoValue(t *testing.T) {
 	f := NewForest()
-	rootId := f.updateStringEntries("ba", "zoo", "bar", "", "baron", "Hello")
+	rootId := updateStringEntries(f, "ba", "zoo", "bar", "baz", "baron", "Hello")
 
-	proof := getProofExpectHeight(t, f, rootId, "", "baron", 2)
-	require.Len(t, proof, 2, "expected proof of 2 nodes. found %v", len(proof))
+	getProofRequireHeight(t, f, rootId, "", "baron", 3)
 }
 
 func TestExtendingKeyPathByOneChar(t *testing.T) {
 	f := NewForest()
-	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux")
+	rootId := updateStringEntries(f, "bar", "baz", "bar1", "qux")
 
-	proof := getProofExpectHeight(t, f, rootId, "", "bar1", 2)
+	proof := getProofRequireHeight(t, f, rootId, "", "bar1", 2)
 	verifyProof(t, f, 2, proof, "", "bar1", "qux", true)
 }
 
 func TestExtendingKeyPathBySeveralChars(t *testing.T) {
 	f := NewForest()
 
-	rootId := f.updateStringEntries("bar", "baz", "bar12", "qux", "bar123456789", "quux")
+	rootId := updateStringEntries(f, "bar", "baz", "bar12", "qux", "bar123456789", "quux")
 
-	proof := getProofExpectHeight(t, f, rootId, "", "bar123456789", 3)
+	proof := getProofRequireHeight(t, f, rootId, "", "bar123456789", 3)
 	verifyProof(t, f, rootId, proof, "", "bar123456789", "quux", true)
 }
 
 func TestAddSiblingNode(t *testing.T) {
 	f := NewForest()
-	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bar2", "quux")
+	rootId := updateStringEntries(f, "bar", "baz", "bar1", "qux", "bar2", "quux")
 
-	proof := getProofExpectHeight(t, f, rootId, "", "bar2", 2)
+	proof := getProofRequireHeight(t, f, rootId, "", "bar2", 2)
 	verifyProof(t, f, rootId, proof, "", "bar2", "quux", true)
 }
 
 func TestAddPathToCauseBranchingAlongExistingPath(t *testing.T) {
 	f := NewForest()
-	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bad", "quux")
+	rootId := updateStringEntries(f, "bar", "baz", "bar1", "qux", "bad", "quux")
 
-	proof := getProofExpectHeight(t, f, rootId, "", "bad", 2)
+	proof := getProofRequireHeight(t, f, rootId, "", "bad", 2)
 	verifyProof(t, f, rootId, proof, "", "bad", "quux", true)
 }
 
 func TestReplaceExistingValueBelowDivergingPaths(t *testing.T) {
 	f := NewForest()
-	rootId := f.updateStringEntries("bar", "baz", "bar1", "qux", "bad", "quux", "bar1", "zoo")
+	rootId := updateStringEntries(f, "bar", "baz", "bar1", "qux", "bad", "quux", "bar1", "zoo")
 
-	proof := getProofExpectHeight(t, f, rootId, "", "bar1", 3)
+	proof := getProofRequireHeight(t, f, rootId, "", "bar1", 3)
 	verifyProof(t, f, rootId, proof, "", "bar1", "zoo", true)
 	verifyProof(t, f, rootId, proof, "", "bar1", "qux", false)
 }
@@ -185,48 +195,156 @@ func TestReplaceExistingValueBelowDivergingPaths(t *testing.T) {
 func TestAddPathToCauseNewLeafAlongExistingPath(t *testing.T) {
 	f := NewForest()
 
-	rootId := f.updateStringEntries("baron", "Hirsch", "bar", "Hello")
+	rootId := updateStringEntries(f, "baron", "Hirsch", "bar", "Hello")
 
-	proof := getProofExpectHeight(t, f, rootId, "", "bar", 1)
+	proof := getProofRequireHeight(t, f, rootId, "", "bar", 1)
 	verifyProof(t, f, rootId, proof, "", "bar", "Hello", true)
 
-	proof = getProofExpectHeight(t, f, rootId, "", "baron", 2)
+	proof = getProofRequireHeight(t, f, rootId, "", "baron", 2)
 	verifyProof(t, f, rootId, proof, "", "baron", "Hirsch", true)
 }
 
-func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
-	keyValue := []string{"bar", "baz", "bar123", "qux", "bar1234", "quux", "bad", "foo", "bank", "hello"}
-	var1 := []int{2, 6, 0, 8, 4}
-	var2 := []int{8, 4, 0, 2, 6}
-	var3 := []int{8, 6, 4, 2, 0}
+func TestRemoveValue_SingleExistingNode(t *testing.T) {
+	f := NewForest()
 
-	f1 := NewForest()
-	rootId1 := f1.updateStringEntries(keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
-		keyValue[var1[2]], keyValue[var1[2]+1], keyValue[var1[3]], keyValue[var1[3]+1], keyValue[var1[4]], keyValue[var1[4]+1])
-	root1, _ := f1.GetRootHash(rootId1)
-	proof1, _ := f1.GetProof(rootId1, "", "bar1234")
+	updateStringEntries(f, "aKey", "aValue")
+	updateStringEntries(f, "aKey", "")
 
-	f2 := NewForest()
-	rootId2 := f2.updateStringEntries(keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
-		keyValue[var2[2]], keyValue[var2[2]+1], keyValue[var2[3]], keyValue[var2[3]+1], keyValue[var2[4]], keyValue[var2[4]+1])
-	root2, _ := f2.GetRootHash(rootId2)
-	proof2, _ := f2.GetProof(rootId2, "", "bar1234")
+	baseHash, _ := f.GetRootHash(0)
+	topRootHash, _ := f.GetTopRootHash()
 
-	require.Equal(t, rootId1, rootId2, "unexpected different rootId")
-	require.Equal(t, root1, root2, "unexpected different root hash")
-	require.Equal(t, len(proof1), len(proof2), "unexpected different tree depth / proof lengths")
-	require.Equal(t, proof1[3].hash(), proof2[3].hash(), "unexpected different leaf node hash")
+	getProofRequireHeight(t, f, 0, "", "aKey", 1)
+	getProofRequireHeight(t, f, 1, "", "aKey", 1)
+	getProofRequireHeight(t, f, 2, "", "aKey", 1)
+	require.EqualValues(t, baseHash, topRootHash, "root hash should be identical")
+}
 
-	f3 := NewForest()
-	rootId3 := f3.updateStringEntries(keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
-		keyValue[var3[2]], keyValue[var3[2]+1], keyValue[var3[3]], keyValue[var3[3]+1], keyValue[var3[4]], keyValue[var3[4]+1])
-	root3, _ := f3.GetRootHash(rootId3)
-	proof3, _ := f3.GetProof(rootId3, "", "bar1234")
+func TestRemoveValue_RemoveSingleChildLeaf(t *testing.T) {
+	f := NewForest()
 
-	require.Equal(t, rootId2, rootId3, "unexpected different rootId")
-	require.Equal(t, root2, root3, "unexpected different root hash")
-	require.Equal(t, len(proof2), len(proof3), "unexpected different tree depth / proof lengths")
-	require.Equal(t, proof2[3].hash(), proof3[3].hash(), "unexpected different leaf node hash")
+	baseHash, _ := f.GetRootHash(updateStringEntries(f, "prefix", "1"))
+	updateStringEntries(f, "prefixSuffix", "2")
+	topRootHash, _ := f.GetRootHash(updateStringEntries(f, "prefixSuffix", ""))
+
+	getProofRequireHeight(t, f, 1, "", "prefixSuffix", 1)
+	getProofRequireHeight(t, f, 2, "", "prefixSuffix", 2)
+	getProofRequireHeight(t, f, 3, "", "prefixSuffix", 1)
+	require.EqualValues(t, baseHash, topRootHash, "root hash should be identical")
+}
+
+func TestRemoveValue_ParentWithSingleChild(t *testing.T) {
+	f := NewForest()
+
+	updateStringEntries(f, "no", "1", "noam", "1")
+	updateStringEntries(f, "no", "")
+
+	p := getProofRequireHeight(t, f, 3, "", "noam", 1)
+	require.EqualValues(t, "noam", p[0].path, "full tree proof for and does not end with expected node path")
+}
+
+func TestRemoveValue_NonBranchingNonLeaf1(t *testing.T) {
+	f := NewForest()
+
+	fullTree := updateStringEntries(f, "a", "1", "and", "2", "android", "3")
+	afterRemove := updateStringEntries(f, "and", "")
+
+	p1 := getProofRequireHeight(t, f, fullTree, "", "and", 2)
+	p2 := getProofRequireHeight(t, f, afterRemove, "", "and", 2)
+
+	getProofRequireHeight(t, f, fullTree, "", "android", 3)
+	getProofRequireHeight(t, f, afterRemove, "", "android", 2)
+
+	require.EqualValues(t, "d", p1[1].path, "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "droid", p2[1].path, "full tree proof for and does not end with expected node path")
+}
+
+func TestRemoveValue_NonBranchingNonLeaf2(t *testing.T) {
+	f := NewForest()
+
+	fullTree := updateStringEntries(f, "an", "1", "and", "2", "android", "3")
+	afterRemove := updateStringEntries(f, "and", "")
+
+	p1 := getProofRequireHeight(t, f, fullTree, "", "and", 2)
+	p2 := getProofRequireHeight(t, f, afterRemove, "", "and", 2)
+
+	getProofRequireHeight(t, f, fullTree, "", "android", 3)
+	getProofRequireHeight(t, f, afterRemove, "", "android", 2)
+
+	require.EqualValues(t, "", p1[1].path, "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "roid", p2[1].path, "full tree proof for and does not end with expected node path")
+}
+
+func TestRemoveValue_BranchingNonLeaf_NodeStructureUnchanged(t *testing.T) {
+	f := NewForest()
+
+	fullTree := updateStringEntries(f, "and", "1", "andalusian", "1", "android", "1")
+	afterRemove := updateStringEntries(f, "and", "")
+
+	p1 := getProofRequireHeight(t, f, afterRemove, "", "andalusian", 2)
+	p2 := getProofRequireHeight(t, f, afterRemove, "", "android", 2)
+
+
+	getProofRequireHeight(t, f, fullTree, "", "android", 2)
+	getProofRequireHeight(t, f, afterRemove, "", "android", 2)
+
+	require.EqualValues(t, "lusian", p1[1].path, "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "oid", p2[1].path, "full tree proof for and does not end with expected node path")
+}
+
+func TestRemoveValue_BranchingNonLeaf_CollapseBranch(t *testing.T) {
+	f := NewForest()
+
+	updateStringEntries(f, "no", "7", "noam", "8", "noan", "9")
+	updateStringEntries(f, "no", "")
+
+	p0 := getProofRequireHeight(t, f, 3, "", "noam", 3)
+	require.EqualValues(t, "no", p0[0].path, "unexpected proof structure")
+
+	p := getProofRequireHeight(t, f, 4, "", "noam", 2)
+	require.EqualValues(t, false, p[0].hasValue(), "unexpected proof structure")
+	require.EqualValues(t, "noa", p[0].path, "unexpected proof structure")
+}
+
+func TestRemoveValue_OneOfTwoChildren(t *testing.T) {
+	f := NewForest()
+
+	updateStringEntries(f, "noa", "1", "noam", "1", "noan", "1")
+	updateStringEntries(f, "noan", "")
+
+	p := getProofRequireHeight(t, f, 4, "", "noam", 2)
+	getProofRequireHeight(t, f, 4, "", "noan", 1)
+	require.EqualValues(t, "noa", p[0].path, "full tree proof for and does not end with expected node path")
+}
+
+func TestRemoveValue_OneOfTwoChildrenCollapsingParent(t *testing.T) {
+	f := NewForest()
+
+	updateStringEntries(f, "noam", "8", "noan", "9")
+	updateStringEntries(f, "noan", "")
+
+	p := getProofRequireHeight(t, f, 3, "", "noam", 1)
+	getProofRequireHeight(t, f, 3, "", "noan", 1)
+	require.EqualValues(t, "noam", p[0].path, "unexpected proof structure")
+}
+
+func TestRemoveValue_MissingKey(t *testing.T) {
+	f := NewForest()
+
+	baseHash, err := f.GetRootHash(updateStringEntries(f, "noam", "1", "noan", "1", "noamon", "1", "noamiko", "1"))
+	hash1, err1 := f.GetRootHash(updateStringEntries(f, "noamiko_andSomeSuffix", ""))
+	hash2, err2 := f.GetRootHash(updateStringEntries(f, "noa", ""))
+	hash3, err3 := f.GetRootHash(updateStringEntries(f, "n", ""))
+	hash4, err4 := f.GetRootHash(updateStringEntries(f, "noamo", ""))
+
+	require.NoError(t, err, "unexpected error")
+	require.NoError(t, err1, "unexpected error")
+	require.NoError(t, err2, "unexpected error")
+	require.NoError(t, err3, "unexpected error")
+	require.NoError(t, err4, "unexpected error")
+	require.EqualValues(t, baseHash, hash1, "tree changed after removing missing key")
+	require.EqualValues(t, baseHash, hash2, "tree changed after removing missing key")
+	require.EqualValues(t, baseHash, hash3, "tree changed after removing missing key")
+	require.EqualValues(t, baseHash, hash4, "tree changed after removing missing key")
 }
 
 //TODO - updateStringEntries should advance TrieId only by one
@@ -249,6 +367,41 @@ func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 
 // Debug helpers
 // TODO - we don't use any of these. but they are useful for debugging
+
+func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
+	keyValue := []string{"bar", "baz", "bar123", "qux", "bar1234", "quux", "bad", "foo", "bank", "hello"}
+	var1 := []int{2, 6, 0, 8, 4}
+	var2 := []int{8, 4, 0, 2, 6}
+	var3 := []int{8, 6, 4, 2, 0}
+
+	f1 := NewForest()
+	rootId1 := updateStringEntries(f1, keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
+		keyValue[var1[2]], keyValue[var1[2]+1], keyValue[var1[3]], keyValue[var1[3]+1], keyValue[var1[4]], keyValue[var1[4]+1])
+	root1, _ := f1.GetRootHash(rootId1)
+	proof1, _ := f1.GetProof(rootId1, "", "bar1234")
+
+	f2 := NewForest()
+	rootId2 := updateStringEntries(f2, keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
+		keyValue[var2[2]], keyValue[var2[2]+1], keyValue[var2[3]], keyValue[var2[3]+1], keyValue[var2[4]], keyValue[var2[4]+1])
+	root2, _ := f2.GetRootHash(rootId2)
+	proof2, _ := f2.GetProof(rootId2, "", "bar1234")
+
+	require.Equal(t, rootId1, rootId2, "unexpected different rootId")
+	require.Equal(t, root1, root2, "unexpected different root hash")
+	require.Equal(t, len(proof1), len(proof2), "unexpected different tree depth / proof lengths")
+	require.Equal(t, proof1[3].hash(), proof2[3].hash(), "unexpected different leaf node hash")
+
+	f3 := NewForest()
+	rootId3 := updateStringEntries(f3, keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
+		keyValue[var3[2]], keyValue[var3[2]+1], keyValue[var3[3]], keyValue[var3[3]+1], keyValue[var3[4]], keyValue[var3[4]+1])
+	root3, _ := f3.GetRootHash(rootId3)
+	proof3, _ := f3.GetProof(rootId3, "", "bar1234")
+
+	require.Equal(t, rootId2, rootId3, "unexpected different rootId")
+	require.Equal(t, root2, root3, "unexpected different root hash")
+	require.Equal(t, len(proof2), len(proof3), "unexpected different tree depth / proof lengths")
+	require.Equal(t, proof2[3].hash(), proof3[3].hash(), "unexpected different leaf node hash")
+}
 
 func (f *Forest) dump() {
 	fmt.Println("---------------- TRIE BEGIN ------------------")
