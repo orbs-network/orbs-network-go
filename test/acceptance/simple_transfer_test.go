@@ -6,11 +6,16 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
+	"math/rand"
+	"strconv"
 	"testing"
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.WithNetwork(t, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	testId := "acceptance-LeaderCommitsTransactionsAndSkipsInvalidOnes-" + strconv.FormatUint(rand.Uint64(), 10)
+	defer harness.ReportTestId(t, testId)
+
+	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -35,7 +40,10 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	harness.WithNetwork(t, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	testId := "acceptance-LeaderCommitsTransactionsAndSkipsInvalidOnes-" + strconv.FormatUint(rand.Uint64(), 10)
+	defer harness.ReportTestId(t, testId)
+
+	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -44,8 +52,13 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		pausedTxForwards := network.GossipTransport().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		tx := <-network.SendTransfer(1, 17)
 
-		network.BlockPersistence(0).WaitForBlocks(2)
-		network.BlockPersistence(1).WaitForBlocks(2)
+		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(2); err != nil {
+			t.Errorf("failed waiting for block on node 0: %s", err)
+		}
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(2); err != nil {
+			t.Errorf("failed waiting for block on node 1: %s", err)
+
+		}
 
 		require.EqualValues(t, 0, <-network.CallGetBalance(0), "initial getBalance result on leader")
 		require.EqualValues(t, 0, <-network.CallGetBalance(1), "initial getBalance result on non leader")

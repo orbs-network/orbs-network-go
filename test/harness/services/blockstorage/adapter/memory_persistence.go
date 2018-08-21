@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -13,7 +14,6 @@ import (
 
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
-	WaitForBlocks(count int)
 	FailNextBlocks()
 	WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight
 }
@@ -21,9 +21,9 @@ type InMemoryBlockPersistence interface {
 type blockHeightChan chan primitives.BlockHeight
 
 type inMemoryBlockPersistence struct {
-	blockWritten   chan bool
 	blockPairs     []*protocol.BlockPairContainer
 	failNextBlocks bool
+	tracker        *synchronization.BlockTracker
 
 	lock                  *sync.Mutex
 	blockHeightsPerTxHash map[string]blockHeightChan
@@ -31,18 +31,16 @@ type inMemoryBlockPersistence struct {
 
 func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
 	return &inMemoryBlockPersistence{
-		blockWritten:   make(chan bool, 10),
 		failNextBlocks: false,
+		tracker:        synchronization.NewBlockTracker(0, 5, time.Millisecond*100),
 
 		lock: &sync.Mutex{},
 		blockHeightsPerTxHash: make(map[string]blockHeightChan),
 	}
 }
 
-func (bp *inMemoryBlockPersistence) WaitForBlocks(count int) {
-	for i := 0; i < count; i++ {
-		<-bp.blockWritten
-	}
+func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
+	return bp.tracker
 }
 
 func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight {
@@ -56,7 +54,7 @@ func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairCont
 	}
 
 	bp.blockPairs = append(bp.blockPairs, blockPair)
-	bp.blockWritten <- true
+	bp.tracker.IncrementHeight()
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
 

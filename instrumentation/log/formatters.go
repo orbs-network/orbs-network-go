@@ -130,10 +130,22 @@ func extractParamByType(params []*Field, ft FieldType, shouldPrint, shouldRemove
 	return nil, params
 }
 
+func extractParamByConditionAndRemove(params []*Field, condition func(param *Field) bool) (results []*Field, newParams []*Field) {
+	for _, param := range params {
+		if condition(param) {
+			results = append(results, param)
+		} else {
+			newParams = append(newParams, param)
+		}
+	}
+
+	return results, newParams
+}
+
 func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
 	builder := strings.Builder{}
 
-	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.999999Z07:00")
+	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
@@ -150,6 +162,9 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	_, newParams = extractParamByTypePrintAndRemove(newParams, ServiceType, &builder)
 	functionParam, newParams := extractParamByTypeAndRemove(newParams, FunctionType)
 	sourceParam, newParams := extractParamByTypeAndRemove(newParams, SourceType)
+	underscoreParams, newParams := extractParamByConditionAndRemove(newParams, func(param *Field) bool {
+		return strings.Index(param.Key, "_") == 0
+	})
 
 	for _, param := range newParams {
 		printParam(&builder, param)
@@ -159,6 +174,9 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	printParam(&builder, functionParam)
 	printParam(&builder, sourceParam)
 
+	for _, param := range underscoreParams {
+		printParam(&builder, param)
+	}
 	return builder.String()
 }
 
