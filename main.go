@@ -7,12 +7,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 )
 
-func getLogger(path string) log.BasicLogger {
+func getLogger(path string, silent bool) log.BasicLogger {
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -22,7 +24,14 @@ func getLogger(path string) log.BasicLogger {
 		panic(err)
 	}
 
-	stdoutOutput := log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter())
+	var stdout io.Writer
+	stdout = os.Stdout
+
+	if silent {
+		stdout = ioutil.Discard
+	}
+
+	stdoutOutput := log.NewOutput(stdout).WithFormatter(log.NewHumanReadableFormatter())
 	fileOutput := log.NewOutput(logFile)
 
 	return log.GetLogger().WithOutput(stdoutOutput, fileOutput)
@@ -39,8 +48,9 @@ func main() {
 	consensusLeader, _ := hex.DecodeString(os.Getenv("CONSENSUS_LEADER"))
 	httpAddress := ":" + strconv.FormatInt(port, 10)
 	logPath := os.Getenv("LOG_PATH")
+	silentLog := os.Getenv("SILENT") == "true"
 
-	logger := getLogger(logPath)
+	logger := getLogger(logPath, silentLog)
 
 	// TODO: move this code to the config we decided to add, the HardCodedConfig stuff is just placeholder
 	federationNodes := make(map[string]config.FederationNode)
