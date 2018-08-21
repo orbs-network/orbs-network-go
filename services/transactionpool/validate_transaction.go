@@ -58,7 +58,7 @@ func validateSignerAndContractName(transaction *protocol.SignedTransaction) erro
 
 func validateTransactionNotExpired(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) error {
-		if time.Unix(0, int64(transaction.Transaction().Timestamp())).Before(time.Now().Add(vctx.expiryWindow * -1)) {
+		if transaction.Transaction().Timestamp() < primitives.TimestampNano(time.Now().Add(vctx.expiryWindow*-1).UnixNano()) {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
 		}
 
@@ -68,7 +68,7 @@ func validateTransactionNotExpired(vctx *validationContext) validator {
 
 func validateTransactionNotInFuture(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) error {
-		tsWithGrace := vctx.lastCommittedBlockTimestamp + primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds())
+		tsWithGrace := primitives.TimestampNano(time.Now().UnixNano() + vctx.futureTimestampGrace.Nanoseconds())
 		if transaction.Transaction().Timestamp() > tsWithGrace {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
 		}
