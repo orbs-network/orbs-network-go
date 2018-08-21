@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/jsonapi"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness"
@@ -16,14 +16,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 )
 
-var testLogger = instrumentation.GetLogger().WithOutput(instrumentation.NewOutput(os.Stdout).WithFormatter(instrumentation.NewHumanReadableFormatter()))
+var testLogger = log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 //TODO: 1. move sendTransactionJson and callMethodJson to jsonapi package (and omit the json suffix)
 //TODO: 2. create runnable in json api: orbs-json-client [--send-transaction | --call-method]=<json> --public-key=<pubkey> --private-key=<privkey> --server-url=<http://....>
@@ -38,7 +40,11 @@ func TestSambusacFlow(t *testing.T) {
 	serverUrl := fmt.Sprintf("http://127.0.0.1%s", port)
 
 	pathToContracts := "." //TODO compile contract(s) to SO, path points to dir containing them
-	sambusac := startSambusac(port, pathToContracts)
+
+	testId := "sambusac-flow-" + strconv.FormatUint(rand.Uint64(), 10)
+	defer harness.ReportTestId(t, testId)
+
+	sambusac := startSambusac(testId, port, pathToContracts)
 	defer sambusac.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
@@ -73,7 +79,7 @@ func TestSambusacFlow(t *testing.T) {
 
 func sendTransactionJson(transferJson *jsonapi.Transaction, keyPair *keys.Ed25519KeyPair, serverUrl string) (*jsonapi.SendTransactionOutput, error) {
 	tx, err := jsonapi.ConvertAndSignTransaction(transferJson, keyPair)
-	testLogger.Info("sending transaction", instrumentation.Stringable("transaction", tx.Build()))
+	testLogger.Info("sending transaction", log.Stringable("transaction", tx.Build()))
 	sendTransactionRequest := (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()
 	res, err := http.Post(serverUrl+"/api/send-transaction", "application/octet-stream", bytes.NewReader(sendTransactionRequest.Raw()))
 	if err != nil {
@@ -95,7 +101,7 @@ func sendTransactionJson(transferJson *jsonapi.Transaction, keyPair *keys.Ed2551
 
 func CallMethodJson(transferJson *jsonapi.Transaction, serverUrl string) (*jsonapi.CallMethodOutput, error) {
 	tx := jsonapi.ConvertTransaction(transferJson)
-	testLogger.Info("calling method", instrumentation.Stringable("transaction", tx.Build()))
+	testLogger.Info("calling method", log.Stringable("transaction", tx.Build()))
 	request := (&client.CallMethodRequestBuilder{Transaction: tx}).Build()
 	res, err := http.Post(serverUrl+"/api/call-method", "application/octet-stream", bytes.NewReader(request.Raw()))
 	if err != nil {
@@ -123,10 +129,10 @@ type Sambusac struct {
 	ctxCancel    context.CancelFunc
 }
 
-func startSambusac(serverAddress string, pathToContracts string) *Sambusac {
+func startSambusac(testId, serverAddress string, pathToContracts string) *Sambusac {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	network := harness.NewTestNetwork(ctx, 3, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+	network := harness.NewTestNetwork(ctx, 3, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, testId)
 
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
 
