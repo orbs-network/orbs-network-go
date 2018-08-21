@@ -69,7 +69,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 	}
 
 	err := <-timeoutError
-	require.EqualError(t, err, "operation timed out", "expect a timeout as the requested block height never reached")
+	require.EqualError(t, err, "timed out waiting for block at height 5", "expect a timeout as the requested block height never reached")
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
@@ -133,5 +133,5 @@ func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	}
 
 	err := <-timeoutError
-	require.EqualError(t, err, "operation timed out", "expect a timeout as the requested block height never reached")
+	require.EqualError(t, err, "timed out waiting for block at height 5", "expect a timeout as the requested block height never reached")
 }
