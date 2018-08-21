@@ -2,7 +2,7 @@ package jsonapi
 
 import (
 	"bytes"
-	"github.com/go-errors/errors"
+	"github.com/pkg/errors"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
