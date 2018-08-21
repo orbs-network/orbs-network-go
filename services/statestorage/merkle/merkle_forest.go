@@ -57,7 +57,7 @@ func (n *Node) clone() *Node {
 
 func (n *Node) hasChildren() bool {
 	for _, v := range n.branches {
-		if len(v) != 0 {
+		if v != nil {
 			return true
 		}
 	}
@@ -149,7 +149,7 @@ func (f *Forest) remove(currentNode *Node, path string) *Node {
 		clone := currentNode.clone()
 		branchSelector := path[len(currentNode.path)]
 		branchHash := clone.branches[branchSelector]
-		if len(branchHash) != 0 {
+		if branchHash != nil {
 			newChild := f.remove(f.nodes[branchHash.KeyForMap()], path[len(clone.path)+1:])
 			if !newChild.hasChildren() && !newChild.hasValue() {
 				clone.branches[branchSelector] = nil
@@ -179,7 +179,7 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 		branchSelector := path[len(currentNode.path)]
 		childPath := path[len(currentNode.path)+1:]
 		var newChild *Node
-		if branchHash := currentNode.branches[branchSelector]; len(branchHash) != 0 {
+		if branchHash := currentNode.branches[branchSelector]; branchHash != nil {
 			newChild = f.add(f.nodes[branchHash.KeyForMap()], childPath, valueHash)
 		} else {
 			newChild = createNode(childPath, valueHash)
@@ -234,7 +234,7 @@ func (f *Forest) GetProof(trieId TrieId, contract string, key string) (Proof, er
 	for p := fullPath; exists && strings.HasPrefix(p, currentNode.path); {
 		p = p[len(currentNode.path):]
 
-		if len(p) != 0 {
+		if p != "" {
 			currentNode, exists = f.nodes[currentNode.branches[p[0]].KeyForMap()]
 			if exists {
 				proof = append(proof, currentNode)
@@ -288,7 +288,7 @@ func determineValueHashByProof(proof Proof, path string, parentHash primitives.M
 	// follow branch: get the hash code of the next expected node for our key
 	nextHash := node.branches[path[len(node.path)]]
 
-	if len(nextHash) == 0 { // key is not in trie
+	if nextHash == nil { // key is not in trie
 		return zeroValueHash, nil
 	}
 
