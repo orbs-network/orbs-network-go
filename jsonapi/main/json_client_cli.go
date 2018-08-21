@@ -32,38 +32,25 @@ func main() {
 	if *sendTransactionPtr != "" {
 		logger.Info("sending transaction")
 
-		tx := &jsonapi.Transaction{}
-		if err := json.Unmarshal([]byte(*sendTransactionPtr), tx); err != nil {
-			logger.Error("could not unpack json", log.Error(err))
-		}
+		txBuilder := buildSignedTransaction(logger, []byte(*sendTransactionPtr))
+		input := (&client.SendTransactionRequestBuilder{
+			SignedTransaction: txBuilder,
+		}).Build()
 
-		logger.Info("method argument", log.String("method-argument", fmt.Sprintf("%v", tx)))
-		keyPair := keys.Ed25519KeyPairForTests(1)
-
-		signedTxBuilder, _ := jsonapi.ConvertAndSignTransaction(tx, keyPair)
-		//signedTx := signedTxBuilder.Build()
-		//logger.Info("tx", log.Stringable("transaction", signedTx))
-
-		//logger.Info("Read tx as protocol.SignedTransactionReader", log.Stringable("transaction", protocol.SignedTransactionReader(signedTx.Raw())))
-
-		bytes, err := httpPost(signedTxBuilder, *apiEndpointPtr, "send-transaction")
-		output := jsonapi.ConvertCallMethodOutput(client.CallMethodResponseReader(bytes))
-
-		if err != nil {
-			logger.Error("api call error", log.Error(err))
-		}
-
-		logger.Info("received call method response", log.Stringable("result", output.CallResult), log.BlockHeight(output.BlockHeight), log.StringableSlice("output-args", output.OutputArguments))
-
+		callAPI(logger, *apiEndpointPtr, "send-transaction", input.Raw())
 	} else if *callMethodPtr != "" {
 		logger.Info("calling method")
 
-		signedTxBuilder := buildTransaction(logger, []byte(*callMethodPtr))
-		callAPI(logger, *apiEndpointPtr, "call-method", signedTxBuilder)
+		txBuilder := buildTransaction(logger, []byte(*callMethodPtr))
+		input := (&client.CallMethodRequestBuilder{
+			Transaction: txBuilder,
+		}).Build()
+
+		callAPI(logger, *apiEndpointPtr, "call-method", input.Raw())
 	}
 }
 
-func buildTransaction(logger log.BasicLogger, source []byte) *protocol.SignedTransactionBuilder {
+func buildSignedTransaction(logger log.BasicLogger, source []byte) *protocol.SignedTransactionBuilder {
 	tx := &jsonapi.Transaction{}
 	if err := json.Unmarshal(source, tx); err != nil {
 		logger.Error("could not unpack json", log.Error(err))
@@ -76,9 +63,18 @@ func buildTransaction(logger log.BasicLogger, source []byte) *protocol.SignedTra
 	return signedTxBuilder
 }
 
-func callAPI(logger log.BasicLogger, apiEndpoint string, apiMethod string, txBuilder *protocol.SignedTransactionBuilder) {
-	logger.Info("Read tx as client.SendTransactionRequestReader", log.Stringable("transaction", protocol.SignedTransactionReader(txBuilder.Build().Raw())))
-	bytes, err := httpPost(txBuilder, apiEndpoint, apiMethod)
+func buildTransaction(logger log.BasicLogger, source []byte) *protocol.TransactionBuilder {
+	tx := &jsonapi.Transaction{}
+	if err := json.Unmarshal(source, tx); err != nil {
+		logger.Error("could not unpack json", log.Error(err))
+	}
+
+	logger.Info("method argument", log.String("method-argument", fmt.Sprintf("%v", tx)))
+	return jsonapi.ConvertTransaction(tx)
+}
+
+func callAPI(logger log.BasicLogger, apiEndpoint string, apiMethod string, raw []byte) {
+	bytes, err := httpPost(raw, apiEndpoint, apiMethod)
 	output := jsonapi.ConvertCallMethodOutput(client.CallMethodResponseReader(bytes))
 
 	if err != nil {
@@ -88,12 +84,9 @@ func callAPI(logger log.BasicLogger, apiEndpoint string, apiMethod string, txBui
 	logger.Info("received call method response", log.Stringable("result", output.CallResult), log.BlockHeight(output.BlockHeight), log.StringableSlice("output-args", output.OutputArguments))
 }
 
-func httpPost(txBuilder *protocol.SignedTransactionBuilder, apiEndpoint string, method string) ([]byte, error) {
-	input := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: txBuilder,
-	}).Build()
+func httpPost(raw []byte, apiEndpoint string, method string) ([]byte, error) {
 
-	res, err := http.Post(apiEndpoint+method, "application/octet-stream", bytes.NewReader(input.Raw()))
+	res, err := http.Post(apiEndpoint+method, "application/octet-stream", bytes.NewReader(raw))
 
 	if err != nil {
 		return nil, err
