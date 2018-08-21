@@ -3,12 +3,12 @@ package merkle
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 )
 
 func updateStringEntries(f *Forest, keyValues ...string) TrieId {
@@ -282,7 +282,6 @@ func TestRemoveValue_BranchingNonLeaf_NodeStructureUnchanged(t *testing.T) {
 
 	p1 := getProofRequireHeight(t, f, afterRemove, "", "andalusian", 2)
 	p2 := getProofRequireHeight(t, f, afterRemove, "", "android", 2)
-
 
 	getProofRequireHeight(t, f, fullTree, "", "android", 2)
 	getProofRequireHeight(t, f, afterRemove, "", "android", 2)
