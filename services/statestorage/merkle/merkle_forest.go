@@ -14,7 +14,7 @@ type Proof []*Node
 
 const trieRadix = 256 // base of the merkle trie. TODO change to 16
 
-var zeroValue = []byte("")
+var zeroValue = make([]byte, 0)
 var zeroValueHash = hash.CalcSha256(zeroValue)
 
 type Node struct {
