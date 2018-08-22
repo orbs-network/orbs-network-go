@@ -14,17 +14,17 @@ type Proof []*Node
 
 const trieRadix = 256 // base of the merkle trie. TODO change to 16
 
-var zeroValue = make([]byte, 0)
-var zeroValueHash = hash.CalcSha256(zeroValue)
+func getZeroValueHash() primitives.Sha256 {
+	return hash.CalcSha256([]byte{})
+}
+
+var zeroValueHash = getZeroValueHash()
 
 type Node struct {
 	path     string // TODO replace with []byte + parity bool when moving to trieRadix = 16
 	value    primitives.Sha256
 	branches [trieRadix]primitives.MerkleSha256
 }
-
-var emptyNode = &Node{value: zeroValueHash}
-var emptyNodeHash = emptyNode.hash()
 
 func createNode(path string, valueHash primitives.Sha256) *Node {
 	return &Node{
@@ -85,6 +85,9 @@ type Forest struct {
 }
 
 func NewForest() *Forest {
+	emptyNode := createNode("", zeroValueHash)
+	emptyNodeHash := emptyNode.hash()
+
 	return &Forest{
 		roots: map[TrieId]primitives.MerkleSha256{0: emptyNodeHash},
 		nodes: map[string]*Node{emptyNodeHash.KeyForMap(): emptyNode},
@@ -108,7 +111,7 @@ func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, s
 	f.nodes[childHash.KeyForMap()] = childNode
 }
 
-func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) TrieId {
+func (f *Forest) updateSingleEntry(path string, valueHash primitives.Sha256) TrieId {
 	currentRoot := f.nodes[f.roots[f.topRoot].KeyForMap()]
 	var newRoot *Node
 	if valueHash.Equal(zeroValueHash) {
@@ -217,7 +220,7 @@ func (f *Forest) Update(diffs []*protocol.ContractStateDiff) TrieId {
 		for i := diff.StateDiffsIterator(); i.HasNext(); {
 			record := i.NextStateDiffs()
 			path := contract + record.StringKey()
-			f.addSingleEntry(path, hash.CalcSha256([]byte(record.StringValue())))
+			f.updateSingleEntry(path, hash.CalcSha256([]byte(record.StringValue())))
 		}
 	}
 	return f.topRoot

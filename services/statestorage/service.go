@@ -96,7 +96,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		if ok {
 			records = append(records, record)
 		} else { // implicitly return the zero value if key is missing in db
-			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: []byte{}}).Build())
+			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: newZeroValue()}).Build())
 		}
 	}
 
@@ -129,4 +129,8 @@ func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.Get
 	output := &services.GetStateHashOutput{StateRootHash: value}
 
 	return output, nil
+}
+
+func newZeroValue() []byte {
+	return []byte{}
 }

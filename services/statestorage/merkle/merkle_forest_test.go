@@ -16,7 +16,7 @@ func updateStringEntries(f *Forest, keyValues ...string) TrieId {
 		panic("expected key value pairs")
 	}
 	for i := 0; i < len(keyValues); i = i + 2 {
-		f.addSingleEntry(keyValues[i], hash.CalcSha256([]byte(keyValues[i+1])))
+		f.updateSingleEntry(keyValues[i], hash.CalcSha256([]byte(keyValues[i+1])))
 	}
 	return f.topRoot
 }
@@ -356,7 +356,6 @@ func TestRemoveValue_MissingKey(t *testing.T) {
 //TODO - split branch and node leafs (this can be limited to serializeation only)
 //TODO - accept Node DB object
 //TODO - garbage collection
-//TODO - when setting zero values - compact - remove redundant nodes
 //TODO - avoid hashing values of less than 32 bytes
 //TODO - what hash functions should be used for values and what functions for node addresses?
 //TODO - in case save key length is enforced - accept a key length in the forest constructor
