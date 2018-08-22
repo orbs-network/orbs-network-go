@@ -16,8 +16,8 @@ type Config interface {
 	TransactionExpirationWindowInSeconds() time.Duration
 	FutureTimestampGraceInSeconds() time.Duration
 	VirtualChainId() primitives.VirtualChainId
-	QuerySyncGraceBlockDist() uint32
-	QueryGraceTimeoutMillis() time.Duration
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
 }
 
 type service struct {
@@ -48,7 +48,7 @@ func NewTransactionPool(gossip gossiptopics.TransactionRelay,
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
 		pendingPool:                 NewPendingPool(config),
 		committedPool:               NewCommittedPool(),
-		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
+		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
 	}
 	gossip.RegisterTransactionRelayHandler(s)
 	return s

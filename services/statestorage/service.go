@@ -14,9 +14,9 @@ import (
 )
 
 type Config interface {
-	StateHistoryRetentionInBlockHeights() uint32
-	QuerySyncGraceBlockDist() uint32
-	QueryGraceTimeoutMillis() time.Duration
+	StateStorageHistoryRetentionDistance() uint32
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
 }
 
 type service struct {
@@ -33,7 +33,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence) servic
 	return &service{
 		config:       config,
 		merkle:       merkle.NewForest(),
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), config.QueryGraceTimeoutMillis()),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
@@ -71,8 +71,8 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, fmt.Errorf("missing contract name")
 	}
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
 	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {

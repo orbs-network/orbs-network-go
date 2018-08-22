@@ -31,7 +31,7 @@ func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlo
 	}
 
 	cfg := config.EmptyConfig()
-	cfg.SetUint32(config.STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, numOfStateRevisionsToRetain)
+	cfg.SetUint32(config.STATE_STORAGE_HISTORY_RETENTION_DISTANCE, numOfStateRevisionsToRetain)
 	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, time.Duration(graceTimeoutMillis)*time.Millisecond)
 	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, graceBlockDiff)
 
