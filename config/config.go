@@ -24,7 +24,7 @@ type NodeConfig interface {
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 
 	// benchmark consensus
-	BenchmarkConsensusRoundRetryIntervalMillis() uint32
+	BenchmarkConsensusRoundRetryIntervalMillis() time.Duration
 
 	// block storage
 	BlockSyncCommitTimeoutMillis() time.Duration

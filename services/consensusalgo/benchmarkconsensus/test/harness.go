@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"os"
 	"testing"
+	"time"
 )
 
 const networkSize = 5
@@ -62,7 +63,7 @@ func newHarness(
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 	)
 
-	cfg.SetUint32(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, 5)
+	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, 5*time.Millisecond)
 
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 

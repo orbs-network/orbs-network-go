@@ -58,7 +58,7 @@ func newHardCodedConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillis uint32,
+	benchmarkConsensusRoundRetryIntervalMillis time.Duration,
 	minimumTransactionsInBlock uint32,
 	belowMinimalBlockDelayMillis uint32,
 	queryGraceTimeoutMillis uint64,
@@ -73,7 +73,7 @@ func newHardCodedConfig(
 	}
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetUint32(BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, benchmarkConsensusRoundRetryIntervalMillis)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, benchmarkConsensusRoundRetryIntervalMillis)
 
 	cfg.SetDuration(QUERY_GRACE_TIMEOUT_MILLIS, time.Duration(queryGraceTimeoutMillis)*time.Millisecond)
 	cfg.SetUint32(QUERY_SYNC_GRACE_BLOCK_DIST, 3)
@@ -129,8 +129,8 @@ func (c *config) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
 }
 
-func (c *config) BenchmarkConsensusRoundRetryIntervalMillis() uint32 {
-	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS].Uint32Value
+func (c *config) BenchmarkConsensusRoundRetryIntervalMillis() time.Duration {
+	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS].DurationValue
 
 }
 
