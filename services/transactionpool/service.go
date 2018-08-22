@@ -16,8 +16,8 @@ type Config interface {
 	TransactionExpirationWindowInSeconds() uint32
 	FutureTimestampGraceInSeconds() uint32
 	VirtualChainId() primitives.VirtualChainId
-	QuerySyncGraceBlockDist() uint16
-	QueryGraceTimeoutMillis() uint64
+	QuerySyncGraceBlockDist() uint32
+	QueryGraceTimeoutMillis() time.Duration
 }
 
 type service struct {

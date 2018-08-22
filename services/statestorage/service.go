@@ -14,9 +14,9 @@ import (
 )
 
 type Config interface {
-	StateHistoryRetentionInBlockHeights() uint16
-	QuerySyncGraceBlockDist() uint16
-	QueryGraceTimeoutMillis() uint64
+	StateHistoryRetentionInBlockHeights() uint32
+	QuerySyncGraceBlockDist() uint32
+	QueryGraceTimeoutMillis() time.Duration
 }
 
 type service struct {
@@ -33,7 +33,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence) servic
 	return &service{
 		config:       config,
 		merkle:       merkle.NewForest(),
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), config.QueryGraceTimeoutMillis()),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,

@@ -6,7 +6,7 @@ import (
 )
 
 type Config interface {
-	MinimumTransactionsInBlock() int
+	MinimumTransactionsInBlock() uint32
 	BelowMinimalBlockDelayMillis() uint32
 }
 

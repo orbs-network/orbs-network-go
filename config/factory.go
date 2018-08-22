@@ -12,7 +12,7 @@ func ForProduction(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis uint32,
-	minimumTransactionsInBlock int,
+	minimumTransactionsInBlock uint32,
 ) NodeConfig {
 
 	return newHardCodedConfig(

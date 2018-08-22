@@ -6,7 +6,7 @@ import (
 )
 
 func (s *service) fetchTransactions(maxNumberOfTransactions uint32,
-	minimumTransactionsInBlock int, belowMinimalBlockDelayMillis uint32) (*services.GetTransactionsForOrderingOutput, error) {
+	minimumTransactionsInBlock uint32, belowMinimalBlockDelayMillis uint32) (*services.GetTransactionsForOrderingOutput, error) {
 
 	input := &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumberOfTransactions,
@@ -16,7 +16,7 @@ func (s *service) fetchTransactions(maxNumberOfTransactions uint32,
 	if err != nil {
 		return nil, err
 	}
-	txCount := len(proposedTransactions.SignedTransactions)
+	txCount := uint32(len(proposedTransactions.SignedTransactions))
 	if txCount >= minimumTransactionsInBlock {
 		return proposedTransactions, nil
 	}

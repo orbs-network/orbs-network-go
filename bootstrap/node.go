@@ -36,7 +36,7 @@ func NewNode(
 	logger log.BasicLogger,
 	transport gossipAdapter.Transport,
 	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
-	minimumTransactionsInBlock int,
+	minimumTransactionsInBlock uint32,
 ) Node {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())

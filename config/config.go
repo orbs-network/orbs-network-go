@@ -11,7 +11,7 @@ type NodeConfig interface {
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
-	QueryGraceTimeoutMillis() uint64
+	QueryGraceTimeoutMillis() time.Duration
 
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
@@ -27,12 +27,12 @@ type NodeConfig interface {
 	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
 
 	// state storage
-	StateHistoryRetentionInBlockHeights() uint16
-	QuerySyncGraceBlockDist() uint16
+	StateHistoryRetentionInBlockHeights() uint32
+	QuerySyncGraceBlockDist() uint32
 
 	// consensus context
 	BelowMinimalBlockDelayMillis() uint32
-	MinimumTransactionsInBlock() int
+	MinimumTransactionsInBlock() uint32
 
 	// transaction pool
 	PendingPoolSizeInBytes() uint32
