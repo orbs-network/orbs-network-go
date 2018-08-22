@@ -12,7 +12,7 @@ type BlockTracker struct {
 	timeout       time.Duration
 
 	mutex         sync.RWMutex
-	currentHeight uint64 // this is not primitves.BlockHeight so as to avoid unnecessary casts
+	currentHeight uint64 // this is not primitives.BlockHeight so as to avoid unnecessary casts
 	latch         chan struct{}
 
 	// following fields are for tests only

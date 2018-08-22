@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"os"
 	"time"
 )
 
@@ -36,8 +38,9 @@ func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlo
 	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, graceBlockDiff)
 
 	p := adapter.NewInMemoryStatePersistence()
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
-	return &driver{service: statestorage.NewStateStorage(cfg, p)}
+	return &driver{service: statestorage.NewStateStorage(cfg, p, logger)}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
