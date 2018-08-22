@@ -14,7 +14,7 @@ type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	PendingPoolSizeInBytes() uint32
 	TransactionExpirationWindowInSeconds() time.Duration
-	FutureTimestampGraceInSeconds() uint32
+	FutureTimestampGraceInSeconds() time.Duration
 	VirtualChainId() primitives.VirtualChainId
 	QuerySyncGraceBlockDist() uint32
 	QueryGraceTimeoutMillis() time.Duration
@@ -81,7 +81,7 @@ func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
 		expiryWindow:                s.config.TransactionExpirationWindowInSeconds(),
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
-		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
+		futureTimestampGrace:        s.config.FutureTimestampGraceInSeconds(),
 		virtualChainId:              s.config.VirtualChainId(),
 	}
 }

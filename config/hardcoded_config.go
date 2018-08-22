@@ -92,7 +92,7 @@ func newHardCodedConfig(
 
 	cfg.SetUint32(PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
 	cfg.SetDuration(TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, 1800*time.Second)
-	cfg.SetUint32(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, 180)
+	cfg.SetDuration(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, 180*time.Second)
 
 	return cfg
 }
@@ -177,8 +177,8 @@ func (c *config) TransactionExpirationWindowInSeconds() time.Duration {
 	return c.kv[TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS].DurationValue
 }
 
-func (c *config) FutureTimestampGraceInSeconds() uint32 {
-	return c.kv[FUTURE_TIMESTAMP_GRACE_IN_SECONDS].Uint32Value
+func (c *config) FutureTimestampGraceInSeconds() time.Duration {
+	return c.kv[FUTURE_TIMESTAMP_GRACE_IN_SECONDS].DurationValue
 }
 
 func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
