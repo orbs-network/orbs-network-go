@@ -41,9 +41,9 @@ const (
 	BLOCK_TRACKER_GRACE_DISTANCE = "BLOCK_TRACKER_GRACE_DISTANCE"
 	BLOCK_TRACKER_GRACE_TIMEOUT  = "BLOCK_TRACKER_GRACE_TIMEOUT"
 
-	PENDING_POOL_SIZE_IN_BYTES               = "PENDING_POOL_SIZE_IN_BYTES"
-	TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS = "TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS"
-	FUTURE_TIMESTAMP_GRACE_IN_SECONDS        = "FUTURE_TIMESTAMP_GRACE_IN_SECONDS"
+	TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES     = "TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES"
+	TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW  = "TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW"
+	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -91,9 +91,9 @@ func newHardCodedConfig(
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
 
-	cfg.SetUint32(PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
-	cfg.SetDuration(TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, 1800*time.Second)
-	cfg.SetDuration(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, 180*time.Second)
+	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
+	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 1800*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
 
 	return cfg
 }
@@ -170,16 +170,16 @@ func (c *config) BlockTrackerGraceTimeout() time.Duration {
 	return c.kv[BLOCK_TRACKER_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *config) PendingPoolSizeInBytes() uint32 {
-	return c.kv[PENDING_POOL_SIZE_IN_BYTES].Uint32Value
+func (c *config) TransactionPoolPendingPoolSizeInBytes() uint32 {
+	return c.kv[TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES].Uint32Value
 }
 
-func (c *config) TransactionExpirationWindowInSeconds() time.Duration {
-	return c.kv[TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS].DurationValue
+func (c *config) TransactionPoolTransactionExpirationWindow() time.Duration {
+	return c.kv[TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW].DurationValue
 }
 
-func (c *config) FutureTimestampGraceInSeconds() time.Duration {
-	return c.kv[FUTURE_TIMESTAMP_GRACE_IN_SECONDS].DurationValue
+func (c *config) TransactionPoolFutureTimestampGraceTimeout() time.Duration {
+	return c.kv[TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT].DurationValue
 }
 
 func (c *config) Set(key string, value NodeConfigValue) NodeConfig {

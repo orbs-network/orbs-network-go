@@ -12,12 +12,12 @@ import (
 
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
-	PendingPoolSizeInBytes() uint32
-	TransactionExpirationWindowInSeconds() time.Duration
-	FutureTimestampGraceInSeconds() time.Duration
 	VirtualChainId() primitives.VirtualChainId
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
+	TransactionPoolPendingPoolSizeInBytes() uint32
+	TransactionPoolTransactionExpirationWindow() time.Duration
+	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 }
 
 type service struct {
@@ -79,9 +79,9 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
-		expiryWindow:                s.config.TransactionExpirationWindowInSeconds(),
+		expiryWindow:                s.config.TransactionPoolTransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
-		futureTimestampGrace:        s.config.FutureTimestampGraceInSeconds(),
+		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:              s.config.VirtualChainId(),
 	}
 }

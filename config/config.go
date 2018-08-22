@@ -13,6 +13,7 @@ type NodeConfig interface {
 	// TODO do we even need it
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 
+	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
@@ -43,10 +44,9 @@ type NodeConfig interface {
 	ConsensusContextMinimumTransactionsInBlock() uint32
 
 	// transaction pool
-	PendingPoolSizeInBytes() uint32
-	TransactionExpirationWindowInSeconds() time.Duration
-	FutureTimestampGraceInSeconds() time.Duration
-	VirtualChainId() primitives.VirtualChainId
+	TransactionPoolPendingPoolSizeInBytes() uint32
+	TransactionPoolTransactionExpirationWindow() time.Duration
+	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 }
 
 type FederationNode interface {

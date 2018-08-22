@@ -44,7 +44,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	defer p.lock.Unlock()
 	size := sizeOf(transaction)
 
-	if p.currentSizeInBytes+size > p.config.PendingPoolSizeInBytes() {
+	if p.currentSizeInBytes+size > p.config.TransactionPoolPendingPoolSizeInBytes() {
 		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_CONGESTION}
 	}
 
