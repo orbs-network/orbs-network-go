@@ -59,6 +59,31 @@ func TestSimpleLogger(t *testing.T) {
 	Expect(jsonMap["timestamp"]).NotTo(BeNil())
 }
 
+func TestCompareLogger(t *testing.T) {
+	RegisterTestingT(t)
+
+	stdout := captureStdout(func(writer io.Writer) {
+		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
+		serviceLogger.LogFailedExpectation("Service initialized compare",log.BlockHeight(primitives.BlockHeight(9999)),log.BlockHeight(primitives.BlockHeight(8888)),log.Bytes("bytes", []byte{2, 3, 99}))
+	})
+
+	fmt.Println(stdout)
+	jsonMap := parseOutput(stdout)
+
+	Expect(jsonMap["level"]).To(Equal("expectation"))
+	Expect(jsonMap["node"]).To(Equal("node1"))
+	Expect(jsonMap["service"]).To(Equal("public-api"))
+	Expect(jsonMap["function"]).To(Equal("log_test.TestCompareLogger.func1"))
+	Expect(jsonMap["message"]).To(Equal("Service initialized compare"))
+	Expect(jsonMap["source"]).NotTo(BeEmpty())
+	Expect(jsonMap["timestamp"]).NotTo(BeNil())
+	Expect(jsonMap["bytes"]).To(Equal("Z0Rw"))
+	Expect(jsonMap["actual-block-height"]).To(Equal("22b8"))
+	Expect(jsonMap["expected-block-height"]).To(Equal("270f"))
+
+
+}
+
 func TestNestedLogger(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -197,6 +222,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("log/basic_logger_test.go"))
 	Expect(stdout).To(ContainSubstring("_test-id=hello"))
 	Expect(stdout).To(ContainSubstring("_underscore=wow"))
+
 }
 
 func TestMultipleOutputs(t *testing.T) {
