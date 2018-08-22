@@ -12,7 +12,7 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 
 	// TODO extract to config
 	var maxNumberOfTransactions uint32 = 1
-	proposedTransactions, err := s.fetchTransactions(maxNumberOfTransactions, s.config.MinimumTransactionsInBlock(), s.config.BelowMinimalBlockDelayMillis())
+	proposedTransactions, err := s.fetchTransactions(maxNumberOfTransactions, s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
 	if err != nil {
 		return nil, err
 	}

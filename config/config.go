@@ -30,15 +30,15 @@ type NodeConfig interface {
 	BlockSyncCommitTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
-	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
+	BlockTransactionReceiptQueryExpirationWindow() time.Duration
 
 	// state storage
 	StateHistoryRetentionInBlockHeights() uint32
 	QuerySyncGraceBlockDist() uint32
 
 	// consensus context
-	BelowMinimalBlockDelayMillis() time.Duration
-	MinimumTransactionsInBlock() uint32
+	ConsensusContextMinimalBlockDelay() time.Duration
+	ConsensusContextMinimumTransactionsInBlock() uint32
 
 	// transaction pool
 	PendingPoolSizeInBytes() uint32

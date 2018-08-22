@@ -65,8 +65,8 @@ func newHarness() *harness {
 	transactionPool := &services.MockTransactionPool{}
 
 	cfg := config.EmptyConfig()
-	cfg.SetDuration(config.BELOW_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
-	cfg.SetUint32(config.MINIMUM_TRANSACTION_IN_BLOCK, 2)
+	cfg.SetDuration(config.CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
+	cfg.SetUint32(config.CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 2)
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
 		cfg, log)

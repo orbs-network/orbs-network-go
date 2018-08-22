@@ -33,8 +33,9 @@ const (
 	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
 	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
 
-	BELOW_MINIMAL_BLOCK_DELAY                = "BELOW_MINIMAL_BLOCK_DELAY"
-	MINIMUM_TRANSACTION_IN_BLOCK             = "MINIMUM_TRANSACTION_IN_BLOCK"
+	CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY          = "CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY"
+	CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK = "CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK"
+
 	STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS = "STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS"
 
 	BLOCK_TRACKER_GRACE_DISTANCE = "BLOCK_TRACKER_GRACE_DISTANCE"
@@ -85,8 +86,8 @@ func newHardCodedConfig(
 
 	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
 
-	cfg.SetDuration(BELOW_MINIMAL_BLOCK_DELAY, belowMinimalBlockDelayMillis)
-	cfg.SetUint32(MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, belowMinimalBlockDelayMillis)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
 
 	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
 
@@ -144,16 +145,16 @@ func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {
 func (c *config) BlockTransactionReceiptQueryGraceEnd() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END].DurationValue
 }
-func (c *config) BlockTransactionReceiptQueryTransactionExpireSec() time.Duration {
+func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
 }
 
-func (c *config) BelowMinimalBlockDelayMillis() time.Duration {
-	return c.kv[BELOW_MINIMAL_BLOCK_DELAY].DurationValue
+func (c *config) ConsensusContextMinimalBlockDelay() time.Duration {
+	return c.kv[CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY].DurationValue
 }
 
-func (c *config) MinimumTransactionsInBlock() uint32 {
-	return c.kv[MINIMUM_TRANSACTION_IN_BLOCK].Uint32Value
+func (c *config) ConsensusContextMinimumTransactionsInBlock() uint32 {
+	return c.kv[CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK].Uint32Value
 }
 
 func (c *config) StateHistoryRetentionInBlockHeights() uint32 {

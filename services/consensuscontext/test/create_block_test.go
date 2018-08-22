@@ -8,7 +8,7 @@ import (
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 
 	h := newHarness()
-	txCount := h.config.MinimumTransactionsInBlock() + 1
+	txCount := h.config.ConsensusContextMinimumTransactionsInBlock() + 1
 
 	h.expectTransactionsRequestedFromTransactionPool(txCount)
 
@@ -27,11 +27,11 @@ func TestRetryWhenNotEnoughTransactionsPendingOnTransactionPool(t *testing.T) {
 
 	h := newHarness()
 
-	if h.config.MinimumTransactionsInBlock() <= 1 {
-		t.Errorf("must set MinimumTransactionsInBlock > 1 in test config, now it is %v", h.config.MinimumTransactionsInBlock())
+	if h.config.ConsensusContextMinimumTransactionsInBlock() <= 1 {
+		t.Errorf("must set ConsensusContextMinimumTransactionsInBlock > 1 in test config, now it is %v", h.config.ConsensusContextMinimumTransactionsInBlock())
 	}
 
-	txCount := h.config.MinimumTransactionsInBlock() - 1
+	txCount := h.config.ConsensusContextMinimumTransactionsInBlock() - 1
 
 	h.expectTransactionsRequestedFromTransactionPool(0)
 	h.expectTransactionsRequestedFromTransactionPool(txCount)

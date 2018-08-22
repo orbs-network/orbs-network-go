@@ -7,8 +7,8 @@ import (
 )
 
 type Config interface {
-	MinimumTransactionsInBlock() uint32
-	BelowMinimalBlockDelayMillis() time.Duration
+	ConsensusContextMinimumTransactionsInBlock() uint32
+	ConsensusContextMinimalBlockDelay() time.Duration
 }
 
 type service struct {

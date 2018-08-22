@@ -19,7 +19,7 @@ type Config interface {
 	BlockSyncCommitTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
-	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
+	BlockTransactionReceiptQueryExpirationWindow() time.Duration
 }
 
 const (
@@ -163,7 +163,7 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 	searchRules := adapter.BlockSearchRules{
 		EndGraceNano:          s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds(),
 		StartGraceNano:        s.config.BlockTransactionReceiptQueryGraceStart().Nanoseconds(),
-		TransactionExpireNano: s.config.BlockTransactionReceiptQueryTransactionExpireSec().Nanoseconds(),
+		TransactionExpireNano: s.config.BlockTransactionReceiptQueryExpirationWindow().Nanoseconds(),
 	}
 	blocksToSearch := s.persistence.GetReceiptRelevantBlocks(input.TransactionTimestamp, searchRules)
 	if blocksToSearch == nil {
