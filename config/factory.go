@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"time"
 )
 
 func ForProduction(
@@ -21,8 +22,8 @@ func ForProduction(
 		activeConsensusAlgo,
 		2000,
 		1,
-		20, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
-		100)
+		20*time.Millisecond, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
+		100*time.Millisecond)
 
 }
 
@@ -42,8 +43,8 @@ func ForAcceptanceTests(
 		activeConsensusAlgo,
 		1,
 		1,
-		1,
-		1)
+		1*time.Millisecond,
+		1*time.Millisecond)
 }
 
 func EmptyConfig() NodeConfig {

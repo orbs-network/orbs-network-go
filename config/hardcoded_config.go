@@ -61,7 +61,7 @@ func newHardCodedConfig(
 	benchmarkConsensusRoundRetryIntervalMillis time.Duration,
 	minimumTransactionsInBlock uint32,
 	belowMinimalBlockDelayMillis time.Duration,
-	queryGraceTimeoutMillis uint64,
+	queryGraceTimeoutMillis time.Duration,
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
@@ -75,7 +75,7 @@ func newHardCodedConfig(
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, benchmarkConsensusRoundRetryIntervalMillis)
 
-	cfg.SetDuration(QUERY_GRACE_TIMEOUT_MILLIS, time.Duration(queryGraceTimeoutMillis)*time.Millisecond)
+	cfg.SetDuration(QUERY_GRACE_TIMEOUT_MILLIS, queryGraceTimeoutMillis)
 	cfg.SetUint32(QUERY_SYNC_GRACE_BLOCK_DIST, 3)
 
 	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS, 70*time.Millisecond)
