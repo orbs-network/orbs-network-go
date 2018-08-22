@@ -14,14 +14,6 @@ type identity struct {
 	virtualChainId primitives.VirtualChainId
 }
 
-type consensusConfig struct {
-	*identity
-	federationNodes                            map[string]FederationNode
-	constantConsensusLeader                    primitives.Ed25519PublicKey
-	activeConsensusAlgo                        consensus.ConsensusAlgoType
-	benchmarkConsensusRoundRetryIntervalMillis uint32
-}
-
 type crossServiceConfig struct {
 	queryGraceTimeoutMillis uint64
 	querySyncGraceBlockDist uint16
@@ -136,28 +128,6 @@ func newHardCodedConfig(
 	cfg.Set(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, NodeConfigValue{Uint32Value: 180})
 
 	return cfg
-}
-
-func NewConsensusConfig(
-	federationNodes map[string]FederationNode,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey,
-	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillis uint32,
-) *consensusConfig {
-
-	return &consensusConfig{
-		identity: &identity{
-			nodePublicKey:  nodePublicKey,
-			nodePrivateKey: nodePrivateKey,
-			virtualChainId: 42,
-		},
-		federationNodes:                            federationNodes,
-		constantConsensusLeader:                    constantConsensusLeader,
-		activeConsensusAlgo:                        activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
-	}
 }
 
 func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {

@@ -54,14 +54,15 @@ func newHarness(
 		nodeKeyPair = nonLeaderKeyPair()
 	}
 
-	config := config.NewConsensusConfig(
+	cfg := config.ForAcceptanceTests(
 		federationNodes,
 		nodeKeyPair.PublicKey(),
 		nodeKeyPair.PrivateKey(),
 		leaderKeyPair().PublicKey(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-		5,
 	)
+
+	cfg.Set(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, config.NodeConfigValue{Uint32Value: 5})
 
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
@@ -78,7 +79,7 @@ func newHarness(
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
 		reporting:        log,
-		config:           config,
+		config:           cfg,
 		service:          nil,
 	}
 }
