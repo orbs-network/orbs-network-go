@@ -29,7 +29,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			s.reporting.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
 			continue
-		case <-time.After(s.config.BenchmarkConsensusRoundRetryIntervalMillis()):
+		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
 			s.reporting.Info("consensus round waking up after retry timeout")
 			continue
 		}

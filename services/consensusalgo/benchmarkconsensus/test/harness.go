@@ -63,7 +63,7 @@ func newHarness(
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 	)
 
-	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, 5*time.Millisecond)
+	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
 
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 

@@ -61,10 +61,10 @@ func NewDriver() *driver {
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
 
 	cfg := config.EmptyConfig()
-	cfg.SetDuration(config.BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS, 70*time.Millisecond)
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC, 5*time.Second)
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC, 5*time.Second)
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC, 30*time.Minute)
+	cfg.SetDuration(config.BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
+	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
+	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
+	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
 
 	d.blockStorage = blockstorage.NewBlockStorage(cfg, d.storageAdapter, d.stateStorage, log.GetLogger())
 

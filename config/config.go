@@ -24,12 +24,12 @@ type NodeConfig interface {
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 
 	// benchmark consensus
-	BenchmarkConsensusRoundRetryIntervalMillis() time.Duration
+	BenchmarkConsensusRetryInterval() time.Duration
 
 	// block storage
-	BlockSyncCommitTimeoutMillis() time.Duration
-	BlockTransactionReceiptQueryStartGraceSec() time.Duration
-	BlockTransactionReceiptQueryEndGraceSec() time.Duration
+	BlockSyncCommitTimeout() time.Duration
+	BlockTransactionReceiptQueryGraceStart() time.Duration
+	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
 
 	// state storage

@@ -122,8 +122,8 @@ func getConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, k
 	cfg.SetDuration(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, transactionExpirationInSeconds)
 
 	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(config.QUERY_GRACE_TIMEOUT_MILLIS, 100*time.Millisecond)
-	cfg.SetUint32(config.QUERY_SYNC_GRACE_BLOCK_DIST, 5)
+	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
+	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, 5)
 	cfg.SetDuration(config.FUTURE_TIMESTAMP_GRACE_IN_SECONDS, 180*time.Second)
 
 	return cfg

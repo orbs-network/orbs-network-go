@@ -25,20 +25,20 @@ type config struct {
 }
 
 const (
-	VIRTUAL_CHAIN_ID                          = "VIRTUAL_CHAIN_ID"
-	BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS = "BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS"
+	VIRTUAL_CHAIN_ID                   = "VIRTUAL_CHAIN_ID"
+	BENCHMARK_CONSENSUS_RETRY_INTERVAL = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 
-	BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS                       = "BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS"
-	BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC        = "BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC"
-	BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC          = "BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC"
-	BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC = "BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC"
+	BLOCK_SYNC_COMMIT_TIMEOUT                         = "BLOCK_SYNC_COMMIT_TIMEOUT"
+	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START       = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START"
+	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
+	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
 
-	BELOW_MINIMAL_BLOCK_DELAY_MILLIS         = "BELOW_MINIMAL_BLOCK_DELAY_MILLIS"
+	BELOW_MINIMAL_BLOCK_DELAY                = "BELOW_MINIMAL_BLOCK_DELAY"
 	MINIMUM_TRANSACTION_IN_BLOCK             = "MINIMUM_TRANSACTION_IN_BLOCK"
 	STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS = "STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS"
 
-	QUERY_SYNC_GRACE_BLOCK_DIST = "QUERY_SYNC_GRACE_BLOCK_DIST"
-	QUERY_GRACE_TIMEOUT_MILLIS  = "QUERY_GRACE_TIMEOUT_MILLIS"
+	BLOCK_TRACKER_GRACE_DISTANCE = "BLOCK_TRACKER_GRACE_DISTANCE"
+	BLOCK_TRACKER_GRACE_TIMEOUT  = "BLOCK_TRACKER_GRACE_TIMEOUT"
 
 	PENDING_POOL_SIZE_IN_BYTES               = "PENDING_POOL_SIZE_IN_BYTES"
 	TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS = "TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS"
@@ -73,19 +73,19 @@ func newHardCodedConfig(
 	}
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, benchmarkConsensusRoundRetryIntervalMillis)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, benchmarkConsensusRoundRetryIntervalMillis)
 
-	cfg.SetDuration(QUERY_GRACE_TIMEOUT_MILLIS, queryGraceTimeoutMillis)
-	cfg.SetUint32(QUERY_SYNC_GRACE_BLOCK_DIST, 3)
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, queryGraceTimeoutMillis)
+	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 
-	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS, 70*time.Millisecond)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC, 180*time.Second)
+	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 180*time.Second)
 
 	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
 
-	cfg.SetDuration(BELOW_MINIMAL_BLOCK_DELAY_MILLIS, belowMinimalBlockDelayMillis)
+	cfg.SetDuration(BELOW_MINIMAL_BLOCK_DELAY, belowMinimalBlockDelayMillis)
 	cfg.SetUint32(MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
 
 	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
@@ -129,27 +129,27 @@ func (c *config) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
 }
 
-func (c *config) BenchmarkConsensusRoundRetryIntervalMillis() time.Duration {
-	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS].DurationValue
+func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
+	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL].DurationValue
 
 }
 
-func (c *config) BlockSyncCommitTimeoutMillis() time.Duration {
-	return c.kv[BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS].DurationValue
+func (c *config) BlockSyncCommitTimeout() time.Duration {
+	return c.kv[BLOCK_SYNC_COMMIT_TIMEOUT].DurationValue
 }
 
-func (c *config) BlockTransactionReceiptQueryStartGraceSec() time.Duration {
-	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC].DurationValue
+func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {
+	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START].DurationValue
 }
-func (c *config) BlockTransactionReceiptQueryEndGraceSec() time.Duration {
-	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC].DurationValue
+func (c *config) BlockTransactionReceiptQueryGraceEnd() time.Duration {
+	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END].DurationValue
 }
 func (c *config) BlockTransactionReceiptQueryTransactionExpireSec() time.Duration {
-	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC].DurationValue
+	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
 }
 
 func (c *config) BelowMinimalBlockDelayMillis() time.Duration {
-	return c.kv[BELOW_MINIMAL_BLOCK_DELAY_MILLIS].DurationValue
+	return c.kv[BELOW_MINIMAL_BLOCK_DELAY].DurationValue
 }
 
 func (c *config) MinimumTransactionsInBlock() uint32 {
@@ -161,12 +161,12 @@ func (c *config) StateHistoryRetentionInBlockHeights() uint32 {
 }
 
 func (c *config) QuerySyncGraceBlockDist() uint32 {
-	return c.kv[QUERY_SYNC_GRACE_BLOCK_DIST].Uint32Value
+	return c.kv[BLOCK_TRACKER_GRACE_DISTANCE].Uint32Value
 
 }
 
 func (c *config) QueryGraceTimeoutMillis() time.Duration {
-	return c.kv[QUERY_GRACE_TIMEOUT_MILLIS].DurationValue
+	return c.kv[BLOCK_TRACKER_GRACE_TIMEOUT].DurationValue
 }
 
 func (c *config) PendingPoolSizeInBytes() uint32 {
