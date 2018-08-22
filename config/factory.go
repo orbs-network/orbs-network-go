@@ -11,8 +11,6 @@ func ForProduction(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillis uint32,
-	minimumTransactionsInBlock uint32,
 ) NodeConfig {
 
 	return newHardCodedConfig(
@@ -21,8 +19,8 @@ func ForProduction(
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillis,
-		minimumTransactionsInBlock,
+		2000,
+		1,
 		20, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
 		100)
 
