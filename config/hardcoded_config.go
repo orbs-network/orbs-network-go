@@ -91,7 +91,7 @@ func newHardCodedConfig(
 	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
 
 	cfg.SetUint32(PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
-	cfg.SetUint32(TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, 1800)
+	cfg.SetDuration(TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, 1800*time.Second)
 	cfg.SetUint32(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, 180)
 
 	return cfg
@@ -173,8 +173,8 @@ func (c *config) PendingPoolSizeInBytes() uint32 {
 	return c.kv[PENDING_POOL_SIZE_IN_BYTES].Uint32Value
 }
 
-func (c *config) TransactionExpirationWindowInSeconds() uint32 {
-	return c.kv[TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS].Uint32Value
+func (c *config) TransactionExpirationWindowInSeconds() time.Duration {
+	return c.kv[TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS].DurationValue
 }
 
 func (c *config) FutureTimestampGraceInSeconds() uint32 {

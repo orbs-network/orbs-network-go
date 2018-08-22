@@ -13,7 +13,7 @@ import (
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	PendingPoolSizeInBytes() uint32
-	TransactionExpirationWindowInSeconds() uint32
+	TransactionExpirationWindowInSeconds() time.Duration
 	FutureTimestampGraceInSeconds() uint32
 	VirtualChainId() primitives.VirtualChainId
 	QuerySyncGraceBlockDist() uint32
@@ -79,7 +79,7 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
-		expiryWindow:                time.Duration(s.config.TransactionExpirationWindowInSeconds()) * time.Second,
+		expiryWindow:                s.config.TransactionExpirationWindowInSeconds(),
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
 		futureTimestampGrace:        time.Duration(s.config.FutureTimestampGraceInSeconds()) * time.Second,
 		virtualChainId:              s.config.VirtualChainId(),

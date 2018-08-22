@@ -27,7 +27,7 @@ type harness struct {
 
 var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
 var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
-var transactionExpirationWindowInSeconds = uint32(1800)
+var transactionExpirationWindowInSeconds = 1800 * time.Second
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
 
@@ -162,13 +162,13 @@ func newHarness() *harness {
 }
 
 // FIXME unify with pending_transactios_pool_test.go
-func getConfig(sizeLimit uint32, transactionExpirationInSeconds uint32, key primitives.Ed25519PublicKey) transactionpool.Config {
+func getConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, key primitives.Ed25519PublicKey) transactionpool.Config {
 	cfg := config.EmptyConfig()
 
 	cfg.SetNodePublicKey(key)
 
 	cfg.SetUint32(config.PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
-	cfg.SetUint32(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, transactionExpirationInSeconds)
+	cfg.SetDuration(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, transactionExpirationInSeconds)
 
 	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
 	cfg.SetDuration(config.QUERY_GRACE_TIMEOUT_MILLIS, 100*time.Millisecond)

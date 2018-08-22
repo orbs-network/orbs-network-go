@@ -42,7 +42,7 @@ type NodeConfig interface {
 
 	// transaction pool
 	PendingPoolSizeInBytes() uint32
-	TransactionExpirationWindowInSeconds() uint32
+	TransactionExpirationWindowInSeconds() time.Duration
 	FutureTimestampGraceInSeconds() uint32
 	VirtualChainId() primitives.VirtualChainId
 }

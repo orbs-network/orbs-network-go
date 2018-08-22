@@ -12,7 +12,7 @@ import (
 )
 
 var pk = keys.Ed25519KeyPairForTests(8).PublicKey()
-var transactionExpirationInSeconds = uint32(1800)
+var transactionExpirationInSeconds = 1800 * time.Second
 
 func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
 	t.Parallel()
@@ -113,13 +113,13 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	}
 }
 
-func getConfig(sizeLimit uint32, transactionExpirationInSeconds uint32, key primitives.Ed25519PublicKey) Config {
+func getConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, key primitives.Ed25519PublicKey) Config {
 	cfg := config.EmptyConfig()
 
 	cfg.SetNodePublicKey(key)
 
 	cfg.SetUint32(config.PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
-	cfg.SetUint32(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, transactionExpirationInSeconds)
+	cfg.SetDuration(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, transactionExpirationInSeconds)
 
 	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
 	cfg.SetDuration(config.QUERY_GRACE_TIMEOUT_MILLIS, 100*time.Millisecond)
