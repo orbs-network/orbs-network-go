@@ -37,7 +37,7 @@ type NodeConfig interface {
 	QuerySyncGraceBlockDist() uint32
 
 	// consensus context
-	BelowMinimalBlockDelayMillis() uint32
+	BelowMinimalBlockDelayMillis() time.Duration
 	MinimumTransactionsInBlock() uint32
 
 	// transaction pool

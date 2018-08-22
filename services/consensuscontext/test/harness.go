@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+	"time"
 )
 
 type harness struct {
@@ -64,7 +65,7 @@ func newHarness() *harness {
 	transactionPool := &services.MockTransactionPool{}
 
 	cfg := config.EmptyConfig()
-	cfg.SetUint32(config.BELOW_MINIMAL_BLOCK_DELAY_MILLIS, 300)
+	cfg.SetDuration(config.BELOW_MINIMAL_BLOCK_DELAY_MILLIS, 1*time.Millisecond)
 	cfg.SetUint32(config.MINIMUM_TRANSACTION_IN_BLOCK, 2)
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,

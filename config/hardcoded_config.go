@@ -60,7 +60,7 @@ func newHardCodedConfig(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	benchmarkConsensusRoundRetryIntervalMillis time.Duration,
 	minimumTransactionsInBlock uint32,
-	belowMinimalBlockDelayMillis uint32,
+	belowMinimalBlockDelayMillis time.Duration,
 	queryGraceTimeoutMillis uint64,
 ) NodeConfig {
 	cfg := &config{
@@ -85,7 +85,7 @@ func newHardCodedConfig(
 
 	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
 
-	cfg.SetUint32(BELOW_MINIMAL_BLOCK_DELAY_MILLIS, belowMinimalBlockDelayMillis)
+	cfg.SetDuration(BELOW_MINIMAL_BLOCK_DELAY_MILLIS, belowMinimalBlockDelayMillis)
 	cfg.SetUint32(MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
 
 	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
@@ -148,8 +148,8 @@ func (c *config) BlockTransactionReceiptQueryTransactionExpireSec() time.Duratio
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC].DurationValue
 }
 
-func (c *config) BelowMinimalBlockDelayMillis() uint32 {
-	return c.kv[BELOW_MINIMAL_BLOCK_DELAY_MILLIS].Uint32Value
+func (c *config) BelowMinimalBlockDelayMillis() time.Duration {
+	return c.kv[BELOW_MINIMAL_BLOCK_DELAY_MILLIS].DurationValue
 }
 
 func (c *config) MinimumTransactionsInBlock() uint32 {
