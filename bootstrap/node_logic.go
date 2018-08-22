@@ -42,7 +42,7 @@ func NewNodeLogic(
 ) NodeLogic {
 
 	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
-	stateStorage := statestorage.NewStateStorage(nodeConfig, statePersistence)
+	stateStorage := statestorage.NewStateStorage(nodeConfig, statePersistence, reporting)
 	blockStorage := blockstorage.NewBlockStorage(nodeConfig, blockPersistence, stateStorage, reporting)
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
