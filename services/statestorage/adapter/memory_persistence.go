@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -49,6 +50,12 @@ func (sp *InMemoryStatePersistence) writeOneContract(height primitives.BlockHeig
 	if _, ok := sp.snapshots[height][contract]; !ok {
 		sp.snapshots[height][contract] = map[string]*protocol.StateRecord{}
 	}
+
+	if isZeroValue(stateDiff.Value()) {
+		delete(sp.snapshots[height][contract], stateDiff.Key().KeyForMap())
+		return
+	}
+
 	sp.snapshots[height][contract][stateDiff.Key().KeyForMap()] = stateDiff
 }
 
@@ -69,20 +76,6 @@ func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.Bloc
 	}
 	return newStore
 }
-
-/*
-func (sp *InMemoryStatePersistence) clearOldStateDiffs(current) {
-	if nToRemove := uint64(len(sp.snapshots)) - sp.maxHistory; nToRemove > 0 {
-		currRemove := uint64(current) - sp.maxHistory
-		for ; nToRemove > 0 && currRemove > 0 ; {
-			if _, ok := sp.snapshots[primitives.BlockHeight(currRemove)]; ok {
-				delete(sp.snapshots, primitives.BlockHeight(currRemove))
-				nToRemove--
-			}
-		}
-	}
-}
-*/
 
 func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName) (map[string]*protocol.StateRecord, error) {
 	if stateAtHeight, ok := sp.snapshots[height]; ok {
@@ -136,4 +129,8 @@ func (sp *InMemoryStatePersistence) Dump() string {
 
 func (sp *InMemoryStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) error {
 	return sp.blockTrackerForTests.WaitForBlock(height)
+}
+
+func isZeroValue(value []byte) bool {
+	return bytes.Equal(value, []byte{})
 }

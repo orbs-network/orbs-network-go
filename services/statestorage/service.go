@@ -1,6 +1,7 @@
 package statestorage
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -10,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"sync"
 	"time"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 )
 
 type Config interface {
@@ -23,7 +23,7 @@ type service struct {
 	config       Config
 	merkle       *merkle.Forest
 	blockTracker *synchronization.BlockTracker
-	reporting 	log.BasicLogger
+	reporting    log.BasicLogger
 
 	mutex                    *sync.RWMutex
 	persistence              adapter.StatePersistence
@@ -35,7 +35,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence, report
 		config:       config,
 		merkle:       merkle.NewForest(),
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
-		reporting: reporting.For(log.Service("state-storage")),
+		reporting:    reporting.For(log.Service("state-storage")),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
@@ -74,16 +74,16 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, errors.Errorf("missing contract name")
 	}
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
-	}
-
 	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
+	}
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
 	if err != nil {
@@ -96,7 +96,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		if ok {
 			records = append(records, record)
 		} else { // implicitly return the zero value if key is missing in db
-			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: []byte{}}).Build())
+			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: newZeroValue()}).Build())
 		}
 	}
 
@@ -129,4 +129,8 @@ func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.Get
 	output := &services.GetStateHashOutput{StateRootHash: value}
 
 	return output, nil
+}
+
+func newZeroValue() []byte {
+	return []byte{}
 }

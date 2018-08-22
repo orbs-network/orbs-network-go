@@ -14,16 +14,17 @@ type Proof []*Node
 
 const trieRadix = 256 // base of the merkle trie. TODO change to 16
 
-var zeroValueHash = hash.CalcSha256([]byte{})
+func getZeroValueHash() primitives.Sha256 {
+	return hash.CalcSha256([]byte{})
+}
+
+var zeroValueHash = getZeroValueHash()
 
 type Node struct {
 	path     string // TODO replace with []byte + parity bool when moving to trieRadix = 16
 	value    primitives.Sha256
 	branches [trieRadix]primitives.MerkleSha256
 }
-
-var emptyNode = &Node{value: zeroValueHash}
-var emptyNodeHash = emptyNode.hash()
 
 func createNode(path string, valueHash primitives.Sha256) *Node {
 	return &Node{
@@ -53,13 +54,28 @@ func (n *Node) clone() *Node {
 	}
 	return result
 }
+
 func (n *Node) hasChildren() bool {
 	for _, v := range n.branches {
-		if len(v) != 0 {
+		if v != nil {
 			return true
 		}
 	}
 	return false
+}
+
+func (n *Node) getSingleChildSelector() *byte {
+	var singleChildSelector *byte
+	for i, v := range n.branches {
+		if v != nil {
+			if singleChildSelector != nil {
+				return nil
+			}
+			ib := byte(i)
+			singleChildSelector = &ib
+		}
+	}
+	return singleChildSelector
 }
 
 type Forest struct {
@@ -69,6 +85,9 @@ type Forest struct {
 }
 
 func NewForest() *Forest {
+	emptyNode := createNode("", zeroValueHash)
+	emptyNodeHash := emptyNode.hash()
+
 	return &Forest{
 		roots: map[TrieId]primitives.MerkleSha256{0: emptyNodeHash},
 		nodes: map[string]*Node{emptyNodeHash.KeyForMap(): emptyNode},
@@ -92,14 +111,59 @@ func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, s
 	f.nodes[childHash.KeyForMap()] = childNode
 }
 
-func (f *Forest) addSingleEntry(path string, valueHash primitives.Sha256) TrieId {
+func (f *Forest) updateSingleEntry(path string, valueHash primitives.Sha256) TrieId {
 	currentRoot := f.nodes[f.roots[f.topRoot].KeyForMap()]
-	newRoot := f.add(currentRoot, path, valueHash)
+	var newRoot *Node
+	if valueHash.Equal(zeroValueHash) {
+		newRoot = f.remove(currentRoot, path)
+	} else {
+		newRoot = f.add(currentRoot, path, valueHash)
+	}
 	sha256s := newRoot.hash()
 	f.nodes[sha256s.KeyForMap()] = newRoot
 	f.topRoot++
 	f.roots[f.topRoot] = sha256s
 	return f.topRoot
+}
+
+func (f *Forest) squash(n *Node) *Node {
+	if !n.hasValue() && !n.hasChildren() && n.path != "" { // no branch and no value - reset path
+		clone := n.clone()
+		clone.path = ""
+		return clone
+	}
+	if singleChildSelector := n.getSingleChildSelector(); singleChildSelector != nil && !n.hasValue() { // merge with single child
+		clone := f.nodes[n.branches[*singleChildSelector].KeyForMap()].clone()
+		clone.path = n.path + string([]byte{*singleChildSelector}) + clone.path
+		return clone
+	}
+	return n
+}
+
+func (f *Forest) remove(currentNode *Node, path string) *Node {
+	if currentNode.path == path { // reached node with value that is being zeroed
+		clone := currentNode.clone()
+		clone.value = zeroValueHash
+		clone = f.squash(clone)
+		return clone
+	}
+
+	if strings.HasPrefix(path, currentNode.path) {
+		clone := currentNode.clone()
+		branchSelector := path[len(currentNode.path)]
+		branchHash := clone.branches[branchSelector]
+		if branchHash != nil {
+			newChild := f.remove(f.nodes[branchHash.KeyForMap()], path[len(clone.path)+1:])
+			if !newChild.hasChildren() && !newChild.hasValue() {
+				clone.branches[branchSelector] = nil
+			} else {
+				f.connectChildToParentAndSaveChild(newChild, clone, branchSelector)
+			}
+			clone = f.squash(clone)
+		}
+		return clone
+	}
+	return currentNode
 }
 
 func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256) *Node {
@@ -118,7 +182,7 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 		branchSelector := path[len(currentNode.path)]
 		childPath := path[len(currentNode.path)+1:]
 		var newChild *Node
-		if branchHash := currentNode.branches[branchSelector]; len(branchHash) != 0 {
+		if branchHash := currentNode.branches[branchSelector]; branchHash != nil {
 			newChild = f.add(f.nodes[branchHash.KeyForMap()], childPath, valueHash)
 		} else {
 			newChild = createNode(childPath, valueHash)
@@ -156,18 +220,8 @@ func (f *Forest) Update(diffs []*protocol.ContractStateDiff) TrieId {
 		for i := diff.StateDiffsIterator(); i.HasNext(); {
 			record := i.NextStateDiffs()
 			path := contract + record.StringKey()
-			f.addSingleEntry(path, hash.CalcSha256([]byte(record.StringValue())))
+			f.updateSingleEntry(path, hash.CalcSha256([]byte(record.StringValue())))
 		}
-	}
-	return f.topRoot
-}
-
-func (f *Forest) updateStringEntries(keyValues ...string) TrieId {
-	if len(keyValues)%2 != 0 {
-		panic("expected key value pairs")
-	}
-	for i := 0; i < len(keyValues); i = i + 2 {
-		f.addSingleEntry(keyValues[i], hash.CalcSha256([]byte(keyValues[i+1])))
 	}
 	return f.topRoot
 }
@@ -183,7 +237,7 @@ func (f *Forest) GetProof(trieId TrieId, contract string, key string) (Proof, er
 	for p := fullPath; exists && strings.HasPrefix(p, currentNode.path); {
 		p = p[len(currentNode.path):]
 
-		if len(p) != 0 {
+		if p != "" {
 			currentNode, exists = f.nodes[currentNode.branches[p[0]].KeyForMap()]
 			if exists {
 				proof = append(proof, currentNode)
@@ -237,7 +291,7 @@ func determineValueHashByProof(proof Proof, path string, parentHash primitives.M
 	// follow branch: get the hash code of the next expected node for our key
 	nextHash := node.branches[path[len(node.path)]]
 
-	if len(nextHash) == 0 { // key is not in trie
+	if nextHash == nil { // key is not in trie
 		return zeroValueHash, nil
 	}
 
