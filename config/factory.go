@@ -41,7 +41,7 @@ func ForAcceptanceTests(
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
-		1,
+		1*time.Millisecond,
 		1,
 		1*time.Millisecond,
 		5*time.Millisecond)
