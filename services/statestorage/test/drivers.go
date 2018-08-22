@@ -9,6 +9,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"os"
 )
 
 type driver struct {
@@ -32,8 +34,9 @@ func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint16, graceBlo
 	conf := config.NewStateStorageConfig(numOfStateRevisionsToRetain, graceBlockDiff, graceTimeoutMillis)
 
 	p := adapter.NewInMemoryStatePersistence()
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
-	return &driver{service: statestorage.NewStateStorage(conf, p)}
+	return &driver{service: statestorage.NewStateStorage(conf, p, logger)}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
