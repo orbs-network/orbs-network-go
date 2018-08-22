@@ -16,7 +16,7 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 	if err != nil {
 		t.Fatal("request transactions block failed:", err)
 	}
-	if len(txBlock.SignedTransactions) != txCount {
+	if uint32(len(txBlock.SignedTransactions)) != txCount {
 		t.Fatalf("returned %d instead of %d", len(txBlock.SignedTransactions), txCount)
 	}
 
@@ -39,7 +39,7 @@ func TestRetryWhenNotEnoughTransactionsPendingOnTransactionPool(t *testing.T) {
 	txBlock, err := h.requestTransactionsBlock()
 	require.NoError(t, err, "request transactions block failed:", err)
 
-	if len(txBlock.SignedTransactions) != txCount {
+	if uint32(len(txBlock.SignedTransactions)) != txCount {
 		t.Fatalf("returned %d instead of %d", len(txBlock.SignedTransactions), txCount)
 	}
 

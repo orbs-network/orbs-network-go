@@ -34,13 +34,13 @@ func (h *harness) requestTransactionsBlock() (*protocol.TransactionsBlockContain
 	return output.TransactionsBlock, nil
 }
 
-func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactionsToReturn int) {
+func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactionsToReturn uint32) {
 
 	output := &services.GetTransactionsForOrderingOutput{
 		SignedTransactions: nil,
 	}
 
-	for i := 0; i < numTransactionsToReturn; i++ {
+	for i := uint32(0); i < numTransactionsToReturn; i++ {
 		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmount(uint64(i+1)*10).Build())
 	}
 
@@ -63,15 +63,17 @@ func newHarness() *harness {
 
 	transactionPool := &services.MockTransactionPool{}
 
-	serviceConfig := config.NewConsensusContextConfig(300, 2)
+	cfg := config.EmptyConfig()
+	cfg.Set(config.BELOW_MINIMAL_BLOCK_DELAY_MILLIS, config.NodeConfigValue{Uint32Value: 300})
+	cfg.Set(config.MINIMUM_TRANSACTION_IN_BLOCK, config.NodeConfigValue{Uint32Value: 2})
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
-		serviceConfig, log)
+		cfg, log)
 
 	return &harness{
 		transactionPool: transactionPool,
 		reporting:       log,
 		service:         service,
-		config:          serviceConfig,
+		config:          cfg,
 	}
 }

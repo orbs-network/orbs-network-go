@@ -19,11 +19,6 @@ type crossServiceConfig struct {
 	querySyncGraceBlockDist uint16
 }
 
-type consensusContextConfig struct {
-	belowMinimalBlockDelayMillis uint32
-	minimumTransactionsInBlock   int
-}
-
 type stateStorageConfig struct {
 	*crossServiceConfig
 	stateHistoryRetentionInBlockHeights uint16
@@ -128,13 +123,6 @@ func newHardCodedConfig(
 	cfg.Set(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, NodeConfigValue{Uint32Value: 180})
 
 	return cfg
-}
-
-func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {
-	return &consensusContextConfig{
-		belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
-		minimumTransactionsInBlock:   minimumTransactionsInBlock,
-	}
 }
 
 func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindowInSeconds uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
