@@ -6,24 +6,6 @@ import (
 	"time"
 )
 
-//TODO introduce FileSystemConfig
-
-type identity struct {
-	nodePublicKey  primitives.Ed25519PublicKey
-	nodePrivateKey primitives.Ed25519PrivateKey
-	virtualChainId primitives.VirtualChainId
-}
-
-type crossServiceConfig struct {
-	queryGraceTimeoutMillis uint64
-	querySyncGraceBlockDist uint16
-}
-
-type stateStorageConfig struct {
-	*crossServiceConfig
-	stateHistoryRetentionInBlockHeights uint16
-}
-
 type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
@@ -115,16 +97,6 @@ func newHardCodedConfig(
 	cfg.Set(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, NodeConfigValue{Uint32Value: 180})
 
 	return cfg
-}
-
-func NewStateStorageConfig(maxStateHistory uint16, graceBlockDist uint16, graceTimeoutMillis uint64) *stateStorageConfig {
-	return &stateStorageConfig{
-		stateHistoryRetentionInBlockHeights: maxStateHistory,
-		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: graceTimeoutMillis,
-			querySyncGraceBlockDist: graceBlockDist,
-		},
-	}
 }
 
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {

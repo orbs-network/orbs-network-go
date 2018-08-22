@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type driver struct {
@@ -20,20 +21,23 @@ type keyValue struct {
 	value []byte
 }
 
-func newStateStorageDriver(numOfStateRevisionsToRetain uint16) *driver {
+func newStateStorageDriver(numOfStateRevisionsToRetain uint32) *driver {
 	return newStateStorageDriverWithGrace(numOfStateRevisionsToRetain, 0, 0)
 }
 
-func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint16, graceBlockDiff uint16, graceTimeoutMillis uint64) *driver {
+func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlockDiff uint32, graceTimeoutMillis uint64) *driver {
 	if numOfStateRevisionsToRetain <= 0 {
 		numOfStateRevisionsToRetain = 1
 	}
 
-	conf := config.NewStateStorageConfig(numOfStateRevisionsToRetain, graceBlockDiff, graceTimeoutMillis)
+	cfg := config.EmptyConfig()
+	cfg.Set(config.STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, config.NodeConfigValue{Uint32Value: numOfStateRevisionsToRetain})
+	cfg.Set(config.QUERY_GRACE_TIMEOUT_MILLIS, config.NodeConfigValue{DurationValue: time.Duration(graceTimeoutMillis) * time.Millisecond})
+	cfg.Set(config.QUERY_SYNC_GRACE_BLOCK_DIST, config.NodeConfigValue{Uint32Value: graceBlockDiff})
 
 	p := adapter.NewInMemoryStatePersistence()
 
-	return &driver{service: statestorage.NewStateStorage(conf, p)}
+	return &driver{service: statestorage.NewStateStorage(cfg, p)}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
