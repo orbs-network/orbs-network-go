@@ -59,10 +59,10 @@ func newHardCodedConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillis time.Duration,
+	benchmarkConsensusRetryInterval time.Duration,
 	minimumTransactionsInBlock uint32,
-	belowMinimalBlockDelayMillis time.Duration,
-	queryGraceTimeoutMillis time.Duration,
+	minimalBlockDelay time.Duration,
+	queryGraceTimeout time.Duration,
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
@@ -74,9 +74,9 @@ func newHardCodedConfig(
 	}
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, benchmarkConsensusRoundRetryIntervalMillis)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, benchmarkConsensusRetryInterval)
 
-	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, queryGraceTimeoutMillis)
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, queryGraceTimeout)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 
 	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
@@ -86,7 +86,7 @@ func newHardCodedConfig(
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
 
-	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, belowMinimalBlockDelayMillis)
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, minimalBlockDelay)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)

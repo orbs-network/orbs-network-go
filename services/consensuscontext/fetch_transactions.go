@@ -6,7 +6,7 @@ import (
 )
 
 func (s *service) fetchTransactions(maxNumberOfTransactions uint32,
-	minimumTransactionsInBlock uint32, belowMinimalBlockDelayMillis time.Duration) (*services.GetTransactionsForOrderingOutput, error) {
+	minimumTransactionsInBlock uint32, minimalBlockDelay time.Duration) (*services.GetTransactionsForOrderingOutput, error) {
 
 	input := &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumberOfTransactions,
@@ -21,8 +21,8 @@ func (s *service) fetchTransactions(maxNumberOfTransactions uint32,
 		return proposedTransactions, nil
 	}
 
-	// TODO should we wait here at all?
-	<-time.After(belowMinimalBlockDelayMillis)
+	// FIXME find better way to wait for new block, maybe block tracker?
+	<-time.After(minimalBlockDelay)
 
 	proposedTransactions, err = s.transactionPool.GetTransactionsForOrdering(input)
 	if err != nil {
