@@ -161,6 +161,23 @@ func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
+// FIXME unify with pending_transactios_pool_test.go
+func getConfig(sizeLimit uint32, transactionExpirationInSeconds uint32, key primitives.Ed25519PublicKey) transactionpool.Config {
+	cfg := config.EmptyConfig()
+
+	cfg.SetNodePublicKey(key)
+
+	cfg.Set(config.PENDING_POOL_SIZE_IN_BYTES, config.NodeConfigValue{Uint32Value: sizeLimit})
+	cfg.Set(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, config.NodeConfigValue{Uint32Value: transactionExpirationInSeconds})
+
+	cfg.Set(config.VIRTUAL_CHAIN_ID, config.NodeConfigValue{Uint32Value: 42})
+	cfg.Set(config.QUERY_GRACE_TIMEOUT_MILLIS, config.NodeConfigValue{DurationValue: 100 * time.Millisecond})
+	cfg.Set(config.QUERY_SYNC_GRACE_BLOCK_DIST, config.NodeConfigValue{Uint32Value: 5})
+	cfg.Set(config.FUTURE_TIMESTAMP_GRACE_IN_SECONDS, config.NodeConfigValue{Uint32Value: 180})
+
+	return cfg
+}
+
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	ts := primitives.TimestampNano(time.Now().UnixNano())
 
@@ -169,7 +186,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
+	config := getConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
 	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, log.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}

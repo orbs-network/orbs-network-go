@@ -8,6 +8,8 @@ import (
 
 type NodeConfig interface {
 	Set(key string, value NodeConfigValue) NodeConfig
+	// TODO do we even need it
+	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey

@@ -24,14 +24,6 @@ type stateStorageConfig struct {
 	stateHistoryRetentionInBlockHeights uint16
 }
 
-type transactionPoolConfig struct {
-	*identity
-	*crossServiceConfig
-	pendingPoolSizeInBytes               uint32
-	transactionExpirationWindowInSeconds uint32
-	futureTimestampGraceInSeconds        uint32
-}
-
 type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
@@ -123,22 +115,6 @@ func newHardCodedConfig(
 	cfg.Set(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, NodeConfigValue{Uint32Value: 180})
 
 	return cfg
-}
-
-func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindowInSeconds uint32, nodePublicKey primitives.Ed25519PublicKey) *transactionPoolConfig {
-	return &transactionPoolConfig{
-		identity: &identity{
-			nodePublicKey:  nodePublicKey,
-			virtualChainId: 42,
-		},
-		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: 100,
-			querySyncGraceBlockDist: 5,
-		},
-		pendingPoolSizeInBytes:               pendingPoolSizeInBytes,
-		transactionExpirationWindowInSeconds: transactionExpirationWindowInSeconds,
-		futureTimestampGraceInSeconds:        180,
-	}
 }
 
 func NewStateStorageConfig(maxStateHistory uint16, graceBlockDist uint16, graceTimeoutMillis uint64) *stateStorageConfig {
@@ -237,5 +213,10 @@ func (c *config) FutureTimestampGraceInSeconds() uint32 {
 
 func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
 	c.kv[key] = value
+	return c
+}
+
+func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig {
+	c.nodePublicKey = key
 	return c
 }

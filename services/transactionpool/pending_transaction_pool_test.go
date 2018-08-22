@@ -4,9 +4,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 var pk = keys.Ed25519KeyPairForTests(8).PublicKey()
@@ -111,6 +113,22 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	}
 }
 
+func getConfig(sizeLimit uint32, transactionExpirationInSeconds uint32, key primitives.Ed25519PublicKey) Config {
+	cfg := config.EmptyConfig()
+
+	cfg.SetNodePublicKey(key)
+
+	cfg.Set(config.PENDING_POOL_SIZE_IN_BYTES, config.NodeConfigValue{Uint32Value: sizeLimit})
+	cfg.Set(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, config.NodeConfigValue{Uint32Value: transactionExpirationInSeconds})
+
+	cfg.Set(config.VIRTUAL_CHAIN_ID, config.NodeConfigValue{Uint32Value: 42})
+	cfg.Set(config.QUERY_GRACE_TIMEOUT_MILLIS, config.NodeConfigValue{DurationValue: 100 * time.Millisecond})
+	cfg.Set(config.QUERY_SYNC_GRACE_BLOCK_DIST, config.NodeConfigValue{Uint32Value: 5})
+	cfg.Set(config.FUTURE_TIMESTAMP_GRACE_IN_SECONDS, config.NodeConfigValue{Uint32Value: 180})
+
+	return cfg
+}
+
 func makePendingPool() *pendingTxPool {
-	return NewPendingPool(config.NewTransactionPoolConfig(100000, transactionExpirationInSeconds, pk))
+	return NewPendingPool(getConfig(100000, transactionExpirationInSeconds, pk))
 }
