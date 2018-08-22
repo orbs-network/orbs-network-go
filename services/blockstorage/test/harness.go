@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 type driver struct {
@@ -58,7 +59,14 @@ func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
-	d.blockStorage = blockstorage.NewBlockStorage(config.NewBlockStorageConfig(70, 5, 5, 30*60), d.storageAdapter, d.stateStorage, log.GetLogger())
+
+	cfg := config.EmptyConfig()
+	cfg.Set(config.BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS, config.NodeConfigValue{Uint32Value: 70})
+	cfg.Set(config.BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC, config.NodeConfigValue{DurationValue: 5 * time.Second})
+	cfg.Set(config.BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC, config.NodeConfigValue{DurationValue: 5 * time.Second})
+	cfg.Set(config.BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC, config.NodeConfigValue{DurationValue: 30 * time.Minute})
+
+	d.blockStorage = blockstorage.NewBlockStorage(cfg, d.storageAdapter, d.stateStorage, log.GetLogger())
 
 	return d
 }

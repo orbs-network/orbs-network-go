@@ -27,13 +27,6 @@ type crossServiceConfig struct {
 	querySyncGraceBlockDist uint16
 }
 
-type blockStorageConfig struct {
-	blockSyncCommitTimeoutMillis                     time.Duration
-	blockTransactionReceiptQueryStartGraceSec        time.Duration
-	blockTransactionReceiptQueryEndGraceSec          time.Duration
-	blockTransactionReceiptQueryTransactionExpireSec time.Duration
-}
-
 type consensusContextConfig struct {
 	belowMinimalBlockDelayMillis uint32
 	minimumTransactionsInBlock   int
@@ -56,17 +49,7 @@ type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
 
-type hardcodedConfig struct {
-	*identity
-	*consensusConfig
-	*crossServiceConfig
-	*blockStorageConfig
-	*stateStorageConfig
-	*consensusContextConfig
-	*transactionPoolConfig
-}
-
-type configValue struct {
+type NodeConfigValue struct {
 	StringValue   string
 	BytesValue    []byte
 	Uint32Value   uint32
@@ -74,7 +57,7 @@ type configValue struct {
 }
 
 type config struct {
-	kv                      map[string]configValue
+	kv                      map[string]NodeConfigValue
 	federationNodes         map[string]FederationNode
 	nodePublicKey           primitives.Ed25519PublicKey
 	nodePrivateKey          primitives.Ed25519PrivateKey
@@ -127,30 +110,30 @@ func newHardCodedConfig(
 		nodePrivateKey:          nodePrivateKey,
 		constantConsensusLeader: constantConsensusLeader,
 		activeConsensusAlgo:     activeConsensusAlgo,
-		kv:                      make(map[string]configValue),
+		kv:                      make(map[string]NodeConfigValue),
 	}
 
-	cfg.kv[VIRTUAL_CHAIN_ID] = configValue{Uint32Value: 42}
-	cfg.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS] = configValue{Uint32Value: benchmarkConsensusRoundRetryIntervalMillis}
+	cfg.Set(VIRTUAL_CHAIN_ID, NodeConfigValue{Uint32Value: 42})
+	cfg.Set(BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, NodeConfigValue{Uint32Value: benchmarkConsensusRoundRetryIntervalMillis})
 
-	cfg.kv[QUERY_GRACE_TIMEOUT_MILLIS] = configValue{DurationValue: time.Duration(queryGraceTimeoutMillis) * time.Millisecond}
-	cfg.kv[QUERY_SYNC_GRACE_BLOCK_DIST] = configValue{Uint32Value: 3}
+	cfg.Set(QUERY_GRACE_TIMEOUT_MILLIS, NodeConfigValue{DurationValue: time.Duration(queryGraceTimeoutMillis) * time.Millisecond})
+	cfg.Set(QUERY_SYNC_GRACE_BLOCK_DIST, NodeConfigValue{Uint32Value: 3})
 
-	cfg.kv[BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS] = configValue{DurationValue: 70 * time.Millisecond}
-	cfg.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC] = configValue{DurationValue: 5 * time.Second}
-	cfg.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC] = configValue{DurationValue: 5 * time.Second}
-	cfg.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC] = configValue{DurationValue: 180 * time.Second}
+	cfg.Set(BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS, NodeConfigValue{DurationValue: 70 * time.Millisecond})
+	cfg.Set(BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC, NodeConfigValue{DurationValue: 5 * time.Second})
+	cfg.Set(BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC, NodeConfigValue{DurationValue: 5 * time.Second})
+	cfg.Set(BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC, NodeConfigValue{DurationValue: 180 * time.Second})
 
-	cfg.kv[STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS] = configValue{Uint32Value: 5}
+	cfg.Set(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, NodeConfigValue{Uint32Value: 5})
 
-	cfg.kv[BELOW_MINIMAL_BLOCK_DELAY_MILLIS] = configValue{Uint32Value: belowMinimalBlockDelayMillis}
-	cfg.kv[MINIMUM_TRANSACTION_IN_BLOCK] = configValue{Uint32Value: minimumTransactionsInBlock}
+	cfg.Set(BELOW_MINIMAL_BLOCK_DELAY_MILLIS, NodeConfigValue{Uint32Value: belowMinimalBlockDelayMillis})
+	cfg.Set(MINIMUM_TRANSACTION_IN_BLOCK, NodeConfigValue{Uint32Value: minimumTransactionsInBlock})
 
-	cfg.kv[STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS] = configValue{Uint32Value: 5}
+	cfg.Set(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, NodeConfigValue{Uint32Value: 5})
 
-	cfg.kv[PENDING_POOL_SIZE_IN_BYTES] = configValue{Uint32Value: 20 * 1024 * 1024}
-	cfg.kv[TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS] = configValue{Uint32Value: 1800}
-	cfg.kv[FUTURE_TIMESTAMP_GRACE_IN_SECONDS] = configValue{Uint32Value: 180}
+	cfg.Set(PENDING_POOL_SIZE_IN_BYTES, NodeConfigValue{Uint32Value: 20 * 1024 * 1024})
+	cfg.Set(TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, NodeConfigValue{Uint32Value: 1800})
+	cfg.Set(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, NodeConfigValue{Uint32Value: 180})
 
 	return cfg
 }
@@ -174,15 +157,6 @@ func NewConsensusConfig(
 		constantConsensusLeader:                    constantConsensusLeader,
 		activeConsensusAlgo:                        activeConsensusAlgo,
 		benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
-	}
-}
-
-func NewBlockStorageConfig(blockSyncCommitTimeoutMillis, blockTransactionReceiptQueryStartGraceSec, blockTransactionReceiptQueryEndGraceSec, blockTransactionReceiptQueryTransactionExpireSec uint32) *blockStorageConfig {
-	return &blockStorageConfig{
-		blockSyncCommitTimeoutMillis:                     time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
-		blockTransactionReceiptQueryStartGraceSec:        time.Duration(blockTransactionReceiptQueryStartGraceSec) * time.Second,
-		blockTransactionReceiptQueryEndGraceSec:          time.Duration(blockTransactionReceiptQueryEndGraceSec) * time.Second,
-		blockTransactionReceiptQueryTransactionExpireSec: time.Duration(blockTransactionReceiptQueryTransactionExpireSec) * time.Second,
 	}
 }
 
@@ -301,4 +275,9 @@ func (c *config) TransactionExpirationWindowInSeconds() uint32 {
 
 func (c *config) FutureTimestampGraceInSeconds() uint32 {
 	return c.kv[FUTURE_TIMESTAMP_GRACE_IN_SECONDS].Uint32Value
+}
+
+func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
+	c.kv[key] = value
+	return c
 }

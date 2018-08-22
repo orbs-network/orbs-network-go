@@ -7,6 +7,8 @@ import (
 )
 
 type NodeConfig interface {
+	Set(key string, value NodeConfigValue) NodeConfig
+
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32

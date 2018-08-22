@@ -47,3 +47,9 @@ func ForAcceptanceTests(
 		1,
 		1)
 }
+
+func EmptyConfig() NodeConfig {
+	return &config{
+		kv: make(map[string]NodeConfigValue),
+	}
+}
