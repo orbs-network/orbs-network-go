@@ -118,13 +118,13 @@ func getConfig(sizeLimit uint32, transactionExpirationInSeconds uint32, key prim
 
 	cfg.SetNodePublicKey(key)
 
-	cfg.Set(config.PENDING_POOL_SIZE_IN_BYTES, config.NodeConfigValue{Uint32Value: sizeLimit})
-	cfg.Set(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, config.NodeConfigValue{Uint32Value: transactionExpirationInSeconds})
+	cfg.SetUint32(config.PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
+	cfg.SetUint32(config.TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, transactionExpirationInSeconds)
 
-	cfg.Set(config.VIRTUAL_CHAIN_ID, config.NodeConfigValue{Uint32Value: 42})
-	cfg.Set(config.QUERY_GRACE_TIMEOUT_MILLIS, config.NodeConfigValue{DurationValue: 100 * time.Millisecond})
-	cfg.Set(config.QUERY_SYNC_GRACE_BLOCK_DIST, config.NodeConfigValue{Uint32Value: 5})
-	cfg.Set(config.FUTURE_TIMESTAMP_GRACE_IN_SECONDS, config.NodeConfigValue{Uint32Value: 180})
+	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
+	cfg.SetDuration(config.QUERY_GRACE_TIMEOUT_MILLIS, 100*time.Millisecond)
+	cfg.SetUint32(config.QUERY_SYNC_GRACE_BLOCK_DIST, 5)
+	cfg.SetUint32(config.FUTURE_TIMESTAMP_GRACE_IN_SECONDS, 180)
 
 	return cfg
 }

@@ -8,6 +8,8 @@ import (
 
 type NodeConfig interface {
 	Set(key string, value NodeConfigValue) NodeConfig
+	SetDuration(key string, value time.Duration) NodeConfig
+	SetUint32(key string, value uint32) NodeConfig
 	// TODO do we even need it
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 

@@ -11,8 +11,6 @@ type hardCodedFederationNode struct {
 }
 
 type NodeConfigValue struct {
-	StringValue   string
-	BytesValue    []byte
 	Uint32Value   uint32
 	DurationValue time.Duration
 }
@@ -74,27 +72,27 @@ func newHardCodedConfig(
 		kv:                      make(map[string]NodeConfigValue),
 	}
 
-	cfg.Set(VIRTUAL_CHAIN_ID, NodeConfigValue{Uint32Value: 42})
-	cfg.Set(BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, NodeConfigValue{Uint32Value: benchmarkConsensusRoundRetryIntervalMillis})
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
+	cfg.SetUint32(BENCHMARK_CONSENSUS_RETRY_INTERVAL_MILLIS, benchmarkConsensusRoundRetryIntervalMillis)
 
-	cfg.Set(QUERY_GRACE_TIMEOUT_MILLIS, NodeConfigValue{DurationValue: time.Duration(queryGraceTimeoutMillis) * time.Millisecond})
-	cfg.Set(QUERY_SYNC_GRACE_BLOCK_DIST, NodeConfigValue{Uint32Value: 3})
+	cfg.SetDuration(QUERY_GRACE_TIMEOUT_MILLIS, time.Duration(queryGraceTimeoutMillis)*time.Millisecond)
+	cfg.SetUint32(QUERY_SYNC_GRACE_BLOCK_DIST, 3)
 
-	cfg.Set(BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS, NodeConfigValue{DurationValue: 70 * time.Millisecond})
-	cfg.Set(BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC, NodeConfigValue{DurationValue: 5 * time.Second})
-	cfg.Set(BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC, NodeConfigValue{DurationValue: 5 * time.Second})
-	cfg.Set(BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC, NodeConfigValue{DurationValue: 180 * time.Second})
+	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT_MILLIS, 70*time.Millisecond)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_START_GRACE_SEC, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_END_GRACE_SEC, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_TRANSACTION_EXPIRE_SEC, 180*time.Second)
 
-	cfg.Set(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, NodeConfigValue{Uint32Value: 5})
+	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
 
-	cfg.Set(BELOW_MINIMAL_BLOCK_DELAY_MILLIS, NodeConfigValue{Uint32Value: belowMinimalBlockDelayMillis})
-	cfg.Set(MINIMUM_TRANSACTION_IN_BLOCK, NodeConfigValue{Uint32Value: minimumTransactionsInBlock})
+	cfg.SetUint32(BELOW_MINIMAL_BLOCK_DELAY_MILLIS, belowMinimalBlockDelayMillis)
+	cfg.SetUint32(MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
 
-	cfg.Set(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, NodeConfigValue{Uint32Value: 5})
+	cfg.SetUint32(STATE_HISTORY_RETENTION_IN_BLOCK_HEIGHTS, 5)
 
-	cfg.Set(PENDING_POOL_SIZE_IN_BYTES, NodeConfigValue{Uint32Value: 20 * 1024 * 1024})
-	cfg.Set(TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, NodeConfigValue{Uint32Value: 1800})
-	cfg.Set(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, NodeConfigValue{Uint32Value: 180})
+	cfg.SetUint32(PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
+	cfg.SetUint32(TRANSACTION_EXPIRATION_WINDOW_IN_SECONDS, 1800)
+	cfg.SetUint32(FUTURE_TIMESTAMP_GRACE_IN_SECONDS, 180)
 
 	return cfg
 }
@@ -185,6 +183,16 @@ func (c *config) FutureTimestampGraceInSeconds() uint32 {
 
 func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
 	c.kv[key] = value
+	return c
+}
+
+func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
+	c.kv[key] = NodeConfigValue{DurationValue: value}
+	return c
+}
+
+func (c *config) SetUint32(key string, value uint32) NodeConfig {
+	c.kv[key] = NodeConfigValue{Uint32Value: value}
 	return c
 }
 
