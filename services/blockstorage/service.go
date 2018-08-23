@@ -306,10 +306,10 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 }
 
 // TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
-func (s *service) syncBlockToStateStorage(commitedBlockPair *protocol.BlockPairContainer) error {
+func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPairContainer) error {
 	_, err := s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{
-		ResultsBlockHeader: commitedBlockPair.ResultsBlock.Header,
-		ContractStateDiffs: commitedBlockPair.ResultsBlock.ContractStateDiffs,
+		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
+		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
 	})
 	return err
 }
