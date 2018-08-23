@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"os"
+	"time"
 )
 
 type driver struct {
@@ -22,21 +23,24 @@ type keyValue struct {
 	value []byte
 }
 
-func newStateStorageDriver(numOfStateRevisionsToRetain uint16) *driver {
+func newStateStorageDriver(numOfStateRevisionsToRetain uint32) *driver {
 	return newStateStorageDriverWithGrace(numOfStateRevisionsToRetain, 0, 0)
 }
 
-func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint16, graceBlockDiff uint16, graceTimeoutMillis uint64) *driver {
+func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlockDiff uint32, graceTimeoutMillis uint64) *driver {
 	if numOfStateRevisionsToRetain <= 0 {
 		numOfStateRevisionsToRetain = 1
 	}
 
-	conf := config.NewStateStorageConfig(numOfStateRevisionsToRetain, graceBlockDiff, graceTimeoutMillis)
+	cfg := config.EmptyConfig()
+	cfg.SetUint32(config.STATE_STORAGE_HISTORY_RETENTION_DISTANCE, numOfStateRevisionsToRetain)
+	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, time.Duration(graceTimeoutMillis)*time.Millisecond)
+	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, graceBlockDiff)
 
 	p := adapter.NewInMemoryStatePersistence()
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
-	return &driver{service: statestorage.NewStateStorage(conf, p, logger)}
+	return &driver{service: statestorage.NewStateStorage(cfg, p, logger)}
 }
 
 func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {

@@ -19,14 +19,14 @@ import (
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
-	PendingPoolSizeInBytes() uint32
 	VirtualChainId() primitives.VirtualChainId
-	QuerySyncGraceBlockDist() uint16
-	QueryGraceTimeoutMillis() uint64
-	FutureTimestampGrace() time.Duration
-	TransactionExpirationWindow() time.Duration
-	PendingPoolClearExpiredInterval() time.Duration
-	CommittedPoolClearExpiredInterval() time.Duration
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
+	TransactionPoolPendingPoolSizeInBytes() uint32
+	TransactionPoolTransactionExpirationWindow() time.Duration
+	TransactionPoolFutureTimestampGraceTimeout() time.Duration
+	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
+	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 }
 
 type service struct {
@@ -56,16 +56,16 @@ func NewTransactionPool(ctx context.Context,
 		logger:         logger.For(log.Service("transaction-pool")),
 
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
-		pendingPool:                 NewPendingPool(config.PendingPoolSizeInBytes),
+		pendingPool:                 NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes),
 		committedPool:               NewCommittedPool(),
-		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())),
+		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
 	}
 
 	gossip.RegisterTransactionRelayHandler(s)
 
 	//TODO supervise
-	startCleaningProcess(ctx, config.CommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool)
-	startCleaningProcess(ctx, config.PendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool)
+	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool)
+	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool)
 
 	return s
 }
@@ -141,9 +141,9 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
-		expiryWindow:                s.config.TransactionExpirationWindow(),
+		expiryWindow:                s.config.TransactionPoolTransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
-		futureTimestampGrace:        s.config.FutureTimestampGrace(),
+		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:              s.config.VirtualChainId(),
 	}
 }
