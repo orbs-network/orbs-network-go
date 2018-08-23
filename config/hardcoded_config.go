@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 )
 
 type hardCodedFederationNode struct {
@@ -94,6 +95,11 @@ func newHardCodedConfig(
 	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
 	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 1800*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
+
+//futureTimestampGrace:              3 * time.Minute,
+//	transactionExpirationWindow:       transactionExpirationWindow,
+//		pendingPoolClearExpiredInterval:   10 * time.Second,
+//		committedPoolClearExpiredInterval: 30 * time.Second,
 
 	return cfg
 }
@@ -197,7 +203,24 @@ func (c *config) SetUint32(key string, value uint32) NodeConfig {
 	return c
 }
 
+func (c *config) TransactionExpirationWindow() time.Duration {
+	return c.transactionExpirationWindow
+}
+
+func (c *config) FutureTimestampGrace() time.Duration {
+	return c.futureTimestampGrace
+}
+
+func (c *config) PendingPoolClearExpiredInterval() time.Duration {
+	return c.pendingPoolClearExpiredInterval
+}
+
 func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig {
 	c.nodePublicKey = key
 	return c
 }
+
+func (c *config) CommittedPoolClearExpiredInterval() time.Duration {
+	return c.committedPoolClearExpiredInterval
+}
+

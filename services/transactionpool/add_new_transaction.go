@@ -1,18 +1,19 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 
-	err := s.createValidationContext().validateTransaction(input.SignedTransaction)
-	if err != nil {
+	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
 		s.logger.Info("transaction is invalid", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
 		return s.addTransactionOutputFor(nil, err.(*ErrTransactionRejected).TransactionStatus), err
 	}
@@ -21,7 +22,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION}
 	}
 
-	if alreadyCommitted := s.committedPool.get(input.SignedTransaction); alreadyCommitted != nil {
+	if alreadyCommitted := s.committedPool.get(digest.CalcTxHash(input.SignedTransaction.Transaction())); alreadyCommitted != nil {
 		s.logger.Info("transaction already committed", log.Stringable("transaction", input.SignedTransaction))
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
@@ -37,23 +38,27 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	}
 	//TODO batch
-	s.forwardTransaction(input.SignedTransaction)
+	if err := s.forwardTransaction(input.SignedTransaction); err != nil {
+		s.logger.Error("error forwarding transaction via gossip", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
+
+		return  nil, err
+	}
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
 func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
-	// TODO sign
-	//sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
-	//if err != nil {
-	//	return nil, err
-	//}
+	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), tx.Raw())
+	if err != nil {
+		return err
+	}
 
-	_, err := s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+	_, err = s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
-			SignedTransactions: []*protocol.SignedTransaction{tx},
+			SignedTransactions: Transactions{tx},
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: s.config.NodePublicKey(),
+				Signature: sig,
 			}).Build(),
 		},
 	})
@@ -64,7 +69,7 @@ func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
 func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
 	//TODO handle error from vm call
 	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
-		SignedTransactions: transactions{transaction},
+		SignedTransactions: Transactions{transaction},
 		BlockHeight:        s.lastCommittedBlockHeight,
 	})
 
