@@ -34,6 +34,9 @@ func (d *driver) expectCommitStateDiffTimes(times int) {
 func (d *driver) verifyMocks(t *testing.T) {
 	_, err := d.stateStorage.Verify()
 	require.NoError(t, err)
+
+	_, err = d.blockSync.Verify()
+	require.NoError(t, err)
 }
 
 func (d *driver) commitBlock(blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
@@ -72,8 +75,8 @@ func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
-	d.blockStorage = blockstorage.NewBlockStorage(cfg, d.storageAdapter, d.stateStorage, logger)
 	d.blockSync = &services.MockGossip{}
+	d.blockStorage = blockstorage.NewBlockStorage(cfg, d.storageAdapter, d.stateStorage, d.blockSync, logger)
 
 	return d
 }

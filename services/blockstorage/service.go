@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -16,6 +17,7 @@ import (
 )
 
 type Config interface {
+	NodePublicKey() primitives.Ed25519PublicKey
 	BlockSyncCommitTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
@@ -30,6 +32,7 @@ const (
 type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
+	blockSync    gossiptopics.BlockSync
 
 	config Config
 
@@ -40,10 +43,11 @@ type service struct {
 	lastBlockLock      *sync.Mutex
 }
 
-func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting log.BasicLogger) services.BlockStorage {
+func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, blockSync gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
 	return &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
+		blockSync:     blockSync,
 		reporting:     reporting.For(log.Service("block-storage")),
 		config:        config,
 		lastBlockLock: &sync.Mutex{},
@@ -217,6 +221,22 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	s.reporting.Info("Received block availability request", log.Stringable("sender", input.Message.Sender))
+
+	response := &gossiptopics.BlockAvailabilityResponseInput{
+		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
+		Message: &gossipmessages.BlockAvailabilityResponseMessage{
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				LastAvailableBlockHeight:  primitives.BlockHeight(2),
+				FirstAvailableBlockHeight: primitives.BlockHeight(1),
+				LastCommittedBlockHeight:  primitives.BlockHeight(2),
+			}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+			}).Build(),
+		},
+	}
+	s.blockSync.SendBlockAvailabilityResponse(response)
 
 	return nil, nil
 }
