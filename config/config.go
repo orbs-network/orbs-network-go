@@ -10,8 +10,9 @@ type NodeConfig interface {
 	Set(key string, value NodeConfigValue) NodeConfig
 	SetDuration(key string, value time.Duration) NodeConfig
 	SetUint32(key string, value uint32) NodeConfig
-	// TODO do we even need it
+
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
+	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
 
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
@@ -47,7 +48,6 @@ type NodeConfig interface {
 	TransactionPoolPendingPoolSizeInBytes() uint32
 	TransactionPoolTransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
-	FutureTimestampGrace() time.Duration
 	PendingPoolClearExpiredInterval() time.Duration
 	CommittedPoolClearExpiredInterval() time.Duration
 }

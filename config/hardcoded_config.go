@@ -4,7 +4,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 )
 
 type hardCodedFederationNode struct {
@@ -42,9 +41,11 @@ const (
 	BLOCK_TRACKER_GRACE_DISTANCE = "BLOCK_TRACKER_GRACE_DISTANCE"
 	BLOCK_TRACKER_GRACE_TIMEOUT  = "BLOCK_TRACKER_GRACE_TIMEOUT"
 
-	TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES     = "TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES"
-	TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW  = "TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW"
-	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
+	TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES            = "TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES"
+	TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW         = "TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW"
+	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT        = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
+	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
+	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -83,7 +84,7 @@ func newHardCodedConfig(
 	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 180*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 3*time.Minute)
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
 
@@ -93,15 +94,36 @@ func newHardCodedConfig(
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
 
 	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
-	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 1800*time.Second)
-	cfg.SetDuration(TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
-
-//futureTimestampGrace:              3 * time.Minute,
-//	transactionExpirationWindow:       transactionExpirationWindow,
-//		pendingPoolClearExpiredInterval:   10 * time.Second,
-//		committedPoolClearExpiredInterval: 30 * time.Second,
+	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
+	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
 
 	return cfg
+}
+
+func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
+	c.kv[key] = value
+	return c
+}
+
+func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
+	c.kv[key] = NodeConfigValue{DurationValue: value}
+	return c
+}
+
+func (c *config) SetUint32(key string, value uint32) NodeConfig {
+	c.kv[key] = NodeConfigValue{Uint32Value: value}
+	return c
+}
+
+func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig {
+	c.nodePublicKey = key
+	return c
+}
+
+func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig {
+	c.nodePrivateKey = key
+	return c
 }
 
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
@@ -188,39 +210,10 @@ func (c *config) TransactionPoolFutureTimestampGraceTimeout() time.Duration {
 	return c.kv[TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
-	c.kv[key] = value
-	return c
-}
-
-func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
-	c.kv[key] = NodeConfigValue{DurationValue: value}
-	return c
-}
-
-func (c *config) SetUint32(key string, value uint32) NodeConfig {
-	c.kv[key] = NodeConfigValue{Uint32Value: value}
-	return c
-}
-
-func (c *config) TransactionExpirationWindow() time.Duration {
-	return c.transactionExpirationWindow
-}
-
-func (c *config) FutureTimestampGrace() time.Duration {
-	return c.futureTimestampGrace
-}
-
 func (c *config) PendingPoolClearExpiredInterval() time.Duration {
-	return c.pendingPoolClearExpiredInterval
-}
-
-func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig {
-	c.nodePublicKey = key
-	return c
+	return c.kv[TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
 
 func (c *config) CommittedPoolClearExpiredInterval() time.Duration {
-	return c.committedPoolClearExpiredInterval
+	return c.kv[TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
-

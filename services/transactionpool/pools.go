@@ -37,6 +37,7 @@ type pendingTxPool struct {
 	transactionList    *list.List
 	lock               *sync.RWMutex
 
+	//FIXME get rid of it
 	pendingPoolSizeInBytes func() uint32
 }
 
@@ -45,7 +46,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	defer p.lock.Unlock()
 	size := sizeOf(transaction)
 
-	if p.currentSizeInBytes+size > p.config.TransactionPoolPendingPoolSizeInBytes() {
+	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
 		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_CONGESTION}
 	}
 

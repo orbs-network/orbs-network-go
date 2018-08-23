@@ -25,10 +25,6 @@ type Config interface {
 	TransactionPoolPendingPoolSizeInBytes() uint32
 	TransactionPoolTransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
-	QuerySyncGraceBlockDist() uint16
-	QueryGraceTimeoutMillis() uint64
-	FutureTimestampGrace() time.Duration
-	TransactionExpirationWindow() time.Duration
 	PendingPoolClearExpiredInterval() time.Duration
 	CommittedPoolClearExpiredInterval() time.Duration
 }
@@ -60,7 +56,7 @@ func NewTransactionPool(ctx context.Context,
 		logger:         logger.For(log.Service("transaction-pool")),
 
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
-		pendingPool:                 NewPendingPool(config.PendingPoolSizeInBytes),
+		pendingPool:                 NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes),
 		committedPool:               NewCommittedPool(),
 		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
 	}
@@ -68,8 +64,8 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 
 	//TODO supervise
-	startCleaningProcess(ctx, config.CommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool)
-	startCleaningProcess(ctx, config.PendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool)
+	startCleaningProcess(ctx, config.CommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool)
+	startCleaningProcess(ctx, config.PendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool)
 
 	return s
 }

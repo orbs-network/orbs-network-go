@@ -3,7 +3,6 @@ package transactionpool
 import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -126,22 +125,6 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
 		p.add(tx, pk)
 	}
-}
-
-func getConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, key primitives.Ed25519PublicKey) Config {
-	cfg := config.EmptyConfig()
-
-	cfg.SetNodePublicKey(key)
-
-	cfg.SetUint32(config.TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
-	cfg.SetDuration(config.TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, transactionExpirationInSeconds)
-
-	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
-	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, 5)
-	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
-
-	return cfg
 }
 
 func makePendingPool() *pendingTxPool {
