@@ -28,7 +28,7 @@ const (
 	VIRTUAL_CHAIN_ID                   = "VIRTUAL_CHAIN_ID"
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 
-	BLOCK_SYNC_COMMIT_TIMEOUT                         = "BLOCK_SYNC_COMMIT_TIMEOUT"
+	BLOCK_SYNC_BATCH_SIZE                             = "BLOCK_SYNC_BATCH_SIZE"
 	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START       = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START"
 	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
 	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
@@ -81,7 +81,7 @@ func newHardCodedConfig(
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, queryGraceTimeout)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 
-	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_BATCH_SIZE, 10000)
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 3*time.Minute)
@@ -163,8 +163,8 @@ func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
 
 }
 
-func (c *config) BlockSyncCommitTimeout() time.Duration {
-	return c.kv[BLOCK_SYNC_COMMIT_TIMEOUT].DurationValue
+func (c *config) BlockSyncBatchSize() uint32 {
+	return c.kv[BLOCK_SYNC_BATCH_SIZE].Uint32Value
 }
 
 func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {

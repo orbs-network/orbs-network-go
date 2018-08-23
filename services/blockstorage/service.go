@@ -18,7 +18,7 @@ import (
 
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
-	BlockSyncCommitTimeout() time.Duration
+	BlockSyncBatchSize() uint32
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
@@ -274,9 +274,6 @@ func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvail
 		return nil, nil
 	}
 
-	// FIXME extract to config
-	const BATCH_SIZE = 10000
-
 	lastCommittedBlockHeight := s.lastCommittedBlockHeight()
 
 	if lastCommittedBlockHeight >= input.Message.SignedRange.LastCommittedBlockHeight() {
@@ -290,7 +287,7 @@ func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvail
 
 	blockType := input.Message.SignedRange.BlockType()
 
-	lastAvailableBlockHeight := lastCommittedBlockHeight + BATCH_SIZE
+	lastAvailableBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize())
 	firstAvailableBlockHeight := lastCommittedBlockHeight + 1
 
 	request := &gossiptopics.BlockSyncRequestInput{

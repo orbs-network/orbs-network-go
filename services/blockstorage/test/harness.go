@@ -73,7 +73,7 @@ func NewDriver() *driver {
 
 	cfg := config.EmptyConfig()
 	cfg.SetNodePublicKey(keyPair.PublicKey())
-	cfg.SetDuration(config.BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
+	cfg.SetUint32(config.BLOCK_SYNC_BATCH_SIZE, 10000)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
