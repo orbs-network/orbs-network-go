@@ -21,11 +21,9 @@ type InMemoryStatePersistence struct {
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
-	stateDiffsContract := map[primitives.ContractName]ContractState{primitives.ContractName("BenchmarkToken"): {}}
-
 	return &InMemoryStatePersistence{
-		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
-		snapshots:            map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
+		// TODO remove this hard coded init of genesis block state once init flow syncs state storage with block storage
+		snapshots:            map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): map[primitives.ContractName]ContractState{}},
 		blockTrackerForTests: synchronization.NewBlockTracker(0, 64000, time.Duration(1*time.Hour)),
 	}
 }
