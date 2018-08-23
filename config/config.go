@@ -7,40 +7,49 @@ import (
 )
 
 type NodeConfig interface {
+	Set(key string, value NodeConfigValue) NodeConfig
+	SetDuration(key string, value time.Duration) NodeConfig
+	SetUint32(key string, value uint32) NodeConfig
+
+	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
+	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
+
+	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
-	VirtualChainId() primitives.VirtualChainId
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
-	QueryGraceTimeoutMillis() uint64
 
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 
 	// benchmark consensus
-	BenchmarkConsensusRoundRetryIntervalMillis() uint32
+	BenchmarkConsensusRetryInterval() time.Duration
 
 	// block storage
-	BlockSyncCommitTimeoutMillis() time.Duration
-	BlockTransactionReceiptQueryStartGraceSec() time.Duration
-	BlockTransactionReceiptQueryEndGraceSec() time.Duration
-	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
+	BlockSyncCommitTimeout() time.Duration
+	BlockTransactionReceiptQueryGraceStart() time.Duration
+	BlockTransactionReceiptQueryGraceEnd() time.Duration
+	BlockTransactionReceiptQueryExpirationWindow() time.Duration
 
 	// state storage
-	StateHistoryRetentionInBlockHeights() uint16
-	QuerySyncGraceBlockDist() uint16
+	StateStorageHistoryRetentionDistance() uint32
+
+	// block tracker
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
 
 	// consensus context
-	BelowMinimalBlockDelayMillis() uint32
-	MinimumTransactionsInBlock() int
+	ConsensusContextMinimalBlockDelay() time.Duration
+	ConsensusContextMinimumTransactionsInBlock() uint32
 
 	// transaction pool
-	PendingPoolSizeInBytes() uint32
-	TransactionExpirationWindow() time.Duration
-	FutureTimestampGrace() time.Duration
-	PendingPoolClearExpiredInterval() time.Duration
-	CommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPendingPoolSizeInBytes() uint32
+	TransactionPoolTransactionExpirationWindow() time.Duration
+	TransactionPoolFutureTimestampGraceTimeout() time.Duration
+	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
+	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 }
 
 type FederationNode interface {

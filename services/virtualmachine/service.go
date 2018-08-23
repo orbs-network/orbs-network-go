@@ -80,6 +80,7 @@ func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInp
 
 func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
+	// FIXME sometimes we get value of ffffffffffffffff
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
 	// check subscription
@@ -93,7 +94,11 @@ func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderI
 		err = s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 	}
 
-	s.reporting.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+	if err != nil {
+		s.reporting.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+	} else {
+		s.reporting.Info("performed pre order checks", log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+	}
 
 	return &services.TransactionSetPreOrderOutput{
 		PreOrderResults: statuses,

@@ -62,7 +62,5 @@ func main() {
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		logger,
 		gossipTransport,
-		2*1000,
-		1,
 	).WaitUntilShutdown()
 }

@@ -14,9 +14,9 @@ import (
 )
 
 type Config interface {
-	StateHistoryRetentionInBlockHeights() uint16
-	QuerySyncGraceBlockDist() uint16
-	QueryGraceTimeoutMillis() uint64
+	StateStorageHistoryRetentionDistance() uint32
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
 }
 
 type service struct {
@@ -34,7 +34,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence, report
 	return &service{
 		config:       config,
 		merkle:       merkle.NewForest(),
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 		reporting:    reporting.For(log.Service("state-storage")),
 
 		mutex:                    &sync.RWMutex{},
@@ -74,6 +74,10 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, errors.Errorf("missing contract name")
 	}
 
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	}
+
 	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
@@ -81,8 +85,8 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)

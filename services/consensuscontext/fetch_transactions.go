@@ -6,7 +6,7 @@ import (
 )
 
 func (s *service) fetchTransactions(maxNumberOfTransactions uint32,
-	minimumTransactionsInBlock int, belowMinimalBlockDelayMillis uint32) (*services.GetTransactionsForOrderingOutput, error) {
+	minimumTransactionsInBlock uint32, minimalBlockDelay time.Duration) (*services.GetTransactionsForOrderingOutput, error) {
 
 	input := &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumberOfTransactions,
@@ -16,13 +16,13 @@ func (s *service) fetchTransactions(maxNumberOfTransactions uint32,
 	if err != nil {
 		return nil, err
 	}
-	txCount := len(proposedTransactions.SignedTransactions)
+	txCount := uint32(len(proposedTransactions.SignedTransactions))
 	if txCount >= minimumTransactionsInBlock {
 		return proposedTransactions, nil
 	}
 
-	// TODO: Replace Sleep() with some other mechanism once we decide on it (such as context, timers...)
-	time.Sleep(time.Duration(belowMinimalBlockDelayMillis) * time.Millisecond)
+	// FIXME find better way to wait for new block, maybe block tracker?
+	<-time.After(minimalBlockDelay)
 
 	proposedTransactions, err = s.transactionPool.GetTransactionsForOrdering(input)
 	if err != nil {
