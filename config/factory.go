@@ -14,7 +14,7 @@ func ForProduction(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) NodeConfig {
 
-	benchmarkConsensusRetryInterval := time.Duration(2000)
+	benchmarkConsensusRetryInterval := 2000 * time.Millisecond
 	minimumTransactionsInBlock := uint32(1)
 	minimalBlockDelay := 20 * time.Millisecond
 	queryGraceTimeout := 100 * time.Millisecond
