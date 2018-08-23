@@ -222,14 +222,27 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	s.reporting.Info("Received block availability request", log.Stringable("sender", input.Message.Sender))
 
+	lastCommittedBlockHeight := s.lastCommittedBlockHeight()
+
+	if lastCommittedBlockHeight == 0 {
+		return nil, nil
+	}
+
+	if lastCommittedBlockHeight <= input.Message.SignedRange.LastCommittedBlockHeight() {
+		return nil, nil
+	}
+
+	firstAvailableBlockHeight := primitives.BlockHeight(1)
+	blockType := input.Message.SignedRange.BlockType()
+
 	response := &gossiptopics.BlockAvailabilityResponseInput{
 		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
 			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				LastAvailableBlockHeight:  primitives.BlockHeight(2),
-				FirstAvailableBlockHeight: primitives.BlockHeight(1),
-				LastCommittedBlockHeight:  primitives.BlockHeight(2),
+				BlockType:                 blockType,
+				LastAvailableBlockHeight:  lastCommittedBlockHeight,
+				FirstAvailableBlockHeight: firstAvailableBlockHeight,
+				LastCommittedBlockHeight:  lastCommittedBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: s.config.NodePublicKey(),
