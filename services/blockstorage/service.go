@@ -238,14 +238,14 @@ func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvaila
 	response := &gossiptopics.BlockAvailabilityResponseInput{
 		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+			}).Build(),
 			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                 blockType,
 				LastAvailableBlockHeight:  lastCommittedBlockHeight,
 				FirstAvailableBlockHeight: firstAvailableBlockHeight,
 				LastCommittedBlockHeight:  lastCommittedBlockHeight,
-			}).Build(),
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
 			}).Build(),
 		},
 	}
@@ -255,8 +255,36 @@ func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvaila
 }
 
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	s.reporting.Info("Received block availability response", log.Stringable("sender", input.Message.Sender))
+
+	// FIXME extract to
+	const BATCH_SIZE = 10000
+
+	lastCommittedBlockHeight := s.lastCommittedBlockHeight()
+	blockType := input.Message.SignedRange.BlockType()
+
+	lastAvailableBlockHeight := lastCommittedBlockHeight + BATCH_SIZE
+	firstAvailableBlockHeight := lastCommittedBlockHeight + 1
+
+	request := &gossiptopics.BlockSyncRequestInput{
+		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
+		Message: &gossipmessages.BlockSyncRequestMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+			}).Build(),
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 blockType,
+				LastAvailableBlockHeight:  lastAvailableBlockHeight,
+				FirstAvailableBlockHeight: firstAvailableBlockHeight,
+				LastCommittedBlockHeight:  lastCommittedBlockHeight,
+			}).Build(),
+		},
+	}
+	s.blockSync.SendBlockSyncRequest(request)
+
+	return nil, nil
 }
+
 func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }

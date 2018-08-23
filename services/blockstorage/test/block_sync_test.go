@@ -88,3 +88,48 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfSenderIsInSync(t *testing.T)
 
 	driver.verifyMocks(t)
 }
+
+func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityResponseInput {
+	return &gossiptopics.BlockAvailabilityResponseInput{
+		Message: &gossipmessages.BlockAvailabilityResponseMessage{
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				LastCommittedBlockHeight: lastCommittedBlockHeight,
+			}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: senderPublicKey,
+			}).Build(),
+		},
+	}
+}
+
+func TestSyncHandleBlockAvailabilityResponse(t *testing.T) {
+	driver := NewDriver()
+
+	driver.expectCommitStateDiffTimes(2)
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(9)
+	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(999), senderKeyPair.PublicKey())
+
+	request := &gossiptopics.BlockSyncRequestInput{
+		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
+		Message: &gossipmessages.BlockSyncRequestMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: driver.config.NodePublicKey(),
+			}).Build(),
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				LastAvailableBlockHeight:  primitives.BlockHeight(10002),
+				FirstAvailableBlockHeight: primitives.BlockHeight(3),
+				LastCommittedBlockHeight:  primitives.BlockHeight(2),
+			}).Build(),
+		},
+	}
+
+	driver.blockSync.When("SendBlockSyncRequest", request).Return(nil, nil).Times(1)
+
+	driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	driver.verifyMocks(t)
+}
