@@ -5,9 +5,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -18,7 +20,8 @@ type driver struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter adapter.InMemoryBlockPersistence
 	blockStorage   services.BlockStorage
-	blockSync      *services.MockGossip
+	blockSync      *gossiptopics.MockBlockSync
+	config         blockstorage.Config
 }
 
 func (d *driver) expectCommitStateDiff() {
@@ -66,16 +69,19 @@ func (d *driver) failNextBlocks() {
 
 func NewDriver() *driver {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	keyPair := keys.Ed25519KeyPairForTests(0)
+
 	cfg := config.EmptyConfig()
+	cfg.SetNodePublicKey(keyPair.PublicKey())
 	cfg.SetDuration(config.BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
 
-	d := &driver{}
+	d := &driver{config: cfg}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
-	d.blockSync = &services.MockGossip{}
+	d.blockSync = &gossiptopics.MockBlockSync{}
 	d.blockStorage = blockstorage.NewBlockStorage(cfg, d.storageAdapter, d.stateStorage, d.blockSync, logger)
 
 	return d

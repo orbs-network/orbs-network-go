@@ -28,7 +28,7 @@ func TestSyncHandleBlockAvailabilityRequest(t *testing.T) {
 	}
 
 	response := &gossiptopics.BlockAvailabilityResponseInput{
-		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
+		RecipientPublicKey: senderKeyPair.PublicKey(),
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
 			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -37,7 +37,7 @@ func TestSyncHandleBlockAvailabilityRequest(t *testing.T) {
 				LastCommittedBlockHeight:  primitives.BlockHeight(2),
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: primitives.Ed25519PublicKey([]byte("hey")),
+				SenderPublicKey: driver.config.NodePublicKey(),
 			}).Build(),
 		},
 	}
