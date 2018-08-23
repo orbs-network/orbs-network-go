@@ -11,6 +11,23 @@ import (
 	"testing"
 )
 
+//TODO - updateStringEntries should advance TrieId only by one
+
+//TODO - updateStringEntries - the bulk update version (optimize node access)
+//TODO - Work with persistent state adapter + cache where appropriate
+
+//TODO - serialization based on spec (oded)
+//TODO - Radix 16 +/- parity
+//TODO - split branch and node leafs (this can be limited to serialization only)
+//TODO - avoid hashing values of less than 32 bytes ?? Other optimizations (see ethereum)?
+//TODO - what hash functions should be used for values and what functions for node addresses?
+//TODO - should we include full values or just hashes (compare Ethereum)
+//TODO - use hashes of contract names
+
+//TODO - garbage collection
+//TODO - in case uniform key length is enforced - accept a key length in the forest constructor
+//TODO - getProof in bulk ???
+
 func updateStringEntries(f *Forest, keyValues ...string) TrieId {
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
@@ -346,26 +363,6 @@ func TestRemoveValue_MissingKey(t *testing.T) {
 	require.EqualValues(t, baseHash, hash4, "tree changed after removing missing key")
 }
 
-//TODO - updateStringEntries should advance TrieId only by one
-//TODO - updateStringEntries - the bulk update version (optimize node access)
-//TODO - Radix 16
-//TODO - parity
-//TODO - use hashes of contract names
-//TODO - GetProof - accept an in memory list of cached nodes (to support bulk proof fetch).
-//TODO - serialization based on spec
-//TODO - split branch and node leafs (this can be limited to serializeation only)
-//TODO - accept Node DB object
-//TODO - garbage collection
-//TODO - avoid hashing values of less than 32 bytes
-//TODO - what hash functions should be used for values and what functions for node addresses?
-//TODO - in case save key length is enforced - accept a key length in the forest constructor
-//TODO - Prepare for GC (set values of older nodes to know when they were last valid)
-
-//TODO - change verify and update types to []byte from strings
-
-// Debug helpers
-// TODO - we don't use any of these. but they are useful for debugging
-
 func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 	keyValue := []string{"bar", "baz", "bar123", "qux", "bar1234", "quux", "bad", "foo", "bank", "hello"}
 	var1 := []int{2, 6, 0, 8, 4}
@@ -400,6 +397,10 @@ func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 	require.Equal(t, len(proof2), len(proof3), "unexpected different tree depth / proof lengths")
 	require.Equal(t, proof2[3].hash(), proof3[3].hash(), "unexpected different leaf node hash")
 }
+
+// =================
+// Debug helpers
+// =================
 
 func (f *Forest) dump() {
 	fmt.Println("---------------- TRIE BEGIN ------------------")
