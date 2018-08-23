@@ -63,6 +63,6 @@ func main() {
 		logger,
 		gossipTransport,
 		2*1000,
-		2,
+		1,
 	).WaitUntilShutdown()
 }
