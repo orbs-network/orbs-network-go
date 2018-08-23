@@ -210,10 +210,10 @@ func (c *config) TransactionPoolFutureTimestampGraceTimeout() time.Duration {
 	return c.kv[TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *config) PendingPoolClearExpiredInterval() time.Duration {
+func (c *config) TransactionPoolPendingPoolClearExpiredInterval() time.Duration {
 	return c.kv[TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
 
-func (c *config) CommittedPoolClearExpiredInterval() time.Duration {
+func (c *config) TransactionPoolCommittedPoolClearExpiredInterval() time.Duration {
 	return c.kv[TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }

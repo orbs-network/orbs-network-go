@@ -48,8 +48,8 @@ type NodeConfig interface {
 	TransactionPoolPendingPoolSizeInBytes() uint32
 	TransactionPoolTransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
-	PendingPoolClearExpiredInterval() time.Duration
-	CommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
+	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 }
 
 type FederationNode interface {

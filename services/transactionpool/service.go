@@ -25,8 +25,8 @@ type Config interface {
 	TransactionPoolPendingPoolSizeInBytes() uint32
 	TransactionPoolTransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
-	PendingPoolClearExpiredInterval() time.Duration
-	CommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
+	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 }
 
 type service struct {
@@ -64,8 +64,8 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 
 	//TODO supervise
-	startCleaningProcess(ctx, config.CommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool)
-	startCleaningProcess(ctx, config.PendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool)
+	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool)
+	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool)
 
 	return s
 }
