@@ -216,7 +216,9 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	s.reporting.Info("Received block availability request", log.Stringable("sender", input.Message.Sender))
+
+	return nil, nil
 }
 
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {

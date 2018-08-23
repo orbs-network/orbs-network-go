@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
@@ -16,12 +17,17 @@ type driver struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter adapter.InMemoryBlockPersistence
 	blockStorage   services.BlockStorage
+	blockSync      *services.MockGossip
 }
 
 func (d *driver) expectCommitStateDiff() {
+	d.expectCommitStateDiffTimes(1)
+}
+
+func (d *driver) expectCommitStateDiffTimes(times int) {
 	csdOut := &services.CommitStateDiffOutput{}
 
-	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(1)
+	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(times)
 }
 
 func (d *driver) verifyMocks(t *testing.T) {
@@ -58,7 +64,9 @@ func NewDriver() *driver {
 	d := &driver{}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
-	d.blockStorage = blockstorage.NewBlockStorage(config.NewBlockStorageConfig(70, 5, 5, 30*60), d.storageAdapter, d.stateStorage, log.GetLogger())
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	d.blockStorage = blockstorage.NewBlockStorage(config.NewBlockStorageConfig(70, 5, 5, 30*60), d.storageAdapter, d.stateStorage, logger)
+	d.blockSync = &services.MockGossip{}
 
 	return d
 }
