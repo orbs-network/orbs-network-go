@@ -33,7 +33,8 @@ func updateStringEntries(f *Forest, keyValues ...string) TrieId {
 		panic("expected key value pairs")
 	}
 	for i := 0; i < len(keyValues); i = i + 2 {
-		f.updateSingleEntry(keyValues[i], hash.CalcSha256([]byte(keyValues[i+1])))
+		f.roots[f.topRoot+1] = f.updateSingleEntry(f.roots[f.topRoot], keyValues[i], hash.CalcSha256([]byte(keyValues[i+1])))
+		f.topRoot++
 	}
 	return f.topRoot
 }
@@ -122,31 +123,62 @@ func TestAddSingleEntryToEmptyTree(t *testing.T) {
 	getProofRequireHeight(t, f, rootId, "", "bar", 1)
 }
 
+func TestUpdateComplexStateDiffIncrementsTrieIdOnce(t *testing.T) {
+	f := NewForest()
+	originalRoot := f.topRoot
+	contract1Diff := builders.ContractStateDiff().WithContractName("foo1").
+		WithStringRecord("bar1", "baz1").
+		WithStringRecord("bar2", "baz2").
+		Build()
+
+	contract2Diff := builders.ContractStateDiff().WithContractName("foo2").
+		WithStringRecord("bar1", "qux1").
+		WithStringRecord("bar2", "qux1").
+		Build()
+
+	newRoot := f.Update([]*protocol.ContractStateDiff{contract1Diff, contract2Diff})
+
+	require.Equal(t, originalRoot+1, newRoot, "update did not increment TrieId by 1")
+}
+
 func TestProofValidationAfterBatchStateUpdate(t *testing.T) {
 	f := NewForest()
-	diffContract := builders.ContractStateDiff().WithContractName("foo")
-	r1 := diffContract.WithStringRecord("bar1", "baz").Build()
-	k1 := r1.StateDiffsIterator().NextStateDiffs().StringKey()
-	v1 := r1.StateDiffsIterator().NextStateDiffs().StringValue()
-	f.Update([]*protocol.ContractStateDiff{r1})
 
-	diffContract = builders.ContractStateDiff().WithContractName("foo")
-	r2 := diffContract.WithStringRecord("bar2", "qux").Build()
-	k2 := r2.StateDiffsIterator().NextStateDiffs().StringKey()
-	v2 := r2.StateDiffsIterator().NextStateDiffs().StringValue()
+	r1 := builders.ContractStateDiff().WithContractName("foo").
+		WithStringRecord("bar1", "baz").WithStringRecord("shared", "quux1").Build()
+	iterator1 := r1.StateDiffsIterator()
+	bar1 := iterator1.NextStateDiffs()
+	shared1 := iterator1.NextStateDiffs()
+
+	r2 := builders.ContractStateDiff().WithContractName("foo").
+		WithStringRecord("bar2", "qux").WithStringRecord("shared", "quux2").Build()
+	iterator2 := r2.StateDiffsIterator()
+	bar2 := iterator2.NextStateDiffs()
+	shared2 := iterator2.NextStateDiffs()
+
+	f.Update([]*protocol.ContractStateDiff{r1})
 	f.Update([]*protocol.ContractStateDiff{r2})
 
-	proof := getProofRequireHeight(t, f, 1, "foo", k1, 1)
-	verifyProof(t, f, 1, proof, "foo", k1, v1, true)
+	proof := getProofRequireHeight(t, f, 1, "foo", bar1.StringKey(), 2)
+	verifyProof(t, f, 1, proof, "foo", bar1.StringKey(), bar1.StringValue(), true)
 
-	proof = getProofRequireHeight(t, f, 1, "foo", k2, 1)
-	verifyProof(t, f, 1, proof, "foo", k2, v2, false)
+	proof = getProofRequireHeight(t, f, 1, "foo", bar2.StringKey(), 2)
+	verifyProof(t, f, 1, proof, "foo", bar2.StringKey(), bar2.StringValue(), false)
 
-	proof = getProofRequireHeight(t, f, 2, "foo", k2, 2)
-	verifyProof(t, f, 2, proof, "foo", k2, v2, true)
+	proof = getProofRequireHeight(t, f, 2, "foo", bar2.StringKey(), 3)
+	verifyProof(t, f, 2, proof, "foo", bar2.StringKey(), bar2.StringValue(), true)
 
-	proof = getProofRequireHeight(t, f, 2, "foo", k1, 2)
-	verifyProof(t, f, 2, proof, "foo", k1, v1, true)
+	proof = getProofRequireHeight(t, f, 2, "foo", bar1.StringKey(), 3)
+	verifyProof(t, f, 2, proof, "foo", bar1.StringKey(), bar1.StringValue(), true)
+
+	proof = getProofRequireHeight(t, f, 1, "foo", shared1.StringKey(), 2)
+	verifyProof(t, f, 1, proof, "foo", shared1.StringKey(), shared1.StringValue(), true)
+	verifyProof(t, f, 1, proof, "foo", shared1.StringKey(), shared2.StringValue(), false)
+
+	proof = getProofRequireHeight(t, f, 2, "foo", shared2.StringKey(), 2)
+	verifyProof(t, f, 2, proof, "foo", shared2.StringKey(), shared2.StringValue(), true)
+	verifyProof(t, f, 2, proof, "foo", shared2.StringKey(), shared1.StringValue(), false)
+
 }
 
 func TestProofValidationForTwoRevisionsOfSameKey(t *testing.T) {
