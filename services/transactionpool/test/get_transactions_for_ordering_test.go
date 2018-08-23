@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -14,10 +15,10 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	h := newHarness()
 
 	validTx := builders.TransferTransaction().Build()
-	expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(transactionExpirationWindowInSeconds+60) * time.Second)).Build()
+	expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(transactionExpirationWindow+60) * time.Second)).Build()
 
 	// we use forward rather than add to simulate a scenario where a byzantine node submitted invalid transactions
-	h.handleForwardFrom(otherNodeKeyPair.PublicKey(), validTx, expiredTx)
+	h.handleForwardFrom(otherNodeKeyPair, validTx, expiredTx)
 
 	txSet, err := h.getTransactionsForOrdering(2)
 
@@ -44,7 +45,7 @@ func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t 
 	txSet, err := h.getTransactionsForOrdering(4)
 
 	require.NoError(t, err, "expected transaction set but got an error")
-	require.ElementsMatch(t, []*protocol.SignedTransaction{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
+	require.ElementsMatch(t, transactionpool.Transactions{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
 }
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
