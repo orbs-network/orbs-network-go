@@ -41,16 +41,22 @@ type service struct {
 
 	lastCommittedBlock *protocol.BlockPairContainer
 	lastBlockLock      *sync.Mutex
+
+	blockSyncSource   primitives.Ed25519PublicKey
+	blockSyncIsActive bool
+	blockSyncLock     *sync.RWMutex
 }
 
 func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, blockSync gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
 	return &service{
-		persistence:   persistence,
-		stateStorage:  stateStorage,
-		blockSync:     blockSync,
-		reporting:     reporting.For(log.Service("block-storage")),
-		config:        config,
-		lastBlockLock: &sync.Mutex{},
+		persistence:       persistence,
+		stateStorage:      stateStorage,
+		blockSync:         blockSync,
+		reporting:         reporting.For(log.Service("block-storage")),
+		config:            config,
+		lastBlockLock:     &sync.Mutex{},
+		blockSyncLock:     &sync.RWMutex{},
+		blockSyncIsActive: false,
 	}
 }
 
@@ -257,17 +263,38 @@ func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvaila
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	s.reporting.Info("Received block availability response", log.Stringable("sender", input.Message.Sender))
 
-	// FIXME extract to
+	senderPublicKey := input.Message.Sender.SenderPublicKey()
+
+	s.blockSyncLock.RLock()
+	isActive := s.blockSyncIsActive
+	syncSource := s.blockSyncSource
+	s.blockSyncLock.RUnlock()
+
+	if isActive && !syncSource.Equal(senderPublicKey) {
+		return nil, nil
+	}
+
+	// FIXME extract to config
 	const BATCH_SIZE = 10000
 
 	lastCommittedBlockHeight := s.lastCommittedBlockHeight()
+
+	if lastCommittedBlockHeight >= input.Message.SignedRange.LastCommittedBlockHeight() {
+		return nil, nil
+	}
+
+	s.blockSyncLock.Lock()
+	s.blockSyncSource = senderPublicKey
+	s.blockSyncIsActive = true
+	s.blockSyncLock.Unlock()
+
 	blockType := input.Message.SignedRange.BlockType()
 
 	lastAvailableBlockHeight := lastCommittedBlockHeight + BATCH_SIZE
 	firstAvailableBlockHeight := lastCommittedBlockHeight + 1
 
 	request := &gossiptopics.BlockSyncRequestInput{
-		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
+		RecipientPublicKey: senderPublicKey,
 		Message: &gossipmessages.BlockSyncRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: s.config.NodePublicKey(),

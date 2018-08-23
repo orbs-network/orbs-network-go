@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -53,7 +54,8 @@ func TestSyncHandleBlockAvailabilityRequest(t *testing.T) {
 
 	driver.blockSync.When("SendBlockAvailabilityResponse", response).Return(nil, nil).Times(1)
 
-	driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	require.NoError(t, err)
 
 	driver.verifyMocks(t)
 }
@@ -66,7 +68,8 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfNoBlocksWereCommitted(t *tes
 
 	driver.blockSync.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
 
-	driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	require.NoError(t, err)
 
 	driver.verifyMocks(t)
 }
@@ -84,7 +87,8 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfSenderIsInSync(t *testing.T)
 
 	driver.blockSync.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
 
-	driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	require.NoError(t, err)
 
 	driver.verifyMocks(t)
 }
@@ -130,6 +134,46 @@ func TestSyncHandleBlockAvailabilityResponse(t *testing.T) {
 
 	driver.blockSync.When("SendBlockSyncRequest", request).Return(nil, nil).Times(1)
 
-	driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	require.NoError(t, err)
+
+	driver.verifyMocks(t)
+}
+
+func TestSyncHandleBlockAvailabilityResponseIgnoredIfNodeInSync(t *testing.T) {
+	driver := NewDriver()
+
+	driver.expectCommitStateDiffTimes(2)
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(9)
+	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
+
+	driver.blockSync.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(0)
+
+	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	require.NoError(t, err)
+
+	driver.verifyMocks(t)
+}
+
+func TestSyncHandleBlockAvailabilityResponseIgnoredIfAlreadySyncing(t *testing.T) {
+	driver := NewDriver()
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(9)
+	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
+
+	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(999), senderKeyPair.PublicKey())
+	anotherInput := generateBlockAvailabilityResponseInput(primitives.BlockHeight(1000), anotherSenderKeyPair.PublicKey())
+
+	driver.blockSync.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+
+	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	require.NoError(t, err)
+
+	_, err = driver.blockStorage.HandleBlockAvailabilityResponse(anotherInput)
+	require.NoError(t, err)
+
 	driver.verifyMocks(t)
 }
