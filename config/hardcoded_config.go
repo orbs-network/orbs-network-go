@@ -4,75 +4,55 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 )
-
-//TODO introduce FileSystemConfig
-
-type identity struct {
-	nodePublicKey  primitives.Ed25519PublicKey
-	nodePrivateKey primitives.Ed25519PrivateKey
-	virtualChainId primitives.VirtualChainId
-}
-
-type consensusConfig struct {
-	*identity
-	federationNodes                            map[string]FederationNode
-	constantConsensusLeader                    primitives.Ed25519PublicKey
-	activeConsensusAlgo                        consensus.ConsensusAlgoType
-	benchmarkConsensusRoundRetryIntervalMillis uint32
-}
-
-type crossServiceConfig struct {
-	queryGraceTimeoutMillis uint64
-	querySyncGraceBlockDist uint16
-}
-
-type blockStorageConfig struct {
-	blockSyncCommitTimeoutMillis                     time.Duration
-	blockTransactionReceiptQueryStartGraceSec        time.Duration
-	blockTransactionReceiptQueryEndGraceSec          time.Duration
-	blockTransactionReceiptQueryTransactionExpireSec time.Duration
-}
-
-type consensusContextConfig struct {
-	belowMinimalBlockDelayMillis uint32
-	minimumTransactionsInBlock   int
-}
-
-type stateStorageConfig struct {
-	*crossServiceConfig
-	stateHistoryRetentionInBlockHeights uint16
-}
-
-type transactionPoolConfig struct {
-	*identity
-	*crossServiceConfig
-	pendingPoolSizeInBytes            uint32
-	transactionExpirationWindow       time.Duration
-	futureTimestampGrace              time.Duration
-	pendingPoolClearExpiredInterval   time.Duration
-	committedPoolClearExpiredInterval time.Duration
-}
 
 type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
 
-type hardcodedConfig struct {
-	*identity
-	*consensusConfig
-	*crossServiceConfig
-	*blockStorageConfig
-	*stateStorageConfig
-	*consensusContextConfig
-	*transactionPoolConfig
+type NodeConfigValue struct {
+	Uint32Value   uint32
+	DurationValue time.Duration
 }
+
+type config struct {
+	kv                      map[string]NodeConfigValue
+	federationNodes         map[string]FederationNode
+	nodePublicKey           primitives.Ed25519PublicKey
+	nodePrivateKey          primitives.Ed25519PrivateKey
+	constantConsensusLeader primitives.Ed25519PublicKey
+	activeConsensusAlgo     consensus.ConsensusAlgoType
+}
+
+const (
+	VIRTUAL_CHAIN_ID                   = "VIRTUAL_CHAIN_ID"
+	BENCHMARK_CONSENSUS_RETRY_INTERVAL = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
+
+	BLOCK_SYNC_COMMIT_TIMEOUT                         = "BLOCK_SYNC_COMMIT_TIMEOUT"
+	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START       = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START"
+	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
+	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
+
+	CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY          = "CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY"
+	CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK = "CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK"
+
+	STATE_STORAGE_HISTORY_RETENTION_DISTANCE = "STATE_STORAGE_HISTORY_RETENTION_DISTANCE"
+
+	BLOCK_TRACKER_GRACE_DISTANCE = "BLOCK_TRACKER_GRACE_DISTANCE"
+	BLOCK_TRACKER_GRACE_TIMEOUT  = "BLOCK_TRACKER_GRACE_TIMEOUT"
+
+	TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES            = "TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES"
+	TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW         = "TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW"
+	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT        = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
+	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
+	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
+)
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
 	return &hardCodedFederationNode{
 		nodePublicKey: nodePublicKey,
 	}
+	return nil
 }
 
 func newHardCodedConfig(
@@ -81,204 +61,159 @@ func newHardCodedConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillis uint32,
-	minimumTransactionsInBlock int,
-	belowMinimalBlockDelayMillis uint32,
-	queryGraceTimeoutMillis uint64,
+	benchmarkConsensusRetryInterval time.Duration,
+	minimumTransactionsInBlock uint32,
+	minimalBlockDelay time.Duration,
+	queryGraceTimeout time.Duration,
 ) NodeConfig {
-
-	return &hardcodedConfig{
-		identity: &identity{
-			nodePublicKey:  nodePublicKey,
-			nodePrivateKey: nodePrivateKey,
-			virtualChainId: 42,
-		},
-		consensusConfig: &consensusConfig{
-			federationNodes:                            federationNodes,
-			constantConsensusLeader:                    constantConsensusLeader,
-			activeConsensusAlgo:                        activeConsensusAlgo,
-			benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
-		},
-		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: queryGraceTimeoutMillis,
-			querySyncGraceBlockDist: 3,
-		},
-		blockStorageConfig: &blockStorageConfig{
-			blockSyncCommitTimeoutMillis:                     70 * time.Millisecond,
-			blockTransactionReceiptQueryStartGraceSec:        5 * time.Second,
-			blockTransactionReceiptQueryEndGraceSec:          5 * time.Second,
-			blockTransactionReceiptQueryTransactionExpireSec: 180 * time.Second,
-		},
-		stateStorageConfig: &stateStorageConfig{
-			stateHistoryRetentionInBlockHeights: 5,
-		},
-		consensusContextConfig: &consensusContextConfig{
-			belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
-			minimumTransactionsInBlock:   minimumTransactionsInBlock,
-		},
-		transactionPoolConfig: &transactionPoolConfig{
-			pendingPoolSizeInBytes:            20 * 1024 * 1024,
-			futureTimestampGrace:              3 * time.Minute,
-			transactionExpirationWindow:       30 * time.Minute,
-			pendingPoolClearExpiredInterval:   10 * time.Second,
-			committedPoolClearExpiredInterval: 30 * time.Second,
-		},
+	cfg := &config{
+		federationNodes:         federationNodes,
+		nodePublicKey:           nodePublicKey,
+		nodePrivateKey:          nodePrivateKey,
+		constantConsensusLeader: constantConsensusLeader,
+		activeConsensusAlgo:     activeConsensusAlgo,
+		kv:                      make(map[string]NodeConfigValue),
 	}
+
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, benchmarkConsensusRetryInterval)
+
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, queryGraceTimeout)
+	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
+
+	cfg.SetDuration(BLOCK_SYNC_COMMIT_TIMEOUT, 70*time.Millisecond)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 3*time.Minute)
+
+	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
+
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, minimalBlockDelay)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
+
+	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
+
+	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
+	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
+	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
+
+	return cfg
 }
 
-func NewConsensusConfig(
-	federationNodes map[string]FederationNode,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey,
-	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRoundRetryIntervalMillis uint32,
-) *consensusConfig {
-
-	return &consensusConfig{
-		identity: &identity{
-			nodePublicKey:  nodePublicKey,
-			nodePrivateKey: nodePrivateKey,
-			virtualChainId: 42,
-		},
-		federationNodes:                            federationNodes,
-		constantConsensusLeader:                    constantConsensusLeader,
-		activeConsensusAlgo:                        activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillis: benchmarkConsensusRoundRetryIntervalMillis,
-	}
+func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
+	c.kv[key] = value
+	return c
 }
 
-func NewBlockStorageConfig(blockSyncCommitTimeoutMillis, blockTransactionReceiptQueryStartGraceSec, blockTransactionReceiptQueryEndGraceSec, blockTransactionReceiptQueryTransactionExpireSec uint32) *blockStorageConfig {
-	return &blockStorageConfig{
-		blockSyncCommitTimeoutMillis:                     time.Duration(blockSyncCommitTimeoutMillis) * time.Millisecond,
-		blockTransactionReceiptQueryStartGraceSec:        time.Duration(blockTransactionReceiptQueryStartGraceSec) * time.Second,
-		blockTransactionReceiptQueryEndGraceSec:          time.Duration(blockTransactionReceiptQueryEndGraceSec) * time.Second,
-		blockTransactionReceiptQueryTransactionExpireSec: time.Duration(blockTransactionReceiptQueryTransactionExpireSec) * time.Second,
-	}
+func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
+	c.kv[key] = NodeConfigValue{DurationValue: value}
+	return c
 }
 
-func NewConsensusContextConfig(belowMinimalBlockDelayMillis uint32, minimumTransactionsInBlock int) *consensusContextConfig {
-	return &consensusContextConfig{
-		belowMinimalBlockDelayMillis: belowMinimalBlockDelayMillis,
-		minimumTransactionsInBlock:   minimumTransactionsInBlock,
-	}
+func (c *config) SetUint32(key string, value uint32) NodeConfig {
+	c.kv[key] = NodeConfigValue{Uint32Value: value}
+	return c
 }
 
-func NewTransactionPoolConfig(pendingPoolSizeInBytes uint32, transactionExpirationWindow time.Duration, nodeKeyPair *keys.Ed25519KeyPair) *transactionPoolConfig {
-	return &transactionPoolConfig{
-		identity: &identity{
-			nodePublicKey:  nodeKeyPair.PublicKey(),
-			nodePrivateKey:  nodeKeyPair.PrivateKey(),
-			virtualChainId: 42,
-		},
-		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: 100,
-			querySyncGraceBlockDist: 5,
-		},
-		pendingPoolSizeInBytes:            pendingPoolSizeInBytes,
-		futureTimestampGrace:              3 * time.Minute,
-		transactionExpirationWindow:       transactionExpirationWindow,
-		pendingPoolClearExpiredInterval:   10 * time.Second,
-		committedPoolClearExpiredInterval: 30 * time.Second,
-	}
+func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig {
+	c.nodePublicKey = key
+	return c
 }
 
-func NewStateStorageConfig(maxStateHistory uint16, graceBlockDist uint16, graceTimeoutMillis uint64) *stateStorageConfig {
-	return &stateStorageConfig{
-		stateHistoryRetentionInBlockHeights: maxStateHistory,
-		crossServiceConfig: &crossServiceConfig{
-			queryGraceTimeoutMillis: graceTimeoutMillis,
-			querySyncGraceBlockDist: graceBlockDist,
-		},
-	}
+func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig {
+	c.nodePrivateKey = key
+	return c
 }
 
-func (c *identity) NodePublicKey() primitives.Ed25519PublicKey {
+func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
 }
 
-func (c *identity) NodePrivateKey() primitives.Ed25519PrivateKey {
+func (c *config) NodePublicKey() primitives.Ed25519PublicKey {
+	return c.nodePublicKey
+}
+
+func (c *config) NodePrivateKey() primitives.Ed25519PrivateKey {
 	return c.nodePrivateKey
 }
 
-func (c *identity) VirtualChainId() primitives.VirtualChainId {
-	return c.virtualChainId
+func (c *config) VirtualChainId() primitives.VirtualChainId {
+	return primitives.VirtualChainId(c.kv[VIRTUAL_CHAIN_ID].Uint32Value)
 }
 
-func (c *consensusConfig) NetworkSize(asOfBlock uint64) uint32 {
+func (c *config) NetworkSize(asOfBlock uint64) uint32 {
 	return uint32(len(c.federationNodes))
 }
 
-func (c *consensusConfig) FederationNodes(asOfBlock uint64) map[string]FederationNode {
+func (c *config) FederationNodes(asOfBlock uint64) map[string]FederationNode {
 	return c.federationNodes
 }
 
-func (c *consensusConfig) ConstantConsensusLeader() primitives.Ed25519PublicKey {
+func (c *config) ConstantConsensusLeader() primitives.Ed25519PublicKey {
 	return c.constantConsensusLeader
 }
 
-func (c *consensusConfig) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
+func (c *config) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
 }
 
-func (c *consensusConfig) BenchmarkConsensusRoundRetryIntervalMillis() uint32 {
-	return c.benchmarkConsensusRoundRetryIntervalMillis
+func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
+	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL].DurationValue
+
 }
 
-func (n *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
-	return n.nodePublicKey
+func (c *config) BlockSyncCommitTimeout() time.Duration {
+	return c.kv[BLOCK_SYNC_COMMIT_TIMEOUT].DurationValue
 }
 
-func (c *blockStorageConfig) BlockSyncCommitTimeoutMillis() time.Duration {
-	return c.blockSyncCommitTimeoutMillis
+func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {
+	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START].DurationValue
+}
+func (c *config) BlockTransactionReceiptQueryGraceEnd() time.Duration {
+	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END].DurationValue
+}
+func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
+	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
 }
 
-func (c *blockStorageConfig) BlockTransactionReceiptQueryStartGraceSec() time.Duration {
-	return c.blockTransactionReceiptQueryStartGraceSec
-}
-func (c *blockStorageConfig) BlockTransactionReceiptQueryEndGraceSec() time.Duration {
-	return c.blockTransactionReceiptQueryEndGraceSec
-}
-func (c *blockStorageConfig) BlockTransactionReceiptQueryTransactionExpireSec() time.Duration {
-	return c.blockTransactionReceiptQueryTransactionExpireSec
+func (c *config) ConsensusContextMinimalBlockDelay() time.Duration {
+	return c.kv[CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY].DurationValue
 }
 
-func (c *consensusContextConfig) BelowMinimalBlockDelayMillis() uint32 {
-	return c.belowMinimalBlockDelayMillis
+func (c *config) ConsensusContextMinimumTransactionsInBlock() uint32 {
+	return c.kv[CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK].Uint32Value
 }
 
-func (c *consensusContextConfig) MinimumTransactionsInBlock() int {
-	return c.minimumTransactionsInBlock
+func (c *config) StateStorageHistoryRetentionDistance() uint32 {
+	return c.kv[STATE_STORAGE_HISTORY_RETENTION_DISTANCE].Uint32Value
 }
 
-func (c *stateStorageConfig) StateHistoryRetentionInBlockHeights() uint16 {
-	return c.stateHistoryRetentionInBlockHeights
+func (c *config) BlockTrackerGraceDistance() uint32 {
+	return c.kv[BLOCK_TRACKER_GRACE_DISTANCE].Uint32Value
+
 }
 
-func (c *crossServiceConfig) QuerySyncGraceBlockDist() uint16 {
-	return c.querySyncGraceBlockDist
+func (c *config) BlockTrackerGraceTimeout() time.Duration {
+	return c.kv[BLOCK_TRACKER_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *crossServiceConfig) QueryGraceTimeoutMillis() uint64 {
-	return c.queryGraceTimeoutMillis
+func (c *config) TransactionPoolPendingPoolSizeInBytes() uint32 {
+	return c.kv[TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES].Uint32Value
 }
 
-func (c *transactionPoolConfig) PendingPoolSizeInBytes() uint32 {
-	return c.pendingPoolSizeInBytes
+func (c *config) TransactionPoolTransactionExpirationWindow() time.Duration {
+	return c.kv[TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW].DurationValue
 }
 
-func (c *transactionPoolConfig) TransactionExpirationWindow() time.Duration {
-	return c.transactionExpirationWindow
+func (c *config) TransactionPoolFutureTimestampGraceTimeout() time.Duration {
+	return c.kv[TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *transactionPoolConfig) FutureTimestampGrace() time.Duration {
-	return c.futureTimestampGrace
+func (c *config) TransactionPoolPendingPoolClearExpiredInterval() time.Duration {
+	return c.kv[TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
 
-func (c *transactionPoolConfig) PendingPoolClearExpiredInterval() time.Duration {
-	return c.pendingPoolClearExpiredInterval
-}
-
-func (c *transactionPoolConfig) CommittedPoolClearExpiredInterval() time.Duration {
-	return c.committedPoolClearExpiredInterval
+func (c *config) TransactionPoolCommittedPoolClearExpiredInterval() time.Duration {
+	return c.kv[TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }

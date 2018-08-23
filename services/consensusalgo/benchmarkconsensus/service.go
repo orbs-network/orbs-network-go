@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"math"
 	"sync"
+	"time"
 )
 
 const blockHeightNone = primitives.BlockHeight(math.MaxUint64)
@@ -23,7 +24,7 @@ type Config interface {
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	BenchmarkConsensusRoundRetryIntervalMillis() uint32
+	BenchmarkConsensusRetryInterval() time.Duration
 }
 
 type service struct {
