@@ -35,10 +35,7 @@ func NewNode(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	logger log.BasicLogger,
 	transport gossipAdapter.Transport,
-	benchmarkConsensusRoundRetryIntervalMillis uint32, // TODO: move all of the config from the ctor, it's a smell
-	minimumTransactionsInBlock int,
 ) Node {
-
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.ForProduction(
 		federationNodes,
@@ -46,8 +43,6 @@ func NewNode(
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
-		benchmarkConsensusRoundRetryIntervalMillis,
-		minimumTransactionsInBlock,
 	)
 
 	nodeLogger := logger.For(log.Node(nodePublicKey.String()))

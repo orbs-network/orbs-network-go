@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -15,7 +16,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"time"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 type harness struct {
@@ -37,7 +37,7 @@ func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction,
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
-				Signature: sig,
+				Signature:       sig,
 			}).Build(),
 			SignedTransactions: transactionpool.Transactions{tx},
 		},
@@ -106,9 +106,9 @@ func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ..
 
 	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
-			Sender:             (&gossipmessages.SenderSignatureBuilder{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: sender.PublicKey(),
-				Signature: sig,
+				Signature:       sig,
 			}).Build(),
 			SignedTransactions: transactions,
 		},
@@ -188,6 +188,25 @@ func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
+func getConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, keyPair *keys.Ed25519KeyPair) transactionpool.Config {
+	cfg := config.EmptyConfig()
+
+	cfg.SetNodePublicKey(keyPair.PublicKey())
+	cfg.SetNodePrivateKey(keyPair.PrivateKey())
+
+	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
+	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
+	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, 5)
+
+	cfg.SetUint32(config.TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
+	cfg.SetDuration(config.TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, transactionExpirationInSeconds)
+	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
+	cfg.SetDuration(config.TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)
+	cfg.SetDuration(config.TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
+
+	return cfg
+}
+
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	ctx := context.Background()
 
@@ -198,7 +217,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
+	config := getConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
 	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, config, log.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
