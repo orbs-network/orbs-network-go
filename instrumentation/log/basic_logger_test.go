@@ -80,8 +80,6 @@ func TestCompareLogger(t *testing.T) {
 	Expect(jsonMap["bytes"]).To(Equal("020363"))
 	Expect(jsonMap["actual-block-height"]).To(Equal("22b8"))
 	Expect(jsonMap["expected-block-height"]).To(Equal("270f"))
-
-
 }
 
 func TestNestedLogger(t *testing.T) {
@@ -222,7 +220,6 @@ func TestCustomLogFormatter(t *testing.T) {
 	Expect(stdout).To(ContainSubstring("log/basic_logger_test.go"))
 	Expect(stdout).To(ContainSubstring("_test-id=hello"))
 	Expect(stdout).To(ContainSubstring("_underscore=wow"))
-
 }
 
 func TestMultipleOutputs(t *testing.T) {
