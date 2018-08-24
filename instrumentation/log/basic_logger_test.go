@@ -77,7 +77,7 @@ func TestCompareLogger(t *testing.T) {
 	Expect(jsonMap["message"]).To(Equal("Service initialized compare"))
 	Expect(jsonMap["source"]).NotTo(BeEmpty())
 	Expect(jsonMap["timestamp"]).NotTo(BeNil())
-	Expect(jsonMap["bytes"]).To(Equal("Z0Rw"))
+	Expect(jsonMap["bytes"]).To(Equal("020363"))
 	Expect(jsonMap["actual-block-height"]).To(Equal("22b8"))
 	Expect(jsonMap["expected-block-height"]).To(Equal("270f"))
 
