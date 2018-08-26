@@ -33,7 +33,7 @@ var METHOD_INIT = types.MethodInfo{
 }
 
 func (c *contract) _init(ctx types.Context) error {
-	return nil
+	return c.State.WriteUint64ByKey(ctx, "total-balance", 0)
 }
 
 ///////////////////////////////////////////////////////////////////////////

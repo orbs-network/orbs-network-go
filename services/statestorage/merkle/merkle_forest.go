@@ -111,19 +111,17 @@ func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, s
 	f.nodes[childHash.KeyForMap()] = childNode
 }
 
-func (f *Forest) updateSingleEntry(path string, valueHash primitives.Sha256) TrieId {
-	currentRoot := f.nodes[f.roots[f.topRoot].KeyForMap()]
+func (f *Forest) updateSingleEntry(baseHash primitives.MerkleSha256, path string, valueHash primitives.Sha256) primitives.MerkleSha256 {
+	baseNode := f.nodes[baseHash.KeyForMap()]
 	var newRoot *Node
 	if valueHash.Equal(zeroValueHash) {
-		newRoot = f.remove(currentRoot, path)
+		newRoot = f.remove(baseNode, path)
 	} else {
-		newRoot = f.add(currentRoot, path, valueHash)
+		newRoot = f.add(baseNode, path, valueHash)
 	}
-	sha256s := newRoot.hash()
-	f.nodes[sha256s.KeyForMap()] = newRoot
-	f.topRoot++
-	f.roots[f.topRoot] = sha256s
-	return f.topRoot
+	sha256 := newRoot.hash()
+	f.nodes[sha256.KeyForMap()] = newRoot
+	return sha256
 }
 
 func (f *Forest) squash(n *Node) *Node {
@@ -215,14 +213,18 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 
 // appends diffs to the top trie building new nodes as needed and returns the new trie id
 func (f *Forest) Update(diffs []*protocol.ContractStateDiff) TrieId {
+	sha256, _ := f.GetTopRootHash()
 	for _, diff := range diffs {
 		contract := diff.StringContractName()
 		for i := diff.StateDiffsIterator(); i.HasNext(); {
 			record := i.NextStateDiffs()
 			path := contract + record.StringKey()
-			f.updateSingleEntry(path, hash.CalcSha256([]byte(record.StringValue())))
+			sha256 = f.updateSingleEntry(sha256, path, hash.CalcSha256([]byte(record.StringValue())))
 		}
 	}
+	f.topRoot++
+	f.roots[f.topRoot] = sha256
+
 	return f.topRoot
 }
 
