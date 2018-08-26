@@ -94,6 +94,10 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfSenderIsInSync(t *testing.T)
 	driver.verifyMocks(t)
 }
 
+func TestSyncHandleBlockAvailabilityRequestResentAfterSomeTime(t *testing.T) {
+	t.Skip("Not implemented")
+}
+
 func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityResponseInput {
 	return &gossiptopics.BlockAvailabilityResponseInput{
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
@@ -323,6 +327,29 @@ func TestSyncHandleBlockSyncResponse(t *testing.T) {
 	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
 	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
+	require.NoError(t, err)
+
+	driver.verifyMocks(t)
+}
+
+func TestSyncHandleBlockSyncResponseFromMultipleSenders(t *testing.T) {
+	driver := NewDriver()
+
+	driver.expectCommitStateDiffTimes(5)
+
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(7)
+	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
+
+	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
+	inputFromAnotherSender := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(5), anotherSenderKeyPair.PublicKey())
+
+	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
+	require.NoError(t, err)
+
+	_, err = driver.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
 	require.NoError(t, err)
 
 	driver.verifyMocks(t)

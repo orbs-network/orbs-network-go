@@ -280,10 +280,7 @@ func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvail
 		return nil, nil
 	}
 
-	s.blockSyncLock.Lock()
-	s.blockSyncSource = senderPublicKey
-	s.blockSyncIsActive = true
-	s.blockSyncLock.Unlock()
+	s.turnOnBlockSync(senderPublicKey)
 
 	blockType := input.Message.SignedRange.BlockType()
 
@@ -367,6 +364,8 @@ func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseI
 			s.reporting.Error("Failed to commit block received via sync", log.Error(err))
 		}
 	}
+
+	s.turnOffBlockSync()
 
 	return nil, nil
 }
@@ -458,4 +457,18 @@ func (s *service) getBlocks(first primitives.BlockHeight, last primitives.BlockH
 	}
 
 	return blocks, firstAvailableBlockHeight, lastAvailableBlockHeight
+}
+
+func (s *service) turnOnBlockSync(publicKey primitives.Ed25519PublicKey) {
+	s.blockSyncLock.Lock()
+	s.blockSyncSource = publicKey
+	s.blockSyncIsActive = true
+	s.blockSyncLock.Unlock()
+}
+
+func (s *service) turnOffBlockSync() {
+	s.blockSyncLock.Lock()
+	s.blockSyncSource = nil
+	s.blockSyncIsActive = false
+	s.blockSyncLock.Unlock()
 }
