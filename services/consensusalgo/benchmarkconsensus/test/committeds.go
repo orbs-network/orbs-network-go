@@ -40,7 +40,7 @@ func (c *committed) WithCountBelowQuorum() *committed {
 }
 
 func (c *committed) WithCountAboveQuorum() *committed {
-	c.count = 3
+	c.count = 4
 	return c
 }
 
