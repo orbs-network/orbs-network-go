@@ -40,6 +40,7 @@ func (c *committed) WithCountBelowQuorum() *committed {
 }
 
 func (c *committed) WithCountAboveQuorum() *committed {
+	//TODO: Change count to 3 once requiredQuorumSize is 2/3 
 	c.count = 4
 	return c
 }
