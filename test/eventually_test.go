@@ -7,6 +7,8 @@ import (
 )
 
 func TestEventually(t *testing.T) {
+	t.Parallel()
+
 	sem := newSemaphore(4)
 	num := 1
 	go func() {
@@ -23,6 +25,8 @@ func TestEventually(t *testing.T) {
 }
 
 func TestConsistently(t *testing.T) {
+	t.Parallel()
+
 	sem := newSemaphore(4)
 	num := 1
 	go func() {
@@ -47,6 +51,8 @@ func (p *personMock) GetName() string {
 }
 
 func TestEventuallyVerifySuccess(t *testing.T) {
+	t.Parallel()
+
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(1)
 	go func() {
@@ -60,6 +66,8 @@ func TestEventuallyVerifySuccess(t *testing.T) {
 }
 
 func TestEventuallyVerifyFailure(t *testing.T) {
+	t.Parallel()
+
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(1)
 	err := EventuallyVerify(p)
@@ -69,6 +77,8 @@ func TestEventuallyVerifyFailure(t *testing.T) {
 }
 
 func TestEventuallyVerifySuccessWithTwoMocks(t *testing.T) {
+	t.Parallel()
+
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(1)
 	p2 := &personMock{}
@@ -86,6 +96,8 @@ func TestEventuallyVerifySuccessWithTwoMocks(t *testing.T) {
 }
 
 func TestEventuallyVerifyFailureWithTwoMocks(t *testing.T) {
+	t.Parallel()
+
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(1)
 	p2 := &personMock{}
@@ -101,6 +113,8 @@ func TestEventuallyVerifyFailureWithTwoMocks(t *testing.T) {
 }
 
 func TestConsistentlyVerifySuccess(t *testing.T) {
+	t.Parallel()
+
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(0)
 	err := ConsistentlyVerify(p)
@@ -110,6 +124,8 @@ func TestConsistentlyVerifySuccess(t *testing.T) {
 }
 
 func TestConsistentlyVerifyFailure(t *testing.T) {
+	t.Parallel()
+
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(0)
 	go func() {
@@ -123,6 +139,8 @@ func TestConsistentlyVerifyFailure(t *testing.T) {
 }
 
 func TestConsistentlyVerifySuccessWithTwoMocks(t *testing.T) {
+	t.Parallel()
+
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(0)
 	p2 := &personMock{}
@@ -134,6 +152,8 @@ func TestConsistentlyVerifySuccessWithTwoMocks(t *testing.T) {
 }
 
 func TestConsistentlyVerifyFailureWithTwoMocks(t *testing.T) {
+	t.Parallel()
+
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(0)
 	p2 := &personMock{}
