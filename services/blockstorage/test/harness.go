@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -23,6 +24,7 @@ type driver struct {
 	blockSync      *gossiptopics.MockBlockSync
 	config         blockstorage.Config
 	logger         log.BasicLogger
+	ctx            context.Context
 }
 
 func (d *driver) expectCommitStateDiff() {
@@ -87,7 +89,10 @@ func NewDriver() *driver {
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
 	d.blockSync = &gossiptopics.MockBlockSync{}
-	d.blockStorage = blockstorage.NewBlockStorage(cfg, d.storageAdapter, d.stateStorage, d.blockSync, logger)
+
+	ctx := context.Background()
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.blockSync, logger)
+	d.ctx = ctx
 
 	return d
 }

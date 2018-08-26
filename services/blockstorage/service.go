@@ -1,6 +1,7 @@
 package blockstorage
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -47,8 +48,8 @@ type service struct {
 	blockSyncLock     *sync.RWMutex
 }
 
-func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, blockSync gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
-	return &service{
+func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, blockSync gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
+	storage := &service{
 		persistence:       persistence,
 		stateStorage:      stateStorage,
 		blockSync:         blockSync,
@@ -58,6 +59,10 @@ func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateS
 		blockSyncLock:     &sync.RWMutex{},
 		blockSyncIsActive: false,
 	}
+
+	go storage.syncLoop(ctx)
+
+	return storage
 }
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -471,4 +476,8 @@ func (s *service) turnOffBlockSync() {
 	s.blockSyncSource = nil
 	s.blockSyncIsActive = false
 	s.blockSyncLock.Unlock()
+}
+
+func (s *service) syncLoop(ctx context.Context) {
+
 }

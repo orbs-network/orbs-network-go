@@ -94,10 +94,6 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfSenderIsInSync(t *testing.T)
 	driver.verifyMocks(t)
 }
 
-func TestSyncHandleBlockAvailabilityRequestResentAfterSomeTime(t *testing.T) {
-	t.Skip("Not implemented")
-}
-
 func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityResponseInput {
 	return &gossiptopics.BlockAvailabilityResponseInput{
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
@@ -353,4 +349,24 @@ func TestSyncHandleBlockSyncResponseFromMultipleSenders(t *testing.T) {
 	require.NoError(t, err)
 
 	driver.verifyMocks(t)
+}
+
+func TestSyncBroadcastBlockAvailabilityRequestSentContinuously(t *testing.T) {
+	t.Skip("not implemented")
+
+	driver := NewDriver()
+
+	driver.blockSync.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(1)
+
+	time.Sleep(20 * time.Millisecond)
+
+	driver.verifyMocks(t)
+}
+
+func TestSyncBroadcastBlockAvailabilityRequestIsNotSentIfSyncingWithOtherNode(t *testing.T) {
+	t.Skip("not implemented")
+}
+
+func TestSyncBroadcastBlockAvailabilityRequestResentAfterSomeTime(t *testing.T) {
+	t.Skip("not implemented")
 }
