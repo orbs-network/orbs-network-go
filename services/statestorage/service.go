@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"sync"
 	"time"
-)
+		)
 
 type Config interface {
 	StateStorageHistoryRetentionDistance() uint32
@@ -31,6 +31,7 @@ type service struct {
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence, reporting log.BasicLogger) services.StateStorage {
+	persistence.WriteMerkleRoot(0, merkle.GetEmptyNodeHash()) // TODO genesis block merkle here
 	return &service{
 		config:       config,
 		merkle:       merkle.NewForest(),
@@ -55,12 +56,18 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 
 	s.reporting.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
-	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != commitBlockHeight {
+	lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight()
+	if  lastCommittedBlock+1 != commitBlockHeight {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
-	s.merkle.Update(input.ContractStateDiffs)
+	if root, err := s.persistence.ReadMerkleRoot(commitBlockHeight-1); err != nil { // TODO use input.resultheader.preexecutuion
+		return nil, errors.Errorf("cannot find previous block merkle root. current block %d", commitBlockHeight)
+	} else {
+		newRoot := s.merkle.Update(root, input.ContractStateDiffs)
+		s.persistence.WriteMerkleRoot(commitBlockHeight, newRoot)
+	}
 	s.persistence.WriteState(commitBlockHeight, input.ContractStateDiffs)
 
 	s.lastCommittedBlockHeader = input.ResultsBlockHeader
@@ -123,13 +130,14 @@ func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBloc
 }
 
 func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-
 	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
-	value, _ := s.merkle.GetRootHash(merkle.TrieId(input.BlockHeight))
-
+	value, err := s.persistence.ReadMerkleRoot(input.BlockHeight)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not merkle root for block height %d", input.BlockHeight)
+	}
 	output := &services.GetStateHashOutput{StateRootHash: value}
 
 	return output, nil
