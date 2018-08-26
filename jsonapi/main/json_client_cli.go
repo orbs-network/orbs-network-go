@@ -14,6 +14,7 @@ import (
 func main() {
 	sendTransactionPtr := flag.String("send-transaction", "", "<json>")
 	callMethodPtr := flag.String("call-method", "", "<json>")
+	verbosePtr := flag.Bool("v", false, "Show all related logs")
 
 	//publicKeyPtr := flag.String("public-key")
 	//privateKeyPtr := flag.String("private-key")
@@ -25,7 +26,9 @@ func main() {
 	logger := log.GetLogger(log.String("api-endpoint", *apiEndpointPtr)).WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	if *sendTransactionPtr != "" {
-		logger.Info("sending transaction")
+		if *verbosePtr {
+			logger.Info("sending transaction")
+		}
 
 		keyPair := keys.Ed25519KeyPairForTests(1)
 
@@ -34,17 +37,23 @@ func main() {
 			logger.Error("could not unpack json", log.Error(err))
 		}
 
-		result, _ := jsonapi.SendTransaction(tx, keyPair, *apiEndpointPtr)
-		fmt.Println(result)
+		result, _ := jsonapi.SendTransaction(tx, keyPair, *apiEndpointPtr, *verbosePtr)
+
+		jsonBytes, _ := json.Marshal(result.TransactionReceipt)
+		fmt.Println(string(jsonBytes))
 	} else if *callMethodPtr != "" {
-		logger.Info("calling method")
+		if *verbosePtr {
+			logger.Info("calling method")
+		}
 
 		tx := &jsonapi.Transaction{}
 		if err := json.Unmarshal([]byte(*callMethodPtr), tx); err != nil {
 			logger.Error("could not unpack json", log.Error(err))
 		}
 
-		result, _ := jsonapi.CallMethod(tx, *apiEndpointPtr)
-		fmt.Println(result)
+		result, _ := jsonapi.CallMethod(tx, *apiEndpointPtr, *verbosePtr)
+
+		jsonBytes, _ := json.Marshal(result)
+		fmt.Println(string(jsonBytes))
 	}
 }
