@@ -352,7 +352,23 @@ func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInp
 }
 
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	firstAvailableBlockHeight := input.Message.SignedRange.FirstAvailableBlockHeight()
+	lastAvailableBlockHeight := input.Message.SignedRange.LastAvailableBlockHeight()
+
+	s.reporting.Info("Received block sync response",
+		log.Stringable("sender", input.Message.Sender),
+		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
+		log.Stringable("last-available-block-height", lastAvailableBlockHeight))
+
+	for _, blockPair := range input.Message.BlockPairs {
+		_, err := s.CommitBlock(&services.CommitBlockInput{blockPair})
+
+		if err != nil {
+			s.reporting.Error("Failed to commit block received via sync", log.Error(err))
+		}
+	}
+
+	return nil, nil
 }
 
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
@@ -418,7 +434,7 @@ func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPair
 	return err
 }
 
-// Return a slice of blocks containing first and last
+// Returns a slice of blocks containing first and last
 func (s *service) getBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
 	// FIXME use more efficient way to slice blocks
 

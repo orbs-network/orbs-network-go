@@ -287,3 +287,43 @@ func TestSyncHandleBlockSyncRequestIgnoresRangeAccordingToLocalBatchSettings(t *
 
 	driver.verifyMocks(t)
 }
+
+func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncResponseInput {
+	var blocks []*protocol.BlockPairContainer
+
+	for i := lastBlockHeight; i <= desirableBlockHeight; i++ {
+		blocks = append(blocks, builders.BlockPair().WithHeight(i).WithBlockCreated(time.Now()).Build())
+	}
+
+	return &gossiptopics.BlockSyncResponseInput{
+		Message: &gossipmessages.BlockSyncResponseMessage{
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstAvailableBlockHeight: lastBlockHeight,
+				LastAvailableBlockHeight:  desirableBlockHeight,
+				LastCommittedBlockHeight:  lastBlockHeight,
+			}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: senderPublicKey,
+			}).Build(),
+			BlockPairs: blocks,
+		},
+	}
+}
+
+func TestSyncHandleBlockSyncResponse(t *testing.T) {
+	driver := NewDriver()
+
+	driver.expectCommitStateDiffTimes(4)
+
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(9)
+	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
+
+	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
+	require.NoError(t, err)
+
+	driver.verifyMocks(t)
+}
