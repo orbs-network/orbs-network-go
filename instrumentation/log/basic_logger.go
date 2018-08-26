@@ -13,6 +13,7 @@ import (
 
 type BasicLogger interface {
 	Log(level string, message string, params ...*Field)
+	LogFailedExpectation(message string, expected *Field, actual *Field, params ...*Field)
 	Info(message string, params ...*Field)
 	Error(message string, params ...*Field)
 	Metric(name string, params ...*Field)
@@ -262,6 +263,13 @@ func (b *basicLogger) Info(message string, params ...*Field) {
 
 func (b *basicLogger) Error(message string, params ...*Field) {
 	b.Log("error", message, params...)
+}
+
+func (b *basicLogger) LogFailedExpectation(message string, expected *Field, actual *Field, params ...*Field) {
+	actual.Key = "actual-" + actual.Key
+	expected.Key = "expected-" + expected.Key
+	newParams:= append(params,expected,actual)
+	b.Log("expectation", message, newParams...)
 }
 
 func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
