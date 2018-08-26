@@ -1,24 +1,36 @@
 package adapter
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
-var _ = Describe("Reading a Key", func() {
-	When("not providing a contract name", func() {
-		It("Returns an error", func() {
-			d := NewInMemoryStatePersistence()
-			_, err := d.ReadState(0, "")
-			Expect(err).To(MatchError("missing contract name"))
-		})
-	})
+func TestReadStateWithNonExistingBlockHeight(t *testing.T) {
+	d := NewInMemoryStatePersistence()
+	_, err := d.ReadState(1, "foo")
+	require.EqualError(t, err, "block 1 does not exist in snapshot history", "did not fail with error")
+}
 
-	When("providing a non existing contract", func() {
-		It("Returns an error", func() {
-			d := NewInMemoryStatePersistence()
-			_, err := d.ReadState(0, "foo")
-			Expect(err).To(HaveOccurred())
-		})
-	})
-})
+func TestReadStateWithNonExistingContractName(t *testing.T) {
+	d := NewInMemoryStatePersistence()
+	_, err := d.ReadState(0, "foo")
+	require.EqualError(t, err, "contract foo does not exist", "did not fail with error")
+}
+
+func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
+	d := NewInMemoryStatePersistence()
+
+	d.WriteState(1, []*protocol.ContractStateDiff{builders.ContractStateDiff().WithContractName("foo").WithStringRecord("foo", "bar").Build()})
+
+	records, err := d.ReadState(1, "foo")
+	require.NoError(t, err, "unexpected error")
+	require.Len(t, records, 1, "after writing one key there should be 1 keys")
+
+	d.WriteState(1, []*protocol.ContractStateDiff{builders.ContractStateDiff().WithContractName("foo").WithStringRecord("foo", "").Build()})
+
+	records, err = d.ReadState(1, "foo")
+	require.NoError(t, err, "unexpected error")
+	require.Len(t, records, 0, "writing zero value to state did not remove key")
+}

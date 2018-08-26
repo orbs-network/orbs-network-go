@@ -1,7 +1,7 @@
 package statestorage
 
 import (
-	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -14,26 +14,28 @@ import (
 )
 
 type Config interface {
-	StateHistoryRetentionInBlockHeights() uint16
-	QuerySyncGraceBlockDist() uint16
-	QueryGraceTimeoutMillis() uint64
+	StateStorageHistoryRetentionDistance() uint32
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
 }
 
 type service struct {
 	config       Config
 	merkle       *merkle.Forest
 	blockTracker *synchronization.BlockTracker
+	reporting    log.BasicLogger
 
 	mutex                    *sync.RWMutex
 	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 }
 
-func NewStateStorage(config Config, persistence adapter.StatePersistence) services.StateStorage {
+func NewStateStorage(config Config, persistence adapter.StatePersistence, reporting log.BasicLogger) services.StateStorage {
 	return &service{
 		config:       config,
 		merkle:       merkle.NewForest(),
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.QuerySyncGraceBlockDist()), time.Duration(config.QueryGraceTimeoutMillis())*time.Millisecond),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
+		reporting:    reporting.For(log.Service("state-storage")),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
@@ -50,7 +52,8 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	defer s.mutex.Unlock()
 
 	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
-	fmt.Printf("trying to commit state diff for block height %d, num contract state diffs %d\n", commitBlockHeight, len(input.ContractStateDiffs)) // TODO: move this to reporting mechanism
+
+	s.reporting.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
 	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != commitBlockHeight {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
@@ -68,11 +71,11 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 
 func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
 	if input.ContractName == "" {
-		return nil, fmt.Errorf("missing contract name")
+		return nil, errors.Errorf("missing contract name")
 	}
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, fmt.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateHistoryRetentionInBlockHeights()))
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
 	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
@@ -81,6 +84,10 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.lastCommittedBlockHeader.BlockHeight() {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	}
 
 	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
 	if err != nil {
@@ -93,13 +100,13 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		if ok {
 			records = append(records, record)
 		} else { // implicitly return the zero value if key is missing in db
-			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: []byte{}}).Build())
+			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: newZeroValue()}).Build())
 		}
 	}
 
 	output := &services.ReadKeysOutput{StateRecords: records}
 	if len(output.StateRecords) == 0 {
-		return output, fmt.Errorf("no value found for input key(s)")
+		return output, errors.Errorf("no value found for input key(s)")
 	}
 	return output, nil
 }
@@ -126,4 +133,8 @@ func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.Get
 	output := &services.GetStateHashOutput{StateRootHash: value}
 
 	return output, nil
+}
+
+func newZeroValue() []byte {
+	return []byte{}
 }
