@@ -319,6 +319,10 @@ func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInp
 	firstRequestedBlockHeight := input.Message.SignedRange.FirstAvailableBlockHeight()
 	lastRequestedBlockHeight := input.Message.SignedRange.LastAvailableBlockHeight()
 
+	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncBatchSize()-1) {
+		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize()-1)
+	}
+
 	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := s.getBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
 
 	s.reporting.Info("Sending blocks to another node via block sync",

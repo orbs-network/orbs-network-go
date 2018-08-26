@@ -239,5 +239,51 @@ func TestSyncHandleBlockSyncRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	driver.verifyMocks(t)
+}
 
+func TestSyncHandleBlockSyncRequestIgnoresRangeAccordingToLocalBatchSettings(t *testing.T) {
+	driver := NewDriver()
+	driver.setBatchSize(2)
+
+	driver.expectCommitStateDiffTimes(4)
+
+	blocks := []*protocol.BlockPairContainer{
+		builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
+		builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build(),
+		builders.BlockPair().WithHeight(primitives.BlockHeight(3)).WithBlockCreated(time.Now()).Build(),
+		builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
+	}
+
+	driver.commitBlock(blocks[0])
+	driver.commitBlock(blocks[1])
+	driver.commitBlock(blocks[2])
+	driver.commitBlock(blocks[3])
+
+	expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(9)
+	input := generateBlockSyncRequestInput(primitives.BlockHeight(2), primitives.BlockHeight(10002), senderKeyPair.PublicKey())
+
+	response := &gossiptopics.BlockSyncResponseInput{
+		RecipientPublicKey: senderKeyPair.PublicKey(),
+		Message: &gossipmessages.BlockSyncResponseMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: driver.config.NodePublicKey(),
+			}).Build(),
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstAvailableBlockHeight: primitives.BlockHeight(2),
+				LastAvailableBlockHeight:  primitives.BlockHeight(3),
+				LastCommittedBlockHeight:  primitives.BlockHeight(4),
+			}).Build(),
+			BlockPairs: expectedBlocks,
+		},
+	}
+
+	driver.blockSync.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+
+	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
+	require.NoError(t, err)
+
+	driver.verifyMocks(t)
 }

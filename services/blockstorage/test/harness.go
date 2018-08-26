@@ -68,6 +68,10 @@ func (d *driver) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }
 
+func (d *driver) setBatchSize(batchSize uint32) {
+	d.config.(config.NodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
+}
+
 func NewDriver() *driver {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
