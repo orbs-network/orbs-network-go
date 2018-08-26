@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
@@ -176,4 +177,67 @@ func TestSyncHandleBlockAvailabilityResponseIgnoredIfAlreadySyncing(t *testing.T
 	require.NoError(t, err)
 
 	driver.verifyMocks(t)
+}
+
+func generateBlockSyncRequestInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncRequestInput {
+	return &gossiptopics.BlockSyncRequestInput{
+		Message: &gossipmessages.BlockSyncRequestMessage{
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstAvailableBlockHeight: lastBlockHeight,
+				LastAvailableBlockHeight:  desirableBlockHeight,
+				LastCommittedBlockHeight:  lastBlockHeight,
+			}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: senderPublicKey,
+			}).Build(),
+		},
+	}
+}
+
+func TestSyncHandleBlockSyncRequest(t *testing.T) {
+	driver := NewDriver()
+
+	driver.expectCommitStateDiffTimes(4)
+
+	blocks := []*protocol.BlockPairContainer{
+		builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
+		builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build(),
+		builders.BlockPair().WithHeight(primitives.BlockHeight(3)).WithBlockCreated(time.Now()).Build(),
+		builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
+	}
+
+	driver.commitBlock(blocks[0])
+	driver.commitBlock(blocks[1])
+	driver.commitBlock(blocks[2])
+	driver.commitBlock(blocks[3])
+
+	expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2], blocks[3]}
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(9)
+	input := generateBlockSyncRequestInput(primitives.BlockHeight(2), primitives.BlockHeight(10002), senderKeyPair.PublicKey())
+
+	response := &gossiptopics.BlockSyncResponseInput{
+		RecipientPublicKey: senderKeyPair.PublicKey(),
+		Message: &gossipmessages.BlockSyncResponseMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: driver.config.NodePublicKey(),
+			}).Build(),
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstAvailableBlockHeight: primitives.BlockHeight(2),
+				LastAvailableBlockHeight:  primitives.BlockHeight(4),
+				LastCommittedBlockHeight:  primitives.BlockHeight(4),
+			}).Build(),
+			BlockPairs: expectedBlocks,
+		},
+	}
+
+	driver.blockSync.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+
+	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
+	require.NoError(t, err)
+
+	driver.verifyMocks(t)
+
 }

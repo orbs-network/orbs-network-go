@@ -22,6 +22,7 @@ type driver struct {
 	blockStorage   services.BlockStorage
 	blockSync      *gossiptopics.MockBlockSync
 	config         blockstorage.Config
+	logger         log.BasicLogger
 }
 
 func (d *driver) expectCommitStateDiff() {
@@ -78,7 +79,7 @@ func NewDriver() *driver {
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
 
-	d := &driver{config: cfg}
+	d := &driver{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
 	d.blockSync = &gossiptopics.MockBlockSync{}

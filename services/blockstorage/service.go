@@ -310,8 +310,43 @@ func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvail
 }
 
 func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	s.reporting.Info("Received block sync request", log.Stringable("sender", input.Message.Sender))
+
+	senderPublicKey := input.Message.Sender.SenderPublicKey()
+	blockType := input.Message.SignedRange.BlockType()
+
+	lastCommittedBlockHeight := s.lastCommittedBlockHeight()
+	firstRequestedBlockHeight := input.Message.SignedRange.FirstAvailableBlockHeight()
+	lastRequestedBlockHeight := input.Message.SignedRange.LastAvailableBlockHeight()
+
+	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := s.getBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
+
+	s.reporting.Info("Sending blocks to another node via block sync",
+		log.Stringable("recipient", senderPublicKey),
+		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
+		log.Stringable("last-available-block-height", lastAvailableBlockHeight))
+
+	response := &gossiptopics.BlockSyncResponseInput{
+		RecipientPublicKey: senderPublicKey,
+		Message: &gossipmessages.BlockSyncResponseMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+			}).Build(),
+			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                 blockType,
+				FirstAvailableBlockHeight: firstAvailableBlockHeight,
+				LastAvailableBlockHeight:  lastAvailableBlockHeight,
+				LastCommittedBlockHeight:  lastCommittedBlockHeight,
+			}).Build(),
+			BlockPairs: blocks,
+		},
+	}
+
+	s.blockSync.SendBlockSyncResponse(response)
+
+	return nil, nil
 }
+
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
@@ -377,4 +412,30 @@ func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPair
 		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
 	})
 	return err
+}
+
+// Return a slice of blocks containing first and last
+func (s *service) getBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
+	// FIXME use more efficient way to slice blocks
+
+	allBlocks := s.persistence.ReadAllBlocks()
+	allBlocksLength := primitives.BlockHeight(len(allBlocks))
+
+	firstAvailableBlockHeight = first
+
+	if firstAvailableBlockHeight > allBlocksLength {
+		return blocks, firstAvailableBlockHeight, firstAvailableBlockHeight
+	}
+
+	lastAvailableBlockHeight = last
+	if allBlocksLength < last {
+		lastAvailableBlockHeight = allBlocksLength
+	}
+
+	for i := first - 1; i < lastAvailableBlockHeight; i++ {
+		s.reporting.Info("Retrieving block", log.BlockHeight(i), log.Stringable("blocks-total", i))
+		blocks = append(blocks, allBlocks[i])
+	}
+
+	return blocks, firstAvailableBlockHeight, lastAvailableBlockHeight
 }
