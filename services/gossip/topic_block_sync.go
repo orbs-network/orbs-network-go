@@ -19,6 +19,10 @@ func (s *service) receivedBlockSyncMessage(header *gossipmessages.Header, payloa
 		s.receivedBlockSyncAvailabilityRequest(header, payloads)
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE:
 		s.receivedBlockSyncAvailabilityResponse(header, payloads)
+	case gossipmessages.BLOCK_SYNC_REQUEST:
+		s.receivedBlockSyncRequest(header, payloads)
+		//case gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE:
+		//	s.receivedBlockSyncAvailabilityResponse(header, payloads)
 	}
 }
 
@@ -114,6 +118,24 @@ func (s *service) SendBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput
 		Payloads:            payloads,
 	})
 }
+
+func (s *service) receivedBlockSyncRequest(header *gossipmessages.Header, payloads [][]byte) {
+	if len(payloads) < 2 {
+		return
+	}
+	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
+	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
+
+	for _, l := range s.blockSyncHandlers {
+		l.HandleBlockSyncRequest(&gossiptopics.BlockSyncRequestInput{
+			Message: &gossipmessages.BlockSyncRequestMessage{
+				SignedChunkRange: chunkRange,
+				Sender:           senderSignature,
+			},
+		})
+	}
+}
+
 func (s *service) SendBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 	// TODO this is for Tal
