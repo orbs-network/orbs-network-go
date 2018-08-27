@@ -3,6 +3,7 @@ package gossip
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
@@ -94,7 +95,24 @@ func (s *service) receivedBlockSyncAvailabilityResponse(header *gossipmessages.H
 }
 
 func (s *service) SendBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:           gossipmessages.BLOCK_SYNC_REQUEST,
+		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+	}).Build()
+
+	if input.Message.SignedChunkRange == nil {
+		return nil, errors.Errorf("cannot encode BlockSyncRequestMessage", log.Stringable("message", input.Message))
+	}
+	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
+
+	return nil, s.transport.Send(&adapter.TransportData{
+		SenderPublicKey:     s.config.NodePublicKey(),
+		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+		Payloads:            payloads,
+	})
 }
 func (s *service) SendBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
