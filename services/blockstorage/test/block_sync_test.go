@@ -248,6 +248,9 @@ func TestSyncHandleBlockSyncRequest(t *testing.T) {
 	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
 
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
+
 	driver.verifyMocks(t)
 }
 
@@ -295,6 +298,9 @@ func TestSyncHandleBlockSyncRequestIgnoresRangeAccordingToLocalBatchSettings(t *
 	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
 
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
+
 	driver.verifyMocks(t)
 }
 
@@ -335,6 +341,9 @@ func TestSyncHandleBlockSyncResponse(t *testing.T) {
 	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
 
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
+
 	driver.verifyMocks(t)
 }
 
@@ -357,6 +366,9 @@ func TestSyncHandleBlockSyncResponseFromMultipleSenders(t *testing.T) {
 
 	_, err = driver.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
 	require.NoError(t, err)
+
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
 
 	driver.verifyMocks(t)
 }
