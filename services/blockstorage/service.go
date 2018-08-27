@@ -33,7 +33,7 @@ const (
 type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
-	blockSync    gossiptopics.BlockSync
+	gossip       gossiptopics.BlockSync
 
 	config Config
 
@@ -48,11 +48,11 @@ type service struct {
 	blockSyncLock     *sync.RWMutex
 }
 
-func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, blockSync gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
+func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
 	storage := &service{
 		persistence:       persistence,
 		stateStorage:      stateStorage,
-		blockSync:         blockSync,
+		gossip:            gossip,
 		reporting:         reporting.For(log.Service("block-storage")),
 		config:            config,
 		lastBlockLock:     &sync.Mutex{},
@@ -260,7 +260,7 @@ func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvaila
 			}).Build(),
 		},
 	}
-	s.blockSync.SendBlockAvailabilityResponse(response)
+	s.gossip.SendBlockAvailabilityResponse(response)
 
 	return nil, nil
 }
@@ -306,7 +306,7 @@ func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvail
 			}).Build(),
 		},
 	}
-	s.blockSync.SendBlockSyncRequest(request)
+	s.gossip.SendBlockSyncRequest(request)
 
 	return nil, nil
 }
@@ -348,7 +348,7 @@ func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInp
 		},
 	}
 
-	s.blockSync.SendBlockSyncResponse(response)
+	s.gossip.SendBlockSyncResponse(response)
 
 	return nil, nil
 }
