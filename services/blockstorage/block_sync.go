@@ -49,12 +49,12 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 			return
 		case event := <-b.Events:
 			switch event.(type) {
-			case *gossiptopics.BlockAvailabilityResponseInput:
-				input := event.(*gossiptopics.BlockAvailabilityResponseInput)
+			case *gossipmessages.BlockAvailabilityResponseMessage:
+				message := event.(*gossipmessages.BlockAvailabilityResponseMessage)
 
-				b.reporting.Info("Received block availability response", log.Stringable("sender", input.Message.Sender))
+				b.reporting.Info("Received block availability response", log.Stringable("sender", message.Sender))
 
-				senderPublicKey := input.Message.Sender.SenderPublicKey()
+				senderPublicKey := message.Sender.SenderPublicKey()
 
 				//if isActive && !syncSource.Equal(senderPublicKey) {
 				//	continue
@@ -62,14 +62,14 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 				lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 
-				if lastCommittedBlockHeight >= input.Message.SignedBatchRange.LastCommittedBlockHeight() {
+				if lastCommittedBlockHeight >= message.SignedBatchRange.LastCommittedBlockHeight() {
 					continue
 				}
 
 				//syncSource = senderPublicKey
 				//isActive = true
 
-				blockType := input.Message.SignedBatchRange.BlockType()
+				blockType := message.SignedBatchRange.BlockType()
 
 				lastAvailableBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize())
 				firstAvailableBlockHeight := lastCommittedBlockHeight + 1
@@ -90,16 +90,16 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 				}
 
 				b.gossip.SendBlockSyncRequest(request)
-			case *gossiptopics.BlockSyncRequestInput:
-				input := event.(*gossiptopics.BlockSyncRequestInput)
-				b.reporting.Info("Received block sync request", log.Stringable("sender", input.Message.Sender))
+			case *gossipmessages.BlockSyncRequestMessage:
+				message := event.(*gossipmessages.BlockSyncRequestMessage)
+				b.reporting.Info("Received block sync request", log.Stringable("sender", message.Sender))
 
-				senderPublicKey := input.Message.Sender.SenderPublicKey()
-				blockType := input.Message.SignedChunkRange.BlockType()
+				senderPublicKey := message.Sender.SenderPublicKey()
+				blockType := message.SignedChunkRange.BlockType()
 
 				lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
-				firstRequestedBlockHeight := input.Message.SignedChunkRange.FirstBlockHeight()
-				lastRequestedBlockHeight := input.Message.SignedChunkRange.LastBlockHeight()
+				firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
+				lastRequestedBlockHeight := message.SignedChunkRange.LastBlockHeight()
 
 				if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(b.config.BlockSyncBatchSize()-1) {
 					lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize()-1)
@@ -129,28 +129,28 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 				}
 
 				b.gossip.SendBlockSyncResponse(response)
-			case *gossiptopics.BlockSyncResponseInput:
-				input := event.(*gossiptopics.BlockSyncResponseInput)
+			case *gossipmessages.BlockSyncResponseMessage:
+				message := event.(*gossipmessages.BlockSyncResponseMessage)
 
-				firstAvailableBlockHeight := input.Message.SignedChunkRange.FirstBlockHeight()
-				lastAvailableBlockHeight := input.Message.SignedChunkRange.LastBlockHeight()
+				firstAvailableBlockHeight := message.SignedChunkRange.FirstBlockHeight()
+				lastAvailableBlockHeight := message.SignedChunkRange.LastBlockHeight()
 
 				b.reporting.Info("Received block sync response",
-					log.Stringable("sender", input.Message.Sender),
+					log.Stringable("sender", message.Sender),
 					log.Stringable("first-available-block-height", firstAvailableBlockHeight),
 					log.Stringable("last-available-block-height", lastAvailableBlockHeight))
 
-				for _, blockPair := range input.Message.BlockPairs {
+				for _, blockPair := range message.BlockPairs {
 					_, err := b.storage.CommitBlock(&services.CommitBlockInput{blockPair})
 
 					if err != nil {
 						b.reporting.Error("Failed to commit block received via sync", log.Error(err))
 					}
 				}
-			case *gossiptopics.BlockAvailabilityRequestInput:
-				input := event.(*gossiptopics.BlockAvailabilityRequestInput)
+			case *gossipmessages.BlockAvailabilityRequestMessage:
+				message := event.(*gossipmessages.BlockAvailabilityRequestMessage)
 
-				b.reporting.Info("Received block availability request", log.Stringable("sender", input.Message.Sender))
+				b.reporting.Info("Received block availability request", log.Stringable("sender", message.Sender))
 
 				lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 
@@ -158,15 +158,15 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 					continue
 				}
 
-				if lastCommittedBlockHeight <= input.Message.SignedBatchRange.LastCommittedBlockHeight() {
+				if lastCommittedBlockHeight <= message.SignedBatchRange.LastCommittedBlockHeight() {
 					continue
 				}
 
 				firstAvailableBlockHeight := primitives.BlockHeight(1)
-				blockType := input.Message.SignedBatchRange.BlockType()
+				blockType := message.SignedBatchRange.BlockType()
 
 				response := &gossiptopics.BlockAvailabilityResponseInput{
-					RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
+					RecipientPublicKey: message.Sender.SenderPublicKey(),
 					Message: &gossipmessages.BlockAvailabilityResponseMessage{
 						Sender: (&gossipmessages.SenderSignatureBuilder{
 							SenderPublicKey: b.config.NodePublicKey(),

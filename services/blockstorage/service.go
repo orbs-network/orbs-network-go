@@ -226,22 +226,22 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.Events <- input
+	s.blockSync.Events <- input.Message
 	return nil, nil
 }
 
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.Events <- input
+	s.blockSync.Events <- input.Message
 	return nil, nil
 }
 
 func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.Events <- input
+	s.blockSync.Events <- input.Message
 	return nil, nil
 }
 
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.Events <- input
+	s.blockSync.Events <- input.Message
 	return nil, nil
 }
 
