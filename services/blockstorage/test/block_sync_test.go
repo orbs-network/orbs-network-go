@@ -28,6 +28,9 @@ func generateBlockAvailabilityRequestInput(lastCommittedBlockHeight primitives.B
 }
 
 func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
+	// FIXME user WithContext everywhere
+	//test.WithContext(func(ctx context.Context) {
+
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(2)
@@ -368,7 +371,7 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	driver.verifyMocks(t)
 }
 
-func TestSyncCompleteSyncFlow(t *testing.T) {
+func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	driver := NewDriver()
 
 	driver.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
@@ -390,4 +393,8 @@ func TestSyncCompleteSyncFlow(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	driver.verifyMocks(t)
+}
+
+func TestSyncCompleteSourceSyncFlow(t *testing.T) {
+	t.Skip("not implemented")
 }

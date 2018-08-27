@@ -58,6 +58,7 @@ func NewBlockStorage(ctx context.Context, config Config, persistence adapter.Blo
 	}
 
 	storage.blockSync = NewBlockSync(ctx, storage, gossip, config, storage.reporting)
+	gossip.RegisterBlockSyncHandler(storage)
 
 	return storage
 }
