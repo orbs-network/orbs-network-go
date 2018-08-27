@@ -62,14 +62,14 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 				lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 
-				if lastCommittedBlockHeight >= input.Message.SignedRange.LastCommittedBlockHeight() {
+				if lastCommittedBlockHeight >= input.Message.SignedBatchRange.LastCommittedBlockHeight() {
 					continue
 				}
 
 				//syncSource = senderPublicKey
 				//isActive = true
 
-				blockType := input.Message.SignedRange.BlockType()
+				blockType := input.Message.SignedBatchRange.BlockType()
 
 				lastAvailableBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize())
 				firstAvailableBlockHeight := lastCommittedBlockHeight + 1
@@ -80,11 +80,11 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 						Sender: (&gossipmessages.SenderSignatureBuilder{
 							SenderPublicKey: b.config.NodePublicKey(),
 						}).Build(),
-						SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-							BlockType:                 blockType,
-							LastAvailableBlockHeight:  lastAvailableBlockHeight,
-							FirstAvailableBlockHeight: firstAvailableBlockHeight,
-							LastCommittedBlockHeight:  lastCommittedBlockHeight,
+						SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+							BlockType:                blockType,
+							LastBlockHeight:          lastAvailableBlockHeight,
+							FirstBlockHeight:         firstAvailableBlockHeight,
+							LastCommittedBlockHeight: lastCommittedBlockHeight,
 						}).Build(),
 					},
 				}
@@ -95,11 +95,11 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 				b.reporting.Info("Received block sync request", log.Stringable("sender", input.Message.Sender))
 
 				senderPublicKey := input.Message.Sender.SenderPublicKey()
-				blockType := input.Message.SignedRange.BlockType()
+				blockType := input.Message.SignedChunkRange.BlockType()
 
 				lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
-				firstRequestedBlockHeight := input.Message.SignedRange.FirstAvailableBlockHeight()
-				lastRequestedBlockHeight := input.Message.SignedRange.LastAvailableBlockHeight()
+				firstRequestedBlockHeight := input.Message.SignedChunkRange.FirstBlockHeight()
+				lastRequestedBlockHeight := input.Message.SignedChunkRange.LastBlockHeight()
 
 				if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(b.config.BlockSyncBatchSize()-1) {
 					lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize()-1)
@@ -118,11 +118,11 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 						Sender: (&gossipmessages.SenderSignatureBuilder{
 							SenderPublicKey: b.config.NodePublicKey(),
 						}).Build(),
-						SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-							BlockType:                 blockType,
-							FirstAvailableBlockHeight: firstAvailableBlockHeight,
-							LastAvailableBlockHeight:  lastAvailableBlockHeight,
-							LastCommittedBlockHeight:  lastCommittedBlockHeight,
+						SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+							BlockType:                blockType,
+							FirstBlockHeight:         firstAvailableBlockHeight,
+							LastBlockHeight:          lastAvailableBlockHeight,
+							LastCommittedBlockHeight: lastCommittedBlockHeight,
 						}).Build(),
 						BlockPairs: blocks,
 					},
@@ -132,8 +132,8 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 			case *gossiptopics.BlockSyncResponseInput:
 				input := event.(*gossiptopics.BlockSyncResponseInput)
 
-				firstAvailableBlockHeight := input.Message.SignedRange.FirstAvailableBlockHeight()
-				lastAvailableBlockHeight := input.Message.SignedRange.LastAvailableBlockHeight()
+				firstAvailableBlockHeight := input.Message.SignedChunkRange.FirstBlockHeight()
+				lastAvailableBlockHeight := input.Message.SignedChunkRange.LastBlockHeight()
 
 				b.reporting.Info("Received block sync response",
 					log.Stringable("sender", input.Message.Sender),
@@ -158,12 +158,12 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 					continue
 				}
 
-				if lastCommittedBlockHeight <= input.Message.SignedRange.LastCommittedBlockHeight() {
+				if lastCommittedBlockHeight <= input.Message.SignedBatchRange.LastCommittedBlockHeight() {
 					continue
 				}
 
 				firstAvailableBlockHeight := primitives.BlockHeight(1)
-				blockType := input.Message.SignedRange.BlockType()
+				blockType := input.Message.SignedBatchRange.BlockType()
 
 				response := &gossiptopics.BlockAvailabilityResponseInput{
 					RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
@@ -171,11 +171,11 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 						Sender: (&gossipmessages.SenderSignatureBuilder{
 							SenderPublicKey: b.config.NodePublicKey(),
 						}).Build(),
-						SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-							BlockType:                 blockType,
-							LastAvailableBlockHeight:  lastCommittedBlockHeight,
-							FirstAvailableBlockHeight: firstAvailableBlockHeight,
-							LastCommittedBlockHeight:  lastCommittedBlockHeight,
+						SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
+							BlockType:                blockType,
+							LastBlockHeight:          lastCommittedBlockHeight,
+							FirstBlockHeight:         firstAvailableBlockHeight,
+							LastCommittedBlockHeight: lastCommittedBlockHeight,
 						}).Build(),
 					},
 				}

@@ -16,7 +16,7 @@ import (
 func generateBlockAvailabilityRequestInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityRequestInput {
 	return &gossiptopics.BlockAvailabilityRequestInput{
 		Message: &gossipmessages.BlockAvailabilityRequestMessage{
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
 				LastCommittedBlockHeight: lastCommittedBlockHeight,
 			}).Build(),
@@ -41,11 +41,11 @@ func TestSyncHandleBlockAvailabilityRequest(t *testing.T) {
 	response := &gossiptopics.BlockAvailabilityResponseInput{
 		RecipientPublicKey: senderKeyPair.PublicKey(),
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				LastAvailableBlockHeight:  primitives.BlockHeight(2),
-				FirstAvailableBlockHeight: primitives.BlockHeight(1),
-				LastCommittedBlockHeight:  primitives.BlockHeight(2),
+			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				LastBlockHeight:          primitives.BlockHeight(2),
+				FirstBlockHeight:         primitives.BlockHeight(1),
+				LastCommittedBlockHeight: primitives.BlockHeight(2),
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: driver.config.NodePublicKey(),
@@ -106,7 +106,7 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfSenderIsInSync(t *testing.T)
 func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityResponseInput {
 	return &gossiptopics.BlockAvailabilityResponseInput{
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
 				LastCommittedBlockHeight: lastCommittedBlockHeight,
 			}).Build(),
@@ -133,11 +133,11 @@ func TestSyncHandleBlockAvailabilityResponse(t *testing.T) {
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: driver.config.NodePublicKey(),
 			}).Build(),
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				LastAvailableBlockHeight:  primitives.BlockHeight(10002),
-				FirstAvailableBlockHeight: primitives.BlockHeight(3),
-				LastCommittedBlockHeight:  primitives.BlockHeight(2),
+			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				LastBlockHeight:          primitives.BlockHeight(10002),
+				FirstBlockHeight:         primitives.BlockHeight(3),
+				LastCommittedBlockHeight: primitives.BlockHeight(2),
 			}).Build(),
 		},
 	}
@@ -201,11 +201,11 @@ func TestSyncHandleBlockAvailabilityResponseIgnoredIfAlreadySyncing(t *testing.T
 func generateBlockSyncRequestInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncRequestInput {
 	return &gossiptopics.BlockSyncRequestInput{
 		Message: &gossipmessages.BlockSyncRequestMessage{
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				FirstAvailableBlockHeight: lastBlockHeight,
-				LastAvailableBlockHeight:  desirableBlockHeight,
-				LastCommittedBlockHeight:  lastBlockHeight,
+			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         lastBlockHeight,
+				LastBlockHeight:          desirableBlockHeight,
+				LastCommittedBlockHeight: lastBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: senderPublicKey,
@@ -242,11 +242,11 @@ func TestSyncHandleBlockSyncRequest(t *testing.T) {
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: driver.config.NodePublicKey(),
 			}).Build(),
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				FirstAvailableBlockHeight: primitives.BlockHeight(2),
-				LastAvailableBlockHeight:  primitives.BlockHeight(4),
-				LastCommittedBlockHeight:  primitives.BlockHeight(4),
+			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         primitives.BlockHeight(2),
+				LastBlockHeight:          primitives.BlockHeight(4),
+				LastCommittedBlockHeight: primitives.BlockHeight(4),
 			}).Build(),
 			BlockPairs: expectedBlocks,
 		},
@@ -292,11 +292,11 @@ func TestSyncHandleBlockSyncRequestIgnoresRangeAccordingToLocalBatchSettings(t *
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: driver.config.NodePublicKey(),
 			}).Build(),
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				FirstAvailableBlockHeight: primitives.BlockHeight(2),
-				LastAvailableBlockHeight:  primitives.BlockHeight(3),
-				LastCommittedBlockHeight:  primitives.BlockHeight(4),
+			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         primitives.BlockHeight(2),
+				LastBlockHeight:          primitives.BlockHeight(3),
+				LastCommittedBlockHeight: primitives.BlockHeight(4),
 			}).Build(),
 			BlockPairs: expectedBlocks,
 		},
@@ -322,11 +322,11 @@ func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desi
 
 	return &gossiptopics.BlockSyncResponseInput{
 		Message: &gossipmessages.BlockSyncResponseMessage{
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				FirstAvailableBlockHeight: lastBlockHeight,
-				LastAvailableBlockHeight:  desirableBlockHeight,
-				LastCommittedBlockHeight:  lastBlockHeight,
+			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         lastBlockHeight,
+				LastBlockHeight:          desirableBlockHeight,
+				LastCommittedBlockHeight: lastBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: senderPublicKey,
