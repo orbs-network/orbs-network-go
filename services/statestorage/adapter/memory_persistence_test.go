@@ -16,7 +16,7 @@ func TestReadStateWithNonExistingBlockHeight(t *testing.T) {
 func TestReadStateWithNonExistingContractName(t *testing.T) {
 	d := NewInMemoryStatePersistence()
 	_, err := d.ReadState(0, "foo")
-	require.EqualError(t, err, "contract foo does not exist", "did not fail with error")
+	require.NoError(t, err, "unexpected error")
 }
 
 func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
