@@ -45,6 +45,7 @@ func (b *acceptanceTestNetworkBuilder) WithConsensusAlgos(algos ...consensus.Con
 	return b
 }
 
+// setup runs when all adapters have been created but before the nodes are started
 func (b *acceptanceTestNetworkBuilder) WithSetup(f func(network AcceptanceTestNetwork)) *acceptanceTestNetworkBuilder {
 	b.setupFunc = f
 	return b
