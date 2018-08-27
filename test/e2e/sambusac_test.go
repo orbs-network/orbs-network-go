@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/jsonapi"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/stretchr/testify/require"
 	"log"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/orbs-network/orbs-network-go/jsonapi"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 )
 
 type sendTransactionCliResponse struct {
@@ -35,26 +37,28 @@ type callMethodCliResponse struct {
 	BlockTimestamp  int
 }
 
-//TODO: 2. create runnable in json api: orbs-json-client [--send-transaction | --call-method]=<json> --public-key=<pubkey> --private-key=<privkey> --server-url=<http://....>
-//TODO: 3. this test should use aforementioned runnable, sending the jsons as strings
-//TODO: 4. move startSambusac into its own runnable main, taking --port=8080 argument
-//TODO: 5. the sambusac server itself should run inside a docker container, as another runnable
+func ClientBinary() []string {
+	ciBinaryPath := "/opt/orbs/orbs-json-client"
+	if _, err := os.Stat(ciBinaryPath); err == nil {
+		return []string{ciBinaryPath}
+	}
+
+	return []string{"go", "run", "../../jsonapi/main/json_client_cli.go"}
+}
+
 func TestSambusacFlow(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
 	port := ":8080"
-	//serverUrl := fmt.Sprintf("http://127.0.0.1%s", port)
 	pathToContracts := "." //TODO compile contract(s) to SO, path points to dir containing them
 	sambusac := jsonapi.StartSambusac(port, pathToContracts, false)
 	defer sambusac.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
-	//keyPair := keys.Ed25519KeyPairForTests(7)
-
-	transferJson := &jsonapi.Transaction{
+	transferJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "transfer",
 		Arguments: []jsonapi.MethodArgument{
@@ -62,9 +66,12 @@ func TestSambusacFlow(t *testing.T) {
 		},
 	}
 
-	jsonBytes, _ := json.Marshal(&transferJson)
+	jsonBytes, _ := json.Marshal(&transferJSON)
 
-	cmd := exec.Command("go", "run", "../../jsonapi/main/json_client_cli.go", "-send-transaction", string(jsonBytes))
+	baseCommand := ClientBinary()
+	sendCommand := append(baseCommand, "-send-transaction", string(jsonBytes))
+
+	cmd := exec.Command(sendCommand[0], sendCommand[1:]...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -77,7 +84,6 @@ func TestSambusacFlow(t *testing.T) {
 	response := &sendTransactionCliResponse{}
 	unmarshallErr := json.Unmarshal([]byte(outputAsString), &response)
 
-	///sendTransactionOutput, err := jsonapi.SendTransaction(transferJson, keyPair, serverUrl)
 	require.NoError(t, err, "error calling send_transfer")
 	require.NoError(t, unmarshallErr, "error unmarshall cli response")
 	require.Equal(t, response.ExecutionResult, 0, "Transaction status to be successful = 0")
@@ -85,14 +91,16 @@ func TestSambusacFlow(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond) //TODO remove when public api blocks on tx
 
-	getBalanceJson := &jsonapi.Transaction{
+	getBalanceJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "getBalance",
 	}
 
-	callJsonBytes, _ := json.Marshal(&getBalanceJson)
+	callJSONBytes, _ := json.Marshal(&getBalanceJSON)
 
-	callCmd := exec.Command("go", "run", "../../jsonapi/main/json_client_cli.go", "-call-method", string(callJsonBytes))
+	getCommand := append(baseCommand, "-call-method", string(callJSONBytes))
+
+	callCmd := exec.Command(getCommand[0], getCommand[1:]...)
 	var callOut bytes.Buffer
 	callCmd.Stdout = &callOut
 	callErr := callCmd.Run()
@@ -106,7 +114,6 @@ func TestSambusacFlow(t *testing.T) {
 	callResponse := &callMethodCliResponse{}
 	callUnmarshallErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
 
-	//callMethodOutput, err := jsonapi.CallMethod(getBalanceJson, serverUrl)
 	require.NoError(t, callUnmarshallErr, "error calling call_method")
 	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
 	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from getBalance")

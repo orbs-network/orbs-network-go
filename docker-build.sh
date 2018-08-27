@@ -10,6 +10,7 @@ export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
 docker cp orbs_build:$SRC/main .
 docker cp orbs_build:$SRC/e2e.test .
+docker cp orbs_build:$SRC/orbs-json-client .
 
 docker build -f Dockerfile.export -t orbs:export .
 
