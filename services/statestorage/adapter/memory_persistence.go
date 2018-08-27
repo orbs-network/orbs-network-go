@@ -77,11 +77,7 @@ func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.Bloc
 
 func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName) (map[string]*protocol.StateRecord, error) {
 	if stateAtHeight, ok := sp.snapshots[height]; ok {
-		if contractStateDiff, ok := stateAtHeight[contract]; ok {
-			return contractStateDiff, nil
-		} else {
-			return nil, errors.Errorf("contract %v does not exist", contract)
-		}
+		return stateAtHeight[contract], nil
 	} else {
 		return nil, errors.Errorf("block %v does not exist in snapshot history", height)
 	}
