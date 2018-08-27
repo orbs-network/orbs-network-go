@@ -15,17 +15,17 @@ func TestBlockSync(t *testing.T) {
 	defer harness.ReportTestId(t, testId)
 
 	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
-		for i := 1; i < 10; i++ {
+		for i := 1; i < 5; i++ {
 			blockPair := builders.BlockPair().WithHeight(primitives.BlockHeight(i))
 			network.BlockPersistence(0).WriteBlock(blockPair.Build())
 		}
 
-		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(10); err != nil {
+		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(5); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}
 		//require.EqualValues(t, 17, <-network.CallGetBalance(0), "eventual getBalance result on leader")
 
-		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(10); err != nil {
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(5); err != nil {
 			t.Errorf("waiting for block on node 1 failed: %s", err)
 		}
 		//require.EqualValues(t, 17, <-network.CallGetBalance(1), "eventual getBalance result on non leader")
