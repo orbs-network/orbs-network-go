@@ -318,6 +318,8 @@ func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockH
 	allBlocks := s.persistence.ReadAllBlocks()
 	allBlocksLength := primitives.BlockHeight(len(allBlocks))
 
+	s.reporting.Info("Reading all blocks", log.Stringable("blocks-total", allBlocksLength))
+
 	firstAvailableBlockHeight = first
 
 	if firstAvailableBlockHeight > allBlocksLength {
