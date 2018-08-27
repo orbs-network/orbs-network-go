@@ -43,6 +43,7 @@ type service struct {
 	lastCommittedBlock *protocol.BlockPairContainer
 	lastBlockLock      *sync.Mutex
 
+	blockSync         *BlockSync
 	blockSyncSource   primitives.Ed25519PublicKey
 	blockSyncIsActive bool
 	blockSyncLock     *sync.RWMutex
@@ -60,7 +61,7 @@ func NewBlockStorage(ctx context.Context, config Config, persistence adapter.Blo
 		blockSyncIsActive: false,
 	}
 
-	go storage.syncLoop(ctx)
+	storage.blockSync = NewBlockSync(ctx, storage, gossip, config, storage.reporting)
 
 	return storage
 }
@@ -266,48 +267,7 @@ func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvaila
 }
 
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	s.reporting.Info("Received block availability response", log.Stringable("sender", input.Message.Sender))
-
-	senderPublicKey := input.Message.Sender.SenderPublicKey()
-
-	s.blockSyncLock.RLock()
-	isActive := s.blockSyncIsActive
-	syncSource := s.blockSyncSource
-	s.blockSyncLock.RUnlock()
-
-	if isActive && !syncSource.Equal(senderPublicKey) {
-		return nil, nil
-	}
-
-	lastCommittedBlockHeight := s.lastCommittedBlockHeight()
-
-	if lastCommittedBlockHeight >= input.Message.SignedRange.LastCommittedBlockHeight() {
-		return nil, nil
-	}
-
-	s.turnOnBlockSync(senderPublicKey)
-
-	blockType := input.Message.SignedRange.BlockType()
-
-	lastAvailableBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize())
-	firstAvailableBlockHeight := lastCommittedBlockHeight + 1
-
-	request := &gossiptopics.BlockSyncRequestInput{
-		RecipientPublicKey: senderPublicKey,
-		Message: &gossipmessages.BlockSyncRequestMessage{
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
-			}).Build(),
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 blockType,
-				LastAvailableBlockHeight:  lastAvailableBlockHeight,
-				FirstAvailableBlockHeight: firstAvailableBlockHeight,
-				LastCommittedBlockHeight:  lastCommittedBlockHeight,
-			}).Build(),
-		},
-	}
-	s.gossip.SendBlockSyncRequest(request)
-
+	s.blockSync.Events <- input
 	return nil, nil
 }
 
@@ -476,8 +436,4 @@ func (s *service) turnOffBlockSync() {
 	s.blockSyncSource = nil
 	s.blockSyncIsActive = false
 	s.blockSyncLock.Unlock()
-}
-
-func (s *service) syncLoop(ctx context.Context) {
-
 }

@@ -138,6 +138,9 @@ func TestSyncHandleBlockAvailabilityResponse(t *testing.T) {
 	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
 
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
+
 	driver.verifyMocks(t)
 }
 
@@ -156,10 +159,14 @@ func TestSyncHandleBlockAvailabilityResponseIgnoredIfNodeInSync(t *testing.T) {
 	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
 
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
+
 	driver.verifyMocks(t)
 }
 
 func TestSyncHandleBlockAvailabilityResponseIgnoredIfAlreadySyncing(t *testing.T) {
+	t.Skip("should be deleted")
 	driver := NewDriver()
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
@@ -175,6 +182,9 @@ func TestSyncHandleBlockAvailabilityResponseIgnoredIfAlreadySyncing(t *testing.T
 
 	_, err = driver.blockStorage.HandleBlockAvailabilityResponse(anotherInput)
 	require.NoError(t, err)
+
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
 
 	driver.verifyMocks(t)
 }
