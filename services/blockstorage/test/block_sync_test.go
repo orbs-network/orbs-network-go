@@ -58,6 +58,9 @@ func TestSyncHandleBlockAvailabilityRequest(t *testing.T) {
 	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
 
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
+
 	driver.verifyMocks(t)
 }
 
@@ -71,6 +74,9 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfNoBlocksWereCommitted(t *tes
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
+
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
 
 	driver.verifyMocks(t)
 }
@@ -90,6 +96,9 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfSenderIsInSync(t *testing.T)
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
+
+	// FIXME remove sleep
+	time.Sleep(1 * time.Millisecond)
 
 	driver.verifyMocks(t)
 }

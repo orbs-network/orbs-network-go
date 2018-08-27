@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -43,22 +42,17 @@ type service struct {
 	lastCommittedBlock *protocol.BlockPairContainer
 	lastBlockLock      *sync.Mutex
 
-	blockSync         *BlockSync
-	blockSyncSource   primitives.Ed25519PublicKey
-	blockSyncIsActive bool
-	blockSyncLock     *sync.RWMutex
+	blockSync *BlockSync
 }
 
 func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
 	storage := &service{
-		persistence:       persistence,
-		stateStorage:      stateStorage,
-		gossip:            gossip,
-		reporting:         reporting.For(log.Service("block-storage")),
-		config:            config,
-		lastBlockLock:     &sync.Mutex{},
-		blockSyncLock:     &sync.RWMutex{},
-		blockSyncIsActive: false,
+		persistence:   persistence,
+		stateStorage:  stateStorage,
+		gossip:        gossip,
+		reporting:     reporting.For(log.Service("block-storage")),
+		config:        config,
+		lastBlockLock: &sync.Mutex{},
 	}
 
 	storage.blockSync = NewBlockSync(ctx, storage, gossip, config, storage.reporting)
@@ -106,7 +100,7 @@ func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
 	s.lastCommittedBlock = block
 }
 
-func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
+func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -170,7 +164,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 func (s *service) createEmptyTransactionReceiptResult() *services.GetTransactionReceiptOutput {
 	return &services.GetTransactionReceiptOutput{
 		TransactionReceipt: nil,
-		BlockHeight:        s.lastCommittedBlockHeight(),
+		BlockHeight:        s.LastCommittedBlockHeight(),
 		BlockTimestamp:     s.lastCommittedBlockTimestamp(),
 	}
 }
@@ -210,7 +204,7 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 
 func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    s.lastCommittedBlockHeight(),
+		LastCommittedBlockHeight:    s.LastCommittedBlockHeight(),
 		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
 	}, nil
 }
@@ -232,37 +226,7 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	s.reporting.Info("Received block availability request", log.Stringable("sender", input.Message.Sender))
-
-	lastCommittedBlockHeight := s.lastCommittedBlockHeight()
-
-	if lastCommittedBlockHeight == 0 {
-		return nil, nil
-	}
-
-	if lastCommittedBlockHeight <= input.Message.SignedRange.LastCommittedBlockHeight() {
-		return nil, nil
-	}
-
-	firstAvailableBlockHeight := primitives.BlockHeight(1)
-	blockType := input.Message.SignedRange.BlockType()
-
-	response := &gossiptopics.BlockAvailabilityResponseInput{
-		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
-		Message: &gossipmessages.BlockAvailabilityResponseMessage{
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
-			}).Build(),
-			SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                 blockType,
-				LastAvailableBlockHeight:  lastCommittedBlockHeight,
-				FirstAvailableBlockHeight: firstAvailableBlockHeight,
-				LastCommittedBlockHeight:  lastCommittedBlockHeight,
-			}).Build(),
-		},
-	}
-	s.gossip.SendBlockAvailabilityResponse(response)
-
+	s.blockSync.Events <- input
 	return nil, nil
 }
 
@@ -273,35 +237,17 @@ func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvail
 
 func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	s.blockSync.Events <- input
-
 	return nil, nil
 }
 
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	firstAvailableBlockHeight := input.Message.SignedRange.FirstAvailableBlockHeight()
-	lastAvailableBlockHeight := input.Message.SignedRange.LastAvailableBlockHeight()
-
-	s.reporting.Info("Received block sync response",
-		log.Stringable("sender", input.Message.Sender),
-		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
-		log.Stringable("last-available-block-height", lastAvailableBlockHeight))
-
-	for _, blockPair := range input.Message.BlockPairs {
-		_, err := s.CommitBlock(&services.CommitBlockInput{blockPair})
-
-		if err != nil {
-			s.reporting.Error("Failed to commit block received via sync", log.Error(err))
-		}
-	}
-
-	s.turnOffBlockSync()
-
+	s.blockSync.Events <- input
 	return nil, nil
 }
 
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
-	currentBlockHeight := s.lastCommittedBlockHeight()
+	currentBlockHeight := s.LastCommittedBlockHeight()
 	if txBlockHeader.BlockHeight() <= currentBlockHeight {
 		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "block already in storage, timestamp mismatch"
@@ -317,7 +263,7 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 }
 
 func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
-	expectedBlockHeight := s.lastCommittedBlockHeight() + 1
+	expectedBlockHeight := s.LastCommittedBlockHeight() + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
@@ -386,22 +332,4 @@ func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockH
 	}
 
 	return blocks, firstAvailableBlockHeight, lastAvailableBlockHeight
-}
-
-func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
-	return s.lastCommittedBlockHeight()
-}
-
-func (s *service) turnOnBlockSync(publicKey primitives.Ed25519PublicKey) {
-	s.blockSyncLock.Lock()
-	s.blockSyncSource = publicKey
-	s.blockSyncIsActive = true
-	s.blockSyncLock.Unlock()
-}
-
-func (s *service) turnOffBlockSync() {
-	s.blockSyncLock.Lock()
-	s.blockSyncSource = nil
-	s.blockSyncIsActive = false
-	s.blockSyncLock.Unlock()
 }

@@ -6,12 +6,14 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 type BlockSyncStorage interface {
 	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight)
 	LastCommittedBlockHeight() primitives.BlockHeight
+	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 }
 
 type BlockSync struct {
@@ -127,6 +129,57 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 				}
 
 				b.gossip.SendBlockSyncResponse(response)
+			case *gossiptopics.BlockSyncResponseInput:
+				input := event.(*gossiptopics.BlockSyncResponseInput)
+
+				firstAvailableBlockHeight := input.Message.SignedRange.FirstAvailableBlockHeight()
+				lastAvailableBlockHeight := input.Message.SignedRange.LastAvailableBlockHeight()
+
+				b.reporting.Info("Received block sync response",
+					log.Stringable("sender", input.Message.Sender),
+					log.Stringable("first-available-block-height", firstAvailableBlockHeight),
+					log.Stringable("last-available-block-height", lastAvailableBlockHeight))
+
+				for _, blockPair := range input.Message.BlockPairs {
+					_, err := b.storage.CommitBlock(&services.CommitBlockInput{blockPair})
+
+					if err != nil {
+						b.reporting.Error("Failed to commit block received via sync", log.Error(err))
+					}
+				}
+			case *gossiptopics.BlockAvailabilityRequestInput:
+				input := event.(*gossiptopics.BlockAvailabilityRequestInput)
+
+				b.reporting.Info("Received block availability request", log.Stringable("sender", input.Message.Sender))
+
+				lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
+
+				if lastCommittedBlockHeight == 0 {
+					continue
+				}
+
+				if lastCommittedBlockHeight <= input.Message.SignedRange.LastCommittedBlockHeight() {
+					continue
+				}
+
+				firstAvailableBlockHeight := primitives.BlockHeight(1)
+				blockType := input.Message.SignedRange.BlockType()
+
+				response := &gossiptopics.BlockAvailabilityResponseInput{
+					RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
+					Message: &gossipmessages.BlockAvailabilityResponseMessage{
+						Sender: (&gossipmessages.SenderSignatureBuilder{
+							SenderPublicKey: b.config.NodePublicKey(),
+						}).Build(),
+						SignedRange: (&gossipmessages.BlockSyncRangeBuilder{
+							BlockType:                 blockType,
+							LastAvailableBlockHeight:  lastCommittedBlockHeight,
+							FirstAvailableBlockHeight: firstAvailableBlockHeight,
+							LastCommittedBlockHeight:  lastCommittedBlockHeight,
+						}).Build(),
+					},
+				}
+				b.gossip.SendBlockAvailabilityResponse(response)
 			}
 		}
 	}
