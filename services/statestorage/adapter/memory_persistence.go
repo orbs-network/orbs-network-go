@@ -18,6 +18,7 @@ type StateVersion map[primitives.ContractName]ContractState
 type InMemoryStatePersistence struct {
 	snapshots            map[primitives.BlockHeight]StateVersion
 	blockTrackerForTests *synchronization.BlockTracker
+	roots                map[primitives.BlockHeight]primitives.MerkleSha256
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
@@ -25,6 +26,7 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 		// TODO remove this hard coded init of genesis block state once init flow syncs state storage with block storage
 		snapshots:            map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): map[primitives.ContractName]ContractState{}},
 		blockTrackerForTests: synchronization.NewBlockTracker(0, 64000, time.Duration(1*time.Hour)),
+		roots:                map[primitives.BlockHeight]primitives.MerkleSha256{},
 	}
 }
 
@@ -68,7 +70,6 @@ func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.Bloc
 		newStateRecordStore := map[string]*protocol.StateRecord{}
 		for k, v := range contractStore {
 			newStateRecordStore[k] = v
-			//newStateRecordStore[k] = (&protocol.StateRecordBuilder{Key: v.Key(), Value: v.Value()}).Build()
 		}
 		newStore[contract] = newStateRecordStore
 	}
@@ -81,6 +82,19 @@ func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, con
 	} else {
 		return nil, errors.Errorf("block %v does not exist in snapshot history", height)
 	}
+}
+
+func (sp *InMemoryStatePersistence) WriteMerkleRoot(height primitives.BlockHeight, sha256 primitives.MerkleSha256) error {
+	sp.roots[height] = sha256
+	return nil
+}
+
+func (sp *InMemoryStatePersistence) ReadMerkleRoot(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
+	root, exists := sp.roots[height]
+	if !exists {
+		return nil, errors.Errorf("Merkle root doesn't exist for %d Block Height", height)
+	}
+	return root, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {
