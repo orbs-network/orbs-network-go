@@ -367,3 +367,27 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 	driver.verifyMocks(t)
 }
+
+func TestSyncCompleteSyncFlow(t *testing.T) {
+	driver := NewDriver()
+
+	driver.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
+
+	time.Sleep(4 * time.Millisecond)
+
+	senderKeyPair := keys.Ed25519KeyPairForTests(7)
+
+	blockAvailabilityResponse := generateBlockAvailabilityResponseInput(primitives.BlockHeight(4), senderKeyPair.PublicKey())
+
+	driver.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).AtLeast(1)
+	driver.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
+
+	blockSyncResponse := generateBlockSyncResponseInput(primitives.BlockHeight(1), primitives.BlockHeight(4), senderKeyPair.PublicKey())
+
+	driver.expectCommitStateDiffTimes(4)
+	driver.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
+
+	time.Sleep(1 * time.Millisecond)
+
+	driver.verifyMocks(t)
+}
