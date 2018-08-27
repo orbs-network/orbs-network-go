@@ -9,15 +9,15 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type blockSyncState int
 
 const (
-	BLOCK_SYNC_STATE_IDLE                                  blockSyncState = 0
-	BLOCK_SYNC_STATE_START_SYNC                            blockSyncState = 1
-	BLOCK_SYNC_STATE_PETITIONER_REQUEST_BLOCK_AVAILABILITY blockSyncState = 2
-	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK                blockSyncState = 3
+	BLOCK_SYNC_STATE_IDLE                   blockSyncState = 0
+	BLOCK_SYNC_STATE_START_SYNC             blockSyncState = 1
+	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK blockSyncState = 2
 )
 
 type BlockSyncStorage interface {
@@ -54,14 +54,18 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	var event interface{}
 	//var syncSource primitives.Ed25519PublicKey
 
+	syncTrigger := time.AfterFunc(b.config.BlockSyncInterval(), func() {
+		state = BLOCK_SYNC_STATE_START_SYNC
+		b.reporting.Error("transitioning to", log.Int("state", int(state)))
+		b.Events <- nil
+	})
+
 	for {
 		state = b.dispatchEvent(state, event)
 
 		if state == BLOCK_SYNC_STATE_START_SYNC {
-			b.PetitionerBroadcastBlockAvailabilityRequest()
-		}
-
-		if state == BLOCK_SYNC_STATE_PETITIONER_REQUEST_BLOCK_AVAILABILITY {
+			syncTrigger.Stop()
+			syncTrigger.Reset(b.config.BlockSyncInterval())
 			b.PetitionerBroadcastBlockAvailabilityRequest()
 		}
 
@@ -76,6 +80,9 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}) blockSyncState {
 	switch event.(type) {
+	case *gossipmessages.BlockAvailabilityRequestMessage:
+		message := event.(*gossipmessages.BlockAvailabilityRequestMessage)
+		b.SourceHandleBlockAvailabilityRequest(message)
 	case *gossipmessages.BlockAvailabilityResponseMessage:
 		message := event.(*gossipmessages.BlockAvailabilityResponseMessage)
 		err := b.PetitionerHandleBlockAvailabilityResponse(message)
@@ -88,12 +95,11 @@ func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}) block
 	case *gossipmessages.BlockSyncRequestMessage:
 		message := event.(*gossipmessages.BlockSyncRequestMessage)
 		b.SourceHandleBlockSyncRequest(message)
+		return BLOCK_SYNC_STATE_IDLE
 	case *gossipmessages.BlockSyncResponseMessage:
 		message := event.(*gossipmessages.BlockSyncResponseMessage)
 		b.PetitionerHandleBlockSyncResponse(message)
-	case *gossipmessages.BlockAvailabilityRequestMessage:
-		message := event.(*gossipmessages.BlockAvailabilityRequestMessage)
-		b.SourceHandleBlockAvailabilityRequest(message)
+		return BLOCK_SYNC_STATE_IDLE
 	}
 
 	return state

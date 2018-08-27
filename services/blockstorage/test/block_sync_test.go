@@ -361,7 +361,7 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	driver := NewDriver()
 
-	driver.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+	driver.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
 	time.Sleep(6 * time.Millisecond)
 
