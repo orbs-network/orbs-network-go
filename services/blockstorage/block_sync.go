@@ -10,6 +10,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
+const (
+	BLOCK_SYNC_STATE_UNINITIALIZED = iota
+	BLOCK_SYNC_STATE_INITIALIZED
+	BLOCK_SYNC_STATE_PETITIONER_REQUEST_BLOCK_AVAILABILITY
+	BLOCK_SYNC_STATE_PETITIONER_WAIT_FOR_BLOCKS
+)
+
 type BlockSyncStorage interface {
 	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight)
 	LastCommittedBlockHeight() primitives.BlockHeight
@@ -40,9 +47,23 @@ func NewBlockSync(ctx context.Context, storage BlockSyncStorage, gossip gossipto
 }
 
 func (b *BlockSync) mainLoop(ctx context.Context) {
+	state := BLOCK_SYNC_STATE_UNINITIALIZED
+
 	for {
 		//isActive := false
 		//var syncSource primitives.Ed25519PublicKey
+
+		if b.storage != nil {
+			state = BLOCK_SYNC_STATE_INITIALIZED
+		}
+
+		if state == BLOCK_SYNC_STATE_UNINITIALIZED {
+			continue
+		}
+
+		if state == BLOCK_SYNC_STATE_PETITIONER_REQUEST_BLOCK_AVAILABILITY {
+			b.PetitionerBroadcastBlockAvailabilityRequest()
+		}
 
 		select {
 		case <-ctx.Done():
@@ -51,7 +72,6 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 			switch event.(type) {
 			case *gossipmessages.BlockAvailabilityResponseMessage:
 				message := event.(*gossipmessages.BlockAvailabilityResponseMessage)
-
 				b.PetitionerHandleBlockAvailabilityResponse(message)
 			case *gossipmessages.BlockSyncRequestMessage:
 				message := event.(*gossipmessages.BlockSyncRequestMessage)
@@ -65,6 +85,28 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (b *BlockSync) PetitionerBroadcastBlockAvailabilityRequest() {
+	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
+	firstBlockHeight := lastCommittedBlockHeight + 1
+	lastBlockHeight := b.storage.LastCommittedBlockHeight() + primitives.BlockHeight(b.config.BlockSyncBatchSize())
+
+	input := &gossiptopics.BlockAvailabilityRequestInput{
+		Message: &gossipmessages.BlockAvailabilityRequestMessage{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: b.config.NodePublicKey(),
+			}).Build(),
+			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				LastBlockHeight:          lastBlockHeight,
+				FirstBlockHeight:         firstBlockHeight,
+				LastCommittedBlockHeight: lastCommittedBlockHeight,
+			}).Build(),
+		},
+	}
+
+	b.gossip.BroadcastBlockAvailabilityRequest(input)
 }
 
 func (b *BlockSync) PetitionerHandleBlockSyncResponse(message *gossipmessages.BlockSyncResponseMessage) {

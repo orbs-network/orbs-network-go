@@ -359,13 +359,11 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 }
 
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
-	t.Skip("not implemented")
-
 	driver := NewDriver()
 
-	driver.blockSync.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(1)
+	driver.blockSync.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
 
-	time.Sleep(20 * time.Millisecond)
+	//driver.blockSync.PetitionerBroadcastBlockAvailabilityRequest()
 
 	driver.verifyMocks(t)
 }

@@ -19,6 +19,8 @@ import (
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	BlockSyncBatchSize() uint32
+	BlockSyncInterval() time.Duration
+	BlockSyncCollectResponseTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
