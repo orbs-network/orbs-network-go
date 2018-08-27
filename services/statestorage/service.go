@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"sync"
 	"time"
-		)
+)
 
 type Config interface {
 	StateStorageHistoryRetentionDistance() uint32
@@ -31,16 +31,19 @@ type service struct {
 }
 
 func NewStateStorage(config Config, persistence adapter.StatePersistence, reporting log.BasicLogger) services.StateStorage {
-	persistence.WriteMerkleRoot(0, merkle.GetEmptyNodeHash()) // TODO genesis block merkle here
+	merkle, rootHash := merkle.NewForest()
+	// TODO this is equivalent of genesis block deploy in persistence -> move to correct deploy
+	persistence.WriteMerkleRoot(0, rootHash)
+
 	return &service{
 		config:       config,
-		merkle:       merkle.NewForest(),
+		merkle:       merkle,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 		reporting:    reporting.For(log.Service("state-storage")),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
-		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it
+		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it will need to be read from db
 	}
 }
 
@@ -56,18 +59,21 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 
 	s.reporting.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
-	lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight()
-	if  lastCommittedBlock+1 != commitBlockHeight {
+	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != commitBlockHeight {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
 	}
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
-	if root, err := s.persistence.ReadMerkleRoot(commitBlockHeight-1); err != nil { // TODO use input.resultheader.preexecutuion
-		return nil, errors.Errorf("cannot find previous block merkle root. current block %d", commitBlockHeight)
-	} else {
-		newRoot := s.merkle.Update(root, input.ContractStateDiffs)
-		s.persistence.WriteMerkleRoot(commitBlockHeight, newRoot)
+	// TODO use input.resultheader.preexecutuion
+	root, err := s.persistence.ReadMerkleRoot(commitBlockHeight - 1)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
 	}
+	newRoot, err := s.merkle.Update(root, input.ContractStateDiffs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
+	}
+	s.persistence.WriteMerkleRoot(commitBlockHeight, newRoot)
 	s.persistence.WriteState(commitBlockHeight, input.ContractStateDiffs)
 
 	s.lastCommittedBlockHeader = input.ResultsBlockHeader

@@ -77,21 +77,16 @@ func (n *Node) getSingleChildSelector() *byte {
 	return singleChildSelector
 }
 
+var emptyNode = createNode("", zeroValueHash)
+var emptyNodeHash = emptyNode.hash()
+
 type Forest struct {
-	nodes   map[string]*Node
+	nodes map[string]*Node
 }
 
-func getEmptyNode() *Node {
-	return createNode("", zeroValueHash)
-}
-func GetEmptyNodeHash() primitives.MerkleSha256 {
-	return getEmptyNode().hash()
-}
-
-func NewForest() *Forest {
-	return &Forest{
-		nodes: map[string]*Node{GetEmptyNodeHash().KeyForMap(): getEmptyNode()},
-	}
+// return the merkle trie & the trie root hash for the empty default trie
+func NewForest() (*Forest, primitives.MerkleSha256) {
+	return &Forest{nodes: map[string]*Node{emptyNodeHash.KeyForMap(): emptyNode}}, emptyNodeHash
 }
 
 func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, selector byte) {
@@ -200,8 +195,13 @@ func (f *Forest) add(currentNode *Node, path string, valueHash primitives.Sha256
 	return newParent
 }
 
-// appends diffs to the top trie building new nodes as needed and returns the new trie id
-func (f *Forest) Update(baseHash primitives.MerkleSha256, diffs []*protocol.ContractStateDiff) primitives.MerkleSha256 {
+// appends diffs starting at requested trie node (hash) and returns new trie node hash
+// NOTE: typical use is baseHash is the newest root hash and return value is new root.
+func (f *Forest) Update(baseHash primitives.MerkleSha256, diffs []*protocol.ContractStateDiff) (primitives.MerkleSha256, error) {
+	if _, exists := f.nodes[baseHash.KeyForMap()]; !exists {
+		return nil, errors.Errorf("root node doesn't exist cannot update trie")
+	}
+
 	for _, diff := range diffs {
 		contract := diff.StringContractName()
 		for i := diff.StateDiffsIterator(); i.HasNext(); {
@@ -210,7 +210,7 @@ func (f *Forest) Update(baseHash primitives.MerkleSha256, diffs []*protocol.Cont
 			baseHash = f.updateSingleEntry(baseHash, path, hash.CalcSha256([]byte(record.StringValue())))
 		}
 	}
-	return baseHash
+	return baseHash, nil
 }
 
 // extract and return a verifiable proof for the value of key in the state snapshot reflected by trieId (corresponding to some block height)
@@ -246,7 +246,6 @@ func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, contract 
 		return false, err
 	}
 	return valueSha256.Equal(expectedHash), nil
-
 }
 
 func determineValueHashByProof(proof Proof, path string, parentHash primitives.MerkleSha256) (primitives.Sha256, error) {
