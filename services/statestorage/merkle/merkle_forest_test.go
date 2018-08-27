@@ -366,7 +366,7 @@ func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 // Debug helpers
 // =================
 
-func dump(t *testing.T, f *Forest) {
+func (f *Forest) dump(t *testing.T) {
 	t.Logf("---------------- TRIE BEGIN ------------------")
 	childNodes := make(map[string]*Node, len(f.nodes))
 	for _, n := range f.nodes {
@@ -410,7 +410,7 @@ func (p *Proof) dump() {
 }
 
 // TODO - this just checks there are no data integrity in our driver integrity
-func testForestIntegrity(t *testing.T, f *Forest) {
+func (f *Forest) testForestIntegrity(t *testing.T) {
 	for h, n := range f.nodes {
 		require.Equal(t, n.hash().KeyForMap(), h, "node key is not true hash code")
 	}
