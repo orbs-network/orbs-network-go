@@ -27,7 +27,7 @@ func generateBlockAvailabilityRequestInput(lastCommittedBlockHeight primitives.B
 	}
 }
 
-func TestSyncHandleBlockAvailabilityRequest(t *testing.T) {
+func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(2)
@@ -64,7 +64,7 @@ func TestSyncHandleBlockAvailabilityRequest(t *testing.T) {
 	driver.verifyMocks(t)
 }
 
-func TestSyncHandleBlockAvailabilityRequestIgnoredIfNoBlocksWereCommitted(t *testing.T) {
+func TestSyncSourceIgnoresBlockAvailabilityRequestIfNoBlocksWereCommitted(t *testing.T) {
 	driver := NewDriver()
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
@@ -81,7 +81,7 @@ func TestSyncHandleBlockAvailabilityRequestIgnoredIfNoBlocksWereCommitted(t *tes
 	driver.verifyMocks(t)
 }
 
-func TestSyncHandleBlockAvailabilityRequestIgnoredIfSenderIsInSync(t *testing.T) {
+func TestSyncSourceIgnoresBlockAvailabilityRequestIfPetitionerIsFurtherAhead(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(2)
@@ -117,7 +117,7 @@ func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.
 	}
 }
 
-func TestSyncHandleBlockAvailabilityResponse(t *testing.T) {
+func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(2)
@@ -153,7 +153,7 @@ func TestSyncHandleBlockAvailabilityResponse(t *testing.T) {
 	driver.verifyMocks(t)
 }
 
-func TestSyncHandleBlockAvailabilityResponseIgnoredIfNodeInSync(t *testing.T) {
+func TestSyncPetitionerIgnoresBlockAvailabilityResponseIfAlreadyInSync(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(2)
@@ -166,30 +166,6 @@ func TestSyncHandleBlockAvailabilityResponseIgnoredIfNodeInSync(t *testing.T) {
 	driver.blockSync.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(0)
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
-	require.NoError(t, err)
-
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
-
-	driver.verifyMocks(t)
-}
-
-func TestSyncHandleBlockAvailabilityResponseIgnoredIfAlreadySyncing(t *testing.T) {
-	t.Skip("should be deleted")
-	driver := NewDriver()
-
-	senderKeyPair := keys.Ed25519KeyPairForTests(9)
-	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
-
-	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(999), senderKeyPair.PublicKey())
-	anotherInput := generateBlockAvailabilityResponseInput(primitives.BlockHeight(1000), anotherSenderKeyPair.PublicKey())
-
-	driver.blockSync.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
-
-	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
-	require.NoError(t, err)
-
-	_, err = driver.blockStorage.HandleBlockAvailabilityResponse(anotherInput)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
@@ -214,7 +190,7 @@ func generateBlockSyncRequestInput(lastBlockHeight primitives.BlockHeight, desir
 	}
 }
 
-func TestSyncHandleBlockSyncRequest(t *testing.T) {
+func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(4)
@@ -263,7 +239,7 @@ func TestSyncHandleBlockSyncRequest(t *testing.T) {
 	driver.verifyMocks(t)
 }
 
-func TestSyncHandleBlockSyncRequestIgnoresRangeAccordingToLocalBatchSettings(t *testing.T) {
+func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	driver := NewDriver()
 	driver.setBatchSize(2)
 
@@ -336,7 +312,7 @@ func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desi
 	}
 }
 
-func TestSyncHandleBlockSyncResponse(t *testing.T) {
+func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(4)
@@ -356,7 +332,7 @@ func TestSyncHandleBlockSyncResponse(t *testing.T) {
 	driver.verifyMocks(t)
 }
 
-func TestSyncHandleBlockSyncResponseFromMultipleSenders(t *testing.T) {
+func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(5)
@@ -382,7 +358,7 @@ func TestSyncHandleBlockSyncResponseFromMultipleSenders(t *testing.T) {
 	driver.verifyMocks(t)
 }
 
-func TestSyncBroadcastBlockAvailabilityRequestSentContinuously(t *testing.T) {
+func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	t.Skip("not implemented")
 
 	driver := NewDriver()
@@ -392,12 +368,4 @@ func TestSyncBroadcastBlockAvailabilityRequestSentContinuously(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	driver.verifyMocks(t)
-}
-
-func TestSyncBroadcastBlockAvailabilityRequestIsNotSentIfSyncingWithOtherNode(t *testing.T) {
-	t.Skip("not implemented")
-}
-
-func TestSyncBroadcastBlockAvailabilityRequestResentAfterSomeTime(t *testing.T) {
-	t.Skip("not implemented")
 }
