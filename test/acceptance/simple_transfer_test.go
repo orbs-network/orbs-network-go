@@ -3,19 +3,13 @@ package acceptance
 import (
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
-	"math/rand"
-	"strconv"
 	"testing"
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	testId := "acceptance-LeaderCommitsTransactionsAndSkipsInvalidOnes-" + strconv.FormatUint(rand.Uint64(), 10)
-	defer harness.ReportTestId(t, testId)
-
-	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).Start(func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -36,14 +30,12 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 		network.WaitForTransactionInState(1, tx1.TransactionReceipt().Txhash())
 		network.WaitForTransactionInState(1, tx2.TransactionReceipt().Txhash())
 		require.EqualValues(t, 39, <-network.CallGetBalance(1), "getBalance result on non leader")
+
 	})
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	testId := "acceptance-LeaderCommitsTransactionsAndSkipsInvalidOnes-" + strconv.FormatUint(rand.Uint64(), 10)
-	defer harness.ReportTestId(t, testId)
-
-	harness.WithNetwork(t, testId, 2, harness.WithAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS), func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).Start(func(network harness.AcceptanceTestNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -68,5 +60,6 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		require.EqualValues(t, 17, <-network.CallGetBalance(0), "eventual getBalance result on leader")
 		network.WaitForTransactionInState(1, tx.TransactionReceipt().Txhash())
 		require.EqualValues(t, 17, <-network.CallGetBalance(1), "eventual getBalance result on non leader")
+
 	})
 }
