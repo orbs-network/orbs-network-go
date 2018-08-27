@@ -8,13 +8,16 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 )
 
+type blockSyncState int
+
 const (
-	BLOCK_SYNC_STATE_UNINITIALIZED = iota
-	BLOCK_SYNC_STATE_INITIALIZED
-	BLOCK_SYNC_STATE_PETITIONER_REQUEST_BLOCK_AVAILABILITY
-	BLOCK_SYNC_STATE_PETITIONER_WAIT_FOR_BLOCKS
+	BLOCK_SYNC_STATE_IDLE                                  blockSyncState = 0
+	BLOCK_SYNC_STATE_START_SYNC                            blockSyncState = 1
+	BLOCK_SYNC_STATE_PETITIONER_REQUEST_BLOCK_AVAILABILITY blockSyncState = 2
+	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK                blockSyncState = 3
 )
 
 type BlockSyncStorage interface {
@@ -47,18 +50,15 @@ func NewBlockSync(ctx context.Context, storage BlockSyncStorage, gossip gossipto
 }
 
 func (b *BlockSync) mainLoop(ctx context.Context) {
-	state := BLOCK_SYNC_STATE_UNINITIALIZED
+	state := BLOCK_SYNC_STATE_START_SYNC
+	var event interface{}
+	//var syncSource primitives.Ed25519PublicKey
 
 	for {
-		//isActive := false
-		//var syncSource primitives.Ed25519PublicKey
+		state = b.dispatchEvent(state, event)
 
-		if b.storage != nil {
-			state = BLOCK_SYNC_STATE_INITIALIZED
-		}
-
-		if state == BLOCK_SYNC_STATE_UNINITIALIZED {
-			continue
+		if state == BLOCK_SYNC_STATE_START_SYNC {
+			b.PetitionerBroadcastBlockAvailabilityRequest()
 		}
 
 		if state == BLOCK_SYNC_STATE_PETITIONER_REQUEST_BLOCK_AVAILABILITY {
@@ -68,23 +68,35 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case event := <-b.Events:
-			switch event.(type) {
-			case *gossipmessages.BlockAvailabilityResponseMessage:
-				message := event.(*gossipmessages.BlockAvailabilityResponseMessage)
-				b.PetitionerHandleBlockAvailabilityResponse(message)
-			case *gossipmessages.BlockSyncRequestMessage:
-				message := event.(*gossipmessages.BlockSyncRequestMessage)
-				b.SourceHandleBlockSyncRequest(message)
-			case *gossipmessages.BlockSyncResponseMessage:
-				message := event.(*gossipmessages.BlockSyncResponseMessage)
-				b.PetitionerHandleBlockSyncResponse(message)
-			case *gossipmessages.BlockAvailabilityRequestMessage:
-				message := event.(*gossipmessages.BlockAvailabilityRequestMessage)
-				b.SourceHandleBlockAvailabilityRequest(message)
-			}
+		case event = <-b.Events:
+			continue
 		}
 	}
+}
+
+func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}) blockSyncState {
+	switch event.(type) {
+	case *gossipmessages.BlockAvailabilityResponseMessage:
+		message := event.(*gossipmessages.BlockAvailabilityResponseMessage)
+		err := b.PetitionerHandleBlockAvailabilityResponse(message)
+
+		if err != nil {
+			b.reporting.Info("Received bad block availability response", log.Error(err))
+		} else {
+			return BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
+		}
+	case *gossipmessages.BlockSyncRequestMessage:
+		message := event.(*gossipmessages.BlockSyncRequestMessage)
+		b.SourceHandleBlockSyncRequest(message)
+	case *gossipmessages.BlockSyncResponseMessage:
+		message := event.(*gossipmessages.BlockSyncResponseMessage)
+		b.PetitionerHandleBlockSyncResponse(message)
+	case *gossipmessages.BlockAvailabilityRequestMessage:
+		message := event.(*gossipmessages.BlockAvailabilityRequestMessage)
+		b.SourceHandleBlockAvailabilityRequest(message)
+	}
+
+	return state
 }
 
 func (b *BlockSync) PetitionerBroadcastBlockAvailabilityRequest() {
@@ -125,23 +137,16 @@ func (b *BlockSync) PetitionerHandleBlockSyncResponse(message *gossipmessages.Bl
 	}
 }
 
-func (b *BlockSync) PetitionerHandleBlockAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+func (b *BlockSync) PetitionerHandleBlockAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) error {
 	b.reporting.Info("Received block availability response", log.Stringable("sender", message.Sender))
 
 	senderPublicKey := message.Sender.SenderPublicKey()
 
-	//if isActive && !syncSource.Equal(senderPublicKey) {
-	//	continue
-	//}
-
 	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 
 	if lastCommittedBlockHeight >= message.SignedBatchRange.LastCommittedBlockHeight() {
-		return
+		return errors.New("source has is behind petitioner") // stay in the same state
 	}
-
-	//syncSource = senderPublicKey
-	//isActive = true
 
 	blockType := message.SignedBatchRange.BlockType()
 
@@ -163,7 +168,8 @@ func (b *BlockSync) PetitionerHandleBlockAvailabilityResponse(message *gossipmes
 		},
 	}
 
-	b.gossip.SendBlockSyncRequest(request)
+	_, err := b.gossip.SendBlockSyncRequest(request)
+	return err
 }
 
 func (b *BlockSync) SourceHandleBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) {

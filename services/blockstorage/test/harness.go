@@ -21,7 +21,7 @@ type driver struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter adapter.InMemoryBlockPersistence
 	blockStorage   services.BlockStorage
-	blockSync      *gossiptopics.MockBlockSync
+	gossip         *gossiptopics.MockBlockSync
 	config         blockstorage.Config
 	logger         log.BasicLogger
 	ctx            context.Context
@@ -41,7 +41,7 @@ func (d *driver) verifyMocks(t *testing.T) {
 	_, err := d.stateStorage.Verify()
 	require.NoError(t, err)
 
-	_, err = d.blockSync.Verify()
+	_, err = d.gossip.Verify()
 	require.NoError(t, err)
 }
 
@@ -91,11 +91,13 @@ func NewDriver() *driver {
 	d := &driver{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
-	d.blockSync = &gossiptopics.MockBlockSync{}
+	d.gossip = &gossiptopics.MockBlockSync{}
 
 	ctx := context.Background()
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.blockSync, logger)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, logger)
 	d.ctx = ctx
+
+	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 	return d
 }

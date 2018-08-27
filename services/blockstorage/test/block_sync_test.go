@@ -53,7 +53,7 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 		},
 	}
 
-	driver.blockSync.When("SendBlockAvailabilityResponse", response).Return(nil, nil).Times(1)
+	driver.gossip.When("SendBlockAvailabilityResponse", response).Return(nil, nil).Times(1)
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestSyncSourceIgnoresBlockAvailabilityRequestIfNoBlocksWereCommitted(t *tes
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityRequestInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
 
-	driver.blockSync.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
+	driver.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestSyncSourceIgnoresBlockAvailabilityRequestIfPetitionerIsFurtherAhead(t *
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityRequestInput(primitives.BlockHeight(1972), senderKeyPair.PublicKey())
 
-	driver.blockSync.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
+	driver.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
@@ -142,7 +142,7 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 		},
 	}
 
-	driver.blockSync.When("SendBlockSyncRequest", request).Return(nil, nil).Times(1)
+	driver.gossip.When("SendBlockSyncRequest", request).Return(nil, nil).Times(1)
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
@@ -163,7 +163,7 @@ func TestSyncPetitionerIgnoresBlockAvailabilityResponseIfAlreadyInSync(t *testin
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
 
-	driver.blockSync.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(0)
+	driver.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(0)
 
 	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
@@ -228,7 +228,7 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 		},
 	}
 
-	driver.blockSync.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+	driver.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
 
 	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
@@ -278,7 +278,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 		},
 	}
 
-	driver.blockSync.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+	driver.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
 
 	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
@@ -361,9 +361,9 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	driver := NewDriver()
 
-	driver.blockSync.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+	driver.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
 
-	//driver.blockSync.PetitionerBroadcastBlockAvailabilityRequest()
+	time.Sleep(6 * time.Millisecond)
 
 	driver.verifyMocks(t)
 }
