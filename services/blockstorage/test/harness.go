@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -21,6 +22,7 @@ type driver struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter adapter.InMemoryBlockPersistence
 	blockStorage   services.BlockStorage
+	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	config         blockstorage.Config
 	logger         log.BasicLogger
@@ -37,11 +39,20 @@ func (d *driver) expectCommitStateDiffTimes(times int) {
 	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(times)
 }
 
+func (d *driver) expectHandleBlockConsensusTimes(times int) {
+	out := &handlers.HandleBlockConsensusOutput{}
+
+	d.consensus.When("HandleBlockConsensus", mock.Any).Return(out, nil).Times(times)
+}
+
 func (d *driver) verifyMocks(t *testing.T) {
 	_, err := d.stateStorage.Verify()
 	require.NoError(t, err)
 
 	_, err = d.gossip.Verify()
+	require.NoError(t, err)
+
+	_, err = d.consensus.Verify()
 	require.NoError(t, err)
 }
 
@@ -92,18 +103,21 @@ func NewCustomSetupDriver(setup func(persistence adapter.InMemoryBlockPersistenc
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
 
+	d.consensus = &handlers.MockConsensusBlocksHandler{}
+
 	if setup != nil {
 		setup(d.storageAdapter)
 	}
 
 	d.gossip = &gossiptopics.MockBlockSync{}
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
+	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 	ctx := context.Background()
 	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, logger)
 	d.ctx = ctx
 
-	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
+	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	return d
 }

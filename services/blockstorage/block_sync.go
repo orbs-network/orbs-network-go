@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -25,6 +26,7 @@ type BlockSyncStorage interface {
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
+	GetConsensusBlockHandlers() []handlers.ConsensusBlocksHandler
 }
 
 type BlockSync struct {
@@ -36,12 +38,12 @@ type BlockSync struct {
 	Events  chan interface{}
 }
 
-func NewBlockSync(ctx context.Context, storage BlockSyncStorage, gossip gossiptopics.BlockSync, config Config, reporting log.BasicLogger) *BlockSync {
+func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, gossip gossiptopics.BlockSync, reporting log.BasicLogger) *BlockSync {
 	blockSync := &BlockSync{
 		reporting: reporting.For(log.String("flow", "block-sync")),
+		config:    config,
 		storage:   storage,
 		gossip:    gossip,
-		config:    config,
 		Events:    make(chan interface{}),
 	}
 
@@ -57,7 +59,6 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 	syncTrigger := time.AfterFunc(b.config.BlockSyncInterval(), func() {
 		state = BLOCK_SYNC_STATE_START_SYNC
-		b.reporting.Error("transitioning to", log.Int("state", int(state)))
 		b.Events <- nil
 	})
 
@@ -157,6 +158,13 @@ func (b *BlockSync) PetitionerHandleBlockSyncResponse(message *gossipmessages.Bl
 
 		if err != nil {
 			b.reporting.Error("failed to commit block received via sync", log.Error(err))
+		}
+
+		for _, handler := range b.storage.GetConsensusBlockHandlers() {
+			_, err = handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+				BlockType: protocol.BLOCK_TYPE_BLOCK_PAIR,
+				BlockPair: blockPair,
+			})
 		}
 	}
 }

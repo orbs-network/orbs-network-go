@@ -326,6 +326,8 @@ func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
+	driver.expectHandleBlockConsensusTimes(2)
+
 	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
 
@@ -348,6 +350,8 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 
 	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
 	inputFromAnotherSender := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(5), anotherSenderKeyPair.PublicKey())
+
+	driver.expectHandleBlockConsensusTimes(5)
 
 	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
@@ -393,6 +397,8 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	blockSyncResponse := generateBlockSyncResponseInput(primitives.BlockHeight(1), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
 	driver.expectCommitStateDiffTimes(4)
+	driver.expectHandleBlockConsensusTimes(4)
+
 	driver.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
 
 	time.Sleep(1 * time.Millisecond)

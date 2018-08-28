@@ -69,7 +69,7 @@ func NewBlockStorage(ctx context.Context, config Config, persistence adapter.Blo
 		storage.updateLastCommittedBlock(lastBlock)
 	}
 
-	storage.blockSync = NewBlockSync(ctx, storage, gossip, config, storage.reporting)
+	storage.blockSync = NewBlockSync(ctx, config, storage, gossip, reporting)
 	gossip.RegisterBlockSyncHandler(storage)
 
 	return storage
@@ -350,4 +350,8 @@ func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockH
 	}
 
 	return blocks, firstAvailableBlockHeight, lastAvailableBlockHeight
+}
+
+func (s *service) GetConsensusBlockHandlers() []handlers.ConsensusBlocksHandler {
+	return s.consensusBlocksHandlers
 }
