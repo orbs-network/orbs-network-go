@@ -234,6 +234,10 @@ func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitI
 		return nil, blockHeightError
 	}
 
+	if err := s.validateWithConsensusAlgos(s.lastCommittedBlock, input.BlockPair); err != nil {
+		s.reporting.Error("intra-node sync to consensus algo failed", log.Error(err))
+	}
+
 	return &services.ValidateBlockForCommitOutput{}, nil
 }
 
@@ -324,6 +328,23 @@ func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPair
 	return err
 }
 
+func (s *service) validateWithConsensusAlgos(prevBlockPair *protocol.BlockPairContainer, lastCommittedBlockPair *protocol.BlockPairContainer) error {
+	for _, handler := range s.consensusBlocksHandlers {
+		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:              lastCommittedBlockPair,
+			PrevCommittedBlockPair: prevBlockPair,
+		})
+
+		// one of the consensus algos has validated the block, this means it's a valid block
+		if err == nil {
+			return nil
+		}
+	}
+
+	return errors.New("all consensus algos refused to validate the block")
+}
+
 // Returns a slice of blocks containing first and last
 func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
 	// FIXME use more efficient way to slice blocks
@@ -350,8 +371,4 @@ func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockH
 	}
 
 	return blocks, firstAvailableBlockHeight, lastAvailableBlockHeight
-}
-
-func (s *service) GetConsensusBlockHandlers() []handlers.ConsensusBlocksHandler {
-	return s.consensusBlocksHandlers
 }

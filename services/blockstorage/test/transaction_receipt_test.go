@@ -13,6 +13,7 @@ import (
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().WithTimestampBloomFilter().Build()
 	driver.commitBlock(block)
@@ -33,6 +34,7 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 func TestReturnTransactionReceipt(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampBloomFilter().WithTimestampNow().Build()
 	driver.commitBlock(block)

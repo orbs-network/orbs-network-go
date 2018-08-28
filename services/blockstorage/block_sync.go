@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -26,7 +25,6 @@ type BlockSyncStorage interface {
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
-	GetConsensusBlockHandlers() []handlers.ConsensusBlocksHandler
 }
 
 type BlockSync struct {
@@ -158,13 +156,6 @@ func (b *BlockSync) PetitionerHandleBlockSyncResponse(message *gossipmessages.Bl
 
 		if err != nil {
 			b.reporting.Error("failed to commit block received via sync", log.Error(err))
-		}
-
-		for _, handler := range b.storage.GetConsensusBlockHandlers() {
-			_, err = handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
-				BlockType: protocol.BLOCK_TYPE_BLOCK_PAIR,
-				BlockPair: blockPair,
-			})
 		}
 	}
 }

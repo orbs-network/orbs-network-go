@@ -11,6 +11,7 @@ import (
 func TestReturnTransactionBlockHeader(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().Build()
 	driver.commitBlock(block)
@@ -27,6 +28,7 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().Build()
 	driver.commitBlock(block)
@@ -52,6 +54,7 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().Build()
 	driver.commitBlock(block)
@@ -75,6 +78,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 func TestReturnResultsBlockHeader(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().Build()
 	driver.commitBlock(block)
@@ -90,6 +94,7 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().Build()
 	driver.commitBlock(block)
@@ -116,6 +121,7 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().Build()
 	driver.commitBlock(block)

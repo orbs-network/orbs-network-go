@@ -39,7 +39,7 @@ func (d *driver) expectCommitStateDiffTimes(times int) {
 	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(times)
 }
 
-func (d *driver) expectHandleBlockConsensusTimes(times int) {
+func (d *driver) expectValidateWithConsensusAlgosTimes(times int) {
 	out := &handlers.HandleBlockConsensusOutput{}
 
 	d.consensus.When("HandleBlockConsensus", mock.Any).Return(out, nil).Times(times)

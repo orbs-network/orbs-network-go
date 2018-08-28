@@ -11,6 +11,8 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 	driver := NewDriver()
 	block := builders.BlockPair().Build()
 
+	driver.expectValidateWithConsensusAlgosTimes(1)
+
 	_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.NoError(t, err, "block should be valid")
 }
@@ -43,6 +45,7 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 func TestValidateBlockWithValidHeight(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	driver.commitBlock(builders.BlockPair().Build())
 
@@ -55,6 +58,7 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
 	driver := NewDriver()
 	driver.expectCommitStateDiff()
+	driver.expectValidateWithConsensusAlgosTimes(1)
 
 	driver.commitBlock(builders.BlockPair().Build())
 

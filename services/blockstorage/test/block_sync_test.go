@@ -124,6 +124,7 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(2)
+
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
@@ -160,6 +161,7 @@ func TestSyncPetitionerIgnoresBlockAvailabilityResponseIfAlreadyInSync(t *testin
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(2)
+
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
@@ -319,14 +321,13 @@ func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(4)
+	driver.expectValidateWithConsensusAlgosTimes(2)
 
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
-
-	driver.expectHandleBlockConsensusTimes(2)
 
 	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
@@ -341,6 +342,7 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 	driver := NewDriver()
 
 	driver.expectCommitStateDiffTimes(5)
+	driver.expectValidateWithConsensusAlgosTimes(3)
 
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
 	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
@@ -350,8 +352,6 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 
 	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
 	inputFromAnotherSender := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(5), anotherSenderKeyPair.PublicKey())
-
-	driver.expectHandleBlockConsensusTimes(5)
 
 	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
@@ -397,7 +397,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	blockSyncResponse := generateBlockSyncResponseInput(primitives.BlockHeight(1), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
 	driver.expectCommitStateDiffTimes(4)
-	driver.expectHandleBlockConsensusTimes(4)
+	driver.expectValidateWithConsensusAlgosTimes(4)
 
 	driver.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
 
