@@ -268,7 +268,7 @@ func (b *basicLogger) Error(message string, params ...*Field) {
 func (b *basicLogger) LogFailedExpectation(message string, expected *Field, actual *Field, params ...*Field) {
 	actual.Key = "actual-" + actual.Key
 	expected.Key = "expected-" + expected.Key
-	newParams:= append(params,expected,actual)
+	newParams := append(params, expected, actual)
 	b.Log("expectation", message, newParams...)
 }
 

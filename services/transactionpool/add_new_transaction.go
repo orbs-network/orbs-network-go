@@ -2,13 +2,13 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
@@ -41,7 +41,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	if err := s.forwardTransaction(input.SignedTransaction); err != nil {
 		s.logger.Error("error forwarding transaction via gossip", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
 
-		return  nil, err
+		return nil, err
 	}
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
@@ -58,7 +58,7 @@ func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
 			SignedTransactions: Transactions{tx},
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: s.config.NodePublicKey(),
-				Signature: sig,
+				Signature:       sig,
 			}).Build(),
 		},
 	})
