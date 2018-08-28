@@ -156,47 +156,47 @@ func TestExtendingKeyPathByOneChar(t *testing.T) {
 func TestExtendingKeyPathBySeveralChars(t *testing.T) {
 	f, root := NewForest()
 
-	rootId := updateStringEntries(f, root, "bar", "baz", "bar12", "qux", "bar123456789", "quux")
+	root1 := updateStringEntries(f, root, "bar", "baz", "bar12", "qux", "bar123456789", "quux")
 
-	proof := getProofRequireHeight(t, f, rootId, "", "bar123456789", 3)
-	verifyProof(t, f, rootId, proof, "", "bar123456789", "quux", true)
+	proof := getProofRequireHeight(t, f, root1, "", "bar123456789", 3)
+	verifyProof(t, f, root1, proof, "", "bar123456789", "quux", true)
 }
 
 func TestAddSiblingNode(t *testing.T) {
 	f, root := NewForest()
-	rootId := updateStringEntries(f, root, "bar", "baz", "bar1", "qux", "bar2", "quux")
+	root1 := updateStringEntries(f, root, "bar", "baz", "bar1", "qux", "bar2", "quux")
 
-	proof := getProofRequireHeight(t, f, rootId, "", "bar2", 2)
-	verifyProof(t, f, rootId, proof, "", "bar2", "quux", true)
+	proof := getProofRequireHeight(t, f, root1, "", "bar2", 2)
+	verifyProof(t, f, root1, proof, "", "bar2", "quux", true)
 }
 
 func TestAddPathToCauseBranchingAlongExistingPath(t *testing.T) {
 	f, root := NewForest()
-	rootId := updateStringEntries(f, root, "bar", "baz", "bar1", "qux", "bad", "quux")
+	root1 := updateStringEntries(f, root, "bar", "baz", "bar1", "qux", "bad", "quux")
 
-	proof := getProofRequireHeight(t, f, rootId, "", "bad", 2)
-	verifyProof(t, f, rootId, proof, "", "bad", "quux", true)
+	proof := getProofRequireHeight(t, f, root1, "", "bad", 2)
+	verifyProof(t, f, root1, proof, "", "bad", "quux", true)
 }
 
 func TestReplaceExistingValueBelowDivergingPaths(t *testing.T) {
 	f, root := NewForest()
-	rootId := updateStringEntries(f, root, "bar", "baz", "bar1", "qux", "bad", "quux", "bar1", "zoo")
+	root1 := updateStringEntries(f, root, "bar", "baz", "bar1", "qux", "bad", "quux", "bar1", "zoo")
 
-	proof := getProofRequireHeight(t, f, rootId, "", "bar1", 3)
-	verifyProof(t, f, rootId, proof, "", "bar1", "zoo", true)
-	verifyProof(t, f, rootId, proof, "", "bar1", "qux", false)
+	proof := getProofRequireHeight(t, f, root1, "", "bar1", 3)
+	verifyProof(t, f, root1, proof, "", "bar1", "zoo", true)
+	verifyProof(t, f, root1, proof, "", "bar1", "qux", false)
 }
 
 func TestAddPathToCauseNewLeafAlongExistingPath(t *testing.T) {
 	f, root := NewForest()
 
-	rootId := updateStringEntries(f, root, "baron", "Hirsch", "bar", "Hello")
+	root1 := updateStringEntries(f, root, "baron", "Hirsch", "bar", "Hello")
 
-	proof := getProofRequireHeight(t, f, rootId, "", "bar", 1)
-	verifyProof(t, f, rootId, proof, "", "bar", "Hello", true)
+	proof := getProofRequireHeight(t, f, root1, "", "bar", 1)
+	verifyProof(t, f, root1, proof, "", "bar", "Hello", true)
 
-	proof = getProofRequireHeight(t, f, rootId, "", "baron", 2)
-	verifyProof(t, f, rootId, proof, "", "baron", "Hirsch", true)
+	proof = getProofRequireHeight(t, f, root1, "", "baron", 2)
+	verifyProof(t, f, root1, proof, "", "baron", "Hirsch", true)
 }
 
 func TestRemoveValue_SingleExistingNode(t *testing.T) {
