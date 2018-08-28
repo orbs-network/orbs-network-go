@@ -46,6 +46,9 @@ const (
 	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT        = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
 	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
+
+	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
+	PUBLIC_API_TRANSACTION_STATUS_GRACE = "PUBLIC_API_TRANSACTION_STATUS_GRACE"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -97,6 +100,9 @@ func newHardCodedConfig(
 	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
+
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
+	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
 
 	return cfg
 }
@@ -216,4 +222,12 @@ func (c *config) TransactionPoolPendingPoolClearExpiredInterval() time.Duration 
 
 func (c *config) TransactionPoolCommittedPoolClearExpiredInterval() time.Duration {
 	return c.kv[TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
+}
+
+func (c *config) SendTransactionTimeout() time.Duration {
+	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
+}
+
+func (c *config) GetTransactionStatusGrace() time.Duration {
+	return c.kv[PUBLIC_API_TRANSACTION_STATUS_GRACE].DurationValue
 }
