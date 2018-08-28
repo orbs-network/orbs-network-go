@@ -224,6 +224,7 @@ func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBl
 	}, nil
 }
 
+// FIXME implement all block checks
 func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
 		return nil, protocolVersionError

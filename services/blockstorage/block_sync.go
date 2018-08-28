@@ -24,6 +24,7 @@ type BlockSyncStorage interface {
 	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight)
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
+	ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
 }
 
 type BlockSync struct {
@@ -139,28 +140,36 @@ func (b *BlockSync) PetitionerBroadcastBlockAvailabilityRequest() {
 func (b *BlockSync) PetitionerHandleBlockSyncResponse(message *gossipmessages.BlockSyncResponseMessage) {
 	firstAvailableBlockHeight := message.SignedChunkRange.FirstBlockHeight()
 	lastAvailableBlockHeight := message.SignedChunkRange.LastBlockHeight()
-	b.reporting.Info("Received block sync response",
+
+	b.reporting.Info("received block sync response",
 		log.Stringable("sender", message.Sender),
 		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
 		log.Stringable("last-available-block-height", lastAvailableBlockHeight))
+
 	for _, blockPair := range message.BlockPairs {
-		_, err := b.storage.CommitBlock(&services.CommitBlockInput{blockPair})
+		_, err := b.storage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
 		if err != nil {
-			b.reporting.Error("Failed to commit block received via sync", log.Error(err))
+			b.reporting.Error("failed to commit block received via sync", log.Error(err))
+		}
+
+		_, err = b.storage.CommitBlock(&services.CommitBlockInput{BlockPair: blockPair})
+
+		if err != nil {
+			b.reporting.Error("failed to commit block received via sync", log.Error(err))
 		}
 	}
 }
 
 func (b *BlockSync) PetitionerHandleBlockAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) error {
-	b.reporting.Info("Received block availability response", log.Stringable("sender", message.Sender))
+	b.reporting.Info("received block availability response", log.Stringable("sender", message.Sender))
 
 	senderPublicKey := message.Sender.SenderPublicKey()
 
 	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 
 	if lastCommittedBlockHeight >= message.SignedBatchRange.LastCommittedBlockHeight() {
-		return errors.New("source has is behind petitioner") // stay in the same state
+		return errors.New("source is behind petitioner") // stay in the same state
 	}
 
 	blockType := message.SignedBatchRange.BlockType()
@@ -188,7 +197,7 @@ func (b *BlockSync) PetitionerHandleBlockAvailabilityResponse(message *gossipmes
 }
 
 func (b *BlockSync) SourceHandleBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) {
-	b.reporting.Info("Received block availability request", log.Stringable("sender", message.Sender))
+	b.reporting.Info("received block availability request", log.Stringable("sender", message.Sender))
 
 	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 
@@ -221,7 +230,7 @@ func (b *BlockSync) SourceHandleBlockAvailabilityRequest(message *gossipmessages
 }
 
 func (b *BlockSync) SourceHandleBlockSyncRequest(message *gossipmessages.BlockSyncRequestMessage) {
-	b.reporting.Info("Received block sync request", log.Stringable("sender", message.Sender))
+	b.reporting.Info("received block sync request", log.Stringable("sender", message.Sender))
 	senderPublicKey := message.Sender.SenderPublicKey()
 	blockType := message.SignedChunkRange.BlockType()
 	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
@@ -232,7 +241,7 @@ func (b *BlockSync) SourceHandleBlockSyncRequest(message *gossipmessages.BlockSy
 	}
 
 	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := b.storage.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
-	b.reporting.Info("Sending blocks to another node via block sync",
+	b.reporting.Info("sending blocks to another node via block sync",
 		log.Stringable("recipient", senderPublicKey),
 		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
 		log.Stringable("last-available-block-height", lastAvailableBlockHeight))

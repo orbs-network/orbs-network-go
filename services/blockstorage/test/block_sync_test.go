@@ -361,6 +361,11 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 	driver.verifyMocks(t)
 }
 
+// FIXME implement
+func TestSyncPetitionerHandlesBlockSyncResponseAndRunsValidationChecks(t *testing.T) {
+	t.Skip("not implemented")
+}
+
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	driver := NewDriver()
 
