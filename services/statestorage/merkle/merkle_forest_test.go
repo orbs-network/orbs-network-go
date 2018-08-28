@@ -87,23 +87,32 @@ func TestValidProofForMissingKey(t *testing.T) {
 
 }
 
+func TestUpdateTrieFailsForMissingBaseNode(t *testing.T) {
+	f, root := NewForest()
+
+	root[3] = root[3] + 1
+	csd := builders.ContractStateDiff().WithContractName("foo").WithStringRecord("bar1", "baz").Build()
+	_, err := f.Update(root, []*protocol.ContractStateDiff{csd})
+	require.Error(t, err, "did not receive an error when using a corrupt merkle root")
+}
+
 func TestProofValidationAfterBatchStateUpdate(t *testing.T) {
 	f, root := NewForest()
 
-	r1 := builders.ContractStateDiff().WithContractName("foo").
+	csd1 := builders.ContractStateDiff().WithContractName("foo").
 		WithStringRecord("bar1", "baz").WithStringRecord("shared", "quux1").Build()
-	iterator1 := r1.StateDiffsIterator()
+	iterator1 := csd1.StateDiffsIterator()
 	bar1 := iterator1.NextStateDiffs()
 	shared1 := iterator1.NextStateDiffs()
 
-	r2 := builders.ContractStateDiff().WithContractName("foo").
+	csd2 := builders.ContractStateDiff().WithContractName("foo").
 		WithStringRecord("bar2", "qux").WithStringRecord("shared", "quux2").Build()
-	iterator2 := r2.StateDiffsIterator()
+	iterator2 := csd2.StateDiffsIterator()
 	bar2 := iterator2.NextStateDiffs()
 	shared2 := iterator2.NextStateDiffs()
 
-	root1, _ := f.Update(root, []*protocol.ContractStateDiff{r1})
-	root2, _ := f.Update(root1, []*protocol.ContractStateDiff{r2})
+	root1, _ := f.Update(root, []*protocol.ContractStateDiff{csd1})
+	root2, _ := f.Update(root1, []*protocol.ContractStateDiff{csd2})
 
 	proof := getProofRequireHeight(t, f, root1, "foo", bar1.StringKey(), 2)
 	verifyProof(t, f, root1, proof, "foo", bar1.StringKey(), bar1.StringValue(), true)
