@@ -213,6 +213,19 @@ func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitI
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
 	s.consensusBlocksHandlers = append(s.consensusBlocksHandlers, handler)
+
+	// update the consensus algo about the latest block we have (for its initialization)
+	// TODO: should this be under mutex since it reads s.lastCommittedBlock
+	if s.lastCommittedBlock != nil {
+		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:              s.lastCommittedBlock,
+			PrevCommittedBlockPair: nil, // on purpose, see spec
+		})
+		if err != nil {
+			s.reporting.Error(err.Error())
+		}
+	}
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
