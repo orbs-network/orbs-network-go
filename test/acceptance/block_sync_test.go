@@ -24,13 +24,14 @@ func TestBlockSync(t *testing.T) {
 			t.Errorf("waiting for block on node 1 failed: %s", err)
 		}
 
+		// Wait until full sync
 		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(10); err != nil {
 			t.Errorf("waiting for block on node 1 failed: %s", err)
 		}
 
-		// TODO change the test to check that consensus keeps producing new blocks
-		//if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(15); err != nil {
-		//	t.Errorf("waiting for block on node 1 failed: %s", err)
-		//}
+		// Wait again to get new blocks created after the sync
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(15); err != nil {
+			t.Errorf("waiting for block on node 1 failed: %s", err)
+		}
 	})
 }
