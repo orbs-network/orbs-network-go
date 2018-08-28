@@ -78,29 +78,37 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	}
 }
 
-// FIXME do not respond to my own events
 func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}) blockSyncState {
 	switch event.(type) {
 	case *gossipmessages.BlockAvailabilityRequestMessage:
 		message := event.(*gossipmessages.BlockAvailabilityRequestMessage)
-		b.SourceHandleBlockAvailabilityRequest(message)
+		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
+			b.SourceHandleBlockAvailabilityRequest(message)
+		}
 	case *gossipmessages.BlockAvailabilityResponseMessage:
 		message := event.(*gossipmessages.BlockAvailabilityResponseMessage)
-		err := b.PetitionerHandleBlockAvailabilityResponse(message)
 
-		if err != nil {
-			b.reporting.Info("Received bad block availability response", log.Error(err))
-		} else {
-			return BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
+		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
+			err := b.PetitionerHandleBlockAvailabilityResponse(message)
+
+			if err != nil {
+				b.reporting.Info("Received bad block availability response", log.Error(err))
+			} else {
+				return BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
+			}
 		}
 	case *gossipmessages.BlockSyncRequestMessage:
 		message := event.(*gossipmessages.BlockSyncRequestMessage)
-		b.SourceHandleBlockSyncRequest(message)
-		return BLOCK_SYNC_STATE_IDLE
+		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
+			b.SourceHandleBlockSyncRequest(message)
+			return BLOCK_SYNC_STATE_IDLE
+		}
 	case *gossipmessages.BlockSyncResponseMessage:
 		message := event.(*gossipmessages.BlockSyncResponseMessage)
-		b.PetitionerHandleBlockSyncResponse(message)
-		return BLOCK_SYNC_STATE_IDLE
+		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
+			b.PetitionerHandleBlockSyncResponse(message)
+			return BLOCK_SYNC_STATE_IDLE
+		}
 	}
 
 	return state
