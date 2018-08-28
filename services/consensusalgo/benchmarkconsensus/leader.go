@@ -16,7 +16,7 @@ import (
 )
 
 func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
-	// CHANGED
+	s.lastCommittedBlock = s.leaderGenerateGenesisBlock()
 	for {
 		err := s.leaderConsensusRoundTick()
 		if err != nil {
@@ -39,15 +39,6 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 func (s *service) leaderConsensusRoundTick() (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-
-	// CHANGED
-	// make sure last committed block is initialized
-	if s.lastCommittedBlock == nil {
-		s.lastCommittedBlock, err = s.leaderInitializeLastCommittedBlock()
-		if err != nil {
-			return err
-		}
-	}
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeightUnderMutex() {
@@ -75,49 +66,6 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 	}
 
 	return nil
-}
-
-// CHANGED
-func (s *service) leaderInitializeLastCommittedBlock() (*protocol.BlockPairContainer, error) {
-	bsLastHeightOutput, err := s.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
-	if err != nil {
-		return nil, err
-	}
-
-	// nothing in block persistent storage, leader started for the first time ever
-	if bsLastHeightOutput.LastCommittedBlockHeight == 0 {
-		return s.leaderGenerateGenesisBlock(), nil
-	}
-
-	bsLastTxOutput, err := s.blockStorage.GetTransactionsBlockHeader(&services.GetTransactionsBlockHeaderInput{
-		BlockHeight: bsLastHeightOutput.LastCommittedBlockHeight,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	bsLastRxOutput, err := s.blockStorage.GetResultsBlockHeader(&services.GetResultsBlockHeaderInput{
-		BlockHeight: bsLastHeightOutput.LastCommittedBlockHeight,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// return a partial block that can't be broadcasted but can be used to base new proposals on
-	return &protocol.BlockPairContainer{
-		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header:             bsLastTxOutput.TransactionsBlockHeader,
-			Metadata:           nil, // will remain nil since a partial block that can't be broadcasted
-			SignedTransactions: nil, // will remain nil since a partial block that can't be broadcasted
-			BlockProof:         nil, // will remain nil since a partial block that can't be broadcasted
-		},
-		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:              bsLastRxOutput.ResultsBlockHeader,
-			TransactionReceipts: nil, // will remain nil since a partial block that can't be broadcasted
-			ContractStateDiffs:  nil, // will remain nil since a partial block that can't be broadcasted
-			BlockProof:          nil, // will remain nil since a partial block that can't be broadcasted
-		},
-	}, nil
 }
 
 // used for the first commit a leader does which is nop (genesis block) just to see where everybody's at
@@ -200,11 +148,10 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 	return blockPair, nil
 }
 
-// CHANGED
 func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairContainer) error {
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
 	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
-		return nil
+		return errors.Errorf("attempting to broadcast commit of a partial block with height that is missing fields like block proofs")
 	}
 
 	_, err := s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{

@@ -10,7 +10,7 @@ import (
 func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")

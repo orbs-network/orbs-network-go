@@ -3,17 +3,14 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"testing"
 )
 
-func newLeaderHarnessWaitingForCommittedMessages(t *testing.T, ctx context.Context, numPersistentBlocks primitives.BlockHeight) *harness {
+func newLeaderHarnessWaitingForCommittedMessages(t *testing.T, ctx context.Context) *harness {
 	h := newHarness(true)
-	h.expectLastPersistentBlockToBeQueriedInStorage(numPersistentBlocks)
 	h.expectNewBlockProposalNotRequested()
-	h.expectCommitBroadcastViaGossip(numPersistentBlocks, h.config.NodePublicKey())
+	h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 	h.createService(ctx)
-	h.verifyLastPersistentBlockToBeQueriedInStorage(t)
 	h.verifyCommitBroadcastViaGossip(t)
 	return h
 }
@@ -21,7 +18,7 @@ func newLeaderHarnessWaitingForCommittedMessages(t *testing.T, ctx context.Conte
 func TestLeaderInit(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		h.verifyHandlerRegistrations(t)
 		h.verifyNewBlockProposalNotRequested(t)
@@ -31,7 +28,7 @@ func TestLeaderInit(t *testing.T) {
 func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
@@ -58,7 +55,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), fail to generate height 1")
 
@@ -83,7 +80,7 @@ func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
@@ -110,7 +107,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		t.Log("Bad signatures nodes confirmed height 0 (genesis), commit height 0 again")
 
@@ -127,7 +124,7 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		t.Log("Non federation nodes confirmed height 0 (genesis), commit height 0 again")
 
@@ -144,7 +141,7 @@ func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
 func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
@@ -170,7 +167,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx, 0)
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
 		t.Log("Nodes confirmed height 1000, commit height 0 (genesis) again")
 
