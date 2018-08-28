@@ -1,13 +1,13 @@
 package test
 
 import (
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/stretchr/testify/require"
-	"testing"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"crypto/rand"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
@@ -22,15 +22,16 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 
 	_, err := h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
-			Sender:             (&gossipmessages.SenderSignatureBuilder{
+			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: otherNodeKeyPair.PublicKey(),
-				Signature: invalidSig,
+				Signature:       invalidSig,
 			}).Build(),
 			SignedTransactions: transactionpool.Transactions{tx1, tx2},
 		},
 	})
 
-	require.Error(t, err, "did not fail on invalid signature")}
+	require.Error(t, err, "did not fail on invalid signature")
+}
 
 func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 	t.Parallel()

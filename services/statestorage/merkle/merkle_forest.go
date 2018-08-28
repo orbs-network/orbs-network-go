@@ -77,15 +77,14 @@ func (n *Node) getSingleChildSelector() *byte {
 	return singleChildSelector
 }
 
-var emptyNode = createNode("", zeroValueHash)
-var emptyNodeHash = emptyNode.hash()
-
 type Forest struct {
 	nodes map[string]*Node
 }
 
 // return the merkle trie & the trie root hash for the empty default trie
 func NewForest() (*Forest, primitives.MerkleSha256) {
+	var emptyNode = createNode("", zeroValueHash)
+	var emptyNodeHash = emptyNode.hash()
 	return &Forest{nodes: map[string]*Node{emptyNodeHash.KeyForMap(): emptyNode}}, emptyNodeHash
 }
 

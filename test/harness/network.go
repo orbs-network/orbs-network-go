@@ -69,7 +69,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 			consensusAlgo,
 		)
 
-		node.statePersistence = stateStorageAdapter.NewInMemoryStatePersistence()
+		node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 		node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
 
 		nodes[i] = node
@@ -104,7 +104,7 @@ type networkNode struct {
 	name             string
 	config           config.NodeConfig
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.InMemoryStatePersistence
+	statePersistence stateStorageAdapter.TamperingStatePersistence
 	nodeLogic        bootstrap.NodeLogic
 }
 
