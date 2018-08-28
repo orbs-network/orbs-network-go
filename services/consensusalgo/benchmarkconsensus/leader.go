@@ -151,7 +151,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairContainer) error {
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
 	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
-		return errors.Errorf("attempting to broadcast commit of a partial block with height that is missing fields like block proofs")
+		return errors.Errorf("attempting to broadcast commit of a partial block that is missing fields like block proofs: %v", blockPair.String())
 	}
 
 	_, err := s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
