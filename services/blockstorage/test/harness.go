@@ -74,7 +74,7 @@ func (d *driver) setBatchSize(batchSize uint32) {
 	d.config.(config.NodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
 }
 
-func NewDriver() *driver {
+func NewCustomSetupDriver(setup func(persistence adapter.InMemoryBlockPersistence)) *driver {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -91,7 +91,13 @@ func NewDriver() *driver {
 	d := &driver{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
+
+	if setup != nil {
+		setup(d.storageAdapter)
+	}
+
 	d.gossip = &gossiptopics.MockBlockSync{}
+	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 
 	ctx := context.Background()
 	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, logger)
@@ -100,4 +106,8 @@ func NewDriver() *driver {
 	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 	return d
+}
+
+func NewDriver() *driver {
+	return NewCustomSetupDriver(nil)
 }

@@ -48,13 +48,25 @@ type service struct {
 }
 
 func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
+	logger := reporting.For(log.Service("block-storage"))
+
 	storage := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
 		gossip:        gossip,
-		reporting:     reporting.For(log.Service("block-storage")),
+		reporting:     logger,
 		config:        config,
 		lastBlockLock: &sync.Mutex{},
+	}
+
+	lastBlock, err := persistence.GetLastBlock()
+
+	if err != nil {
+		logger.Error("could not update last block from persistence", log.Error(err))
+	}
+
+	if lastBlock != nil {
+		storage.updateLastCommittedBlock(lastBlock)
 	}
 
 	storage.blockSync = NewBlockSync(ctx, storage, gossip, config, storage.reporting)
