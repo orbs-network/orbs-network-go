@@ -62,7 +62,7 @@ type networkNode struct {
 	index            int
 	config           config.NodeConfig
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.InMemoryStatePersistence
+	statePersistence stateStorageAdapter.TamperingStatePersistence
 	nodeLogic        bootstrap.NodeLogic
 }
 
