@@ -19,7 +19,7 @@ type TestStatePersistence struct {
 	blockTrackerForTests *synchronization.BlockTracker
 }
 
-func NewInMemoryStatePersistence() TamperingStatePersistence {
+func NewTamperingStatePersistence() TamperingStatePersistence {
 	return &TestStatePersistence{
 		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(),
 		blockTrackerForTests:     synchronization.NewBlockTracker(0, 64000, time.Duration(1*time.Hour)),
