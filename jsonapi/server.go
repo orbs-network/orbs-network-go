@@ -25,7 +25,7 @@ func StartSambusac(serverAddress string, pathToContracts string, blocking bool) 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	testId := "Sambusac-Test-Network"
-	network := harness.NewTestNetwork(ctx, 3, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, testId)
+	network := harness.NewAcceptanceTestNetwork(3, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, testId).StartNodes(ctx)
 
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
 
