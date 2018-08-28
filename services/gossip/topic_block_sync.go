@@ -176,8 +176,10 @@ func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, paylo
 
 	var blocks []*protocol.BlockPairContainer
 
-	for i := 0; i < len(blockPairPayloads); i += 2 {
-		blockPair, err := decodeBlockPair([][]byte{blockPairPayloads[i], blockPairPayloads[i+1]})
+	for i := 0; i < len(blockPairPayloads); i += 8 {
+		input := blockPairPayloads[i : i+8]
+
+		blockPair, err := decodeBlockPair(input)
 		if err != nil {
 			s.reporting.Error("could not decode block pair from block sync", log.Error(err))
 			return

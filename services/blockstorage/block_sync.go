@@ -78,6 +78,7 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	}
 }
 
+// FIXME do not respond to my own events
 func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}) blockSyncState {
 	switch event.(type) {
 	case *gossipmessages.BlockAvailabilityRequestMessage:
@@ -221,6 +222,7 @@ func (b *BlockSync) SourceHandleBlockSyncRequest(message *gossipmessages.BlockSy
 	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(b.config.BlockSyncBatchSize()-1) {
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize()-1)
 	}
+
 	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := b.storage.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
 	b.reporting.Info("Sending blocks to another node via block sync",
 		log.Stringable("recipient", senderPublicKey),
