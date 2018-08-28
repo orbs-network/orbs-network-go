@@ -51,6 +51,13 @@ func getProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256
 	return proof
 }
 
+func TestAddSingleEntryToEmptyTree(t *testing.T) {
+	f, root := NewForest()
+	root = updateStringEntries(f, root, "bar", "baz")
+
+	getProofRequireHeight(t, f, root, "", "bar", 1)
+}
+
 func TestRootChangeAfterStateChange(t *testing.T) {
 	f, root := NewForest()
 
@@ -78,13 +85,6 @@ func TestValidProofForMissingKey(t *testing.T) {
 	verifyProof(t, f, root, proof, contract, key, "", true)
 	verifyProof(t, f, root, proof, contract, key, "non-zero", false)
 
-}
-
-func TestAddSingleEntryToEmptyTree(t *testing.T) {
-	f, root := NewForest()
-	topRoot := updateStringEntries(f, root, "bar", "baz")
-
-	getProofRequireHeight(t, f, topRoot, "", "bar", 1)
 }
 
 func TestProofValidationAfterBatchStateUpdate(t *testing.T) {
@@ -140,17 +140,17 @@ func TestProofValidationForTwoRevisionsOfSameKey(t *testing.T) {
 
 func TestExtendingLeafNodeWithNoBranchesAndNoValue(t *testing.T) {
 	f, root := NewForest()
-	topRoot := updateStringEntries(f, root, "ba", "zoo", "bar", "baz", "baron", "Hello")
+	root = updateStringEntries(f, root, "ba", "zoo", "bar", "baz", "baron", "Hello")
 
-	getProofRequireHeight(t, f, topRoot, "", "baron", 3)
+	getProofRequireHeight(t, f, root, "", "baron", 3)
 }
 
 func TestExtendingKeyPathByOneChar(t *testing.T) {
 	f, root := NewForest()
-	topRoot := updateStringEntries(f, root, "bar", "baz", "bar1", "qux")
+	root = updateStringEntries(f, root, "bar", "baz", "bar1", "qux")
 
-	proof := getProofRequireHeight(t, f, topRoot, "", "bar1", 2)
-	verifyProof(t, f, topRoot, proof, "", "bar1", "qux", true)
+	proof := getProofRequireHeight(t, f, root, "", "bar1", 2)
+	verifyProof(t, f, root, proof, "", "bar1", "qux", true)
 }
 
 func TestExtendingKeyPathBySeveralChars(t *testing.T) {
