@@ -3,30 +3,26 @@ package adapter
 import (
 	"bytes"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"sort"
 	"strings"
-	"time"
 )
 
 type ContractState map[string]*protocol.StateRecord
 type StateVersion map[primitives.ContractName]ContractState
 
 type InMemoryStatePersistence struct {
-	snapshots            map[primitives.BlockHeight]StateVersion
-	blockTrackerForTests *synchronization.BlockTracker
-	roots                map[primitives.BlockHeight]primitives.MerkleSha256
+	snapshots map[primitives.BlockHeight]StateVersion
+	roots     map[primitives.BlockHeight]primitives.MerkleSha256
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 	return &InMemoryStatePersistence{
 		// TODO remove this hard coded init of genesis block state once init flow syncs state storage with block storage
-		snapshots:            map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): map[primitives.ContractName]ContractState{}},
-		blockTrackerForTests: synchronization.NewBlockTracker(0, 64000, time.Duration(1*time.Hour)),
-		roots:                map[primitives.BlockHeight]primitives.MerkleSha256{},
+		snapshots: map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): map[primitives.ContractName]ContractState{}},
+		roots:     map[primitives.BlockHeight]primitives.MerkleSha256{},
 	}
 }
 
@@ -40,8 +36,6 @@ func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, co
 			sp.writeOneContract(height, stateDiffs.ContractName(), i.NextStateDiffs())
 		}
 	}
-
-	sp.blockTrackerForTests.IncrementHeight()
 
 	return nil
 }
@@ -133,10 +127,6 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	}
 	output.WriteString("}")
 	return output.String()
-}
-
-func (sp *InMemoryStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) error {
-	return sp.blockTrackerForTests.WaitForBlock(height)
 }
 
 func isZeroValue(value []byte) bool {

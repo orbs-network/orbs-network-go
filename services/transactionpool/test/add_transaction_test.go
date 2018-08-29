@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -9,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {

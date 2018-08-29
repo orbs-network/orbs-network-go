@@ -64,7 +64,7 @@ func TestCompareLogger(t *testing.T) {
 
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
-		serviceLogger.LogFailedExpectation("Service initialized compare",log.BlockHeight(primitives.BlockHeight(9999)),log.BlockHeight(primitives.BlockHeight(8888)),log.Bytes("bytes", []byte{2, 3, 99}))
+		serviceLogger.LogFailedExpectation("Service initialized compare", log.BlockHeight(primitives.BlockHeight(9999)), log.BlockHeight(primitives.BlockHeight(8888)), log.Bytes("bytes", []byte{2, 3, 99}))
 	})
 
 	fmt.Println(stdout)
