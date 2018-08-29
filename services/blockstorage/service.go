@@ -247,11 +247,7 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 	// update the consensus algo about the latest block we have (for its initialization)
 	// TODO: should this be under mutex since it reads s.lastCommittedBlock
 	if s.lastCommittedBlock != nil {
-		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
-			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              s.lastCommittedBlock,
-			PrevCommittedBlockPair: nil, // on purpose, see spec
-		})
+		err := s.validateWithConsensusAlgos(nil, s.lastCommittedBlock)
 		if err != nil {
 			s.reporting.Error(err.Error())
 		}

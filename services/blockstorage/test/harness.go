@@ -85,7 +85,7 @@ func (d *driver) setBatchSize(batchSize uint32) {
 	d.config.(config.NodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
 }
 
-func NewCustomSetupDriver(setup func(persistence adapter.InMemoryBlockPersistence)) *driver {
+func NewCustomSetupDriver(setup func(persistence adapter.InMemoryBlockPersistence, consensus *handlers.MockConsensusBlocksHandler)) *driver {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -106,7 +106,7 @@ func NewCustomSetupDriver(setup func(persistence adapter.InMemoryBlockPersistenc
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
 	if setup != nil {
-		setup(d.storageAdapter)
+		setup(d.storageAdapter, d.consensus)
 	}
 
 	d.gossip = &gossiptopics.MockBlockSync{}
