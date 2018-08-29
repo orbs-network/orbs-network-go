@@ -174,7 +174,7 @@ func (b *BlockSync) PetitionerBroadcastBlockAvailabilityRequest() error {
 
 	b.reporting.Info("broadcast block availability request",
 		log.Stringable("first-block-height", firstBlockHeight),
-		log.Stringable("last-block-height", lastCommittedBlockHeight))
+		log.Stringable("last-block-height", lastBlockHeight))
 
 	input := &gossiptopics.BlockAvailabilityRequestInput{
 		Message: &gossipmessages.BlockAvailabilityRequestMessage{
