@@ -28,6 +28,7 @@ type BlockSyncStorage interface {
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
+	UpdateConsensusAlgo()
 }
 
 type BlockSync struct {
@@ -79,6 +80,8 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 			syncTrigger.Stop()
 			syncTrigger.Reset(b.config.BlockSyncInterval())
 
+			b.storage.UpdateConsensusAlgo()
+
 			blockAvailabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
 
 			err := b.PetitionerBroadcastBlockAvailabilityRequest()
@@ -99,7 +102,6 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 			if count == 0 {
 				state = BLOCK_SYNC_STATE_START_SYNC
-				//b.reporting.Info("could not collect block availability responses")
 				continue
 			}
 
