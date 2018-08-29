@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/orbs-network/orbs-network-go/jsonapi"
+	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
 )
 
 func main() {
