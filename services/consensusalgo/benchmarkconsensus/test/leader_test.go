@@ -32,7 +32,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
-		c0 := committedMessages().WithHeight(0).WithCountAboveQuorum().Build()
+		c0 := multipleCommittedMessages().WithHeight(0).WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
@@ -42,7 +42,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 
 		t.Log("Nodes confirmed height 1, commit height 2")
 
-		c1 := committedMessages().WithHeight(1).WithCountAboveQuorum().Build()
+		c1 := multipleCommittedMessages().WithHeight(1).WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalRequestedAndSaved(2)
 		h.expectCommitBroadcastViaGossip(2, h.config.NodePublicKey())
 
@@ -59,7 +59,7 @@ func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 
 		t.Log("Nodes confirmed height 0 (genesis), fail to generate height 1")
 
-		c0 := committedMessages().WithHeight(0).WithCountAboveQuorum().Build()
+		c0 := multipleCommittedMessages().WithHeight(0).WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalRequestedToFail()
 		h.expectCommitNotSent()
 
@@ -84,7 +84,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
-		c0 := committedMessages().WithHeight(0).WithCountAboveQuorum().Build()
+		c0 := multipleCommittedMessages().WithHeight(0).WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
@@ -94,7 +94,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 
 		t.Log("Not enough nodes confirmed height 1, commit height 1 again")
 
-		c1 := committedMessages().WithHeight(1).WithCountBelowQuorum().Build()
+		c1 := multipleCommittedMessages().WithHeight(1).WithCountBelowQuorum().Build()
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
@@ -111,7 +111,7 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 
 		t.Log("Bad signatures nodes confirmed height 0 (genesis), commit height 0 again")
 
-		c0 := committedMessages().WithHeight(0).WithInvalidSignatures().WithCountAboveQuorum().Build()
+		c0 := multipleCommittedMessages().WithHeight(0).WithInvalidSignatures().WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 
@@ -128,7 +128,7 @@ func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
 
 		t.Log("Non federation nodes confirmed height 0 (genesis), commit height 0 again")
 
-		c0 := committedMessages().WithHeight(0).FromNonFederationMembers().WithCountAboveQuorum().Build()
+		c0 := multipleCommittedMessages().WithHeight(0).FromNonFederationMembers().WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 
@@ -145,7 +145,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
-		c0 := committedMessages().WithHeight(0).WithCountAboveQuorum().Build()
+		c0 := multipleCommittedMessages().WithHeight(0).WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
@@ -171,7 +171,7 @@ func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 
 		t.Log("Nodes confirmed height 1000, commit height 0 (genesis) again")
 
-		c1000 := committedMessages().WithHeight(1000).WithCountAboveQuorum().Build()
+		c1000 := multipleCommittedMessages().WithHeight(1000).WithCountAboveQuorum().Build()
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 

@@ -30,7 +30,7 @@ type committed struct {
 	nonFederationMembers bool
 }
 
-func committedMessages() *committed {
+func multipleCommittedMessages() *committed {
 	return &committed{}
 }
 

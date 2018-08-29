@@ -12,7 +12,7 @@ import (
 	//"math"
 )
 
-func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
+func (s *service) lastCommittedBlockHeightUnderMutex() primitives.BlockHeight {
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -91,7 +91,7 @@ func (s *service) handleBlockConsensusFromHandler(blockType protocol.BlockType, 
 	}
 
 	// update lastCommitted to reflect this if newer
-	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeight() {
+	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeightUnderMutex() {
 		s.lastCommittedBlock = blockPair
 		s.lastCommittedBlockVoters = make(map[string]bool) // leader only
 	}

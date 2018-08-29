@@ -32,17 +32,17 @@ func (s *service) nonLeaderValidateBlockUnderMutex(blockPair *protocol.BlockPair
 	if blockHeight != blockPair.ResultsBlock.Header.BlockHeight() {
 		return errors.Errorf("invalid block: block height of tx %d is not equal rx %d", blockHeight, blockPair.ResultsBlock.Header.BlockHeight())
 	}
-	if blockHeight > s.lastCommittedBlockHeight()+1 {
+	if blockHeight > s.lastCommittedBlockHeightUnderMutex()+1 {
 		return errors.Errorf("invalid block: future block height %d", blockHeight)
 	}
 
 	// block consensus
-	var prevCommittedBlock *protocol.BlockPairContainer = nil
-	if s.lastCommittedBlock != nil && blockHeight == s.lastCommittedBlockHeight()+1 {
+	var prevCommittedBlockPair *protocol.BlockPairContainer = nil
+	if s.lastCommittedBlock != nil && blockHeight == s.lastCommittedBlockHeightUnderMutex()+1 {
 		// in this case we also want to validate match to the prev (prev hashes)
-		prevCommittedBlock = s.lastCommittedBlock
+		prevCommittedBlockPair = s.lastCommittedBlock
 	}
-	err := s.validateBlockConsensus(blockPair, prevCommittedBlock)
+	err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
 	if err != nil {
 		return err
 	}
@@ -58,13 +58,13 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 	}
 
 	// remember the block in our last committed state variable
-	if blockPair.TransactionsBlock.Header.BlockHeight() == s.lastCommittedBlockHeight()+1 {
+	if blockPair.TransactionsBlock.Header.BlockHeight() == s.lastCommittedBlockHeightUnderMutex()+1 {
 		s.lastCommittedBlock = blockPair
 	}
 
 	// sign the committed message we're about to send
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
-		LastCommittedBlockHeight: s.lastCommittedBlockHeight(),
+		LastCommittedBlockHeight: s.lastCommittedBlockHeightUnderMutex(),
 	}).Build()
 	signedData := hash.CalcSha256(status.Raw())
 	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
@@ -83,7 +83,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
-	s.reporting.Info("replying committed with last committed height", log.BlockHeight(s.lastCommittedBlockHeight()), log.Stringable("signed-data", signedData))
+	s.reporting.Info("replying committed with last committed height", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()), log.Stringable("signed-data", signedData))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: recipient,
 		Message:            message,
