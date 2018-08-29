@@ -105,6 +105,10 @@ func NewCustomSetupDriver(setup func(persistence adapter.InMemoryBlockPersistenc
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
+	// Always expect at least 0 because sometimes it gets triggered because of the timings
+	// HandleBlockConsensus always gets called when we try to start the sync which happens automatically
+	d.consensus.When("HandleBlockConsensus", mock.Any).Return(nil, nil).AtLeast(0)
+
 	if setup != nil {
 		setup(d.storageAdapter, d.consensus)
 	}
