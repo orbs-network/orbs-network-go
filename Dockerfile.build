@@ -8,6 +8,6 @@ RUN sh test.sh
 
 RUN CGO_ENABLED=0 go test -a -ldflags '-extldflags "-static"' -c ./test/e2e
 
-RUN CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' main.go
+RUN CGO_ENABLED=0 go build -o orbs-node -a -ldflags '-extldflags "-static"' main.go
 
 RUN CGO_ENABLED=0 go build -o orbs-json-client -a -ldflags '-extldflags "-static"' jsonapi/main/json_client_cli.go

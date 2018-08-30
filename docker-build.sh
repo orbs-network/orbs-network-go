@@ -8,7 +8,7 @@ docker run --name orbs_build orbs:build sleep 1
 
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
-docker cp orbs_build:$SRC/main .
+docker cp orbs_build:$SRC/orbs-node .
 docker cp orbs_build:$SRC/e2e.test .
 docker cp orbs_build:$SRC/orbs-json-client .
 
