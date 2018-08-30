@@ -31,12 +31,12 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	// FIXME user WithContext everywhere
 	//test.WithContext(func(ctx context.Context) {
 
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(2)
+	harness.expectCommitStateDiffTimes(2)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 
@@ -51,59 +51,59 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 				LastCommittedBlockHeight: primitives.BlockHeight(2),
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: driver.config.NodePublicKey(),
+				SenderPublicKey: harness.config.NodePublicKey(),
 			}).Build(),
 		},
 	}
 
-	driver.gossip.When("SendBlockAvailabilityResponse", response).Return(nil, nil).Times(1)
+	harness.gossip.When("SendBlockAvailabilityResponse", response).Return(nil, nil).Times(1)
 
-	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncSourceIgnoresBlockAvailabilityRequestIfNoBlocksWereCommitted(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityRequestInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
 
-	driver.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
+	harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
 
-	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncSourceIgnoresBlockAvailabilityRequestIfPetitionerIsFurtherAhead(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(2)
+	harness.expectCommitStateDiffTimes(2)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityRequestInput(primitives.BlockHeight(1972), senderKeyPair.PublicKey())
 
-	driver.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
+	harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(0)
 
-	_, err := driver.blockStorage.HandleBlockAvailabilityRequest(input)
+	_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityResponseInput {
@@ -121,12 +121,12 @@ func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.
 }
 
 func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(2)
+	harness.expectCommitStateDiffTimes(2)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(999), senderKeyPair.PublicKey())
@@ -135,7 +135,7 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
 		Message: &gossipmessages.BlockSyncRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: driver.config.NodePublicKey(),
+				SenderPublicKey: harness.config.NodePublicKey(),
 			}).Build(),
 			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -146,46 +146,46 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 		},
 	}
 
-	driver.gossip.When("SendBlockSyncRequest", request).Return(nil, nil).Times(1)
+	harness.gossip.When("SendBlockSyncRequest", request).Return(nil, nil).Times(1)
 
-	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	_, err := harness.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(2 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncPetitionerIgnoresBlockAvailabilityResponseIfAlreadyInSync(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(2)
+	harness.expectCommitStateDiffTimes(2)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
 
-	driver.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(0)
+	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(0)
 
-	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	_, err := harness.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncPetitionerHandlesBlockAvailabilityResponseFromMultipleSources(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(2)
+	harness.expectCommitStateDiffTimes(2)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
@@ -193,18 +193,18 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponseFromMultipleSources(t *te
 	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
 	anotherInput := generateBlockAvailabilityResponseInput(primitives.BlockHeight(3), anotherSenderKeyPair.PublicKey())
 
-	driver.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
 
-	_, err := driver.blockStorage.HandleBlockAvailabilityResponse(input)
+	_, err := harness.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
 
-	_, err = driver.blockStorage.HandleBlockAvailabilityResponse(anotherInput)
+	_, err = harness.blockStorage.HandleBlockAvailabilityResponse(anotherInput)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(2 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func generateBlockSyncRequestInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncRequestInput {
@@ -224,9 +224,9 @@ func generateBlockSyncRequestInput(lastBlockHeight primitives.BlockHeight, desir
 }
 
 func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(4)
+	harness.expectCommitStateDiffTimes(4)
 
 	blocks := []*protocol.BlockPairContainer{
 		builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -235,10 +235,10 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 		builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
 	}
 
-	driver.commitBlock(blocks[0])
-	driver.commitBlock(blocks[1])
-	driver.commitBlock(blocks[2])
-	driver.commitBlock(blocks[3])
+	harness.commitBlock(blocks[0])
+	harness.commitBlock(blocks[1])
+	harness.commitBlock(blocks[2])
+	harness.commitBlock(blocks[3])
 
 	expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2], blocks[3]}
 
@@ -249,7 +249,7 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 		RecipientPublicKey: senderKeyPair.PublicKey(),
 		Message: &gossipmessages.BlockSyncResponseMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: driver.config.NodePublicKey(),
+				SenderPublicKey: harness.config.NodePublicKey(),
 			}).Build(),
 			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -261,22 +261,22 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 		},
 	}
 
-	driver.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+	harness.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
 
-	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
+	_, err := harness.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(2 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
-	driver := NewDriver()
-	driver.setBatchSize(2)
+	harness := newHarness()
+	harness.setBatchSize(2)
 
-	driver.expectCommitStateDiffTimes(4)
+	harness.expectCommitStateDiffTimes(4)
 
 	blocks := []*protocol.BlockPairContainer{
 		builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -285,10 +285,10 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 		builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
 	}
 
-	driver.commitBlock(blocks[0])
-	driver.commitBlock(blocks[1])
-	driver.commitBlock(blocks[2])
-	driver.commitBlock(blocks[3])
+	harness.commitBlock(blocks[0])
+	harness.commitBlock(blocks[1])
+	harness.commitBlock(blocks[2])
+	harness.commitBlock(blocks[3])
 
 	expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
 
@@ -299,7 +299,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 		RecipientPublicKey: senderKeyPair.PublicKey(),
 		Message: &gossipmessages.BlockSyncResponseMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: driver.config.NodePublicKey(),
+				SenderPublicKey: harness.config.NodePublicKey(),
 			}).Build(),
 			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -311,15 +311,15 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 		},
 	}
 
-	driver.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+	harness.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
 
-	_, err := driver.blockStorage.HandleBlockSyncRequest(input)
+	_, err := harness.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncResponseInput {
@@ -346,34 +346,34 @@ func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desi
 }
 
 func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(4)
-	driver.expectValidateWithConsensusAlgosTimes(2)
+	harness.expectCommitStateDiffTimes(4)
+	harness.expectValidateWithConsensusAlgosTimes(2)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
-	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
+	_, err := harness.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiffTimes(5)
-	driver.expectValidateWithConsensusAlgosTimes(3)
+	harness.expectCommitStateDiffTimes(5)
+	harness.expectValidateWithConsensusAlgosTimes(3)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	driver.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(7)
 	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
@@ -381,16 +381,16 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
 	inputFromAnotherSender := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(5), anotherSenderKeyPair.PublicKey())
 
-	_, err := driver.blockStorage.HandleBlockSyncResponse(input)
+	_, err := harness.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
 
-	_, err = driver.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
+	_, err = harness.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
 	require.NoError(t, err)
 
 	// FIXME remove sleep
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 // FIXME implement
@@ -399,19 +399,19 @@ func TestSyncPetitionerHandlesBlockSyncResponseAndRunsValidationChecks(t *testin
 }
 
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
+	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
 	time.Sleep(9 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
+	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
 	time.Sleep(6 * time.Millisecond)
 
@@ -419,21 +419,21 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 	blockAvailabilityResponse := generateBlockAvailabilityResponseInput(primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
-	driver.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).AtLeast(1)
-	driver.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
+	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).AtLeast(1)
+	harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
 
 	time.Sleep(2 * time.Millisecond)
 
 	blockSyncResponse := generateBlockSyncResponseInput(primitives.BlockHeight(1), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
-	driver.expectCommitStateDiffTimes(4)
-	driver.expectValidateWithConsensusAlgosTimes(4)
+	harness.expectCommitStateDiffTimes(4)
+	harness.expectValidateWithConsensusAlgosTimes(4)
 
-	driver.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
+	harness.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
 
 	time.Sleep(1 * time.Millisecond)
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 }
 
 func TestSyncCompleteSourceSyncFlow(t *testing.T) {

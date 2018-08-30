@@ -11,14 +11,14 @@ import (
 )
 
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
-	driver := NewDriver()
-	driver.expectCommitStateDiff()
-	driver.expectValidateWithConsensusAlgosTimes(1)
+	harness := newHarness()
+	harness.expectCommitStateDiff()
+	harness.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().WithTimestampBloomFilter().Build()
-	driver.commitBlock(block)
+	harness.commitBlock(block)
 
-	out, err := driver.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+	out, err := harness.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
 		Txhash:               []byte("will-not-be-found"),
 		TransactionTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 	})
@@ -32,23 +32,23 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 // TODO return transaction receipt while the transaction timestamp is in the future (and too far ahead to be in the grace
 
 func TestReturnTransactionReceipt(t *testing.T) {
-	driver := NewDriver()
-	driver.expectCommitStateDiff()
-	driver.expectValidateWithConsensusAlgosTimes(1)
+	harness := newHarness()
+	harness.expectCommitStateDiff()
+	harness.expectValidateWithConsensusAlgosTimes(1)
 
 	block := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampBloomFilter().WithTimestampNow().Build()
-	driver.commitBlock(block)
+	harness.commitBlock(block)
 
 	// it will be similar data transactions, but with different time stamps (and hashes..)
 	block2 := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampBloomFilter().WithTimestampNow().Build()
-	driver.commitBlock(block2)
+	harness.commitBlock(block2)
 
 	// taking a transaction at 'random' (they were created at random)
 	tx := block.TransactionsBlock.SignedTransactions[3].Transaction()
 	txHash := digest.CalcTxHash(tx)
 
 	// the block timestamp is just a couple of nanos ahead of the transactions, which is inside the grace
-	out, err := driver.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+	out, err := harness.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
 		Txhash:               txHash,
 		TransactionTimestamp: tx.Timestamp(),
 	})

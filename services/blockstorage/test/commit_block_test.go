@@ -9,21 +9,21 @@ import (
 )
 
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiff()
+	harness.expectCommitStateDiff()
 
 	blockCreated := time.Now()
 	blockHeight := primitives.BlockHeight(1)
 
-	_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+	_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
 
 	require.NoError(t, err)
-	require.EqualValues(t, 1, driver.numOfWrittenBlocks())
+	require.EqualValues(t, 1, harness.numOfWrittenBlocks())
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 
-	lastCommittedBlockHeight := driver.getLastBlockHeight(t)
+	lastCommittedBlockHeight := harness.getLastBlockHeight(t)
 
 	require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight, "block height in storage should be the same")
 	require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestampe in storage should be the same")
@@ -32,31 +32,31 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 }
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiff()
+	harness.expectCommitStateDiff()
 
 	blockCreated := time.Now()
 	blockHeight := primitives.BlockHeight(1)
 
-	driver.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
-	require.EqualValues(t, 1, driver.numOfWrittenBlocks())
+	harness.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+	require.EqualValues(t, 1, harness.numOfWrittenBlocks())
 
-	driver.failNextBlocks()
+	harness.failNextBlocks()
 
-	_, err := driver.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
+	_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
 	require.EqualError(t, err, "could not write a block", "error should be returned if storage fails")
 
-	driver.verifyMocks(t)
+	harness.verifyMocks(t)
 
-	lastCommittedBlockHeight := driver.getLastBlockHeight(t)
+	lastCommittedBlockHeight := harness.getLastBlockHeight(t)
 
 	require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight, "block height should not update as storage was unavailable")
 	require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestamp should not update as storage was unavailable")
 }
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
-	driver := NewDriver()
+	driver := newHarness()
 
 	_, err := driver.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -64,45 +64,45 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 }
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
 	blockPair := builders.BlockPair().Build()
 
-	driver.expectCommitStateDiff()
+	harness.expectCommitStateDiff()
 
-	driver.commitBlock(blockPair)
-	_, err := driver.commitBlock(blockPair)
+	harness.commitBlock(blockPair)
+	_, err := harness.commitBlock(blockPair)
 
 	require.NoError(t, err)
 
-	require.EqualValues(t, 1, driver.numOfWrittenBlocks(), "block should be written only once")
-	driver.verifyMocks(t)
+	require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "block should be written only once")
+	harness.verifyMocks(t)
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 
-	driver.expectCommitStateDiff()
+	harness.expectCommitStateDiff()
 
 	blockPair := builders.BlockPair()
 
-	driver.commitBlock(blockPair.Build())
+	harness.commitBlock(blockPair.Build())
 
-	_, err := driver.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
+	_, err := harness.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
 
 	require.EqualError(t, err, "block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
-	require.EqualValues(t, 1, driver.numOfWrittenBlocks(), "only one block should have been written")
-	driver.verifyMocks(t)
+	require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
+	harness.verifyMocks(t)
 }
 
 func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
-	driver := NewDriver()
-	driver.expectCommitStateDiff()
+	harness := newHarness()
+	harness.expectCommitStateDiff()
 
-	driver.commitBlock(builders.BlockPair().Build())
+	harness.commitBlock(builders.BlockPair().Build())
 
-	_, err := driver.commitBlock(builders.BlockPair().WithHeight(1000).Build())
+	_, err := harness.commitBlock(builders.BlockPair().WithHeight(1000).Build())
 	require.EqualError(t, err, "block height is 1000, expected 2", "block height was mutate to be invalid, should return an error")
-	require.EqualValues(t, 1, driver.numOfWrittenBlocks(), "only one block should have been written")
-	driver.verifyMocks(t)
+	require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
+	harness.verifyMocks(t)
 }
