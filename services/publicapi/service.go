@@ -33,8 +33,7 @@ func NewPublicApi(
 	virtualMachine services.VirtualMachine,
 	reporting log.BasicLogger,
 ) services.PublicApi {
-
-	return &service{
+	me := &service{
 		config:          config,
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
@@ -43,6 +42,10 @@ func NewPublicApi(
 		mutex:  sync.RWMutex{},
 		txChan: map[string]chan *services.AddNewTransactionOutput{},
 	}
+
+	transactionPool.RegisterTransactionResultsHandler(me)
+
+	return me
 }
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
@@ -50,31 +53,29 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	defer s.reporting.Info("exit SendTransaction")
 
 	tx := input.ClientRequest.SignedTransaction()
-	alreadyCommitted, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
-		SignedTransaction: tx,
-	})
-
-	//TODO handle alreadyCommitted and errors
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed queuing transaction")
-	}
-	if alreadyCommitted.TransactionStatus == protocol.TRANSACTION_STATUS_COMMITTED ||
-		alreadyCommitted.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED {
-		return prepareResponse(alreadyCommitted), nil
-	}
-
 	txId := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
 	receiptChannel := make(chan *services.AddNewTransactionOutput)
 
 	s.mutex.Lock()
 	s.txChan[txId.KeyForMap()] = receiptChannel
+	s.mutex.Unlock()
 	defer func() {
 		s.mutex.Lock()
 		delete(s.txChan, txId.KeyForMap())
 		s.mutex.Unlock()
 		close(receiptChannel)
 	}()
-	s.mutex.Unlock()
+
+	txResponse, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
+		SignedTransaction: tx,
+	})
+
+	if err != nil {
+		return prepareResponse(txResponse), errors.Errorf("error '%s' for transaction result", txResponse)
+	}
+	if txResponse.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED {
+		return prepareResponse(txResponse), nil
+	}
 
 	timer := time.NewTimer(s.config.SendTransactionTimeout())
 	defer timer.Stop()
@@ -89,29 +90,31 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 }
 
 func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *services.SendTransactionOutput {
-	receipt := transactionOutput.TransactionReceipt
+	var receiptForClient *protocol.TransactionReceiptBuilder = nil
 
-	mabs := make([]*protocol.MethodArgumentBuilder, 0, 1)
-	oai := receipt.OutputArgumentsIterator()
-	for oai.HasNext() {
-		ma := oai.NextOutputArguments()
-		mabs = append(mabs, &protocol.MethodArgumentBuilder{
-			Name:        ma.Name(),
-			Type:        ma.Type(),
-			Uint32Value: ma.Uint32Value(),
-			Uint64Value: ma.Uint64Value(),
-			StringValue: ma.StringValue(),
-			BytesValue:  ma.BytesValue()},
-		)
-	}
-
-	//TODO this is terrible, delete and make it right (shaiy)
-	response := &client.SendTransactionResponseBuilder{
-		TransactionReceipt: &protocol.TransactionReceiptBuilder{
+	if receipt := transactionOutput.TransactionReceipt; receipt != nil {
+		mabs := make([]*protocol.MethodArgumentBuilder, 0, 1)
+		oai := receipt.OutputArgumentsIterator()
+		for oai.HasNext() {
+			ma := oai.NextOutputArguments()
+			mabs = append(mabs, &protocol.MethodArgumentBuilder{
+				Name:        ma.Name(),
+				Type:        ma.Type(),
+				Uint32Value: ma.Uint32Value(),
+				Uint64Value: ma.Uint64Value(),
+				StringValue: ma.StringValue(),
+				BytesValue:  ma.BytesValue()},
+			)
+		}
+		receiptForClient = &protocol.TransactionReceiptBuilder{
 			Txhash:          receipt.Txhash(),
 			ExecutionResult: receipt.ExecutionResult(),
 			OutputArguments: mabs,
-		},
+		}
+	}
+
+	response := &client.SendTransactionResponseBuilder{
+		TransactionReceipt: receiptForClient,
 		TransactionStatus: transactionOutput.TransactionStatus,
 		BlockHeight:       transactionOutput.BlockHeight,
 		BlockTimestamp:    transactionOutput.BlockTimestamp,
@@ -119,6 +122,7 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}
 }
+
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
 	s.reporting.Info("enter CallMethod")
 	defer s.reporting.Info("exit CallMethod")
@@ -150,5 +154,21 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 }
 
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
-	panic("Not implemented")
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	for _, txReceipt := range input.TransactionReceipts {
+		if txChan, exists := s.txChan[txReceipt.Txhash().KeyForMap()]; exists {
+			select {
+				case txChan <- &services.AddNewTransactionOutput{
+					TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+					TransactionReceipt: txReceipt,
+					BlockHeight:        input.BlockHeight,
+					BlockTimestamp:     input.Timestamp,
+				} :
+				default:
+			}
+		}
+		// if we have no one to wait we just ignore this receipt ... can be accessed via getstatus
+	}
+	return &handlers.HandleTransactionResultsOutput{}, nil
 }
