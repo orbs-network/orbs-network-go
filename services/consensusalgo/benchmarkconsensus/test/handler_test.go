@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"testing"
 )
 
@@ -20,12 +21,55 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(1002, h.config.NodePublicKey())
 
-		err := h.handleBlockConsensus(b1002, b1001)
+		err := h.handleBlockConsensus(handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b1002, b1001)
 		if err != nil {
 			t.Fatal("handle did not validate valid block:", err)
 		}
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitBroadcastViaGossip(t)
+	})
+}
+
+func TestHandlerOfLeaderSynchronizesToFutureValidBlockWithModeUpdateOnly(t *testing.T) {
+	t.Parallel()
+	test.WithContext(func(ctx context.Context) {
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
+
+		t.Log("Handle block consensus (ie due to block sync) of height 1002")
+
+		b1002 := aBlockFromLeader.WithHeight(1002).WithInvalidBenchmarkConsensusBlockProof(leaderKeyPair()).Build()
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitBroadcastViaGossip(1002, h.config.NodePublicKey())
+
+		err := h.handleBlockConsensus(handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY, b1002, nil)
+		if err != nil {
+			t.Fatal("handle did not validate valid block:", err)
+		}
+		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyCommitBroadcastViaGossip(t)
+	})
+}
+
+func TestHandlerOfLeaderIgnoresFutureValidBlockWithModeVerifyOnly(t *testing.T) {
+	t.Parallel()
+	test.WithContext(func(ctx context.Context) {
+		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
+
+		t.Log("Handle block consensus (ie due to block sync) of height 1002")
+
+		b1001 := aBlockFromLeader.WithHeight(1001).Build()
+		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitNotSent()
+
+		err := h.handleBlockConsensus(handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY, b1002, b1001)
+		if err != nil {
+			t.Fatal("handle did not validate valid block:", err)
+		}
+		h.verifyNewBlockProposalNotRequested(t)
+		h.verifyCommitNotSent(t)
 	})
 }
 
@@ -40,7 +84,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		b1001 := aBlockFromLeader.WithHeight(1001).Build()
 		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
 
-		err := h.handleBlockConsensus(b1002, b1001)
+		err := h.handleBlockConsensus(handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b1002, b1001)
 		if err != nil {
 			t.Fatal("handle did not validate valid block:", err)
 		}
@@ -66,7 +110,7 @@ func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(nil).Build()
 
-		err := h.handleBlockConsensus(b2, b1)
+		err := h.handleBlockConsensus(handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b2, b1)
 		if err == nil {
 			t.Fatal("handle did not discover blocks with bad hash pointers:", err)
 		}
@@ -88,7 +132,7 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 			WithInvalidBenchmarkConsensusBlockProof(leaderKeyPair()).
 			Build()
 
-		err := h.handleBlockConsensus(b2, b1)
+		err := h.handleBlockConsensus(handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b2, b1)
 		if err == nil {
 			t.Fatal("handle did not discover blocks with bad signature:", err)
 		}
@@ -106,7 +150,7 @@ func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
 		b1 := aBlockFromNonLeader.WithHeight(1).Build()
 		b2 := aBlockFromNonLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
 
-		err := h.handleBlockConsensus(b2, b1)
+		err := h.handleBlockConsensus(handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b2, b1)
 		if err == nil {
 			t.Fatal("handle did not discover blocks not from the leader:", err)
 		}

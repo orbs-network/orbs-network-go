@@ -218,6 +218,7 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 	// TODO: should this be under mutex since it reads s.lastCommittedBlock
 	if s.lastCommittedBlock != nil {
 		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              s.lastCommittedBlock,
 			PrevCommittedBlockPair: nil, // on purpose, see spec
