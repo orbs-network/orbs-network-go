@@ -20,6 +20,7 @@ type service struct {
 	transactionHandlers        []gossiptopics.TransactionRelayHandler
 	leanHelixHandlers          []gossiptopics.LeanHelixHandler
 	benchmarkConsensusHandlers []gossiptopics.BenchmarkConsensusHandler
+	blockSyncHandlers          []gossiptopics.BlockSyncHandler
 }
 
 func NewGossip(transport adapter.Transport, config Config, reporting log.BasicLogger) services.Gossip {
@@ -50,5 +51,7 @@ func (s *service) OnTransportMessageReceived(payloads [][]byte) {
 		s.receivedLeanHelixMessage(header, payloads[1:])
 	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
 		s.receivedBenchmarkConsensusMessage(header, payloads[1:])
+	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
+		s.receivedBlockSyncMessage(header, payloads[1:])
 	}
 }

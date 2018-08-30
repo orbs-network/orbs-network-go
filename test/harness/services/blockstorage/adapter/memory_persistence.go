@@ -129,3 +129,13 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 		bp.getChanFor(digest.CalcTxHash(tx.Transaction())) <- block.Header.BlockHeight()
 	}
 }
+
+func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
+	count := len(bp.blockPairs)
+
+	if count == 0 {
+		return nil, nil
+	}
+
+	return bp.blockPairs[count-1], nil
+}
