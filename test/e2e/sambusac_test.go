@@ -2,7 +2,7 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/jsonapi"
+	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
