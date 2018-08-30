@@ -260,6 +260,7 @@ func (s *service) UpdateConsensusAlgo() {
 	defer s.lastBlockLock.Unlock()
 
 	if s.lastCommittedBlock != nil {
+		// passing nil on purpose, see spec
 		err := s.validateWithConsensusAlgos(nil, s.lastCommittedBlock)
 		if err != nil {
 			s.reporting.Error(err.Error())
@@ -361,6 +362,7 @@ func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPair
 func (s *service) validateWithConsensusAlgos(prevBlockPair *protocol.BlockPairContainer, lastCommittedBlockPair *protocol.BlockPairContainer) error {
 	for _, handler := range s.consensusBlocksHandlers {
 		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              lastCommittedBlockPair,
 			PrevCommittedBlockPair: prevBlockPair,
