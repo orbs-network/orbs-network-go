@@ -2,6 +2,7 @@ package deployments
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 )
@@ -9,10 +10,10 @@ import (
 var CONTRACT = types.ContractInfo{
 	Name:       "_Deployments",
 	Permission: protocol.PERMISSION_SCOPE_SYSTEM,
-	Methods: []types.MethodInfo{
-		METHOD_INIT,
-		METHOD_IS_SERVICE_DEPLOYED_READ_ONLY,
-		METHOD_IS_SERVICE_DEPLOYED,
+	Methods: map[primitives.MethodName]types.MethodInfo{
+		METHOD_INIT.Name:                          METHOD_INIT,
+		METHOD_IS_SERVICE_DEPLOYED_READ_ONLY.Name: METHOD_IS_SERVICE_DEPLOYED_READ_ONLY,
+		METHOD_IS_SERVICE_DEPLOYED.Name:           METHOD_IS_SERVICE_DEPLOYED,
 	},
 	InitSingleton: newContract,
 }

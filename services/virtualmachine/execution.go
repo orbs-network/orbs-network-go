@@ -20,14 +20,14 @@ func (s *service) runMethod(
 	defer s.contexts.destroyExecutionContext(contextId)
 
 	// get deployment info
-	processor, contractPermission, err := s.getServiceDeployment(executionContext, transaction.ContractName())
+	processor, err := s.getServiceDeployment(executionContext, transaction.ContractName())
 	if err != nil {
 		s.reporting.Info("get deployment for contract failed", log.Error(err), log.Stringable("transaction", transaction))
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, err
 	}
 
 	// modify execution context
-	executionContext.serviceStackPush(transaction.ContractName(), contractPermission)
+	executionContext.serviceStackPush(transaction.ContractName())
 	defer executionContext.serviceStackPop()
 	executionContext.batchTransientState = batchTransientState
 
@@ -38,14 +38,14 @@ func (s *service) runMethod(
 		args = append(args, i.NextInputArguments())
 	}
 	output, err := processor.ProcessCall(&services.ProcessCallInput{
-		ContextId:         contextId,
-		ContractName:      transaction.ContractName(),
-		MethodName:        transaction.MethodName(),
-		InputArguments:    args,
-		AccessScope:       accessScope,
-		PermissionScope:   contractPermission,
-		CallingService:    transaction.ContractName(),
-		TransactionSigner: transaction.Signer(),
+		ContextId:              contextId,
+		ContractName:           transaction.ContractName(),
+		MethodName:             transaction.MethodName(),
+		InputArguments:         args,
+		AccessScope:            accessScope,
+		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+		CallingService:         transaction.ContractName(),
+		TransactionSigner:      transaction.Signer(),
 	})
 	if err != nil {
 		s.reporting.Info("transaction execution failed", log.Stringable("result", output.CallResult), log.Error(err), log.Stringable("transaction", transaction))

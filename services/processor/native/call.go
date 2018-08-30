@@ -10,18 +10,24 @@ import (
 	"reflect"
 )
 
-func (s *service) retrieveContractFromRepository(contractName primitives.ContractName, methodName primitives.MethodName) (*types.ContractInfo, *types.MethodInfo, error) {
-	for _, contract := range repository.Contracts {
-		if contractName.Equal(contract.Name) {
-			for _, method := range contract.Methods {
-				if methodName.Equal(method.Name) {
-					return &contract, &method, nil
-				}
-			}
-			return nil, nil, errors.Errorf("method '%s' not found in contract '%s'", methodName, contractName)
-		}
+func (s *service) getContractFromRepository(contractName primitives.ContractName) (*types.ContractInfo, error) {
+	contract, found := repository.Contracts[contractName]
+	if !found {
+		return nil, errors.Errorf("contract '%s' not found", contractName)
 	}
-	return nil, nil, errors.Errorf("contract '%s' not found", contractName)
+	return &contract, nil
+}
+
+func (s *service) getContractAndMethodFromRepository(contractName primitives.ContractName, methodName primitives.MethodName) (*types.ContractInfo, *types.MethodInfo, error) {
+	contract, err := s.getContractFromRepository(contractName)
+	if err != nil {
+		return nil, nil, err
+	}
+	method, found := contract.Methods[methodName]
+	if !found {
+		return nil, nil, errors.Errorf("method '%s' not found in contract '%s'", methodName, contractName)
+	}
+	return contract, &method, nil
 }
 
 func (s *service) verifyMethodPermissions(contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope, accessScope protocol.ExecutionAccessScope) error {

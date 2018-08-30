@@ -66,10 +66,25 @@ func newHarness() *harness {
 
 func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
 	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:      contextId,
-		ContractName:   contractName,
-		MethodName:     methodName,
-		InputArguments: builders.MethodArguments(args...),
+		ContextId:       contextId,
+		OperationName:   contractName,
+		MethodName:      methodName,
+		InputArguments:  builders.MethodArguments(args...),
+		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return output.OutputArguments, nil
+}
+
+func (h *harness) handleSdkCallWithSystemPermissions(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
+		ContextId:       contextId,
+		OperationName:   contractName,
+		MethodName:      methodName,
+		InputArguments:  builders.MethodArguments(args...),
+		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
 	})
 	if err != nil {
 		return nil, err
@@ -80,7 +95,6 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
 	// deployment related
 	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED_READ_ONLY.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
-	h.expectNativeContractInfoRequested(contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
 
 	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
 		BlockHeight: 0,
@@ -111,7 +125,6 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 	for _, contractAndMethod := range contractAndMethods {
 		// deployment related
 		h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
-		h.expectNativeContractInfoRequested(contractAndMethod.contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
 
 		resultKeyValuePairsPerContract[contractAndMethod.contractName] = []*keyValuePair{}
 		tx := builders.Transaction().WithMethod(contractAndMethod.contractName, contractAndMethod.methodName).Build()

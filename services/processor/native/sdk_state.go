@@ -11,16 +11,17 @@ import (
 )
 
 type stateSdk struct {
-	handler handlers.ContractSdkCallHandler
+	handler         handlers.ContractSdkCallHandler
+	permissionScope protocol.ExecutionPermissionScope
 }
 
-const SDK_STATE_CONTRACT_NAME = "Sdk.State"
+const SDK_OPERATION_NAME_STATE = "Sdk.State"
 
 func (s *stateSdk) ReadBytesByAddress(ctx types.Context, address primitives.Ripmd160Sha256) ([]byte, error) {
 	output, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:    primitives.ExecutionContextId(ctx),
-		ContractName: SDK_STATE_CONTRACT_NAME,
-		MethodName:   "read",
+		ContextId:     primitives.ExecutionContextId(ctx),
+		OperationName: SDK_OPERATION_NAME_STATE,
+		MethodName:    "read",
 		InputArguments: []*protocol.MethodArgument{
 			(&protocol.MethodArgumentBuilder{
 				Name:       "key",
@@ -28,6 +29,7 @@ func (s *stateSdk) ReadBytesByAddress(ctx types.Context, address primitives.Ripm
 				BytesValue: address,
 			}).Build(),
 		},
+		PermissionScope: s.permissionScope,
 	})
 	if err != nil {
 		return nil, err
@@ -40,9 +42,9 @@ func (s *stateSdk) ReadBytesByAddress(ctx types.Context, address primitives.Ripm
 
 func (s *stateSdk) WriteBytesByAddress(ctx types.Context, address primitives.Ripmd160Sha256, value []byte) error {
 	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:    primitives.ExecutionContextId(ctx),
-		ContractName: SDK_STATE_CONTRACT_NAME,
-		MethodName:   "write",
+		ContextId:     primitives.ExecutionContextId(ctx),
+		OperationName: SDK_OPERATION_NAME_STATE,
+		MethodName:    "write",
 		InputArguments: []*protocol.MethodArgument{
 			(&protocol.MethodArgumentBuilder{
 				Name:       "key",
@@ -55,6 +57,7 @@ func (s *stateSdk) WriteBytesByAddress(ctx types.Context, address primitives.Rip
 				BytesValue: value,
 			}).Build(),
 		},
+		PermissionScope: s.permissionScope,
 	})
 	return err
 }

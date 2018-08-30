@@ -80,3 +80,7 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
 	panic("Not implemented")
 }
+
+func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
+	panic("Not implemented")
+}

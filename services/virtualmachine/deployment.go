@@ -8,38 +8,31 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) getServiceDeployment(executionContext *executionContext, serviceName primitives.ContractName) (services.Processor, protocol.ExecutionPermissionScope, error) {
+func (s *service) getServiceDeployment(executionContext *executionContext, serviceName primitives.ContractName) (services.Processor, error) {
 	// call the system contract to identify the processor
 	processorType, err := s.callIsServiceDeployedContract(executionContext, serviceName)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	// return according to processor
 	switch processorType {
 	case protocol.PROCESSOR_TYPE_NATIVE:
-		output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(&services.GetContractInfoInput{
-			ContractName: serviceName,
-		})
-		if err != nil {
-			return nil, 0, err
-		}
-		return s.processors[protocol.PROCESSOR_TYPE_NATIVE], output.PermissionScope, nil
+		return s.processors[protocol.PROCESSOR_TYPE_NATIVE], nil
 	default:
-		return nil, 0, errors.Errorf("isServiceDeployed contract returned unknown processor type: %s", processorType)
+		return nil, errors.Errorf("isServiceDeployed contract returned unknown processor type: %s", processorType)
 	}
 }
 
 func (s *service) callIsServiceDeployedContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
 	systemContractName := deployments.CONTRACT.Name
 	systemMethodName := deployments.METHOD_IS_SERVICE_DEPLOYED_READ_ONLY.Name
-	systemContractPermissions := deployments.CONTRACT.Permission
 	if executionContext.accessScope == protocol.ACCESS_SCOPE_READ_WRITE {
 		systemMethodName = deployments.METHOD_IS_SERVICE_DEPLOYED.Name
 	}
 
 	// modify execution context
-	executionContext.serviceStackPush(systemContractName, systemContractPermissions)
+	executionContext.serviceStackPush(systemContractName)
 	defer executionContext.serviceStackPop()
 
 	// execute the call
@@ -52,10 +45,10 @@ func (s *service) callIsServiceDeployedContract(executionContext *executionConte
 			Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
 			StringValue: string(serviceName),
 		}).Build()},
-		AccessScope:       executionContext.accessScope,
-		PermissionScope:   systemContractPermissions,
-		CallingService:    systemContractName,
-		TransactionSigner: nil,
+		AccessScope:            executionContext.accessScope,
+		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+		CallingService:         systemContractName,
+		TransactionSigner:      nil,
 	})
 	if err != nil {
 		return 0, err

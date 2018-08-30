@@ -25,10 +25,29 @@ func (h *harness) expectNativeContractMethodCalled(expectedContractName primitiv
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
 			input.ContractName == expectedContractName &&
-			input.MethodName == expectedMethodName
+			input.MethodName == expectedMethodName &&
+			input.CallingPermissionScope == protocol.PERMISSION_SCOPE_SERVICE
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are service", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+		callResult, err := contractFunction(input.ContextId)
+		return &services.ProcessCallOutput{
+			OutputArguments: []*protocol.MethodArgument{},
+			CallResult:      callResult,
+		}, err
+	}).Times(1)
+}
+
+func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
+	contractMethodMatcher := func(i interface{}) bool {
+		input, ok := i.(*services.ProcessCallInput)
+		return ok &&
+			input.ContractName == expectedContractName &&
+			input.MethodName == expectedMethodName &&
+			input.CallingPermissionScope == protocol.PERMISSION_SCOPE_SYSTEM
+	}
+
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are system", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 		callResult, err := contractFunction(input.ContextId)
 		return &services.ProcessCallOutput{
 			OutputArguments: []*protocol.MethodArgument{},

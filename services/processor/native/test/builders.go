@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 // process call
@@ -17,14 +16,14 @@ type processCall struct {
 func processCallInput() *processCall {
 	p := &processCall{
 		input: &services.ProcessCallInput{
-			ContextId:         0,
-			ContractName:      "BenchmarkContract",
-			MethodName:        "add",
-			InputArguments:    []*protocol.MethodArgument{},
-			AccessScope:       protocol.ACCESS_SCOPE_READ_ONLY,
-			PermissionScope:   protocol.PERMISSION_SCOPE_SERVICE,
-			CallingService:    "",
-			TransactionSigner: nil,
+			ContextId:              0,
+			ContractName:           "BenchmarkContract",
+			MethodName:             "add",
+			InputArguments:         []*protocol.MethodArgument{},
+			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
+			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+			CallingService:         "",
+			TransactionSigner:      nil,
 		},
 	}
 	return p
@@ -84,7 +83,7 @@ func (p *processCall) WithDifferentCallingService() *processCall {
 }
 
 func (p *processCall) WithSystemPermissions() *processCall {
-	p.input.PermissionScope = protocol.PERMISSION_SCOPE_SYSTEM
+	p.input.CallingPermissionScope = protocol.PERMISSION_SCOPE_SYSTEM
 	return p
 }
 
@@ -96,21 +95,6 @@ func (p *processCall) WithWriteAccess() *processCall {
 func (p *processCall) WithArgs(args ...interface{}) *processCall {
 	p.input.InputArguments = builders.MethodArguments(args...)
 	return p
-}
-
-func handleSdkCallInput(contractName primitives.ContractName, methodName primitives.MethodName, args []*protocol.MethodArgument) *handlers.HandleSdkCallInput {
-	return &handlers.HandleSdkCallInput{
-		ContextId:      0,
-		ContractName:   contractName,
-		MethodName:     methodName,
-		InputArguments: args,
-	}
-}
-
-func handleSdkCallOutput(args []*protocol.MethodArgument) *handlers.HandleSdkCallOutput {
-	return &handlers.HandleSdkCallOutput{
-		OutputArguments: args,
-	}
 }
 
 // get contract info

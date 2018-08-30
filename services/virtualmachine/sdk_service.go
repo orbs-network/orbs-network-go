@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkServiceCall(context *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkServiceCall(context *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
 	switch methodName {
 
 	case "isNative":
@@ -16,7 +16,7 @@ func (s *service) handleSdkServiceCall(context *executionContext, methodName pri
 		return []*protocol.MethodArgument{}, err
 
 	case "callMethod":
-		err := s.handleSdkServiceCallMethod(context, args)
+		err := s.handleSdkServiceCallMethod(context, args, permissionScope)
 		return []*protocol.MethodArgument{}, err
 
 	default:
@@ -37,36 +37,28 @@ func (s *service) handleSdkServiceIsNative(context *executionContext, args []*pr
 	return err
 }
 
-func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*protocol.MethodArgument) error {
+func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) error {
 	if len(args) != 2 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() {
 		return errors.Errorf("invalid SDK service callMethod args: %v", args)
 	}
 	serviceName := args[0].StringValue()
 	methodName := args[1].StringValue()
 
-	// get info about the called contract
-	serviceInfo, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(&services.GetContractInfoInput{
-		ContractName: primitives.ContractName(serviceName),
-	})
-	if err != nil {
-		return err
-	}
-
 	// modify execution context
-	callingService, callingServicePermission := context.serviceStackTop()
-	context.serviceStackPush(primitives.ContractName(serviceName), serviceInfo.PermissionScope)
+	callingService := context.serviceStackTop()
+	context.serviceStackPush(primitives.ContractName(serviceName))
 	defer context.serviceStackPop()
 
 	// execute the call
-	_, err = s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
-		ContextId:         context.contextId,
-		ContractName:      primitives.ContractName(serviceName),
-		MethodName:        primitives.MethodName(methodName),
-		InputArguments:    []*protocol.MethodArgument{}, // TODO: support args
-		AccessScope:       context.accessScope,
-		PermissionScope:   callingServicePermission,
-		CallingService:    callingService,
-		TransactionSigner: nil,
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+		ContextId:              context.contextId,
+		ContractName:           primitives.ContractName(serviceName),
+		MethodName:             primitives.MethodName(methodName),
+		InputArguments:         []*protocol.MethodArgument{}, // TODO: support args
+		AccessScope:            context.accessScope,
+		CallingPermissionScope: permissionScope,
+		CallingService:         callingService,
+		TransactionSigner:      nil,
 	})
 	if err != nil {
 		s.reporting.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("caller", callingService), log.Stringable("callee", primitives.ContractName(serviceName)))

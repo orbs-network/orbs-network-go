@@ -3,23 +3,24 @@ package benchmarkcontract
 import (
 	"errors"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 var CONTRACT = types.ContractInfo{
 	Name:       "BenchmarkContract",
 	Permission: protocol.PERMISSION_SCOPE_SERVICE,
-	Methods: []types.MethodInfo{
-		METHOD_INIT,
-		METHOD_NOP,
-		METHOD_ADD,
-		METHOD_SET,
-		METHOD_GET,
-		METHOD_ARG_TYPES,
-		METHOD_THROW,
-		METHOD_PANIC,
-		METHOD_INVALID_NO_ERROR,
-		METHOD_INVALID_NO_CONTEXT,
+	Methods: map[primitives.MethodName]types.MethodInfo{
+		METHOD_INIT.Name:               METHOD_INIT,
+		METHOD_NOP.Name:                METHOD_NOP,
+		METHOD_ADD.Name:                METHOD_ADD,
+		METHOD_SET.Name:                METHOD_SET,
+		METHOD_GET.Name:                METHOD_GET,
+		METHOD_ARG_TYPES.Name:          METHOD_ARG_TYPES,
+		METHOD_THROW.Name:              METHOD_THROW,
+		METHOD_PANIC.Name:              METHOD_PANIC,
+		METHOD_INVALID_NO_ERROR.Name:   METHOD_INVALID_NO_ERROR,
+		METHOD_INVALID_NO_CONTEXT.Name: METHOD_INVALID_NO_CONTEXT,
 	},
 	InitSingleton: newContract,
 }

@@ -8,7 +8,7 @@ import (
 type ContractInfo struct {
 	Name          primitives.ContractName
 	Permission    protocol.ExecutionPermissionScope
-	Methods       []MethodInfo
+	Methods       map[primitives.MethodName]MethodInfo
 	InitSingleton func(*BaseContract) Contract
 }
 
