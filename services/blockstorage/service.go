@@ -268,22 +268,30 @@ func (s *service) UpdateConsensusAlgo() {
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.events <- input.Message
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
 	return nil, nil
 }
 
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.events <- input.Message
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
 	return nil, nil
 }
 
 func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.events <- input.Message
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
 	return nil, nil
 }
 
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	s.blockSync.events <- input.Message
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
 	return nil, nil
 }
 
