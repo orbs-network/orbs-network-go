@@ -28,7 +28,9 @@ type NodeConfig interface {
 	BenchmarkConsensusRetryInterval() time.Duration
 
 	// block storage
-	BlockSyncCommitTimeout() time.Duration
+	BlockSyncBatchSize() uint32
+	BlockSyncInterval() time.Duration
+	BlockSyncCollectResponseTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
