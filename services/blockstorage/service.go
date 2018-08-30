@@ -116,6 +116,9 @@ func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
 }
 
 func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -123,6 +126,9 @@ func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
 }
 
 func (s *service) lastCommittedBlockTimestamp() primitives.TimestampNano {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -250,6 +256,9 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 }
 
 func (s *service) UpdateConsensusAlgo() {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
 	if s.lastCommittedBlock != nil {
 		err := s.validateWithConsensusAlgos(nil, s.lastCommittedBlock)
 		if err != nil {
