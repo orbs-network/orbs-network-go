@@ -67,6 +67,10 @@ func decodeBlockPair(payloads [][]byte) (*protocol.BlockPairContainer, error) {
 		return nil, err
 	}
 
+	if len(results) == 0 {
+		return nil, errors.New("codec failed to decode at least one block pair")
+	}
+
 	return results[0], nil
 }
 
