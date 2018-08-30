@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 )
@@ -68,8 +69,13 @@ func TestSambusacFlow(t *testing.T) {
 
 	jsonBytes, _ := json.Marshal(&transferJSON)
 
+	keyPair := keys.Ed25519KeyPairForTests(0)
+
 	baseCommand := ClientBinary()
-	sendCommand := append(baseCommand, "-send-transaction", string(jsonBytes))
+	sendCommand := append(baseCommand,
+		"-send-transaction", string(jsonBytes),
+		"-public-key", keyPair.PublicKey().String(),
+		"-private-key", keyPair.PrivateKey().String())
 
 	cmd := exec.Command(sendCommand[0], sendCommand[1:]...)
 	var out bytes.Buffer

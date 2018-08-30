@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"os"
 )
 
@@ -16,8 +18,8 @@ func main() {
 	callMethodPtr := flag.String("call-method", "", "<json>")
 	verbosePtr := flag.Bool("v", false, "Show all related logs")
 
-	//publicKeyPtr := flag.String("public-key")
-	//privateKeyPtr := flag.String("private-key")
+	publicKeyPtr := flag.String("public-key", "", "public key in hex form")
+	privateKeyPtr := flag.String("private-key", "", "public key in hex form")
 
 	apiEndpointPtr := flag.String("api-endpoint", "http://localhost:8080", "<http://..../api>")
 
@@ -30,7 +32,23 @@ func main() {
 			logger.Info("sending transaction")
 		}
 
-		keyPair := keys.Ed25519KeyPairForTests(1)
+		if *publicKeyPtr == "" || *privateKeyPtr == "" {
+			logger.Error("Public key or private key is incorrect")
+			return
+		}
+
+		decodedPublicKey, publicKeyDecodeError := hex.DecodeString(*publicKeyPtr)
+		decodedPrivateKey, privateKeyDecodeError := hex.DecodeString(*privateKeyPtr)
+
+		if publicKeyDecodeError != nil {
+			logger.Error("Could not decode public key from HEX", log.Error(publicKeyDecodeError))
+		}
+
+		if privateKeyDecodeError != nil {
+			logger.Error("Could not decode private key from HEX", log.Error(privateKeyDecodeError))
+		}
+
+		keyPair := keys.NewEd25519KeyPair(primitives.Ed25519PublicKey(decodedPublicKey), primitives.Ed25519PrivateKey(decodedPrivateKey))
 
 		tx := &jsonapi.Transaction{}
 		if err := json.Unmarshal([]byte(*sendTransactionPtr), tx); err != nil {
