@@ -60,12 +60,14 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	var blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage
 	updateState := make(chan blockSyncState)
 
+	// TODO use better time patterns
 	syncTrigger := time.AfterFunc(b.config.BlockSyncInterval(), func() {
 		if state == BLOCK_SYNC_STATE_IDLE {
 			updateState <- BLOCK_SYNC_STATE_START_SYNC
 		}
 	})
 
+	// TODO use better time patterns
 	requestBlocksTrigger := time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
 		if state == BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
 			updateState <- BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS

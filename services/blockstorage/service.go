@@ -359,6 +359,7 @@ func (s *service) validateWithConsensusAlgos(prevBlockPair *protocol.BlockPairCo
 }
 
 // Returns a slice of blocks containing first and last
+// TODO support chunking
 func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
 	// FIXME use more efficient way to slice blocks
 
