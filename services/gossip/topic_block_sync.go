@@ -67,7 +67,7 @@ func (s *service) SendBlockAvailabilityResponse(input *gossiptopics.BlockAvailab
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
-		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_LIST,
 	}).Build()
 
 	if input.Message.SignedBatchRange == nil {
@@ -77,7 +77,7 @@ func (s *service) SendBlockAvailabilityResponse(input *gossiptopics.BlockAvailab
 
 	return nil, s.transport.Send(&adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		Payloads:        payloads,
 	})
 }
