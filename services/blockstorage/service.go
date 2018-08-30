@@ -355,7 +355,7 @@ func (s *service) validateWithConsensusAlgos(prevBlockPair *protocol.BlockPairCo
 		}
 	}
 
-	return errors.New("all consensus algos refused to validate the block")
+	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers))
 }
 
 // Returns a slice of blocks containing first and last
