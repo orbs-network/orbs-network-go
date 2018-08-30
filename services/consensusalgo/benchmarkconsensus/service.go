@@ -80,7 +80,7 @@ func NewBenchmarkConsensusAlgo(
 }
 
 func (s *service) HandleBlockConsensus(input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-	return nil, s.handleBlockConsensusFromHandler(input.BlockType, input.BlockPair, input.PrevCommittedBlockPair)
+	return nil, s.handleBlockConsensusFromHandler(input.Mode, input.BlockType, input.BlockPair, input.PrevCommittedBlockPair)
 }
 
 func (s *service) HandleBenchmarkConsensusCommit(input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
