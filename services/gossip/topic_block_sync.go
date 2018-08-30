@@ -4,7 +4,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
@@ -150,13 +149,11 @@ func (s *service) SendBlockSyncResponse(input *gossiptopics.BlockSyncResponseInp
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
 
-	for _, blocks := range input.Message.BlockPairs {
-		blockPairPayloads, err := encodeBlockPair(blocks)
-		if err != nil {
-			return nil, err
-		}
-		payloads = append(payloads, blockPairPayloads...)
+	blockPairPayloads, err := encodeBlockPairs(input.Message.BlockPairs)
+	if err != nil {
+		return nil, err
 	}
+	payloads = append(payloads, blockPairPayloads...)
 
 	return nil, s.transport.Send(&adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
@@ -172,20 +169,12 @@ func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, paylo
 	}
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
-	blockPairPayloads := payloads[2:]
 
-	var blocks []*protocol.BlockPairContainer
+	blocks, err := decodeBlockPairs(payloads)
 
-	for i := 0; i < len(blockPairPayloads); i += 8 {
-		input := blockPairPayloads[i : i+8]
-
-		blockPair, err := decodeBlockPair(input)
-		if err != nil {
-			s.reporting.Error("could not decode block pair from block sync", log.Error(err))
-			return
-		}
-
-		blocks = append(blocks, blockPair)
+	if err != nil {
+		s.reporting.Error("could not decode block pair from block sync", log.Error(err))
+		return
 	}
 
 	for _, l := range s.blockSyncHandlers {

@@ -47,53 +47,83 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	return payloads, nil
 }
 
+func encodeBlockPairs(blockPairs []*protocol.BlockPairContainer) ([][]byte, error) {
+	var payloads [][]byte
+
+	for _, blocks := range blockPairs {
+		blockPairPayloads, err := encodeBlockPair(blocks)
+		if err != nil {
+			return nil, err
+		}
+		payloads = append(payloads, blockPairPayloads...)
+	}
+
+	return payloads, nil
+}
+
 func decodeBlockPair(payloads [][]byte) (*protocol.BlockPairContainer, error) {
-	if len(payloads) < NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
-		return nil, errors.Errorf("codec failed to decode block pair due to missing payloads", log.Int("num-payloads", len(payloads)))
+	results, err := decodeBlockPairs(payloads)
+	if err != nil {
+		return nil, err
 	}
 
-	txBlockHeader := protocol.TransactionsBlockHeaderReader(payloads[0])
-	txBlockMetadata := protocol.TransactionsBlockMetadataReader(payloads[1])
-	txBlockProof := protocol.TransactionsBlockProofReader(payloads[2])
-	rxBlockHeader := protocol.ResultsBlockHeaderReader(payloads[3])
-	rxBlockProof := protocol.ResultsBlockProofReader(payloads[4])
-	payloadIndex := uint32(NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR)
+	return results[0], nil
+}
 
-	expectedPayloads := NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR + txBlockHeader.NumSignedTransactions() + rxBlockHeader.NumTransactionReceipts() + rxBlockHeader.NumContractStateDiffs()
-	if uint32(len(payloads)) < expectedPayloads {
-		return nil, errors.Errorf("codec failed to decode block pair due to missing payloads", log.Int("num-payloads", len(payloads)), log.Uint32("expected-payloads", expectedPayloads))
-	}
+func decodeBlockPairs(payloads [][]byte) (results []*protocol.BlockPairContainer, err error) {
+	payloadIndex := uint32(0)
 
-	txs := make([]*protocol.SignedTransaction, 0, txBlockHeader.NumSignedTransactions())
-	for i := uint32(0); i < txBlockHeader.NumSignedTransactions(); i++ {
-		txs = append(txs, protocol.SignedTransactionReader(payloads[payloadIndex+i]))
-	}
-	payloadIndex += txBlockHeader.NumSignedTransactions()
+	for payloadIndex < uint32(len(payloads)) {
+		if uint32(len(payloads)) < payloadIndex+NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
+			return nil, errors.Errorf("codec failed to decode block pair, missing payloads %d", len(payloads))
+		}
 
-	receipts := make([]*protocol.TransactionReceipt, 0, rxBlockHeader.NumTransactionReceipts())
-	for i := uint32(0); i < rxBlockHeader.NumTransactionReceipts(); i++ {
-		receipts = append(receipts, protocol.TransactionReceiptReader(payloads[payloadIndex+i]))
-	}
-	payloadIndex += rxBlockHeader.NumTransactionReceipts()
+		txBlockHeader := protocol.TransactionsBlockHeaderReader(payloads[payloadIndex])
+		txBlockMetadata := protocol.TransactionsBlockMetadataReader(payloads[payloadIndex+1])
+		txBlockProof := protocol.TransactionsBlockProofReader(payloads[payloadIndex+2])
+		rxBlockHeader := protocol.ResultsBlockHeaderReader(payloads[payloadIndex+3])
+		rxBlockProof := protocol.ResultsBlockProofReader(payloads[payloadIndex+4])
+		payloadIndex += uint32(NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR)
 
-	sdiffs := make([]*protocol.ContractStateDiff, 0, rxBlockHeader.NumContractStateDiffs())
-	for i := uint32(0); i < rxBlockHeader.NumContractStateDiffs(); i++ {
-		sdiffs = append(sdiffs, protocol.ContractStateDiffReader(payloads[payloadIndex+i]))
-	}
+		expectedPayloads := txBlockHeader.NumSignedTransactions() + rxBlockHeader.NumTransactionReceipts() + rxBlockHeader.NumContractStateDiffs()
+		if uint32(len(payloads)) < payloadIndex+expectedPayloads {
+			return nil, errors.Errorf("codec failed to decode block pair, remaining payloads %d, expected payloads %d", uint32(len(payloads))-payloadIndex, expectedPayloads)
+		}
 
-	blockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header:             txBlockHeader,
-			Metadata:           txBlockMetadata,
-			SignedTransactions: txs,
-			BlockProof:         txBlockProof,
-		},
-		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:              rxBlockHeader,
-			TransactionReceipts: receipts,
-			ContractStateDiffs:  sdiffs,
-			BlockProof:          rxBlockProof,
-		},
+		txs := make([]*protocol.SignedTransaction, 0, txBlockHeader.NumSignedTransactions())
+		for i := uint32(0); i < txBlockHeader.NumSignedTransactions(); i++ {
+			txs = append(txs, protocol.SignedTransactionReader(payloads[payloadIndex+i]))
+		}
+		payloadIndex += txBlockHeader.NumSignedTransactions()
+
+		receipts := make([]*protocol.TransactionReceipt, 0, rxBlockHeader.NumTransactionReceipts())
+		for i := uint32(0); i < rxBlockHeader.NumTransactionReceipts(); i++ {
+			receipts = append(receipts, protocol.TransactionReceiptReader(payloads[payloadIndex+i]))
+		}
+		payloadIndex += rxBlockHeader.NumTransactionReceipts()
+
+		sdiffs := make([]*protocol.ContractStateDiff, 0, rxBlockHeader.NumContractStateDiffs())
+		for i := uint32(0); i < rxBlockHeader.NumContractStateDiffs(); i++ {
+			sdiffs = append(sdiffs, protocol.ContractStateDiffReader(payloads[payloadIndex+i]))
+		}
+
+		payloadIndex += rxBlockHeader.NumContractStateDiffs()
+
+		blockPair := &protocol.BlockPairContainer{
+			TransactionsBlock: &protocol.TransactionsBlockContainer{
+				Header:             txBlockHeader,
+				Metadata:           txBlockMetadata,
+				SignedTransactions: txs,
+				BlockProof:         txBlockProof,
+			},
+			ResultsBlock: &protocol.ResultsBlockContainer{
+				Header:              rxBlockHeader,
+				TransactionReceipts: receipts,
+				ContractStateDiffs:  sdiffs,
+				BlockProof:          rxBlockProof,
+			},
+		}
+		results = append(results, blockPair)
 	}
-	return blockPair, nil
+	return results, nil
 }
