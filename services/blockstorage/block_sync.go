@@ -58,18 +58,17 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	state := BLOCK_SYNC_STATE_START_SYNC
 	var event interface{}
 	var blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage
+	updateState := make(chan blockSyncState)
 
 	syncTrigger := time.AfterFunc(b.config.BlockSyncInterval(), func() {
 		if state == BLOCK_SYNC_STATE_IDLE {
-			state = BLOCK_SYNC_STATE_START_SYNC
-			b.Events <- nil
+			updateState <- BLOCK_SYNC_STATE_START_SYNC
 		}
 	})
 
 	requestBlocksTrigger := time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
 		if state == BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
-			state = BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS
-			b.Events <- nil
+			updateState <- BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS
 		}
 	})
 
@@ -123,6 +122,10 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 		}
 
 		select {
+		case state = <-updateState:
+			// Nullify the event because if we switched state, the event was processed already
+			event = nil
+			continue
 		case <-ctx.Done():
 			return
 		case event = <-b.Events:
