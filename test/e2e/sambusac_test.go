@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"testing"
@@ -47,6 +46,43 @@ func ClientBinary() []string {
 	return []string{"go", "run", "../../jsonapi/main/json_client_cli.go"}
 }
 
+func runCommand(command []string, t *testing.T) (output string) {
+	cmd := exec.Command(command[0], command[1:]...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+
+	require.NoError(t, err, "error calling send_transfer")
+
+	output = out.String()
+	fmt.Println(output)
+
+	return output
+}
+
+func generateTransferJSON() string {
+	transferJSON := &jsonapi.Transaction{
+		ContractName: "BenchmarkToken",
+		MethodName:   "transfer",
+		Arguments: []jsonapi.MethodArgument{
+			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 42},
+		},
+	}
+
+	jsonBytes, _ := json.Marshal(&transferJSON)
+	return string(jsonBytes)
+}
+
+func generateGetBalanceJSON() string {
+	getBalanceJSON := &jsonapi.Transaction{
+		ContractName: "BenchmarkToken",
+		MethodName:   "getBalance",
+	}
+
+	callJSONBytes, _ := json.Marshal(&getBalanceJSON)
+	return string(callJSONBytes)
+}
+
 func TestSambusacFlow(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e tests in short mode")
@@ -59,62 +95,28 @@ func TestSambusacFlow(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
-	transferJSON := &jsonapi.Transaction{
-		ContractName: "BenchmarkToken",
-		MethodName:   "transfer",
-		Arguments: []jsonapi.MethodArgument{
-			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 42},
-		},
-	}
-
-	jsonBytes, _ := json.Marshal(&transferJSON)
-
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
 	baseCommand := ClientBinary()
 	sendCommand := append(baseCommand,
-		"-send-transaction", string(jsonBytes),
+		"-send-transaction", generateTransferJSON(),
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
 
-	cmd := exec.Command(sendCommand[0], sendCommand[1:]...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-	outputAsString := out.String()
-	fmt.Println(outputAsString)
+	sendCommandOutput := runCommand(sendCommand, t)
 
 	response := &sendTransactionCliResponse{}
-	unmarshallErr := json.Unmarshal([]byte(outputAsString), &response)
+	unmarshallErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
-	require.NoError(t, err, "error calling send_transfer")
 	require.NoError(t, unmarshallErr, "error unmarshall cli response")
 	require.Equal(t, response.ExecutionResult, 0, "Transaction status to be successful = 0")
 	require.NotNil(t, response.TxHash, "got empty txhash")
 
 	time.Sleep(500 * time.Millisecond) //TODO remove when public api blocks on tx
 
-	getBalanceJSON := &jsonapi.Transaction{
-		ContractName: "BenchmarkToken",
-		MethodName:   "getBalance",
-	}
+	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON())
 
-	callJSONBytes, _ := json.Marshal(&getBalanceJSON)
-
-	getCommand := append(baseCommand, "-call-method", string(callJSONBytes))
-
-	callCmd := exec.Command(getCommand[0], getCommand[1:]...)
-	var callOut bytes.Buffer
-	callCmd.Stdout = &callOut
-	callErr := callCmd.Run()
-	if callErr != nil {
-		log.Fatal(callErr)
-	}
-
-	callOutputAsString := callOut.String()
+	callOutputAsString := runCommand(getCommand, t)
 	fmt.Println(callOutputAsString)
 
 	callResponse := &callMethodCliResponse{}
