@@ -37,7 +37,7 @@ type BlockSync struct {
 	config  Config
 	storage BlockSyncStorage
 	gossip  gossiptopics.BlockSync
-	Events  chan interface{}
+	events  chan interface{}
 }
 
 func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, gossip gossiptopics.BlockSync, reporting log.BasicLogger) *BlockSync {
@@ -46,7 +46,7 @@ func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, 
 		config:    config,
 		storage:   storage,
 		gossip:    gossip,
-		Events:    make(chan interface{}),
+		events:    make(chan interface{}),
 	}
 
 	go blockSync.mainLoop(ctx)
@@ -128,7 +128,7 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 			continue
 		case <-ctx.Done():
 			return
-		case event = <-b.Events:
+		case event = <-b.events:
 			continue
 		}
 	}
