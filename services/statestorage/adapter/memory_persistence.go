@@ -1,31 +1,28 @@
 package adapter
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"sort"
 	"strings"
-	"time"
 )
 
 type ContractState map[string]*protocol.StateRecord
 type StateVersion map[primitives.ContractName]ContractState
 
 type InMemoryStatePersistence struct {
-	snapshots            map[primitives.BlockHeight]StateVersion
-	blockTrackerForTests *synchronization.BlockTracker
+	snapshots map[primitives.BlockHeight]StateVersion
+	roots     map[primitives.BlockHeight]primitives.MerkleSha256
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
-	stateDiffsContract := map[primitives.ContractName]ContractState{primitives.ContractName("BenchmarkToken"): {}}
-
 	return &InMemoryStatePersistence{
-		// TODO remove init with a hard coded contract once deploy/provisioning of contracts exists
-		snapshots:            map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): stateDiffsContract},
-		blockTrackerForTests: synchronization.NewBlockTracker(0, 64000, time.Duration(1*time.Hour)),
+		// TODO remove this hard coded init of genesis block state once init flow syncs state storage with block storage
+		snapshots: map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): map[primitives.ContractName]ContractState{}},
+		roots:     map[primitives.BlockHeight]primitives.MerkleSha256{},
 	}
 }
 
@@ -40,8 +37,6 @@ func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, co
 		}
 	}
 
-	sp.blockTrackerForTests.IncrementHeight()
-
 	return nil
 }
 
@@ -49,6 +44,12 @@ func (sp *InMemoryStatePersistence) writeOneContract(height primitives.BlockHeig
 	if _, ok := sp.snapshots[height][contract]; !ok {
 		sp.snapshots[height][contract] = map[string]*protocol.StateRecord{}
 	}
+
+	if isZeroValue(stateDiff.Value()) {
+		delete(sp.snapshots[height][contract], stateDiff.Key().KeyForMap())
+		return
+	}
+
 	sp.snapshots[height][contract][stateDiff.Key().KeyForMap()] = stateDiff
 }
 
@@ -63,37 +64,31 @@ func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.Bloc
 		newStateRecordStore := map[string]*protocol.StateRecord{}
 		for k, v := range contractStore {
 			newStateRecordStore[k] = v
-			//newStateRecordStore[k] = (&protocol.StateRecordBuilder{Key: v.Key(), Value: v.Value()}).Build()
 		}
 		newStore[contract] = newStateRecordStore
 	}
 	return newStore
 }
 
-/*
-func (sp *InMemoryStatePersistence) clearOldStateDiffs(current) {
-	if nToRemove := uint64(len(sp.snapshots)) - sp.maxHistory; nToRemove > 0 {
-		currRemove := uint64(current) - sp.maxHistory
-		for ; nToRemove > 0 && currRemove > 0 ; {
-			if _, ok := sp.snapshots[primitives.BlockHeight(currRemove)]; ok {
-				delete(sp.snapshots, primitives.BlockHeight(currRemove))
-				nToRemove--
-			}
-		}
-	}
-}
-*/
-
 func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName) (map[string]*protocol.StateRecord, error) {
 	if stateAtHeight, ok := sp.snapshots[height]; ok {
-		if contractStateDiff, ok := stateAtHeight[contract]; ok {
-			return contractStateDiff, nil
-		} else {
-			return nil, errors.Errorf("contract %v does not exist", contract)
-		}
+		return stateAtHeight[contract], nil
 	} else {
 		return nil, errors.Errorf("block %v does not exist in snapshot history", height)
 	}
+}
+
+func (sp *InMemoryStatePersistence) WriteMerkleRoot(height primitives.BlockHeight, sha256 primitives.MerkleSha256) error {
+	sp.roots[height] = sha256
+	return nil
+}
+
+func (sp *InMemoryStatePersistence) ReadMerkleRoot(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
+	root, exists := sp.roots[height]
+	if !exists {
+		return nil, errors.Errorf("Merkle root doesn't exist for %d Block Height", height)
+	}
+	return root, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {
@@ -134,6 +129,6 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	return output.String()
 }
 
-func (sp *InMemoryStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) error {
-	return sp.blockTrackerForTests.WaitForBlock(height)
+func isZeroValue(value []byte) bool {
+	return bytes.Equal(value, []byte{})
 }

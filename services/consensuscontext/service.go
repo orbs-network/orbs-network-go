@@ -3,11 +3,12 @@ package consensuscontext
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type Config interface {
-	MinimumTransactionsInBlock() int
-	BelowMinimalBlockDelayMillis() uint32
+	ConsensusContextMinimumTransactionsInBlock() uint32
+	ConsensusContextMinimalBlockDelay() time.Duration
 }
 
 type service struct {

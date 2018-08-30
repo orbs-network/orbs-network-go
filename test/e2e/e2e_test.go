@@ -78,8 +78,6 @@ var _ = Describe("The Orbs Network", func() {
 					consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 					logger,
 					gossipTransport,
-					2*1000,
-					1,
 				)
 
 				nodes = append(nodes, node)

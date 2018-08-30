@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+	"time"
 )
 
 type harness struct {
@@ -34,13 +35,13 @@ func (h *harness) requestTransactionsBlock() (*protocol.TransactionsBlockContain
 	return output.TransactionsBlock, nil
 }
 
-func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactionsToReturn int) {
+func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactionsToReturn uint32) {
 
 	output := &services.GetTransactionsForOrderingOutput{
 		SignedTransactions: nil,
 	}
 
-	for i := 0; i < numTransactionsToReturn; i++ {
+	for i := uint32(0); i < numTransactionsToReturn; i++ {
 		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmount(uint64(i+1)*10).Build())
 	}
 
@@ -63,15 +64,17 @@ func newHarness() *harness {
 
 	transactionPool := &services.MockTransactionPool{}
 
-	serviceConfig := config.NewConsensusContextConfig(300, 2)
+	cfg := config.EmptyConfig()
+	cfg.SetDuration(config.CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
+	cfg.SetUint32(config.CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 2)
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
-		serviceConfig, log)
+		cfg, log)
 
 	return &harness{
 		transactionPool: transactionPool,
 		reporting:       log,
 		service:         service,
-		config:          serviceConfig,
+		config:          cfg,
 	}
 }

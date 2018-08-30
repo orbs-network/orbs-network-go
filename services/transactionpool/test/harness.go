@@ -1,9 +1,11 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -27,16 +29,17 @@ type harness struct {
 
 var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
 var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
-var transactionExpirationWindowInSeconds = uint32(1800)
+var transactionExpirationWindow = 30 * time.Minute
 
-func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction) {
+func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
 
 	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
+				Signature:       sig,
 			}).Build(),
-			SignedTransactions: []*protocol.SignedTransaction{tx},
+			SignedTransactions: transactionpool.Transactions{tx},
 		},
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
 }
@@ -66,7 +69,7 @@ func (h *harness) addTransactions(txs ...*protocol.SignedTransaction) {
 func (h *harness) reportTransactionsAsCommitted(transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
 	return h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
 		LastCommittedBlockHeight: h.lastBlockHeight,
-		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto from Tal and OdedW
+		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto, see issue #121
 		TransactionReceipts:      asReceipts(transactions),
 	})
 
@@ -88,10 +91,25 @@ func (h *harness) verifyMocks() error {
 	return nil
 }
 
-func (h *harness) handleForwardFrom(sender primitives.Ed25519PublicKey, transactions ...*protocol.SignedTransaction) {
+func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+
+	//TODO this is copying and needs to go away pending issue #119
+	var allTransactions []byte
+	for _, tx := range transactions {
+		allTransactions = append(allTransactions, tx.Raw()...)
+	}
+
+	sig, err := signature.SignEd25519(sender.PrivateKey(), allTransactions)
+	if err != nil {
+		panic(err)
+	}
+
 	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
-			Sender:             (&gossipmessages.SenderSignatureBuilder{SenderPublicKey: sender}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: sender.PublicKey(),
+				Signature:       sig,
+			}).Build(),
 			SignedTransactions: transactions,
 		},
 	})
@@ -157,11 +175,41 @@ func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.
 	h.lastBlockHeight = height
 }
 
+func (h *harness) validateTransactionsForOrdering(blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
+	_, err := h.txpool.ValidateTransactionsForOrdering(&services.ValidateTransactionsForOrderingInput{
+		BlockHeight:        blockHeight,
+		SignedTransactions: txs,
+	})
+
+	return err
+}
+
 func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
+func getConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, keyPair *keys.Ed25519KeyPair) transactionpool.Config {
+	cfg := config.EmptyConfig()
+
+	cfg.SetNodePublicKey(keyPair.PublicKey())
+	cfg.SetNodePrivateKey(keyPair.PrivateKey())
+
+	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
+	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
+	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, 5)
+
+	cfg.SetUint32(config.TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
+	cfg.SetDuration(config.TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, transactionExpirationInSeconds)
+	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
+	cfg.SetDuration(config.TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)
+	cfg.SetDuration(config.TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
+
+	return cfg
+}
+
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
+	ctx := context.Background()
+
 	ts := primitives.TimestampNano(time.Now().UnixNano())
 
 	gossip := &gossiptopics.MockTransactionRelay{}
@@ -169,8 +217,8 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	config := config.NewTransactionPoolConfig(sizeLimit, transactionExpirationWindowInSeconds, thisNodeKeyPair.PublicKey())
-	service := transactionpool.NewTransactionPool(gossip, virtualMachine, config, log.GetLogger(), ts)
+	config := getConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, config, log.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
@@ -188,7 +236,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	return h
 }
 
-func asReceipts(transactions []*protocol.SignedTransaction) []*protocol.TransactionReceipt {
+func asReceipts(transactions transactionpool.Transactions) []*protocol.TransactionReceipt {
 	var receipts []*protocol.TransactionReceipt
 	for _, tx := range transactions {
 		receipts = append(receipts, (&protocol.TransactionReceiptBuilder{

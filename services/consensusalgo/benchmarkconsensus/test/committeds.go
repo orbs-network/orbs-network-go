@@ -30,7 +30,7 @@ type committed struct {
 	nonFederationMembers bool
 }
 
-func committedMessages() *committed {
+func multipleCommittedMessages() *committed {
 	return &committed{}
 }
 
@@ -40,7 +40,8 @@ func (c *committed) WithCountBelowQuorum() *committed {
 }
 
 func (c *committed) WithCountAboveQuorum() *committed {
-	c.count = 3
+	//TODO: Change count to 3 once requiredQuorumSize is 2/3
+	c.count = 4
 	return c
 }
 

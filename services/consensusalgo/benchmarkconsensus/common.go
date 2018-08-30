@@ -9,10 +9,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"math"
+	//"math"
 )
 
-func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
+func (s *service) lastCommittedBlockHeightUnderMutex() primitives.BlockHeight {
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -20,7 +20,9 @@ func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
 }
 
 func (s *service) requiredQuorumSize() int {
-	return int(math.Ceil(float64(s.config.NetworkSize(0)) * 2 / 3))
+	//TODO: Bring back once we have block sync
+	//return int(math.Ceil(float64(s.config.NetworkSize(0)) * 2 / 3))
+	return int(s.config.NetworkSize(0))
 }
 
 func (s *service) saveToBlockStorage(blockPair *protocol.BlockPairContainer) error {
@@ -89,7 +91,7 @@ func (s *service) handleBlockConsensusFromHandler(blockType protocol.BlockType, 
 	}
 
 	// update lastCommitted to reflect this if newer
-	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeight() {
+	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeightUnderMutex() {
 		s.lastCommittedBlock = blockPair
 		s.lastCommittedBlockVoters = make(map[string]bool) // leader only
 	}

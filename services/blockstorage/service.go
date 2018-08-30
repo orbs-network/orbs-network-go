@@ -16,10 +16,10 @@ import (
 )
 
 type Config interface {
-	BlockSyncCommitTimeoutMillis() time.Duration
-	BlockTransactionReceiptQueryStartGraceSec() time.Duration
-	BlockTransactionReceiptQueryEndGraceSec() time.Duration
-	BlockTransactionReceiptQueryTransactionExpireSec() time.Duration
+	BlockSyncCommitTimeout() time.Duration
+	BlockTransactionReceiptQueryGraceStart() time.Duration
+	BlockTransactionReceiptQueryGraceEnd() time.Duration
+	BlockTransactionReceiptQueryExpirationWindow() time.Duration
 }
 
 const (
@@ -161,9 +161,9 @@ func (s *service) createEmptyTransactionReceiptResult() *services.GetTransaction
 
 func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
 	searchRules := adapter.BlockSearchRules{
-		EndGraceNano:          s.config.BlockTransactionReceiptQueryEndGraceSec().Nanoseconds(),
-		StartGraceNano:        s.config.BlockTransactionReceiptQueryStartGraceSec().Nanoseconds(),
-		TransactionExpireNano: s.config.BlockTransactionReceiptQueryTransactionExpireSec().Nanoseconds(),
+		EndGraceNano:          s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds(),
+		StartGraceNano:        s.config.BlockTransactionReceiptQueryGraceStart().Nanoseconds(),
+		TransactionExpireNano: s.config.BlockTransactionReceiptQueryExpirationWindow().Nanoseconds(),
 	}
 	blocksToSearch := s.persistence.GetReceiptRelevantBlocks(input.TransactionTimestamp, searchRules)
 	if blocksToSearch == nil {
@@ -213,6 +213,19 @@ func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitI
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
 	s.consensusBlocksHandlers = append(s.consensusBlocksHandlers, handler)
+
+	// update the consensus algo about the latest block we have (for its initialization)
+	// TODO: should this be under mutex since it reads s.lastCommittedBlock
+	if s.lastCommittedBlock != nil {
+		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:              s.lastCommittedBlock,
+			PrevCommittedBlockPair: nil, // on purpose, see spec
+		})
+		if err != nil {
+			s.reporting.Error(err.Error())
+		}
+	}
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {

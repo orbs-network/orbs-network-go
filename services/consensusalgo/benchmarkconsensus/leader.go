@@ -29,7 +29,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			s.reporting.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
 			continue
-		case <-time.After(time.Duration(s.config.BenchmarkConsensusRoundRetryIntervalMillis()) * time.Millisecond):
+		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
 			s.reporting.Info("consensus round waking up after retry timeout")
 			continue
 		}
@@ -41,7 +41,7 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 	defer s.mutex.Unlock()
 
 	// check if we need to move to next block
-	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeight() {
+	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeightUnderMutex() {
 		proposedBlock, err := s.leaderGenerateNewProposedBlockUnderMutex()
 		if err != nil {
 			return err
@@ -56,17 +56,13 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 	}
 
 	// broadcast the commit via gossip for last committed block
-	_, err = s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
-		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
-			BlockPair: s.lastCommittedBlock,
-		},
-	})
+	err = s.leaderBroadcastCommittedBlock(s.lastCommittedBlock)
 	if err != nil {
 		return err
 	}
 
 	if s.config.NetworkSize(0) == 1 {
-		s.successfullyVotedBlocks <- s.lastCommittedBlockHeight()
+		s.successfullyVotedBlocks <- s.lastCommittedBlockHeightUnderMutex()
 	}
 
 	return nil
@@ -77,14 +73,14 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	transactionsBlock := &protocol.TransactionsBlockContainer{
 		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-		SignedTransactions: nil,
-		BlockProof:         nil,
+		SignedTransactions: []*protocol.SignedTransaction{},
+		BlockProof:         nil, // will be generated in a minute when signed
 	}
 	resultsBlock := &protocol.ResultsBlockContainer{
 		Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
-		TransactionReceipts: nil,
-		ContractStateDiffs:  nil,
-		BlockProof:          nil,
+		TransactionReceipts: []*protocol.TransactionReceipt{},
+		ContractStateDiffs:  []*protocol.ContractStateDiff{},
+		BlockProof:          nil, // will be generated in a minute when signed
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
@@ -95,11 +91,11 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
-	s.reporting.Info("generating new proposed block for height", log.BlockHeight(s.lastCommittedBlockHeight()+1))
+	s.reporting.Info("generating new proposed block for height", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
-		BlockHeight:   s.lastCommittedBlockHeight() + 1,
+		BlockHeight:   s.lastCommittedBlockHeightUnderMutex() + 1,
 		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
@@ -108,7 +104,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPai
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
-		BlockHeight:       s.lastCommittedBlockHeight() + 1,
+		BlockHeight:       s.lastCommittedBlockHeightUnderMutex() + 1,
 		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
@@ -152,6 +148,21 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 	return blockPair, nil
 }
 
+func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairContainer) error {
+	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
+	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
+		return errors.Errorf("attempting to broadcast commit of a partial block that is missing fields like block proofs: %v", blockPair.String())
+	}
+
+	_, err := s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
+			BlockPair: blockPair,
+		},
+	})
+
+	return err
+}
+
 func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) {
 	successfullyVotedBlock := blockHeightNone
 	defer func() {
@@ -178,15 +189,15 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
 	s.reporting.Info("valid vote arrived", log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() {
-		successfullyVotedBlock = s.lastCommittedBlockHeight()
+		successfullyVotedBlock = s.lastCommittedBlockHeightUnderMutex()
 	}
 }
 
 func (s *service) leaderValidateVoteUnderMutex(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
 	// block height
 	blockHeight := status.LastCommittedBlockHeight()
-	if blockHeight != s.lastCommittedBlockHeight() {
-		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, s.lastCommittedBlockHeight())
+	if blockHeight != s.lastCommittedBlockHeightUnderMutex() {
+		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, s.lastCommittedBlockHeightUnderMutex())
 	}
 
 	// approved signer

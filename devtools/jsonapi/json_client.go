@@ -2,7 +2,6 @@ package jsonapi
 
 import (
 	"bytes"
-	"github.com/pkg/errors"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -11,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"time"

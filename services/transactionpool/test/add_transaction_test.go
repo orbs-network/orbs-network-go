@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -16,7 +17,8 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
-	h.expectTransactionToBeForwarded(tx)
+	sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), tx.Raw())
+	h.expectTransactionToBeForwarded(tx, sig)
 
 	_, err := h.addNewTransaction(tx)
 	require.NoError(t, err, "a valid transaction was not added to pool")
