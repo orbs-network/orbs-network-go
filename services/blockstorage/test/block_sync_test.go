@@ -41,20 +41,8 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
 
 	input := generateBlockAvailabilityRequestInput(primitives.BlockHeight(0), senderKeyPair.PublicKey())
-	response := &gossiptopics.BlockAvailabilityResponseInput{
-		RecipientPublicKey: senderKeyPair.PublicKey(),
-		Message: &gossipmessages.BlockAvailabilityResponseMessage{
-			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				LastBlockHeight:          primitives.BlockHeight(2),
-				FirstBlockHeight:         primitives.BlockHeight(1),
-				LastCommittedBlockHeight: primitives.BlockHeight(2),
-			}).Build(),
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: harness.config.NodePublicKey(),
-			}).Build(),
-		},
-	}
+	response := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), primitives.BlockHeight(1), primitives.BlockHeight(2),
+		harness.config.NodePublicKey(), senderKeyPair.PublicKey())
 
 	harness.gossip.When("SendBlockAvailabilityResponse", response).Return(nil, nil).Times(1)
 
@@ -106,12 +94,15 @@ func TestSyncSourceIgnoresBlockAvailabilityRequestIfPetitionerIsFurtherAhead(t *
 	harness.verifyMocks(t)
 }
 
-func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityResponseInput {
+func generateBlockAvailabilityResponseInput(lastCommittedBlockHeight primitives.BlockHeight, firstBlockHeight primitives.BlockHeight, lastBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey, recipientPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityResponseInput {
 	return &gossiptopics.BlockAvailabilityResponseInput{
+		RecipientPublicKey: recipientPublicKey,
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
 				LastCommittedBlockHeight: lastCommittedBlockHeight,
+				FirstBlockHeight:         firstBlockHeight,
+				LastBlockHeight:          lastBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: senderPublicKey,
@@ -129,7 +120,8 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
-	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(999), senderKeyPair.PublicKey())
+	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(999), primitives.BlockHeight(0), primitives.BlockHeight(0),
+		senderKeyPair.PublicKey(), harness.config.NodePublicKey())
 
 	request := &gossiptopics.BlockSyncRequestInput{
 		RecipientPublicKey: input.Message.Sender.SenderPublicKey(),
@@ -166,7 +158,8 @@ func TestSyncPetitionerIgnoresBlockAvailabilityResponseIfAlreadyInSync(t *testin
 	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
-	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
+	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), primitives.BlockHeight(1), primitives.BlockHeight(2),
+		senderKeyPair.PublicKey(), harness.config.NodePublicKey())
 
 	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(0)
 
@@ -188,10 +181,12 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponseFromMultipleSources(t *te
 	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(9)
-	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), senderKeyPair.PublicKey())
+	input := generateBlockAvailabilityResponseInput(primitives.BlockHeight(2), primitives.BlockHeight(1), primitives.BlockHeight(2),
+		senderKeyPair.PublicKey(), harness.config.NodePublicKey())
 
 	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
-	anotherInput := generateBlockAvailabilityResponseInput(primitives.BlockHeight(3), anotherSenderKeyPair.PublicKey())
+	anotherInput := generateBlockAvailabilityResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(1), primitives.BlockHeight(3),
+		anotherSenderKeyPair.PublicKey(), harness.config.NodePublicKey())
 
 	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
 
@@ -417,7 +412,8 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(7)
 
-	blockAvailabilityResponse := generateBlockAvailabilityResponseInput(primitives.BlockHeight(4), senderKeyPair.PublicKey())
+	blockAvailabilityResponse := generateBlockAvailabilityResponseInput(primitives.BlockHeight(4), primitives.BlockHeight(1), primitives.BlockHeight(4),
+		senderKeyPair.PublicKey(), harness.config.NodePublicKey())
 
 	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).AtLeast(1)
 	harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
