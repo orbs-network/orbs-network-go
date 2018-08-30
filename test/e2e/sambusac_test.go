@@ -43,7 +43,7 @@ func ClientBinary() []string {
 		return []string{ciBinaryPath}
 	}
 
-	return []string{"go", "run", "../../jsonapi/main/json_client_cli.go"}
+	return []string{"go", "run", "../../devtools/jsonapi/main/main.go"}
 }
 
 func runCommand(command []string, t *testing.T) (output string) {

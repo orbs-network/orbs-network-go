@@ -1,0 +1,7 @@
+FROM busybox
+
+ADD ./sambusac ./orbs-json-client /opt/orbs/
+
+WORKDIR /opt/orbs
+
+CMD ./sambusac
