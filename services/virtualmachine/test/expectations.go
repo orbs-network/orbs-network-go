@@ -56,6 +56,17 @@ func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expected
 	}).Times(1)
 }
 
+func (h *harness) expectNativeContractMethodNotCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName) {
+	contractMethodMatcher := func(i interface{}) bool {
+		input, ok := i.(*services.ProcessCallInput)
+		return ok &&
+			input.ContractName == expectedContractName &&
+			input.MethodName == expectedMethodName
+	}
+
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(nil, nil).Times(0)
+}
+
 func (h *harness) verifyNativeContractMethodCalled(t *testing.T) {
 	ok, err := h.processors[protocol.PROCESSOR_TYPE_NATIVE].Verify()
 	require.True(t, ok, "did not call processor: %v", err)
@@ -78,7 +89,7 @@ func (h *harness) expectSystemContractCalled(expectedContractName primitives.Con
 		CallResult:      callResult,
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(outputToReturn, returnError).Times(1)
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(outputToReturn, returnError).AtLeast(1)
 }
 
 func (h *harness) verifySystemContractCalled(t *testing.T) {
@@ -86,7 +97,7 @@ func (h *harness) verifySystemContractCalled(t *testing.T) {
 	require.True(t, ok, "did not call processor for system contract: %v", err)
 }
 
-func (h *harness) expectNativeContractInfoRequested(expectedContractName primitives.ContractName, returnPermission protocol.ExecutionPermissionScope, returnError error) {
+func (h *harness) expectNativeContractInfoRequested(expectedContractName primitives.ContractName, returnError error) {
 	contractMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.GetContractInfoInput)
 		return ok &&
@@ -94,7 +105,7 @@ func (h *harness) expectNativeContractInfoRequested(expectedContractName primiti
 	}
 
 	outputToReturn := &services.GetContractInfoOutput{
-		PermissionScope: returnPermission,
+		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	}
 
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
@@ -102,7 +113,7 @@ func (h *harness) expectNativeContractInfoRequested(expectedContractName primiti
 
 func (h *harness) verifyNativeContractInfoRequested(t *testing.T) {
 	ok, err := h.processors[protocol.PROCESSOR_TYPE_NATIVE].Verify()
-	require.True(t, ok, "did not request contract info: %v", err)
+	require.True(t, ok, "did not request info for native contract: %v", err)
 }
 
 func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.BlockHeight) {

@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -9,33 +10,9 @@ import (
 	"testing"
 )
 
-func TestSdkServiceIsNative(t *testing.T) {
-	h := newHarness()
-
-	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
-		t.Log("First isNative on unknown contract")
-		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "isNative", "UnknownContract")
-		require.Error(t, err, "handleSdkCall should fail")
-
-		t.Log("Second isNative on known contract")
-		_, err = h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "isNative", "NativeContract")
-		require.NoError(t, err, "handleSdkCall should not fail")
-
-		return protocol.EXECUTION_RESULT_SUCCESS, nil
-	})
-	h.expectNativeContractInfoRequested("UnknownContract", protocol.PERMISSION_SCOPE_SERVICE, errors.New("unknown contract"))
-	h.expectNativeContractInfoRequested("NativeContract", protocol.PERMISSION_SCOPE_SERVICE, nil)
-
-	h.runLocalMethod("Contract1", "method1")
-
-	h.verifyStateStorageBlockHeightRequested(t)
-	h.verifyNativeContractMethodCalled(t)
-	h.verifyNativeContractInfoRequested(t)
-}
-
 func TestSdkServiceCallMethodFailingCall(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("CallMethod on failing contract")
@@ -51,11 +28,13 @@ func TestSdkServiceCallMethodFailingCall(t *testing.T) {
 		{"Contract1", "method1"},
 	})
 
+	h.verifySystemContractCalled(t)
 	h.verifyNativeContractMethodCalled(t)
 }
 
 func TestSdkServiceCallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Write to key in first contract")
@@ -81,12 +60,14 @@ func TestSdkServiceCallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T
 		{"Contract1", "method1"},
 	})
 
+	h.verifySystemContractCalled(t)
 	h.verifyNativeContractMethodCalled(t)
 	h.verifyStateStorageRead(t)
 }
 
 func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Write to key in first contract")
@@ -117,12 +98,14 @@ func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
 		{"Contract1", "method1"},
 	})
 
+	h.verifySystemContractCalled(t)
 	h.verifyNativeContractMethodCalled(t)
 	h.verifyStateStorageRead(t)
 }
 
 func TestSdkServiceCallMethodWithSystemPermissions(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("CallMethod on a different contract with system permissions")
@@ -139,5 +122,6 @@ func TestSdkServiceCallMethodWithSystemPermissions(t *testing.T) {
 		{"Contract1", "method1"},
 	})
 
+	h.verifySystemContractCalled(t)
 	h.verifyNativeContractMethodCalled(t)
 }

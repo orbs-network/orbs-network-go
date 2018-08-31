@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-func (s *service) callGlobalPreOrderContract(blockHeight primitives.BlockHeight) error {
+func (s *service) callGlobalPreOrderSystemContract(blockHeight primitives.BlockHeight) error {
 	systemContractName := globalpreorder.CONTRACT.Name
 	systemMethodName := globalpreorder.METHOD_APPROVE.Name
 

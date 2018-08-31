@@ -22,7 +22,7 @@ func (s *service) runMethod(
 	// get deployment info
 	processor, err := s.getServiceDeployment(executionContext, transaction.ContractName())
 	if err != nil {
-		s.reporting.Info("get deployment for contract failed", log.Error(err), log.Stringable("transaction", transaction))
+		s.reporting.Info("get deployment info for contract failed", log.Error(err), log.Stringable("transaction", transaction))
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, err
 	}
 

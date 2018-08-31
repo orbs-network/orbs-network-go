@@ -8,16 +8,6 @@ import (
 	"testing"
 )
 
-func TestIsNative(t *testing.T) {
-	s := createServiceSdk()
-
-	err := s.IsNative(EXAMPLE_CONTEXT, "NativeContract")
-	require.NoError(t, err, "isNative should succeed")
-
-	err = s.IsNative(EXAMPLE_CONTEXT, "NonNativeContract")
-	require.Error(t, err, "isNative should fail")
-}
-
 func TestCallMethod(t *testing.T) {
 	s := createServiceSdk()
 
@@ -40,12 +30,6 @@ func (c *contractSdkServiceCallHandlerStub) HandleSdkCall(input *handlers.Handle
 		panic("permissions passed to SDK are incorrect")
 	}
 	switch input.MethodName {
-	case "isNative":
-		if input.InputArguments[0].StringValue() == "NativeContract" {
-			return nil, nil
-		} else {
-			return nil, errors.New("not native contract")
-		}
 	case "callMethod":
 		return nil, nil
 	default:

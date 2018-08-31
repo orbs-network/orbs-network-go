@@ -1,0 +1,92 @@
+package test
+
+import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+	"testing"
+)
+
+func TestRunLocalMethodWhenContractNotDeployed(t *testing.T) {
+	h := newHarness()
+
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+
+	h.expectStateStorageBlockHeightRequested(12)
+	h.expectNativeContractMethodNotCalled("Contract1", "method1")
+
+	result, refHeight, err := h.runLocalMethod("Contract1", "method1")
+	require.Error(t, err, "run local method should fail")
+	require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
+	require.EqualValues(t, 12, refHeight)
+
+	h.verifySystemContractCalled(t)
+	h.verifyStateStorageBlockHeightRequested(t)
+	h.verifyNativeContractMethodCalled(t)
+}
+
+func TestProcessTransactionSetWhenContractNotDeployedAndNotNativeContract(t *testing.T) {
+	h := newHarness()
+
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+	h.expectNativeContractInfoRequested("Contract1", errors.New("not found"))
+
+	h.expectNativeContractMethodNotCalled("Contract1", "method1")
+
+	results, _ := h.processTransactionSet([]*contractAndMethod{
+		{"Contract1", "method1"},
+	})
+	require.Equal(t, results, []protocol.ExecutionResult{
+		protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+	}, "processTransactionSet returned receipts should match")
+
+	h.verifySystemContractCalled(t)
+	h.verifyNativeContractInfoRequested(t)
+	h.verifyNativeContractMethodCalled(t)
+}
+
+func TestAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
+	h := newHarness()
+
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+	h.expectNativeContractInfoRequested("Contract1", nil)
+
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_DEPLOY_SERVICE.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
+		return protocol.EXECUTION_RESULT_SUCCESS, nil
+	})
+
+	results, _ := h.processTransactionSet([]*contractAndMethod{
+		{"Contract1", "method1"},
+	})
+	require.Equal(t, results, []protocol.ExecutionResult{
+		protocol.EXECUTION_RESULT_SUCCESS,
+	}, "processTransactionSet returned receipts should match")
+
+	h.verifySystemContractCalled(t)
+	h.verifyNativeContractInfoRequested(t)
+	h.verifyNativeContractMethodCalled(t)
+}
+
+func TestFailingAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
+	h := newHarness()
+
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+	h.expectNativeContractInfoRequested("Contract1", nil)
+
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_DEPLOY_SERVICE.Name, errors.New("deploy error"), uint32(0))
+	h.expectNativeContractMethodNotCalled("Contract1", "method1")
+
+	results, _ := h.processTransactionSet([]*contractAndMethod{
+		{"Contract1", "method1"},
+	})
+	require.Equal(t, results, []protocol.ExecutionResult{
+		protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+	}, "processTransactionSet returned receipts should match")
+
+	h.verifySystemContractCalled(t)
+	h.verifyNativeContractInfoRequested(t)
+	h.verifyNativeContractMethodCalled(t)
+}

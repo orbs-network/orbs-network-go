@@ -84,7 +84,7 @@ func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderI
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
 	// check subscription
-	err := s.callGlobalPreOrderContract(previousBlockHeight)
+	err := s.callGlobalPreOrderSystemContract(previousBlockHeight)
 	if err != nil {
 		for i := 0; i < len(statuses); i++ {
 			statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,7 @@ func TestInit(t *testing.T) {
 
 func TestSdkUnknownOperation(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
@@ -24,6 +26,7 @@ func TestSdkUnknownOperation(t *testing.T) {
 
 	h.runLocalMethod("Contract1", "method1")
 
+	h.verifySystemContractCalled(t)
 	h.verifyStateStorageBlockHeightRequested(t)
 	h.verifyNativeContractMethodCalled(t)
 }

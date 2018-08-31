@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -10,6 +11,7 @@ import (
 
 func TestProcessTransactionSetSuccess(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 1: successful")
@@ -29,11 +31,13 @@ func TestProcessTransactionSetSuccess(t *testing.T) {
 		protocol.EXECUTION_RESULT_SUCCESS,
 	}, "processTransactionSet returned receipts should match")
 
+	h.verifySystemContractCalled(t)
 	h.verifyNativeContractMethodCalled(t)
 }
 
 func TestProcessTransactionSetWithErrors(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
 		t.Log("Transaction 1: failed (contract error)")
@@ -53,5 +57,6 @@ func TestProcessTransactionSetWithErrors(t *testing.T) {
 		protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 	}, "processTransactionSet returned receipts should match")
 
+	h.verifySystemContractCalled(t)
 	h.verifyNativeContractMethodCalled(t)
 }

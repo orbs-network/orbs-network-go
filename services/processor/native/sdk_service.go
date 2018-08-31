@@ -14,23 +14,6 @@ type serviceSdk struct {
 
 const SDK_OPERATION_NAME_SERVICE = "Sdk.Service"
 
-func (s *serviceSdk) IsNative(ctx types.Context, serviceName string) error {
-	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:     primitives.ExecutionContextId(ctx),
-		OperationName: SDK_OPERATION_NAME_SERVICE,
-		MethodName:    "isNative",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:        "serviceName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: serviceName,
-			}).Build(),
-		},
-		PermissionScope: s.permissionScope,
-	})
-	return err
-}
-
 func (s *serviceSdk) CallMethod(ctx types.Context, serviceName string, methodName string) error {
 	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(ctx),

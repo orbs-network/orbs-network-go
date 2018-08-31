@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -10,6 +11,7 @@ import (
 
 func TestRunLocalMethodSuccess(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
@@ -21,12 +23,14 @@ func TestRunLocalMethodSuccess(t *testing.T) {
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
 	require.EqualValues(t, 12, refHeight)
 
+	h.verifySystemContractCalled(t)
 	h.verifyStateStorageBlockHeightRequested(t)
 	h.verifyNativeContractMethodCalled(t)
 }
 
 func TestRunLocalMethodContractError(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
@@ -38,12 +42,14 @@ func TestRunLocalMethodContractError(t *testing.T) {
 	require.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, result, "run local method should return contract error")
 	require.EqualValues(t, 12, refHeight)
 
+	h.verifySystemContractCalled(t)
 	h.verifyStateStorageBlockHeightRequested(t)
 	h.verifyNativeContractMethodCalled(t)
 }
 
 func TestRunLocalMethodUnexpectedError(t *testing.T) {
 	h := newHarness()
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, error) {
@@ -55,6 +61,7 @@ func TestRunLocalMethodUnexpectedError(t *testing.T) {
 	require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
 	require.EqualValues(t, 12, refHeight)
 
+	h.verifySystemContractCalled(t)
 	h.verifyStateStorageBlockHeightRequested(t)
 	h.verifyNativeContractMethodCalled(t)
 }
