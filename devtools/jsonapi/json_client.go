@@ -52,22 +52,24 @@ func ConvertTransaction(tx *Transaction) *protocol.TransactionBuilder {
 			Uint64Value: arg.Uint64Value,
 		})
 	}
+	inputArgumentArray := (&protocol.MethodArgumentArrayBuilder{Arguments: inputArguments}).Build()
 
 	return &protocol.TransactionBuilder{
-		ProtocolVersion: 1,
-		VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID, //TODO move to Transaction
-		ContractName:    primitives.ContractName(tx.ContractName),
-		MethodName:      primitives.MethodName(tx.MethodName),
-		Timestamp:       primitives.TimestampNano(time.Now().UnixNano()),
-		InputArguments:  inputArguments,
+		ProtocolVersion:    1,
+		VirtualChainId:     builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID, //TODO move to Transaction
+		ContractName:       primitives.ContractName(tx.ContractName),
+		MethodName:         primitives.MethodName(tx.MethodName),
+		Timestamp:          primitives.TimestampNano(time.Now().UnixNano()),
+		InputArgumentArray: inputArgumentArray.RawArgumentsArray(),
 	}
 
 }
 
 func ConvertSendTransactionOutput(sto *client.SendTransactionResponse) *SendTransactionOutput {
+	outputArgsIterator := builders.TransactionReceiptOutputArgumentsParse(sto.TransactionReceipt())
 	var outputArguments []MethodArgument
-	for iter := sto.TransactionReceipt().OutputArgumentsIterator(); iter.HasNext(); {
-		arg := iter.NextOutputArguments()
+	for iter := outputArgsIterator; iter.HasNext(); {
+		arg := iter.NextArguments()
 		methodArg := convertMethodArgument(arg)
 		outputArguments = append(outputArguments, methodArg)
 	}
@@ -85,9 +87,10 @@ func ConvertSendTransactionOutput(sto *client.SendTransactionResponse) *SendTran
 }
 
 func ConvertCallMethodOutput(cmo *client.CallMethodResponse) *CallMethodOutput {
+	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(cmo)
 	var outputArguments []MethodArgument
-	for iter := cmo.OutputArgumentsIterator(); iter.HasNext(); {
-		arg := iter.NextOutputArguments()
+	for iter := outputArgsIterator; iter.HasNext(); {
+		arg := iter.NextArguments()
 		methodArg := convertMethodArgument(arg)
 		outputArguments = append(outputArguments, methodArg)
 	}

@@ -51,24 +51,15 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	s.reporting.Info("enter CallMethod")
 	defer s.reporting.Info("exit CallMethod")
 	// TODO get block height for input ?
-	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
+	output, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: input.ClientRequest.Transaction(),
 	})
 	if err != nil {
 		return nil, err
 	}
-	var oa []*protocol.MethodArgumentBuilder
-	for _, arg := range rlm.OutputArguments {
-		switch arg.Type() {
-		case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
-			oa = []*protocol.MethodArgumentBuilder{
-				{Name: arg.Name(), Type: arg.Type(), Uint64Value: arg.Uint64Value()},
-			}
-		}
-	}
 	return &services.CallMethodOutput{
 		ClientResponse: (&client.CallMethodResponseBuilder{
-			OutputArguments: oa,
+			OutputArgumentArray: output.OutputArgumentArray,
 		}).Build(),
 	}, nil
 }

@@ -91,17 +91,17 @@ func (h *harness) handleSdkCallWithSystemPermissions(contextId primitives.Execut
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
+func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, error) {
 	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
-			Signer:         nil,
-			ContractName:   contractName,
-			MethodName:     methodName,
-			InputArguments: []*protocol.MethodArgumentBuilder{},
+			Signer:             nil,
+			ContractName:       contractName,
+			MethodName:         methodName,
+			InputArgumentArray: []byte{},
 		}).Build(),
 	})
-	return output.CallResult, output.ReferenceBlockHeight, err
+	return output.CallResult, output.OutputArgumentArray, output.ReferenceBlockHeight, err
 }
 
 type keyValuePair struct {
@@ -114,7 +114,7 @@ type contractAndMethod struct {
 	methodName   primitives.MethodName
 }
 
-func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
+func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
@@ -130,9 +130,12 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 	})
 
 	results := []protocol.ExecutionResult{}
+	outputArgsOfAllTransactions := [][]byte{}
 	for _, transactionReceipt := range output.TransactionReceipts {
 		result := transactionReceipt.ExecutionResult()
 		results = append(results, result)
+		outputArgs := transactionReceipt.OutputArgumentArray()
+		outputArgsOfAllTransactions = append(outputArgsOfAllTransactions, outputArgs)
 	}
 
 	for _, contractStateDiffs := range output.ContractStateDiffs {
@@ -146,7 +149,7 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 		}
 	}
 
-	return results, resultKeyValuePairsPerContract
+	return results, outputArgsOfAllTransactions, resultKeyValuePairsPerContract
 }
 
 func (h *harness) transactionSetPreOrder(signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {

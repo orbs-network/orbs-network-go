@@ -191,7 +191,8 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 		if err != nil {
 			panic(fmt.Sprintf("error in get balance: %v", err)) // TODO: improve
 		}
-		ch <- output.ClientResponse.OutputArgumentsIterator().NextOutputArguments().Uint64Value()
+		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(output.ClientResponse)
+		ch <- outputArgsIterator.NextArguments().Uint64Value()
 	}()
 	return ch
 }

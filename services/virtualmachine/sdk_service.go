@@ -37,7 +37,7 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 		ContextId:              context.contextId,
 		ContractName:           primitives.ContractName(serviceName),
 		MethodName:             primitives.MethodName(methodName),
-		InputArguments:         []*protocol.MethodArgument{}, // TODO: support args
+		InputArgumentArray:     (&protocol.MethodArgumentArrayBuilder{}).Build(), // TODO: support args
 		AccessScope:            context.accessScope,
 		CallingPermissionScope: permissionScope,
 		CallingService:         callingService,

@@ -62,15 +62,20 @@ func (s *service) callGetDeploymentInfoSystemContract(executionContext *executio
 	defer executionContext.serviceStackPop()
 
 	// execute the call
+	inputArgs := (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{
+				Name:        "serviceName",
+				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+				StringValue: string(serviceName),
+			},
+		},
+	}).Build()
 	output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
-		ContextId:    executionContext.contextId,
-		ContractName: systemContractName,
-		MethodName:   systemMethodName,
-		InputArguments: []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:        "serviceName",
-			Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-			StringValue: string(serviceName),
-		}).Build()},
+		ContextId:              executionContext.contextId,
+		ContractName:           systemContractName,
+		MethodName:             systemMethodName,
+		InputArgumentArray:     inputArgs,
 		AccessScope:            executionContext.accessScope,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         systemContractName,
@@ -79,10 +84,15 @@ func (s *service) callGetDeploymentInfoSystemContract(executionContext *executio
 	if err != nil {
 		return 0, err
 	}
-	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeUint32Value() {
+	outputArgsIterator := output.OutputArgumentArray.ArgumentsIterator()
+	if !outputArgsIterator.HasNext() {
 		return 0, errors.Errorf("_Deployments.getInfo contract returned corrupt output value")
 	}
-	return protocol.ProcessorType(output.OutputArguments[0].Uint32Value()), nil
+	outputArg0 := outputArgsIterator.NextArguments()
+	if !outputArg0.IsTypeUint32Value() {
+		return 0, errors.Errorf("_Deployments.getInfo contract returned corrupt output value")
+	}
+	return protocol.ProcessorType(outputArg0.Uint32Value()), nil
 }
 
 func (s *service) callDeployServiceSystemContract(executionContext *executionContext, serviceName primitives.ContractName) error {
@@ -94,27 +104,30 @@ func (s *service) callDeployServiceSystemContract(executionContext *executionCon
 	defer executionContext.serviceStackPop()
 
 	// execute the call
-	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
-		ContextId:    executionContext.contextId,
-		ContractName: systemContractName,
-		MethodName:   systemMethodName,
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
+	inputArgs := (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{
 				Name:        "serviceName",
 				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(serviceName),
-			}).Build(),
-			(&protocol.MethodArgumentBuilder{
+			},
+			{
 				Name:        "processorType",
 				Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE,
 				Uint32Value: uint32(protocol.PROCESSOR_TYPE_NATIVE),
-			}).Build(),
-			(&protocol.MethodArgumentBuilder{
+			},
+			{
 				Name:       "code",
 				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: []byte{},
-			}).Build(),
+			},
 		},
+	}).Build()
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+		ContextId:              executionContext.contextId,
+		ContractName:           systemContractName,
+		MethodName:             systemMethodName,
+		InputArgumentArray:     inputArgs,
 		AccessScope:            executionContext.accessScope,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         systemContractName,

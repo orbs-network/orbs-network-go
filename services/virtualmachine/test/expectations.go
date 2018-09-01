@@ -20,7 +20,7 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) expectNativeContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
+func (h *harness) expectNativeContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error)) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
@@ -30,15 +30,15 @@ func (h *harness) expectNativeContractMethodCalled(expectedContractName primitiv
 	}
 
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are service", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-		callResult, err := contractFunction(input.ContextId)
+		callResult, outputArgsArray, err := contractFunction(input.ContextId)
 		return &services.ProcessCallOutput{
-			OutputArguments: []*protocol.MethodArgument{},
-			CallResult:      callResult,
+			OutputArgumentArray: outputArgsArray,
+			CallResult:          callResult,
 		}, err
 	}).Times(1)
 }
 
-func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, error)) {
+func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error)) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
@@ -48,10 +48,10 @@ func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expected
 	}
 
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are system", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-		callResult, err := contractFunction(input.ContextId)
+		callResult, outputArgsArray, err := contractFunction(input.ContextId)
 		return &services.ProcessCallOutput{
-			OutputArguments: []*protocol.MethodArgument{},
-			CallResult:      callResult,
+			OutputArgumentArray: outputArgsArray,
+			CallResult:          callResult,
 		}, err
 	}).Times(1)
 }
@@ -85,8 +85,8 @@ func (h *harness) expectSystemContractCalled(expectedContractName primitives.Con
 		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
 	}
 	outputToReturn := &services.ProcessCallOutput{
-		OutputArguments: builders.MethodArguments(returnArgs...),
-		CallResult:      callResult,
+		OutputArgumentArray: builders.MethodArgumentsArray(returnArgs...),
+		CallResult:          callResult,
 	}
 
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(outputToReturn, returnError).AtLeast(1)

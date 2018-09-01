@@ -38,3 +38,8 @@ func (r *receipt) WithRandomHash() *receipt {
 	rand.Read(r.builder.Txhash)
 	return r
 }
+
+func TransactionReceiptOutputArgumentsParse(r *protocol.TransactionReceipt) *protocol.MethodArgumentArrayArgumentsIterator {
+	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
+	return argsArray.ArgumentsIterator()
+}

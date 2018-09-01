@@ -49,7 +49,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 	if err != nil {
 		return &services.RunLocalMethodOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
-			OutputArguments:         []*protocol.MethodArgument{},
+			OutputArgumentArray:     []byte{},
 			ReferenceBlockHeight:    blockHeight,
 			ReferenceBlockTimestamp: blockTimestamp,
 		}, err
@@ -57,10 +57,13 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 
 	s.reporting.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
 	callResult, outputArgs, err := s.runMethod(blockHeight, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	if outputArgs == nil {
+		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+	}
 
 	return &services.RunLocalMethodOutput{
 		CallResult:              callResult,
-		OutputArguments:         outputArgs,
+		OutputArgumentArray:     outputArgs.RawArgumentsArray(),
 		ReferenceBlockHeight:    blockHeight,
 		ReferenceBlockTimestamp: blockTimestamp,
 	}, err

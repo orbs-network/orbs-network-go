@@ -39,8 +39,8 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	if s.contractRepository == nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, errors.New("contractRepository is not initialized")
 	}
 
@@ -48,8 +48,8 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	contractInfo, methodInfo, err := s.getContractAndMethodFromRepository(input.ContractName, input.MethodName)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
 
@@ -57,18 +57,21 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	err = s.verifyMethodPermissions(contractInfo, methodInfo, input.CallingService, input.CallingPermissionScope, input.AccessScope)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
 
 	// execute
 	ctx := types.Context(input.ContextId)
-	outputArgs, contractErr, err := s.processMethodCall(ctx, contractInfo, methodInfo, input.InputArguments)
+	outputArgs, contractErr, err := s.processMethodCall(ctx, contractInfo, methodInfo, input.InputArgumentArray)
+	if outputArgs == nil {
+		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+	}
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: outputArgs,
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
 
@@ -78,8 +81,8 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
 	}
 	return &services.ProcessCallOutput{
-		OutputArguments: outputArgs,
-		CallResult:      callResult,
+		OutputArgumentArray: outputArgs,
+		CallResult:          callResult,
 	}, contractErr
 }
 

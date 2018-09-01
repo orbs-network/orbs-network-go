@@ -13,7 +13,7 @@ func (s *service) runMethod(
 	transaction *protocol.Transaction,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
-) (protocol.ExecutionResult, []*protocol.MethodArgument, error) {
+) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 
 	// create execution context
 	contextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, accessScope)
@@ -32,16 +32,12 @@ func (s *service) runMethod(
 	executionContext.batchTransientState = batchTransientState
 
 	// execute the call
-	// TODO: might need to change protos to avoid this copy
-	args := []*protocol.MethodArgument{}
-	for i := transaction.InputArgumentsIterator(); i.HasNext(); {
-		args = append(args, i.NextInputArguments())
-	}
+	inputArgs := protocol.MethodArgumentArrayReader(transaction.RawInputArgumentArrayWithHeader())
 	output, err := processor.ProcessCall(&services.ProcessCallInput{
 		ContextId:              contextId,
 		ContractName:           transaction.ContractName(),
 		MethodName:             transaction.MethodName(),
-		InputArguments:         args,
+		InputArgumentArray:     inputArgs,
 		AccessScope:            accessScope,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         transaction.ContractName(),
@@ -55,7 +51,7 @@ func (s *service) runMethod(
 		executionContext.transientState.mergeIntoTransientState(batchTransientState)
 	}
 
-	return output.CallResult, output.OutputArguments, err
+	return output.CallResult, output.OutputArgumentArray, err
 }
 
 func (s *service) processTransactionSet(
@@ -73,6 +69,9 @@ func (s *service) processTransactionSet(
 
 		s.reporting.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(blockHeight))
 		callResult, outputArgs, _ := s.runMethod(blockHeight, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
+		if outputArgs == nil {
+			outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+		}
 
 		receipt := s.encodeTransactionReceipt(signedTransaction.Transaction(), callResult, outputArgs)
 		receipts = append(receipts, receipt)
@@ -90,31 +89,11 @@ func (s *service) getRecentBlockHeight() (primitives.BlockHeight, primitives.Tim
 	return output.LastCommittedBlockHeight, output.LastCommittedBlockTimestamp, nil
 }
 
-func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs []*protocol.MethodArgument) *protocol.TransactionReceipt {
-	// TODO: might need to change protos to avoid this copy
-	outputArgsBuilders := []*protocol.MethodArgumentBuilder{}
-	for _, outputArg := range outputArgs {
-		outputArgsBuilder := &protocol.MethodArgumentBuilder{
-			Name: outputArg.Name(),
-			Type: outputArg.Type(),
-		}
-		switch outputArg.Type() {
-		case protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE:
-			outputArgsBuilder.Uint32Value = outputArg.Uint32Value()
-		case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
-			outputArgsBuilder.Uint64Value = outputArg.Uint64Value()
-		case protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE:
-			outputArgsBuilder.StringValue = outputArg.StringValue()
-		case protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE:
-			outputArgsBuilder.BytesValue = outputArg.BytesValue()
-		}
-		outputArgsBuilders = append(outputArgsBuilders, outputArgsBuilder)
-	}
-
+func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.MethodArgumentArray) *protocol.TransactionReceipt {
 	return (&protocol.TransactionReceiptBuilder{
-		Txhash:          digest.CalcTxHash(transaction),
-		ExecutionResult: result,
-		OutputArguments: outputArgsBuilders,
+		Txhash:              digest.CalcTxHash(transaction),
+		ExecutionResult:     result,
+		OutputArgumentArray: outputArgs.RawArgumentsArray(),
 	}).Build()
 }
 

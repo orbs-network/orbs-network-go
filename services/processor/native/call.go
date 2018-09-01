@@ -59,7 +59,7 @@ func (s *service) verifyInternalMethodCall(contractInfo *types.ContractInfo, met
 	return errors.Errorf("internal method '%s' called from different service '%s' without system permissions", methodInfo.Name, callingService)
 }
 
-func (s *service) processMethodCall(ctx types.Context, contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args []*protocol.MethodArgument) (contractOutputArgs []*protocol.MethodArgument, contractOutputErr error, err error) {
+func (s *service) processMethodCall(ctx types.Context, contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("call method '%s' panicked: %v", methodInfo.Name, r)
@@ -83,7 +83,7 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	}
 
 	// create output args
-	contractOutputArgs = []*protocol.MethodArgument{}
+	contractOutputArgs = nil
 	if len(outValues) > 1 {
 		contractOutputArgs, err = s.createMethodOutputArgs(methodInfo, outValues[:len(outValues)-1])
 		if err != nil {
@@ -96,7 +96,7 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *types.MethodInfo, implementation interface{}, args []*protocol.MethodArgument) ([]reflect.Value, error) {
+func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *types.MethodInfo, implementation interface{}, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
 	const NUM_ARGS_RECEIVER_AND_CONTEXT = 2
 
 	res := []reflect.Value{}
@@ -105,63 +105,78 @@ func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *t
 		return nil, errors.Errorf("method '%s' first arg is not Context", methodInfo.Name)
 	}
 
-	if methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT != len(args) {
-		return nil, errors.Errorf("method '%s' takes %d args but received %d", methodInfo.Name, methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT, len(args))
-	}
-
+	var arg *protocol.MethodArgument
+	argsIterator := args.ArgumentsIterator()
 	for i := 0; i < methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT; i++ {
+
+		// get the next arg from the transaction
+		if argsIterator.HasNext() {
+			arg = argsIterator.NextArguments()
+		} else {
+			return nil, errors.Errorf("method '%s' takes %d args but received %d", methodInfo.Name, methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT, i)
+		}
+
+		// translate argument type
 		switch methodType.In(i + NUM_ARGS_RECEIVER_AND_CONTEXT).Kind() {
 		case reflect.Uint32:
-			if !args[i].IsTypeUint32Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, args[i].Type())
+			if !arg.IsTypeUint32Value() {
+				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, arg.Type())
 			}
-			res = append(res, reflect.ValueOf(args[i].Uint32Value()))
+			res = append(res, reflect.ValueOf(arg.Uint32Value()))
 		case reflect.Uint64:
-			if !args[i].IsTypeUint64Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i, args[i].Type())
+			if !arg.IsTypeUint64Value() {
+				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i, arg.Type())
 			}
-			res = append(res, reflect.ValueOf(args[i].Uint64Value()))
+			res = append(res, reflect.ValueOf(arg.Uint64Value()))
 		case reflect.String:
-			if !args[i].IsTypeStringValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i, args[i].Type())
+			if !arg.IsTypeStringValue() {
+				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i, arg.Type())
 			}
-			res = append(res, reflect.ValueOf(args[i].StringValue()))
+			res = append(res, reflect.ValueOf(arg.StringValue()))
 		case reflect.Slice:
 			if methodType.In(i+NUM_ARGS_RECEIVER_AND_CONTEXT).Elem().Kind() != reflect.Uint8 {
 				return nil, errors.Errorf("method '%s' arg %d slice type is not byte", methodInfo.Name, i)
 			}
-			if !args[i].IsTypeBytesValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i, args[i].Type())
+			if !arg.IsTypeBytesValue() {
+				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i, arg.Type())
 			}
-			res = append(res, reflect.ValueOf(args[i].BytesValue()))
+			res = append(res, reflect.ValueOf(arg.BytesValue()))
 		default:
-			return nil, errors.Errorf("method '%s' expects arg %d to be unknown type", methodInfo.Name, i, args[i].Type())
+			return nil, errors.Errorf("method '%s' expects arg %d to be unknown type", methodInfo.Name, i, arg.Type())
 		}
+
+	}
+
+	// make sure transaction doesn't have any more args left
+	if argsIterator.HasNext() {
+		return nil, errors.Errorf("method '%s' takes %d args but received more", methodInfo.Name, methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT)
 	}
 
 	return res, nil
 }
 
-func (s *service) createMethodOutputArgs(methodInfo *types.MethodInfo, args []reflect.Value) ([]*protocol.MethodArgument, error) {
-	res := []*protocol.MethodArgument{}
+func (s *service) createMethodOutputArgs(methodInfo *types.MethodInfo, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
+	res := []*protocol.MethodArgumentBuilder{}
 	for i, arg := range args {
 		switch arg.Kind() {
 		case reflect.Uint32:
-			res = append(res, (&protocol.MethodArgumentBuilder{Name: "uint32", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.Interface().(uint32)}).Build())
+			res = append(res, &protocol.MethodArgumentBuilder{Name: "uint32", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.Interface().(uint32)})
 		case reflect.Uint64:
-			res = append(res, (&protocol.MethodArgumentBuilder{Name: "uint64", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.Interface().(uint64)}).Build())
+			res = append(res, &protocol.MethodArgumentBuilder{Name: "uint64", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.Interface().(uint64)})
 		case reflect.String:
-			res = append(res, (&protocol.MethodArgumentBuilder{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Interface().(string)}).Build())
+			res = append(res, &protocol.MethodArgumentBuilder{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Interface().(string)})
 		case reflect.Slice:
 			if arg.Type().Elem().Kind() != reflect.Uint8 {
 				return nil, errors.Errorf("call method '%s' output arg %d slice type is not byte", methodInfo.Name, i)
 			}
-			res = append(res, (&protocol.MethodArgumentBuilder{Name: "bytes", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.Interface().([]byte)}).Build())
+			res = append(res, &protocol.MethodArgumentBuilder{Name: "bytes", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.Interface().([]byte)})
 		default:
 			return nil, errors.Errorf("call method '%s' output arg %d is of unknown type", methodInfo.Name, i)
 		}
 	}
-	return res, nil
+	return (&protocol.MethodArgumentArrayBuilder{
+		Arguments: res,
+	}).Build(), nil
 }
 
 func (s *service) createContractOutputError(methodInfo *types.MethodInfo, value reflect.Value) (outErr error, err error) {

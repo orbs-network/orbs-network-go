@@ -24,7 +24,7 @@ func (s *service) callGlobalPreOrderSystemContract(blockHeight primitives.BlockH
 		ContextId:              contextId,
 		ContractName:           systemContractName,
 		MethodName:             systemMethodName,
-		InputArguments:         []*protocol.MethodArgument{},
+		InputArgumentArray:     (&protocol.MethodArgumentArrayBuilder{}).Build(),
 		AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         systemContractName,

@@ -19,7 +19,7 @@ func processCallInput() *processCall {
 			ContextId:              0,
 			ContractName:           "BenchmarkContract",
 			MethodName:             "add",
-			InputArguments:         []*protocol.MethodArgument{},
+			InputArgumentArray:     (&protocol.MethodArgumentArrayBuilder{}).Build(),
 			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 			CallingService:         "",
@@ -93,7 +93,7 @@ func (p *processCall) WithWriteAccess() *processCall {
 }
 
 func (p *processCall) WithArgs(args ...interface{}) *processCall {
-	p.input.InputArguments = builders.MethodArguments(args...)
+	p.input.InputArgumentArray = builders.MethodArgumentsArray(args...)
 	return p
 }
 
