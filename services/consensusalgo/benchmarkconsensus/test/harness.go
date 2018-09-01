@@ -107,8 +107,9 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) handleBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommitted *protocol.BlockPairContainer) error {
+func (h *harness) handleBlockConsensus(mode handlers.HandleBlockConsensusMode, blockPair *protocol.BlockPairContainer, prevCommitted *protocol.BlockPairContainer) error {
 	_, err := h.service.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+		Mode:                   mode,
 		BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 		BlockPair:              blockPair,
 		PrevCommittedBlockPair: prevCommitted,
