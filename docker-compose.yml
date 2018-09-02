@@ -12,8 +12,12 @@ services:
       NODE_PRIVATE_KEY: 93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173
       CONSENSUS_LEADER: dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173
       FEDERATION_NODES: dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173,92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152,a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0
+      SILENT: 'true'
+      LOG_PATH: /opt/orbs/logs/node1.log
     ports:
       - 8080:8080
+    volumes:
+      - ./logs/:/opt/orbs/logs
     networks:
       orbs-network:
         ipv4_address: 192.168.199.2
@@ -29,8 +33,12 @@ services:
       NODE_PRIVATE_KEY: 3b24b5f9e6b1371c3b5de2e402a96930eeafe52111bb4a1b003e5ecad3fab53892d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152
       CONSENSUS_LEADER: dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173
       FEDERATION_NODES: dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173,92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152,a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0
+      SILENT: 'true'
+      LOG_PATH: /opt/orbs/logs/node2.log
     ports:
       - 8081:8080
+    volumes:
+      - ./logs/:/opt/orbs/logs
     networks:
       orbs-network:
         ipv4_address: 192.168.199.3
@@ -46,8 +54,12 @@ services:
       NODE_PRIVATE_KEY: 2c72df84be2b994c32a3f4ded0eab901debd3f3e13721a59eed00fbd1da4cc00a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0
       CONSENSUS_LEADER: dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173
       FEDERATION_NODES: dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173,92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152,a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0
+      SILENT: 'true'
+      LOG_PATH: /opt/orbs/logs/node3.log
     ports:
       - 8082:8080
+    volumes:
+      - ./logs/:/opt/orbs/logs
     networks:
       orbs-network:
         ipv4_address: 192.168.199.4

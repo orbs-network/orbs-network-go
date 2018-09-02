@@ -1,7 +1,7 @@
 FROM busybox
 
-ADD ./main /opt/orbs/
+ADD ./orbs-node ./orbs-json-client /opt/orbs/
 
 WORKDIR /opt/orbs
 
-CMD ./main
+CMD ./orbs-node

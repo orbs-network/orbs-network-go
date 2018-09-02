@@ -1,6 +1,7 @@
 FROM busybox
 
 ADD ./e2e.test /opt/orbs/
+ADD ./orbs-json-client /opt/orbs/
 
 WORKDIR /opt/orbs
 

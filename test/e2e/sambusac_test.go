@@ -1,35 +1,67 @@
 package e2e
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"testing"
+	"time"
+
 	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
-//TODO: 2. create runnable in json api: orbs-json-client [--send-transaction | --call-method]=<json> --public-key=<pubkey> --private-key=<privkey> --server-url=<http://....>
-//TODO: 3. this test should use aforementioned runnable, sending the jsons as strings
-//TODO: 4. move startSambusac into its own runnable main, taking --port=8080 argument
-//TODO: 5. the sambusac server itself should run inside a docker container, as another runnable
-func TestSambusacFlow(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping e2e tests in short mode")
+type sendTransactionCliResponse struct {
+	TxHash          string
+	ExecutionResult int
+	OutputArguments []string
+}
+
+type OutputArgumentCliResponse struct {
+	Name        string
+	Type        int
+	Uint32Value int32
+	Uint64Value int64
+	StringValue string
+	BytesValue  []byte
+}
+
+type callMethodCliResponse struct {
+	OutputArguments []OutputArgumentCliResponse
+	CallResult      int
+	BlockHeight     int
+	BlockTimestamp  int
+}
+
+func ClientBinary() []string {
+	ciBinaryPath := "/opt/orbs/orbs-json-client"
+	if _, err := os.Stat(ciBinaryPath); err == nil {
+		return []string{ciBinaryPath}
 	}
-	port := ":8765"
-	serverUrl := fmt.Sprintf("http://127.0.0.1%s", port)
 
-	pathToContracts := "." //TODO compile contract(s) to SO, path points to dir containing them
-	sambusac := jsonapi.StartSambusac(port, pathToContracts, false)
-	defer sambusac.GracefulShutdown(1 * time.Second)
+	return []string{"go", "run", "../../devtools/jsonapi/main/main.go"}
+}
 
-	time.Sleep(100 * time.Millisecond) // wait for server to start
+func runCommand(command []string, t *testing.T) (output string) {
+	cmd := exec.Command(command[0], command[1:]...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
 
-	keyPair := keys.Ed25519KeyPairForTests(7)
+	require.NoError(t, err, "error calling send_transfer")
 
-	transferJson := &jsonapi.Transaction{
+	output = out.String()
+	fmt.Println(output)
+
+	return output
+}
+
+func generateTransferJSON() string {
+	transferJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "transfer",
 		Arguments: []jsonapi.MethodArgument{
@@ -37,20 +69,61 @@ func TestSambusacFlow(t *testing.T) {
 		},
 	}
 
-	sendTransactionOutput, err := jsonapi.SendTransaction(transferJson, keyPair, serverUrl)
-	require.NoError(t, err, "error calling send_transfer")
-	require.NotNil(t, sendTransactionOutput.TransactionReceipt.Txhash, "got empty txhash")
+	jsonBytes, _ := json.Marshal(&transferJSON)
+	return string(jsonBytes)
+}
 
-	time.Sleep(500 * time.Millisecond) //TODO remove when public api blocks on tx
-
-	getBalanceJson := &jsonapi.Transaction{
+func generateGetBalanceJSON() string {
+	getBalanceJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "getBalance",
 	}
 
-	callMethodOutput, err := jsonapi.CallMethod(getBalanceJson, serverUrl)
-	require.NoError(t, err, "error calling call_method")
+	callJSONBytes, _ := json.Marshal(&getBalanceJSON)
+	return string(callJSONBytes)
+}
 
-	require.Len(t, callMethodOutput.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
-	require.EqualValues(t, 42, callMethodOutput.OutputArguments[0].Uint64Value, "expected balance to equal 42")
+func TestSambusacFlow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping e2e tests in short mode")
+	}
+
+	port := ":8080"
+	pathToContracts := "." //TODO compile contract(s) to SO, path points to dir containing them
+	sambusac := jsonapi.StartSambusac(port, pathToContracts, false)
+	defer sambusac.GracefulShutdown(1 * time.Second)
+
+	time.Sleep(100 * time.Millisecond) // wait for server to start
+
+	keyPair := keys.Ed25519KeyPairForTests(0)
+
+	baseCommand := ClientBinary()
+	sendCommand := append(baseCommand,
+		"-send-transaction", generateTransferJSON(),
+		"-public-key", keyPair.PublicKey().String(),
+		"-private-key", keyPair.PrivateKey().String())
+
+	sendCommandOutput := runCommand(sendCommand, t)
+
+	response := &sendTransactionCliResponse{}
+	unmarshallErr := json.Unmarshal([]byte(sendCommandOutput), &response)
+
+	require.NoError(t, unmarshallErr, "error unmarshall cli response")
+	require.Equal(t, response.ExecutionResult, 0, "Transaction status to be successful = 0")
+	require.NotNil(t, response.TxHash, "got empty txhash")
+
+	time.Sleep(500 * time.Millisecond) //TODO remove when public api blocks on tx
+
+	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON())
+
+	callOutputAsString := runCommand(getCommand, t)
+	fmt.Println(callOutputAsString)
+
+	callResponse := &callMethodCliResponse{}
+	callUnmarshallErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
+
+	require.NoError(t, callUnmarshallErr, "error calling call_method")
+	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
+	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
+	require.EqualValues(t, 42, callResponse.OutputArguments[0].Uint64Value, "expected balance to equal 42")
 }
