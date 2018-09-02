@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -8,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
-	"sync"
 	"time"
 )
 
@@ -17,17 +17,24 @@ type Config interface {
 	GetTransactionStatusGrace() time.Duration
 }
 
+type txWaiterMessage struct {
+	txId    string
+	c       chan *services.AddNewTransactionOutput
+	output  *services.AddNewTransactionOutput
+	cleanup bool
+}
+
 type service struct {
 	config          Config
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	reporting       log.BasicLogger
 
-	mutex  sync.RWMutex
-	txChan map[string]chan *services.AddNewTransactionOutput
+	txWaiter *waiter
 }
 
 func NewPublicApi(
+	ctx context.Context,
 	config Config,
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
@@ -39,8 +46,7 @@ func NewPublicApi(
 		virtualMachine:  virtualMachine,
 		reporting:       reporting.For(log.Service("public-api")),
 
-		mutex:  sync.RWMutex{},
-		txChan: map[string]chan *services.AddNewTransactionOutput{},
+		txWaiter: newWaiter(ctx),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(me)
@@ -48,24 +54,18 @@ func NewPublicApi(
 	return me
 }
 
+func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
+	return s.txWaiter.HandleTransactionResults(input) //TODO replace this delegation with a dependency. see https://github.com/orbs-network/orbs-spec/issues/80
+}
+
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
 	s.reporting.Info("enter SendTransaction")
 	defer s.reporting.Info("exit SendTransaction")
 
 	tx := input.ClientRequest.SignedTransaction()
-	txId := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
-	receiptChannel := make(chan *services.AddNewTransactionOutput)
+	txHash := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
 
-	s.mutex.Lock()
-	s.txChan[txId.KeyForMap()] = receiptChannel
-	s.mutex.Unlock()
-	defer func() {
-		s.mutex.Lock()
-		delete(s.txChan, txId.KeyForMap())
-		s.mutex.Unlock()
-		close(receiptChannel)
-	}()
-
+	// TODO if callback from txPool returns before call to wait() below we may lose the notification and timeout
 	txResponse, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
 		SignedTransaction: tx,
 	})
@@ -77,14 +77,10 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 		return prepareResponse(txResponse), nil
 	}
 
-	timer := time.NewTimer(s.config.SendTransactionTimeout())
-	defer timer.Stop()
-
-	var ta *services.AddNewTransactionOutput
-	select {
-	case <-timer.C:
-		return nil, errors.Errorf("timed out waiting for transaction result")
-	case ta = <-receiptChannel:
+	ta, err := s.txWaiter.wait(txHash, s.config.SendTransactionTimeout())
+	// TODO return pending response on timeout error
+	if err != nil {
+		return nil, err
 	}
 	return prepareResponse(ta), nil
 }
@@ -94,6 +90,7 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 
 	if receipt := transactionOutput.TransactionReceipt; receipt != nil {
 		mabs := make([]*protocol.MethodArgumentBuilder, 0, 1)
+		// TODO replace with Tals implementation
 		oai := receipt.OutputArgumentsIterator()
 		for oai.HasNext() {
 			ma := oai.NextOutputArguments()
@@ -115,9 +112,9 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 
 	response := &client.SendTransactionResponseBuilder{
 		TransactionReceipt: receiptForClient,
-		TransactionStatus: transactionOutput.TransactionStatus,
-		BlockHeight:       transactionOutput.BlockHeight,
-		BlockTimestamp:    transactionOutput.BlockTimestamp,
+		TransactionStatus:  transactionOutput.TransactionStatus,
+		BlockHeight:        transactionOutput.BlockHeight,
+		BlockTimestamp:     transactionOutput.BlockTimestamp,
 	}
 
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}
@@ -151,24 +148,4 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 
 func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
 	panic("Not implemented")
-}
-
-func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	for _, txReceipt := range input.TransactionReceipts {
-		if txChan, exists := s.txChan[txReceipt.Txhash().KeyForMap()]; exists {
-			select {
-				case txChan <- &services.AddNewTransactionOutput{
-					TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-					TransactionReceipt: txReceipt,
-					BlockHeight:        input.BlockHeight,
-					BlockTimestamp:     input.Timestamp,
-				} :
-				default:
-			}
-		}
-		// if we have no one to wait we just ignore this receipt ... can be accessed via getstatus
-	}
-	return &handlers.HandleTransactionResultsOutput{}, nil
 }
