@@ -17,20 +17,13 @@ type Config interface {
 	GetTransactionStatusGrace() time.Duration
 }
 
-type txWaiterMessage struct {
-	txId    string
-	c       chan *services.AddNewTransactionOutput
-	output  *services.AddNewTransactionOutput
-	cleanup bool
-}
-
 type service struct {
 	config          Config
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	reporting       log.BasicLogger
 
-	txWaiter *waiter
+	txWaiter *txWaiter
 }
 
 func NewPublicApi(
@@ -55,7 +48,10 @@ func NewPublicApi(
 }
 
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
-	return s.txWaiter.HandleTransactionResults(input) //TODO replace this delegation with a dependency. see https://github.com/orbs-network/orbs-spec/issues/80
+	for _, txReceipt := range input.TransactionReceipts {
+		s.txWaiter.reportCompleted(txReceipt, input.BlockHeight, input.Timestamp)
+	}
+	return &handlers.HandleTransactionResultsOutput{}, nil
 }
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
@@ -65,7 +61,9 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	tx := input.ClientRequest.SignedTransaction()
 	txHash := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
 
-	// TODO if callback from txPool returns before call to wait() below we may lose the notification and timeout
+	wait := s.txWaiter.prepareFor(txHash)
+	defer wait.cleanup()
+
 	txResponse, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
 		SignedTransaction: tx,
 	})
@@ -77,7 +75,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 		return prepareResponse(txResponse), nil
 	}
 
-	ta, err := s.txWaiter.wait(txHash, s.config.SendTransactionTimeout())
+	ta, err := wait.until(s.config.SendTransactionTimeout())
 	// TODO return pending response on timeout error
 	if err != nil {
 		return nil, err

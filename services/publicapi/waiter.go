@@ -5,38 +5,64 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
 )
 
-func newWaiter(ctx context.Context) *waiter {
+type txWaiter struct {
+	queue   chan txWaiterMessage
+	stopped chan struct{}
+}
+
+type txWaitContext struct {
+	c      txResultChan
+	txHash primitives.Sha256
+	waiter *txWaiter
+}
+
+type txResultChan chan *services.AddNewTransactionOutput
+
+type txWaiterMessage struct {
+	txId    string
+	c       txResultChan
+	output  *services.AddNewTransactionOutput
+	cleanup bool
+}
+
+func newWaiter(ctx context.Context) *txWaiter {
 	// TODO supervise
-	result := &waiter{c: make(chan txWaiterMessage)}
+	result := &txWaiter{queue: make(chan txWaiterMessage)}
 	result.startReceiptHandler(ctx)
 	return result
 }
 
-func (w *waiter) startReceiptHandler(ctx context.Context) chan struct{} {
-	stopped := make(chan struct{})
+func (w *txWaiter) startReceiptHandler(ctx context.Context) {
+	w.stopped = make(chan struct{})
 	go func(ctx context.Context) {
-		txChan := map[string]chan *services.AddNewTransactionOutput{}
+		txChan := map[string]txResultChan{}
 		for {
 			select {
-			case message := <-w.c:
+			case message := <-w.queue:
 				outputChan, _ := txChan[message.txId]
-				if message.c != nil && outputChan == nil { // first request
+				if message.c != nil && outputChan == nil && !message.cleanup { // first request
 					txChan[message.txId] = message.c
 				}
-				// TODO - handle the case of a second request for the same transaction while someone else is already waiting
-				if message.output != nil && outputChan != nil { // send output and cleanup
-					select {
-					case outputChan <- message.output:
-					default:
-					}
+				if message.c != nil && outputChan != nil && !message.cleanup { // second request
 					close(outputChan)
 					outputChan = nil
-					delete(txChan, message.txId)
+					txChan[message.txId] = message.c
+				}
+				if message.output != nil && outputChan != nil && !message.cleanup { // send output and cleanup
+					select {
+					case outputChan <- message.output:
+						close(outputChan)
+						outputChan = nil
+						delete(txChan, message.txId)
+					default:
+						go func() {
+							w.queue <- message
+						}()
+					}
 				}
 				if message.cleanup && message.c == outputChan && outputChan != nil { // cleanup
 					close(outputChan)
@@ -45,59 +71,64 @@ func (w *waiter) startReceiptHandler(ctx context.Context) chan struct{} {
 				}
 
 			case <-ctx.Done():
-				close(stopped)
+				close(w.stopped)
 				return
 			}
 		}
 	}(ctx)
-	return stopped
 }
 
-type waiter struct {
-	c chan txWaiterMessage
-}
-
-func (w *waiter) wait(txHash primitives.Sha256, timeout time.Duration) (*services.AddNewTransactionOutput, error) {
-	receiptChannel := make(chan *services.AddNewTransactionOutput)
-
-	w.c <- txWaiterMessage{
+func (w *txWaiter) startWaiting(txHash primitives.Sha256, c txResultChan) {
+	w.queue <- txWaiterMessage{
 		txId: txHash.KeyForMap(),
-		c:    receiptChannel,
+		c:    c,
 	}
-	defer func() {
-		w.c <- txWaiterMessage{
-			txId:    txHash.KeyForMap(),
-			c:       receiptChannel,
-			cleanup: true,
-		}
-	}()
+}
+
+func (w *txWaiter) forget(txHash primitives.Sha256, c txResultChan) {
+	w.queue <- txWaiterMessage{
+		txId:    txHash.KeyForMap(),
+		c:       c,
+		cleanup: true,
+	}
+}
+
+func (w *txWaiter) reportCompleted(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, timestampNano primitives.TimestampNano) {
+	w.queue <- txWaiterMessage{
+		txId: receipt.Txhash().KeyForMap(),
+		output: &services.AddNewTransactionOutput{
+			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+			TransactionReceipt: receipt,
+			BlockHeight:        blockHeight,
+			BlockTimestamp:     timestampNano,
+		},
+	}
+}
+
+func (w *txWaiter) prepareFor(txHash primitives.Sha256) *txWaitContext {
+	receiptChannel := make(txResultChan)
+
+	w.startWaiting(txHash, receiptChannel)
+
+	return &txWaitContext{c: receiptChannel, txHash: txHash, waiter: w}
+}
+
+func (w *txWaitContext) until(timeout time.Duration) (*services.AddNewTransactionOutput, error) {
 
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 
-	var ta *services.AddNewTransactionOutput
 	select {
 	case <-timer.C:
 		return nil, errors.Errorf("timed out waiting for transaction result")
-	case ta = <-receiptChannel:
+	case ta, open := <-w.c:
+		if !open {
+			return nil, errors.Errorf("waiting aborted")
+		}
 		return ta, nil
 	}
 }
-func (w *waiter) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
-	for _, txReceipt := range input.TransactionReceipts {
-		select {
-		case w.c <- txWaiterMessage{
-			txId: txReceipt.Txhash().KeyForMap(),
-			output: &services.AddNewTransactionOutput{
-				TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-				TransactionReceipt: txReceipt,
-				BlockHeight:        input.BlockHeight,
-				BlockTimestamp:     input.Timestamp,
-			},
-		}:
-		default:
-		}
-		// if we have no one to wait we just ignore this receipt ... can be accessed via getstatus
-	}
-	return &handlers.HandleTransactionResultsOutput{}, nil
+
+func (w *txWaitContext) cleanup() {
+	w.waiter.forget(w.txHash, w.c)
 }
