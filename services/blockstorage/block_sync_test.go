@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -72,6 +73,24 @@ func TestIdleIgnoresInvalidEvents(t *testing.T) {
 
 	event := collectingAvailabilityFinishedEvent{}
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState)
+	require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
+
+	harness.verifyMocks(t)
+}
+
+func TestStartSyncGossipFailure(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	event := startSyncEvent{}
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+	harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
+	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
 	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
 

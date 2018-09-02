@@ -149,13 +149,12 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 
 		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
 
-		availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
-
 		err := b.petitionerBroadcastBlockAvailabilityRequest()
 
 		if err != nil {
-			b.reporting.Info("failed to broadcast block availability request")
+			b.reporting.Info("failed to broadcast block availability request", log.Error(err))
 		} else {
+			availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
 			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
 			periodicalBlockRequest.Reset()
 		}
