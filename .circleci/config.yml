@@ -10,6 +10,8 @@ jobs:
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker-tag.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
+      - store_artifacts:
+          path: logs
 
 workflows:
   version: 2
