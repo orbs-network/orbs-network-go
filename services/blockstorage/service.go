@@ -252,10 +252,10 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 
 	// update the consensus algo about the latest block we have (for its initialization)
 	// TODO: should this be under mutex since it reads s.lastCommittedBlock
-	s.UpdateConsensusAlgo()
+	s.UpdateConsensusAlgosAboutLatestCommittedBlock()
 }
 
-func (s *service) UpdateConsensusAlgo() {
+func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock() {
 	s.lastBlockLock.Lock()
 	defer s.lastBlockLock.Unlock()
 

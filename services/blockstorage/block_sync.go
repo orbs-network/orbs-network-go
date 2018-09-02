@@ -28,7 +28,7 @@ type BlockSyncStorage interface {
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
-	UpdateConsensusAlgo()
+	UpdateConsensusAlgosAboutLatestCommittedBlock()
 }
 
 type BlockSync struct {
@@ -81,7 +81,7 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 			syncTrigger.Stop()
 			syncTrigger.Reset(b.config.BlockSyncInterval())
 
-			b.storage.UpdateConsensusAlgo()
+			b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
 
 			blockAvailabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
 
@@ -136,6 +136,27 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	}
 }
 
+func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+	switch currentState {
+	case BLOCK_SYNC_STATE_START_SYNC:
+		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
+
+		blockAvailabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
+
+		err := b.petitionerBroadcastBlockAvailabilityRequest()
+
+		if err != nil {
+			b.reporting.Info("failed to broadcast block availability request")
+		} else {
+			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
+
+			//requestBlocksTrigger.Reset(b.config.BlockSyncCollectResponseTimeout())
+		}
+	}
+
+	return currentState, blockAvailabilityResponses
+}
+
 func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}, blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
 	switch event.(type) {
 	case *gossipmessages.BlockAvailabilityRequestMessage:
@@ -175,7 +196,7 @@ func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}, block
 func (b *BlockSync) petitionerBroadcastBlockAvailabilityRequest() error {
 	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := b.storage.LastCommittedBlockHeight() + primitives.BlockHeight(b.config.BlockSyncBatchSize())
+	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize())
 
 	b.reporting.Info("broadcast block availability request",
 		log.Stringable("first-block-height", firstBlockHeight),
