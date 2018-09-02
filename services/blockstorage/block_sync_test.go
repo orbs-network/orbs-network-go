@@ -5,6 +5,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -110,6 +112,20 @@ func TestCollectingAvailabilityNoResponsesFlow(t *testing.T) {
 
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Empty(t, availabilityResponses, "no availabilityResponses should have been received")
+
+	harness.verifyMocks(t)
+}
+
+func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	event := builders.BlockAvailabilityResponseInput(100, 10, 100, keys.Ed25519KeyPairForTests(1).PublicKey(), keys.Ed25519KeyPairForTests(2).PublicKey()).Message
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+	require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
+	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, event}, "availabilityResponses should have the event added")
 
 	harness.verifyMocks(t)
 }

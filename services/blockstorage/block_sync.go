@@ -159,6 +159,11 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			periodicalBlockRequest.Reset()
 		}
 	case BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES:
+		if msg, ok := event.(*gossipmessages.BlockAvailabilityResponseMessage); ok {
+			availabilityResponses = append(availabilityResponses, msg)
+			break
+		}
+
 		currentState = BLOCK_SYNC_STATE_IDLE
 	}
 
