@@ -3,6 +3,7 @@ package blockstorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -136,12 +137,12 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	}
 }
 
-func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, periodicalBlockRequest synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
 	switch currentState {
 	case BLOCK_SYNC_STATE_START_SYNC:
 		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
 
-		blockAvailabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
+		availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
 
 		err := b.petitionerBroadcastBlockAvailabilityRequest()
 
@@ -149,12 +150,11 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			b.reporting.Info("failed to broadcast block availability request")
 		} else {
 			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
-
-			//requestBlocksTrigger.Reset(b.config.BlockSyncCollectResponseTimeout())
+			periodicalBlockRequest.Reset()
 		}
 	}
 
-	return currentState, blockAvailabilityResponses
+	return currentState, availabilityResponses
 }
 
 func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}, blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
