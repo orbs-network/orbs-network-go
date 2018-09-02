@@ -8,32 +8,17 @@ import (
 )
 
 type serviceSdk struct {
-	handler handlers.ContractSdkCallHandler
+	handler         handlers.ContractSdkCallHandler
+	permissionScope protocol.ExecutionPermissionScope
 }
 
-const SDK_SERVICE_CONTRACT_NAME = "Sdk.Service"
-
-func (s *serviceSdk) IsNative(ctx types.Context, serviceName string) error {
-	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:    primitives.ExecutionContextId(ctx),
-		ContractName: SDK_SERVICE_CONTRACT_NAME,
-		MethodName:   "isNative",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:        "serviceName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: serviceName,
-			}).Build(),
-		},
-	})
-	return err
-}
+const SDK_OPERATION_NAME_SERVICE = "Sdk.Service"
 
 func (s *serviceSdk) CallMethod(ctx types.Context, serviceName string, methodName string) error {
 	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:    primitives.ExecutionContextId(ctx),
-		ContractName: SDK_SERVICE_CONTRACT_NAME,
-		MethodName:   "callMethod",
+		ContextId:     primitives.ExecutionContextId(ctx),
+		OperationName: SDK_OPERATION_NAME_SERVICE,
+		MethodName:    "callMethod",
 		InputArguments: []*protocol.MethodArgument{
 			(&protocol.MethodArgumentBuilder{
 				Name:        "serviceName",
@@ -46,6 +31,7 @@ func (s *serviceSdk) CallMethod(ctx types.Context, serviceName string, methodNam
 				StringValue: methodName,
 			}).Build(),
 		},
+		PermissionScope: s.permissionScope,
 	})
 	return err
 }

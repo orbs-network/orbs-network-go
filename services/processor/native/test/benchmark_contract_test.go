@@ -18,7 +18,7 @@ func TestBenchmarkContractAddMethod(t *testing.T) {
 	output, err := h.service.ProcessCall(call)
 	require.NoError(t, err, "call should succeed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	require.Equal(t, builders.MethodArguments(uint64(12+27)), output.OutputArguments, "call return args should be equal")
+	require.Equal(t, builders.MethodArgumentsArray(uint64(12+27)), output.OutputArgumentArray, "call return args should be equal")
 }
 
 func TestBenchmarkContractSetGetMethods(t *testing.T) {
@@ -35,7 +35,7 @@ func TestBenchmarkContractSetGetMethods(t *testing.T) {
 	output, err := h.service.ProcessCall(call)
 	require.NoError(t, err, "call should succeed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	require.Equal(t, builders.MethodArguments(), output.OutputArguments, "call return args should be equal")
+	require.Equal(t, builders.MethodArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
 	h.verifySdkCallMade(t)
 
 	t.Log("Runs BenchmarkContract.get to read that value back from state")
@@ -46,6 +46,6 @@ func TestBenchmarkContractSetGetMethods(t *testing.T) {
 	output, err = h.service.ProcessCall(call)
 	require.NoError(t, err, "call should succeed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	require.Equal(t, builders.MethodArguments(valueAsUint64), output.OutputArguments, "call return args should be equal")
+	require.Equal(t, builders.MethodArgumentsArray(valueAsUint64), output.OutputArgumentArray, "call return args should be equal")
 	h.verifySdkCallMade(t)
 }

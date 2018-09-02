@@ -18,7 +18,7 @@ type TransactionBuilder struct {
 
 func TransferTransaction() *TransactionBuilder {
 	keyPair := keys.Ed25519KeyPairForTests(1)
-	return &TransactionBuilder{
+	t := &TransactionBuilder{
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
@@ -34,12 +34,10 @@ func TransferTransaction() *TransactionBuilder {
 					},
 				},
 				Timestamp: primitives.TimestampNano(time.Now().UnixNano()),
-				InputArguments: []*protocol.MethodArgumentBuilder{
-					{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 10},
-				},
 			},
 		},
 	}
+	return t.WithAmount(10)
 }
 
 func Transaction() *TransactionBuilder {
@@ -101,13 +99,12 @@ func (t *TransactionBuilder) WithMethod(contractName primitives.ContractName, me
 }
 
 func (t *TransactionBuilder) WithArgs(args ...interface{}) *TransactionBuilder {
-	t.builder.Transaction.InputArguments = MethodArgumentsBuilders(args...)
+	t.builder.Transaction.InputArgumentArray = MethodArgumentsArray(args...).RawArgumentsArray()
 	return t
 }
 
 func (t *TransactionBuilder) WithAmount(amount uint64) *TransactionBuilder {
-	t.builder.Transaction.InputArguments[0].Uint64Value = amount
-	return t
+	return t.WithArgs(amount)
 }
 
 func (t *TransactionBuilder) WithProtocolVersion(v primitives.ProtocolVersion) *TransactionBuilder {
@@ -130,4 +127,9 @@ func (t *TransactionBuilder) WithInvalidSignerScheme() *TransactionBuilder {
 func (t *TransactionBuilder) WithVirtualChainId(virtualChainId primitives.VirtualChainId) *TransactionBuilder {
 	t.builder.Transaction.VirtualChainId = virtualChainId
 	return t
+}
+
+func TransactionInputArgumentsParse(t *protocol.Transaction) *protocol.MethodArgumentArrayArgumentsIterator {
+	argsArray := protocol.MethodArgumentArrayReader(t.RawInputArgumentArrayWithHeader())
+	return argsArray.ArgumentsIterator()
 }

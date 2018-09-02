@@ -2,6 +2,7 @@ package synchronization
 
 import (
 	"github.com/stretchr/testify/require"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -27,18 +28,23 @@ func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
 	require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
 }
 
-func TestWaitForBlockWithinGraceReturnsWhenRequestedBlockHeightAdvancesBeforeTimeout(t *testing.T) {
+func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeTimeoutAfterWaiting(t *testing.T) {
 	tracker := NewBlockTracker(1, 2, 1*time.Second)
-	tracker.enteredSelectSignalForTests = make(chan int)
+
+	var waitCount int32
+	internalWaitChan := make(chan int32)
+	tracker.fireOnWait = func() {
+		internalWaitChan <- atomic.AddInt32(&waitCount, 1)
+	}
 
 	doneWait := make(chan error)
 	go func() {
 		doneWait <- tracker.WaitForBlock(3)
 	}()
 
-	<-tracker.enteredSelectSignalForTests
+	require.EqualValues(t, 1, <-internalWaitChan, "did not block before the first increment")
 	tracker.IncrementHeight()
-	require.Equal(t, 2, <-tracker.enteredSelectSignalForTests, "did not block before the second increment")
+	require.EqualValues(t, 2, <-internalWaitChan, "did not block before the second increment")
 	tracker.IncrementHeight()
 
 	require.NoError(t, <-doneWait, "did not return as expected")
@@ -46,7 +52,12 @@ func TestWaitForBlockWithinGraceReturnsWhenRequestedBlockHeightAdvancesBeforeTim
 
 func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 	tracker := NewBlockTracker(1, 1, 1*time.Second)
-	tracker.enteredSelectSignalForTests = make(chan int)
+
+	var waitCount int32
+	internalWaitChan := make(chan int32)
+	tracker.fireOnWait = func() {
+		internalWaitChan <- atomic.AddInt32(&waitCount, 1)
+	}
 
 	doneWait := make(chan error)
 	waiter := func() {
@@ -55,8 +66,10 @@ func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 	go waiter()
 	go waiter()
 
-	selectIterationsBeforeIncrement := <-tracker.enteredSelectSignalForTests
-	require.NotZero(t, selectIterationsBeforeIncrement, "did not enter select before returning")
+	selectIterationsBeforeIncrement := <-internalWaitChan
+	require.EqualValues(t, 1, selectIterationsBeforeIncrement, "did not enter select before returning")
+	selectIterationsBeforeIncrement = <-internalWaitChan
+	require.EqualValues(t, 2, selectIterationsBeforeIncrement, "did not enter select before returning")
 
 	tracker.IncrementHeight()
 

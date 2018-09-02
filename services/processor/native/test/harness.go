@@ -35,7 +35,7 @@ func (h *harness) expectSdkCallMadeWithStateRead(returnValue []byte) {
 	stateReadCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
-			input.ContractName == native.SDK_STATE_CONTRACT_NAME &&
+			input.OperationName == native.SDK_OPERATION_NAME_STATE &&
 			input.MethodName == "read"
 	}
 
@@ -50,7 +50,7 @@ func (h *harness) expectSdkCallMadeWithStateWrite() {
 	stateWriteCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
-			input.ContractName == native.SDK_STATE_CONTRACT_NAME &&
+			input.OperationName == native.SDK_OPERATION_NAME_STATE &&
 			input.MethodName == "write"
 	}
 

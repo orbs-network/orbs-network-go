@@ -42,9 +42,8 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	transportListeners map[string]adapter.TransportListener
-
 	mutex             *sync.Mutex
+	transportListeners map[string]adapter.TransportListener
 	failingTamperers  []*failingTamperer
 	pausingTamperers  []*pausingTamperer
 	latchingTamperers []*latchingTamperer
@@ -58,6 +57,8 @@ func NewTamperingTransport() TamperingTransport {
 }
 
 func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	t.transportListeners[string(listenerPublicKey)] = listener
 }
 
@@ -160,6 +161,9 @@ func (t *tamperingTransport) receive(data *adapter.TransportData) {
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
+		t.mutex.Lock()
+		defer t.mutex.Unlock()
+
 		for stringPublicKey, l := range t.transportListeners {
 			if stringPublicKey != string(data.SenderPublicKey) {
 				l.OnTransportMessageReceived(data.Payloads)
@@ -167,6 +171,9 @@ func (t *tamperingTransport) receive(data *adapter.TransportData) {
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
+		t.mutex.Lock()
+		defer t.mutex.Unlock()
+
 		for _, recipientPublicKey := range data.RecipientPublicKeys {
 			stringPublicKey := string(recipientPublicKey)
 			t.transportListeners[stringPublicKey].OnTransportMessageReceived(data.Payloads)

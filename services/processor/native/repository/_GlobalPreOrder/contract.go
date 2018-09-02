@@ -2,15 +2,16 @@ package globalpreorder
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 var CONTRACT = types.ContractInfo{
 	Name:       "_GlobalPreOrder",
 	Permission: protocol.PERMISSION_SCOPE_SYSTEM,
-	Methods: []types.MethodInfo{
-		METHOD_INIT,
-		METHOD_APPROVE,
+	Methods: map[primitives.MethodName]types.MethodInfo{
+		METHOD_INIT.Name:    METHOD_INIT,
+		METHOD_APPROVE.Name: METHOD_APPROVE,
 	},
 	InitSingleton: newContract,
 }

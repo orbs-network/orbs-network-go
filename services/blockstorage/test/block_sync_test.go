@@ -49,9 +49,6 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
 
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 
@@ -65,9 +62,6 @@ func TestSyncSourceIgnoresBlockAvailabilityRequestIfNoBlocksWereCommitted(t *tes
 
 	_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
-
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
 
 	harness.verifyMocks(t)
 }
@@ -87,9 +81,6 @@ func TestSyncSourceIgnoresBlockAvailabilityRequestIfPetitionerIsFurtherAhead(t *
 
 	_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
 	require.NoError(t, err)
-
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
 
 	harness.verifyMocks(t)
 }
@@ -143,9 +134,6 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 	_, err := harness.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
 
-	// FIXME remove sleep
-	time.Sleep(2 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 
@@ -165,9 +153,6 @@ func TestSyncPetitionerIgnoresBlockAvailabilityResponseIfAlreadyInSync(t *testin
 
 	_, err := harness.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
-
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
 
 	harness.verifyMocks(t)
 }
@@ -195,9 +180,6 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponseFromMultipleSources(t *te
 
 	_, err = harness.blockStorage.HandleBlockAvailabilityResponse(anotherInput)
 	require.NoError(t, err)
-
-	// FIXME remove sleep
-	time.Sleep(2 * time.Millisecond)
 
 	harness.verifyMocks(t)
 }
@@ -261,9 +243,6 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	_, err := harness.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
 
-	// FIXME remove sleep
-	time.Sleep(2 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 
@@ -311,9 +290,6 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 	_, err := harness.blockStorage.HandleBlockSyncRequest(input)
 	require.NoError(t, err)
 
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 
@@ -355,9 +331,6 @@ func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
 	_, err := harness.blockStorage.HandleBlockSyncResponse(input)
 	require.NoError(t, err)
 
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 
@@ -382,9 +355,6 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 	_, err = harness.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
 	require.NoError(t, err)
 
-	// FIXME remove sleep
-	time.Sleep(1 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 
@@ -398,17 +368,13 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
-	time.Sleep(9 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 
 func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	harness := newHarness()
 
-	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
-
-	time.Sleep(6 * time.Millisecond)
+	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(1)
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(7)
 
@@ -418,7 +384,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).AtLeast(1)
 	harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
 
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(4 * time.Millisecond)
 
 	blockSyncResponse := generateBlockSyncResponseInput(primitives.BlockHeight(1), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
