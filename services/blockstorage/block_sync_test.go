@@ -62,7 +62,7 @@ func TestStartSyncHappyFlow(t *testing.T) {
 
 	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
 
-	require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState)
+	require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
 	require.Empty(t, availabilityResponses, "no availabilityResponses were sent yet")
 
 	harness.verifyMocks(t)
@@ -76,7 +76,7 @@ func TestIdleIgnoresInvalidEvents(t *testing.T) {
 
 	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
 
-	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState)
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
 
 	harness.verifyMocks(t)
@@ -94,8 +94,22 @@ func TestStartSyncGossipFailure(t *testing.T) {
 
 	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
 
-	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState)
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
+
+	harness.verifyMocks(t)
+}
+
+func TestCollectingAvailabilityNoResponsesFlow(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	event := collectingAvailabilityFinishedEvent{}
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+	require.Empty(t, availabilityResponses, "no availabilityResponses should have been received")
 
 	harness.verifyMocks(t)
 }

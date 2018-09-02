@@ -158,6 +158,8 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
 			periodicalBlockRequest.Reset()
 		}
+	case BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES:
+		currentState = BLOCK_SYNC_STATE_IDLE
 	}
 
 	return currentState, availabilityResponses
