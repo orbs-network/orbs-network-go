@@ -164,6 +164,10 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			break
 		}
 
+		if _, ok := event.(collectingAvailabilityFinishedEvent); !ok {
+			break
+		}
+
 		currentState = BLOCK_SYNC_STATE_IDLE
 	}
 

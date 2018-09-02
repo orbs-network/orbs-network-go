@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"reflect"
 	"testing"
 )
 
@@ -71,17 +72,22 @@ func TestStartSyncHappyFlow(t *testing.T) {
 }
 
 func TestIdleIgnoresInvalidEvents(t *testing.T) {
-	harness := newBlockSyncHarness()
+	events := allEventsExcept("blockstorage.startSyncEvent")
 
-	event := collectingAvailabilityFinishedEvent{}
-	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+	for _, event := range events {
+		t.Run(typeOfEvent(event), func(t *testing.T) {
+			harness := newBlockSyncHarness()
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
-	require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
+			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
 
-	harness.verifyMocks(t)
+			require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+			require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
+
+			harness.verifyMocks(t)
+		})
+	}
 }
 
 func TestStartSyncGossipFailure(t *testing.T) {
@@ -128,4 +134,52 @@ func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, event}, "availabilityResponses should have the event added")
 
 	harness.verifyMocks(t)
+}
+
+func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
+
+	events := allEventsExcept("blockstorage.collectingAvailabilityFinishedEvent", "*gossipmessages.BlockAvailabilityResponseMessage")
+	for _, event := range events {
+		t.Run(typeOfEvent(event), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+			require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
+			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
+
+func typeOfEvent(event interface{}) string {
+	return reflect.TypeOf(event).String()
+}
+
+func allEventsExcept(eventTypes ...string) (res []interface{}) {
+	allEvents := []interface{}{
+		startSyncEvent{},
+		collectingAvailabilityFinishedEvent{},
+		builders.BlockAvailabilityResponseInput(100, 10, 100, keys.Ed25519KeyPairForTests(1).PublicKey(), keys.Ed25519KeyPairForTests(2).PublicKey()).Message,
+	}
+
+	res = []interface{}{}
+
+	for _, event := range allEvents {
+		shouldAdd := true
+		for _, eventTypeToRemove := range eventTypes {
+			if typeOfEvent(event) == eventTypeToRemove {
+				shouldAdd = false
+				break
+			}
+		}
+
+		if shouldAdd {
+			res = append(res, event)
+		}
+	}
+	return
 }
