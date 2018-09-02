@@ -48,10 +48,10 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 
 }
 
-func TestTransitionFromSyncStartToCollectAvailabilityResponses(t *testing.T) {
+func TestStartSyncHappyFlow(t *testing.T) {
 	harness := newBlockSyncHarness()
 
-	var event interface{}
+	event := startSyncEvent{}
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
 	harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
@@ -59,10 +59,24 @@ func TestTransitionFromSyncStartToCollectAvailabilityResponses(t *testing.T) {
 	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
 	harness.collectAvailabilityTrigger.When("Reset").Return().Times(1)
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_START_SYNC, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
 
 	require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState)
 	require.Empty(t, availabilityResponses, "no availabilityResponses were sent yet")
+
+	harness.verifyMocks(t)
+}
+
+func TestIdleIgnoresInvalidEvents(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	event := collectingAvailabilityFinishedEvent{}
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState)
+	require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
 
 	harness.verifyMocks(t)
 }

@@ -18,7 +18,7 @@ type blockSyncState int
 
 const (
 	BLOCK_SYNC_STATE_IDLE                                   blockSyncState = 0
-	BLOCK_SYNC_STATE_START_SYNC                             blockSyncState = 1
+	BLOCK_SYNC_STATE_START_SYNC                             blockSyncState = 1 // TODO: kill me
 	BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES blockSyncState = 2
 	BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS                    blockSyncState = 3
 	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK                 blockSyncState = 4
@@ -137,9 +137,16 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 	}
 }
 
+type startSyncEvent struct{}
+type collectingAvailabilityFinishedEvent struct{}
+
 func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, periodicalBlockRequest synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
 	switch currentState {
-	case BLOCK_SYNC_STATE_START_SYNC:
+	case BLOCK_SYNC_STATE_IDLE:
+		if _, ok := event.(startSyncEvent); !ok {
+			break
+		}
+
 		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
 
 		availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
