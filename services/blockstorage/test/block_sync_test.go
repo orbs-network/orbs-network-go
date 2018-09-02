@@ -374,9 +374,7 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	harness := newHarness()
 
-	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
-
-	time.Sleep(6 * time.Millisecond)
+	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(1)
 
 	senderKeyPair := keys.Ed25519KeyPairForTests(7)
 
@@ -386,7 +384,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).AtLeast(1)
 	harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
 
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(4 * time.Millisecond)
 
 	blockSyncResponse := generateBlockSyncResponseInput(primitives.BlockHeight(1), primitives.BlockHeight(4), senderKeyPair.PublicKey())
 
