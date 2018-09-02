@@ -17,14 +17,15 @@ func (t *Timer) GetTimer() *time.Timer {
 }
 
 func (t *Timer) Reset(d time.Duration) bool {
-	active := t.timer.Stop()
-	if !active {
-		<-t.C
-	}
+	active := t.Stop()
 	t.timer.Reset(d)
 	return active
 }
 
 func (t *Timer) Stop() bool {
-	return false
+	active := t.timer.Stop()
+	if !active {
+		<-t.C
+	}
+	return active
 }
