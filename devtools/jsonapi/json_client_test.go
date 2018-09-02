@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -36,7 +37,8 @@ func TestConvertTransaction(t *testing.T) {
 	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
 	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
 
-	arg1 := tx.InputArgumentsIterator().NextInputArguments()
+	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
+	arg1 := inputArgsIterator.NextArguments()
 	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
 	require.EqualValues(t, req.Arguments[0].Type, arg1.Type(), "argument type was not converted properly")
 	require.EqualValues(t, req.Arguments[0].StringValue, arg1.StringValue(), "argument string value was not converted properly")
@@ -66,18 +68,23 @@ func TestConvertAndSignTransaction(t *testing.T) {
 }
 
 func TestConvertSendTransactionOutput(t *testing.T) {
+	outputArgumentArray := (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{
+				Name:        "foo",
+				Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE,
+				Uint64Value: 200,
+			},
+		},
+	}).Build()
 	sto := (&client.SendTransactionResponseBuilder{
 		BlockHeight:       4,
 		BlockTimestamp:    primitives.TimestampNano(time.Now().UnixNano()),
 		TransactionStatus: protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: &protocol.TransactionReceiptBuilder{
-			Txhash:          []byte("foo"),
-			ExecutionResult: protocol.EXECUTION_RESULT_SUCCESS,
-			OutputArguments: []*protocol.MethodArgumentBuilder{{
-				Name:        "foo",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE,
-				Uint64Value: 200,
-			}},
+			Txhash:              []byte("foo"),
+			ExecutionResult:     protocol.EXECUTION_RESULT_SUCCESS,
+			OutputArgumentArray: outputArgumentArray.RawArgumentsArray(),
 		},
 	}).Build()
 
@@ -90,7 +97,8 @@ func TestConvertSendTransactionOutput(t *testing.T) {
 	require.EqualValues(t, sto.TransactionReceipt().ExecutionResult(), out.TransactionReceipt.ExecutionResult, "execution result mismatched")
 	require.Len(t, out.TransactionReceipt.OutputArguments, 1, "expected exactly 1 output argument")
 
-	expectedArg := sto.TransactionReceipt().OutputArgumentsIterator().NextOutputArguments()
+	outputArgsIterator := builders.TransactionReceiptOutputArgumentsParse(sto.TransactionReceipt())
+	expectedArg := outputArgsIterator.NextArguments()
 	actualArg := out.TransactionReceipt.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")
 	require.EqualValues(t, expectedArg.Type(), actualArg.Type, "argument type mismatched")
@@ -99,15 +107,20 @@ func TestConvertSendTransactionOutput(t *testing.T) {
 }
 
 func TestConvertCallMethodOutput(t *testing.T) {
+	outputArgumentArray := (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{
+				Name:        "foo",
+				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+				StringValue: "bar",
+			},
+		},
+	}).Build()
 	cmo := (&client.CallMethodResponseBuilder{
-		BlockHeight:    4,
-		BlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
-		CallResult:     protocol.EXECUTION_RESULT_SUCCESS,
-		OutputArguments: []*protocol.MethodArgumentBuilder{{
-			Name:        "foo",
-			Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-			StringValue: "bar",
-		}},
+		BlockHeight:         4,
+		BlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
+		CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
+		OutputArgumentArray: outputArgumentArray.RawArgumentsArray(),
 	}).Build()
 
 	out := ConvertCallMethodOutput(cmo)
@@ -117,7 +130,8 @@ func TestConvertCallMethodOutput(t *testing.T) {
 	require.EqualValues(t, cmo.CallResult(), out.CallResult, "call result mismatched")
 	require.Len(t, out.OutputArguments, 1, "expected exactly 1 output argument")
 
-	expectedArg := cmo.OutputArgumentsIterator().NextOutputArguments()
+	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(cmo)
+	expectedArg := outputArgsIterator.NextArguments()
 	actualArg := out.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")
 	require.EqualValues(t, expectedArg.Type(), actualArg.Type, "argument type mismatched")

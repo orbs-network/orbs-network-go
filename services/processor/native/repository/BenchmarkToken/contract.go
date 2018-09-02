@@ -3,16 +3,17 @@ package benchmarktoken
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
 var CONTRACT = types.ContractInfo{
 	Name:       "BenchmarkToken",
 	Permission: protocol.PERMISSION_SCOPE_SERVICE,
-	Methods: []types.MethodInfo{
-		METHOD_INIT,
-		METHOD_TRANSFER,
-		METHOD_GET_BALANCE,
+	Methods: map[primitives.MethodName]types.MethodInfo{
+		METHOD_INIT.Name:        METHOD_INIT,
+		METHOD_TRANSFER.Name:    METHOD_TRANSFER,
+		METHOD_GET_BALANCE.Name: METHOD_GET_BALANCE,
 	},
 	InitSingleton: newContract,
 }

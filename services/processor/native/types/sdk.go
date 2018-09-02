@@ -29,6 +29,5 @@ type StateSdk interface {
 }
 
 type ServiceSdk interface {
-	IsNative(ctx Context, serviceName string) error
 	CallMethod(ctx Context, serviceName string, methodName string) error // TODO: handle var args and return
 }

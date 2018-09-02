@@ -14,21 +14,21 @@ func TestProcessCallArguments(t *testing.T) {
 		input          *services.ProcessCallInput
 		expectedError  bool
 		expectedResult protocol.ExecutionResult
-		expectedOutput []*protocol.MethodArgument
+		expectedOutput *protocol.MethodArgumentArray
 	}{
 		{
 			name:           "WithNoArgsAndNoReturn",
 			input:          processCallInput().WithMethod("BenchmarkContract", "nop").Build(),
 			expectedError:  false,
 			expectedResult: protocol.EXECUTION_RESULT_SUCCESS,
-			expectedOutput: builders.MethodArguments(),
+			expectedOutput: builders.MethodArgumentsArray(),
 		},
 		{
 			name:           "WithAllArgTypes",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}).Build(),
 			expectedError:  false,
 			expectedResult: protocol.EXECUTION_RESULT_SUCCESS,
-			expectedOutput: builders.MethodArguments(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01}),
+			expectedOutput: builders.MethodArgumentsArray(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01}),
 		},
 		{
 			name:           "WithIncorrectArgTypeFails",
@@ -94,7 +94,7 @@ func TestProcessCallArguments(t *testing.T) {
 				require.Error(t, err, "call should fail")
 			} else {
 				require.NoError(t, err, "call should succeed")
-				require.Equal(t, test.expectedOutput, output.OutputArguments, "call return args should be equal")
+				require.Equal(t, test.expectedOutput, output.OutputArgumentArray, "call return args should be equal")
 			}
 			require.Equal(t, test.expectedResult, output.CallResult, "call result should be equal")
 		})

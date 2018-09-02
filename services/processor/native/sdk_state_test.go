@@ -182,7 +182,8 @@ func TestClearReadUint32ByKey(t *testing.T) {
 
 func createStateSdk() *stateSdk {
 	return &stateSdk{
-		handler: &contractSdkStateCallHandlerStub{make(map[string]*protocol.MethodArgument, 0)},
+		handler:         &contractSdkStateCallHandlerStub{make(map[string]*protocol.MethodArgument, 0)},
+		permissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	}
 }
 
@@ -191,6 +192,9 @@ type contractSdkStateCallHandlerStub struct {
 }
 
 func (c *contractSdkStateCallHandlerStub) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
+	if input.PermissionScope != protocol.PERMISSION_SCOPE_SERVICE {
+		panic("permissions passed to SDK are incorrect")
+	}
 	switch input.MethodName {
 	case "read":
 		return &handlers.HandleSdkCallOutput{

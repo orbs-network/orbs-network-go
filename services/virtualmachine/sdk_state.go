@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkStateCall(context *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkStateCall(context *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
 	switch methodName {
 
 	case "read":
@@ -40,7 +40,7 @@ func (s *service) handleSdkStateRead(context *executionContext, args []*protocol
 	key := args[0].BytesValue()
 
 	// get current running service
-	currentService, _ := context.serviceStackTop()
+	currentService := context.serviceStackTop()
 
 	// try from transient state first
 	value, found := context.transientState.getValue(currentService, key)
@@ -88,7 +88,7 @@ func (s *service) handleSdkStateWrite(context *executionContext, args []*protoco
 	value := args[1].BytesValue()
 
 	// get current running service
-	currentService, _ := context.serviceStackTop()
+	currentService := context.serviceStackTop()
 
 	// write to transient state
 	// TODO: maybe compare with getValue to see the value actually changed

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -66,10 +65,11 @@ func newHarness() *harness {
 
 func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
 	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:      contextId,
-		ContractName:   contractName,
-		MethodName:     methodName,
-		InputArguments: builders.MethodArguments(args...),
+		ContextId:       contextId,
+		OperationName:   contractName,
+		MethodName:      methodName,
+		InputArguments:  builders.MethodArguments(args...),
+		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	})
 	if err != nil {
 		return nil, err
@@ -77,21 +77,31 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, primitives.BlockHeight, error) {
-	// deployment related
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED_READ_ONLY.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
-	h.expectNativeContractInfoRequested(contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
+func (h *harness) handleSdkCallWithSystemPermissions(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
+		ContextId:       contextId,
+		OperationName:   contractName,
+		MethodName:      methodName,
+		InputArguments:  builders.MethodArguments(args...),
+		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return output.OutputArguments, nil
+}
 
+func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, error) {
 	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
-			Signer:         nil,
-			ContractName:   contractName,
-			MethodName:     methodName,
-			InputArguments: []*protocol.MethodArgumentBuilder{},
+			Signer:             nil,
+			ContractName:       contractName,
+			MethodName:         methodName,
+			InputArgumentArray: []byte{},
 		}).Build(),
 	})
-	return output.CallResult, output.ReferenceBlockHeight, err
+	return output.CallResult, output.OutputArgumentArray, output.ReferenceBlockHeight, err
 }
 
 type keyValuePair struct {
@@ -104,15 +114,11 @@ type contractAndMethod struct {
 	methodName   primitives.MethodName
 }
 
-func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, map[primitives.ContractName][]*keyValuePair) {
+func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
 	for _, contractAndMethod := range contractAndMethods {
-		// deployment related
-		h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_IS_SERVICE_DEPLOYED.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
-		h.expectNativeContractInfoRequested(contractAndMethod.contractName, protocol.PERMISSION_SCOPE_SERVICE, nil)
-
 		resultKeyValuePairsPerContract[contractAndMethod.contractName] = []*keyValuePair{}
 		tx := builders.Transaction().WithMethod(contractAndMethod.contractName, contractAndMethod.methodName).Build()
 		transactions = append(transactions, tx)
@@ -124,9 +130,12 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 	})
 
 	results := []protocol.ExecutionResult{}
+	outputArgsOfAllTransactions := [][]byte{}
 	for _, transactionReceipt := range output.TransactionReceipts {
 		result := transactionReceipt.ExecutionResult()
 		results = append(results, result)
+		outputArgs := transactionReceipt.OutputArgumentArray()
+		outputArgsOfAllTransactions = append(outputArgsOfAllTransactions, outputArgs)
 	}
 
 	for _, contractStateDiffs := range output.ContractStateDiffs {
@@ -140,7 +149,7 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 		}
 	}
 
-	return results, resultKeyValuePairsPerContract
+	return results, outputArgsOfAllTransactions, resultKeyValuePairsPerContract
 }
 
 func (h *harness) transactionSetPreOrder(signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {

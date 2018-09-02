@@ -49,7 +49,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 	if err != nil {
 		return &services.RunLocalMethodOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
-			OutputArguments:         []*protocol.MethodArgument{},
+			OutputArgumentArray:     []byte{},
 			ReferenceBlockHeight:    blockHeight,
 			ReferenceBlockTimestamp: blockTimestamp,
 		}, err
@@ -57,10 +57,13 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 
 	s.reporting.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
 	callResult, outputArgs, err := s.runMethod(blockHeight, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	if outputArgs == nil {
+		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+	}
 
 	return &services.RunLocalMethodOutput{
 		CallResult:              callResult,
-		OutputArguments:         outputArgs,
+		OutputArgumentArray:     outputArgs.RawArgumentsArray(),
 		ReferenceBlockHeight:    blockHeight,
 		ReferenceBlockTimestamp: blockTimestamp,
 	}, err
@@ -84,7 +87,7 @@ func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderI
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
 	// check subscription
-	err := s.callGlobalPreOrderContract(previousBlockHeight)
+	err := s.callGlobalPreOrderSystemContract(previousBlockHeight)
 	if err != nil {
 		for i := 0; i < len(statuses); i++ {
 			statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
@@ -114,13 +117,13 @@ func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.H
 		return nil, errors.Errorf("invalid execution context %s", input.ContextId)
 	}
 
-	switch input.ContractName {
-	case native.SDK_STATE_CONTRACT_NAME:
-		output, err = s.handleSdkStateCall(executionContext, input.MethodName, input.InputArguments)
-	case native.SDK_SERVICE_CONTRACT_NAME:
-		output, err = s.handleSdkServiceCall(executionContext, input.MethodName, input.InputArguments)
+	switch input.OperationName {
+	case native.SDK_OPERATION_NAME_STATE:
+		output, err = s.handleSdkStateCall(executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
+	case native.SDK_OPERATION_NAME_SERVICE:
+		output, err = s.handleSdkServiceCall(executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	default:
-		return nil, errors.Errorf("unknown SDK call type: %s", input.ContractName)
+		return nil, errors.Errorf("unknown SDK call operation: %s", input.OperationName)
 	}
 
 	if err != nil {

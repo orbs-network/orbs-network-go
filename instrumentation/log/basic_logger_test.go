@@ -133,8 +133,8 @@ func TestStringableSlice(t *testing.T) {
 	Expect(jsonMap["a-collection"]).ToNot(Equal("[]"))
 
 	Expect(jsonMap["a-collection"]).To(Equal([]interface{}{
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],}",
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArguments:[],}",
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,}",
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,}",
 	}))
 }
 
