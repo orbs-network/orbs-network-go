@@ -143,9 +143,6 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponse(t *testing.T) {
 	_, err := harness.blockStorage.HandleBlockAvailabilityResponse(input)
 	require.NoError(t, err)
 
-	// FIXME remove sleep
-	time.Sleep(2 * time.Millisecond)
-
 	harness.verifyMocks(t)
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -46,13 +47,7 @@ func (d *harness) expectValidateWithConsensusAlgosTimes(times int) {
 }
 
 func (d *harness) verifyMocks(t *testing.T) {
-	_, err := d.stateStorage.Verify()
-	require.NoError(t, err)
-
-	_, err = d.gossip.Verify()
-	require.NoError(t, err)
-
-	_, err = d.consensus.Verify()
+	err := test.EventuallyVerify(d.gossip, d.stateStorage, d.consensus)
 	require.NoError(t, err)
 }
 
