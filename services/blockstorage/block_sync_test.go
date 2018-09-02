@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -50,6 +49,35 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 
+}
+
+func typeOfEvent(event interface{}) string {
+	return reflect.TypeOf(event).String()
+}
+
+func allEventsExcept(eventTypes ...string) (res []interface{}) {
+	allEvents := []interface{}{
+		startSyncEvent{},
+		collectingAvailabilityFinishedEvent{},
+		builders.BlockAvailabilityResponseInput().Build().Message,
+	}
+
+	res = []interface{}{}
+
+	for _, event := range allEvents {
+		shouldAdd := true
+		for _, eventTypeToRemove := range eventTypes {
+			if typeOfEvent(event) == eventTypeToRemove {
+				shouldAdd = false
+				break
+			}
+		}
+
+		if shouldAdd {
+			res = append(res, event)
+		}
+	}
+	return
 }
 
 func TestStartSyncHappyFlow(t *testing.T) {
@@ -125,7 +153,7 @@ func TestCollectingAvailabilityNoResponsesFlow(t *testing.T) {
 func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
 	harness := newBlockSyncHarness()
 
-	event := builders.BlockAvailabilityResponseInput(100, 10, 100, keys.Ed25519KeyPairForTests(1).PublicKey(), keys.Ed25519KeyPairForTests(2).PublicKey()).Message
+	event := builders.BlockAvailabilityResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil}
 
 	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
@@ -153,33 +181,4 @@ func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
 			harness.verifyMocks(t)
 		})
 	}
-}
-
-func typeOfEvent(event interface{}) string {
-	return reflect.TypeOf(event).String()
-}
-
-func allEventsExcept(eventTypes ...string) (res []interface{}) {
-	allEvents := []interface{}{
-		startSyncEvent{},
-		collectingAvailabilityFinishedEvent{},
-		builders.BlockAvailabilityResponseInput(100, 10, 100, keys.Ed25519KeyPairForTests(1).PublicKey(), keys.Ed25519KeyPairForTests(2).PublicKey()).Message,
-	}
-
-	res = []interface{}{}
-
-	for _, event := range allEvents {
-		shouldAdd := true
-		for _, eventTypeToRemove := range eventTypes {
-			if typeOfEvent(event) == eventTypeToRemove {
-				shouldAdd = false
-				break
-			}
-		}
-
-		if shouldAdd {
-			res = append(res, event)
-		}
-	}
-	return
 }
