@@ -1,10 +1,9 @@
 package httpserver
 
 import (
-	"io/ioutil"
-	"net/http"
 	"time"
 
+	"github.com/buaazp/fasthttprouter"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -43,9 +42,19 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 	return server
 }
 
+func fastSendTransactionHandler(r *fastResponse) {
+	clientRequest := client.SendTransactionRequestReader(r.writer.Request.Body())
+	if r.reportErrorOnInvalidRequest(clientRequest) {
+		return
+	}
+
+	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
+	r.writeMessageOrError(result.ClientResponse, err)
+}
+
 //TODO extract commonalities between handlers
-func (s *fastHttpServer) createRouter() http.Handler {
-	sendTransactionHandler := s.handler(func(bytes []byte, r *response) {
+func (s *fastHttpServer) createRouter() *fasthttprouter.Router {
+	sendTransactionHandler := s.handler(func(bytes []byte, r *fastResponse) {
 
 		clientRequest := client.SendTransactionRequestReader(bytes)
 		if r.reportErrorOnInvalidRequest(clientRequest) {
@@ -56,7 +65,7 @@ func (s *fastHttpServer) createRouter() http.Handler {
 		r.writeMessageOrError(result.ClientResponse, err)
 	})
 
-	callMethodHandler := s.handler(func(bytes []byte, r *response) {
+	callMethodHandler := s.handler(func(bytes []byte, r *fastResponse) {
 
 		clientRequest := client.CallMethodRequestReader(bytes)
 		if r.reportErrorOnInvalidRequest(clientRequest) {
@@ -71,9 +80,9 @@ func (s *fastHttpServer) createRouter() http.Handler {
 		}
 	})
 
-	router := http.NewServeMux()
-	router.Handle("/api/send-transaction", report(s.reporting, sendTransactionHandler))
-	router.Handle("/api/call-method", report(s.reporting, callMethodHandler))
+	router := fasthttprouter.New()
+	router.Handle("get", "/api/send-transaction", fastReport(sendTransactionHandler, s.reporting))
+	router.Handle("get", "/api/call-method", fastReport(callMethodHandler, s.reporting))
 	return router
 }
 
@@ -81,18 +90,19 @@ func (s *fastHttpServer) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown() //TODO timeout context
 }
 
-func report(reporting log.BasicLogger, h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		meter := reporting.Meter("request-process-time", log.String("url", r.URL.String()))
+func fastReport(h fasthttp.RequestHandler, reporting log.BasicLogger) fasthttp.RequestHandler {
+	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
+		meter := reporting.Meter("request-process-time", log.String("url", ctx.URI().String()))
 		defer meter.Done()
-		h.ServeHTTP(w, r)
+		h(ctx)
+
 	})
 }
 
-func (r *response) reportErrorOnInvalidRequest(m membuffers.Message) bool {
+func (r *fastResponse) reportErrorOnInvalidRequest(m membuffers.Message) bool {
 	if !m.IsValid() {
 		//TODO report error to Reporting
-		r.writer.WriteHeader(http.StatusBadRequest)
+		r.writer.Response.SetStatusCode(fasthttp.StatusBadRequest)
 		r.writer.Write([]byte("Input is invalid"))
 		return true
 	}
@@ -100,9 +110,9 @@ func (r *response) reportErrorOnInvalidRequest(m membuffers.Message) bool {
 	return false
 }
 
-func (r *response) writeMessageOrError(message membuffers.Message, err error) {
+func (r *fastResponse) writeMessageOrError(message membuffers.Message, err error) {
 	//TODO handle errors
-	r.writer.Header().Set("Content-Type", "application/octet-stream")
+	r.writer.Response.Header.Set("Content-Type", "application/octet-stream")
 	if err != nil {
 		r.writer.Write([]byte(err.Error()))
 	} else {
@@ -110,20 +120,21 @@ func (r *response) writeMessageOrError(message membuffers.Message, err error) {
 	}
 }
 
-func (s *fastHttpServer) handler(handler func(bytes []byte, r *response)) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			s.reporting.Info("could not read http request body", log.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
+func (s *fastHttpServer) handler(handler func(bytes []byte, r *fastResponse)) fasthttp.RequestHandler {
+	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
 
-		handler(bytes, &response{writer: w})
+		bytes := ctx.Request.Body()
+		//if err != nil {
+		//	s.reporting.Info("could not read http request body", log.Error(err))
+		//	w.WriteHeader(http.StatusInternalServerError)
+		//	w.Write([]byte(err.Error()))
+		//	return
+		//}
+
+		handler(bytes, &fastResponse{writer: *ctx})
 	})
 }
 
-type response struct {
-	writer http.ResponseWriter
+type fastResponse struct {
+	writer fasthttp.RequestCtx
 }
