@@ -9,13 +9,15 @@ import (
 	"time"
 )
 
-type availabilityResponse struct {
+type basicSyncMessage struct {
 	lastCommittedBlockHeight primitives.BlockHeight
 	firstBlockHeight         primitives.BlockHeight
 	lastBlockHeight          primitives.BlockHeight
 	senderPublicKey          primitives.Ed25519PublicKey
 	recipientPublicKey       primitives.Ed25519PublicKey
 }
+
+type availabilityResponse basicSyncMessage
 
 func BlockAvailabilityResponseInput() *availabilityResponse {
 	return &availabilityResponse{
@@ -71,12 +73,16 @@ func (ar *availabilityResponse) Build() *gossiptopics.BlockAvailabilityResponseI
 
 type blockChunk struct {
 	blocks []*protocol.BlockPairContainer
-	availabilityResponse
+	basicSyncMessage
 }
 
 func BlockSyncResponseInput() *blockChunk {
 	chunk := &blockChunk{}
-	chunk.availabilityResponse = *BlockAvailabilityResponseInput()
+	chunk.recipientPublicKey = keys.Ed25519KeyPairForTests(1).PublicKey()
+	chunk.senderPublicKey = keys.Ed25519KeyPairForTests(2).PublicKey()
+	chunk.lastBlockHeight = 100
+	chunk.lastCommittedBlockHeight = 100
+	chunk.firstBlockHeight = 10
 
 	return chunk
 }
@@ -125,6 +131,60 @@ func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
 				SenderPublicKey: bc.senderPublicKey,
 			}).Build(),
 			BlockPairs: blocks,
+		},
+	}
+}
+
+type blockAvailabilityRequest basicSyncMessage
+
+func BlockAvailabilityRequestInput() *blockAvailabilityRequest {
+	availabilityRequest := &blockAvailabilityRequest{}
+	availabilityRequest.recipientPublicKey = keys.Ed25519KeyPairForTests(1).PublicKey()
+	availabilityRequest.senderPublicKey = keys.Ed25519KeyPairForTests(2).PublicKey()
+	availabilityRequest.lastBlockHeight = 100
+	availabilityRequest.lastCommittedBlockHeight = 100
+	availabilityRequest.firstBlockHeight = 10
+
+	return availabilityRequest
+}
+
+func (bar *blockAvailabilityRequest) WithSenderPublicKey(publicKey primitives.Ed25519PublicKey) *blockAvailabilityRequest {
+	bar.senderPublicKey = publicKey
+	return bar
+}
+
+func (bar *blockAvailabilityRequest) WithRecipientPublicKey(publicKey primitives.Ed25519PublicKey) *blockAvailabilityRequest {
+	bar.recipientPublicKey = publicKey
+	return bar
+}
+
+func (bar *blockAvailabilityRequest) WithLastCommittedBlockHeight(h primitives.BlockHeight) *blockAvailabilityRequest {
+	bar.lastCommittedBlockHeight = h
+	return bar
+}
+
+func (bar *blockAvailabilityRequest) WithFirstBlockHeight(h primitives.BlockHeight) *blockAvailabilityRequest {
+	bar.firstBlockHeight = h
+	return bar
+}
+
+func (bar *blockAvailabilityRequest) WithLastBlockHeight(h primitives.BlockHeight) *blockAvailabilityRequest {
+	bar.lastBlockHeight = h
+	return bar
+}
+
+func (bar *blockAvailabilityRequest) Build() *gossiptopics.BlockAvailabilityRequestInput {
+	return &gossiptopics.BlockAvailabilityRequestInput{
+		Message: &gossipmessages.BlockAvailabilityRequestMessage{
+			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         bar.firstBlockHeight,
+				LastBlockHeight:          bar.lastBlockHeight,
+				LastCommittedBlockHeight: bar.lastCommittedBlockHeight,
+			}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: bar.senderPublicKey,
+			}).Build(),
 		},
 	}
 }

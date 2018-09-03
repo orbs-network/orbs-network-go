@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -79,6 +80,14 @@ func allEventsExcept(eventTypes ...string) (res []interface{}) {
 		}
 	}
 	return
+}
+
+func allStates() []blockSyncState {
+	return []blockSyncState{
+		BLOCK_SYNC_STATE_IDLE,
+		BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES,
+		BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK,
+	}
 }
 
 func TestStartSyncHappyFlow(t *testing.T) {
@@ -302,6 +311,73 @@ func TestWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
 			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
 
 			require.Equal(t, BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, newState, "state change does not match expected")
+			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
+
+func TestAnyStateRespondToAvailabilityRequests(t *testing.T) {
+	event := builders.BlockAvailabilityRequestInput().Build().Message
+
+	for _, state := range allStates() {
+		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(200)).Times(1)
+			harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(1)
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+			require.Equal(t, state, newState, "state change was not expected")
+			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
+
+func TestAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
+	event := builders.BlockAvailabilityRequestInput().Build().Message
+	petitionerBlockHeight := event.SignedBatchRange.LastCommittedBlockHeight()
+
+	for _, state := range allStates() {
+		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			harness.storage.When("LastCommittedBlockHeight").Return(petitionerBlockHeight).Times(1)
+			harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any)
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+			require.Equal(t, state, newState, "state change was not expected")
+			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
+
+func TestAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
+	event := builders.BlockAvailabilityRequestInput().Build().Message
+
+	for _, state := range allStates() {
+		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(200)).Times(1)
+			harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+			require.Equal(t, state, newState, "state change was not expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
 
 			harness.verifyMocks(t)

@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// FIXME use builders
 func generateBlockAvailabilityRequestInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityRequestInput {
 	return &gossiptopics.BlockAvailabilityRequestInput{
 		Message: &gossipmessages.BlockAvailabilityRequestMessage{

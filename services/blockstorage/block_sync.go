@@ -141,6 +141,10 @@ type startSyncEvent struct{}
 type collectingAvailabilityFinishedEvent struct{}
 
 func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, periodicalBlockRequest synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+	if msg, ok := event.(*gossipmessages.BlockAvailabilityRequestMessage); ok {
+		b.sourceHandleBlockAvailabilityRequest(msg)
+	}
+
 	switch currentState {
 	case BLOCK_SYNC_STATE_IDLE:
 		if _, ok := event.(startSyncEvent); !ok {
@@ -323,17 +327,13 @@ func (b *BlockSync) petitionerSendBlockSyncRequest(blockType gossipmessages.Bloc
 	return err
 }
 
-func (b *BlockSync) sourceHandleBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) {
+func (b *BlockSync) sourceHandleBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) error {
 	b.reporting.Info("received block availability request", log.Stringable("sender", message.Sender))
 
 	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 
-	if lastCommittedBlockHeight == 0 {
-		return
-	}
-
 	if lastCommittedBlockHeight <= message.SignedBatchRange.LastCommittedBlockHeight() {
-		return
+		return nil
 	}
 
 	firstAvailableBlockHeight := primitives.BlockHeight(1)
@@ -353,7 +353,8 @@ func (b *BlockSync) sourceHandleBlockAvailabilityRequest(message *gossipmessages
 			}).Build(),
 		},
 	}
-	b.gossip.SendBlockAvailabilityResponse(response)
+	_, err := b.gossip.SendBlockAvailabilityResponse(response)
+	return err
 }
 
 func (b *BlockSync) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSyncRequestMessage) {
