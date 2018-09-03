@@ -188,3 +188,57 @@ func (bar *blockAvailabilityRequest) Build() *gossiptopics.BlockAvailabilityRequ
 		},
 	}
 }
+
+type blockSyncRequest basicSyncMessage
+
+func BlockSyncRequestInput() *blockSyncRequest {
+	syncRequest := &blockSyncRequest{}
+	syncRequest.recipientPublicKey = keys.Ed25519KeyPairForTests(1).PublicKey()
+	syncRequest.senderPublicKey = keys.Ed25519KeyPairForTests(2).PublicKey()
+	syncRequest.lastBlockHeight = 100
+	syncRequest.lastCommittedBlockHeight = 100
+	syncRequest.firstBlockHeight = 10
+
+	return syncRequest
+}
+
+func (bsr *blockSyncRequest) WithSenderPublicKey(publicKey primitives.Ed25519PublicKey) *blockSyncRequest {
+	bsr.senderPublicKey = publicKey
+	return bsr
+}
+
+func (bsr *blockSyncRequest) WithRecipientPublicKey(publicKey primitives.Ed25519PublicKey) *blockSyncRequest {
+	bsr.recipientPublicKey = publicKey
+	return bsr
+}
+
+func (bsr *blockSyncRequest) WithLastCommittedBlockHeight(h primitives.BlockHeight) *blockSyncRequest {
+	bsr.lastCommittedBlockHeight = h
+	return bsr
+}
+
+func (bsr *blockSyncRequest) WithFirstBlockHeight(h primitives.BlockHeight) *blockSyncRequest {
+	bsr.firstBlockHeight = h
+	return bsr
+}
+
+func (bsr *blockSyncRequest) WithLastBlockHeight(h primitives.BlockHeight) *blockSyncRequest {
+	bsr.lastBlockHeight = h
+	return bsr
+}
+
+func (bsr *blockSyncRequest) Build() *gossiptopics.BlockSyncRequestInput {
+	return &gossiptopics.BlockSyncRequestInput{
+		Message: &gossipmessages.BlockSyncRequestMessage{
+			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         bsr.firstBlockHeight,
+				LastBlockHeight:          bsr.lastBlockHeight,
+				LastCommittedBlockHeight: bsr.lastCommittedBlockHeight,
+			}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: bsr.senderPublicKey,
+			}).Build(),
+		},
+	}
+}

@@ -142,7 +142,15 @@ type collectingAvailabilityFinishedEvent struct{}
 
 func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, periodicalBlockRequest synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
 	if msg, ok := event.(*gossipmessages.BlockAvailabilityRequestMessage); ok {
-		b.sourceHandleBlockAvailabilityRequest(msg)
+		if err := b.sourceHandleBlockAvailabilityRequest(msg); err != nil {
+			b.reporting.Info("failed to respond to block availability request", log.Error(err))
+		}
+	}
+
+	if msg, ok := event.(*gossipmessages.BlockSyncRequestMessage); ok {
+		if err := b.sourceHandleBlockSyncRequest(msg); err != nil {
+			b.reporting.Info("failed to respond to block sync request", log.Error(err))
+		}
 	}
 
 	switch currentState {
@@ -357,22 +365,26 @@ func (b *BlockSync) sourceHandleBlockAvailabilityRequest(message *gossipmessages
 	return err
 }
 
-func (b *BlockSync) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSyncRequestMessage) {
+func (b *BlockSync) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSyncRequestMessage) error {
 	b.reporting.Info("received block sync request", log.Stringable("sender", message.Sender))
+
 	senderPublicKey := message.Sender.SenderPublicKey()
 	blockType := message.SignedChunkRange.BlockType()
 	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 	firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
 	lastRequestedBlockHeight := message.SignedChunkRange.LastBlockHeight()
+
 	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(b.config.BlockSyncBatchSize()-1) {
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize()-1)
 	}
 
 	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := b.storage.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
+
 	b.reporting.Info("sending blocks to another node via block sync",
 		log.Stringable("recipient", senderPublicKey),
 		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
 		log.Stringable("last-available-block-height", lastAvailableBlockHeight))
+
 	response := &gossiptopics.BlockSyncResponseInput{
 		RecipientPublicKey: senderPublicKey,
 		Message: &gossipmessages.BlockSyncResponseMessage{
@@ -388,5 +400,6 @@ func (b *BlockSync) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSy
 			BlockPairs: blocks,
 		},
 	}
-	b.gossip.SendBlockSyncResponse(response)
+	_, err := b.gossip.SendBlockSyncResponse(response)
+	return err
 }

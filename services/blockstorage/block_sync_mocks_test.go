@@ -12,7 +12,8 @@ type blockSyncStorageMock struct {
 }
 
 func (s *blockSyncStorageMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
-	panic("not mocked")
+	ret := s.Called()
+	return ret.Get(0).([]*protocol.BlockPairContainer), ret.Get(1).(primitives.BlockHeight), ret.Get(2).(primitives.BlockHeight)
 }
 
 func (s *blockSyncStorageMock) LastCommittedBlockHeight() primitives.BlockHeight {

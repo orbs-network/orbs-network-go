@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -372,6 +373,38 @@ func TestAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testin
 
 			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(200)).Times(1)
 			harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+			require.Equal(t, state, newState, "state change was not expected")
+			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
+
+func TestAnyStateRespondsWithChunks(t *testing.T) {
+	event := builders.BlockSyncRequestInput().Build().Message
+
+	firstHeight := primitives.BlockHeight(11)
+	lastHeight := primitives.BlockHeight(20)
+
+	var blocks []*protocol.BlockPairContainer
+
+	for i := firstHeight; i <= lastHeight; i++ {
+		blocks = append(blocks, builders.BlockPair().WithHeight(i).Build())
+	}
+
+	for _, state := range allStates() {
+		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			harness.storage.When("GetBlocks").Return(blocks, firstHeight, lastHeight).Times(1)
+			harness.storage.When("LastCommittedBlockHeight").Return(lastHeight).Times(1)
+			harness.gossip.When("SendBlockSyncResponse", mock.Any).Return(nil, nil).Times(1)
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
