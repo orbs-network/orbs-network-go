@@ -56,7 +56,7 @@ func main() {
 	federationNodes := make(map[string]config.FederationNode)
 	for _, federationNodePublicKey := range federationNodePublicKeys {
 		publicKey, _ := hex.DecodeString(federationNodePublicKey)
-		federationNodes[string(publicKey)] = config.NewHardCodedFederationNode(publicKey)
+		federationNodes[string(publicKey)] = config.NewHardCodedFederationNode(publicKey, 0, "") // TODO: fix gossip port and gossip endpoint
 	}
 
 	// TODO: change MemberlistGossipConfig to the standard config mechanism

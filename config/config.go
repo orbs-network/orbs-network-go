@@ -7,13 +7,15 @@ import (
 )
 
 type NodeConfig interface {
+	// setters (for creation)
 	Set(key string, value NodeConfigValue) NodeConfig
 	SetDuration(key string, value time.Duration) NodeConfig
 	SetUint32(key string, value uint32) NodeConfig
-
+	SetFederationNodes(map[string]FederationNode) NodeConfig
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
 
+	// shared
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
@@ -56,4 +58,6 @@ type NodeConfig interface {
 
 type FederationNode interface {
 	NodePublicKey() primitives.Ed25519PublicKey
+	GossipPort() uint16
+	GossipEndpoint() string
 }

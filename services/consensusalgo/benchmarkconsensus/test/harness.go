@@ -47,7 +47,7 @@ func newHarness(
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < networkSize; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey, 0, "")
 	}
 
 	nodeKeyPair := leaderKeyPair()

@@ -51,7 +51,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < int(numNodes); i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey, 0, "")
 	}
 
 	nodes := make([]*networkNode, numNodes)

@@ -7,7 +7,9 @@ import (
 )
 
 type hardCodedFederationNode struct {
-	nodePublicKey primitives.Ed25519PublicKey
+	nodePublicKey  primitives.Ed25519PublicKey
+	gossipPort     uint16
+	gossipEndpoint string
 }
 
 type NodeConfigValue struct {
@@ -51,9 +53,11 @@ const (
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 )
 
-func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
+func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey, gossipPort uint16, gossipEndpoint string) FederationNode {
 	return &hardCodedFederationNode{
-		nodePublicKey: nodePublicKey,
+		nodePublicKey:  nodePublicKey,
+		gossipPort:     gossipPort,
+		gossipEndpoint: gossipEndpoint,
 	}
 	return nil
 }
@@ -131,8 +135,21 @@ func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig 
 	return c
 }
 
+func (c *config) SetFederationNodes(federationNodes map[string]FederationNode) NodeConfig {
+	c.federationNodes = federationNodes
+	return c
+}
+
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
+}
+
+func (c *hardCodedFederationNode) GossipPort() uint16 {
+	return c.gossipPort
+}
+
+func (c *hardCodedFederationNode) GossipEndpoint() string {
+	return c.gossipEndpoint
 }
 
 func (c *config) NodePublicKey() primitives.Ed25519PublicKey {

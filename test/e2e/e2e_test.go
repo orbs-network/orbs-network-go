@@ -62,7 +62,7 @@ var _ = Describe("The Orbs Network", func() {
 			leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 			for i := 0; i < 3; i++ {
 				nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-				federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())
+				federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey(), 0, "") // TODO: fix the gossip ports and endpoints
 			}
 
 			logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
