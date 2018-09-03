@@ -48,14 +48,16 @@ func ClientBinary() []string {
 
 func runCommand(command []string, t *testing.T) (output string) {
 	cmd := exec.Command(command[0], command[1:]...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 
-	require.NoError(t, err, "error calling send_transfer")
+	fmt.Println("jsonapi exec command:", command)
+	fmt.Println("command stdout:", stdout.String())
+	fmt.Println("command stderr:", stderr.String())
 
-	output = out.String()
-	fmt.Println(output)
+	require.NoError(t, err, "jsonapi cli command should not fail")
 
 	return output
 }
