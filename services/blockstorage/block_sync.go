@@ -187,6 +187,11 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 				currentState = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
 			}
 		}
+	case BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK:
+		if msg, ok := event.(*gossipmessages.BlockSyncResponseMessage); ok {
+			b.petitionerHandleBlockSyncResponse(msg)
+			currentState = BLOCK_SYNC_STATE_IDLE
+		}
 	}
 
 	return currentState, availabilityResponses
@@ -269,12 +274,14 @@ func (b *BlockSync) petitionerHandleBlockSyncResponse(message *gossipmessages.Bl
 
 		if err != nil {
 			b.reporting.Error("failed to commit block received via sync", log.Error(err))
+			break
 		}
 
 		_, err = b.storage.CommitBlock(&services.CommitBlockInput{BlockPair: blockPair})
 
 		if err != nil {
 			b.reporting.Error("failed to commit block received via sync", log.Error(err))
+			break
 		}
 	}
 }

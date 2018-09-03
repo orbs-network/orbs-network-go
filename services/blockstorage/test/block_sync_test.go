@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -288,6 +289,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 	harness.verifyMocks(t)
 }
 
+// FIXME use builders instead
 func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncResponseInput {
 	var blocks []*protocol.BlockPairContainer
 
@@ -332,7 +334,7 @@ func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
 func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T) {
 	harness := newHarness()
 
-	harness.expectCommitStateDiffTimes(5)
+	harness.expectCommitStateDiffTimes(4)
 	harness.expectValidateWithConsensusAlgosTimes(3)
 
 	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
@@ -349,6 +351,9 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 
 	_, err = harness.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
 	require.NoError(t, err)
+
+	lastCommittedBlockheight, _ := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+	require.Equal(t, primitives.BlockHeight(4), lastCommittedBlockheight.LastCommittedBlockHeight)
 
 	harness.verifyMocks(t)
 }

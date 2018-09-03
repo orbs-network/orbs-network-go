@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -228,6 +229,64 @@ func TestCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *testing.T) {
 
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}, "availabilityResponses should not have been changed")
+
+	harness.verifyMocks(t)
+}
+
+func TestWaitingForChunk(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	harness.storage.When("ValidateBlockForCommit", mock.Any).Return(nil, nil).Times(91)
+	harness.storage.When("CommitBlock", mock.Any).Return(nil, nil).Times(91)
+
+	event := builders.BlockSyncResponseInput().Build().Message
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should not have been changed")
+
+	harness.verifyMocks(t)
+}
+
+func TestWaitingForChunkBlockValidationFailed(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	event := builders.BlockSyncResponseInput().Build().Message
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+	harness.storage.When("ValidateBlockForCommit", mock.Any).Call(func(input *services.ValidateBlockForCommitInput) error {
+		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(event.SignedChunkRange.FirstBlockHeight() + 50) {
+			return errors.New("failed to validate block #51")
+		}
+		return nil
+	}).Times(51)
+	harness.storage.When("CommitBlock", mock.Any).Return(nil, nil).Times(50)
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should not have been changed")
+
+	harness.verifyMocks(t)
+}
+
+func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	event := builders.BlockSyncResponseInput().Build().Message
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+	harness.storage.When("ValidateBlockForCommit", mock.Any).Return(nil, nil).Times(51)
+	harness.storage.When("CommitBlock", mock.Any).Call(func(input *services.CommitBlockInput) error {
+		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(event.SignedChunkRange.FirstBlockHeight() + 50) {
+			return errors.New("failed to validate block #51")
+		}
+		return nil
+	}).Times(51)
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should not have been changed")
 
 	harness.verifyMocks(t)
 }

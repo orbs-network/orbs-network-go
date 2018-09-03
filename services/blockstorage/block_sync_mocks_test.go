@@ -21,11 +21,13 @@ func (s *blockSyncStorageMock) LastCommittedBlockHeight() primitives.BlockHeight
 }
 
 func (s *blockSyncStorageMock) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
-	panic("not mocked")
+	ret := s.Called(input)
+	return nil, ret.Error(0)
 }
 
 func (s *blockSyncStorageMock) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-	panic("not mocked")
+	ret := s.Called(input)
+	return nil, ret.Error(0)
 }
 
 func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock() {

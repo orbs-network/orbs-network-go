@@ -3,8 +3,10 @@ package builders
 import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"time"
 )
 
 type availabilityResponse struct {
@@ -63,6 +65,66 @@ func (ar *availabilityResponse) Build() *gossiptopics.BlockAvailabilityResponseI
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: ar.senderPublicKey,
 			}).Build(),
+		},
+	}
+}
+
+type blockChunk struct {
+	blocks []*protocol.BlockPairContainer
+	availabilityResponse
+}
+
+func BlockSyncResponseInput() *blockChunk {
+	chunk := &blockChunk{}
+	chunk.availabilityResponse = *BlockAvailabilityResponseInput()
+
+	return chunk
+}
+
+func (bc *blockChunk) WithSenderPublicKey(publicKey primitives.Ed25519PublicKey) *blockChunk {
+	bc.senderPublicKey = publicKey
+	return bc
+}
+
+func (bc *blockChunk) WithRecipientPublicKey(publicKey primitives.Ed25519PublicKey) *blockChunk {
+	bc.recipientPublicKey = publicKey
+	return bc
+}
+
+func (bc *blockChunk) WithLastCommittedBlockHeight(h primitives.BlockHeight) *blockChunk {
+	bc.lastCommittedBlockHeight = h
+	return bc
+}
+
+func (bc *blockChunk) WithFirstBlockHeight(h primitives.BlockHeight) *blockChunk {
+	bc.firstBlockHeight = h
+	return bc
+}
+
+func (bc *blockChunk) WithLastBlockHeight(h primitives.BlockHeight) *blockChunk {
+	bc.lastBlockHeight = h
+	return bc
+}
+
+func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
+	var blocks []*protocol.BlockPairContainer
+
+	for i := bc.firstBlockHeight; i <= bc.lastBlockHeight; i++ {
+		blocks = append(blocks, BlockPair().WithHeight(i).WithBlockCreated(time.Now()).Build())
+	}
+
+	return &gossiptopics.BlockSyncResponseInput{
+		Message: &gossipmessages.BlockSyncResponseMessage{
+			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         bc.firstBlockHeight,
+				LastBlockHeight:          bc.lastBlockHeight,
+				LastCommittedBlockHeight: bc.lastCommittedBlockHeight,
+			}).Build(),
+			Sender: (&gossipmessages.SenderSignatureBuilder{
+				SenderPublicKey: bc.senderPublicKey,
+			}).Build(),
+			BlockPairs: blocks,
 		},
 	}
 }
