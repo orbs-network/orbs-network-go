@@ -15,16 +15,16 @@ import (
 
 func TestWaitForTransaction_ReturnsReceiptWhenCallbackArrivesAfterWaitIsCalled(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		w := newWaiter(ctx)
+		w := newTxWaiter(ctx)
 
 		receipt := builders.TransactionReceipt().WithRandomHash().Build()
 
-		wait := w.prepareFor(receipt.Txhash())
-		defer wait.cleanup()
+		waitContext := w.createTxWaitCtx(receipt.Txhash())
+		defer waitContext.cleanup()
 
 		c := make(txResultChan)
 		go func() {
-			o, err := wait.until(100 * time.Millisecond)
+			o, err := waitContext.until(100 * time.Millisecond)
 			assert.NoError(t, err)
 			if err != nil {
 				close(c)
@@ -43,19 +43,19 @@ func TestWaitForTransaction_ReturnsReceiptWhenCallbackArrivesAfterWaitIsCalled(t
 
 func TestWaitForTransaction_TwoWaitersOnSameTransactionDoNotBothBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		w := newWaiter(ctx)
+		w := newTxWaiter(ctx)
 
 		receipt := builders.TransactionReceipt().WithRandomHash().Build()
 
-		wait := w.prepareFor(receipt.Txhash())
-		defer wait.cleanup()
-		wait2 := w.prepareFor(receipt.Txhash())
-		defer wait2.cleanup()
+		waitContext1 := w.createTxWaitCtx(receipt.Txhash())
+		defer waitContext1.cleanup()
+		waitContext2 := w.createTxWaitCtx(receipt.Txhash())
+		defer waitContext2.cleanup()
 
 		c := make(chan struct{})
 		go func() {
-			_, e1 := wait.until(100 * time.Millisecond)
-			_, e2 := wait2.until(100 * time.Millisecond)
+			_, e1 := waitContext1.until(100 * time.Millisecond)
+			_, e2 := waitContext2.until(100 * time.Millisecond)
 			assert.Error(t, e1)
 			assert.NoError(t, e2)
 			close(c)
@@ -68,15 +68,40 @@ func TestWaitForTransaction_TwoWaitersOnSameTransactionDoNotBothBlock(t *testing
 
 func TestWaitForTransaction_Timeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		w := newWaiter(ctx)
-		var txHash primitives.Sha256
+		w := newTxWaiter(ctx)
+		txHash := make(primitives.Sha256, 32)
 		rand.Read(txHash)
 
-		wait := w.prepareFor(txHash)
-		defer wait.cleanup()
+		waitContext := w.createTxWaitCtx(txHash)
+		defer waitContext.cleanup()
 
-		_, err := wait.until(1 * time.Millisecond)
+		_, err := waitContext.until(1 * time.Millisecond)
 
 		require.EqualError(t, err, "timed out waiting for transaction result", "Timeout did not occur")
 	})
+}
+
+func TestWaitForTransaction_GracefulShutdownFreesAllWaitingGoroutines(t *testing.T) {
+	var w *txWaiter
+	done := make(chan struct{})
+	test.WithContext(func(ctx context.Context) {
+		w = newTxWaiter(ctx)
+
+		var waitTillCancelled = func() {
+			txHash := make(primitives.Sha256, 32)
+			rand.Read(txHash)
+			waitContext := w.createTxWaitCtx(txHash)
+			defer waitContext.cleanup()
+
+			startTime := time.Now()
+			_, err := waitContext.until(1 * time.Second)
+			assert.Error(t, err, "expected waiting to be aborted")
+			assert.WithinDuration(t, time.Now(), startTime, 100*time.Millisecond, "expected not to reach timeout")
+			done <- struct{}{}
+		}
+		go waitTillCancelled()
+		go waitTillCancelled()
+	})
+	<-done
+	<-done
 }

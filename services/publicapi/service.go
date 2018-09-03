@@ -39,7 +39,7 @@ func NewPublicApi(
 		virtualMachine:  virtualMachine,
 		reporting:       reporting.For(log.Service("public-api")),
 
-		txWaiter: newWaiter(ctx),
+		txWaiter: newTxWaiter(ctx),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(me)
@@ -61,8 +61,8 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	tx := input.ClientRequest.SignedTransaction()
 	txHash := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
 
-	wait := s.txWaiter.prepareFor(txHash)
-	defer wait.cleanup()
+	waitContext := s.txWaiter.createTxWaitCtx(txHash)
+	defer waitContext.cleanup()
 
 	txResponse, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
 		SignedTransaction: tx,
@@ -75,7 +75,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 		return prepareResponse(txResponse), nil
 	}
 
-	ta, err := wait.until(s.config.SendTransactionTimeout())
+	ta, err := waitContext.until(s.config.SendTransactionTimeout())
 	// TODO return pending response on timeout error
 	if err != nil {
 		return nil, err

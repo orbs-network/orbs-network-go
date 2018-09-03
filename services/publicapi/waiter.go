@@ -1,12 +1,15 @@
 package publicapi
 
 import (
-	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"time"
+)
+
+import (
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type txWaiter struct {
@@ -22,14 +25,18 @@ type txWaitContext struct {
 
 type txResultChan chan *services.AddNewTransactionOutput
 
+const retryCount = 10
+const retryDelay = 10 * time.Millisecond
+
 type txWaiterMessage struct {
-	txId    string
-	c       txResultChan
-	output  *services.AddNewTransactionOutput
-	cleanup bool
+	txId       string
+	c          txResultChan
+	output     *services.AddNewTransactionOutput
+	cleanup    bool
+	retryCount byte
 }
 
-func newWaiter(ctx context.Context) *txWaiter {
+func newTxWaiter(ctx context.Context) *txWaiter {
 	// TODO supervise
 	result := &txWaiter{queue: make(chan txWaiterMessage)}
 	result.startReceiptHandler(ctx)
@@ -59,9 +66,13 @@ func (w *txWaiter) startReceiptHandler(ctx context.Context) {
 						outputChan = nil
 						delete(txChan, message.txId)
 					default:
-						go func() {
-							w.queue <- message
-						}()
+						if message.retryCount > 0 {
+							message.retryCount--
+							go func() {
+								time.Sleep(retryDelay)
+								w.tryEnqueue(&message)
+							}()
+						}
 					}
 				}
 				if message.cleanup && message.c == outputChan && outputChan != nil { // cleanup
@@ -71,6 +82,10 @@ func (w *txWaiter) startReceiptHandler(ctx context.Context) {
 				}
 
 			case <-ctx.Done():
+				close(w.queue)
+				for _, c := range txChan {
+					close(c)
+				}
 				close(w.stopped)
 				return
 			}
@@ -78,39 +93,47 @@ func (w *txWaiter) startReceiptHandler(ctx context.Context) {
 	}(ctx)
 }
 
-func (w *txWaiter) startWaiting(txHash primitives.Sha256, c txResultChan) {
-	w.queue <- txWaiterMessage{
-		txId: txHash.KeyForMap(),
-		c:    c,
-	}
-}
-
 func (w *txWaiter) forget(txHash primitives.Sha256, c txResultChan) {
-	w.queue <- txWaiterMessage{
+	w.tryEnqueue(&txWaiterMessage{
 		txId:    txHash.KeyForMap(),
 		c:       c,
 		cleanup: true,
-	}
+	})
 }
 
 func (w *txWaiter) reportCompleted(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, timestampNano primitives.TimestampNano) {
-	w.queue <- txWaiterMessage{
-		txId: receipt.Txhash().KeyForMap(),
+	w.tryEnqueue(&txWaiterMessage{
+		txId:       receipt.Txhash().KeyForMap(),
+		retryCount: retryCount,
 		output: &services.AddNewTransactionOutput{
 			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 			TransactionReceipt: receipt,
 			BlockHeight:        blockHeight,
 			BlockTimestamp:     timestampNano,
 		},
-	}
+	})
 }
 
-func (w *txWaiter) prepareFor(txHash primitives.Sha256) *txWaitContext {
+func (w *txWaiter) createTxWaitCtx(txHash primitives.Sha256) (waitContext *txWaitContext) {
 	receiptChannel := make(txResultChan)
+	waitContext = &txWaitContext{c: receiptChannel, txHash: txHash, waiter: w}
 
-	w.startWaiting(txHash, receiptChannel)
+	defer func() {
+		if p := recover(); p != nil {
+			close(waitContext.c)
+		}
+	}()
+	w.queue <- txWaiterMessage{
+		txId: txHash.KeyForMap(),
+		c:    receiptChannel,
+	}
 
-	return &txWaitContext{c: receiptChannel, txHash: txHash, waiter: w}
+	return
+}
+
+func (w *txWaiter) tryEnqueue(message *txWaiterMessage) {
+	defer func() { recover() }()
+	w.queue <- *message
 }
 
 func (w *txWaitContext) until(timeout time.Duration) (*services.AddNewTransactionOutput, error) {
