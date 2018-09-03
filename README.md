@@ -138,6 +138,8 @@ go run *.go
   * "go fmt" in `Preferences | Tools | File Watchers`, add with `+` the `go fmt` watcher
   * To run tests automatically on save, check `Toggle auto-test` in the test panel (it's now a core feature of GoLand)
 
+* Debugging tests may contain very verbose logs, increase console buffer size in `Preferences | Editor | General | Console | Override console cycle buffer size = 10024 KB`
+
 * If you experience lags while working with GoLand, increasing its default VM heap size can help:
  * Go to `Help | Edit Custom VM Options...` and set:
  ```
