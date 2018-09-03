@@ -11,17 +11,14 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 	"math/rand"
-	"time"
 )
 
 type blockSyncState int
 
 const (
 	BLOCK_SYNC_STATE_IDLE                                   blockSyncState = 0
-	BLOCK_SYNC_STATE_START_SYNC                             blockSyncState = 1 // TODO: kill me
-	BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES blockSyncState = 2
-	BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS                    blockSyncState = 3 // TODO: kill me
-	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK                 blockSyncState = 4
+	BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES blockSyncState = 1
+	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK                 blockSyncState = 2
 )
 
 type BlockSyncStorage interface {
@@ -56,79 +53,20 @@ func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, 
 }
 
 func (b *BlockSync) mainLoop(ctx context.Context) {
-	state := BLOCK_SYNC_STATE_START_SYNC
+	state := BLOCK_SYNC_STATE_IDLE
 	var event interface{}
 	var blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage
-	updateState := make(chan blockSyncState)
 
-	// TODO use better time patterns
-	syncTrigger := time.AfterFunc(b.config.BlockSyncInterval(), func() {
-		if state == BLOCK_SYNC_STATE_IDLE {
-			updateState <- BLOCK_SYNC_STATE_START_SYNC
-		}
-	})
+	event = startSyncEvent{}
 
-	// TODO use better time patterns
-	requestBlocksTrigger := time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
-		if state == BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
-			updateState <- BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS
-		}
+	periodicalBlockRequest := synchronization.NewPeriodicalTrigger(b.config.BlockSyncInterval(), func() {
+		b.events <- startSyncEvent{}
 	})
 
 	for {
-		state, blockAvailabilityResponses = b.dispatchEvent(state, event, blockAvailabilityResponses)
-
-		if state == BLOCK_SYNC_STATE_START_SYNC {
-			syncTrigger.Stop()
-			syncTrigger.Reset(b.config.BlockSyncInterval())
-
-			b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
-
-			blockAvailabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
-
-			err := b.petitionerBroadcastBlockAvailabilityRequest()
-
-			if err != nil {
-				b.reporting.Info("failed to broadcast block availability request")
-			} else {
-				state = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
-				requestBlocksTrigger.Stop()
-				requestBlocksTrigger.Reset(b.config.BlockSyncCollectResponseTimeout())
-			}
-		}
-
-		if state == BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS {
-			requestBlocksTrigger.Stop()
-
-			count := len(blockAvailabilityResponses)
-
-			if count == 0 {
-				state = BLOCK_SYNC_STATE_START_SYNC
-				continue
-			}
-
-			b.reporting.Info("collected block availability responses", log.Int("num-responses", count))
-
-			// TODO in the future we might want to have a more sophisticated select function than that
-			syncSource := blockAvailabilityResponses[rand.Intn(count)]
-			syncSourceKey := syncSource.Sender.SenderPublicKey()
-
-			err := b.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, syncSourceKey)
-			if err != nil {
-				b.reporting.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", syncSource.Sender))
-				state = BLOCK_SYNC_STATE_START_SYNC
-				continue
-			} else {
-				b.reporting.Info("requested block chunk from source", log.Stringable("source", syncSource.Sender))
-				state = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
-			}
-		}
+		state, blockAvailabilityResponses = b.transitionState(state, event, blockAvailabilityResponses, periodicalBlockRequest)
 
 		select {
-		case state = <-updateState:
-			// Nullify the event because if we switched state, the event was processed already
-			event = nil
-			continue
 		case <-ctx.Done():
 			return
 		case event = <-b.events:
@@ -169,6 +107,10 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
 			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
 			periodicalBlockRequest.Reset()
+
+			synchronization.NewPeriodicalTrigger(b.config.BlockSyncCollectResponseTimeout(), func() {
+				b.events <- collectingAvailabilityFinishedEvent{}
+			})
 		}
 	case BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES:
 		if msg, ok := event.(*gossipmessages.BlockAvailabilityResponseMessage); ok {
@@ -207,42 +149,6 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 	}
 
 	return currentState, availabilityResponses
-}
-
-func (b *BlockSync) dispatchEvent(state blockSyncState, event interface{}, blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
-	switch event.(type) {
-	case *gossipmessages.BlockAvailabilityRequestMessage:
-		message := event.(*gossipmessages.BlockAvailabilityRequestMessage)
-		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
-			b.sourceHandleBlockAvailabilityRequest(message)
-		}
-	case *gossipmessages.BlockAvailabilityResponseMessage:
-		message := event.(*gossipmessages.BlockAvailabilityResponseMessage)
-
-		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
-			err := b.petitionerHandleBlockAvailabilityResponse(message)
-
-			if err != nil {
-				b.reporting.Info("received bad block availability response", log.Error(err))
-			} else {
-				blockAvailabilityResponses = append(blockAvailabilityResponses, message)
-			}
-		}
-	case *gossipmessages.BlockSyncRequestMessage:
-		message := event.(*gossipmessages.BlockSyncRequestMessage)
-		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
-			b.sourceHandleBlockSyncRequest(message)
-			return BLOCK_SYNC_STATE_IDLE, blockAvailabilityResponses
-		}
-	case *gossipmessages.BlockSyncResponseMessage:
-		message := event.(*gossipmessages.BlockSyncResponseMessage)
-		if fromMe := message.Sender.SenderPublicKey().Equal(b.config.NodePublicKey()); !fromMe {
-			b.petitionerHandleBlockSyncResponse(message)
-			return BLOCK_SYNC_STATE_IDLE, blockAvailabilityResponses
-		}
-	}
-
-	return state, blockAvailabilityResponses
 }
 
 func (b *BlockSync) petitionerBroadcastBlockAvailabilityRequest() error {

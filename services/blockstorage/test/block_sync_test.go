@@ -315,6 +315,8 @@ func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desi
 }
 
 func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
+	t.Skip("this should be deleted or more setup; event is ignored because it does not follow the appropriate state; tested by TestSyncCompletePetitionerSyncFlow")
+
 	harness := newHarness()
 
 	harness.expectCommitStateDiffTimes(4)
@@ -333,6 +335,8 @@ func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
 }
 
 func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T) {
+	t.Skip("this should be deleted or more setup; event is ignored because it does not follow the appropriate state; tested by TestSyncCompletePetitionerSyncFlow")
+
 	harness := newHarness()
 
 	harness.expectCommitStateDiffTimes(4)
@@ -353,8 +357,8 @@ func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T)
 	_, err = harness.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
 	require.NoError(t, err)
 
-	lastCommittedBlockheight, _ := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
-	require.Equal(t, primitives.BlockHeight(4), lastCommittedBlockheight.LastCommittedBlockHeight)
+	lastCommittedBlockHeight, _ := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+	require.Equal(t, primitives.BlockHeight(4), lastCommittedBlockHeight.LastCommittedBlockHeight)
 
 	harness.verifyMocks(t)
 }
