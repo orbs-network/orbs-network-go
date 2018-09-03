@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"strconv"
 )
 
 //TODO []byte are marshalled as base64. Should we use base58?
@@ -40,4 +41,19 @@ type CallMethodOutput struct {
 	CallResult      protocol.ExecutionResult
 	BlockHeight     primitives.BlockHeight
 	BlockTimestamp  primitives.TimestampNano
+}
+
+func (ma *MethodArgument) String() string {
+	if ma.Uint32Value != 0 {
+		return ma.Name + ":" + strconv.FormatUint(uint64(ma.Uint32Value), 10)
+	} else if ma.Uint64Value != 0 {
+		return ma.Name + ":" + strconv.FormatUint(uint64(ma.Uint64Value), 10)
+	} else if ma.StringValue != "" {
+		return ma.Name + ":" + ma.StringValue
+	} else if len(ma.BytesValue) != 0 {
+		// FIXME encode properly
+		return ma.Name + ":" + string(ma.BytesValue)
+	}
+
+	return ma.Name + ":<nil>"
 }

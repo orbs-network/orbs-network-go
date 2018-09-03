@@ -14,7 +14,9 @@ type BlockSearchRules struct {
 
 type BlockPersistence interface {
 	WriteBlock(blockPairs *protocol.BlockPairContainer) error
+	// FIXME kill it
 	ReadAllBlocks() []*protocol.BlockPairContainer
+	GetLastBlock() (*protocol.BlockPairContainer, error)
 	GetBlockTracker() *synchronization.BlockTracker
 	GetReceiptRelevantBlocks(txTimeStamp primitives.TimestampNano, rules BlockSearchRules) []*protocol.BlockPairContainer
 	GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error)

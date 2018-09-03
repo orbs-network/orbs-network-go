@@ -27,3 +27,17 @@ func MethodArguments(args ...interface{}) (res []*protocol.MethodArgument) {
 	}
 	return
 }
+
+func MethodArgumentsArray(args ...interface{}) *protocol.MethodArgumentArray {
+	res := []*protocol.MethodArgumentBuilder{}
+	builders := MethodArgumentsBuilders(args...)
+	for _, builder := range builders {
+		res = append(res, builder)
+	}
+	return (&protocol.MethodArgumentArrayBuilder{Arguments: res}).Build()
+}
+
+func MethodArgumentsOpaque(args ...interface{}) []byte {
+	argArray := MethodArgumentsArray(args...)
+	return argArray.RawArgumentsArray()
+}

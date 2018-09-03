@@ -27,49 +27,51 @@ func NewNativeProcessor(
 
 // runs once on system initialization (called by the virtual machine constructor)
 func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
-	baseContract := types.NewBaseContract(
-		&stateSdk{handler},
-		&serviceSdk{handler},
-	)
 	s.contractRepository = make(map[primitives.ContractName]types.Contract)
 	for _, contract := range repository.Contracts {
-		s.contractRepository[contract.Name] = contract.InitSingleton(baseContract)
+		s.contractRepository[contract.Name] = contract.InitSingleton(types.NewBaseContract(
+			&stateSdk{handler, contract.Permission},
+			&serviceSdk{handler, contract.Permission},
+		))
 	}
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	if s.contractRepository == nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, errors.New("contractRepository is not initialized")
 	}
 
 	// retrieve code
-	contractInfo, methodInfo, err := s.retrieveContractFromRepository(input.ContractName, input.MethodName)
+	contractInfo, methodInfo, err := s.getContractAndMethodFromRepository(input.ContractName, input.MethodName)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
 
 	// check permissions
-	err = s.verifyMethodPermissions(contractInfo, methodInfo, input.CallingService, input.PermissionScope, input.AccessScope)
+	err = s.verifyMethodPermissions(contractInfo, methodInfo, input.CallingService, input.CallingPermissionScope, input.AccessScope)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
 
 	// execute
 	ctx := types.Context(input.ContextId)
-	outputArgs, contractErr, err := s.processMethodCall(ctx, contractInfo, methodInfo, input.InputArguments)
+	outputArgs, contractErr, err := s.processMethodCall(ctx, contractInfo, methodInfo, input.InputArgumentArray)
+	if outputArgs == nil {
+		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+	}
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArguments: nil,
-			CallResult:      protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			OutputArgumentArray: outputArgs,
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
 
@@ -79,8 +81,8 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
 	}
 	return &services.ProcessCallOutput{
-		OutputArguments: outputArgs,
-		CallResult:      callResult,
+		OutputArgumentArray: outputArgs,
+		CallResult:          callResult,
 	}, contractErr
 }
 
@@ -90,7 +92,7 @@ func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*servic
 	}
 
 	// retrieve code
-	contractInfo, _, err := s.retrieveContractFromRepository(input.ContractName, "_init")
+	contractInfo, err := s.getContractFromRepository(input.ContractName)
 	if err != nil {
 		return nil, err
 	}

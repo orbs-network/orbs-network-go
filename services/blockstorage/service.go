@@ -1,6 +1,7 @@
 package blockstorage
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -16,7 +17,10 @@ import (
 )
 
 type Config interface {
-	BlockSyncCommitTimeout() time.Duration
+	NodePublicKey() primitives.Ed25519PublicKey
+	BlockSyncBatchSize() uint32
+	BlockSyncInterval() time.Duration
+	BlockSyncCollectResponseTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
@@ -30,6 +34,7 @@ const (
 type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
+	gossip       gossiptopics.BlockSync
 
 	config Config
 
@@ -38,16 +43,36 @@ type service struct {
 
 	lastCommittedBlock *protocol.BlockPairContainer
 	lastBlockLock      *sync.Mutex
+
+	blockSync *BlockSync
 }
 
-func NewBlockStorage(config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, reporting log.BasicLogger) services.BlockStorage {
-	return &service{
+func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
+	logger := reporting.For(log.Service("block-storage"))
+
+	storage := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
-		reporting:     reporting.For(log.Service("block-storage")),
+		gossip:        gossip,
+		reporting:     logger,
 		config:        config,
 		lastBlockLock: &sync.Mutex{},
 	}
+
+	lastBlock, err := persistence.GetLastBlock()
+
+	if err != nil {
+		logger.Error("could not update last block from persistence", log.Error(err))
+	}
+
+	if lastBlock != nil {
+		storage.updateLastCommittedBlock(lastBlock)
+	}
+
+	gossip.RegisterBlockSyncHandler(storage)
+	storage.blockSync = NewBlockSync(ctx, config, storage, gossip, reporting)
+
+	return storage
 }
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -90,7 +115,10 @@ func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
 	s.lastCommittedBlock = block
 }
 
-func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
+func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -98,6 +126,9 @@ func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
 }
 
 func (s *service) lastCommittedBlockTimestamp() primitives.TimestampNano {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -154,7 +185,7 @@ func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInp
 func (s *service) createEmptyTransactionReceiptResult() *services.GetTransactionReceiptOutput {
 	return &services.GetTransactionReceiptOutput{
 		TransactionReceipt: nil,
-		BlockHeight:        s.lastCommittedBlockHeight(),
+		BlockHeight:        s.LastCommittedBlockHeight(),
 		BlockTimestamp:     s.lastCommittedBlockTimestamp(),
 	}
 }
@@ -194,11 +225,12 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 
 func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    s.lastCommittedBlockHeight(),
+		LastCommittedBlockHeight:    s.LastCommittedBlockHeight(),
 		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
 	}, nil
 }
 
+// FIXME implement all block checks
 func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
 		return nil, protocolVersionError
@@ -208,30 +240,65 @@ func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitI
 		return nil, blockHeightError
 	}
 
+	if err := s.validateWithConsensusAlgos(s.lastCommittedBlock, input.BlockPair); err != nil {
+		s.reporting.Error("intra-node sync to consensus algo failed", log.Error(err))
+	}
+
 	return &services.ValidateBlockForCommitOutput{}, nil
 }
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
 	s.consensusBlocksHandlers = append(s.consensusBlocksHandlers, handler)
+
+	// update the consensus algo about the latest block we have (for its initialization)
+	// TODO: should this be under mutex since it reads s.lastCommittedBlock
+	s.UpdateConsensusAlgo()
+}
+
+func (s *service) UpdateConsensusAlgo() {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
+	if s.lastCommittedBlock != nil {
+		// passing nil on purpose, see spec
+		err := s.validateWithConsensusAlgos(nil, s.lastCommittedBlock)
+		if err != nil {
+			s.reporting.Error(err.Error())
+		}
+	}
 }
 
 func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
+	return nil, nil
 }
 
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
+	return nil, nil
 }
+
 func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
+	return nil, nil
 }
+
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	panic("Not implemented")
+	if s.blockSync != nil {
+		s.blockSync.events <- input.Message
+	}
+	return nil, nil
 }
 
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
-	currentBlockHeight := s.lastCommittedBlockHeight()
+	currentBlockHeight := s.LastCommittedBlockHeight()
 	if txBlockHeader.BlockHeight() <= currentBlockHeight {
 		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "block already in storage, timestamp mismatch"
@@ -247,7 +314,7 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 }
 
 func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
-	expectedBlockHeight := s.lastCommittedBlockHeight() + 1
+	expectedBlockHeight := s.LastCommittedBlockHeight() + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
@@ -284,10 +351,57 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 }
 
 // TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
-func (s *service) syncBlockToStateStorage(commitedBlockPair *protocol.BlockPairContainer) error {
+func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPairContainer) error {
 	_, err := s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{
-		ResultsBlockHeader: commitedBlockPair.ResultsBlock.Header,
-		ContractStateDiffs: commitedBlockPair.ResultsBlock.ContractStateDiffs,
+		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
+		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
 	})
 	return err
+}
+
+func (s *service) validateWithConsensusAlgos(prevBlockPair *protocol.BlockPairContainer, lastCommittedBlockPair *protocol.BlockPairContainer) error {
+	for _, handler := range s.consensusBlocksHandlers {
+		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:              lastCommittedBlockPair,
+			PrevCommittedBlockPair: prevBlockPair,
+		})
+
+		// one of the consensus algos has validated the block, this means it's a valid block
+		if err == nil {
+			return nil
+		}
+	}
+
+	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers))
+}
+
+// Returns a slice of blocks containing first and last
+// TODO support chunking
+func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
+	// FIXME use more efficient way to slice blocks
+
+	allBlocks := s.persistence.ReadAllBlocks()
+	allBlocksLength := primitives.BlockHeight(len(allBlocks))
+
+	s.reporting.Info("Reading all blocks", log.Stringable("blocks-total", allBlocksLength))
+
+	firstAvailableBlockHeight = first
+
+	if firstAvailableBlockHeight > allBlocksLength {
+		return blocks, firstAvailableBlockHeight, firstAvailableBlockHeight
+	}
+
+	lastAvailableBlockHeight = last
+	if allBlocksLength < last {
+		lastAvailableBlockHeight = allBlocksLength
+	}
+
+	for i := first - 1; i < lastAvailableBlockHeight; i++ {
+		s.reporting.Info("Retrieving block", log.BlockHeight(i), log.Stringable("blocks-total", i))
+		blocks = append(blocks, allBlocks[i])
+	}
+
+	return blocks, firstAvailableBlockHeight, lastAvailableBlockHeight
 }

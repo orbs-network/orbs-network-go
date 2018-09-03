@@ -52,22 +52,24 @@ func ConvertTransaction(tx *Transaction) *protocol.TransactionBuilder {
 			Uint64Value: arg.Uint64Value,
 		})
 	}
+	inputArgumentArray := (&protocol.MethodArgumentArrayBuilder{Arguments: inputArguments}).Build()
 
 	return &protocol.TransactionBuilder{
-		ProtocolVersion: 1,
-		VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID, //TODO move to Transaction
-		ContractName:    primitives.ContractName(tx.ContractName),
-		MethodName:      primitives.MethodName(tx.MethodName),
-		Timestamp:       primitives.TimestampNano(time.Now().UnixNano()),
-		InputArguments:  inputArguments,
+		ProtocolVersion:    1,
+		VirtualChainId:     builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID, //TODO move to Transaction
+		ContractName:       primitives.ContractName(tx.ContractName),
+		MethodName:         primitives.MethodName(tx.MethodName),
+		Timestamp:          primitives.TimestampNano(time.Now().UnixNano()),
+		InputArgumentArray: inputArgumentArray.RawArgumentsArray(),
 	}
 
 }
 
 func ConvertSendTransactionOutput(sto *client.SendTransactionResponse) *SendTransactionOutput {
+	outputArgsIterator := builders.TransactionReceiptOutputArgumentsParse(sto.TransactionReceipt())
 	var outputArguments []MethodArgument
-	for iter := sto.TransactionReceipt().OutputArgumentsIterator(); iter.HasNext(); {
-		arg := iter.NextOutputArguments()
+	for iter := outputArgsIterator; iter.HasNext(); {
+		arg := iter.NextArguments()
 		methodArg := convertMethodArgument(arg)
 		outputArguments = append(outputArguments, methodArg)
 	}
@@ -85,9 +87,10 @@ func ConvertSendTransactionOutput(sto *client.SendTransactionResponse) *SendTran
 }
 
 func ConvertCallMethodOutput(cmo *client.CallMethodResponse) *CallMethodOutput {
+	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(cmo)
 	var outputArguments []MethodArgument
-	for iter := cmo.OutputArgumentsIterator(); iter.HasNext(); {
-		arg := iter.NextOutputArguments()
+	for iter := outputArgsIterator; iter.HasNext(); {
+		arg := iter.NextArguments()
 		methodArg := convertMethodArgument(arg)
 		outputArguments = append(outputArguments, methodArg)
 	}
@@ -118,10 +121,13 @@ func convertMethodArgument(arg *protocol.MethodArgument) MethodArgument {
 	return methodArg
 }
 
-func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, serverUrl string) (*SendTransactionOutput, error) {
+func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, serverUrl string, logVerbose bool) (*SendTransactionOutput, error) {
 	tx, err := ConvertAndSignTransaction(transferJson, keyPair)
 
-	log.GetLogger().Info("sending transaction", log.Stringable("transaction", tx.Build()))
+	if logVerbose {
+		log.GetLogger().Info("sending transaction", log.Stringable("transaction", tx.Build()))
+	}
+
 	sendTransactionRequest := (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()
 	res, err := http.Post(serverUrl+"/api/send-transaction", "application/octet-stream", bytes.NewReader(sendTransactionRequest.Raw()))
 	if err != nil {
@@ -132,18 +138,22 @@ func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, se
 		return nil, errors.Errorf("got unexpected http status code %s", res.StatusCode)
 	}
 
-	bytes, err := ioutil.ReadAll(res.Body)
+	readBytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
-	//
-	return ConvertSendTransactionOutput(client.SendTransactionResponseReader(bytes)), err
+
+	return ConvertSendTransactionOutput(client.SendTransactionResponseReader(readBytes)), err
 }
 
-func CallMethod(transferJson *Transaction, serverUrl string) (*CallMethodOutput, error) {
+func CallMethod(transferJson *Transaction, serverUrl string, logVerbose bool) (*CallMethodOutput, error) {
 	tx := ConvertTransaction(transferJson)
-	log.GetLogger().Info("calling method", log.Stringable("transaction", tx.Build()))
+
+	if logVerbose {
+		log.GetLogger().Info("calling method", log.Stringable("transaction", tx.Build()))
+	}
+
 	request := (&client.CallMethodRequestBuilder{Transaction: tx}).Build()
 	res, err := http.Post(serverUrl+"/api/call-method", "application/octet-stream", bytes.NewReader(request.Raw()))
 	if err != nil {
@@ -154,11 +164,11 @@ func CallMethod(transferJson *Transaction, serverUrl string) (*CallMethodOutput,
 		return nil, errors.Errorf("got unexpected http status code %s", res.StatusCode)
 	}
 
-	bytes, err := ioutil.ReadAll(res.Body)
+	readBytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	return ConvertCallMethodOutput(client.CallMethodResponseReader(bytes)), err
+	return ConvertCallMethodOutput(client.CallMethodResponseReader(readBytes)), err
 }

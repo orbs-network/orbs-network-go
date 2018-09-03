@@ -97,9 +97,9 @@ var _ = Describe("The Orbs Network", func() {
 		}
 
 		Eventually(func() uint64 {
-			response := callMethod(m).ClientResponse.OutputArgumentsIterator()
-			if response.HasNext() {
-				return response.NextOutputArguments().Uint64Value()
+			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(callMethod(m).ClientResponse)
+			if outputArgsIterator.HasNext() {
+				return outputArgsIterator.NextArguments().Uint64Value()
 			} else {
 				return 0
 			}

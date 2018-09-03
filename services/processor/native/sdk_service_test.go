@@ -1,21 +1,12 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
-
-func TestIsNative(t *testing.T) {
-	s := createServiceSdk()
-
-	err := s.IsNative(EXAMPLE_CONTEXT, "NativeContract")
-	require.NoError(t, err, "isNative should succeed")
-
-	err = s.IsNative(EXAMPLE_CONTEXT, "NonNativeContract")
-	require.Error(t, err, "isNative should fail")
-}
 
 func TestCallMethod(t *testing.T) {
 	s := createServiceSdk()
@@ -26,7 +17,8 @@ func TestCallMethod(t *testing.T) {
 
 func createServiceSdk() *serviceSdk {
 	return &serviceSdk{
-		handler: &contractSdkServiceCallHandlerStub{},
+		handler:         &contractSdkServiceCallHandlerStub{},
+		permissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
 	}
 }
 
@@ -34,13 +26,10 @@ type contractSdkServiceCallHandlerStub struct {
 }
 
 func (c *contractSdkServiceCallHandlerStub) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
+	if input.PermissionScope != protocol.PERMISSION_SCOPE_SYSTEM {
+		panic("permissions passed to SDK are incorrect")
+	}
 	switch input.MethodName {
-	case "isNative":
-		if input.InputArguments[0].StringValue() == "NativeContract" {
-			return nil, nil
-		} else {
-			return nil, errors.New("not native contract")
-		}
 	case "callMethod":
 		return nil, nil
 	default:

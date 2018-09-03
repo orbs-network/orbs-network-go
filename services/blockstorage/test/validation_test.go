@@ -8,76 +8,80 @@ import (
 )
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 	block := builders.BlockPair().Build()
 
-	_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	harness.expectValidateWithConsensusAlgosTimes(1)
+
+	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.NoError(t, err, "block should be valid")
 }
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
-	driver := NewDriver()
+	harness := newHarness()
 	block := builders.BlockPair().Build()
 
 	block.TransactionsBlock.Header.MutateProtocolVersion(998)
 
-	_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "protocol version mismatch", "tx protocol was mutate, should fail")
 
 	block.ResultsBlock.Header.MutateProtocolVersion(999)
 
-	_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "protocol version mismatch", "rx protocol was mutate, should fail")
 
 	block.TransactionsBlock.Header.MutateProtocolVersion(999)
 
-	_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "protocol version mismatch", "tx and rx protocol was mutate, should fail")
 
 	block.TransactionsBlock.Header.MutateProtocolVersion(1)
 
-	_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "protocol version mismatch", "only rx protocol was mutate, should fail")
 }
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
-	driver := NewDriver()
-	driver.expectCommitStateDiff()
+	harness := newHarness()
+	harness.expectCommitStateDiff()
+	harness.expectValidateWithConsensusAlgosTimes(1)
 
-	driver.commitBlock(builders.BlockPair().Build())
+	harness.commitBlock(builders.BlockPair().Build())
 
 	block := builders.BlockPair().WithHeight(2).Build()
 
-	_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.NoError(t, err, "happy flow")
 }
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
-	driver := NewDriver()
-	driver.expectCommitStateDiff()
+	harness := newHarness()
+	harness.expectCommitStateDiff()
+	harness.expectValidateWithConsensusAlgosTimes(1)
 
-	driver.commitBlock(builders.BlockPair().Build())
+	harness.commitBlock(builders.BlockPair().Build())
 
 	block := builders.BlockPair().WithHeight(2).Build()
 
 	block.TransactionsBlock.Header.MutateBlockHeight(998)
 
-	_, err := driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "block height is 998, expected 2", "tx block height was mutate, expected an error")
 
 	block.ResultsBlock.Header.MutateBlockHeight(999)
 
-	_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "block height is 998, expected 2", "rx block height was mutate, expected an error")
 
 	block.TransactionsBlock.Header.MutateBlockHeight(999)
 
-	_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "block height is 999, expected 2", "tx & rx block height was mutate, expected an error")
 
 	block.TransactionsBlock.Header.MutateProtocolVersion(1)
 
-	_, err = driver.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
 	require.EqualError(t, err, "block height is 999, expected 2", "only rx block height was mutate, expected an error")
 }
 

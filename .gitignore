@@ -80,3 +80,6 @@ main
 
 # Logs
 *.log
+
+# binaries
+orbs-*

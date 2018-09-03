@@ -8,60 +8,133 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) getServiceDeployment(executionContext *executionContext, serviceName primitives.ContractName) (services.Processor, protocol.ExecutionPermissionScope, error) {
+func (s *service) getServiceDeployment(executionContext *executionContext, serviceName primitives.ContractName) (services.Processor, error) {
 	// call the system contract to identify the processor
-	processorType, err := s.callIsServiceDeployedContract(executionContext, serviceName)
+	processorType, err := s.callGetDeploymentInfoSystemContract(executionContext, serviceName)
+
+	// on failure (contract not deployed), attempt to auto deploy native contract
 	if err != nil {
-		return nil, 0, err
+		processorType, err = s.attemptToAutoDeployNativeContract(executionContext, serviceName)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// return according to processor
 	switch processorType {
 	case protocol.PROCESSOR_TYPE_NATIVE:
-		output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(&services.GetContractInfoInput{
-			ContractName: serviceName,
-		})
-		if err != nil {
-			return nil, 0, err
-		}
-		return s.processors[protocol.PROCESSOR_TYPE_NATIVE], output.PermissionScope, nil
+		return s.processors[protocol.PROCESSOR_TYPE_NATIVE], nil
 	default:
-		return nil, 0, errors.Errorf("isServiceDeployed contract returned unknown processor type: %s", processorType)
+		return nil, errors.Errorf("_Deployments.getInfo contract returned unknown processor type: %s", processorType)
 	}
 }
 
-func (s *service) callIsServiceDeployedContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
-	systemContractName := deployments.CONTRACT.Name
-	systemMethodName := deployments.METHOD_IS_SERVICE_DEPLOYED_READ_ONLY.Name
-	systemContractPermissions := deployments.CONTRACT.Permission
-	if executionContext.accessScope == protocol.ACCESS_SCOPE_READ_WRITE {
-		systemMethodName = deployments.METHOD_IS_SERVICE_DEPLOYED.Name
+func (s *service) attemptToAutoDeployNativeContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
+	// make sure we have a write context (needed for deployment)
+	if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
+		return 0, errors.Errorf("context accessScope is %s instead of read-write needed for auto deployment", executionContext.accessScope)
 	}
 
+	// make sure this is a native contract
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(&services.GetContractInfoInput{
+		ContractName: serviceName,
+	})
+	if err != nil {
+		return 0, errors.Wrap(err, "attempting to auto deploy native contract")
+	}
+
+	// auto deploy native contract
+	err = s.callDeployServiceSystemContract(executionContext, serviceName)
+	if err != nil {
+		return 0, err
+	}
+
+	// auto deploy native contract was successful
+	return protocol.PROCESSOR_TYPE_NATIVE, nil
+}
+
+func (s *service) callGetDeploymentInfoSystemContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
+	systemContractName := deployments.CONTRACT.Name
+	systemMethodName := deployments.METHOD_GET_INFO.Name
+
 	// modify execution context
-	executionContext.serviceStackPush(systemContractName, systemContractPermissions)
+	executionContext.serviceStackPush(systemContractName)
 	defer executionContext.serviceStackPop()
 
 	// execute the call
+	inputArgs := (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{
+				Name:        "serviceName",
+				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+				StringValue: string(serviceName),
+			},
+		},
+	}).Build()
 	output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
-		ContextId:    executionContext.contextId,
-		ContractName: systemContractName,
-		MethodName:   systemMethodName,
-		InputArguments: []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:        "serviceName",
-			Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-			StringValue: string(serviceName),
-		}).Build()},
-		AccessScope:       executionContext.accessScope,
-		PermissionScope:   systemContractPermissions,
-		CallingService:    systemContractName,
-		TransactionSigner: nil,
+		ContextId:              executionContext.contextId,
+		ContractName:           systemContractName,
+		MethodName:             systemMethodName,
+		InputArgumentArray:     inputArgs,
+		AccessScope:            executionContext.accessScope,
+		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+		CallingService:         systemContractName,
+		TransactionSigner:      nil,
 	})
 	if err != nil {
 		return 0, err
 	}
-	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeUint32Value() {
-		return 0, errors.Errorf("isServiceDeployed contract returned corrupt output value")
+	outputArgsIterator := output.OutputArgumentArray.ArgumentsIterator()
+	if !outputArgsIterator.HasNext() {
+		return 0, errors.Errorf("_Deployments.getInfo contract returned corrupt output value")
 	}
-	return protocol.ProcessorType(output.OutputArguments[0].Uint32Value()), nil
+	outputArg0 := outputArgsIterator.NextArguments()
+	if !outputArg0.IsTypeUint32Value() {
+		return 0, errors.Errorf("_Deployments.getInfo contract returned corrupt output value")
+	}
+	return protocol.ProcessorType(outputArg0.Uint32Value()), nil
+}
+
+func (s *service) callDeployServiceSystemContract(executionContext *executionContext, serviceName primitives.ContractName) error {
+	systemContractName := deployments.CONTRACT.Name
+	systemMethodName := deployments.METHOD_DEPLOY_SERVICE.Name
+
+	// modify execution context
+	executionContext.serviceStackPush(systemContractName)
+	defer executionContext.serviceStackPop()
+
+	// execute the call
+	inputArgs := (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{
+				Name:        "serviceName",
+				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+				StringValue: string(serviceName),
+			},
+			{
+				Name:        "processorType",
+				Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE,
+				Uint32Value: uint32(protocol.PROCESSOR_TYPE_NATIVE),
+			},
+			{
+				Name:       "code",
+				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+				BytesValue: []byte{},
+			},
+		},
+	}).Build()
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+		ContextId:              executionContext.contextId,
+		ContractName:           systemContractName,
+		MethodName:             systemMethodName,
+		InputArgumentArray:     inputArgs,
+		AccessScope:            executionContext.accessScope,
+		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
+		CallingService:         systemContractName,
+		TransactionSigner:      nil,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

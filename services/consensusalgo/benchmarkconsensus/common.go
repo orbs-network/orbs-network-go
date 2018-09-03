@@ -10,9 +10,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	//"math"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
-func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
+func (s *service) lastCommittedBlockHeightUnderMutex() primitives.BlockHeight {
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -77,23 +78,28 @@ func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer
 	return xorHash
 }
 
-func (s *service) handleBlockConsensusFromHandler(blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConsensusMode, blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// validate the block consensus
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
 		return errors.Errorf("handler received unsupported block type %s", blockType)
 	}
-	err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
-	if err != nil {
-		return err
+
+	// validate the block consensus
+	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY {
+		err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
+		if err != nil {
+			return err
+		}
 	}
 
 	// update lastCommitted to reflect this if newer
-	if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeight() {
-		s.lastCommittedBlock = blockPair
-		s.lastCommittedBlockVoters = make(map[string]bool) // leader only
+	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
+		if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeightUnderMutex() {
+			s.lastCommittedBlock = blockPair
+			s.lastCommittedBlockVoters = make(map[string]bool) // leader only
+		}
 	}
 
 	return nil

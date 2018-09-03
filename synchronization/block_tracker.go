@@ -15,9 +15,7 @@ type BlockTracker struct {
 	currentHeight uint64 // this is not primitives.BlockHeight so as to avoid unnecessary casts
 	latch         chan struct{}
 
-	// following fields are for tests only
-	enteredSelectSignalForTests chan int
-	selectIterationsForTests    int
+	fireOnWait func() // used by unit test
 }
 
 func NewBlockTracker(startingHeight uint64, graceDist uint16, timeout time.Duration) *BlockTracker {
@@ -59,11 +57,14 @@ func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) erro
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
+	// TODO deal with edge cases of Stop and Reset
 	timer := time.NewTimer(t.timeout)
 	defer timer.Stop()
 
 	for currentHeight < requestedHeightUint {
-		t.notifyEnterSelectForTests()
+		if t.fireOnWait != nil {
+			t.fireOnWait()
+		}
 		select {
 		case <-timer.C:
 			return errors.Errorf("timed out waiting for block at height %v", requestedHeight)
@@ -74,12 +75,3 @@ func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) erro
 	return nil
 }
 
-func (t *BlockTracker) notifyEnterSelectForTests() {
-	if t.enteredSelectSignalForTests != nil {
-		t.selectIterationsForTests++
-		select {
-		case t.enteredSelectSignalForTests <- t.selectIterationsForTests:
-		default:
-		}
-	}
-}

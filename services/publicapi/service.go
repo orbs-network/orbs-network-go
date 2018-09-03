@@ -54,6 +54,10 @@ func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResu
 	return &handlers.HandleTransactionResultsOutput{}, nil
 }
 
+func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
+	panic("Not implemented")
+}
+
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
 	s.reporting.Info("enter SendTransaction")
 	defer s.reporting.Info("exit SendTransaction")
@@ -87,24 +91,10 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 	var receiptForClient *protocol.TransactionReceiptBuilder = nil
 
 	if receipt := transactionOutput.TransactionReceipt; receipt != nil {
-		mabs := make([]*protocol.MethodArgumentBuilder, 0, 1)
-		// TODO replace with Tals implementation
-		oai := receipt.OutputArgumentsIterator()
-		for oai.HasNext() {
-			ma := oai.NextOutputArguments()
-			mabs = append(mabs, &protocol.MethodArgumentBuilder{
-				Name:        ma.Name(),
-				Type:        ma.Type(),
-				Uint32Value: ma.Uint32Value(),
-				Uint64Value: ma.Uint64Value(),
-				StringValue: ma.StringValue(),
-				BytesValue:  ma.BytesValue()},
-			)
-		}
 		receiptForClient = &protocol.TransactionReceiptBuilder{
 			Txhash:          receipt.Txhash(),
 			ExecutionResult: receipt.ExecutionResult(),
-			OutputArguments: mabs,
+			OutputArgumentArray: receipt.OutputArgumentArray(),
 		}
 	}
 
@@ -122,24 +112,15 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	s.reporting.Info("enter CallMethod")
 	defer s.reporting.Info("exit CallMethod")
 	// TODO get block height for input ?
-	rlm, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
+	output, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: input.ClientRequest.Transaction(),
 	})
 	if err != nil {
 		return nil, err
 	}
-	var oa []*protocol.MethodArgumentBuilder
-	for _, arg := range rlm.OutputArguments {
-		switch arg.Type() {
-		case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
-			oa = []*protocol.MethodArgumentBuilder{
-				{Name: arg.Name(), Type: arg.Type(), Uint64Value: arg.Uint64Value()},
-			}
-		}
-	}
 	return &services.CallMethodOutput{
 		ClientResponse: (&client.CallMethodResponseBuilder{
-			OutputArguments: oa,
+			OutputArgumentArray: output.OutputArgumentArray,
 		}).Build(),
 	}, nil
 }
