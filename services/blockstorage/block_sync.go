@@ -20,7 +20,7 @@ const (
 	BLOCK_SYNC_STATE_IDLE                                   blockSyncState = 0
 	BLOCK_SYNC_STATE_START_SYNC                             blockSyncState = 1 // TODO: kill me
 	BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES blockSyncState = 2
-	BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS                    blockSyncState = 3
+	BLOCK_SYNC_PETITIONER_ASK_FOR_BLOCKS                    blockSyncState = 3 // TODO: kill me
 	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK                 blockSyncState = 4
 )
 
@@ -164,11 +164,29 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			break
 		}
 
-		if _, ok := event.(collectingAvailabilityFinishedEvent); !ok {
-			break
-		}
+		if _, ok := event.(collectingAvailabilityFinishedEvent); ok {
+			count := len(availabilityResponses)
 
-		currentState = BLOCK_SYNC_STATE_IDLE
+			if count == 0 {
+				currentState = BLOCK_SYNC_STATE_IDLE
+				break
+			}
+
+			b.reporting.Info("collected block availability responses", log.Int("num-responses", count))
+
+			// TODO in the future we might want to have a more sophisticated select function than that
+			syncSource := availabilityResponses[rand.Intn(count)]
+			syncSourceKey := syncSource.Sender.SenderPublicKey()
+
+			err := b.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, syncSourceKey)
+			if err != nil {
+				b.reporting.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", syncSource.Sender))
+				currentState = BLOCK_SYNC_STATE_IDLE
+			} else {
+				b.reporting.Info("requested block chunk from source", log.Stringable("source", syncSource.Sender))
+				currentState = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
+			}
+		}
 	}
 
 	return currentState, availabilityResponses

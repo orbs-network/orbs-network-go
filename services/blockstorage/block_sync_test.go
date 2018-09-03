@@ -165,7 +165,6 @@ func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
 }
 
 func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
-
 	events := allEventsExcept("blockstorage.collectingAvailabilityFinishedEvent", "*gossipmessages.BlockAvailabilityResponseMessage")
 	for _, event := range events {
 		t.Run(typeOfEvent(event), func(t *testing.T) {
@@ -181,4 +180,54 @@ func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
 			harness.verifyMocks(t)
 		})
 	}
+}
+
+func TestCollectingAvailabilitySendsBlockSyncRequest(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
+	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+
+	event := collectingAvailabilityFinishedEvent{}
+	availabilityResponse := builders.BlockAvailabilityResponseInput().Build().Message
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+	require.Equal(t, BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, newState, "state change does not match expected")
+	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}, "availabilityResponses should not have been changed")
+
+	harness.verifyMocks(t)
+}
+
+func TestCollectingAvailabilityDoesNothingIfNoResponsesCollected(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	event := collectingAvailabilityFinishedEvent{}
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+	require.Empty(t, availabilityResponses, "availabilityResponses should not have been changed")
+
+	harness.verifyMocks(t)
+}
+
+func TestCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *testing.T) {
+	harness := newBlockSyncHarness()
+
+	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
+	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+
+	event := collectingAvailabilityFinishedEvent{}
+	availabilityResponse := builders.BlockAvailabilityResponseInput().Build().Message
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}, "availabilityResponses should not have been changed")
+
+	harness.verifyMocks(t)
 }
