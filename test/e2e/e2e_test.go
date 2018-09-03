@@ -3,7 +3,6 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	. "github.com/onsi/ginkgo"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -29,13 +28,6 @@ type E2EConfig struct {
 	ApiEndpoint string
 }
 
-func TestE2E(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E tests in short mode")
-	}
-	RunSpecs(t, "E2E Suite")
-}
-
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	ApiEndpoint := "http://localhost:8080/api/"
@@ -51,6 +43,10 @@ func getConfig() E2EConfig {
 }
 
 func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
+
 	var nodes []bootstrap.Node
 
 	// TODO: kill me - why do we need this override?
