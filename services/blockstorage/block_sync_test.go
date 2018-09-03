@@ -290,3 +290,21 @@ func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
 
 	harness.verifyMocks(t)
 }
+
+func TestWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
+	events := allEventsExcept("*gossipmessages.BlockSyncResponseMessage")
+	for _, event := range events {
+		t.Run(typeOfEvent(event), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+			require.Equal(t, BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, newState, "state change does not match expected")
+			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
