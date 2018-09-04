@@ -15,21 +15,6 @@ import (
 	"time"
 )
 
-// FIXME use builders
-func generateBlockAvailabilityRequestInput(lastCommittedBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockAvailabilityRequestInput {
-	return &gossiptopics.BlockAvailabilityRequestInput{
-		Message: &gossipmessages.BlockAvailabilityRequestMessage{
-			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
-			}).Build(),
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: senderPublicKey,
-			}).Build(),
-		},
-	}
-}
-
 func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
@@ -41,7 +26,8 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 
 		senderKeyPair := keys.Ed25519KeyPairForTests(9)
 
-		input := generateBlockAvailabilityRequestInput(primitives.BlockHeight(0), senderKeyPair.PublicKey())
+		input := builders.BlockAvailabilityRequestInput().WithLastCommittedBlockHeight(primitives.BlockHeight(0)).WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
+
 		response := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
@@ -94,22 +80,6 @@ func TestSyncPetitionerHandlesBlockAvailabilityResponseFromMultipleSources(t *te
 	})
 }
 
-func generateBlockSyncRequestInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncRequestInput {
-	return &gossiptopics.BlockSyncRequestInput{
-		Message: &gossipmessages.BlockSyncRequestMessage{
-			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				FirstBlockHeight:         lastBlockHeight,
-				LastBlockHeight:          desirableBlockHeight,
-				LastCommittedBlockHeight: lastBlockHeight,
-			}).Build(),
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: senderPublicKey,
-			}).Build(),
-		},
-	}
-}
-
 func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
@@ -131,7 +101,11 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2], blocks[3]}
 
 		senderKeyPair := keys.Ed25519KeyPairForTests(9)
-		input := generateBlockSyncRequestInput(primitives.BlockHeight(2), primitives.BlockHeight(10002), senderKeyPair.PublicKey())
+		input := builders.BlockSyncRequestInput().
+			WithFirstBlockHeight(primitives.BlockHeight(2)).
+			WithLastBlockHeight(primitives.BlockHeight(10002)).
+			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
+			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
 		response := &gossiptopics.BlockSyncResponseInput{
 			RecipientPublicKey: senderKeyPair.PublicKey(),
@@ -181,7 +155,11 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
 
 		senderKeyPair := keys.Ed25519KeyPairForTests(9)
-		input := generateBlockSyncRequestInput(primitives.BlockHeight(2), primitives.BlockHeight(10002), senderKeyPair.PublicKey())
+		input := builders.BlockSyncRequestInput().
+			WithFirstBlockHeight(primitives.BlockHeight(2)).
+			WithLastBlockHeight(primitives.BlockHeight(10002)).
+			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
+			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
 		response := &gossiptopics.BlockSyncResponseInput{
 			RecipientPublicKey: senderKeyPair.PublicKey(),
@@ -206,30 +184,6 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 
 		harness.verifyMocks(t)
 	})
-}
-
-// FIXME use builders instead
-func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desirableBlockHeight primitives.BlockHeight, senderPublicKey primitives.Ed25519PublicKey) *gossiptopics.BlockSyncResponseInput {
-	var blocks []*protocol.BlockPairContainer
-
-	for i := lastBlockHeight; i <= desirableBlockHeight; i++ {
-		blocks = append(blocks, builders.BlockPair().WithHeight(i).WithBlockCreated(time.Now()).Build())
-	}
-
-	return &gossiptopics.BlockSyncResponseInput{
-		Message: &gossipmessages.BlockSyncResponseMessage{
-			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				FirstBlockHeight:         lastBlockHeight,
-				LastBlockHeight:          desirableBlockHeight,
-				LastCommittedBlockHeight: lastBlockHeight,
-			}).Build(),
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: senderPublicKey,
-			}).Build(),
-			BlockPairs: blocks,
-		},
-	}
 }
 
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
@@ -260,7 +214,11 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 		time.Sleep(4 * time.Millisecond)
 
-		blockSyncResponse := generateBlockSyncResponseInput(primitives.BlockHeight(1), primitives.BlockHeight(4), senderKeyPair.PublicKey())
+		blockSyncResponse := builders.BlockSyncResponseInput().
+			WithFirstBlockHeight(primitives.BlockHeight(1)).
+			WithLastBlockHeight(primitives.BlockHeight(4)).
+			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
+			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
 		harness.expectCommitStateDiffTimes(4)
 		harness.expectValidateWithConsensusAlgosTimes(4)
