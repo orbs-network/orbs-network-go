@@ -103,7 +103,7 @@ func allStatesExceptCollecting() []blockSyncState {
 	}
 }
 
-func TestEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *testing.T) {
+func TestPetitionerEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *testing.T) {
 	for _, state := range allStatesExceptCollecting() {
 		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
@@ -127,7 +127,7 @@ func TestEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *testing.T)
 	}
 }
 
-func TestIdleIgnoresInvalidEvents(t *testing.T) {
+func TestAnyoneIdleIgnoresInvalidEvents(t *testing.T) {
 	events := allEventsExcept(
 		"blockstorage.startSyncEvent",
 		"*gossipmessages.BlockAvailabilityRequestMessage",
@@ -149,7 +149,7 @@ func TestIdleIgnoresInvalidEvents(t *testing.T) {
 	}
 }
 
-func TestStartSyncGossipFailure(t *testing.T) {
+func TestPetitionerStartSyncGossipFailure(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	event := startSyncEvent{}
@@ -167,7 +167,7 @@ func TestStartSyncGossipFailure(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestCollectingAvailabilityNoResponsesFlow(t *testing.T) {
+func TestPetitionerCollectingAvailabilityNoResponsesFlow(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	event := collectingAvailabilityFinishedEvent{}
@@ -181,7 +181,7 @@ func TestCollectingAvailabilityNoResponsesFlow(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
+func TestPetitionerCollectingAvailabilityAddingResponseFlow(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	event := builders.BlockAvailabilityResponseInput().Build().Message
@@ -195,7 +195,7 @@ func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
+func TestPetitionerCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
 	events := allEventsExcept(
 		"blockstorage.collectingAvailabilityFinishedEvent",
 		"*gossipmessages.BlockAvailabilityResponseMessage",
@@ -218,7 +218,7 @@ func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
 	}
 }
 
-func TestFinishingCollectingAvailabilityRequestsSendsBlockSyncRequest(t *testing.T) {
+func TestPetitionerFinishingCollectingAvailabilityRequestsSendsBlockSyncRequest(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
@@ -237,7 +237,7 @@ func TestFinishingCollectingAvailabilityRequestsSendsBlockSyncRequest(t *testing
 	harness.verifyMocks(t)
 }
 
-func TestCollectingAvailabilityDoesNothingIfNoResponsesCollected(t *testing.T) {
+func TestPetitionerCollectingAvailabilityDoesNothingIfNoResponsesCollected(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	event := collectingAvailabilityFinishedEvent{}
@@ -251,7 +251,7 @@ func TestCollectingAvailabilityDoesNothingIfNoResponsesCollected(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *testing.T) {
+func TestPetitionerCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
@@ -269,7 +269,28 @@ func TestCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestWaitingForChunk(t *testing.T) {
+func TestPetitionerCollectingAvailabilityDoesNothingIfSourceIsBehindPetitioner(t *testing.T) {
+	t.Skip("not implemented")
+
+	harness := newBlockSyncHarness()
+
+	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(2000)).Times(1)
+	harness.gossip.Never("SendBlockSyncRequest", mock.Any)
+	harness.startSyncTimer.When("Reset").Times(1)
+
+	event := collectingAvailabilityFinishedEvent{}
+	availabilityResponse := builders.BlockAvailabilityResponseInput().Build().Message
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
+
+	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
+	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}, "availabilityResponses should not have been changed")
+
+	harness.verifyMocks(t)
+}
+
+func TestPetitionerWaitingForChunk(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	harness.storage.When("ValidateBlockForCommit", mock.Any).Return(nil, nil).Times(91)
@@ -286,7 +307,7 @@ func TestWaitingForChunk(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestWaitingForChunkBlockValidationFailed(t *testing.T) {
+func TestPetitionerWaitingForChunkBlockValidationFailed(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	event := builders.BlockSyncResponseInput().Build().Message
@@ -308,7 +329,7 @@ func TestWaitingForChunkBlockValidationFailed(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
+func TestPetitionerWaitingForChunkBlockCommitFailed(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	event := builders.BlockSyncResponseInput().Build().Message
@@ -330,7 +351,7 @@ func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
 	harness.verifyMocks(t)
 }
 
-func TestWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
+func TestPetitionerWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
 	events := allEventsExcept(
 		"blockstorage.startSyncEvent",
 		"*gossipmessages.BlockSyncResponseMessage",
@@ -353,7 +374,7 @@ func TestWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
 	}
 }
 
-func TestAnyStateRespondToAvailabilityRequests(t *testing.T) {
+func TestSourceAnyStateRespondToAvailabilityRequests(t *testing.T) {
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
 	for _, state := range allStates() {
@@ -375,7 +396,7 @@ func TestAnyStateRespondToAvailabilityRequests(t *testing.T) {
 	}
 }
 
-func TestAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
+func TestSourceAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 	petitionerBlockHeight := event.SignedBatchRange.LastCommittedBlockHeight()
 
@@ -398,7 +419,7 @@ func TestAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(
 	}
 }
 
-func TestAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
+func TestSourceAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
 	for _, state := range allStates() {
@@ -420,7 +441,7 @@ func TestAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testin
 	}
 }
 
-func TestAnyStateRespondsWithChunks(t *testing.T) {
+func TestSourceAnyStateRespondsWithChunks(t *testing.T) {
 	event := builders.BlockSyncRequestInput().Build().Message
 
 	firstHeight := primitives.BlockHeight(11)

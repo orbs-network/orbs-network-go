@@ -27,7 +27,6 @@ type harness struct {
 	gossip         *gossiptopics.MockBlockSync
 	config         blockstorage.Config
 	logger         log.BasicLogger
-	ctx            context.Context
 }
 
 func (d *harness) expectCommitStateDiff() {
@@ -80,7 +79,7 @@ func (d *harness) setBatchSize(batchSize uint32) {
 	d.config.(config.NodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
 }
 
-func newCustomSetupHarness(setup func(persistence adapter.InMemoryBlockPersistence, consensus *handlers.MockConsensusBlocksHandler)) *harness {
+func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.InMemoryBlockPersistence, consensus *handlers.MockConsensusBlocksHandler)) *harness {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -114,15 +113,13 @@ func newCustomSetupHarness(setup func(persistence adapter.InMemoryBlockPersisten
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
-	ctx := context.Background()
 	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, logger)
-	d.ctx = ctx
 
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	return d
 }
 
-func newHarness() *harness {
-	return newCustomSetupHarness(nil)
+func newHarness(ctx context.Context) *harness {
+	return newCustomSetupHarness(ctx, nil)
 }
