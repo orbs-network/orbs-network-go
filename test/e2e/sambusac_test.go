@@ -46,7 +46,7 @@ func ClientBinary() []string {
 	return []string{"go", "run", "../../devtools/jsonapi/main/main.go"}
 }
 
-func runCommand(command []string, t *testing.T) (output string) {
+func runCommand(command []string, t *testing.T) string {
 	cmd := exec.Command(command[0], command[1:]...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -59,7 +59,7 @@ func runCommand(command []string, t *testing.T) (output string) {
 
 	require.NoError(t, err, "jsonapi cli command should not fail")
 
-	return output
+	return stdout.String()
 }
 
 func generateTransferJSON() string {
