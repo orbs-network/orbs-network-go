@@ -54,25 +54,14 @@ go run *.go
 
 ## Testing from command line
 
-### Prerequisites for tests
-
-* Make sure [Ginkgo](http://onsi.github.io/ginkgo/#getting-ginkgo) is installed.
-  
-  > Install with `go get github.com/onsi/ginkgo/ginkgo`
-  
-  > Verify with `ginkgo version`
-
 ### Available test runners
-
-* The custom ginkgo test runner `ginkgo` (tailored to the testing framework we use)
 
 * The official go test runner `go test` (has minimal UI and result caching)
 
 ### Test
 
 * Run **all** tests from project root:
- 
-  * Using ginkgo test runner with `ginkgo ./...`
+
   * Using go test with `go test ./...`
 
 * Run only **fast** tests (no E2E and similar):
@@ -92,7 +81,7 @@ go run *.go
   > End-to-end tests check the entire system in a real life scenario mimicking real production with multiple nodes. It runs on docker with several nodes connected in a cluster. Due to their nature, E2E tests are slow to run.
 
   * The tests are found in [`/test/e2e`](test/e2e)
-  * Run the suite from project root with `ginkgo -v ./test/e2e` or `go test ./test/e2e`
+  * Run the suite from project root with `go test ./test/e2e`
   
   ##### Integration tests
   
@@ -107,7 +96,7 @@ go run *.go
   > Acceptance tests check the internal hexagon of the system (it's logic with all microservices) with faster adapters that allow the suite to run extremely fast.  
 
   * The tests are found in [`/test/acceptance`](test/acceptance)
-  * Run the suite from project root with `ginkgo -v ./test/acceptance` or `go test ./test/acceptance`
+  * Run the suite from project root with `go test ./test/acceptance`
 
   ##### Component tests
 

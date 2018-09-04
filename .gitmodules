@@ -1,12 +1,6 @@
 [submodule "vendor/github.com/hashicorp/memberlist"]
 	path = vendor/github.com/hashicorp/memberlist
 	url = https://github.com/hashicorp/memberlist
-[submodule "vendor/github.com/onsi/ginkgo"]
-	path = vendor/github.com/onsi/ginkgo
-	url = https://github.com/onsi/ginkgo
-[submodule "vendor/github.com/onsi/gomega"]
-	path = vendor/github.com/onsi/gomega
-	url = https://github.com/onsi/gomega
 [submodule "vendor/github.com/armon/go-metrics"]
 	path = vendor/github.com/armon/go-metrics
 	url = https://github.com/armon/go-metrics
@@ -46,9 +40,6 @@
 [submodule "vendor/golang.org/x/text"]
 	path = vendor/golang.org/x/text
 	url = https://go.googlesource.com/text
-[submodule "vendor/gopkg.in/yaml.v2"]
-	path = vendor/gopkg.in/yaml.v2
-	url = https://gopkg.in/yaml.v2
 [submodule "vendor/github.com/orbs-network/orbs-spec"]
 	path = vendor/github.com/orbs-network/orbs-spec
 	url = https://github.com/orbs-network/orbs-spec
