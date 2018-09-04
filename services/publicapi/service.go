@@ -39,7 +39,7 @@ func NewPublicApi(
 		virtualMachine:  virtualMachine,
 		reporting:       reporting.For(log.Service("public-api")),
 
-		txWaiter: newTxWaiter(ctx),
+		txWaiter: newTxWaiter(ctx, reporting),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(me)
@@ -48,6 +48,7 @@ func NewPublicApi(
 }
 
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
+	s.reporting.Info ("enter HandleTransactionResults", log.Int("N_Receipts", len(input.TransactionReceipts)))
 	for _, txReceipt := range input.TransactionReceipts {
 		s.txWaiter.reportCompleted(txReceipt, input.BlockHeight, input.Timestamp)
 	}

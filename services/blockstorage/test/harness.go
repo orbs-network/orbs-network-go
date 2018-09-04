@@ -25,6 +25,7 @@ type harness struct {
 	blockStorage   services.BlockStorage
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
+	txPool	       *services.MockTransactionPool
 	config         blockstorage.Config
 	logger         log.BasicLogger
 	ctx            context.Context
@@ -112,8 +113,11 @@ func newCustomSetupHarness(setup func(persistence adapter.InMemoryBlockPersisten
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
+	d.txPool = &services.MockTransactionPool{}
+	d.txPool.When("CommitTransactionReceipts", mock.Any).Return(nil, nil).AtLeast(0)
+
 	ctx := context.Background()
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, logger)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, logger)
 	d.ctx = ctx
 
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)

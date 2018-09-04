@@ -10,11 +10,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-)
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	)
 
 type txWaiter struct {
 	queue   chan txWaiterMessage
 	stopped chan struct{}
+	logger log.BasicLogger
 }
 
 type txWaitContext struct {
@@ -36,10 +38,11 @@ type txWaiterMessage struct {
 	retryCount byte
 }
 
-func newTxWaiter(ctx context.Context) *txWaiter {
+func newTxWaiter(ctx context.Context, reporting log.BasicLogger) *txWaiter {
 	// TODO supervise
 	result := &txWaiter{queue: make(chan txWaiterMessage)}
 	result.startReceiptHandler(ctx)
+	result.logger = reporting
 	return result
 }
 
@@ -52,20 +55,22 @@ func (w *txWaiter) startReceiptHandler(ctx context.Context) {
 			case message := <-w.queue:
 				outputChan, _ := txChan[message.txId]
 				if message.c != nil && outputChan == nil && !message.cleanup { // first request
+					w.logger.Info("RON: SendTxWaiting for")
 					txChan[message.txId] = message.c
-				}
-				if message.c != nil && outputChan != nil && !message.cleanup { // second request
+				} else if message.c != nil && outputChan != nil && !message.cleanup { // second request
+					w.logger.Info("RON: SendTxWaiting for II")
 					close(outputChan)
 					outputChan = nil
 					txChan[message.txId] = message.c
-				}
-				if message.output != nil && outputChan != nil && !message.cleanup { // send output and cleanup
+				} else if message.output != nil && outputChan != nil && !message.cleanup { // send output and cleanup
 					select {
 					case outputChan <- message.output:
+						w.logger.Info("RON: Received Transaction")
 						close(outputChan)
 						outputChan = nil
 						delete(txChan, message.txId)
 					default:
+						w.logger.Info("RON: Miss - Retrying")
 						if message.retryCount > 0 {
 							message.retryCount--
 							go func() {
@@ -74,8 +79,8 @@ func (w *txWaiter) startReceiptHandler(ctx context.Context) {
 							}()
 						}
 					}
-				}
-				if message.cleanup && message.c == outputChan && outputChan != nil { // cleanup
+				} else if message.cleanup && message.c == outputChan && outputChan != nil { // cleanup
+					w.logger.Info("RON: cleanup")
 					close(outputChan)
 					outputChan = nil
 					delete(txChan, message.txId)
@@ -143,11 +148,14 @@ func (w *txWaitContext) until(timeout time.Duration) (*services.AddNewTransactio
 
 	select {
 	case <-timer.C:
+		w.waiter.logger.Info("RON: timeout")
 		return nil, errors.Errorf("timed out waiting for transaction result")
 	case ta, open := <-w.c:
+		w.waiter.logger.Info("RON: is open?")
 		if !open {
 			return nil, errors.Errorf("waiting aborted")
 		}
+		w.waiter.logger.Info("RON: yes")
 		return ta, nil
 	}
 }

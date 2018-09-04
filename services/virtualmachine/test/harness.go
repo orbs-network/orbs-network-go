@@ -46,7 +46,6 @@ func newHarness() *harness {
 	}
 
 	service := virtualmachine.NewVirtualMachine(
-		blockStorage,
 		stateStorage,
 		processorsForService,
 		crosschainConnectorsForService,

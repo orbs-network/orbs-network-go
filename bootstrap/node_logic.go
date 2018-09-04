@@ -32,6 +32,10 @@ type nodeLogic struct {
 	consensusAlgos []services.ConsensusAlgo
 }
 
+type getter struct {
+
+}
+
 func NewNodeLogic(
 	ctx context.Context,
 	gossipTransport gossipAdapter.Transport,
@@ -41,18 +45,17 @@ func NewNodeLogic(
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
-	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
-	stateStorage := statestorage.NewStateStorage(nodeConfig, statePersistence, reporting)
-	blockStorage := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorage, gossip, reporting)
-
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(reporting)
 
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
 
-	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, processors, crosschainConnectors, reporting)
+	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
+	stateStorage := statestorage.NewStateStorage(nodeConfig, statePersistence, reporting)
+	virtualMachine := virtualmachine.NewVirtualMachine(stateStorage, processors, crosschainConnectors, reporting)
 	transactionPool := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nodeConfig, reporting, primitives.TimestampNano(time.Now().UnixNano()))
+	blockStorage := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorage, gossip, transactionPool, reporting)
 	publicApi := publicapi.NewPublicApi(ctx, nodeConfig, transactionPool, virtualMachine, reporting)
 	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig, reporting)
 

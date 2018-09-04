@@ -106,7 +106,7 @@ func newHardCodedConfig(
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
 
-	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 100*time.Millisecond)
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 500*time.Second)
 	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
 
 	return cfg
