@@ -63,6 +63,9 @@ func allEventsExcept(eventTypes ...string) (res []interface{}) {
 		startSyncEvent{},
 		collectingAvailabilityFinishedEvent{},
 		builders.BlockAvailabilityResponseInput().Build().Message,
+		builders.BlockAvailabilityRequestInput().Build().Message,
+		builders.BlockSyncRequestInput().Build().Message,
+		builders.BlockSyncResponseInput().Build().Message,
 	}
 
 	res = []interface{}{}
@@ -111,7 +114,10 @@ func TestStartSyncHappyFlow(t *testing.T) {
 }
 
 func TestIdleIgnoresInvalidEvents(t *testing.T) {
-	events := allEventsExcept("blockstorage.startSyncEvent")
+	events := allEventsExcept(
+		"blockstorage.startSyncEvent",
+		"*gossipmessages.BlockAvailabilityRequestMessage",
+		"*gossipmessages.BlockSyncRequestMessage")
 
 	for _, event := range events {
 		t.Run(typeOfEvent(event), func(t *testing.T) {
@@ -176,7 +182,12 @@ func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
 }
 
 func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
-	events := allEventsExcept("blockstorage.collectingAvailabilityFinishedEvent", "*gossipmessages.BlockAvailabilityResponseMessage")
+	events := allEventsExcept(
+		"blockstorage.collectingAvailabilityFinishedEvent",
+		"*gossipmessages.BlockAvailabilityResponseMessage",
+		"*gossipmessages.BlockAvailabilityRequestMessage",
+		"*gossipmessages.BlockSyncRequestMessage")
+
 	for _, event := range events {
 		t.Run(typeOfEvent(event), func(t *testing.T) {
 			harness := newBlockSyncHarness()
@@ -302,7 +313,11 @@ func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
 }
 
 func TestWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
-	events := allEventsExcept("*gossipmessages.BlockSyncResponseMessage")
+	events := allEventsExcept(
+		"*gossipmessages.BlockSyncResponseMessage",
+		"*gossipmessages.BlockAvailabilityRequestMessage",
+		"*gossipmessages.BlockSyncRequestMessage")
+
 	for _, event := range events {
 		t.Run(typeOfEvent(event), func(t *testing.T) {
 			harness := newBlockSyncHarness()
