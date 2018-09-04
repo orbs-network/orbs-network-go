@@ -2,32 +2,26 @@ package synchronization
 
 import "time"
 
-type PeriodicalTrigger interface {
-	Reset()
+type TempUntilJonathanTrigger interface {
+	Reset(duration time.Duration)
 	Cancel()
 }
 
-type Telemetry struct {
-	timesReset, timesTriggered int
-}
-
 type periodicalTrigger struct {
-	timer    *time.Timer
-	interval time.Duration
+	timer *time.Timer
 }
 
 // empty implementation - WIP
-func NewPeriodicalTrigger(interval time.Duration, trigger func()) PeriodicalTrigger {
+func TempUntilJonathanTimer(interval time.Duration, trigger func()) TempUntilJonathanTrigger {
 	t := &periodicalTrigger{
-		timer:    time.AfterFunc(interval, trigger),
-		interval: interval,
+		timer: time.AfterFunc(interval, trigger),
 	}
 	return t
 }
 
-func (t *periodicalTrigger) Reset() {
+func (t *periodicalTrigger) Reset(duration time.Duration) {
 	t.timer.Stop()
-	t.timer.Reset(t.interval)
+	t.timer.Reset(duration)
 }
 
 func (t *periodicalTrigger) Cancel() {

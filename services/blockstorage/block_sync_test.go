@@ -19,10 +19,10 @@ import (
 )
 
 type blockSyncHarness struct {
-	blockSync                  *BlockSync
-	gossip                     *gossiptopics.MockBlockSync
-	storage                    *blockSyncStorageMock
-	collectAvailabilityTrigger *synchronization.PeriodicalTriggerMock
+	blockSync      *BlockSync
+	gossip         *gossiptopics.MockBlockSync
+	storage        *blockSyncStorageMock
+	startSyncTimer *synchronization.PeriodicalTriggerMock
 }
 
 func newBlockSyncHarness() *blockSyncHarness {
@@ -40,15 +40,15 @@ func newBlockSyncHarness() *blockSyncHarness {
 	}
 
 	return &blockSyncHarness{
-		blockSync:                  blockSync,
-		gossip:                     gossip,
-		storage:                    storage,
-		collectAvailabilityTrigger: collectAvailabilityTrigger,
+		blockSync:      blockSync,
+		gossip:         gossip,
+		storage:        storage,
+		startSyncTimer: collectAvailabilityTrigger,
 	}
 }
 
 func (h *blockSyncHarness) verifyMocks(t *testing.T) {
-	ok, err := mock.VerifyMocks(h.storage, h.gossip, h.collectAvailabilityTrigger)
+	ok, err := mock.VerifyMocks(h.storage, h.gossip, h.startSyncTimer)
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -86,6 +86,7 @@ func allEventsExcept(eventTypes ...string) (res []interface{}) {
 	return
 }
 
+// FIXME replace with a function with a filter
 func allStates() []blockSyncState {
 	return []blockSyncState{
 		BLOCK_SYNC_STATE_IDLE,
@@ -94,23 +95,36 @@ func allStates() []blockSyncState {
 	}
 }
 
-func TestStartSyncHappyFlow(t *testing.T) {
-	harness := newBlockSyncHarness()
+// FIXME replace with a function with a filter
+func allStatesExceptCollecting() []blockSyncState {
+	return []blockSyncState{
+		BLOCK_SYNC_STATE_IDLE,
+		BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK,
+	}
+}
 
-	event := startSyncEvent{}
-	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+func TestEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *testing.T) {
+	for _, state := range allStatesExceptCollecting() {
+		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+			harness := newBlockSyncHarness()
 
-	harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
-	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
-	harness.collectAvailabilityTrigger.When("Reset").Return().Times(1)
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
+			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+			harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+			harness.startSyncTimer.When("Reset").Return().Times(1)
 
-	require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
-	require.Empty(t, availabilityResponses, "no availabilityResponses were sent yet")
+			event := startSyncEvent{}
 
-	harness.verifyMocks(t)
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.startSyncTimer)
+
+			require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
+			require.Empty(t, availabilityResponses, "no availabilityResponses were sent yet")
+
+			harness.verifyMocks(t)
+		})
+	}
 }
 
 func TestIdleIgnoresInvalidEvents(t *testing.T) {
@@ -125,7 +139,7 @@ func TestIdleIgnoresInvalidEvents(t *testing.T) {
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.startSyncTimer)
 
 			require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 			require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
@@ -145,7 +159,7 @@ func TestStartSyncGossipFailure(t *testing.T) {
 	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.startSyncTimer)
 
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.NotEmpty(t, availabilityResponses, "availabilityResponses were sent but shouldn't have")
@@ -159,7 +173,7 @@ func TestCollectingAvailabilityNoResponsesFlow(t *testing.T) {
 	event := collectingAvailabilityFinishedEvent{}
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
 
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Empty(t, availabilityResponses, "no availabilityResponses should have been received")
@@ -173,7 +187,7 @@ func TestCollectingAvailabilityAddingResponseFlow(t *testing.T) {
 	event := builders.BlockAvailabilityResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil}
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
 
 	require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, event}, "availabilityResponses should have the event added")
@@ -194,7 +208,7 @@ func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
 
 			require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
@@ -204,17 +218,18 @@ func TestCollectingAvailabilityIgnoresInvalidEvents(t *testing.T) {
 	}
 }
 
-func TestCollectingAvailabilitySendsBlockSyncRequest(t *testing.T) {
+func TestFinishingCollectingAvailabilityRequestsSendsBlockSyncRequest(t *testing.T) {
 	harness := newBlockSyncHarness()
 
 	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
 	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+	harness.startSyncTimer.When("Reset").Return().Times(1)
 
 	event := collectingAvailabilityFinishedEvent{}
 	availabilityResponse := builders.BlockAvailabilityResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
 
 	require.Equal(t, BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, newState, "state change does not match expected")
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}, "availabilityResponses should not have been changed")
@@ -228,7 +243,7 @@ func TestCollectingAvailabilityDoesNothingIfNoResponsesCollected(t *testing.T) {
 	event := collectingAvailabilityFinishedEvent{}
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
 
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Empty(t, availabilityResponses, "availabilityResponses should not have been changed")
@@ -246,7 +261,7 @@ func TestCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *testing.T) {
 	availabilityResponse := builders.BlockAvailabilityResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
 
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{availabilityResponse}, "availabilityResponses should not have been changed")
@@ -259,11 +274,12 @@ func TestWaitingForChunk(t *testing.T) {
 
 	harness.storage.When("ValidateBlockForCommit", mock.Any).Return(nil, nil).Times(91)
 	harness.storage.When("CommitBlock", mock.Any).Return(nil, nil).Times(91)
+	harness.startSyncTimer.When("Reset").Return().Times(1)
 
 	event := builders.BlockSyncResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.startSyncTimer)
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should not have been changed")
 
@@ -276,6 +292,7 @@ func TestWaitingForChunkBlockValidationFailed(t *testing.T) {
 	event := builders.BlockSyncResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
+	harness.startSyncTimer.When("Reset").Return().Times(1)
 	harness.storage.When("ValidateBlockForCommit", mock.Any).Call(func(input *services.ValidateBlockForCommitInput) error {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(event.SignedChunkRange.FirstBlockHeight() + 50) {
 			return errors.New("failed to validate block #51")
@@ -284,7 +301,7 @@ func TestWaitingForChunkBlockValidationFailed(t *testing.T) {
 	}).Times(51)
 	harness.storage.When("CommitBlock", mock.Any).Return(nil, nil).Times(50)
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.startSyncTimer)
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should not have been changed")
 
@@ -297,6 +314,7 @@ func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
 	event := builders.BlockSyncResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
+	harness.startSyncTimer.When("Reset").Return().Times(1)
 	harness.storage.When("ValidateBlockForCommit", mock.Any).Return(nil, nil).Times(51)
 	harness.storage.When("CommitBlock", mock.Any).Call(func(input *services.CommitBlockInput) error {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(event.SignedChunkRange.FirstBlockHeight() + 50) {
@@ -305,7 +323,7 @@ func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
 		return nil
 	}).Times(51)
 
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.startSyncTimer)
 	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
 	require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should not have been changed")
 
@@ -314,6 +332,7 @@ func TestWaitingForChunkBlockCommitFailed(t *testing.T) {
 
 func TestWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
 	events := allEventsExcept(
+		"blockstorage.startSyncEvent",
 		"*gossipmessages.BlockSyncResponseMessage",
 		"*gossipmessages.BlockAvailabilityRequestMessage",
 		"*gossipmessages.BlockSyncRequestMessage")
@@ -324,7 +343,7 @@ func TestWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, event, availabilityResponses, harness.startSyncTimer)
 
 			require.Equal(t, BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK, newState, "state change does not match expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
@@ -346,7 +365,7 @@ func TestAnyStateRespondToAvailabilityRequests(t *testing.T) {
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.startSyncTimer)
 
 			require.Equal(t, state, newState, "state change was not expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
@@ -369,7 +388,7 @@ func TestAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.startSyncTimer)
 
 			require.Equal(t, state, newState, "state change was not expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
@@ -391,7 +410,7 @@ func TestAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testin
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.startSyncTimer)
 
 			require.Equal(t, state, newState, "state change was not expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
@@ -423,34 +442,10 @@ func TestAnyStateRespondsWithChunks(t *testing.T) {
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.startSyncTimer)
 
 			require.Equal(t, state, newState, "state change was not expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
-
-			harness.verifyMocks(t)
-		})
-	}
-}
-
-func TestEveryStateRestartsSyncAfterHardReset(t *testing.T) {
-	for _, state := range allStates() {
-		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
-			harness := newBlockSyncHarness()
-
-			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
-
-			harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
-			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-			harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
-			harness.collectAvailabilityTrigger.When("Reset").Return().Times(1)
-
-			event := hardResetEvent{}
-
-			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
-
-			require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
-			require.Empty(t, availabilityResponses, "no availabilityResponses were sent yet")
 
 			harness.verifyMocks(t)
 		})

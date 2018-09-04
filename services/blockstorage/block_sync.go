@@ -60,12 +60,12 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 	event = startSyncEvent{}
 
-	periodicalBlockRequest := synchronization.NewPeriodicalTrigger(b.config.BlockSyncInterval(), func() {
+	startSyncTimer := synchronization.TempUntilJonathanTimer(b.config.BlockSyncInterval(), func() {
 		b.events <- startSyncEvent{}
 	})
 
 	for {
-		state, blockAvailabilityResponses = b.transitionState(state, event, blockAvailabilityResponses, periodicalBlockRequest)
+		state, blockAvailabilityResponses = b.transitionState(state, event, blockAvailabilityResponses, startSyncTimer)
 
 		select {
 		case <-ctx.Done():
@@ -78,12 +78,25 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 type startSyncEvent struct{}
 type collectingAvailabilityFinishedEvent struct{}
-type hardResetEvent struct{}
 
-func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, periodicalBlockRequest synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
-	if _, ok := event.(hardResetEvent); ok {
-		currentState = BLOCK_SYNC_STATE_IDLE
-		event = startSyncEvent{}
+func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, startSyncTimer synchronization.TempUntilJonathanTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+	// Ignore start sync because collecting availability responses has its own timer
+	if _, ok := event.(startSyncEvent); ok && currentState != BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
+		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
+
+		err := b.petitionerBroadcastBlockAvailabilityRequest()
+
+		if err != nil {
+			b.reporting.Info("failed to broadcast block availability request", log.Error(err))
+		} else {
+			availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
+			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
+			startSyncTimer.Reset(b.config.BlockSyncInterval())
+
+			time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
+				b.events <- collectingAvailabilityFinishedEvent{}
+			})
+		}
 	}
 
 	if msg, ok := event.(*gossipmessages.BlockAvailabilityRequestMessage); ok {
@@ -99,26 +112,6 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 	}
 
 	switch currentState {
-	case BLOCK_SYNC_STATE_IDLE:
-		if _, ok := event.(startSyncEvent); !ok {
-			break
-		}
-
-		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
-
-		err := b.petitionerBroadcastBlockAvailabilityRequest()
-
-		if err != nil {
-			b.reporting.Info("failed to broadcast block availability request", log.Error(err))
-		} else {
-			availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
-			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
-			periodicalBlockRequest.Reset()
-
-			time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
-				b.events <- collectingAvailabilityFinishedEvent{}
-			})
-		}
 	case BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES:
 		if msg, ok := event.(*gossipmessages.BlockAvailabilityResponseMessage); ok {
 			availabilityResponses = append(availabilityResponses, msg)
@@ -147,15 +140,14 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 				b.reporting.Info("requested block chunk from source", log.Stringable("source", syncSource.Sender))
 				currentState = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
 
-				time.AfterFunc(b.config.BlockSyncCollectChunksTimeout(), func() {
-					b.events <- hardResetEvent{}
-				})
+				startSyncTimer.Reset(b.config.BlockSyncCollectChunksTimeout())
 			}
 		}
 	case BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK:
 		if msg, ok := event.(*gossipmessages.BlockSyncResponseMessage); ok {
 			b.petitionerHandleBlockSyncResponse(msg)
 			currentState = BLOCK_SYNC_STATE_IDLE
+			startSyncTimer.Reset(0) // Fire immediately to sync next batch
 		}
 	}
 
