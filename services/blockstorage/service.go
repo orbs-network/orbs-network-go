@@ -21,6 +21,7 @@ type Config interface {
 	BlockSyncBatchSize() uint32
 	BlockSyncInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
+	BlockSyncCollectChunksTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration

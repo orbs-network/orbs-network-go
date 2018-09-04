@@ -147,7 +147,7 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 				b.reporting.Info("requested block chunk from source", log.Stringable("source", syncSource.Sender))
 				currentState = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
 
-				time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
+				time.AfterFunc(b.config.BlockSyncCollectChunksTimeout(), func() {
 					b.events <- hardResetEvent{}
 				})
 			}

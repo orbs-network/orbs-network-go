@@ -90,6 +90,8 @@ func newCustomSetupHarness(setup func(persistence adapter.InMemoryBlockPersisten
 
 	cfg.SetDuration(config.BLOCK_SYNC_INTERVAL, 3*time.Millisecond)
 	cfg.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 1*time.Millisecond)
+	cfg.SetDuration(config.BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
+
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
 	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
