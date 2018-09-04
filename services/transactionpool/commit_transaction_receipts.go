@@ -59,6 +59,5 @@ func timestampOrNow(tx *pendingTransaction) primitives.TimestampNano {
 }
 
 func (s *service) originatedFromMyPublicApi(removedTx *pendingTransaction) bool {
-	key := s.config.NodePublicKey()
-	return removedTx != nil && removedTx.gatewayPublicKey.Equal(key)
+	return removedTx != nil && removedTx.gatewayPublicKey.Equal(s.config.NodePublicKey())
 }

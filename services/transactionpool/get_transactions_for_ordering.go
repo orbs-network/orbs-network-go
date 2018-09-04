@@ -1,7 +1,6 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -42,12 +41,6 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 			out.SignedTransactions = append(out.SignedTransactions, transactionsForPreOrder[i])
 		}
 	}
-
-	// START OF THROWAWAY CODE TODO remove the following as soon as block storage can call CommitTransactionReceipts
-	for _, tx := range out.SignedTransactions {
-		s.pendingPool.remove(digest.CalcTxHash(tx.Transaction()))
-	}
-	// END OF THROWAWAY CODE
 
 	return out, nil
 }
