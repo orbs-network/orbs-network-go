@@ -29,7 +29,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	t.Parallel()
 	h := newHarness()
 
-	tx := builders.TransferTransaction().WithInvalidContent().Build()
+	tx := builders.TransferTransaction().WithInvalidTimestamp().Build()
 	h.expectNoTransactionsToBeForwarded()
 
 	_, err := h.addNewTransaction(tx)

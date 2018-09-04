@@ -42,11 +42,11 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	mutex             *sync.Mutex
+	mutex              *sync.Mutex
 	transportListeners map[string]adapter.TransportListener
-	failingTamperers  []*failingTamperer
-	pausingTamperers  []*pausingTamperer
-	latchingTamperers []*latchingTamperer
+	failingTamperers   []*failingTamperer
+	pausingTamperers   []*pausingTamperer
+	latchingTamperers  []*latchingTamperer
 }
 
 func NewTamperingTransport() TamperingTransport {

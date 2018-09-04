@@ -35,7 +35,7 @@ type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync
-	txPool		 services.TransactionPool
+	txPool       services.TransactionPool
 
 	config Config
 
@@ -366,6 +366,7 @@ func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPair
 	})
 	return err
 }
+
 // TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
 func (s *service) syncBlockToTxPool(committedBlockPair *protocol.BlockPairContainer) error {
 	_, err := s.txPool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{

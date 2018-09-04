@@ -48,7 +48,7 @@ func NewPublicApi(
 }
 
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
-	s.reporting.Info ("enter HandleTransactionResults", log.Int("N_Receipts", len(input.TransactionReceipts)))
+	s.reporting.Info("enter HandleTransactionResults", log.Int("N_Receipts", len(input.TransactionReceipts)))
 	for _, txReceipt := range input.TransactionReceipts {
 		s.txWaiter.reportCompleted(txReceipt, input.BlockHeight, input.Timestamp)
 	}
@@ -81,9 +81,8 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	}
 
 	ta, err := waitContext.until(s.config.SendTransactionTimeout())
-	// TODO return pending response on timeout error
 	if err != nil {
-		return nil, err
+		return prepareResponse(txResponse), err
 	}
 	return prepareResponse(ta), nil
 }
@@ -93,8 +92,8 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 
 	if receipt := transactionOutput.TransactionReceipt; receipt != nil {
 		receiptForClient = &protocol.TransactionReceiptBuilder{
-			Txhash:          receipt.Txhash(),
-			ExecutionResult: receipt.ExecutionResult(),
+			Txhash:              receipt.Txhash(),
+			ExecutionResult:     receipt.ExecutionResult(),
 			OutputArgumentArray: receipt.OutputArgumentArray(),
 		}
 	}

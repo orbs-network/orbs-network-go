@@ -27,7 +27,6 @@ type Config interface {
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
-
 }
 
 type service struct {

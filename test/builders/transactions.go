@@ -87,9 +87,13 @@ func (t *TransactionBuilder) WithInvalidPublicKey() *TransactionBuilder {
 	return t
 }
 
-func (t *TransactionBuilder) WithInvalidContent() *TransactionBuilder {
-	t.builder.Transaction.Timestamp = primitives.TimestampNano(time.Now().Add(35 * time.Minute).UnixNano())
+func (t *TransactionBuilder) WithInvalidTimestamp() *TransactionBuilder {
+	t.builder.Transaction.Timestamp = primitives.TimestampNano(time.Now().Add(300 * time.Minute).UnixNano())
 	return t
+}
+
+func (t *TransactionBuilder) WithInvalidAmount() *TransactionBuilder {
+	return t.WithAmount(2000) // Benchmark Contract fails amount over 100
 }
 
 func (t *TransactionBuilder) WithMethod(contractName primitives.ContractName, methodName primitives.MethodName) *TransactionBuilder {

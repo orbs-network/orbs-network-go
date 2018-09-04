@@ -25,7 +25,7 @@ type harness struct {
 	blockStorage   services.BlockStorage
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
-	txPool	       *services.MockTransactionPool
+	txPool         *services.MockTransactionPool
 	config         blockstorage.Config
 	logger         log.BasicLogger
 	ctx            context.Context

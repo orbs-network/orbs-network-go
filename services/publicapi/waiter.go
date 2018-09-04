@@ -7,16 +7,14 @@ import (
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+		"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	)
+)
 
 type txWaiter struct {
 	queue   chan txWaiterMessage
 	stopped chan struct{}
-	logger log.BasicLogger
 }
 
 type txWaitContext struct {

@@ -74,4 +74,3 @@ func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) erro
 	}
 	return nil
 }
-
