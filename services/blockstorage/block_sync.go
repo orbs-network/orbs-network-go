@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 	"math/rand"
+	"time"
 )
 
 type blockSyncState int
@@ -77,8 +78,14 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 type startSyncEvent struct{}
 type collectingAvailabilityFinishedEvent struct{}
+type hardResetEvent struct{}
 
 func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, periodicalBlockRequest synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+	if _, ok := event.(hardResetEvent); ok {
+		currentState = BLOCK_SYNC_STATE_IDLE
+		event = startSyncEvent{}
+	}
+
 	if msg, ok := event.(*gossipmessages.BlockAvailabilityRequestMessage); ok {
 		if err := b.sourceHandleBlockAvailabilityRequest(msg); err != nil {
 			b.reporting.Info("failed to respond to block availability request", log.Error(err))
@@ -108,7 +115,7 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
 			periodicalBlockRequest.Reset()
 
-			synchronization.NewPeriodicalTrigger(b.config.BlockSyncCollectResponseTimeout(), func() {
+			time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
 				b.events <- collectingAvailabilityFinishedEvent{}
 			})
 		}
@@ -139,6 +146,10 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			} else {
 				b.reporting.Info("requested block chunk from source", log.Stringable("source", syncSource.Sender))
 				currentState = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
+
+				time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
+					b.events <- hardResetEvent{}
+				})
 			}
 		}
 	case BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK:

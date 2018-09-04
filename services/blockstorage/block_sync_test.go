@@ -323,7 +323,7 @@ func TestAnyStateRespondToAvailabilityRequests(t *testing.T) {
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
 	for _, state := range allStates() {
-		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(200)).Times(1)
@@ -346,7 +346,7 @@ func TestAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(
 	petitionerBlockHeight := event.SignedBatchRange.LastCommittedBlockHeight()
 
 	for _, state := range allStates() {
-		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("LastCommittedBlockHeight").Return(petitionerBlockHeight).Times(1)
@@ -368,7 +368,7 @@ func TestAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testin
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
 	for _, state := range allStates() {
-		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(200)).Times(1)
@@ -399,7 +399,7 @@ func TestAnyStateRespondsWithChunks(t *testing.T) {
 	}
 
 	for _, state := range allStates() {
-		t.Run(strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("GetBlocks").Return(blocks, firstHeight, lastHeight).Times(1)
@@ -412,6 +412,30 @@ func TestAnyStateRespondsWithChunks(t *testing.T) {
 
 			require.Equal(t, state, newState, "state change was not expected")
 			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
+
+func TestEveryStateRestartsSyncAfterHardReset(t *testing.T) {
+	for _, state := range allStates() {
+		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
+			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+			harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+			harness.collectAvailabilityTrigger.When("Reset").Return().Times(1)
+
+			event := hardResetEvent{}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.collectAvailabilityTrigger)
+
+			require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "state change does not match expected")
+			require.Empty(t, availabilityResponses, "no availabilityResponses were sent yet")
 
 			harness.verifyMocks(t)
 		})
