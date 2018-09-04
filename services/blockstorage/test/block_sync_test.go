@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -312,60 +311,6 @@ func generateBlockSyncResponseInput(lastBlockHeight primitives.BlockHeight, desi
 			BlockPairs: blocks,
 		},
 	}
-}
-
-func TestSyncPetitionerHandlesBlockSyncResponse(t *testing.T) {
-	t.Skip("this should be deleted or more setup; event is ignored because it does not follow the appropriate state; tested by TestSyncCompletePetitionerSyncFlow")
-
-	harness := newHarness()
-
-	harness.expectCommitStateDiffTimes(4)
-	harness.expectValidateWithConsensusAlgosTimes(2)
-
-	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
-
-	senderKeyPair := keys.Ed25519KeyPairForTests(9)
-	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
-
-	_, err := harness.blockStorage.HandleBlockSyncResponse(input)
-	require.NoError(t, err)
-
-	harness.verifyMocks(t)
-}
-
-func TestSyncPetitionerHandlesBlockSyncResponseFromMultipleSenders(t *testing.T) {
-	t.Skip("this should be deleted or more setup; event is ignored because it does not follow the appropriate state; tested by TestSyncCompletePetitionerSyncFlow")
-
-	harness := newHarness()
-
-	harness.expectCommitStateDiffTimes(4)
-	harness.expectValidateWithConsensusAlgosTimes(3)
-
-	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-	harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
-
-	senderKeyPair := keys.Ed25519KeyPairForTests(7)
-	input := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(4), senderKeyPair.PublicKey())
-
-	anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
-	inputFromAnotherSender := generateBlockSyncResponseInput(primitives.BlockHeight(3), primitives.BlockHeight(5), anotherSenderKeyPair.PublicKey())
-
-	_, err := harness.blockStorage.HandleBlockSyncResponse(input)
-	require.NoError(t, err)
-
-	_, err = harness.blockStorage.HandleBlockSyncResponse(inputFromAnotherSender)
-	require.NoError(t, err)
-
-	lastCommittedBlockHeight, _ := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
-	require.Equal(t, primitives.BlockHeight(4), lastCommittedBlockHeight.LastCommittedBlockHeight)
-
-	harness.verifyMocks(t)
-}
-
-// FIXME implement
-func TestSyncPetitionerHandlesBlockSyncResponseAndRunsValidationChecks(t *testing.T) {
-	t.Skip("not implemented")
 }
 
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
