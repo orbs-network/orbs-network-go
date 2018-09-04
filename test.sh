@@ -1,7 +1,9 @@
 #!/bin/bash -x
 
-go test -timeout 5s ./...
+go test -timeout 5s ./... > test.out
 export EXIT_CODE=$?
+
+cat test.out | grep -A 15 -- "FAIL"
 
 if [ $EXIT_CODE != 0 ]; then
   exit $EXIT_CODE
