@@ -44,42 +44,6 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	})
 }
 
-// TODO move to happy flow
-func TestSyncPetitionerHandlesBlockAvailabilityResponseFromMultipleSources(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-
-		harness.expectCommitStateDiffTimes(2)
-
-		harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-		harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
-
-		senderKeyPair := keys.Ed25519KeyPairForTests(9)
-		input := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
-			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(2)).
-			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
-
-		anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
-		anotherInput := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(3)).
-			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(3)).
-			WithSenderPublicKey(anotherSenderKeyPair.PublicKey()).Build()
-
-		harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
-
-		_, err := harness.blockStorage.HandleBlockAvailabilityResponse(input)
-		require.NoError(t, err)
-
-		_, err = harness.blockStorage.HandleBlockAvailabilityResponse(anotherInput)
-		require.NoError(t, err)
-
-		harness.verifyMocks(t)
-	})
-}
-
 func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
@@ -209,8 +173,16 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
 			WithLastBlockHeight(primitives.BlockHeight(4)).Build()
 
-		harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).AtLeast(1)
+		anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
+		anotherBlockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
+			WithLastCommittedBlockHeight(primitives.BlockHeight(3)).
+			WithFirstBlockHeight(primitives.BlockHeight(1)).
+			WithLastBlockHeight(primitives.BlockHeight(3)).
+			WithSenderPublicKey(anotherSenderKeyPair.PublicKey()).Build()
+
+		harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
 		harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
+		harness.blockStorage.HandleBlockAvailabilityResponse(anotherBlockAvailabilityResponse)
 
 		time.Sleep(4 * time.Millisecond)
 
@@ -229,8 +201,4 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 		harness.verifyMocks(t)
 	})
-}
-
-func TestSyncCompleteSourceSyncFlow(t *testing.T) {
-	t.Skip("not implemented")
 }
