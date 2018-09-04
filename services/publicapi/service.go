@@ -39,7 +39,7 @@ func NewPublicApi(
 		virtualMachine:  virtualMachine,
 		reporting:       reporting.For(log.Service("public-api")),
 
-		txWaiter: newTxWaiter(ctx, reporting),
+		txWaiter: newTxWaiter(ctx),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(me)
