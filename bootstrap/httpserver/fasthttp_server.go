@@ -42,16 +42,6 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 	return server
 }
 
-func fastSendTransactionHandler(r *fastResponse) {
-	clientRequest := client.SendTransactionRequestReader(r.writer.Request.Body())
-	if r.reportErrorOnInvalidRequest(clientRequest) {
-		return
-	}
-
-	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
-	r.writeMessageOrError(result.ClientResponse, err)
-}
-
 //TODO extract commonalities between handlers
 func (s *fastHttpServer) createRouter() *fasthttprouter.Router {
 	sendTransactionHandler := s.handler(func(bytes []byte, r *fastResponse) {
