@@ -3,7 +3,6 @@ package httpserver
 import (
 	"time"
 
-	"github.com/buaazp/fasthttprouter"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -29,7 +28,7 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 
 	router := server.createRouter()
 	server.httpServer = &fasthttp.Server{
-		Handler: router.Handler,
+		Handler: router,
 	}
 
 	go func() {
@@ -41,7 +40,7 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 }
 
 //TODO extract commonalities between handlers
-func (s *fastHttpServer) createRouter() *fasthttprouter.Router {
+func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 	sendTransactionHandler := s.handler(func(bytes []byte, r *fastResponse) {
 
 		clientRequest := client.SendTransactionRequestReader(bytes)
@@ -68,10 +67,16 @@ func (s *fastHttpServer) createRouter() *fasthttprouter.Router {
 		}
 	})
 
-	router := fasthttprouter.New()
-	router.Handle("post", "/api/send-transaction", fastReport(sendTransactionHandler, s.reporting))
-	router.Handle("post", "/api/call-method", fastReport(callMethodHandler, s.reporting))
-	return router
+	return func(ctx *fasthttp.RequestCtx) {
+		switch string(ctx.Path()) {
+		case "/api/send-transaction":
+			fastReport(sendTransactionHandler, s.reporting)
+		case "/api/call-method":
+			fastReport(callMethodHandler, s.reporting)
+		default:
+			ctx.Error("Unsupported path", fasthttp.StatusNotFound)
+		}
+	}
 }
 
 func (s *fastHttpServer) GracefulShutdown(timeout time.Duration) {
