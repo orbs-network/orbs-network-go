@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
-)
+	)
 
 type Config interface {
 	SendTransactionTimeout() time.Duration
@@ -33,7 +33,7 @@ func NewPublicApi(
 	virtualMachine services.VirtualMachine,
 	reporting log.BasicLogger,
 ) services.PublicApi {
-	me := &service{
+	s := &service{
 		config:          config,
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
@@ -42,9 +42,9 @@ func NewPublicApi(
 		txWaiter: newTxWaiter(ctx),
 	}
 
-	transactionPool.RegisterTransactionResultsHandler(me)
+	transactionPool.RegisterTransactionResultsHandler(s)
 
-	return me
+	return s
 }
 
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
@@ -103,6 +103,7 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 		BlockHeight:        transactionOutput.BlockHeight,
 		BlockTimestamp:     transactionOutput.BlockTimestamp,
 	}
+
 
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}
 }
