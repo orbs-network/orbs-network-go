@@ -34,6 +34,7 @@ type NodeConfig interface {
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
+	BlockSyncCollectChunksTimeout() time.Duration
 
 	// state storage
 	StateStorageHistoryRetentionDistance() uint32

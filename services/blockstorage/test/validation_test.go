@@ -1,6 +1,8 @@
 package test
 
 import (
+	"context"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
@@ -8,81 +10,89 @@ import (
 )
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
-	harness := newHarness()
-	block := builders.BlockPair().Build()
+	test.WithContext(func(ctx context.Context) {
+		harness := newHarness(ctx)
+		block := builders.BlockPair().Build()
 
-	harness.expectValidateWithConsensusAlgosTimes(1)
+		harness.expectValidateWithConsensusAlgosTimes(1)
 
-	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.NoError(t, err, "block should be valid")
+		_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.NoError(t, err, "block should be valid")
+	})
 }
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
-	harness := newHarness()
-	block := builders.BlockPair().Build()
+	test.WithContext(func(ctx context.Context) {
+		harness := newHarness(ctx)
+		block := builders.BlockPair().Build()
 
-	block.TransactionsBlock.Header.MutateProtocolVersion(998)
+		block.TransactionsBlock.Header.MutateProtocolVersion(998)
 
-	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "protocol version mismatch", "tx protocol was mutate, should fail")
+		_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "protocol version mismatch", "tx protocol was mutate, should fail")
 
-	block.ResultsBlock.Header.MutateProtocolVersion(999)
+		block.ResultsBlock.Header.MutateProtocolVersion(999)
 
-	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "protocol version mismatch", "rx protocol was mutate, should fail")
+		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "protocol version mismatch", "rx protocol was mutate, should fail")
 
-	block.TransactionsBlock.Header.MutateProtocolVersion(999)
+		block.TransactionsBlock.Header.MutateProtocolVersion(999)
 
-	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "protocol version mismatch", "tx and rx protocol was mutate, should fail")
+		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "protocol version mismatch", "tx and rx protocol was mutate, should fail")
 
-	block.TransactionsBlock.Header.MutateProtocolVersion(1)
+		block.TransactionsBlock.Header.MutateProtocolVersion(1)
 
-	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "protocol version mismatch", "only rx protocol was mutate, should fail")
+		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "protocol version mismatch", "only rx protocol was mutate, should fail")
+	})
 }
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
-	harness := newHarness()
-	harness.expectCommitStateDiff()
-	harness.expectValidateWithConsensusAlgosTimes(1)
+	test.WithContext(func(ctx context.Context) {
+		harness := newHarness(ctx)
+		harness.expectCommitStateDiff()
+		harness.expectValidateWithConsensusAlgosTimes(1)
 
-	harness.commitBlock(builders.BlockPair().Build())
+		harness.commitBlock(builders.BlockPair().Build())
 
-	block := builders.BlockPair().WithHeight(2).Build()
+		block := builders.BlockPair().WithHeight(2).Build()
 
-	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.NoError(t, err, "happy flow")
+		_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.NoError(t, err, "happy flow")
+	})
 }
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
-	harness := newHarness()
-	harness.expectCommitStateDiff()
-	harness.expectValidateWithConsensusAlgosTimes(1)
+	test.WithContext(func(ctx context.Context) {
+		harness := newHarness(ctx)
+		harness.expectCommitStateDiff()
+		harness.expectValidateWithConsensusAlgosTimes(1)
 
-	harness.commitBlock(builders.BlockPair().Build())
+		harness.commitBlock(builders.BlockPair().Build())
 
-	block := builders.BlockPair().WithHeight(2).Build()
+		block := builders.BlockPair().WithHeight(2).Build()
 
-	block.TransactionsBlock.Header.MutateBlockHeight(998)
+		block.TransactionsBlock.Header.MutateBlockHeight(998)
 
-	_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "block height is 998, expected 2", "tx block height was mutate, expected an error")
+		_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "block height is 998, expected 2", "tx block height was mutate, expected an error")
 
-	block.ResultsBlock.Header.MutateBlockHeight(999)
+		block.ResultsBlock.Header.MutateBlockHeight(999)
 
-	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "block height is 998, expected 2", "rx block height was mutate, expected an error")
+		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "block height is 998, expected 2", "rx block height was mutate, expected an error")
 
-	block.TransactionsBlock.Header.MutateBlockHeight(999)
+		block.TransactionsBlock.Header.MutateBlockHeight(999)
 
-	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "block height is 999, expected 2", "tx & rx block height was mutate, expected an error")
+		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "block height is 999, expected 2", "tx & rx block height was mutate, expected an error")
 
-	block.TransactionsBlock.Header.MutateProtocolVersion(1)
+		block.TransactionsBlock.Header.MutateProtocolVersion(1)
 
-	_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-	require.EqualError(t, err, "block height is 999, expected 2", "only rx block height was mutate, expected an error")
+		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
+		require.EqualError(t, err, "block height is 999, expected 2", "only rx block height was mutate, expected an error")
+	})
 }
 
 //TODO validate virtual chain

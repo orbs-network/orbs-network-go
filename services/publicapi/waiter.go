@@ -17,12 +17,6 @@ type txWaiter struct {
 	stopped chan struct{}
 }
 
-type txWaitContext struct {
-	c      txResultChan
-	txHash primitives.Sha256
-	waiter *txWaiter
-}
-
 type txResultChan chan *services.AddNewTransactionOutput
 
 const retryCount = 10
@@ -39,11 +33,11 @@ type txWaiterMessage struct {
 func newTxWaiter(ctx context.Context) *txWaiter {
 	// TODO supervise
 	result := &txWaiter{queue: make(chan txWaiterMessage)}
-	result.startReceiptHandler(ctx)
+	result._start(ctx)
 	return result
 }
 
-func (w *txWaiter) startReceiptHandler(ctx context.Context) {
+func (w *txWaiter) _start(ctx context.Context) {
 	w.stopped = make(chan struct{})
 	go func(ctx context.Context) {
 		txChan := map[string]txResultChan{}
@@ -68,7 +62,7 @@ func (w *txWaiter) startReceiptHandler(ctx context.Context) {
 							message.retryCount--
 							go func() {
 								time.Sleep(retryDelay)
-								w.tryEnqueue(&message)
+								w._tryEnqueue(&message)
 							}()
 						}
 					}
@@ -90,25 +84,9 @@ func (w *txWaiter) startReceiptHandler(ctx context.Context) {
 	}(ctx)
 }
 
-func (w *txWaiter) forget(txHash primitives.Sha256, c txResultChan) {
-	w.tryEnqueue(&txWaiterMessage{
-		txId:    txHash.KeyForMap(),
-		c:       c,
-		cleanup: true,
-	})
-}
-
-func (w *txWaiter) reportCompleted(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, timestampNano primitives.TimestampNano) {
-	w.tryEnqueue(&txWaiterMessage{
-		txId:       receipt.Txhash().KeyForMap(),
-		retryCount: retryCount,
-		output: &services.AddNewTransactionOutput{
-			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-			TransactionReceipt: receipt,
-			BlockHeight:        blockHeight,
-			BlockTimestamp:     timestampNano,
-		},
-	})
+func (w *txWaiter) _tryEnqueue(message *txWaiterMessage) {
+	defer func() { recover() }()
+	w.queue <- *message
 }
 
 func (w *txWaiter) createTxWaitCtx(txHash primitives.Sha256) (waitContext *txWaitContext) {
@@ -128,13 +106,34 @@ func (w *txWaiter) createTxWaitCtx(txHash primitives.Sha256) (waitContext *txWai
 	return
 }
 
-func (w *txWaiter) tryEnqueue(message *txWaiterMessage) {
-	defer func() { recover() }()
-	w.queue <- *message
+func (w *txWaiter) reportCompleted(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, timestampNano primitives.TimestampNano) {
+	w._tryEnqueue(&txWaiterMessage{
+		txId:       receipt.Txhash().KeyForMap(),
+		retryCount: retryCount,
+		output: &services.AddNewTransactionOutput{
+			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+			TransactionReceipt: receipt,
+			BlockHeight:        blockHeight,
+			BlockTimestamp:     timestampNano,
+		},
+	})
+}
+
+func (w *txWaiter) forget(txHash primitives.Sha256, c txResultChan) {
+	w._tryEnqueue(&txWaiterMessage{
+		txId:    txHash.KeyForMap(),
+		c:       c,
+		cleanup: true,
+	})
+}
+
+type txWaitContext struct {
+	c      txResultChan
+	txHash primitives.Sha256
+	waiter *txWaiter
 }
 
 func (w *txWaitContext) until(timeout time.Duration) (*services.AddNewTransactionOutput, error) {
-
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 
