@@ -2,6 +2,9 @@ package synchronization
 
 import "time"
 
+// This struct comes to work around the timer channel issue: https://github.com/golang/go/issues/11513
+// Google couldn't break the API or behavior, so they documented it https://github.com/golang/go/issues/14383
+// we just wrap the timer so we can reset and stop as expected without the workaround of the channel issue.
 type Timer struct {
 	timer *time.Timer
 	C     <-chan time.Time
