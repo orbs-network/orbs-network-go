@@ -68,7 +68,7 @@ func TestDirectOutgoing_ConnectionReconnectsOnFailure(t *testing.T) {
 	})
 }
 
-func TestOutgoing_AdapterSendsBroadcast(t *testing.T) {
+func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -89,7 +89,7 @@ func TestOutgoing_AdapterSendsBroadcast(t *testing.T) {
 	})
 }
 
-func TestOutgoing_AdapterSendsUnicast(t *testing.T) {
+func TestDirectOutgoing_AdapterSendsUnicast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -108,7 +108,7 @@ func TestOutgoing_AdapterSendsUnicast(t *testing.T) {
 	})
 }
 
-func TestIncoming_TransportListenerReceivesData(t *testing.T) {
+func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -126,7 +126,7 @@ func TestIncoming_TransportListenerReceivesData(t *testing.T) {
 	})
 }
 
-func TestIncoming_ReceivesDataWithoutListener(t *testing.T) {
+func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -143,7 +143,7 @@ func TestIncoming_ReceivesDataWithoutListener(t *testing.T) {
 	})
 }
 
-func TestIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *testing.T) {
+func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -166,7 +166,7 @@ func TestIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *test
 	})
 }
 
-func TestIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *testing.T) {
+func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -189,7 +189,7 @@ func TestIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *test
 	})
 }
 
-func TestOutgoing_SendsKeepAliveWhenNothingToSend(t *testing.T) {
+func TestDirectOutgoing_SendsKeepAliveWhenNothingToSend(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -203,7 +203,7 @@ func TestOutgoing_SendsKeepAliveWhenNothingToSend(t *testing.T) {
 	})
 }
 
-func TestIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
+func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
