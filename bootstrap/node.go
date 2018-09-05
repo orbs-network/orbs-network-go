@@ -50,7 +50,7 @@ func NewNode(
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
 	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, nodeLogger, nodeConfig)
-	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
+	httpServer := httpserver.NewFastHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
 
 	return &node{
 		logic:        nodeLogic,
