@@ -76,9 +76,12 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 	h.ignoringForwardMessages()
 
 	h.addNewTransaction(tx)
-	_, err := h.addNewTransaction(tx)
-	require.Error(t, err, "a transaction was added twice to the pool")
 
+	receipt, err := h.addNewTransaction(tx)
+
+	require.Error(t, err, "a transaction was added twice to the pool")
+	require.NotNil(t, receipt, "receipt should never be nil")
+	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION, receipt.TransactionStatus, "expected transaction status: duplicate pending")
 	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }
 
@@ -111,8 +114,10 @@ func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	h.expectNoTransactionsToBeForwarded()
 
 	tx := builders.TransferTransaction().Build()
-	_, err := h.addNewTransaction(tx)
+	receipt, err := h.addNewTransaction(tx)
 
 	require.Error(t, err, "a transaction was added to a full pool")
+	require.NotNil(t, receipt, "receipt should never be nil")
+	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_CONGESTION, receipt.TransactionStatus, "expected transaction status: congestion")
 	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }

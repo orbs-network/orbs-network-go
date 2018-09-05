@@ -30,9 +30,8 @@ func futureTimeAfterGracePeriod() time.Time {
 func TestValidateTransaction_ValidTransaction(t *testing.T) {
 	t.Parallel()
 
-	require.NoError(t,
-		aValidationContext().validateTransaction(builders.TransferTransaction().Build()),
-		"a valid transaction was rejected")
+	err := aValidationContext().validateTransaction(builders.TransferTransaction().Build())
+	require.Nil(t, err, "a valid transaction was rejected")
 }
 
 //TODO talk to TalKol about Invalid Signer
