@@ -14,6 +14,9 @@ import (
 	"time"
 )
 
+const MAX_PAYLOADS_IN_MESSAGE = 100000
+const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
+
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
@@ -157,13 +160,86 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 	t.reporting.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
 	// TODO: add a whitelist for IPs we're willing to accept connections from
 
-	<-ctx.Done() // TODO: replace with actual send/receive logic
-	conn.Close()
+	for {
+		payloads, err := t.receiveTransportData(ctx, conn)
+		if err != nil {
+			t.reporting.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
+			conn.Close()
+			return
+		}
+
+		// notify if not keepalive
+		if len(payloads) > 0 {
+			t.notifyListener(payloads)
+		}
+	}
+}
+
+func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
+	t.reporting.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()))
+
+	res := [][]byte{}
+
+	// receive num payloads
+	sizeBuffer, err := readTotal(ctx, conn, 4)
+	if err != nil {
+		return nil, err
+	}
+	numPayloads := membuffers.GetUint32(sizeBuffer)
+	if numPayloads > MAX_PAYLOADS_IN_MESSAGE {
+		return nil, errors.Errorf("received message with too many payloads: %d", numPayloads)
+	}
+
+	for i := uint32(0); i < numPayloads; i++ {
+		// receive payload size
+		sizeBuffer, err := readTotal(ctx, conn, 4)
+		if err != nil {
+			return nil, err
+		}
+		payloadSize := membuffers.GetUint32(sizeBuffer)
+		if payloadSize > MAX_PAYLOAD_SIZE_BYTES {
+			return nil, errors.Errorf("received message with a payload too big: %d bytes", payloadSize)
+		}
+
+		// receive payload data
+		payload, err := readTotal(ctx, conn, payloadSize)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, payload)
+
+		// receive padding
+		paddingSize := calcPaddingSize(uint32(len(payload)))
+		if paddingSize > 0 {
+			_, err := readTotal(ctx, conn, paddingSize)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return res, nil
+}
+
+func (t *directTransport) notifyListener(payloads [][]byte) {
+	listener := t.getListener()
+
+	if listener == nil {
+		return
+	}
+
+	listener.OnTransportMessageReceived(payloads)
+}
+
+func (t *directTransport) getListener() TransportListener {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
+	return t.transportListener
 }
 
 func (t *directTransport) clientMainLoop(ctx context.Context, address string, msgs chan *TransportData) {
 	for {
-
 		t.reporting.Info("attempting outgoing transport connection", log.String("server", address))
 		conn, err := net.Dial("tcp", address)
 
@@ -176,7 +252,6 @@ func (t *directTransport) clientMainLoop(ctx context.Context, address string, ms
 		if !t.clientHandleOutgoingConnection(ctx, conn, msgs) {
 			return
 		}
-
 	}
 }
 
@@ -216,31 +291,31 @@ func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, 
 
 	// send num payloads
 	membuffers.WriteUint32(sizeBuffer, uint32(len(data.Payloads)))
-	written, _ := conn.Write(sizeBuffer)
-	if written != 4 {
-		return errors.Errorf("attempted to write %d bytes but only wrote %d", 4, written)
+	err := write(ctx, conn, sizeBuffer)
+	if err != nil {
+		return err
 	}
 
 	for _, payload := range data.Payloads {
 		// send payload size
 		membuffers.WriteUint32(sizeBuffer, uint32(len(payload)))
-		written, _ := conn.Write(sizeBuffer)
-		if written != 4 {
-			return errors.Errorf("attempted to write %d bytes but only wrote %d", 4, written)
+		err := write(ctx, conn, sizeBuffer)
+		if err != nil {
+			return err
 		}
 
 		// send payload data
-		written, _ = conn.Write(payload)
-		if written != len(payload) {
-			return errors.Errorf("attempted to write %d bytes but only wrote %d", len(payload), written)
+		err = write(ctx, conn, payload)
+		if err != nil {
+			return err
 		}
 
 		// send padding
-		paddingSize := calcPaddingSize(len(payload))
+		paddingSize := calcPaddingSize(uint32(len(payload)))
 		if paddingSize > 0 {
-			written, _ = conn.Write(zeroBuffer[:paddingSize])
-			if written != paddingSize {
-				return errors.Errorf("attempted to write %d bytes but only wrote %d", paddingSize, written)
+			err = write(ctx, conn, zeroBuffer[:paddingSize])
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -248,7 +323,7 @@ func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, 
 	return nil
 }
 
-func calcPaddingSize(size int) int {
+func calcPaddingSize(size uint32) uint32 {
 	const contentAlignment = 4
 	alignedSize := (size + contentAlignment - 1) / contentAlignment * contentAlignment
 	return alignedSize - size
@@ -260,10 +335,55 @@ func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) erro
 	zeroBuffer := make([]byte, 4)
 
 	// send zero num payloads
-	written, _ := conn.Write(zeroBuffer)
-	if written != 4 {
-		return errors.Errorf("attempted to write %d bytes but only wrote %d", 4, written)
+	err := write(ctx, conn, zeroBuffer)
+	if err != nil {
+		return err
 	}
 
+	return nil
+}
+
+func readTotal(ctx context.Context, conn net.Conn, totalSize uint32) ([]byte, error) {
+	// TODO: consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
+	// make sure context is still open
+	err := ctx.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: consider working with a pre-allocated buffer pool (enforcing max payload size) to remove allocs and improve performance
+	buffer := make([]byte, totalSize)
+	totalRead := uint32(0)
+	for totalRead < totalSize {
+		// TODO: add timeouts and deadlines
+		read, err := conn.Read(buffer[totalRead:])
+		totalRead += uint32(read)
+		if totalRead == totalSize {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return buffer, nil
+}
+
+func write(ctx context.Context, conn net.Conn, buffer []byte) error {
+	// TODO: consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
+	// make sure context is still open
+	err := ctx.Err()
+	if err != nil {
+		return err
+	}
+
+	// TODO: add timeouts and deadlines
+	written, err := conn.Write(buffer)
+	if written != len(buffer) {
+		if err == nil {
+			return errors.Errorf("attempted to write %d bytes but only wrote %d", len(buffer), written)
+		} else {
+			return errors.Wrapf(err, "attempted to write %d bytes but only wrote %d", len(buffer), written)
+		}
+	}
 	return nil
 }

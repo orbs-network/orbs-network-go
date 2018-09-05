@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -25,6 +26,8 @@ type directHarness struct {
 
 	peersListeners            []net.Listener
 	peersListenersConnections []net.Conn
+	peerTalkerConnection      net.Conn
+	listenerMock              *transportListenerMock
 }
 
 func newDirectHarness() *directHarness {
@@ -46,9 +49,10 @@ func newDirectHarness() *directHarness {
 	port := uint16(firstRandomPort)
 
 	return &directHarness{
-		config:    cfg,
-		transport: nil,
-		myPort:    port,
+		config:       cfg,
+		transport:    nil,
+		myPort:       port,
+		listenerMock: &transportListenerMock{},
 	}
 }
 
@@ -83,6 +87,9 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 		require.NoError(t, err, "test peer server could not accept connection from local transport")
 	}
 
+	h.peerTalkerConnection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
+	require.NoError(t, err, "test should be able connect to local transport")
+
 	return h
 }
 
@@ -103,6 +110,7 @@ func (h *directHarness) peerListenerReadTotal(peerIndex int, totalSize int) ([]b
 }
 
 func (h *directHarness) cleanupConnectedPeers() {
+	h.peerTalkerConnection.Close()
 	for i := 0; i < networkSize-1; i++ {
 		h.peersListenersConnections[i].Close()
 		h.peersListeners[i].Close()
@@ -116,4 +124,22 @@ func (h *directHarness) publicKeyForPeer(index int) primitives.Ed25519PublicKey 
 func (h *directHarness) portForPeer(index int) uint16 {
 	peerPublicKey := h.publicKeyForPeer(index)
 	return h.config.FederationNodes(0)[peerPublicKey.KeyForMap()].GossipPort()
+}
+
+func (h *directHarness) expectTransportListenerCalled(payloads [][]byte) {
+	h.listenerMock.When("OnTransportMessageReceived", payloads).Return().Times(1)
+}
+
+func (h *directHarness) verifyTransportListenerCalled(t *testing.T) {
+	err := test.EventuallyVerify(h.listenerMock)
+	require.NoError(t, err, "transport listener mock should be called as expected")
+}
+
+func (h *directHarness) expectTransportListenerNotCalled() {
+	h.listenerMock.When("OnTransportMessageReceived", mock.Any).Return().Times(0)
+}
+
+func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {
+	err := test.ConsistentlyVerify(h.listenerMock)
+	require.NoError(t, err, "transport listener mock should be called as expected")
 }

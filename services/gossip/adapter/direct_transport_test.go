@@ -68,7 +68,7 @@ func TestDirectOutgoing_ConnectionReconnectsOnFailure(t *testing.T) {
 	})
 }
 
-func TestOutgoing_AdapterBroadcast(t *testing.T) {
+func TestOutgoing_AdapterSendsBroadcast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -83,13 +83,13 @@ func TestOutgoing_AdapterBroadcast(t *testing.T) {
 
 		for i := 0; i < networkSize-1; i++ {
 			data, err := h.peerListenerReadTotal(i, 20)
-			require.NoError(t, err, "test peer server could not accept connection from local transport")
+			require.NoError(t, err, "test peer server could not read from local transport")
 			require.Equal(t, []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}, data)
 		}
 	})
 }
 
-func TestOutgoing_AdapterUnicast(t *testing.T) {
+func TestOutgoing_AdapterSendsUnicast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -103,7 +103,78 @@ func TestOutgoing_AdapterUnicast(t *testing.T) {
 		})
 
 		data, err := h.peerListenerReadTotal(1, 20)
-		require.NoError(t, err, "test peer server could not accept connection from local transport")
+		require.NoError(t, err, "test peer server could not read from local transport")
 		require.Equal(t, []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}, data)
+	})
+}
+
+func TestIncoming_TransportListenerReceivesData(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
+
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
+
+		buffer := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
+
+		h.verifyTransportListenerCalled(t)
+	})
+}
+
+func TestIncoming_ReceivesDataWithoutListener(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
+
+		h.expectTransportListenerNotCalled()
+
+		buffer := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
+
+		h.verifyTransportListenerNotCalled(t)
+	})
+}
+
+func TestIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
+
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerNotCalled()
+
+		buffer := []byte{0x99, 0x99, 0x99, 0x99, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00}
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
+
+		h.verifyTransportListenerNotCalled(t)
+	})
+}
+
+func TestIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
+
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerNotCalled()
+
+		buffer := []byte{0x01, 0x00, 0x00, 0x00, 0x99, 0x99, 0x99, 0x99, 0x11, 0x00, 0x00, 0x00}
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
+
+		h.verifyTransportListenerNotCalled(t)
 	})
 }
