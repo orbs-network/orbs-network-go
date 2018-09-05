@@ -14,9 +14,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"reflect"
-	"strconv"
 	"testing"
 )
+
+var blockSyncStateNameLookup = map[blockSyncState]string{
+	BLOCK_SYNC_STATE_IDLE:                                   `BLOCK_SYNC_STATE_IDLE`,
+	BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES: `BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES`,
+	BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK:                 `BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK`,
+}
 
 type blockSyncHarness struct {
 	blockSync      *BlockSync
@@ -51,7 +56,6 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	ok, err := mock.VerifyMocks(h.storage, h.gossip, h.startSyncTimer)
 	require.NoError(t, err)
 	require.True(t, ok)
-
 }
 
 func typeOfEvent(event interface{}) string {
@@ -103,7 +107,7 @@ func allStates(collecting bool) []blockSyncState {
 
 func TestPetitionerEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *testing.T) {
 	for _, state := range allStates(false) {
-		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
@@ -376,7 +380,7 @@ func TestSourceAnyStateRespondToAvailabilityRequests(t *testing.T) {
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
 	for _, state := range allStates(true) {
-		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(200)).Times(1)
@@ -399,7 +403,7 @@ func TestSourceAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetit
 	petitionerBlockHeight := event.SignedBatchRange.LastCommittedBlockHeight()
 
 	for _, state := range allStates(true) {
-		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("LastCommittedBlockHeight").Return(petitionerBlockHeight).Times(1)
@@ -421,7 +425,7 @@ func TestSourceAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
 	for _, state := range allStates(true) {
-		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(200)).Times(1)
@@ -452,7 +456,7 @@ func TestSourceAnyStateRespondsWithChunks(t *testing.T) {
 	}
 
 	for _, state := range allStates(true) {
-		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("GetBlocks").Return(blocks, firstHeight, lastHeight).Times(1)
