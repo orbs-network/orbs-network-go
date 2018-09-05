@@ -17,17 +17,17 @@ func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T)
 
 	connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
 	defer connection.Close()
-	require.NoError(t, err, "test should be able connect to local transport")
+	require.NoError(t, err, "test peer should be able connect to local transport")
 
 	cancel()
 
 	buffer := []byte{0}
 	read, err := connection.Read(buffer)
-	require.Equal(t, 0, read, "test should disconnect from local transport without reading anything")
-	require.Error(t, err, "test should disconnect from local transport")
+	require.Equal(t, 0, read, "test peer should disconnect from local transport without reading anything")
+	require.Error(t, err, "test peer should disconnect from local transport")
 
 	_, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
-	require.Error(t, err, "test should be able to connect to local transport")
+	require.Error(t, err, "test peer should be able to connect to local transport")
 }
 
 func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
@@ -59,7 +59,7 @@ func TestDirectOutgoing_ConnectionReconnectsOnFailure(t *testing.T) {
 		defer connection.Close()
 		require.NoError(t, err, "test peer server could not accept connection from local transport")
 
-		for i := 0; i < 2; i++ {
+		for numForcefulDisconnect := 0; numForcefulDisconnect < 2; numForcefulDisconnect++ {
 			connection.Close() // disconnect local transport forcefully
 
 			connection, err = listener.Accept()
@@ -157,6 +157,11 @@ func TestIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *test
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
 
+		buffer = []byte{0}
+		read, err := h.peerTalkerConnection.Read(buffer)
+		require.Equal(t, 0, read, "test peer should be disconnected from local transport without reading anything")
+		require.Error(t, err, "test peer should be disconnected from local transport")
+
 		h.verifyTransportListenerNotCalled(t)
 	})
 }
@@ -175,6 +180,50 @@ func TestIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *test
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
 
+		buffer = []byte{0}
+		read, err := h.peerTalkerConnection.Read(buffer)
+		require.Equal(t, 0, read, "test peer should be disconnected from local transport without reading anything")
+		require.Error(t, err, "test peer should be disconnected from local transport")
+
 		h.verifyTransportListenerNotCalled(t)
+	})
+}
+
+func TestOutgoing_SendsKeepAliveWhenNothingToSend(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
+
+		for numKeepAliveSent := 0; numKeepAliveSent < 2; numKeepAliveSent++ {
+			data, err := h.peerListenerReadTotal(1, 4)
+			require.NoError(t, err, "test peer server could not read from local transport")
+			require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00}, data) // keepalive content (zero payloads)
+		}
+	})
+}
+
+func TestIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
+
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
+
+		for numKeepAliveReceived := 0; numKeepAliveReceived < 2; numKeepAliveReceived++ {
+			buffer := []byte{0x00, 0x00, 0x00, 0x00} // keepalive content (zero payloads)
+			written, err := h.peerTalkerConnection.Write(buffer)
+			require.NoError(t, err, "test peer could not write to local transport")
+			require.Equal(t, len(buffer), written)
+		}
+
+		buffer := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
+
+		h.verifyTransportListenerCalled(t)
 	})
 }
