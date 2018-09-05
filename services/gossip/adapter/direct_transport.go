@@ -78,6 +78,8 @@ func (t *directTransport) Send(data *TransportData) error {
 		for _, peerQueue := range t.peerQueues {
 			peerQueue <- data
 		}
+		// TODO: how can we tell if was actually sent without error?
+		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientPublicKeys {
 			if peerQueue, found := t.peerQueues[recipientPublicKey.KeyForMap()]; found {
@@ -86,6 +88,8 @@ func (t *directTransport) Send(data *TransportData) error {
 				return errors.Errorf("unknown recepient public key: %s", recipientPublicKey.String())
 			}
 		}
+		// TODO: how can we tell if was actually sent without error?
+		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
 		panic("Not implemented")
 	}
@@ -158,7 +162,8 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 
 func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, conn net.Conn) {
 	t.reporting.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
-	// TODO: add a whitelist for IPs we're willing to accept connections from
+	// TODO: add a white list for IPs we're willing to accept connections from
+	// TODO: make sure each IP from the white list connects only once
 
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
@@ -178,10 +183,12 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
 	t.reporting.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()))
 
+	// TODO: think about timeout policy on receive, we might not want it
+	timeout := t.config.GossipConnectionKeepAliveInterval()
 	res := [][]byte{}
 
 	// receive num payloads
-	sizeBuffer, err := readTotal(ctx, conn, 4)
+	sizeBuffer, err := readTotal(ctx, conn, 4, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +199,7 @@ func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Con
 
 	for i := uint32(0); i < numPayloads; i++ {
 		// receive payload size
-		sizeBuffer, err := readTotal(ctx, conn, 4)
+		sizeBuffer, err := readTotal(ctx, conn, 4, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +209,7 @@ func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Con
 		}
 
 		// receive payload data
-		payload, err := readTotal(ctx, conn, payloadSize)
+		payload, err := readTotal(ctx, conn, payloadSize, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +218,7 @@ func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Con
 		// receive padding
 		paddingSize := calcPaddingSize(uint32(len(payload)))
 		if paddingSize > 0 {
-			_, err := readTotal(ctx, conn, paddingSize)
+			_, err := readTotal(ctx, conn, paddingSize, timeout)
 			if err != nil {
 				return nil, err
 			}
@@ -286,12 +293,13 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *TransportData) error {
 	t.reporting.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()))
 
+	timeout := t.config.GossipConnectionKeepAliveInterval()
 	zeroBuffer := make([]byte, 4)
 	sizeBuffer := make([]byte, 4)
 
 	// send num payloads
 	membuffers.WriteUint32(sizeBuffer, uint32(len(data.Payloads)))
-	err := write(ctx, conn, sizeBuffer)
+	err := write(ctx, conn, sizeBuffer, timeout)
 	if err != nil {
 		return err
 	}
@@ -299,13 +307,13 @@ func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, 
 	for _, payload := range data.Payloads {
 		// send payload size
 		membuffers.WriteUint32(sizeBuffer, uint32(len(payload)))
-		err := write(ctx, conn, sizeBuffer)
+		err := write(ctx, conn, sizeBuffer, timeout)
 		if err != nil {
 			return err
 		}
 
 		// send payload data
-		err = write(ctx, conn, payload)
+		err = write(ctx, conn, payload, timeout)
 		if err != nil {
 			return err
 		}
@@ -313,7 +321,7 @@ func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, 
 		// send padding
 		paddingSize := calcPaddingSize(uint32(len(payload)))
 		if paddingSize > 0 {
-			err = write(ctx, conn, zeroBuffer[:paddingSize])
+			err = write(ctx, conn, zeroBuffer[:paddingSize], timeout)
 			if err != nil {
 				return err
 			}
@@ -332,10 +340,11 @@ func calcPaddingSize(size uint32) uint32 {
 func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
 	t.reporting.Info("sending keepalive", log.String("peer", conn.RemoteAddr().String()))
 
+	timeout := t.config.GossipConnectionKeepAliveInterval()
 	zeroBuffer := make([]byte, 4)
 
 	// send zero num payloads
-	err := write(ctx, conn, zeroBuffer)
+	err := write(ctx, conn, zeroBuffer, timeout)
 	if err != nil {
 		return err
 	}
@@ -343,7 +352,7 @@ func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) erro
 	return nil
 }
 
-func readTotal(ctx context.Context, conn net.Conn, totalSize uint32) ([]byte, error) {
+func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {
 	// TODO: consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
 	// make sure context is still open
 	err := ctx.Err()
@@ -355,7 +364,7 @@ func readTotal(ctx context.Context, conn net.Conn, totalSize uint32) ([]byte, er
 	buffer := make([]byte, totalSize)
 	totalRead := uint32(0)
 	for totalRead < totalSize {
-		// TODO: add timeouts and deadlines
+		conn.SetReadDeadline(time.Now().Add(timeout))
 		read, err := conn.Read(buffer[totalRead:])
 		totalRead += uint32(read)
 		if totalRead == totalSize {
@@ -368,7 +377,7 @@ func readTotal(ctx context.Context, conn net.Conn, totalSize uint32) ([]byte, er
 	return buffer, nil
 }
 
-func write(ctx context.Context, conn net.Conn, buffer []byte) error {
+func write(ctx context.Context, conn net.Conn, buffer []byte, timeout time.Duration) error {
 	// TODO: consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
 	// make sure context is still open
 	err := ctx.Err()
@@ -376,7 +385,7 @@ func write(ctx context.Context, conn net.Conn, buffer []byte) error {
 		return err
 	}
 
-	// TODO: add timeouts and deadlines
+	conn.SetWriteDeadline(time.Now().Add(timeout))
 	written, err := conn.Write(buffer)
 	if written != len(buffer) {
 		if err == nil {
