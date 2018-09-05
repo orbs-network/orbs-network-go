@@ -14,22 +14,20 @@ func ForProduction(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) NodeConfig {
 
-	benchmarkConsensusRetryInterval := 2000 * time.Millisecond
-	minimumTransactionsInBlock := uint32(1)
-	minimalBlockDelay := 20 * time.Millisecond
-	queryGraceTimeout := 100 * time.Millisecond
-
-	return newHardCodedConfig(
+	cfg := newHardCodedConfig(
 		federationNodes,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,
-		activeConsensusAlgo,
-		benchmarkConsensusRetryInterval,
-		minimumTransactionsInBlock,
-		minimalBlockDelay, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
-		queryGraceTimeout)
+		activeConsensusAlgo)
 
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, uint32(1))
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2000*time.Millisecond)
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 20*time.Millisecond) // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
+	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 5*time.Second)
+
+	return cfg
 }
 
 func ForAcceptanceTests(
@@ -40,21 +38,20 @@ func ForAcceptanceTests(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) NodeConfig {
 
-	benchmarkConsensusRetryInterval := 1 * time.Millisecond
-	minimumTransactionsInBlock := uint32(1)
-	minimalBlockDelay := 1 * time.Millisecond
-	queryGraceTimeout := 5 * time.Millisecond
-
-	return newHardCodedConfig(
+	cfg := newHardCodedConfig(
 		federationNodes,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,
-		activeConsensusAlgo,
-		benchmarkConsensusRetryInterval,
-		minimumTransactionsInBlock,
-		minimalBlockDelay,
-		queryGraceTimeout)
+		activeConsensusAlgo)
+
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, uint32(1))
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 5*time.Millisecond)
+	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Millisecond)
+
+	return cfg
 }
 
 func EmptyConfig() NodeConfig {

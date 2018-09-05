@@ -51,6 +51,8 @@ const (
 	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT        = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
 	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
+
+	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey, gossipPort uint16, gossipEndpoint string) FederationNode {
@@ -68,10 +70,6 @@ func newHardCodedConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRetryInterval time.Duration,
-	minimumTransactionsInBlock uint32,
-	minimalBlockDelay time.Duration,
-	queryGraceTimeout time.Duration,
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
@@ -83,9 +81,7 @@ func newHardCodedConfig(
 	}
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, benchmarkConsensusRetryInterval)
 
-	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, queryGraceTimeout)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 
 	cfg.SetDuration(BLOCK_SYNC_BATCH_SIZE, 10000)
@@ -96,9 +92,6 @@ func newHardCodedConfig(
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 3*time.Minute)
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
-
-	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, minimalBlockDelay)
-	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
 
@@ -182,7 +175,6 @@ func (c *config) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 
 func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
 	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL].DurationValue
-
 }
 
 func (c *config) BlockSyncBatchSize() uint32 {
@@ -192,9 +184,11 @@ func (c *config) BlockSyncBatchSize() uint32 {
 func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START].DurationValue
 }
+
 func (c *config) BlockTransactionReceiptQueryGraceEnd() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END].DurationValue
 }
+
 func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
 }
@@ -213,7 +207,6 @@ func (c *config) StateStorageHistoryRetentionDistance() uint32 {
 
 func (c *config) BlockTrackerGraceDistance() uint32 {
 	return c.kv[BLOCK_TRACKER_GRACE_DISTANCE].Uint32Value
-
 }
 
 func (c *config) BlockTrackerGraceTimeout() time.Duration {
@@ -246,4 +239,8 @@ func (c *config) BlockSyncInterval() time.Duration {
 
 func (c *config) BlockSyncCollectResponseTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT].DurationValue
+}
+
+func (c *config) GossipConnectionKeepAliveInterval() time.Duration {
+	return c.kv[GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL].DurationValue
 }

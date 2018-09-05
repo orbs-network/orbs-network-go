@@ -54,6 +54,9 @@ type NodeConfig interface {
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
+
+	// gossip
+	GossipConnectionKeepAliveInterval() time.Duration
 }
 
 type FederationNode interface {
