@@ -76,29 +76,6 @@ func (t *directTransport) getListenPort() uint16 {
 	return nodeConfig.GossipPort()
 }
 
-func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16) {
-	listener, err := t.serverListenForIncomingConnections(ctx, listenPort)
-	if err != nil {
-		err = errors.Wrapf(err, "gossip transport cannot listen on port %d", listenPort)
-		t.reporting.Error(err.Error())
-		panic(err)
-	}
-	t.reporting.Info("gossip transport server listening", log.Uint32("port", uint32(listenPort)))
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			if !t.isServerReady() {
-				t.reporting.Info("incoming connection accept stopped since server is shutting down")
-				return
-			}
-			t.reporting.Info("incoming connection accept error", log.Error(err))
-			continue
-		}
-		go t.serverHandleIncomingConnection(ctx, conn)
-	}
-}
-
 func (t *directTransport) serverListenForIncomingConnections(ctx context.Context, listenPort uint16) (net.Listener, error) {
 	// TODO: migrate to ListenConfig which has better support of contexts (go 1.11 required)
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", listenPort))
@@ -129,11 +106,35 @@ func (t *directTransport) isServerReady() bool {
 	return t.serverReady
 }
 
+func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16) {
+	listener, err := t.serverListenForIncomingConnections(ctx, listenPort)
+	if err != nil {
+		err = errors.Wrapf(err, "gossip transport cannot listen on port %d", listenPort)
+		t.reporting.Error(err.Error())
+		panic(err)
+	}
+	t.reporting.Info("gossip transport server listening", log.Uint32("port", uint32(listenPort)))
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			if !t.isServerReady() {
+				t.reporting.Info("incoming connection accept stopped since server is shutting down")
+				return
+			}
+			t.reporting.Info("incoming connection accept error", log.Error(err))
+			continue
+		}
+		go t.serverHandleIncomingConnection(ctx, conn)
+	}
+}
+
 func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, conn net.Conn) {
 	t.reporting.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
 	// TODO: add a whitelist for IPs we're willing to accept connections from
 
 	<-ctx.Done() // TODO: replace with actual send/receive logic
+	conn.Close()
 }
 
 func (t *directTransport) clientMainLoop(ctx context.Context, address string, msgs chan *TransportData) {

@@ -37,7 +37,7 @@ func newHarness() *harness {
 	cfg := config.EmptyConfig()
 	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
 	cfg.SetFederationNodes(federationNodes)
-	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Millisecond)
+	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 5*time.Millisecond)
 
 	port := uint16(firstRandomPort)
 
@@ -72,15 +72,17 @@ func TestIncomingConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
 
 	connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
 	defer connection.Close()
-	require.NoError(t, err, "should connect to local transport")
+	require.NoError(t, err, "test should be able connect to local transport")
 
 	cancel()
 
 	buffer := []byte{0}
-	connection.SetDeadline(time.Now().Add(1 * time.Minute))
 	read, err := connection.Read(buffer)
-	require.Equal(t, 0, read, "should disconnect from peer without reading anything")
-	require.Error(t, err, "should disconnect from peer")
+	require.Equal(t, 0, read, "test should disconnect from local transport without reading anything")
+	require.Error(t, err, "test should disconnect from local transport")
+
+	_, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
+	require.Error(t, err, "test should be able to connect to local transport")
 }
 
 func TestOutgoingConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
@@ -93,7 +95,7 @@ func TestOutgoingConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
 	for i := 0; i < networkSize-1; i++ {
 		listeners[i], err = net.Listen("tcp", fmt.Sprintf(":%d", h.portForPeer(i)))
 		defer listeners[i].Close()
-		require.NoError(t, err, "peer server could not listen")
+		require.NoError(t, err, "test peer server could not listen")
 	}
 
 	h.start(ctx)
@@ -102,7 +104,7 @@ func TestOutgoingConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
 	for i := 0; i < networkSize-1; i++ {
 		connections[i], err = listeners[i].Accept()
 		defer connections[i].Close()
-		require.NoError(t, err, "peer server could not accept")
+		require.NoError(t, err, "test peer server could not accept connection from local transport")
 	}
 
 	cancel()
@@ -110,8 +112,8 @@ func TestOutgoingConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
 	for i := 0; i < networkSize-1; i++ {
 		buffer := []byte{0}
 		read, err := connections[i].Read(buffer)
-		require.Equal(t, 0, read, "should disconnect from peer without reading anything")
-		require.Error(t, err, "should disconnect from peer")
+		require.Equal(t, 0, read, "local transport should disconnect from test peer without reading anything")
+		require.Error(t, err, "local transport should disconnect from test peer")
 	}
 }
 
@@ -122,18 +124,17 @@ func TestOutgoingConnectionReconnectsOnFailure(t *testing.T) {
 
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", h.portForPeer(0)))
 		defer listener.Close()
-		require.NoError(t, err, "peer server could not listen")
+		require.NoError(t, err, "test peer server could not listen")
 
 		connection, err := listener.Accept()
 		defer connection.Close()
-		require.NoError(t, err, "peer server could not accept")
+		require.NoError(t, err, "test peer server could not accept connection from local transport")
 
 		for i := 0; i < 3; i++ {
-			connection.Close()
+			connection.Close() // disconnect local transport forcefully
 
 			connection, err = listener.Accept()
-			require.NoError(t, err, "peer server could not accept")
-			fmt.Printf("i connection, err = listener.Accept()\n")
+			require.NoError(t, err, "test peer server could not accept connection from local transport")
 		}
 	})
 }
