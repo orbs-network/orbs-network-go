@@ -73,8 +73,6 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 			fastReport(sendTransactionHandler, s.reporting)
 		case "/api/call-method":
 			fastReport(callMethodHandler, s.reporting)
-		default:
-			ctx.Error("Unsupported path", fasthttp.StatusNotFound)
 		}
 	}
 }
@@ -116,7 +114,7 @@ func (r *fastResponse) writeMessageOrError(message membuffers.Message, err error
 func (s *fastHttpServer) handler(handler func(bytes []byte, r *fastResponse)) fasthttp.RequestHandler {
 	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
 
-		bytes := ctx.Request.Body()
+		bytes := ctx.PostBody()
 		//if err != nil {
 		//	s.reporting.Info("could not read http request body", log.Error(err))
 		//	w.WriteHeader(http.StatusInternalServerError)
