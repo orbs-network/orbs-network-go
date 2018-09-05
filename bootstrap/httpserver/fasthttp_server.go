@@ -27,11 +27,9 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 		publicApi: publicApi,
 	}
 
-	requestHandler := func(ctx *fasthttp.RequestCtx) {
-	}
-
+	router := server.createRouter()
 	server.httpServer = &fasthttp.Server{
-		Handler: requestHandler,
+		Handler: router.Handler,
 	}
 
 	go func() {
