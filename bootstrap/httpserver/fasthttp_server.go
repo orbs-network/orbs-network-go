@@ -69,8 +69,8 @@ func (s *fastHttpServer) createRouter() *fasthttprouter.Router {
 	})
 
 	router := fasthttprouter.New()
-	router.Handle("get", "/api/send-transaction", fastReport(sendTransactionHandler, s.reporting))
-	router.Handle("get", "/api/call-method", fastReport(callMethodHandler, s.reporting))
+	router.Handle("post", "/api/send-transaction", fastReport(sendTransactionHandler, s.reporting))
+	router.Handle("post", "/api/call-method", fastReport(callMethodHandler, s.reporting))
 	return router
 }
 
