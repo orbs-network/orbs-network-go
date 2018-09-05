@@ -86,25 +86,23 @@ func allEventsExcept(eventTypes ...string) (res []interface{}) {
 	return
 }
 
-// FIXME replace with a function with a filter
-func allStates() []blockSyncState {
-	return []blockSyncState{
-		BLOCK_SYNC_STATE_IDLE,
-		BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES,
-		BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK,
-	}
-}
-
-// FIXME replace with a function with a filter
-func allStatesExceptCollecting() []blockSyncState {
-	return []blockSyncState{
-		BLOCK_SYNC_STATE_IDLE,
-		BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK,
+func allStates(collecting bool) []blockSyncState {
+	if collecting {
+		return []blockSyncState{
+			BLOCK_SYNC_STATE_IDLE,
+			BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES,
+			BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK,
+		}
+	} else {
+		return []blockSyncState{
+			BLOCK_SYNC_STATE_IDLE,
+			BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK,
+		}
 	}
 }
 
 func TestPetitionerEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *testing.T) {
-	for _, state := range allStatesExceptCollecting() {
+	for _, state := range allStates(false) {
 		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
@@ -377,7 +375,7 @@ func TestPetitionerWaitingForChunkIgnoresInvalidEvents(t *testing.T) {
 func TestSourceAnyStateRespondToAvailabilityRequests(t *testing.T) {
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
-	for _, state := range allStates() {
+	for _, state := range allStates(true) {
 		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
@@ -400,7 +398,7 @@ func TestSourceAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetit
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 	petitionerBlockHeight := event.SignedBatchRange.LastCommittedBlockHeight()
 
-	for _, state := range allStates() {
+	for _, state := range allStates(true) {
 		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
@@ -422,7 +420,7 @@ func TestSourceAnyStateRespondsNothingToAvailabilityRequestIfSourceIsBehindPetit
 func TestSourceAnyStateIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
 	event := builders.BlockAvailabilityRequestInput().Build().Message
 
-	for _, state := range allStates() {
+	for _, state := range allStates(true) {
 		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
@@ -453,7 +451,7 @@ func TestSourceAnyStateRespondsWithChunks(t *testing.T) {
 		blocks = append(blocks, builders.BlockPair().WithHeight(i).Build())
 	}
 
-	for _, state := range allStates() {
+	for _, state := range allStates(true) {
 		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
