@@ -111,10 +111,8 @@ func TestSambusacFlow(t *testing.T) {
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, response.ExecutionResult, 0, "Transaction status to be successful = 0")
+	require.Equal(t, 1, response.ExecutionResult, "Transaction status to be successful = 1")
 	require.NotNil(t, response.TxHash, "got empty txhash")
-
-	time.Sleep(500 * time.Millisecond) //TODO remove when public api blocks on tx
 
 	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON())
 

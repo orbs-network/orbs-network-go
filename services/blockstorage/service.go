@@ -36,6 +36,7 @@ type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync
+	txPool       services.TransactionPool
 
 	config Config
 
@@ -48,13 +49,15 @@ type service struct {
 	blockSync *BlockSync
 }
 
-func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync, reporting log.BasicLogger) services.BlockStorage {
+func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
+	txPool services.TransactionPool, reporting log.BasicLogger) services.BlockStorage {
 	logger := reporting.For(log.Service("block-storage"))
 
 	storage := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
 		gossip:        gossip,
+		txPool:        txPool,
 		reporting:     logger,
 		config:        config,
 		lastBlockLock: &sync.Mutex{},
@@ -104,6 +107,11 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
 		s.reporting.Error("intra-node sync to state storage failed", log.Error(err))
+	}
+
+	if err := s.syncBlockToTxPool(input.BlockPair); err != nil {
+		// TODO: since the intra-node sync flow is self healing, should we fail if pool fails ?
+		s.reporting.Error("intra-node sync to tx pool failed", log.Error(err))
 	}
 
 	return nil, nil
@@ -356,6 +364,16 @@ func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPair
 	_, err := s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{
 		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
 		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
+	})
+	return err
+}
+
+// TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
+func (s *service) syncBlockToTxPool(committedBlockPair *protocol.BlockPairContainer) error {
+	_, err := s.txPool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+		ResultsBlockHeader:       committedBlockPair.ResultsBlock.Header,
+		TransactionReceipts:      committedBlockPair.ResultsBlock.TransactionReceipts,
+		LastCommittedBlockHeight: committedBlockPair.ResultsBlock.Header.BlockHeight(),
 	})
 	return err
 }

@@ -46,27 +46,23 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 		committedTamper := network.GossipTransport().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 		committedLatch := network.GossipTransport().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 
-		<-network.SendTransfer(0, 0)
+		network.SendTransferInBackground(0, 0) // send a transaction so that network advances to block 1. the tamper prevents COMMITTED messages from reaching leader, so it doesn't move to block 3
+		committedLatch.Wait() // wait for validator to try acknowledge that it reached block 1 (and fail)
 
-		committedLatch.Wait()
-		committedLatch.Remove()
+		txHash := network.SendTransferInBackground(0, 17) // this should be included in block 2 which will not be closed until leader knows network is at block 2
 
-		tx := <-network.SendTransfer(0, 17)
-
-		committedLatch = network.GossipTransport().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
-		committedLatch.Wait()
 		committedLatch.Wait()
 
 		require.EqualValues(t, 0, <-network.CallGetBalance(0), "initial getBalance result on leader")
 		require.EqualValues(t, 0, <-network.CallGetBalance(1), "initial getBalance result on non leader")
 
 		committedLatch.Remove()
-		committedTamper.Release()
+		committedTamper.Release() // this will allow COMMITTED messages to reach leader so that it can progress
 
-		network.WaitForTransactionInState(0, tx.TransactionReceipt().Txhash())
+		network.WaitForTransactionInState(0, txHash)
 		require.EqualValues(t, 17, <-network.CallGetBalance(0), "eventual getBalance result on leader")
 
-		network.WaitForTransactionInState(1, tx.TransactionReceipt().Txhash())
+		network.WaitForTransactionInState(1, txHash)
 		require.EqualValues(t, 17, <-network.CallGetBalance(1), "eventual getBalance result on non leader")
 
 	})

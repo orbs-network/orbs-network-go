@@ -26,7 +26,6 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 		}
 
 		s.committedPool.add(receipt, timestampOrNow(removedTx))
-
 	}
 
 	s.lastCommittedBlockHeight = input.ResultsBlockHeader.BlockHeight()
@@ -34,12 +33,14 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 
 	s.blockTracker.IncrementHeight()
 
-	for _, handler := range s.transactionResultsHandlers {
-		handler.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
-			BlockHeight:         s.lastCommittedBlockHeight,
-			Timestamp:           input.ResultsBlockHeader.Timestamp(),
-			TransactionReceipts: myReceipts,
-		})
+	if len(myReceipts) > 0 {
+		for _, handler := range s.transactionResultsHandlers {
+			handler.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
+				BlockHeight:         s.lastCommittedBlockHeight,
+				Timestamp:           input.ResultsBlockHeader.Timestamp(),
+				TransactionReceipts: myReceipts,
+			})
+		}
 	}
 
 	s.logger.Info("committed transaction receipts for block height", log.BlockHeight(s.lastCommittedBlockHeight))
