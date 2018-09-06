@@ -5,35 +5,43 @@ import (
 	"time"
 )
 
-const iterationsEventually = 100
-const iterationsConsistently = 100
-const interval = 5 * time.Millisecond
+const EVENTUALLY_ACCEPTANCE_TIMEOUT = 20 * time.Millisecond
+const EVENTUALLY_ADAPTER_TIMEOUT = 50 * time.Millisecond
+const EVENTUALLY_LOCAL_E2E_TIMEOUT = 200 * time.Millisecond
+const EVENTUALLY_DOCKER_E2E_TIMEOUT = 500 * time.Millisecond
 
-func Eventually(f func() bool) bool {
-	for i := 0; i < iterationsEventually; i++ {
+const CONSISTENTLY_ACCEPTANCE_TIMEOUT = 20 * time.Millisecond
+const CONSISTENTLY_ADAPTER_TIMEOUT = 50 * time.Millisecond
+const CONSISTENTLY_LOCAL_E2E_TIMEOUT = 200 * time.Millisecond
+const CONSISTENTLY_DOCKER_E2E_TIMEOUT = 500 * time.Millisecond
+
+const iterations = 25
+
+func Eventually(timeout time.Duration, f func() bool) bool {
+	for i := 0; i < iterations; i++ {
 		if f() {
 			return true
 		}
-		time.Sleep(interval)
+		time.Sleep(timeout / iterations)
 	}
 	return false
 }
 
-func Consistently(f func() bool) bool {
-	for i := 0; i < iterationsConsistently; i++ {
+func Consistently(timeout time.Duration, f func() bool) bool {
+	for i := 0; i < iterations; i++ {
 		if !f() {
 			return false
 		}
-		time.Sleep(interval)
+		time.Sleep(timeout / iterations)
 	}
 	return true
 }
 
-func EventuallyVerify(mocks ...mock.HasVerify) error {
+func EventuallyVerify(timeout time.Duration, mocks ...mock.HasVerify) error {
 	verified := make([]bool, len(mocks))
 	numVerified := 0
 	var errExample error
-	Eventually(func() bool {
+	Eventually(timeout, func() bool {
 		for i, mock := range mocks {
 			if !verified[i] {
 				ok, err := mock.Verify()
@@ -54,9 +62,9 @@ func EventuallyVerify(mocks ...mock.HasVerify) error {
 	}
 }
 
-func ConsistentlyVerify(mocks ...mock.HasVerify) error {
+func ConsistentlyVerify(timeout time.Duration, mocks ...mock.HasVerify) error {
 	var errExample error
-	Consistently(func() bool {
+	Consistently(timeout, func() bool {
 		for _, mock := range mocks {
 			ok, err := mock.Verify()
 			if !ok {

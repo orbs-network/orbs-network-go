@@ -47,7 +47,7 @@ func (d *harness) expectValidateWithConsensusAlgosTimes(times int) {
 }
 
 func (d *harness) verifyMocks(t *testing.T) {
-	err := test.EventuallyVerify(d.gossip, d.stateStorage, d.consensus)
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, d.gossip, d.stateStorage, d.consensus)
 	require.NoError(t, err)
 }
 

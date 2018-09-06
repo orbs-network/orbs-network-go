@@ -63,7 +63,7 @@ func (h *directHarness) start(ctx context.Context) *directHarness {
 	h.transport = NewDirectTransport(ctx, h.config, log).(*directTransport)
 
 	// to synchronize tests, wait until server is ready
-	test.Eventually(func() bool {
+	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
 		return h.transport.isServerReady()
 	})
 
@@ -132,7 +132,7 @@ func (h *directHarness) expectTransportListenerCalled(payloads [][]byte) {
 }
 
 func (h *directHarness) verifyTransportListenerCalled(t *testing.T) {
-	err := test.EventuallyVerify(h.listenerMock)
+	err := test.EventuallyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, h.listenerMock)
 	require.NoError(t, err, "transport listener mock should be called as expected")
 }
 
@@ -141,6 +141,6 @@ func (h *directHarness) expectTransportListenerNotCalled() {
 }
 
 func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {
-	err := test.ConsistentlyVerify(h.listenerMock)
+	err := test.ConsistentlyVerify(test.CONSISTENTLY_ADAPTER_TIMEOUT, h.listenerMock)
 	require.NoError(t, err, "transport listener mock should be called as expected")
 }

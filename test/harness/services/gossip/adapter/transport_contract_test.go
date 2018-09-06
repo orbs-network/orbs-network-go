@@ -126,6 +126,7 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 
 func (c *transportContractContext) verify(t *testing.T) {
 	for _, mockListener := range c.listeners {
-		require.NoError(t, test.EventuallyVerify(mockListener))
+		// TODO: reduce eventually timeout to test.EVENTUALLY_ADAPTER_TIMEOUT once we remove memberlist
+		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, mockListener))
 	}
 }
