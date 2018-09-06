@@ -11,10 +11,7 @@ check_exit_code_and_report () {
     fi
 }
 
-go test -timeout 5s ./... > test.out
-check_exit_code_and_report
-
-go test ./services/consensusalgo/... -count 100 -timeout 5s -failfast > test.out
+go test -timeout 10s ./... -failfast > test.out
 check_exit_code_and_report
 
 go test ./test/acceptance -count 100 -timeout 10s -failfast > test.out

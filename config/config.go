@@ -59,6 +59,10 @@ type NodeConfig interface {
 	// gossip
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
+
+	// public api
+	SendTransactionTimeout() time.Duration
+	GetTransactionStatusGrace() time.Duration
 }
 
 type FederationNode interface {

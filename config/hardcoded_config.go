@@ -55,6 +55,9 @@ const (
 
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
+
+	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
+	PUBLIC_API_TRANSACTION_STATUS_GRACE = "PUBLIC_API_TRANSACTION_STATUS_GRACE"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey, gossipPort uint16, gossipEndpoint string) FederationNode {
@@ -103,6 +106,9 @@ func newHardCodedConfig(
 	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
+
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
+	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
 
 	return cfg
 }
@@ -185,6 +191,14 @@ func (c *config) BlockSyncBatchSize() uint32 {
 	return c.kv[BLOCK_SYNC_BATCH_SIZE].Uint32Value
 }
 
+func (c *config) BlockSyncInterval() time.Duration {
+	return c.kv[BLOCK_SYNC_INTERVAL].DurationValue
+}
+
+func (c *config) BlockSyncCollectResponseTimeout() time.Duration {
+	return c.kv[BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT].DurationValue
+}
+
 func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START].DurationValue
 }
@@ -237,12 +251,12 @@ func (c *config) TransactionPoolCommittedPoolClearExpiredInterval() time.Duratio
 	return c.kv[TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
 
-func (c *config) BlockSyncInterval() time.Duration {
-	return c.kv[BLOCK_SYNC_INTERVAL].DurationValue
+func (c *config) SendTransactionTimeout() time.Duration {
+	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
 }
 
-func (c *config) BlockSyncCollectResponseTimeout() time.Duration {
-	return c.kv[BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT].DurationValue
+func (c *config) GetTransactionStatusGrace() time.Duration {
+	return c.kv[PUBLIC_API_TRANSACTION_STATUS_GRACE].DurationValue
 }
 
 func (c *config) BlockSyncCollectChunksTimeout() time.Duration {

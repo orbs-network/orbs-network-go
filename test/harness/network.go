@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -26,6 +27,7 @@ type AcceptanceTestNetwork interface {
 	PublicApi(nodeIndex int) services.PublicApi
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256
 	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
 	DumpState()
@@ -157,11 +159,24 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	return ch
 }
 
+func (n *acceptanceTestNetwork) SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256 {
+	request := (&client.SendTransactionRequestBuilder{
+		SignedTransaction: builders.TransferTransaction().WithAmount(amount).Builder(),
+	}).Build()
+	go func() {
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		publicApi.SendTransaction(&services.SendTransactionInput{ // we ignore timeout here.
+			ClientRequest: request,
+		})
+	}()
+	return digest.CalcTxHash(request.SignedTransaction().Transaction())
+}
+
 func (n *acceptanceTestNetwork) SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse {
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: builders.TransferTransaction().WithInvalidContent().Builder(),
+			SignedTransaction: builders.TransferTransaction().WithInvalidAmount().Builder(),
 		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
