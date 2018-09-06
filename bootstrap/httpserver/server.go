@@ -23,8 +23,9 @@ type server struct {
 }
 
 func NewHttpServer(address string, reporting log.BasicLogger, publicApi services.PublicApi) HttpServer {
+	reporting = reporting.For(log.String("adapter", "http-server"))
 	server := &server{
-		reporting: reporting.For(log.String("subsystem", "http-server")),
+		reporting: reporting,
 		publicApi: publicApi,
 	}
 
@@ -34,7 +35,7 @@ func NewHttpServer(address string, reporting log.BasicLogger, publicApi services
 	}
 
 	go func() {
-		reporting.Info("Starting server on address", log.String("address", address))
+		reporting.Info("starting http server on address", log.String("address", address))
 		server.httpServer.ListenAndServe() //TODO error on failed startup
 	}()
 
@@ -44,12 +45,12 @@ func NewHttpServer(address string, reporting log.BasicLogger, publicApi services
 //TODO extract commonalities between handlers
 func (s *server) createRouter() http.Handler {
 	sendTransactionHandler := s.handler(func(bytes []byte, r *response) {
-
 		clientRequest := client.SendTransactionRequestReader(bytes)
 		if r.reportErrorOnInvalidRequest(clientRequest) {
 			return
 		}
 
+		s.reporting.Info("http server received send-transaction", log.Stringable("request", clientRequest))
 		result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
 		r.writeMessageOrError(result.ClientResponse, err)
 	})
@@ -61,6 +62,7 @@ func (s *server) createRouter() http.Handler {
 			return
 		}
 
+		s.reporting.Info("http server received call-method", log.Stringable("request", clientRequest))
 		result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
 		if result != nil {
 			r.writeMessageOrError(result.ClientResponse, err)

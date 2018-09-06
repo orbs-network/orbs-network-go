@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	. "github.com/onsi/gomega"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"os"
@@ -40,8 +40,6 @@ func parseOutput(input string) map[string]interface{} {
 }
 
 func TestSimpleLogger(t *testing.T) {
-	RegisterTestingT(t)
-
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		serviceLogger.Info("Service initialized")
@@ -50,18 +48,16 @@ func TestSimpleLogger(t *testing.T) {
 	fmt.Println(stdout)
 	jsonMap := parseOutput(stdout)
 
-	Expect(jsonMap["level"]).To(Equal("info"))
-	Expect(jsonMap["node"]).To(Equal("node1"))
-	Expect(jsonMap["service"]).To(Equal("public-api"))
-	Expect(jsonMap["function"]).To(Equal("log_test.TestSimpleLogger.func1"))
-	Expect(jsonMap["message"]).To(Equal("Service initialized"))
-	Expect(jsonMap["source"]).NotTo(BeEmpty())
-	Expect(jsonMap["timestamp"]).NotTo(BeNil())
+	require.Equal(t, "info", jsonMap["level"])
+	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, "public-api", jsonMap["service"])
+	require.Equal(t, "log_test.TestSimpleLogger.func1", jsonMap["function"])
+	require.Equal(t, "Service initialized", jsonMap["message"])
+	require.NotEmpty(t, jsonMap["source"])
+	require.NotNil(t, jsonMap["timestamp"])
 }
 
 func TestCompareLogger(t *testing.T) {
-	RegisterTestingT(t)
-
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		serviceLogger.LogFailedExpectation("Service initialized compare", log.BlockHeight(primitives.BlockHeight(9999)), log.BlockHeight(primitives.BlockHeight(8888)), log.Bytes("bytes", []byte{2, 3, 99}))
@@ -70,21 +66,19 @@ func TestCompareLogger(t *testing.T) {
 	fmt.Println(stdout)
 	jsonMap := parseOutput(stdout)
 
-	Expect(jsonMap["level"]).To(Equal("expectation"))
-	Expect(jsonMap["node"]).To(Equal("node1"))
-	Expect(jsonMap["service"]).To(Equal("public-api"))
-	Expect(jsonMap["function"]).To(Equal("log_test.TestCompareLogger.func1"))
-	Expect(jsonMap["message"]).To(Equal("Service initialized compare"))
-	Expect(jsonMap["source"]).NotTo(BeEmpty())
-	Expect(jsonMap["timestamp"]).NotTo(BeNil())
-	Expect(jsonMap["bytes"]).To(Equal("020363"))
-	Expect(jsonMap["actual-block-height"]).To(Equal("22b8"))
-	Expect(jsonMap["expected-block-height"]).To(Equal("270f"))
+	require.Equal(t, "expectation", jsonMap["level"])
+	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, "public-api", jsonMap["service"])
+	require.Equal(t, "log_test.TestCompareLogger.func1", jsonMap["function"])
+	require.Equal(t, "Service initialized compare", jsonMap["message"])
+	require.NotEmpty(t, jsonMap["source"])
+	require.NotNil(t, jsonMap["timestamp"])
+	require.Equal(t, "020363", jsonMap["bytes"])
+	require.Equal(t, "22b8", jsonMap["actual-block-height"])
+	require.Equal(t, "270f", jsonMap["expected-block-height"])
 }
 
 func TestNestedLogger(t *testing.T) {
-	RegisterTestingT(t)
-
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
@@ -95,21 +89,20 @@ func TestNestedLogger(t *testing.T) {
 	fmt.Println(stdout)
 	jsonMap := parseOutput(stdout)
 
-	Expect(jsonMap["level"]).To(Equal("info"))
-	Expect(jsonMap["node"]).To(Equal("node1"))
-	Expect(jsonMap["service"]).To(Equal("public-api"))
-	Expect(jsonMap["function"]).To(Equal("log_test.TestNestedLogger.func1"))
-	Expect(jsonMap["message"]).To(Equal(TransactionAccepted))
-	Expect(jsonMap["source"]).NotTo(BeEmpty())
-	Expect(jsonMap["timestamp"]).NotTo(BeNil())
-	Expect(jsonMap["txId"]).To(Equal("1234567"))
-	Expect(jsonMap["flow"]).To(Equal(TransactionFlow))
-	Expect(jsonMap["payload"]).To(Equal("01020363fa"))
+	require.Equal(t, "info", jsonMap["level"])
+	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, "public-api", jsonMap["service"])
+	require.Equal(t, "log_test.TestNestedLogger.func1", jsonMap["function"])
+	require.Equal(t, TransactionAccepted, jsonMap["message"])
+	require.NotEmpty(t, jsonMap["source"])
+	require.NotNil(t, jsonMap["timestamp"])
+	require.Equal(t, "1234567", jsonMap["txId"])
+	require.Equal(t, TransactionFlow, jsonMap["flow"])
+	require.Equal(t, "01020363fa", jsonMap["payload"])
+
 }
 
 func TestStringableSlice(t *testing.T) {
-	RegisterTestingT(t)
-
 	var receipts []*protocol.TransactionReceipt
 
 	receipts = append(receipts, builders.TransactionReceipt().Build())
@@ -123,24 +116,22 @@ func TestStringableSlice(t *testing.T) {
 	fmt.Println(stdout)
 	jsonMap := parseOutput(stdout)
 
-	Expect(jsonMap["level"]).To(Equal("info"))
-	Expect(jsonMap["node"]).To(Equal("node1"))
-	Expect(jsonMap["service"]).To(Equal("public-api"))
-	Expect(jsonMap["function"]).To(Equal("log_test.TestStringableSlice.func1"))
-	Expect(jsonMap["message"]).To(Equal("StringableSlice test"))
-	Expect(jsonMap["source"]).NotTo(BeEmpty())
-	Expect(jsonMap["timestamp"]).NotTo(BeNil())
-	Expect(jsonMap["a-collection"]).ToNot(Equal("[]"))
+	require.Equal(t, "info", jsonMap["level"])
+	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, "public-api", jsonMap["service"])
+	require.Equal(t, "log_test.TestStringableSlice.func1", jsonMap["function"])
+	require.Equal(t, "StringableSlice test", jsonMap["message"])
+	require.NotEmpty(t, jsonMap["source"])
+	require.NotNil(t, jsonMap["timestamp"])
+	require.NotEqual(t, "[]", jsonMap["a-collection"])
 
-	Expect(jsonMap["a-collection"]).To(Equal([]interface{}{
+	require.Equal(t, []interface{}{
 		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,}",
 		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,}",
-	}))
+	}, jsonMap["a-collection"])
 }
 
 func TestStringableSliceCustomFormat(t *testing.T) {
-	RegisterTestingT(t)
-
 	var transactions []*protocol.SignedTransaction
 
 	transactions = append(transactions, builders.TransferTransaction().Build())
@@ -155,21 +146,17 @@ func TestStringableSliceCustomFormat(t *testing.T) {
 
 	fmt.Println(stdout)
 
-	Expect(stdout).To(HavePrefix("info"))
-	Expect(stdout).To(ContainSubstring("StringableSlice HR test"))
-	Expect(stdout).To(ContainSubstring("node=node1"))
-	Expect(stdout).To(ContainSubstring("service=public-api"))
-	Expect(stdout).To(ContainSubstring("a-collection=["))
-	Expect(stdout).To(ContainSubstring("{Transaction:{ProtocolVersion:1,"))
-	Expect(stdout).To(ContainSubstring("function=log_test.TestStringableSliceCustomFormat.func1"))
-	Expect(stdout).To(ContainSubstring("source="))
-	Expect(stdout).To(ContainSubstring("log/basic_logger_test.go"))
-
+	require.Regexp(t, "^info", stdout)
+	require.Regexp(t, "StringableSlice HR test", stdout)
+	require.Regexp(t, "node=node1", stdout)
+	require.Regexp(t, "service=public-api", stdout)
+	require.Regexp(t, "a-collection=", stdout)
+	require.Regexp(t, "{Transaction:{ProtocolVersion:1,", stdout)
+	require.Regexp(t, "function=log_test.TestStringableSliceCustomFormat.func1 ", stdout)
+	require.Regexp(t, "source=instrumentation/log/basic_logger_test.go", stdout)
 }
 
 func TestMeter(t *testing.T) {
-	RegisterTestingT(t)
-
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
@@ -184,22 +171,20 @@ func TestMeter(t *testing.T) {
 
 	jsonMap := parseOutput(stdout)
 
-	Expect(jsonMap["level"]).To(Equal("metric"))
-	Expect(jsonMap["node"]).To(Equal("node1"))
-	Expect(jsonMap["service"]).To(Equal("public-api"))
-	Expect(jsonMap["function"]).To(Equal("log_test.TestMeter.func1"))
-	Expect(jsonMap["message"]).To(Equal("Metric recorded"))
-	Expect(jsonMap["source"]).NotTo(BeEmpty())
-	Expect(jsonMap["timestamp"]).NotTo(BeNil())
-	Expect(jsonMap["metric"]).To(Equal("public-api-TransactionFlow-tx-process-time"))
-	Expect(jsonMap["txId"]).To(Equal("1234567"))
-	Expect(jsonMap["flow"]).To(Equal(TransactionFlow))
-	Expect(jsonMap["process-time"]).NotTo(BeNil())
+	require.Equal(t, "metric", jsonMap["level"])
+	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, "public-api", jsonMap["service"])
+	require.Equal(t, "log_test.TestMeter.func1", jsonMap["function"])
+	require.Equal(t, "Metric recorded", jsonMap["message"])
+	require.NotEmpty(t, jsonMap["source"])
+	require.NotNil(t, jsonMap["timestamp"])
+	require.Equal(t, "public-api-TransactionFlow-tx-process-time", jsonMap["metric"])
+	require.Equal(t, "1234567", jsonMap["txId"])
+	require.Equal(t, TransactionFlow, jsonMap["flow"])
+	require.NotNil(t, jsonMap["process-time"])
 }
 
 func TestCustomLogFormatter(t *testing.T) {
-	RegisterTestingT(t)
-
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer).WithFormatter(log.NewHumanReadableFormatter()))
 		serviceLogger.Info("Service initialized", log.Int("some-int-value", 12), log.BlockHeight(primitives.BlockHeight(9999)), log.Bytes("bytes", []byte{2, 3, 99}), log.Stringable("vchainId", primitives.VirtualChainId(123)), log.String("_test-id", "hello"), log.String("_underscore", "wow"))
@@ -207,24 +192,21 @@ func TestCustomLogFormatter(t *testing.T) {
 
 	fmt.Println(stdout)
 
-	Expect(stdout).To(HavePrefix("info"))
-	Expect(stdout).To(ContainSubstring("Service initialized"))
-	Expect(stdout).To(ContainSubstring("node=node1"))
-	Expect(stdout).To(ContainSubstring("service=public-api"))
-	Expect(stdout).To(ContainSubstring("block-height=270f"))
-	Expect(stdout).To(ContainSubstring("vchainId=7b"))
-	Expect(stdout).To(ContainSubstring("bytes=gDp"))
-	Expect(stdout).To(ContainSubstring("some-int-value=12"))
-	Expect(stdout).To(ContainSubstring("function=log_test.TestCustomLogFormatter.func1"))
-	Expect(stdout).To(ContainSubstring("source="))
-	Expect(stdout).To(ContainSubstring("log/basic_logger_test.go"))
-	Expect(stdout).To(ContainSubstring("_test-id=hello"))
-	Expect(stdout).To(ContainSubstring("_underscore=wow"))
+	require.Regexp(t, "^info", stdout)
+	require.Regexp(t, "Service initialized", stdout)
+	require.Regexp(t, "node=node1", stdout)
+	require.Regexp(t, "service=public-api", stdout)
+	require.Regexp(t, "block-height=270f", stdout)
+	require.Regexp(t, "vchainId=7b", stdout)
+	require.Regexp(t, "bytes=gDp", stdout)
+	require.Regexp(t, "some-int-value=12", stdout)
+	require.Regexp(t, "function=log_test.TestCustomLogFormatter.func1", stdout)
+	require.Regexp(t, "source=instrumentation/log/basic_logger_test.go", stdout)
+	require.Regexp(t, "_test-id=hello", stdout)
+	require.Regexp(t, "_underscore=wow", stdout)
 }
 
 func TestMultipleOutputs(t *testing.T) {
-	RegisterTestingT(t)
-
 	filename := "/tmp/test-multiple-outputs"
 	os.RemoveAll(filename)
 
@@ -240,34 +222,32 @@ func TestMultipleOutputs(t *testing.T) {
 
 	fmt.Println(fileContents)
 
-	checkOutput(stdout)
-	checkOutput(fileContents)
+	checkOutput(t, stdout)
+	checkOutput(t, fileContents)
 }
 
 func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
-	RegisterTestingT(t)
-
 	filename := "/tmp/test-multiple-outputs"
 	os.RemoveAll(filename)
 
 	fileOutput, _ := os.Create(filename)
 
-	Expect(func() {
+	require.NotPanics(t, func() {
 		captureStdout(func(writer io.Writer) {
 			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer).WithFormatter(log.NewHumanReadableFormatter()), log.NewOutput(fileOutput))
 			serviceLogger.Info("Service initialized")
 		})
-	}).NotTo(Panic())
+	})
 }
 
-func checkOutput(output string) {
+func checkOutput(t *testing.T, output string) {
 	jsonMap := parseOutput(output)
 
-	Expect(jsonMap["level"]).To(Equal("info"))
-	Expect(jsonMap["node"]).To(Equal("node1"))
-	Expect(jsonMap["service"]).To(Equal("public-api"))
-	Expect(jsonMap["function"]).To(Equal("log_test.TestMultipleOutputs.func1"))
-	Expect(jsonMap["message"]).To(Equal("Service initialized"))
-	Expect(jsonMap["source"]).NotTo(BeEmpty())
-	Expect(jsonMap["timestamp"]).NotTo(BeNil())
+	require.Equal(t, "info", jsonMap["level"])
+	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, "public-api", jsonMap["service"])
+	require.Equal(t, "log_test.TestMultipleOutputs.func1", jsonMap["function"])
+	require.Equal(t, "Service initialized", jsonMap["message"])
+	require.NotEmpty(t, jsonMap["source"])
+	require.NotNil(t, jsonMap["timestamp"])
 }

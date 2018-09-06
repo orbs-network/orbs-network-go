@@ -1,4 +1,4 @@
-package e2e
+package test
 
 import (
 	"bytes"
@@ -43,21 +43,23 @@ func ClientBinary() []string {
 		return []string{ciBinaryPath}
 	}
 
-	return []string{"go", "run", "../../devtools/jsonapi/main/main.go"}
+	return []string{"go", "run", "../../jsonapi/main/main.go"}
 }
 
-func runCommand(command []string, t *testing.T) (output string) {
+func runCommand(command []string, t *testing.T) string {
 	cmd := exec.Command(command[0], command[1:]...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 
-	require.NoError(t, err, "error calling send_transfer")
+	fmt.Println("jsonapi exec command:", command)
+	fmt.Println("command stdout:", stdout.String())
+	fmt.Println("command stderr:", stderr.String())
 
-	output = out.String()
-	fmt.Println(output)
+	require.NoError(t, err, "jsonapi cli command should not fail")
 
-	return output
+	return stdout.String()
 }
 
 func generateTransferJSON() string {
@@ -106,9 +108,9 @@ func TestSambusacFlow(t *testing.T) {
 	sendCommandOutput := runCommand(sendCommand, t)
 
 	response := &sendTransactionCliResponse{}
-	unmarshallErr := json.Unmarshal([]byte(sendCommandOutput), &response)
+	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
-	require.NoError(t, unmarshallErr, "error unmarshall cli response")
+	require.NoError(t, unmarshalErr, "error unmarshal cli response")
 	require.Equal(t, response.ExecutionResult, 0, "Transaction status to be successful = 0")
 	require.NotNil(t, response.TxHash, "got empty txhash")
 
@@ -120,9 +122,9 @@ func TestSambusacFlow(t *testing.T) {
 	fmt.Println(callOutputAsString)
 
 	callResponse := &callMethodCliResponse{}
-	callUnmarshallErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
+	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
 
-	require.NoError(t, callUnmarshallErr, "error calling call_method")
+	require.NoError(t, callUnmarshalErr, "error calling call_method")
 	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
 	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
 	require.EqualValues(t, 42, callResponse.OutputArguments[0].Uint64Value, "expected balance to equal 42")

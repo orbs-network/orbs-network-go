@@ -41,7 +41,7 @@ type pendingTxPool struct {
 	pendingPoolSizeInBytes func() uint32
 }
 
-func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, error) {
+func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	size := sizeOf(transaction)

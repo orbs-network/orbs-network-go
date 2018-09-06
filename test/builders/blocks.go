@@ -3,7 +3,6 @@ package builders
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"time"
@@ -29,7 +28,7 @@ func BlockPair() *blockPair {
 		txHeader: &protocol.TransactionsBlockHeaderBuilder{
 			BlockHeight:           1,
 			Timestamp:             primitives.TimestampNano(createdDate.UnixNano()),
-			ProtocolVersion:       primitives.ProtocolVersion(blockstorage.ProtocolVersion),
+			ProtocolVersion:       primitives.ProtocolVersion(1),
 			NumSignedTransactions: 1,
 		},
 		txMetadata: &protocol.TransactionsBlockMetadataBuilder{},
@@ -40,7 +39,7 @@ func BlockPair() *blockPair {
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
 			BlockHeight:            1,
 			Timestamp:              primitives.TimestampNano(createdDate.UnixNano()),
-			ProtocolVersion:        primitives.ProtocolVersion(blockstorage.ProtocolVersion),
+			ProtocolVersion:        primitives.ProtocolVersion(1),
 			NumContractStateDiffs:  1,
 			NumTransactionReceipts: 1,
 		},

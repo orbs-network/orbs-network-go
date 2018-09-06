@@ -1,15 +1,21 @@
 #!/bin/bash -x
 
-go test -timeout 5s ./...
-export EXIT_CODE=$?
+check_exit_code_and_report () {
+    export EXIT_CODE=$?
 
-if [ $EXIT_CODE != 0 ]; then
-  exit $EXIT_CODE
-fi
+    if [ $EXIT_CODE != 0 ]; then
+        cat test.out | grep -A 15 -- "FAIL"
+        cat test.out | grep -A 15 -- "timed out"
 
-go test ./test/acceptance -count 100 -timeout 10s > test.out
-export EXIT_CODE=$?
+        exit $EXIT_CODE
+    fi
+}
 
-cat test.out | grep -A 15 -- "--- FAIL:"
+go test -timeout 5s ./... > test.out
+check_exit_code_and_report
 
-exit $EXIT_CODE
+go test ./services/consensusalgo/... -count 100 -timeout 5s -failfast > test.out
+check_exit_code_and_report
+
+go test ./test/acceptance -count 100 -timeout 10s -failfast > test.out
+check_exit_code_and_report

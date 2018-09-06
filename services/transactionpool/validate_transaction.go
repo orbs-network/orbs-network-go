@@ -9,7 +9,7 @@ import (
 
 const ProtocolVersion = primitives.ProtocolVersion(1)
 
-type validator func(transaction *protocol.SignedTransaction) error
+type validator func(transaction *protocol.SignedTransaction) *ErrTransactionRejected
 
 type validationContext struct {
 	expiryWindow                time.Duration
@@ -18,7 +18,7 @@ type validationContext struct {
 	virtualChainId              primitives.VirtualChainId
 }
 
-func (c *validationContext) validateTransaction(transaction *protocol.SignedTransaction) error {
+func (c *validationContext) validateTransaction(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	//TODO can we create the list of validators once on system startup; this will save on performance in the critical path
 	validators := []validator{
 		validateProtocolVersion,
@@ -38,14 +38,14 @@ func (c *validationContext) validateTransaction(transaction *protocol.SignedTran
 	return nil
 }
 
-func validateProtocolVersion(tx *protocol.SignedTransaction) error {
+func validateProtocolVersion(tx *protocol.SignedTransaction) *ErrTransactionRejected {
 	if tx.Transaction().ProtocolVersion() != ProtocolVersion {
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION}
 	}
 	return nil
 }
 
-func validateSignerAndContractName(transaction *protocol.SignedTransaction) error {
+func validateSignerAndContractName(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	tx := transaction.Transaction()
 	if tx.ContractName() == "" ||
 		!tx.Signer().IsSchemeEddsa() ||
@@ -57,7 +57,7 @@ func validateSignerAndContractName(transaction *protocol.SignedTransaction) erro
 }
 
 func validateTransactionNotExpired(vctx *validationContext) validator {
-	return func(transaction *protocol.SignedTransaction) error {
+	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 		if transaction.Transaction().Timestamp() < primitives.TimestampNano(time.Now().Add(vctx.expiryWindow*-1).UnixNano()) {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
 		}
@@ -67,7 +67,7 @@ func validateTransactionNotExpired(vctx *validationContext) validator {
 }
 
 func validateTransactionNotInFuture(vctx *validationContext) validator {
-	return func(transaction *protocol.SignedTransaction) error {
+	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 		tsWithGrace := primitives.TimestampNano(time.Now().UnixNano() + vctx.futureTimestampGrace.Nanoseconds())
 		if transaction.Transaction().Timestamp() > tsWithGrace {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
@@ -78,7 +78,7 @@ func validateTransactionNotInFuture(vctx *validationContext) validator {
 }
 
 func validateTransactionVirtualChainId(vctx *validationContext) validator {
-	return func(transaction *protocol.SignedTransaction) error {
+	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 		if !transaction.Transaction().VirtualChainId().Equal(vctx.virtualChainId) {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH}
 
