@@ -20,7 +20,6 @@ type service struct {
 }
 
 func NewVirtualMachine(
-	blockStorage services.BlockStorage,
 	stateStorage services.StateStorage,
 	processors map[protocol.ProcessorType]services.Processor,
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector,
@@ -28,7 +27,6 @@ func NewVirtualMachine(
 ) services.VirtualMachine {
 
 	s := &service{
-		blockStorage:         blockStorage,
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,

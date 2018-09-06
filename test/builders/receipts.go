@@ -30,6 +30,12 @@ func (r *receipt) Build() *protocol.TransactionReceipt {
 	return r.builder.Build()
 }
 
+func (r *receipt) BuildEmpty() *protocol.TransactionReceipt {
+	r.builder.Txhash = []byte{}
+	r.builder.ExecutionResult = protocol.EXECUTION_RESULT_RESERVED
+	return r.builder.Build()
+}
+
 func (r *receipt) Builder() *protocol.TransactionReceiptBuilder {
 	return r.builder
 }

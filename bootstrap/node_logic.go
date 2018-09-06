@@ -41,29 +41,28 @@ func NewNodeLogic(
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
-	gossip := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
-	stateStorage := statestorage.NewStateStorage(nodeConfig, statePersistence, reporting)
-	blockStorage := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorage, gossip, reporting)
-
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(reporting)
 
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
 
-	virtualMachine := virtualmachine.NewVirtualMachine(blockStorage, stateStorage, processors, crosschainConnectors, reporting)
-	transactionPool := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nodeConfig, reporting, primitives.TimestampNano(time.Now().UnixNano()))
-	publicApi := publicapi.NewPublicApi(transactionPool, virtualMachine, reporting)
-	consensusContext := consensuscontext.NewConsensusContext(transactionPool, virtualMachine, nil, nodeConfig, reporting)
+	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, reporting)
+	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, reporting)
+	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, reporting)
+	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, reporting, primitives.TimestampNano(time.Now().UnixNano()))
+	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorageService, gossipService, transactionPoolService, reporting)
+	publicApiService := publicapi.NewPublicApi(ctx, nodeConfig, transactionPoolService, virtualMachineService, reporting)
+	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, reporting)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 
 	// TODO: Restore this when lean-helix-go submodule is integrated
-	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossip, blockStorage, transactionPool, consensusContext, reporting, nodeConfig))
-	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossip, blockStorage, consensusContext, reporting, nodeConfig))
+	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossipService, blockStorageService, transactionPoolService, consensusContextService, reporting, nodeConfig))
+	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, reporting, nodeConfig))
 
 	return &nodeLogic{
-		publicApi:      publicApi,
+		publicApi:      publicApiService,
 		consensusAlgos: consensusAlgos,
 	}
 }
