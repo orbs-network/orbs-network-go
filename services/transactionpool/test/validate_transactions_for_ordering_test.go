@@ -42,7 +42,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 	t.Parallel()
 	h := newHarness()
 
-	invalidTx := builders.TransferTransaction().WithInvalidContent().Build()
+	invalidTx := builders.TransferTransaction().WithInvalidTimestamp().Build()
 
 	require.EqualErrorf(t,
 		h.validateTransactionsForOrdering(0, builders.Transaction().Build(), invalidTx),
