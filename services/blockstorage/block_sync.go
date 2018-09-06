@@ -68,9 +68,9 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 	event = startSyncEvent{}
 
-	startSyncTimer := synchronization.NewPeriodicalTimer(b.config.BlockSyncInterval(), func() {
+	startSyncTimer := synchronization.NewTrigger(b.config.BlockSyncInterval(), func() {
 		b.events <- startSyncEvent{}
-	})
+	}, false)
 
 	for {
 		state, blockAvailabilityResponses = b.transitionState(state, event, blockAvailabilityResponses, startSyncTimer)
