@@ -18,7 +18,7 @@ func ForProduction(
 	minimumTransactionsInBlock := uint32(1)
 	minimalBlockDelay := 20 * time.Millisecond
 	queryGraceTimeout := 100 * time.Millisecond
-
+	sendTransactionTimeout := 30 * time.Second
 	return newHardCodedConfig(
 		federationNodes,
 		nodePublicKey,
@@ -28,7 +28,8 @@ func ForProduction(
 		benchmarkConsensusRetryInterval,
 		minimumTransactionsInBlock,
 		minimalBlockDelay, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
-		queryGraceTimeout)
+		queryGraceTimeout,
+		sendTransactionTimeout)
 
 }
 
@@ -44,7 +45,7 @@ func ForAcceptanceTests(
 	minimumTransactionsInBlock := uint32(1)
 	minimalBlockDelay := 1 * time.Millisecond
 	queryGraceTimeout := 5 * time.Millisecond
-
+	sendTransactionTimeout := 30 * time.Millisecond
 	return newHardCodedConfig(
 		federationNodes,
 		nodePublicKey,
@@ -54,7 +55,8 @@ func ForAcceptanceTests(
 		benchmarkConsensusRetryInterval,
 		minimumTransactionsInBlock,
 		minimalBlockDelay,
-		queryGraceTimeout)
+		queryGraceTimeout,
+		sendTransactionTimeout)
 }
 
 func EmptyConfig() NodeConfig {

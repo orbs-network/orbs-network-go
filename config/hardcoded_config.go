@@ -72,6 +72,7 @@ func newHardCodedConfig(
 	minimumTransactionsInBlock uint32,
 	minimalBlockDelay time.Duration,
 	queryGraceTimeout time.Duration,
+	sendTransactionTimeout time.Duration,
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
@@ -109,7 +110,7 @@ func newHardCodedConfig(
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
 
-	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, sendTransactionTimeout)
 	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
 
 	return cfg
