@@ -68,7 +68,7 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 	event = startSyncEvent{}
 
-	startSyncTimer := synchronization.TempUntilJonathanTimer(b.config.BlockSyncInterval(), func() {
+	startSyncTimer := synchronization.NewPeriodicalTimer(b.config.BlockSyncInterval(), func() {
 		b.events <- startSyncEvent{}
 	})
 
@@ -87,7 +87,7 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 type startSyncEvent struct{}
 type collectingAvailabilityFinishedEvent struct{}
 
-func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, startSyncTimer synchronization.TempUntilJonathanTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, startSyncTimer synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
 	// Ignore start sync because collecting availability responses has its own timer
 	if _, ok := event.(startSyncEvent); ok && currentState != BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
 		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
@@ -155,7 +155,7 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 		if msg, ok := event.(*gossipmessages.BlockSyncResponseMessage); ok {
 			b.petitionerHandleBlockSyncResponse(msg)
 			currentState = BLOCK_SYNC_STATE_IDLE
-			startSyncTimer.Reset(0) // Fire immediately to sync next batch
+			startSyncTimer.FireNow()
 		}
 	}
 

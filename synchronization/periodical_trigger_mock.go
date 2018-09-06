@@ -13,6 +13,34 @@ func (m *PeriodicalTriggerMock) Reset(duration time.Duration) {
 	m.Called()
 }
 
-func (m *PeriodicalTriggerMock) Cancel() {
+func (m *PeriodicalTriggerMock) Stop() {
 	m.Called()
+}
+
+func (m *PeriodicalTriggerMock) FireNow() {
+	m.Called()
+}
+
+func (m *PeriodicalTriggerMock) Start() {
+	m.Called()
+}
+
+func (m *PeriodicalTriggerMock) TimesTriggered() uint {
+	m.Called()
+	return 0
+}
+
+func (m *PeriodicalTriggerMock) TimesReset() uint {
+	m.Called()
+	return 0
+}
+
+func (m *PeriodicalTriggerMock) TimesTriggeredManually() uint {
+	m.Called()
+	return 0
+}
+
+func (m *PeriodicalTriggerMock) IsRunning() bool {
+	m.Called()
+	return false
 }

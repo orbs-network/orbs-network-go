@@ -297,7 +297,7 @@ func TestPetitionerWaitingForChunk(t *testing.T) {
 
 	harness.storage.When("ValidateBlockForCommit", mock.Any).Return(nil, nil).Times(91)
 	harness.storage.When("CommitBlock", mock.Any).Return(nil, nil).Times(91)
-	harness.startSyncTimer.When("Reset").Return().Times(1)
+	harness.startSyncTimer.When("FireNow").Return().Times(1)
 
 	event := builders.BlockSyncResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
@@ -315,7 +315,7 @@ func TestPetitionerWaitingForChunkBlockValidationFailed(t *testing.T) {
 	event := builders.BlockSyncResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-	harness.startSyncTimer.When("Reset").Return().Times(1)
+	harness.startSyncTimer.When("FireNow").Return().Times(1)
 	harness.storage.When("ValidateBlockForCommit", mock.Any).Call(func(input *services.ValidateBlockForCommitInput) error {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(event.SignedChunkRange.FirstBlockHeight() + 50) {
 			return errors.New("failed to validate block #51")
@@ -337,7 +337,7 @@ func TestPetitionerWaitingForChunkBlockCommitFailed(t *testing.T) {
 	event := builders.BlockSyncResponseInput().Build().Message
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
 
-	harness.startSyncTimer.When("Reset").Return().Times(1)
+	harness.startSyncTimer.When("FireNow").Return().Times(1)
 	harness.storage.When("ValidateBlockForCommit", mock.Any).Return(nil, nil).Times(51)
 	harness.storage.When("CommitBlock", mock.Any).Call(func(input *services.CommitBlockInput) error {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(event.SignedChunkRange.FirstBlockHeight() + 50) {
