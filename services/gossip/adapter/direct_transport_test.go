@@ -47,6 +47,7 @@ func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing
 }
 
 func TestDirectOutgoing_ConnectionReconnectsOnFailure(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarness().start(ctx)
@@ -129,6 +130,7 @@ func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
 }
 
 func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -146,6 +148,7 @@ func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -168,6 +171,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
@@ -256,6 +260,7 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 }
 
 func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
