@@ -45,6 +45,7 @@ func newDirectHarness() *directHarness {
 	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
+	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 
 	port := uint16(firstRandomPort)
 

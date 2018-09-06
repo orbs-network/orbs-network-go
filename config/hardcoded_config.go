@@ -53,6 +53,7 @@ const (
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
+	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey, gossipPort uint16, gossipEndpoint string) FederationNode {
@@ -243,4 +244,8 @@ func (c *config) BlockSyncCollectResponseTimeout() time.Duration {
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {
 	return c.kv[GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL].DurationValue
+}
+
+func (c *config) GossipNetworkTimeout() time.Duration {
+	return c.kv[GOSSIP_NETWORK_TIMEOUT].DurationValue
 }

@@ -57,6 +57,7 @@ type NodeConfig interface {
 
 	// gossip
 	GossipConnectionKeepAliveInterval() time.Duration
+	GossipNetworkTimeout() time.Duration
 }
 
 type FederationNode interface {

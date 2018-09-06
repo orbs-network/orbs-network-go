@@ -26,6 +26,7 @@ func ForProduction(
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 20*time.Millisecond) // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 5*time.Second)
+	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 
 	return cfg
 }
@@ -50,6 +51,7 @@ func ForAcceptanceTests(
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 5*time.Millisecond)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Millisecond)
+	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 
 	return cfg
 }

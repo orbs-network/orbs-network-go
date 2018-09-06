@@ -21,6 +21,7 @@ type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	GossipConnectionKeepAliveInterval() time.Duration
+	GossipNetworkTimeout() time.Duration
 }
 
 type directTransport struct {
@@ -184,7 +185,7 @@ func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Con
 	t.reporting.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()))
 
 	// TODO: think about timeout policy on receive, we might not want it
-	timeout := t.config.GossipConnectionKeepAliveInterval()
+	timeout := t.config.GossipNetworkTimeout()
 	res := [][]byte{}
 
 	// receive num payloads
@@ -293,7 +294,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *TransportData) error {
 	t.reporting.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()))
 
-	timeout := t.config.GossipConnectionKeepAliveInterval()
+	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 	sizeBuffer := make([]byte, 4)
 
@@ -340,7 +341,7 @@ func calcPaddingSize(size uint32) uint32 {
 func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
 	t.reporting.Info("sending keepalive", log.String("peer", conn.RemoteAddr().String()))
 
-	timeout := t.config.GossipConnectionKeepAliveInterval()
+	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 
 	// send zero num payloads
