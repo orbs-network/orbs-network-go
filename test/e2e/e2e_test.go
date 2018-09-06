@@ -82,7 +82,8 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	tx := builders.TransferTransaction().WithAmount(17).Builder()
+	amount := uint64(99)
+	tx := builders.TransferTransaction().WithAmount(amount).Builder()
 
 	_ = sendTransaction(t, tx)
 
@@ -91,14 +92,16 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 		MethodName:   "getBalance",
 	}
 
-	test.Eventually(func() bool {
+	ok := test.Eventually(func() bool {
 		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(callMethod(t, m).ClientResponse)
 		if outputArgsIterator.HasNext() {
-			return outputArgsIterator.NextArguments().Uint64Value() == 17
+			return outputArgsIterator.NextArguments().Uint64Value() == amount
 		} else {
 			return false
 		}
 	})
+
+	require.True(t, ok, "should return expected amount from BenchmarkToken.getBalance()")
 
 	if getConfig().Bootstrap {
 		for _, node := range nodes {
