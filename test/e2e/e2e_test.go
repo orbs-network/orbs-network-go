@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -51,13 +50,13 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 
 	// TODO: kill me - why do we need this override?
 	if getConfig().Bootstrap {
-		gossipTransport := gossipAdapter.NewTamperingTransport()
-
 		federationNodes := make(map[string]config.FederationNode)
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+
 		for i := 0; i < 3; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-			federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey(), 0, "") // TODO: fix the gossip ports and endpoints
+			port := 4400 + uint16(i)
+			federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey(), port, "127.0.0.1")
 		}
 
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
@@ -72,7 +71,6 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,
-				gossipTransport,
 			)
 
 			nodes = append(nodes, node)

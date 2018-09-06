@@ -34,7 +34,6 @@ func NewNode(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	logger log.BasicLogger,
-	transport gossipAdapter.Transport,
 ) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.ForProduction(
@@ -47,6 +46,7 @@ func NewNode(
 
 	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
 
+	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
 	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, nodeLogger, nodeConfig)
