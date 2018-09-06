@@ -18,7 +18,6 @@ import (
 
 func TestContract_SendBroadcast(t *testing.T) {
 	t.Run("TamperingTransport", broadcastTest(aTamperingTransport))
-	t.Run("MemberlistTransport", broadcastTest(aMemberlistTransport))
 	t.Run("DirectTransport", broadcastTest(aDirectTransport))
 }
 
@@ -64,30 +63,6 @@ func aTamperingTransport(ctx context.Context) *transportContractContext {
 	transport := NewTamperingTransport()
 	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
-	res.listeners = []*mockListener{
-		listenTo(res.transports[0], res.publicKeys[0]),
-		listenTo(res.transports[1], res.publicKeys[1]),
-		listenTo(res.transports[2], res.publicKeys[2]),
-		listenTo(res.transports[3], res.publicKeys[3]),
-	}
-	return res
-}
-
-func aMemberlistTransport(ctx context.Context) *transportContractContext {
-	res := &transportContractContext{}
-	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
-	configs := []adapter.MemberlistGossipConfig{
-		{res.publicKeys[0], 60001, []string{"127.0.0.1:60002", "127.0.0.1:60003", "127.0.0.1:60004"}},
-		{res.publicKeys[1], 60002, []string{"127.0.0.1:60001", "127.0.0.1:60003", "127.0.0.1:60004"}},
-		{res.publicKeys[2], 60003, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60004"}},
-		{res.publicKeys[3], 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}},
-	}
-	res.transports = []adapter.Transport{
-		adapter.NewMemberlistTransport(configs[0]),
-		adapter.NewMemberlistTransport(configs[1]),
-		adapter.NewMemberlistTransport(configs[2]),
-		adapter.NewMemberlistTransport(configs[3]),
-	}
 	res.listeners = []*mockListener{
 		listenTo(res.transports[0], res.publicKeys[0]),
 		listenTo(res.transports[1], res.publicKeys[1]),
