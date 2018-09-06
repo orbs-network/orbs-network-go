@@ -15,7 +15,7 @@ func TestEventually(t *testing.T) {
 		sem.waitUntilZero()
 		num = 2
 	}()
-	ok := Eventually(func() bool {
+	ok := Eventually(EVENTUALLY_ACCEPTANCE_TIMEOUT, func() bool {
 		sem.dec()
 		return num == 2
 	})
@@ -33,7 +33,7 @@ func TestConsistently(t *testing.T) {
 		sem.waitUntilZero()
 		num = 2
 	}()
-	ok := Consistently(func() bool {
+	ok := Consistently(CONSISTENTLY_ACCEPTANCE_TIMEOUT, func() bool {
 		sem.dec()
 		return num == 1
 	})
@@ -59,7 +59,7 @@ func TestEventuallyVerifySuccess(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 		p.GetName()
 	}()
-	err := EventuallyVerify(p)
+	err := EventuallyVerify(EVENTUALLY_ACCEPTANCE_TIMEOUT, p)
 	if err != nil {
 		t.Fatal("EventuallyVerify did not discover mock was eventually called")
 	}
@@ -70,7 +70,7 @@ func TestEventuallyVerifyFailure(t *testing.T) {
 
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(1)
-	err := EventuallyVerify(p)
+	err := EventuallyVerify(EVENTUALLY_ACCEPTANCE_TIMEOUT, p)
 	if err == nil {
 		t.Fatal("EventuallyVerify did not discover mock was not eventually called")
 	}
@@ -89,7 +89,7 @@ func TestEventuallyVerifySuccessWithTwoMocks(t *testing.T) {
 		time.Sleep(15 * time.Millisecond)
 		p2.GetName()
 	}()
-	err := EventuallyVerify(p1, p2)
+	err := EventuallyVerify(EVENTUALLY_ACCEPTANCE_TIMEOUT, p1, p2)
 	if err != nil {
 		t.Fatal("EventuallyVerify did not discover both mocks were eventually called")
 	}
@@ -106,7 +106,7 @@ func TestEventuallyVerifyFailureWithTwoMocks(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 		p1.GetName()
 	}()
-	err := EventuallyVerify(p1, p2)
+	err := EventuallyVerify(EVENTUALLY_ACCEPTANCE_TIMEOUT, p1, p2)
 	if err == nil {
 		t.Fatal("EventuallyVerify did not discover mock was not eventually called")
 	}
@@ -117,7 +117,7 @@ func TestConsistentlyVerifySuccess(t *testing.T) {
 
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(0)
-	err := ConsistentlyVerify(p)
+	err := ConsistentlyVerify(CONSISTENTLY_ACCEPTANCE_TIMEOUT, p)
 	if err != nil {
 		t.Fatal("ConsistentlyVerify discovered incorrectly that mock was called")
 	}
@@ -132,7 +132,7 @@ func TestConsistentlyVerifyFailure(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 		p.GetName()
 	}()
-	err := ConsistentlyVerify(p)
+	err := ConsistentlyVerify(CONSISTENTLY_ACCEPTANCE_TIMEOUT, p)
 	if err == nil {
 		t.Fatal("ConsistentlyVerify did not discover mock was called")
 	}
@@ -145,7 +145,7 @@ func TestConsistentlyVerifySuccessWithTwoMocks(t *testing.T) {
 	p1.When("GetName").Return("john").Times(0)
 	p2 := &personMock{}
 	p2.When("GetName").Return("smith").Times(0)
-	err := ConsistentlyVerify(p1, p2)
+	err := ConsistentlyVerify(CONSISTENTLY_ACCEPTANCE_TIMEOUT, p1, p2)
 	if err != nil {
 		t.Fatal("ConsistentlyVerify discovered incorrectly that mocks were called")
 	}
@@ -162,7 +162,7 @@ func TestConsistentlyVerifyFailureWithTwoMocks(t *testing.T) {
 		time.Sleep(15 * time.Millisecond)
 		p2.GetName()
 	}()
-	err := ConsistentlyVerify(p1, p2)
+	err := ConsistentlyVerify(CONSISTENTLY_ACCEPTANCE_TIMEOUT, p1, p2)
 	if err == nil {
 		t.Fatal("ConsistentlyVerify did not discover mock was called")
 	}

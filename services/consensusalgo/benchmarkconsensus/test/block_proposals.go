@@ -43,7 +43,7 @@ func (h *harness) expectNewBlockProposalRequestedAndSaved(expectedBlockHeight pr
 }
 
 func (h *harness) verifyNewBlockProposalRequestedAndSaved(t *testing.T) {
-	err := test.EventuallyVerify(h.consensusContext, h.blockStorage)
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext, h.blockStorage)
 	if err != nil {
 		t.Fatal("Did not create block with ConsensusContext or save the block to block storage:", err)
 	}
@@ -56,11 +56,11 @@ func (h *harness) expectNewBlockProposalRequestedToFail() {
 }
 
 func (h *harness) verifyNewBlockProposalRequestedAndNotSaved(t *testing.T) {
-	err := test.EventuallyVerify(h.consensusContext)
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext)
 	if err != nil {
 		t.Fatal("Did not create block with ConsensusContext:", err)
 	}
-	err = test.ConsistentlyVerify(h.blockStorage)
+	err = test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.blockStorage)
 	if err != nil {
 		t.Fatal("Did save the block to block storage:", err)
 	}
@@ -72,7 +72,7 @@ func (h *harness) expectNewBlockProposalNotRequested() {
 }
 
 func (h *harness) verifyNewBlockProposalNotRequested(t *testing.T) {
-	err := test.ConsistentlyVerify(h.consensusContext)
+	err := test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.consensusContext)
 	if err != nil {
 		t.Fatal("Did create block with ConsensusContext:", err)
 	}
