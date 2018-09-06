@@ -22,17 +22,16 @@ type fastHttpServer struct {
 
 func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi services.PublicApi) FastHttpServer {
 	server := &fastHttpServer{
-		reporting: reporting.For(log.String("subsystem", "http-server")),
+		reporting: reporting.For(log.String("adapter", "http-server")),
 		publicApi: publicApi,
 	}
 
-	router := server.createRouter()
 	server.httpServer = &fasthttp.Server{
-		Handler: router,
+		Handler: server.createRouter(),
 	}
 
 	go func() {
-		reporting.Info("Starting server on address", log.String("address", address))
+		reporting.Info("starting http server on address", log.String("address", address))
 		server.httpServer.ListenAndServe(address) //TODO error on failed startup
 	}()
 
@@ -70,9 +69,9 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 	return func(ctx *fasthttp.RequestCtx) {
 		switch string(ctx.Path()) {
 		case "/api/send-transaction":
-			fastReport(sendTransactionHandler, s.reporting)
+			fastReport(s.reporting, sendTransactionHandler)
 		case "/api/call-method":
-			fastReport(callMethodHandler, s.reporting)
+			fastReport(s.reporting, callMethodHandler)
 		}
 	}
 }
@@ -81,7 +80,7 @@ func (s *fastHttpServer) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown() //TODO timeout context
 }
 
-func fastReport(h fasthttp.RequestHandler, reporting log.BasicLogger) fasthttp.RequestHandler {
+func fastReport(reporting log.BasicLogger, h fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
 		meter := reporting.Meter("request-process-time", log.String("url", ctx.URI().String()))
 		defer meter.Done()
