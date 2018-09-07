@@ -82,6 +82,9 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
+	// FIXME system halt itself after some time, if we remove this timeout we won't see the issue
+	time.Sleep(10 * time.Second)
+
 	amounts := []uint64{99, 107, 220}
 	for _, amount := range amounts {
 		tx := builders.TransferTransaction().WithAmount(amount).Builder()
