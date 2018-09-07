@@ -82,26 +82,28 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	amount := uint64(99)
-	tx := builders.TransferTransaction().WithAmount(amount).Builder()
+	amounts := []uint64{99, 107, 220}
+	for _, amount := range amounts {
+		tx := builders.TransferTransaction().WithAmount(amount).Builder()
 
-	_ = sendTransaction(t, tx)
+		_ = sendTransaction(t, tx)
 
-	m := &protocol.TransactionBuilder{
-		ContractName: "BenchmarkToken",
-		MethodName:   "getBalance",
-	}
-
-	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(callMethod(t, m).ClientResponse)
-		if outputArgsIterator.HasNext() {
-			return outputArgsIterator.NextArguments().Uint64Value() == amount
-		} else {
-			return false
+		m := &protocol.TransactionBuilder{
+			ContractName: "BenchmarkToken",
+			MethodName:   "getBalance",
 		}
-	})
 
-	require.True(t, ok, "should return expected amount from BenchmarkToken.getBalance()")
+		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
+			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(callMethod(t, m).ClientResponse)
+			if outputArgsIterator.HasNext() {
+				return outputArgsIterator.NextArguments().Uint64Value() == amount
+			} else {
+				return false
+			}
+		})
+
+		require.True(t, ok, "should return expected amount from BenchmarkToken.getBalance(), expected amount %d", amount)
+	}
 
 	if getConfig().Bootstrap {
 		for _, node := range nodes {
