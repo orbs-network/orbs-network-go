@@ -53,6 +53,7 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 
 		s.lastCommittedBlock = proposedBlock
 		s.lastCommittedBlockVoters = make(map[string]bool)
+		s.lastCommittedBlockVotersReachedQuorum = false
 	}
 
 	// broadcast the commit via gossip for last committed block
@@ -190,7 +191,8 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
 	s.reporting.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
-	if existingVotes >= s.requiredQuorumSize() {
+	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorum {
+		s.lastCommittedBlockVotersReachedQuorum = true
 		successfullyVotedBlock = s.lastCommittedBlockHeightUnderMutex()
 	}
 }
