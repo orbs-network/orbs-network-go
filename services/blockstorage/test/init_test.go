@@ -24,7 +24,7 @@ func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
 		require.EqualValues(t, 0, val.LastCommittedBlockHeight)
 		require.EqualValues(t, 0, val.LastCommittedBlockTimestamp)
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 1)
 	})
 }
 
@@ -50,6 +50,6 @@ func TestInitSetsLastCommittedBlockHeightFromPersistence(t *testing.T) {
 		require.EqualValues(t, 10, val.LastCommittedBlockHeight)
 		require.EqualValues(t, now.UnixNano(), val.LastCommittedBlockTimestamp)
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 1)
 	})
 }

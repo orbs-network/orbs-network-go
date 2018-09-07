@@ -46,8 +46,8 @@ func (d *harness) expectValidateWithConsensusAlgosTimes(times int) {
 	d.consensus.When("HandleBlockConsensus", mock.Any).Return(out, nil).Times(times)
 }
 
-func (d *harness) verifyMocks(t *testing.T) {
-	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, d.gossip, d.stateStorage, d.consensus)
+func (d *harness) verifyMocks(t *testing.T, times int) {
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), d.gossip, d.stateStorage, d.consensus)
 	require.NoError(t, err)
 }
 
