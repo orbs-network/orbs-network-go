@@ -91,7 +91,7 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
-	s.reporting.Info("generating new proposed block for height", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()+1))
+	s.reporting.Info("generating new proposed block", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
@@ -149,6 +149,8 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 }
 
 func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairContainer) error {
+	s.reporting.Info("broadcasting commit block", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
 	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
 		return errors.Errorf("attempting to broadcast commit of a partial block that is missing fields like block proofs: %v", blockPair.String())
@@ -187,7 +189,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	s.reporting.Info("valid vote arrived", log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
+	s.reporting.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() {
 		successfullyVotedBlock = s.lastCommittedBlockHeightUnderMutex()
 	}
