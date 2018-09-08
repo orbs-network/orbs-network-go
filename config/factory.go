@@ -43,7 +43,7 @@ func ForAcceptanceTests(
 
 	benchmarkConsensusRetryInterval := 1 * time.Millisecond
 	minimumTransactionsInBlock := uint32(1)
-	minimalBlockDelay := 1 * time.Millisecond
+	minimalBlockDelay := 10 * time.Millisecond
 	queryGraceTimeout := 5 * time.Millisecond
 	sendTransactionTimeout := 30 * time.Millisecond
 	return newHardCodedConfig(
