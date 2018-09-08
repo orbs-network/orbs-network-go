@@ -32,7 +32,7 @@ func getLogger(path string, silent bool) log.BasicLogger {
 	}
 
 	stdoutOutput := log.NewOutput(stdout).WithFormatter(log.NewHumanReadableFormatter())
-	fileOutput := log.NewOutput(logFile)
+	fileOutput := log.NewOutput(logFile).WithFormatter(log.NewHumanReadableFormatter()) // until system stabilizes we temporarily log files with human readable to assist debugging
 
 	return log.GetLogger().WithOutput(stdoutOutput, fileOutput)
 }

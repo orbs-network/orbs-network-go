@@ -72,7 +72,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(network AcceptanceTestNetwor
 		})
 		// end test
 
-		time.Sleep(1 * time.Millisecond) // give context dependent goroutines 1 ms to terminate gracefully
+		time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 	}
 }
 
