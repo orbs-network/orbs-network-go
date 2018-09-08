@@ -28,7 +28,7 @@ func (h *harness) expectCommitIgnored() {
 }
 
 func (h *harness) verifyCommitIgnored(t *testing.T) {
-	err := test.ConsistentlyVerify(h.blockStorage, h.gossip)
+	err := test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.blockStorage, h.gossip)
 	if err != nil {
 		t.Fatal("Did not ignore block:", err)
 	}
@@ -48,7 +48,7 @@ func (h *harness) expectCommitSaveAndReply(expectedBlockPair *protocol.BlockPair
 }
 
 func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
-	err := test.EventuallyVerify(h.blockStorage, h.gossip)
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.blockStorage, h.gossip)
 	if err != nil {
 		t.Fatal("Did not commit and reply to block:", err)
 	}
@@ -68,11 +68,11 @@ func (h *harness) expectCommitReplyWithoutSave(expectedBlockPair *protocol.Block
 }
 
 func (h *harness) verifyCommitReplyWithoutSave(t *testing.T) {
-	err := test.ConsistentlyVerify(h.blockStorage)
+	err := test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.blockStorage)
 	if err != nil {
 		t.Fatal("Did save the block to block storage:", err)
 	}
-	err = test.EventuallyVerify(h.gossip)
+	err = test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.gossip)
 	if err != nil {
 		t.Fatal("Did not reply to block:", err)
 	}
@@ -92,7 +92,7 @@ func (h *harness) expectCommitBroadcastViaGossip(expectedBlockHeight primitives.
 }
 
 func (h *harness) verifyCommitBroadcastViaGossip(t *testing.T) {
-	err := test.EventuallyVerify(h.gossip)
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.gossip)
 	if err != nil {
 		t.Fatal("Did not broadcast block commit:", err)
 	}
@@ -103,7 +103,7 @@ func (h *harness) expectCommitNotSent() {
 }
 
 func (h *harness) verifyCommitNotSent(t *testing.T) {
-	err := test.ConsistentlyVerify(h.gossip)
+	err := test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.gossip)
 	if err != nil {
 		t.Fatal("Did broadcast block commit:", err)
 	}
