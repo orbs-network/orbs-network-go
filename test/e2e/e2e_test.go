@@ -21,8 +21,8 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 	for _, amount := range amounts {
 		transfer := builders.TransferTransaction().WithAmount(amount).Builder()
 		response := h.sendTransaction(t, transfer)
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction should be successfully committed")
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "transaction should execute successfully")
+		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction for amount %d should be successfully committed", amount)
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "transaction for amount %d should execute successfully", amount)
 	}
 
 	// check balance
