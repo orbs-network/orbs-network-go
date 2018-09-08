@@ -40,38 +40,40 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 
 //TODO extract commonalities between handlers
 func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
-	sendTransactionHandler := s.handler(func(bytes []byte, r *fastResponse) {
-
-		clientRequest := client.SendTransactionRequestReader(bytes)
-		if r.reportErrorOnInvalidRequest(clientRequest) {
+	sendTransactionHandler := func(ctx *fasthttp.RequestCtx) {
+		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
+		defer meter.Done()
+		clientRequest := client.SendTransactionRequestReader(ctx.PostBody())
+		if reportErrorOnInvalidRequest(clientRequest, ctx) {
 			return
 		}
 
 		result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
-		r.writeMessageOrError(result.ClientResponse, err)
-	})
+		writeMessageOrError(result.ClientResponse, err, ctx)
+	}
 
-	callMethodHandler := s.handler(func(bytes []byte, r *fastResponse) {
-
-		clientRequest := client.CallMethodRequestReader(bytes)
-		if r.reportErrorOnInvalidRequest(clientRequest) {
+	callMethodHandler := func(ctx *fasthttp.RequestCtx) {
+		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
+		defer meter.Done()
+		clientRequest := client.CallMethodRequestReader(ctx.PostBody())
+		if reportErrorOnInvalidRequest(clientRequest, ctx) {
 			return
 		}
 
 		result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
 		if result != nil {
-			r.writeMessageOrError(result.ClientResponse, err)
+			writeMessageOrError(result.ClientResponse, err, ctx)
 		} else {
-			r.writeMessageOrError(nil, err)
+			writeMessageOrError(nil, err, ctx)
 		}
-	})
+	}
 
 	return func(ctx *fasthttp.RequestCtx) {
 		switch string(ctx.Path()) {
 		case "/api/send-transaction":
-			fastReport(s.reporting, sendTransactionHandler)
+			sendTransactionHandler(ctx)
 		case "/api/call-method":
-			fastReport(s.reporting, callMethodHandler)
+			callMethodHandler(ctx)
 		}
 	}
 }
@@ -80,51 +82,23 @@ func (s *fastHttpServer) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown() //TODO timeout context
 }
 
-func fastReport(reporting log.BasicLogger, h fasthttp.RequestHandler) fasthttp.RequestHandler {
-	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
-		meter := reporting.Meter("request-process-time", log.String("url", ctx.URI().String()))
-		defer meter.Done()
-		h(ctx)
-
-	})
-}
-
-func (r *fastResponse) reportErrorOnInvalidRequest(m membuffers.Message) bool {
+func reportErrorOnInvalidRequest(m membuffers.Message, ctx *fasthttp.RequestCtx) bool {
 	if !m.IsValid() {
 		//TODO report error to Reporting
-		r.writer.Response.SetStatusCode(fasthttp.StatusBadRequest)
-		r.writer.Write([]byte("Input is invalid"))
+		ctx.Response.SetStatusCode(fasthttp.StatusBadRequest)
+		ctx.Write([]byte("Input is invalid"))
 		return true
 	}
 
 	return false
 }
 
-func (r *fastResponse) writeMessageOrError(message membuffers.Message, err error) {
+func writeMessageOrError(message membuffers.Message, err error, ctx *fasthttp.RequestCtx) {
 	//TODO handle errors
-	r.writer.Response.Header.Set("Content-Type", "application/octet-stream")
+	ctx.Response.Header.Set("Content-Type", "application/octet-stream")
 	if err != nil {
-		r.writer.Write([]byte(err.Error()))
+		ctx.Write([]byte(err.Error()))
 	} else {
-		r.writer.Write(message.Raw())
+		ctx.Write(message.Raw())
 	}
-}
-
-func (s *fastHttpServer) handler(handler func(bytes []byte, r *fastResponse)) fasthttp.RequestHandler {
-	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
-
-		bytes := ctx.PostBody()
-		//if err != nil {
-		//	s.reporting.Info("could not read http request body", log.Error(err))
-		//	w.WriteHeader(http.StatusInternalServerError)
-		//	w.Write([]byte(err.Error()))
-		//	return
-		//}
-
-		handler(bytes, &fastResponse{writer: *ctx})
-	})
-}
-
-type fastResponse struct {
-	writer fasthttp.RequestCtx
 }
