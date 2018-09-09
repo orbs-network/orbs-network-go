@@ -53,12 +53,15 @@ func (s *service) receivedBlockSyncAvailabilityRequest(header *gossipmessages.He
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.blockSyncHandlers {
-		l.HandleBlockAvailabilityRequest(&gossiptopics.BlockAvailabilityRequestInput{
+		_, err := l.HandleBlockAvailabilityRequest(&gossiptopics.BlockAvailabilityRequestInput{
 			Message: &gossipmessages.BlockAvailabilityRequestMessage{
 				SignedBatchRange: batchRange,
 				Sender:           senderSignature,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBlockAvailabilityRequest failed", log.Error(err))
+		}
 	}
 }
 
@@ -89,12 +92,15 @@ func (s *service) receivedBlockSyncAvailabilityResponse(header *gossipmessages.H
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.blockSyncHandlers {
-		l.HandleBlockAvailabilityResponse(&gossiptopics.BlockAvailabilityResponseInput{
+		_, err := l.HandleBlockAvailabilityResponse(&gossiptopics.BlockAvailabilityResponseInput{
 			Message: &gossipmessages.BlockAvailabilityResponseMessage{
 				SignedBatchRange: batchRange,
 				Sender:           senderSignature,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBlockAvailabilityResponse failed", log.Error(err))
+		}
 	}
 }
 
@@ -127,12 +133,15 @@ func (s *service) receivedBlockSyncRequest(header *gossipmessages.Header, payloa
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.blockSyncHandlers {
-		l.HandleBlockSyncRequest(&gossiptopics.BlockSyncRequestInput{
+		_, err := l.HandleBlockSyncRequest(&gossiptopics.BlockSyncRequestInput{
 			Message: &gossipmessages.BlockSyncRequestMessage{
 				SignedChunkRange: chunkRange,
 				Sender:           senderSignature,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBlockSyncRequest failed", log.Error(err))
+		}
 	}
 }
 
@@ -178,12 +187,15 @@ func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, paylo
 	}
 
 	for _, l := range s.blockSyncHandlers {
-		l.HandleBlockSyncResponse(&gossiptopics.BlockSyncResponseInput{
+		_, err := l.HandleBlockSyncResponse(&gossiptopics.BlockSyncResponseInput{
 			Message: &gossipmessages.BlockSyncResponseMessage{
 				SignedChunkRange: chunkRange,
 				Sender:           senderSignature,
 				BlockPairs:       blocks,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBlockSyncResponse failed", log.Error(err))
+		}
 	}
 }

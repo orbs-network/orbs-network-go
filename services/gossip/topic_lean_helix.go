@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -58,13 +59,16 @@ func (s *service) receivedLeanHelixPrePrepare(header *gossipmessages.Header, pay
 	}
 
 	for _, l := range s.leanHelixHandlers {
-		l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
+		_, err := l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
 			Message: &gossipmessages.LeanHelixPrePrepareMessage{
 				SignedHeader: signedHeader,
 				Sender:       senderSignature,
 				BlockPair:    blockPair,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleLeanHelixPrePrepare failed", log.Error(err))
+		}
 	}
 }
 
@@ -86,7 +90,10 @@ func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput
 
 func (s *service) receivedLeanHelixPrepare(header *gossipmessages.Header, payloads [][]byte) {
 	for _, l := range s.leanHelixHandlers {
-		l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+		_, err := l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+		if err != nil {
+			s.reporting.Info("HandleLeanHelixPrepare failed", log.Error(err))
+		}
 	}
 }
 
@@ -108,7 +115,10 @@ func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) 
 
 func (s *service) receivedLeanHelixCommit(header *gossipmessages.Header, payloads [][]byte) {
 	for _, l := range s.leanHelixHandlers {
-		l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
+		_, err := l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
+		if err != nil {
+			s.reporting.Info("HandleLeanHelixCommit failed", log.Error(err))
+		}
 	}
 }
 

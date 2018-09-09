@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -49,11 +50,14 @@ func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, p
 	}
 
 	for _, l := range s.transactionHandlers {
-		l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+		_, err := l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 			Message: &gossipmessages.ForwardedTransactionsMessage{
 				Sender:             senderSignature,
 				SignedTransactions: txs,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleForwardedTransactions failed", log.Error(err))
+		}
 	}
 }

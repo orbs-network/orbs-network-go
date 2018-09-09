@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -49,11 +50,14 @@ func (s *service) receivedBenchmarkConsensusCommit(header *gossipmessages.Header
 	}
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		l.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+		_, err := l.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
 			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
 				BlockPair: blockPair,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBenchmarkConsensusCommit failed", log.Error(err))
+		}
 	}
 }
 
@@ -86,11 +90,14 @@ func (s *service) receivedBenchmarkConsensusCommitted(header *gossipmessages.Hea
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		l.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+		_, err := l.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 			Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
 				Status: status,
 				Sender: senderSignature,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBenchmarkConsensusCommitted failed", log.Error(err))
+		}
 	}
 }
