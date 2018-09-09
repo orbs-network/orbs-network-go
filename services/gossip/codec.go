@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 )
@@ -10,7 +9,7 @@ const NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR = 5 // txHeader, txMetadata, rxHeade
 
 func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		return nil, errors.Errorf("codec failed to encode block pair due to missing fields", log.Stringable("block-pair", blockPair))
+		return nil, errors.Errorf("codec failed to encode block pair due to missing fields: %s", blockPair.String())
 	}
 
 	payloads := make([][]byte, 0, NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR+
@@ -24,7 +23,7 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 		blockPair.TransactionsBlock.BlockProof == nil ||
 		blockPair.ResultsBlock.Header == nil ||
 		blockPair.ResultsBlock.BlockProof == nil {
-		return nil, errors.Errorf("codec failed to encode block pair due to missing fields", log.Stringable("block-pair", blockPair))
+		return nil, errors.Errorf("codec failed to encode block pair due to missing fields: %s", blockPair.String())
 	}
 
 	payloads = append(payloads, blockPair.TransactionsBlock.Header.Raw())

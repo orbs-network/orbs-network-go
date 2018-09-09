@@ -34,7 +34,7 @@ func (s *service) BroadcastBlockAvailabilityRequest(input *gossiptopics.BlockAva
 	}).Build()
 
 	if input.Message.SignedBatchRange == nil {
-		return nil, errors.Errorf("cannot encode BlockAvailabilityRequestMessage", log.Stringable("message", input.Message))
+		return nil, errors.Errorf("cannot encode BlockAvailabilityRequestMessage: %s", input.Message.String())
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
 
@@ -70,7 +70,7 @@ func (s *service) SendBlockAvailabilityResponse(input *gossiptopics.BlockAvailab
 	}).Build()
 
 	if input.Message.SignedBatchRange == nil {
-		return nil, errors.Errorf("cannot encode BlockAvailabilityResponseMessage", log.Stringable("message", input.Message))
+		return nil, errors.Errorf("cannot encode BlockAvailabilityResponseMessage: %s", input.Message.String())
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
 
@@ -107,7 +107,7 @@ func (s *service) SendBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput
 	}).Build()
 
 	if input.Message.SignedChunkRange == nil {
-		return nil, errors.Errorf("cannot encode BlockSyncRequestMessage", log.Stringable("message", input.Message))
+		return nil, errors.Errorf("cannot encode BlockSyncRequestMessage: %s", input.Message.String())
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
 
@@ -145,7 +145,7 @@ func (s *service) SendBlockSyncResponse(input *gossiptopics.BlockSyncResponseInp
 	}).Build()
 
 	if input.Message.SignedChunkRange == nil || len(input.Message.BlockPairs) == 0 {
-		return nil, errors.Errorf("cannot encode BlockSyncResponseMessage", log.Stringable("message", input.Message))
+		return nil, errors.Errorf("cannot encode BlockSyncResponseMessage: %s", input.Message.String())
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
 
