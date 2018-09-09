@@ -1,5 +1,9 @@
 #!/bin/bash -x
 
+if [ "$SKIP_TESTS" != "" ]; then
+    exit 0
+fi
+
 check_exit_code_and_report () {
     export EXIT_CODE=$?
 

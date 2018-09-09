@@ -1,0 +1,54 @@
+version: '2'
+
+services:
+  orbs-network-node-1:
+    extends:
+      file: docker-compose.yml
+      service: orbs-network-node-1
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SKIP_TESTS: 'true'
+    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node
+
+  orbs-network-node-2:
+    extends:
+      file: docker-compose.yml
+      service: orbs-network-node-2
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SKIP_TESTS: 'true'
+    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node
+
+  orbs-network-node-3:
+    extends:
+      file: docker-compose.yml
+      service: orbs-network-node-3
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SKIP_TESTS: 'true'
+    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node
+
+  orbs-e2e:
+    extends:
+      file: docker-compose.yml
+      service: orbs-e2e
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SKIP_TESTS: 'true'
+    command: /go/src/github.com/orbs-network/orbs-network-go/e2e.test
+
+networks:
+  orbs-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 192.168.199.0/24
