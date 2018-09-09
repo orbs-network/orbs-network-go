@@ -2,6 +2,7 @@ package blockstorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -54,6 +55,13 @@ func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, 
 }
 
 func (b *BlockSync) mainLoop(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			// TODO: in production we need to restart our long running goroutine (decide on supervision mechanism)
+			b.reporting.Error("panic in BlockSync.mainLoop long running goroutine", log.String("panic", fmt.Sprintf("%v", r)))
+		}
+	}()
+
 	state := BLOCK_SYNC_STATE_IDLE
 	var event interface{}
 	var blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage

@@ -64,8 +64,8 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 
 	//TODO supervise
-	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool)
-	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool)
+	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool, logger)
+	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool, logger)
 
 	return s
 }
@@ -163,10 +163,17 @@ type cleaner interface {
 }
 
 // TODO supervise
-func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner) chan struct{} {
+func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, logger log.BasicLogger) chan struct{} {
 	stopped := make(chan struct{})
 	ticker := time.NewTicker(tickInterval())
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// TODO: in production we need to restart our long running goroutine (decide on supervision mechanism)
+				logger.Error("panic in TransactionPool.cleaningProcess long running goroutine", log.String("panic", fmt.Sprintf("%v", r)))
+			}
+		}()
+
 		for {
 			select {
 			case <-ctx.Done():
