@@ -71,7 +71,7 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 		postBody := ctx.PostBody()
 		if postBody == nil {
 			s.reporting.Info("could not read http request body")
-			ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
+			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 			return
 		}
 
@@ -91,8 +91,8 @@ func (s *fastHttpServer) GracefulShutdown(timeout time.Duration) {
 func reportErrorOnInvalidRequest(m membuffers.Message, ctx *fasthttp.RequestCtx) bool {
 	if !m.IsValid() {
 		//TODO report error to Reporting
-		ctx.Response.SetStatusCode(fasthttp.StatusBadRequest)
-		ctx.Write([]byte("Input is invalid"))
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		ctx.SetBody([]byte("Input is invalid"))
 		return true
 	}
 
@@ -103,8 +103,8 @@ func writeMessageOrError(message membuffers.Message, err error, ctx *fasthttp.Re
 	//TODO handle errors
 	ctx.Response.Header.Set("Content-Type", "application/octet-stream")
 	if err != nil {
-		ctx.Write([]byte(err.Error()))
+		ctx.SetBody([]byte(err.Error()))
 	} else {
-		ctx.Write(message.Raw())
+		ctx.SetBody(message.Raw())
 	}
 }
