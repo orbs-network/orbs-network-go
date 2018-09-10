@@ -41,8 +41,6 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 //TODO extract commonalities between handlers
 func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 	sendTransactionHandler := func(ctx *fasthttp.RequestCtx) {
-		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
-		defer meter.Done()
 		clientRequest := client.SendTransactionRequestReader(ctx.PostBody())
 		if reportErrorOnInvalidRequest(clientRequest, ctx) {
 			return
@@ -53,8 +51,6 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 	}
 
 	callMethodHandler := func(ctx *fasthttp.RequestCtx) {
-		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
-		defer meter.Done()
 		clientRequest := client.CallMethodRequestReader(ctx.PostBody())
 		if reportErrorOnInvalidRequest(clientRequest, ctx) {
 			return
@@ -69,12 +65,15 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 	}
 
 	return func(ctx *fasthttp.RequestCtx) {
+		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
 		switch string(ctx.Path()) {
 		case "/api/send-transaction":
 			sendTransactionHandler(ctx)
 		case "/api/call-method":
 			callMethodHandler(ctx)
 		}
+		meter.Done()
+
 	}
 }
 
