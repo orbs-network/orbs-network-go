@@ -15,7 +15,7 @@ func TestStopsWhenContextIsCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m := aCleaner()
-	stopped := startCleaningProcess(ctx, tickInterval, expiration, m)
+	stopped := startCleaningProcess(ctx, tickInterval, expiration, m, nil)
 
 	cancel()
 
@@ -27,7 +27,7 @@ func TestTicksOnSchedule(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m := aCleaner()
-	stopped := startCleaningProcess(ctx, tickInterval, expiration, m)
+	stopped := startCleaningProcess(ctx, tickInterval, expiration, m, nil)
 
 	// waiting multiple times to assert that ticker is looping :)
 	for i := 0; i < 3; i++ {

@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
-	)
+)
 
 type Config interface {
 	SendTransactionTimeout() time.Duration
@@ -73,6 +73,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	})
 
 	if err != nil {
+		s.reporting.Info("adding transaction to TransactionPool failed", log.Error(err))
 		return prepareResponse(txResponse), errors.Errorf("error '%s' for transaction result", txResponse)
 	}
 	if txResponse.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED {
@@ -81,6 +82,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 
 	ta, err := waitContext.until(s.config.SendTransactionTimeout())
 	if err != nil {
+		s.reporting.Info("waiting for transaction to be processed failed", log.Error(err))
 		return prepareResponse(txResponse), err
 	}
 	return prepareResponse(ta), nil
@@ -104,18 +106,18 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 		BlockTimestamp:     transactionOutput.BlockTimestamp,
 	}
 
-
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}
 }
 
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
 	s.reporting.Info("enter CallMethod")
 	defer s.reporting.Info("exit CallMethod")
-	// TODO get block height for input ?
+
 	output, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: input.ClientRequest.Transaction(),
 	})
 	if err != nil {
+		s.reporting.Info("running local method on VirtualMachine failed", log.Error(err))
 		return nil, err
 	}
 	return &services.CallMethodOutput{

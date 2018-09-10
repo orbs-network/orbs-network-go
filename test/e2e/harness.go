@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
@@ -12,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -92,20 +94,30 @@ func (h *harness) gracefulShutdown() {
 	}
 }
 
-func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) *client.SendTransactionResponse {
+func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: txBuilder,
 	}).Build()
 	responseBytes := h.httpPost(t, request, "send-transaction")
-	return client.SendTransactionResponseReader(responseBytes)
+	response := client.SendTransactionResponseReader(responseBytes)
+	if !response.IsValid() {
+		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
+		return nil, errors.Errorf("SendTransaction response invalid, raw as text: %s, raw as hex: %s", string(responseBytes), hex.EncodeToString(responseBytes))
+	}
+	return response, nil
 }
 
-func (h *harness) callMethod(t *testing.T, txBuilder *protocol.TransactionBuilder) *client.CallMethodResponse {
+func (h *harness) callMethod(t *testing.T, txBuilder *protocol.TransactionBuilder) (*client.CallMethodResponse, error) {
 	request := (&client.CallMethodRequestBuilder{
 		Transaction: txBuilder,
 	}).Build()
 	responseBytes := h.httpPost(t, request, "call-method")
-	return client.CallMethodResponseReader(responseBytes)
+	response := client.CallMethodResponseReader(responseBytes)
+	if !response.IsValid() {
+		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
+		return nil, errors.Errorf("CallMethod response invalid, raw as text: %s, raw as hex: %s", string(responseBytes), hex.EncodeToString(responseBytes))
+	}
+	return response, nil
 }
 
 func (h *harness) httpPost(t *testing.T, input membuffers.Message, method string) []byte {

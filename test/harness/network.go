@@ -159,6 +159,7 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	return ch
 }
 
+// TODO: when publicApi supports returning as soon as SendTransaction is in the pool, switch to blocking implementation that waits for this
 func (n *acceptanceTestNetwork) SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256 {
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: builders.TransferTransaction().WithAmount(amount).Builder(),
