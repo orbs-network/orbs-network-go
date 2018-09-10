@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -30,6 +31,9 @@ type AcceptanceTestNetwork interface {
 	SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256
 	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
+	SendDeployCounterContract(nodeIndex int, counterStart uint64) chan *client.SendTransactionResponse
+	SendCounterAdd(nodeIndex int, counterStart uint64, amount uint64) chan *client.SendTransactionResponse
+	CallCounterGet(nodeIndex int, counterStart uint64) chan uint64
 	DumpState()
 	WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256)
 }
@@ -205,6 +209,74 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 		})
 		if err != nil {
 			panic(fmt.Sprintf("error in get balance: %v", err)) // TODO: improve
+		}
+		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(output.ClientResponse)
+		ch <- outputArgsIterator.NextArguments().Uint64Value()
+	}()
+	return ch
+}
+
+func (n *acceptanceTestNetwork) SendDeployCounterContract(nodeIndex int, counterStart uint64) chan *client.SendTransactionResponse {
+	ch := make(chan *client.SendTransactionResponse)
+	tx := builders.Transaction().
+		WithMethod("_Deployments", "deployService").
+		WithArgs(
+			fmt.Sprintf("CounterFrom%d", counterStart),
+			uint32(protocol.PROCESSOR_TYPE_NATIVE),
+			contracts.SourceCodeForCounter(counterStart),
+		)
+	go func() {
+		request := (&client.SendTransactionRequestBuilder{
+			SignedTransaction: tx.Builder(),
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			panic(fmt.Sprintf("error sending counter deploy: %v", err)) // TODO: improve
+		}
+		ch <- output.ClientResponse
+	}()
+	return ch
+}
+
+func (n *acceptanceTestNetwork) SendCounterAdd(nodeIndex int, counterStart uint64, amount uint64) chan *client.SendTransactionResponse {
+	ch := make(chan *client.SendTransactionResponse)
+	tx := builders.Transaction().
+		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "add").
+		WithArgs(amount)
+	go func() {
+		request := (&client.SendTransactionRequestBuilder{
+			SignedTransaction: tx.Builder(),
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			panic(fmt.Sprintf("error sending counter add: %v", err)) // TODO: improve
+		}
+		ch <- output.ClientResponse
+	}()
+	return ch
+}
+
+func (n *acceptanceTestNetwork) CallCounterGet(nodeIndex int, counterStart uint64) chan uint64 {
+	ch := make(chan uint64)
+	go func() {
+		request := (&client.CallMethodRequestBuilder{
+			Transaction: &protocol.TransactionBuilder{
+				ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
+				MethodName:   "get",
+			},
+		}).Build()
+		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
+		output, err := publicApi.CallMethod(&services.CallMethodInput{
+			ClientRequest: request,
+		})
+		if err != nil {
+			panic(fmt.Sprintf("error in calling counter get: %v", err)) // TODO: improve
 		}
 		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(output.ClientResponse)
 		ch <- outputArgsIterator.NextArguments().Uint64Value()
