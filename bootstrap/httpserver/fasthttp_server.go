@@ -40,8 +40,8 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 
 //TODO extract commonalities between handlers
 func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
-	sendTransactionHandler := func(ctx *fasthttp.RequestCtx) {
-		clientRequest := client.SendTransactionRequestReader(ctx.PostBody())
+	sendTransactionHandler := func(ctx *fasthttp.RequestCtx, postBody []byte) {
+		clientRequest := client.SendTransactionRequestReader(postBody)
 		if reportErrorOnInvalidRequest(clientRequest, ctx) {
 			return
 		}
@@ -50,8 +50,8 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 		writeMessageOrError(result.ClientResponse, err, ctx)
 	}
 
-	callMethodHandler := func(ctx *fasthttp.RequestCtx) {
-		clientRequest := client.CallMethodRequestReader(ctx.PostBody())
+	callMethodHandler := func(ctx *fasthttp.RequestCtx, postBody []byte) {
+		clientRequest := client.CallMethodRequestReader(postBody)
 		if reportErrorOnInvalidRequest(clientRequest, ctx) {
 			return
 		}
@@ -66,14 +66,21 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 
 	return func(ctx *fasthttp.RequestCtx) {
 		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
+		defer meter.Done()
+
+		postBody := ctx.PostBody()
+		if postBody == nil {
+			s.reporting.Info("could not read http request body")
+			ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
+			return
+		}
+
 		switch string(ctx.Path()) {
 		case "/api/send-transaction":
-			sendTransactionHandler(ctx)
+			sendTransactionHandler(ctx, postBody)
 		case "/api/call-method":
-			callMethodHandler(ctx)
+			callMethodHandler(ctx, postBody)
 		}
-		meter.Done()
-
 	}
 }
 
