@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -46,6 +47,30 @@ func TestProcessTransactionSetWhenContractNotDeployedAndNotNativeContract(t *tes
 	require.Equal(t, outputArgs, [][]byte{
 		{},
 	}, "processTransactionSet returned output args should match")
+
+	h.verifySystemContractCalled(t)
+	h.verifyNativeContractInfoRequested(t)
+	h.verifyNativeContractMethodCalled(t)
+}
+
+func TestSdkServiceCallMethodWhenContractNotDeployedAndNotNativeContract(t *testing.T) {
+	h := newHarness()
+
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+	h.expectNativeContractInfoRequested("Contract2", errors.New("not found"))
+
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+		t.Log("CallMethod on non deployed contract")
+		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1")
+		require.Error(t, err, "handleSdkCall should fail")
+		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+	})
+	h.expectNativeContractMethodNotCalled("Contract2", "method1")
+
+	h.processTransactionSet([]*contractAndMethod{
+		{"Contract1", "method1"},
+	})
 
 	h.verifySystemContractCalled(t)
 	h.verifyNativeContractInfoRequested(t)

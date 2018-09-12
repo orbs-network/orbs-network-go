@@ -27,13 +27,20 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 	serviceName := args[0].StringValue()
 	methodName := args[1].StringValue()
 
+	// get deployment info
+	processor, err := s.getServiceDeployment(context, primitives.ContractName(serviceName))
+	if err != nil {
+		s.reporting.Info("get deployment info for contract failed during Sdk.Service.CallMethod", log.Error(err), log.String("contract", serviceName))
+		return err
+	}
+
 	// modify execution context
 	callingService := context.serviceStackTop()
 	context.serviceStackPush(primitives.ContractName(serviceName))
 	defer context.serviceStackPop()
 
 	// execute the call
-	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+	_, err = processor.ProcessCall(&services.ProcessCallInput{
 		ContextId:              context.contextId,
 		ContractName:           primitives.ContractName(serviceName),
 		MethodName:             primitives.MethodName(methodName),
