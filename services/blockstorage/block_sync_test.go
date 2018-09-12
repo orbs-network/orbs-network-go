@@ -472,3 +472,29 @@ func TestSourceAnyStateRespondsWithChunks(t *testing.T) {
 		})
 	}
 }
+
+func TestSourceAnyStateIgnoresBlockSyncRequestIfSourceIsBehindOrInSync(t *testing.T) {
+	firstHeight := primitives.BlockHeight(11)
+	lastHeight := primitives.BlockHeight(10)
+
+	event := builders.BlockSyncRequestInput().WithFirstBlockHeight(firstHeight).WithLastCommittedBlockHeight(lastHeight).Build().Message
+
+	for _, state := range allStates() {
+		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+			harness := newBlockSyncHarness()
+
+			harness.storage.When("LastCommittedBlockHeight").Return(lastHeight).Times(1)
+			harness.storage.Never("GetBlocks")
+			harness.gossip.Never("SendBlockSyncResponse", mock.Any)
+
+			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+
+			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.startSyncTimer)
+
+			require.Equal(t, state, newState, "state change was not expected")
+			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
+
+			harness.verifyMocks(t)
+		})
+	}
+}
