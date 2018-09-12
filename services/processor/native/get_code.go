@@ -55,6 +55,9 @@ func (s *service) callGetDeploymentCodeSystemContract(executionContextId types.C
 		return nil, errors.New("ContractSdkCallHandler has not registered yet")
 	}
 
+	systemContractName := deployments.CONTRACT.Name
+	systemMethodName := deployments.METHOD_GET_CODE.Name
+
 	_, err := handler.HandleSdkCall(&handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
@@ -63,12 +66,12 @@ func (s *service) callGetDeploymentCodeSystemContract(executionContextId types.C
 			(&protocol.MethodArgumentBuilder{
 				Name:        "serviceName",
 				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: string(deployments.CONTRACT.Name),
+				StringValue: string(systemContractName),
 			}).Build(),
 			(&protocol.MethodArgumentBuilder{
 				Name:        "methodName",
 				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: string(deployments.METHOD_GET_CODE.Name),
+				StringValue: string(systemMethodName),
 			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
