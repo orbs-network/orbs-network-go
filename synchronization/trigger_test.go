@@ -8,14 +8,14 @@ import (
 )
 
 func TestNewPeriodicalTimer(t *testing.T) {
-	p := synchronization.NewTrigger(time.Duration(5), func() {}, false)
+	p := synchronization.NewPeriodicalTimer(time.Duration(5), func() {})
 	require.NotNil(t, p, "failed to initialize the ticker")
 	require.False(t, p.IsRunning(), "should not be running when created")
 }
 
 func TestPeriodicalTrigger_Start(t *testing.T) {
 	x := 0
-	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
+	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
 	p.Start()
 	time.Sleep(time.Millisecond * 5)
 	require.Equal(t, 2, x, "expected two ticks")
@@ -23,16 +23,16 @@ func TestPeriodicalTrigger_Start(t *testing.T) {
 
 func TestTriggerInternalMetrics(t *testing.T) {
 	x := 0
-	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
+	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
 	p.Start()
 	time.Sleep(time.Millisecond * 5)
-	require.Equal(t, 2, x, "expected two ticks (func)")
-	require.EqualValues(t, 2, p.TimesTriggered(), "expected two ticks (metric)")
+	require.Equal(t, 2, x, "expected two ticks")
+	require.EqualValues(t, 2, p.TimesTriggered(), "expected two ticks")
 }
 
 func TestPeriodicalTrigger_Reset(t *testing.T) {
 	x := 0
-	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
+	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
 	p.Start()
 	p.Reset(time.Millisecond * 3)
 	require.Equal(t, 0, x, "expected zero ticks for now")
@@ -42,7 +42,7 @@ func TestPeriodicalTrigger_Reset(t *testing.T) {
 
 func TestPeriodicalTrigger_FireNow(t *testing.T) {
 	x := 0
-	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
+	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
 	p.Start()
 	p.FireNow()
 	time.Sleep(time.Millisecond)
@@ -56,7 +56,7 @@ func TestPeriodicalTrigger_FireNow(t *testing.T) {
 
 func TestPeriodicalTrigger_Stop(t *testing.T) {
 	x := 0
-	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
+	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
 	p.Start()
 	p.Stop()
 	require.Equal(t, 0, x, "expected no ticks")
@@ -64,7 +64,7 @@ func TestPeriodicalTrigger_Stop(t *testing.T) {
 
 func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
 	x := 0
-	p := synchronization.NewTrigger(time.Millisecond, func() { x++ }, true)
+	p := synchronization.NewPeriodicalTimer(time.Millisecond, func() { x++ })
 	p.Start()
 	time.Sleep(time.Microsecond * 1500)
 	p.Stop()

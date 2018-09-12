@@ -18,22 +18,22 @@ type Telemetry struct {
 }
 
 type periodicalTrigger struct {
-	d          time.Duration
-	f          func()
-	ticker     *time.Timer
-	metrics    *Telemetry
-	running    bool
-	periodical bool
+	d       time.Duration
+	f       func()
+	ticker  *time.Ticker
+	metrics *Telemetry
+	running bool
+	stop    chan bool
 }
 
-func NewTrigger(interval time.Duration, trigger func(), periodical bool) PeriodicalTrigger {
+func NewPeriodicalTimer(interval time.Duration, trigger func()) PeriodicalTrigger {
 	t := &periodicalTrigger{
-		ticker:     nil,
-		d:          interval,
-		f:          trigger,
-		metrics:    &Telemetry{},
-		running:    false,
-		periodical: periodical,
+		ticker:  time.NewTicker(interval),
+		d:       interval,
+		f:       trigger,
+		metrics: &Telemetry{},
+		stop:    make(chan bool),
+		running: false,
 	}
 	return t
 }
@@ -54,47 +54,43 @@ func (t *periodicalTrigger) TimesTriggeredManually() uint {
 	return t.metrics.timesTriggeredManually
 }
 
-func (t *periodicalTrigger) getWrappedFunc() func() {
-	return func() {
-		if t.periodical {
-			t.reset(t.d, true)
-		}
-		t.f()
-		t.metrics.timesTriggered++
-	}
-}
-
 func (t *periodicalTrigger) Start() {
 	if t.running {
 		return
 	}
 	t.running = true
-	t.ticker = time.AfterFunc(t.d, t.getWrappedFunc())
+	go func() {
+		for {
+			select {
+			case <-t.ticker.C:
+				t.f()
+				t.metrics.timesTriggered++
+			case <-t.stop:
+				t.ticker.Stop()
+				return
+			}
+		}
+	}()
 }
 
 func (t *periodicalTrigger) FireNow() {
-	go t.f()
 	t.Reset(t.d)
+	go t.f()
 	t.metrics.timesTriggeredManually++
 }
 
 func (t *periodicalTrigger) Reset(duration time.Duration) {
-	t.reset(duration, false)
-}
-
-func (t *periodicalTrigger) reset(duration time.Duration, internal bool) {
 	t.Stop()
+	t.metrics.timesReset++
 	t.d = duration
+	t.ticker = time.NewTicker(t.d)
 	t.Start()
-	if !internal {
-		t.metrics.timesReset++
-	}
 }
 
 func (t *periodicalTrigger) Stop() {
 	if !t.running {
 		return
 	}
-	t.ticker.Stop()
+	t.stop <- true
 	t.running = false
 }
