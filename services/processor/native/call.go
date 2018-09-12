@@ -2,33 +2,12 @@ package native
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"reflect"
 )
-
-func (s *service) getContractFromRepository(contractName primitives.ContractName) (*types.ContractInfo, error) {
-	contract, found := repository.Contracts[contractName]
-	if !found {
-		return nil, errors.Errorf("contract '%s' not found", contractName)
-	}
-	return &contract, nil
-}
-
-func (s *service) getContractAndMethodFromRepository(contractName primitives.ContractName, methodName primitives.MethodName) (*types.ContractInfo, *types.MethodInfo, error) {
-	contract, err := s.getContractFromRepository(contractName)
-	if err != nil {
-		return nil, nil, err
-	}
-	method, found := contract.Methods[methodName]
-	if !found {
-		return nil, nil, errors.Errorf("method '%s' not found in contract '%s'", methodName, contractName)
-	}
-	return contract, &method, nil
-}
 
 func (s *service) verifyMethodPermissions(contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope, accessScope protocol.ExecutionAccessScope) error {
 	// allow external but protect internal
@@ -74,7 +53,11 @@ func (s *service) processMethodCall(executionContextId types.Context, contractIn
 
 	// execute the call
 	s.reporting.Info("processor executing contract", log.Stringable("contract", contractInfo.Name), log.Stringable("method", methodInfo.Name))
-	contractValue := reflect.ValueOf(s.contractRepository[contractInfo.Name])
+	contractInstance := s.getContractInstanceFromRepository(contractInfo.Name)
+	if contractInstance == nil {
+		return nil, nil, errors.New("contract repository is not initialized yet")
+	}
+	contractValue := reflect.ValueOf(contractInstance)
 	contextValue := reflect.ValueOf(executionContextId)
 	inValues := append([]reflect.Value{contractValue, contextValue}, argValues...)
 	outValues := reflect.ValueOf(methodInfo.Implementation).Call(inValues)

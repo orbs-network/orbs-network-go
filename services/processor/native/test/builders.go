@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -45,6 +46,12 @@ func (p *processCall) WithUnknownContract() *processCall {
 func (p *processCall) WithUnknownMethod() *processCall {
 	p.input.ContractName = "BenchmarkContract"
 	p.input.MethodName = "unknownMethod"
+	return p
+}
+
+func (p *processCall) WithDeployableCounterContract(counterStart uint64) *processCall {
+	p.input.ContractName = primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart))
+	p.input.MethodName = "get"
 	return p
 }
 

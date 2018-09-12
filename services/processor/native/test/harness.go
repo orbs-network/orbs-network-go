@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
@@ -57,7 +58,21 @@ func (h *harness) expectSdkCallMadeWithStateWrite() {
 	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State and method equals write", stateWriteCallMatcher)).Return(nil, nil).Times(1)
 }
 
+func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, returnError error) {
+	serviceCallMethodCallMatcher := func(i interface{}) bool {
+		input, ok := i.(*handlers.HandleSdkCallInput)
+		return ok &&
+			input.OperationName == native.SDK_OPERATION_NAME_SERVICE &&
+			input.MethodName == "callMethod" &&
+			len(input.InputArguments) == 2 &&
+			input.InputArguments[0].StringValue() == string(expectedContractName) &&
+			input.InputArguments[1].StringValue() == string(expectedMethodName)
+	}
+
+	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.Service and method equals callMethod", serviceCallMethodCallMatcher)).Return(nil, returnError).Times(1)
+}
+
 func (h *harness) verifySdkCallMade(t *testing.T) {
-	ok, err := h.sdkCallHandler.Verify()
-	require.True(t, ok, "sdkCallHandler should run as expected", err)
+	_, err := h.sdkCallHandler.Verify()
+	require.NoError(t, err, "sdkCallHandler should be called as expected")
 }
