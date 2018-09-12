@@ -62,12 +62,12 @@ func runCommand(command []string, t *testing.T) string {
 	return stdout.String()
 }
 
-func generateTransferJSON() string {
+func generateTransferJSON(amount uint64) string {
 	transferJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "transfer",
 		Arguments: []jsonapi.MethodArgument{
-			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 42},
+			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
 		},
 	}
 
@@ -101,7 +101,7 @@ func TestSambusacFlow(t *testing.T) {
 
 	baseCommand := ClientBinary()
 	sendCommand := append(baseCommand,
-		"-send-transaction", generateTransferJSON(),
+		"-send-transaction", generateTransferJSON(42),
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
 

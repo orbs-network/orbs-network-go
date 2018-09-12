@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -18,15 +19,15 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 
 	transactionsForPreOrder := make(Transactions, 0, input.MaxNumberOfTransactions)
 	for _, tx := range transactions {
+		txHash := digest.CalcTxHash(tx.Transaction())
 		if err := vctx.validateTransaction(tx); err != nil {
 			s.logger.Info("dropping invalid transaction", log.Error(err), log.Stringable("transaction", tx))
+		} else if alreadyCommitted := s.committedPool.get(txHash); alreadyCommitted != nil {
+			s.logger.Info("dropping committed transaction", log.Stringable("transaction", tx))
 		} else {
 			transactionsForPreOrder = append(transactionsForPreOrder, tx)
 		}
 
-		//else if alreadyCommitted := s.committedPool.get(tx); alreadyCommitted != nil {
-		//	s.logger.Info("dropping committed transaction", instrumentation.Stringable("transaction", tx))
-		//}
 
 	}
 
