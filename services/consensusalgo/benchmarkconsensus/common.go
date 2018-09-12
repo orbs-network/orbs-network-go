@@ -99,6 +99,7 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 		if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeightUnderMutex() {
 			s.lastCommittedBlock = blockPair
 			s.lastCommittedBlockVoters = make(map[string]bool) // leader only
+			s.lastCommittedBlockVotersReachedQuorum = false
 		}
 	}
 

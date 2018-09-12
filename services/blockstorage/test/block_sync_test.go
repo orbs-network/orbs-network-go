@@ -156,7 +156,7 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
-		harness.verifyMocks(t, 1)
+		harness.verifyMocks(t, 2)
 	})
 }
 
