@@ -17,9 +17,9 @@ type stateSdk struct {
 
 const SDK_OPERATION_NAME_STATE = "Sdk.State"
 
-func (s *stateSdk) ReadBytesByAddress(ctx types.Context, address primitives.Ripmd160Sha256) ([]byte, error) {
+func (s *stateSdk) ReadBytesByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256) ([]byte, error) {
 	output, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:     primitives.ExecutionContextId(ctx),
+		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
 		MethodName:    "read",
 		InputArguments: []*protocol.MethodArgument{
@@ -40,9 +40,9 @@ func (s *stateSdk) ReadBytesByAddress(ctx types.Context, address primitives.Ripm
 	return output.OutputArguments[0].BytesValue(), nil
 }
 
-func (s *stateSdk) WriteBytesByAddress(ctx types.Context, address primitives.Ripmd160Sha256, value []byte) error {
+func (s *stateSdk) WriteBytesByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256, value []byte) error {
 	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:     primitives.ExecutionContextId(ctx),
+		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
 		MethodName:    "write",
 		InputArguments: []*protocol.MethodArgument{
@@ -62,91 +62,91 @@ func (s *stateSdk) WriteBytesByAddress(ctx types.Context, address primitives.Rip
 	return err
 }
 
-func (s *stateSdk) ReadBytesByKey(ctx types.Context, key string) ([]byte, error) {
+func (s *stateSdk) ReadBytesByKey(executionContextId types.Context, key string) ([]byte, error) {
 	address := keyToAddress(key)
-	return s.ReadBytesByAddress(ctx, address)
+	return s.ReadBytesByAddress(executionContextId, address)
 }
 
-func (s *stateSdk) ReadStringByAddress(ctx types.Context, address primitives.Ripmd160Sha256) (string, error) {
-	bytes, err := s.ReadBytesByAddress(ctx, address)
+func (s *stateSdk) ReadStringByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256) (string, error) {
+	bytes, err := s.ReadBytesByAddress(executionContextId, address)
 	return string(bytes), err
 }
 
-func (s *stateSdk) ReadStringByKey(ctx types.Context, key string) (string, error) {
+func (s *stateSdk) ReadStringByKey(executionContextId types.Context, key string) (string, error) {
 	address := keyToAddress(key)
-	return s.ReadStringByAddress(ctx, address)
+	return s.ReadStringByAddress(executionContextId, address)
 }
 
-func (s *stateSdk) ReadUint64ByAddress(ctx types.Context, address primitives.Ripmd160Sha256) (uint64, error) {
-	bytes, err := s.ReadBytesByAddress(ctx, address)
+func (s *stateSdk) ReadUint64ByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256) (uint64, error) {
+	bytes, err := s.ReadBytesByAddress(executionContextId, address)
 	if err != nil || len(bytes) == 0 {
 		return 0, err
 	}
 	return membuffers.GetUint64(bytes), nil // TODO: maybe we need GetUint64Polyfill if we cannot guarantee alignment
 }
 
-func (s *stateSdk) ReadUint64ByKey(ctx types.Context, key string) (uint64, error) {
+func (s *stateSdk) ReadUint64ByKey(executionContextId types.Context, key string) (uint64, error) {
 	address := keyToAddress(key)
-	return s.ReadUint64ByAddress(ctx, address)
+	return s.ReadUint64ByAddress(executionContextId, address)
 }
 
-func (s *stateSdk) ReadUint32ByAddress(ctx types.Context, address primitives.Ripmd160Sha256) (uint32, error) {
-	bytes, err := s.ReadBytesByAddress(ctx, address)
+func (s *stateSdk) ReadUint32ByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256) (uint32, error) {
+	bytes, err := s.ReadBytesByAddress(executionContextId, address)
 	if err != nil || len(bytes) == 0 {
 		return 0, nil
 	}
 	return membuffers.GetUint32(bytes), nil // TODO: maybe we need GetUint32Polyfill if we cannot guarantee alignment
 }
 
-func (s *stateSdk) ReadUint32ByKey(ctx types.Context, key string) (uint32, error) {
+func (s *stateSdk) ReadUint32ByKey(executionContextId types.Context, key string) (uint32, error) {
 	address := keyToAddress(key)
-	return s.ReadUint32ByAddress(ctx, address)
+	return s.ReadUint32ByAddress(executionContextId, address)
 }
 
-func (s *stateSdk) WriteBytesByKey(ctx types.Context, key string, value []byte) error {
+func (s *stateSdk) WriteBytesByKey(executionContextId types.Context, key string, value []byte) error {
 	address := keyToAddress(key)
-	return s.WriteBytesByAddress(ctx, address, value)
+	return s.WriteBytesByAddress(executionContextId, address, value)
 }
 
-func (s *stateSdk) WriteStringByAddress(ctx types.Context, address primitives.Ripmd160Sha256, value string) error {
+func (s *stateSdk) WriteStringByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256, value string) error {
 	bytes := []byte(value)
-	return s.WriteBytesByAddress(ctx, address, bytes)
+	return s.WriteBytesByAddress(executionContextId, address, bytes)
 }
 
-func (s *stateSdk) WriteStringByKey(ctx types.Context, key string, value string) error {
+func (s *stateSdk) WriteStringByKey(executionContextId types.Context, key string, value string) error {
 	address := keyToAddress(key)
-	return s.WriteStringByAddress(ctx, address, value)
+	return s.WriteStringByAddress(executionContextId, address, value)
 }
 
-func (s *stateSdk) WriteUint64ByAddress(ctx types.Context, address primitives.Ripmd160Sha256, value uint64) error {
+func (s *stateSdk) WriteUint64ByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256, value uint64) error {
 	bytes := make([]byte, 8)
 	membuffers.WriteUint64(bytes, value) // TODO: maybe we need WriteUint64Polyfill if we cannot guarantee alignment
-	return s.WriteBytesByAddress(ctx, address, bytes)
+	return s.WriteBytesByAddress(executionContextId, address, bytes)
 }
 
-func (s *stateSdk) WriteUint64ByKey(ctx types.Context, key string, value uint64) error {
+func (s *stateSdk) WriteUint64ByKey(executionContextId types.Context, key string, value uint64) error {
 	address := keyToAddress(key)
-	return s.WriteUint64ByAddress(ctx, address, value)
+	return s.WriteUint64ByAddress(executionContextId, address, value)
 }
 
-func (s *stateSdk) WriteUint32ByAddress(ctx types.Context, address primitives.Ripmd160Sha256, value uint32) error {
+func (s *stateSdk) WriteUint32ByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256, value uint32) error {
 	bytes := make([]byte, 4)
 	membuffers.WriteUint32(bytes, value) // TODO: maybe we need WriteUint32Polyfill if we cannot guarantee alignment
-	return s.WriteBytesByAddress(ctx, address, bytes)
+	return s.WriteBytesByAddress(executionContextId, address, bytes)
 }
 
-func (s *stateSdk) WriteUint32ByKey(ctx types.Context, key string, value uint32) error {
+func (s *stateSdk) WriteUint32ByKey(executionContextId types.Context, key string, value uint32) error {
 	address := keyToAddress(key)
-	return s.WriteUint32ByAddress(ctx, address, value)
+	return s.WriteUint32ByAddress(executionContextId, address, value)
 }
 
-func (s *stateSdk) ClearByAddress(ctx types.Context, address primitives.Ripmd160Sha256) error {
-	return s.WriteBytesByAddress(ctx, address, []byte{})
+func (s *stateSdk) ClearByAddress(executionContextId types.Context, address primitives.Ripmd160Sha256) error {
+	return s.WriteBytesByAddress(executionContextId, address, []byte{})
 }
 
-func (s *stateSdk) ClearByKey(ctx types.Context, key string) error {
+func (s *stateSdk) ClearByKey(executionContextId types.Context, key string) error {
 	address := keyToAddress(key)
-	return s.ClearByAddress(ctx, address)
+	return s.ClearByAddress(executionContextId, address)
 }
 
 func keyToAddress(key string) primitives.Ripmd160Sha256 {

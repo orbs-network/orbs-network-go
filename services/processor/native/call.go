@@ -59,7 +59,7 @@ func (s *service) verifyInternalMethodCall(contractInfo *types.ContractInfo, met
 	return errors.Errorf("internal method '%s' called from different service '%s' without system permissions", methodInfo.Name, callingService)
 }
 
-func (s *service) processMethodCall(ctx types.Context, contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
+func (s *service) processMethodCall(executionContextId types.Context, contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("call method '%s' panicked: %v", methodInfo.Name, r)
@@ -67,7 +67,7 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	}()
 
 	// verify input args
-	argValues, err := s.prepareMethodInputArgsForCall(ctx, methodInfo, methodInfo.Implementation, args)
+	argValues, err := s.prepareMethodInputArgsForCall(executionContextId, methodInfo, methodInfo.Implementation, args)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -75,7 +75,7 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	// execute the call
 	s.reporting.Info("processor executing contract", log.Stringable("contract", contractInfo.Name), log.Stringable("method", methodInfo.Name))
 	contractValue := reflect.ValueOf(s.contractRepository[contractInfo.Name])
-	contextValue := reflect.ValueOf(ctx)
+	contextValue := reflect.ValueOf(executionContextId)
 	inValues := append([]reflect.Value{contractValue, contextValue}, argValues...)
 	outValues := reflect.ValueOf(methodInfo.Implementation).Call(inValues)
 	if len(outValues) == 0 {
@@ -96,12 +96,12 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *types.MethodInfo, implementation interface{}, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
+func (s *service) prepareMethodInputArgsForCall(executionContextId types.Context, methodInfo *types.MethodInfo, implementation interface{}, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
 	const NUM_ARGS_RECEIVER_AND_CONTEXT = 2
 
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(implementation).Type()
-	if methodType.NumIn() < NUM_ARGS_RECEIVER_AND_CONTEXT || methodType.In(1) != reflect.TypeOf(ctx) {
+	if methodType.NumIn() < NUM_ARGS_RECEIVER_AND_CONTEXT || methodType.In(1) != reflect.TypeOf(executionContextId) {
 		return nil, errors.Errorf("method '%s' first arg is not Context", methodInfo.Name)
 	}
 

@@ -14,9 +14,9 @@ type serviceSdk struct {
 
 const SDK_OPERATION_NAME_SERVICE = "Sdk.Service"
 
-func (s *serviceSdk) CallMethod(ctx types.Context, serviceName string, methodName string) error {
+func (s *serviceSdk) CallMethod(executionContextId types.Context, serviceName string, methodName string) error {
 	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:     primitives.ExecutionContextId(ctx),
+		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
 		InputArguments: []*protocol.MethodArgument{
