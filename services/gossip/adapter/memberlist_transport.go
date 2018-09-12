@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/hashicorp/memberlist"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
@@ -23,6 +24,7 @@ type MemberlistTransport struct {
 	listConfig *MemberlistGossipConfig
 	delegate   *gossipDelegate
 	listeners  map[string]TransportListener
+	logger     log.BasicLogger
 }
 
 type gossipDelegate struct {
@@ -62,7 +64,7 @@ func memberlistNodeName(publicKey primitives.Ed25519PublicKey) string {
 	return fmt.Sprintf("node-pkey-%s", publicKey)
 }
 
-func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
+func NewMemberlistTransport(config MemberlistGossipConfig, loggerFactory log.BasicLogger) Transport {
 	fmt.Println("Creating memberlist with config", config)
 	nodeName := memberlistNodeName(config.PublicKey)
 	listConfig := memberlist.DefaultLocalConfig()
@@ -85,16 +87,19 @@ func NewMemberlistTransport(config MemberlistGossipConfig) Transport {
 	}
 	// Join an existing cluster by specifying at least one known member.
 	n, err := list.Join(config.Peers)
+	logger := loggerFactory.For(log.Service("memberlist-transport"))
+
 	if err != nil {
-		fmt.Println(nodeName, "failed to join the cluster: "+err.Error())
+		loggerFactory.Error("failed to join the cluster", log.Error(err), log.String("node", nodeName))
 	} else {
-		fmt.Println(nodeName, "connected to", n, "hosts")
+		loggerFactory.Info("connected to cluster", log.Int("num-of-nodes", n), log.String("node", nodeName))
 	}
 	t := MemberlistTransport{
 		list:       list,
 		listConfig: &config,
 		delegate:   &delegate,
 		listeners:  make(map[string]TransportListener),
+		logger:     logger,
 	}
 	// this is terrible and should be purged
 	delegate.parent = &t
@@ -111,15 +116,8 @@ func (t *MemberlistTransport) remainConnectedLoop() {
 
 func (t *MemberlistTransport) join() {
 	if len(t.list.Members()) < 2 {
-		fmt.Println("Node does not have any peers, trying to join the cluster...", t.listConfig.Peers)
+		t.logger.Info("node does not have any peers, trying to join the cluster...", log.StringableSlice("peers", t.listConfig.Peers))
 		t.list.Join(t.listConfig.Peers)
-	}
-}
-
-func (t *MemberlistTransport) PrintPeers() {
-	// Ask for members of the cluster
-	for _, member := range t.list.Members() {
-		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
 	}
 }
 
@@ -135,7 +133,8 @@ func (t *MemberlistTransport) Send(data *TransportData) error {
 }
 
 func (t *MemberlistTransport) receive(payloads [][]byte) {
-	for _, l := range t.listeners {
+	for k, l := range t.listeners {
+		t.logger.Info("passing received message to listener", log.String("listener", k), log.Int("num-of-listeners", len(t.listeners)))
 		l.OnTransportMessageReceived(payloads)
 	}
 }

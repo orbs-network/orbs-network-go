@@ -283,13 +283,21 @@ func (b *BlockSync) sourceHandleBlockAvailabilityRequest(message *gossipmessages
 }
 
 func (b *BlockSync) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSyncRequestMessage) error {
-	b.reporting.Info("received block sync request", log.Stringable("sender", message.Sender))
-
 	senderPublicKey := message.Sender.SenderPublicKey()
 	blockType := message.SignedChunkRange.BlockType()
-	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 	firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
 	lastRequestedBlockHeight := message.SignedChunkRange.LastBlockHeight()
+	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
+
+	b.reporting.Info("received block sync request",
+		log.Stringable("sender", message.Sender),
+		log.Stringable("first-requested-block-height", firstRequestedBlockHeight),
+		log.Stringable("last-requested-block-height", lastRequestedBlockHeight),
+		log.Stringable("last-committed-block-height", lastCommittedBlockHeight))
+
+	if lastCommittedBlockHeight <= firstRequestedBlockHeight {
+		return errors.New("firstBlockHeight is greater or equal to lastCommittedBlockHeight")
+	}
 
 	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(b.config.BlockSyncBatchSize()-1) {
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize()-1)

@@ -61,7 +61,7 @@ func main() {
 
 	// TODO: change MemberlistGossipConfig to the standard config mechanism
 	config := gossipAdapter.MemberlistGossipConfig{nodePublicKey, int(gossipPort), peers}
-	gossipTransport := gossipAdapter.NewMemberlistTransport(config)
+	gossipTransport := gossipAdapter.NewMemberlistTransport(config, logger)
 
 	bootstrap.NewNode(
 		httpAddress,

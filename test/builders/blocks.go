@@ -113,6 +113,13 @@ func (b *blockPair) WithTransactions(num uint32) *blockPair {
 	return b
 }
 
+func (b *blockPair) WithTransaction(tx *protocol.SignedTransaction) *blockPair {
+	b.transactions = append(b.transactions, tx)
+	b.txHeader.NumSignedTransactions = uint32(len(b.transactions))
+
+	return b
+}
+
 func (b *blockPair) WithReceiptsForTransactions() *blockPair {
 	b.receipts = make([]*protocol.TransactionReceipt, 0, len(b.transactions))
 	for _, t := range b.transactions {
@@ -128,6 +135,13 @@ func (b *blockPair) WithReceipts(num uint32) *blockPair {
 		b.receipts = append(b.receipts, TransactionReceipt().Build())
 	}
 	b.rxHeader.NumTransactionReceipts = num
+	return b
+}
+
+func (b *blockPair) WithReceipt(receipt *protocol.TransactionReceipt) *blockPair {
+	b.receipts = append(b.receipts, receipt)
+	b.rxHeader.NumTransactionReceipts = uint32(len(b.receipts))
+
 	return b
 }
 
