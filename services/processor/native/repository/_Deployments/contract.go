@@ -102,7 +102,7 @@ func (c *contract) deployService(ctx types.Context, serviceName string, processo
 		}
 	}
 
-	err = c.Service.CallMethod(ctx, serviceName, "_init")
+	_, err = c.Service.CallMethod(ctx, serviceName, "_init")
 	if err != nil {
 		errors.New("failed to initialize contract")
 	}

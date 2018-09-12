@@ -29,5 +29,5 @@ type StateSdk interface {
 }
 
 type ServiceSdk interface {
-	CallMethod(ctx Context, serviceName string, methodName string) error // TODO: handle var args and return
+	CallMethod(ctx Context, serviceName string, methodName string, args ...interface{}) ([]interface{}, error)
 }

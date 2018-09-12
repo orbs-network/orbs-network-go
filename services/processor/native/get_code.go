@@ -46,10 +46,14 @@ func (s *service) retrieveContractInfoFromRepository(executionContextId types.Co
 }
 
 func (s *service) retrieveDeployableContractInfoFromState(executionContextId types.Context, contractName primitives.ContractName) (*types.ContractInfo, error) {
-	return s.callGetDeploymentCodeSystemContract(executionContextId, contractName)
+	_, err := s.callGetDeploymentCodeSystemContract(executionContextId, contractName)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
-func (s *service) callGetDeploymentCodeSystemContract(executionContextId types.Context, contractName primitives.ContractName) (*types.ContractInfo, error) {
+func (s *service) callGetDeploymentCodeSystemContract(executionContextId types.Context, contractName primitives.ContractName) ([]byte, error) {
 	handler := s.getContractSdkHandler()
 	if handler == nil {
 		return nil, errors.New("ContractSdkCallHandler has not registered yet")
@@ -58,7 +62,7 @@ func (s *service) callGetDeploymentCodeSystemContract(executionContextId types.C
 	systemContractName := deployments.CONTRACT.Name
 	systemMethodName := deployments.METHOD_GET_CODE.Name
 
-	_, err := handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	output, err := handler.HandleSdkCall(&handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
@@ -73,8 +77,28 @@ func (s *service) callGetDeploymentCodeSystemContract(executionContextId types.C
 				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(systemMethodName),
 			}).Build(),
+			(&protocol.MethodArgumentBuilder{
+				Name:       "inputArgs",
+				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+				BytesValue: argsToMethodArgumentArray(string(contractName)).Raw(),
+			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
 	})
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
+		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+	}
+	methodArgumentArray := protocol.MethodArgumentArrayReader(output.OutputArguments[0].BytesValue())
+	argIterator := methodArgumentArray.ArgumentsIterator()
+	if !argIterator.HasNext() {
+		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+	}
+	arg0 := argIterator.NextArguments()
+	if !arg0.IsTypeBytesValue() {
+		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+	}
+	return arg0.BytesValue(), nil
 }
