@@ -130,7 +130,7 @@ func TestConvertCallMethodOutput(t *testing.T) {
 	require.EqualValues(t, cmo.CallResult(), out.CallResult, "call result mismatched")
 	require.Len(t, out.OutputArguments, 1, "expected exactly 1 output argument")
 
-	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(cmo)
+	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(cmo)
 	expectedArg := outputArgsIterator.NextArguments()
 	actualArg := out.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")

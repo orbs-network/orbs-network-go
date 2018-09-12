@@ -210,7 +210,7 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 		if err != nil {
 			panic(fmt.Sprintf("error in get balance: %v", err)) // TODO: improve
 		}
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(output.ClientResponse)
+		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
 		ch <- outputArgsIterator.NextArguments().Uint64Value()
 	}()
 	return ch
@@ -278,7 +278,7 @@ func (n *acceptanceTestNetwork) CallCounterGet(nodeIndex int, counterStart uint6
 		if err != nil {
 			panic(fmt.Sprintf("error in calling counter get: %v", err)) // TODO: improve
 		}
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(output.ClientResponse)
+		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
 		ch <- outputArgsIterator.NextArguments().Uint64Value()
 	}()
 	return ch

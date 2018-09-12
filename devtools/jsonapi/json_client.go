@@ -87,7 +87,7 @@ func ConvertSendTransactionOutput(sto *client.SendTransactionResponse) *SendTran
 }
 
 func ConvertCallMethodOutput(cmo *client.CallMethodResponse) *CallMethodOutput {
-	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(cmo)
+	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(cmo)
 	var outputArguments []MethodArgument
 	for iter := outputArgsIterator; iter.HasNext(); {
 		arg := iter.NextArguments()

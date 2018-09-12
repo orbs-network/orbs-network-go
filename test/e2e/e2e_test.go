@@ -92,7 +92,7 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 	}
 
 	test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(callMethod(t, m).ClientResponse)
+		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(callMethod(t, m).ClientResponse)
 		if outputArgsIterator.HasNext() {
 			return outputArgsIterator.NextArguments().Uint64Value() == 17
 		} else {
