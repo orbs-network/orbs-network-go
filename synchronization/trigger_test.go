@@ -37,17 +37,17 @@ func TestPeriodicalTrigger_NoStartDoesNotFireFunc(t *testing.T) {
 
 func TestPeriodicalTrigger_Start(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(time.Millisecond*2, func() { x++ })
+	p := synchronization.NewPeriodicalTrigger(time.Millisecond*4, func() { x++ })
 	p.Start()
-	time.Sleep(time.Millisecond * 5)
+	time.Sleep(time.Millisecond * 10)
 	require.Equal(t, 2, x, "expected two ticks")
 }
 
 func TestTriggerInternalMetrics(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(time.Millisecond*2, func() { x++ })
+	p := synchronization.NewPeriodicalTrigger(time.Millisecond*4, func() { x++ })
 	p.Start()
-	time.Sleep(time.Millisecond * 5)
+	time.Sleep(time.Millisecond * 10)
 	require.Equal(t, 2, x, "expected two ticks")
 	require.EqualValues(t, 2, p.TimesTriggered(), "expected two ticks")
 }
