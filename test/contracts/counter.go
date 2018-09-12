@@ -12,7 +12,7 @@ import (
 )
 
 var CONTRACT = types.ContractInfo{
-	Name:       "Counter",
+	Name:       "CounterFrom%d",
 	Permission: protocol.PERMISSION_SCOPE_SERVICE,
 	Methods: map[primitives.MethodName]types.MethodInfo{
 		METHOD_INIT.Name: METHOD_INIT,
@@ -74,5 +74,5 @@ func (c *contract) get(ctx types.Context) (uint64, error) {
 `
 
 func SourceCodeForCounter(startFrom uint64) string {
-	return fmt.Sprintf(counterContractCode, startFrom)
+	return fmt.Sprintf(counterContractCode, startFrom, startFrom)
 }
