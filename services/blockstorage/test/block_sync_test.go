@@ -40,7 +40,7 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
 		require.NoError(t, err)
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 2)
 	})
 }
 
@@ -92,7 +92,7 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 		_, err := harness.blockStorage.HandleBlockSyncRequest(input)
 		require.NoError(t, err)
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 4)
 	})
 }
 
@@ -146,7 +146,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 		_, err := harness.blockStorage.HandleBlockSyncRequest(input)
 		require.NoError(t, err)
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 4)
 	})
 }
 
@@ -156,7 +156,7 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 2)
 	})
 }
 
@@ -199,6 +199,6 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 		time.Sleep(1 * time.Millisecond)
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 4)
 	})
 }

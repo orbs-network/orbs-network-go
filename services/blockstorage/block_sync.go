@@ -2,6 +2,7 @@ package blockstorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -54,6 +55,13 @@ func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, 
 }
 
 func (b *BlockSync) mainLoop(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			// TODO: in production we need to restart our long running goroutine (decide on supervision mechanism)
+			b.reporting.Error("panic in BlockSync.mainLoop long running goroutine", log.String("panic", fmt.Sprintf("%v", r)))
+		}
+	}()
+
 	state := BLOCK_SYNC_STATE_IDLE
 	var event interface{}
 	var blockAvailabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage
@@ -275,13 +283,21 @@ func (b *BlockSync) sourceHandleBlockAvailabilityRequest(message *gossipmessages
 }
 
 func (b *BlockSync) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSyncRequestMessage) error {
-	b.reporting.Info("received block sync request", log.Stringable("sender", message.Sender))
-
 	senderPublicKey := message.Sender.SenderPublicKey()
 	blockType := message.SignedChunkRange.BlockType()
-	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
 	firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
 	lastRequestedBlockHeight := message.SignedChunkRange.LastBlockHeight()
+	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
+
+	b.reporting.Info("received block sync request",
+		log.Stringable("sender", message.Sender),
+		log.Stringable("first-requested-block-height", firstRequestedBlockHeight),
+		log.Stringable("last-requested-block-height", lastRequestedBlockHeight),
+		log.Stringable("last-committed-block-height", lastCommittedBlockHeight))
+
+	if lastCommittedBlockHeight <= firstRequestedBlockHeight {
+		return errors.New("firstBlockHeight is greater or equal to lastCommittedBlockHeight")
+	}
 
 	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(b.config.BlockSyncBatchSize()-1) {
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize()-1)

@@ -79,3 +79,28 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 
 	require.NoError(t, <-doneWait, "did not resolve after block has been committed")
 }
+
+func TestGetTransactionsForOrderingDropsTransactionsThatAreAlreadyCommitted(t *testing.T) {
+	t.Parallel()
+	h := newHarness()
+
+	h.ignoringForwardMessages()
+
+	tx1 := builders.TransferTransaction().Build()
+	h.addTransactions(tx1)
+	h.assumeBlockStorageAtHeight(1)
+	h.ignoringTransactionResults()
+	h.reportTransactionsAsCommitted(tx1) // this commits tx1, it will now be in the committed pool
+
+	tx2 := builders.TransferTransaction().Build()
+
+	h.handleForwardFrom(otherNodeKeyPair, tx1) // now we add the same transaction again as well as a new transaction
+	h.addTransactions(tx2)
+
+	txSet, err := h.getTransactionsForOrdering(2)
+
+	require.NoError(t, err, "failed getting transactions unexpectedly")
+	require.ElementsMatch(t, transactionpool.Transactions{tx2}, txSet.SignedTransactions, "got a transaction that has already been committed")
+
+
+}

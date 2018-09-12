@@ -9,3 +9,8 @@ func ClientCallMethodResponseOutputArgumentsParse(r *client.CallMethodResponse) 
 	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
 	return argsArray.ArgumentsIterator()
 }
+
+func ClientCallMethodResponseOutputArgumentsPrint(r *client.CallMethodResponse) string {
+	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
+	return argsArray.String()
+}

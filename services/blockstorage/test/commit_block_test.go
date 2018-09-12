@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -24,7 +25,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks())
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 1)
 
 		lastCommittedBlockHeight := harness.getLastBlockHeight(t)
 
@@ -52,7 +53,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 		_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
 		require.EqualError(t, err, "could not write a block", "error should be returned if storage fails")
 
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 1)
 
 		lastCommittedBlockHeight := harness.getLastBlockHeight(t)
 
@@ -86,7 +87,7 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 		require.NoError(t, err)
 
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "block should be written only once")
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 1)
 	})
 }
 
@@ -104,7 +105,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 
 		require.EqualError(t, err, "block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 1)
 	})
 }
 
@@ -118,6 +119,32 @@ func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 		_, err := harness.commitBlock(builders.BlockPair().WithHeight(1000).Build())
 		require.EqualError(t, err, "block height is 1000, expected 2", "block height was mutate to be invalid, should return an error")
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
-		harness.verifyMocks(t)
+		harness.verifyMocks(t, 1)
+	})
+}
+
+func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newHarness(ctx)
+		harness.expectCommitStateDiffTimes(2)
+
+		tx := builders.Transaction().Build()
+		txReceipt := builders.TransactionReceipt().WithTransaction(tx.Transaction()).Build()
+
+		block0 := builders.BlockPair().WithHeight(1).WithTimestampNow().WithTransaction(tx).WithReceipt(txReceipt).Build()
+		block1 := builders.BlockPair().WithHeight(2).WithTimestampNow().WithTransaction(tx).WithReceipt(txReceipt).Build()
+
+		txHash := digest.CalcTxHash(tx.Transaction())
+
+		_, err := harness.commitBlock(block0)
+		require.NoError(t, err)
+
+		_, err = harness.commitBlock(block1)
+		require.NoError(t, err)
+
+		blockHeight := harness.storageAdapter.WaitForTransaction(txHash)
+		require.EqualValues(t, 1, blockHeight)
+
+		harness.verifyMocks(t, 1)
 	})
 }
