@@ -10,5 +10,9 @@ type ErrTransactionRejected struct {
 }
 
 func (e *ErrTransactionRejected) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+
 	return fmt.Sprintf("transaction rejected: %s", e.TransactionStatus)
 }

@@ -32,7 +32,7 @@ func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testi
 	require.Zero(t, p.currentSizeInBytes, "pending pool size did not reflect removal of tx2")
 }
 
-func TestPendingTransactionPoolAddRemove(t *testing.T) {
+func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing.T) {
 	t.Parallel()
 	p := makePendingPool()
 	tx1 := builders.TransferTransaction().Build()
@@ -61,7 +61,7 @@ func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransa
 	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
 }
 
-func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimit(t *testing.T) {
+func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimitInBytes(t *testing.T) {
 	t.Parallel()
 	p := makePendingPool()
 
@@ -75,7 +75,7 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimit(t *testing.T) {
 	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
 }
 
-func TestPendingTransactionPoolGetBatchDoesNotExceedLimit(t *testing.T) {
+func TestPendingTransactionPoolGetBatchDoesNotExceedLengthLimit(t *testing.T) {
 	t.Parallel()
 	p := makePendingPool()
 
@@ -119,6 +119,23 @@ func TestPendingTransactionPoolClearsExpiredTransactions(t *testing.T) {
 	require.True(t, p.has(tx1), "cleared non-expired transaction")
 	require.True(t, p.has(tx2), "cleared non-expired transaction")
 	require.False(t, p.has(tx3), "did not clear expired transaction")
+}
+
+func TestPendingTransactionPoolDoesNotAddTheSameTransactionTwiceRegardlessOfPublicKey(t *testing.T) {
+	p := makePendingPool()
+
+	tx := builders.Transaction().Build()
+
+	_, err := p.add(tx, pk)
+	require.Nil(t, err, "got an unexpected error adding the first transaction")
+
+	_, err = p.add(tx, pk)
+	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION, err.TransactionStatus, "did not get expected status code")
+
+	someOtherPk := keys.Ed25519KeyPairForTests(3).PublicKey()
+	_, err = p.add(tx, someOtherPk)
+	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION, err.TransactionStatus, "did not get expected status code")
+
 }
 
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {

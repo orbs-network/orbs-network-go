@@ -8,6 +8,14 @@ The project is thoroughly tested with unit tests, component tests per microservi
 
 ## Building from source
 
+### Docker
+
+If you only want to build the binaries, you don't need to have Golang on your machine. Having Docker is sufficient.
+
+`./docker-build.sh` will create the images for you:
+* `orbs:export` contains `orbs-node` and `orbs-json-client` binaries in `/opt/orbs` directory.
+* `orbs:sambusac` contains self-sufficient development binary (similar to Ethereum's Ganache) and json client binary.
+
 ### Prerequisites
 
 * Make sure [Go](https://golang.org/doc/install) is installed (version 1.10 or later).
@@ -38,6 +46,8 @@ git checkout master
 
 * Build with `go install`
 
+* You can build all the binaries (`orbs-node`, `orbs-json-client` and `sambusac`) with `./build-binaries.sh`. All binaries are statically linked.
+
 ### Run
 
 * To run the pre-built binary (should be in path):
@@ -56,7 +66,7 @@ go run *.go
 
 ### Available test runners
 
-* The official go test runner `go test` (has minimal UI and result caching)
+The official go test runner `go test` (has minimal UI and result caching). All tests can be run with `./test.sh`
 
 ### Test
 
@@ -110,7 +120,19 @@ go run *.go
 
   * The tests are found next to the actual unit in a file with `_test.go` suffix, eg. `sha256_test.go` sitting next to `sha256.go`
 
+### Testing with Docker
+
+Tests run automatically while we build Docker images because `test.sh` is part of the Docker build. `./docker-build.sh && ./docker-test.sh` will build all the images and then run e2e test in dockerized environment.
+
+The logs for all e2e nodes are in `./logs` directory and will be deleted on every e2e run.
+
 ## Developer experience
+
+### Debugging with Docker
+
+`./docker-build.debug.sh` and `docker-test.debug.sh` provide shorter development cycle by skipping tests and avoiding building development tools while building the image. The purpose is to let developers run e2e as soon as possible because some of the issues only manifest inside Docker.
+
+If the e2e gets stuck or `docker-compose` stops working properly, try to **remove all containers** with this handy command: `docker rm -f $(docker ps -aq)`. But remember that **ALL YOUR CONTAINERS WILL BE GONE**. All of them.
 
 ### IDE
 
