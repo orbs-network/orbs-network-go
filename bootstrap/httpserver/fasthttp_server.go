@@ -26,8 +26,10 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 		publicApi: publicApi,
 	}
 
+	readTimeout, _ := time.ParseDuration("500ms") //TODO error on failed parse
 	server.httpServer = &fasthttp.Server{
-		Handler: server.createRouter(),
+		Handler:     server.createRouter(),
+		ReadTimeout: readTimeout,
 	}
 
 	go func() {
