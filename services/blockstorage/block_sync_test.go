@@ -481,8 +481,8 @@ func TestSourceAnyStateIgnoresBlockSyncRequestIfSourceIsBehindOrInSync(t *testin
 
 	event := builders.BlockSyncRequestInput().WithFirstBlockHeight(firstHeight).WithLastCommittedBlockHeight(lastHeight).Build().Message
 
-	for _, state := range allStates() {
-		t.Run("state="+strconv.Itoa(int(state)), func(t *testing.T) {
+	for _, state := range allStates(true) {
+		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
 			harness := newBlockSyncHarness()
 
 			harness.storage.When("LastCommittedBlockHeight").Return(lastHeight).Times(1)
