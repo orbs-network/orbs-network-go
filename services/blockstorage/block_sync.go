@@ -68,9 +68,9 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 	event = startSyncEvent{}
 
-	startSyncTimer := synchronization.NewPeriodicalTimer(b.config.BlockSyncInterval(), func() {
+	startSyncTimer := synchronization.NewTrigger(b.config.BlockSyncInterval(), func() {
 		b.events <- startSyncEvent{}
-	})
+	}, false)
 
 	for {
 		state, blockAvailabilityResponses = b.transitionState(state, event, blockAvailabilityResponses, startSyncTimer)
@@ -87,7 +87,7 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 type startSyncEvent struct{}
 type collectingAvailabilityFinishedEvent struct{}
 
-func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, startSyncTimer synchronization.PeriodicalTrigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, startSyncTimer synchronization.Trigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
 	// Ignore start sync because collecting availability responses has its own timer
 	if _, ok := event.(startSyncEvent); ok && currentState != BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
 		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()

@@ -2,7 +2,7 @@ package synchronization
 
 import "time"
 
-type PeriodicalTrigger interface {
+type Trigger interface {
 	Start()
 	Reset(duration time.Duration)
 	TimesTriggered() uint
@@ -18,22 +18,24 @@ type Telemetry struct {
 }
 
 type periodicalTrigger struct {
-	d       time.Duration
-	f       func()
-	ticker  *time.Ticker
-	metrics *Telemetry
-	running bool
-	stop    chan bool
+	d          time.Duration
+	f          func()
+	ticker     *time.Ticker
+	metrics    *Telemetry
+	running    bool
+	stop       chan struct{}
+	periodical bool
 }
 
-func NewPeriodicalTimer(interval time.Duration, trigger func()) PeriodicalTrigger {
+func NewTrigger(interval time.Duration, trigger func(), periodical bool) Trigger {
 	t := &periodicalTrigger{
-		ticker:  time.NewTicker(interval),
-		d:       interval,
-		f:       trigger,
-		metrics: &Telemetry{},
-		stop:    make(chan bool),
-		running: false,
+		ticker:     time.NewTicker(interval),
+		d:          interval,
+		f:          trigger,
+		metrics:    &Telemetry{},
+		stop:       make(chan struct{}),
+		running:    false,
+		periodical: periodical,
 	}
 	return t
 }
@@ -63,6 +65,9 @@ func (t *periodicalTrigger) Start() {
 		for {
 			select {
 			case <-t.ticker.C:
+				if !t.periodical {
+					t.ticker.Stop()
+				}
 				t.f()
 				t.metrics.timesTriggered++
 			case <-t.stop:
@@ -74,14 +79,24 @@ func (t *periodicalTrigger) Start() {
 }
 
 func (t *periodicalTrigger) FireNow() {
-	t.Reset(t.d)
+	if !t.periodical {
+		t.Stop()
+	} else {
+		t.reset(t.d, true)
+	}
 	go t.f()
 	t.metrics.timesTriggeredManually++
 }
 
 func (t *periodicalTrigger) Reset(duration time.Duration) {
+	t.reset(duration, false)
+}
+
+func (t *periodicalTrigger) reset(duration time.Duration, internal bool) {
 	t.Stop()
-	t.metrics.timesReset++
+	if !internal {
+		t.metrics.timesReset++
+	}
 	t.d = duration
 	t.ticker = time.NewTicker(t.d)
 	t.Start()
@@ -91,6 +106,6 @@ func (t *periodicalTrigger) Stop() {
 	if !t.running {
 		return
 	}
-	t.stop <- true
+	t.stop <- struct{}{}
 	t.running = false
 }

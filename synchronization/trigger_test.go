@@ -8,14 +8,14 @@ import (
 )
 
 func TestNewPeriodicalTimer(t *testing.T) {
-	p := synchronization.NewPeriodicalTimer(time.Duration(5), func() {})
+	p := synchronization.NewTrigger(time.Duration(5), func() {}, false)
 	require.NotNil(t, p, "failed to initialize the ticker")
 	require.False(t, p.IsRunning(), "should not be running when created")
 }
 
 func TestPeriodicalTrigger_Start(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
+	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
 	p.Start()
 	time.Sleep(time.Millisecond * 5)
 	require.Equal(t, 2, x, "expected two ticks")
@@ -23,7 +23,7 @@ func TestPeriodicalTrigger_Start(t *testing.T) {
 
 func TestTriggerInternalMetrics(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
+	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
 	p.Start()
 	time.Sleep(time.Millisecond * 5)
 	require.Equal(t, 2, x, "expected two ticks")
@@ -32,7 +32,7 @@ func TestTriggerInternalMetrics(t *testing.T) {
 
 func TestPeriodicalTrigger_Reset(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
+	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
 	p.Start()
 	p.Reset(time.Millisecond * 3)
 	require.Equal(t, 0, x, "expected zero ticks for now")
@@ -42,7 +42,7 @@ func TestPeriodicalTrigger_Reset(t *testing.T) {
 
 func TestPeriodicalTrigger_FireNow(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
+	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
 	p.Start()
 	p.FireNow()
 	time.Sleep(time.Millisecond)
@@ -50,13 +50,13 @@ func TestPeriodicalTrigger_FireNow(t *testing.T) {
 	time.Sleep(time.Microsecond * 1500)
 	// at this point ~2.5 millis should have passed after the internal reset that happend on firenow
 	require.Equal(t, 2, x, "expected two ticks")
-	require.EqualValues(t, 1, p.TimesReset(), "should reset internally on immediate trigger")
+	require.EqualValues(t, 0, p.TimesReset(), "should not count a reset on firenow")
 	require.EqualValues(t, 1, p.TimesTriggeredManually(), "we triggered manually once")
 }
 
 func TestPeriodicalTrigger_Stop(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTimer(time.Millisecond*2, func() { x++ })
+	p := synchronization.NewTrigger(time.Millisecond*2, func() { x++ }, true)
 	p.Start()
 	p.Stop()
 	require.Equal(t, 0, x, "expected no ticks")
@@ -64,7 +64,7 @@ func TestPeriodicalTrigger_Stop(t *testing.T) {
 
 func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
 	x := 0
-	p := synchronization.NewPeriodicalTimer(time.Millisecond, func() { x++ })
+	p := synchronization.NewTrigger(time.Millisecond, func() { x++ }, true)
 	p.Start()
 	time.Sleep(time.Microsecond * 1500)
 	p.Stop()
