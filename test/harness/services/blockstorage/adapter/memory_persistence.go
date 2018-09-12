@@ -44,7 +44,11 @@ func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTrac
 }
 
 func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight {
-	h := <-bp.getChanFor(txhash)
+	bp.lock.Lock()
+	ch := bp.getChanFor(txhash)
+	bp.lock.Unlock()
+
+	h := <-ch
 	return h
 }
 
@@ -134,7 +138,13 @@ func (bp *inMemoryBlockPersistence) getChanFor(txhash primitives.Sha256) blockHe
 
 func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
 	for _, tx := range block.SignedTransactions {
-		bp.getChanFor(digest.CalcTxHash(tx.Transaction())) <- block.Header.BlockHeight()
+		ch := bp.getChanFor(digest.CalcTxHash(tx.Transaction()))
+		select {
+		case ch <- block.Header.BlockHeight():
+		default:
+			// FIXME: this happens when two txid are in different blocks (or same block), this should never happen and we do not log it here (too low) and we also do not want to stop the loop (break/return error)
+			continue
+		}
 	}
 }
 
