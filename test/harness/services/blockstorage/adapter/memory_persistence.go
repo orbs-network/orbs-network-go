@@ -142,6 +142,7 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 		select {
 		case ch <- block.Header.BlockHeight():
 		default:
+			// FIXME: this happens when two txid are in different blocks (or same block), this should never happen and we do not log it here (too low) and we also do not want to stop the loop (break/return error)
 			continue
 		}
 	}
