@@ -48,6 +48,9 @@ var METHOD_GET_INFO = types.MethodInfo{
 }
 
 func (c *contract) getInfo(ctx types.Context, serviceName string) (uint32, error) {
+	if serviceName == "_Deployments" { // getInfo on self
+		return uint32(protocol.PROCESSOR_TYPE_NATIVE), nil
+	}
 	processorType, err := c.State.ReadUint32ByKey(ctx, serviceName+".Processor")
 	if err == nil && processorType == 0 {
 		err = errors.New("contract not deployed")
