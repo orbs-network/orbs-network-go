@@ -143,7 +143,7 @@ func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
 		require.NoError(t, err)
 
 		blockHeight := harness.storageAdapter.WaitForTransaction(txHash)
-		require.Equal(t, 1, blockHeight)
+		require.EqualValues(t, 1, blockHeight)
 
 		harness.verifyMocks(t, 1)
 	})
