@@ -8,6 +8,6 @@ ARG SKIP_TESTS
 
 ARG SKIP_DEVTOOLS
 
-RUN sh test.sh
+RUN sh -x test.sh
 
-RUN sh build-binaries.sh
+RUN sh -x build-binaries.sh
