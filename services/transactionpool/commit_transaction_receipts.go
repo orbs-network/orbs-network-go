@@ -26,6 +26,8 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 		}
 
 		s.committedPool.add(receipt, timestampOrNow(removedTx))
+
+		s.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Stringable("txHash", receipt.Txhash()))
 	}
 
 	s.lastCommittedBlockHeight = input.ResultsBlockHeader.BlockHeight()
