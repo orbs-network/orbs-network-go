@@ -1,9 +1,8 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -15,7 +14,7 @@ type service struct {
 
 	mutex                        *sync.RWMutex
 	contractSdkHandlerUnderMutex handlers.ContractSdkCallHandler
-	contractRepositoryUnderMutex map[primitives.ContractName]types.Contract
+	contractInstancesUnderMutex  map[string]sdk.Contract
 }
 
 func NewNativeProcessor(
@@ -33,13 +32,13 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	defer s.mutex.Unlock()
 
 	s.contractSdkHandlerUnderMutex = handler
-	s.contractRepositoryUnderMutex = s.initializePreBuiltRepositoryContractInstances(handler)
+	s.contractInstancesUnderMutex = initializePreBuiltRepositoryContractInstances(handler)
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	// retrieve code
-	executionContextId := types.Context(input.ContextId)
-	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, input.ContractName, input.MethodName)
+	executionContextId := sdk.Context(input.ContextId)
+	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, string(input.ContractName), string(input.MethodName))
 	if err != nil {
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
@@ -81,15 +80,15 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 
 func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
 	// retrieve code
-	executionContextId := types.Context(input.ContextId)
-	contractInfo, err := s.retrieveContractInfoFromRepository(executionContextId, input.ContractName)
+	executionContextId := sdk.Context(input.ContextId)
+	contractInfo, err := s.retrieveContractInfoFromRepository(executionContextId, string(input.ContractName))
 	if err != nil {
 		return nil, err
 	}
 
 	// result
 	return &services.GetContractInfoOutput{
-		PermissionScope: contractInfo.Permission,
+		PermissionScope: protocol.ExecutionPermissionScope(contractInfo.Permission),
 	}, nil
 }
 
@@ -100,12 +99,19 @@ func (s *service) getContractSdkHandler() handlers.ContractSdkCallHandler {
 	return s.contractSdkHandlerUnderMutex
 }
 
-func (s *service) getContractInstanceFromRepository(contractName primitives.ContractName) types.Contract {
+func (s *service) getContractInstanceFromRepository(contractName string) sdk.Contract {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	if s.contractRepositoryUnderMutex == nil {
+	if s.contractInstancesUnderMutex == nil {
 		return nil
 	}
-	return s.contractRepositoryUnderMutex[contractName]
+	return s.contractInstancesUnderMutex[contractName]
+}
+
+func (s *service) addContractInstanceToRepository(contractName string, contractInstance sdk.Contract) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.contractInstancesUnderMutex[contractName] = contractInstance
 }

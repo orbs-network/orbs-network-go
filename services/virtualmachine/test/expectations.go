@@ -72,12 +72,12 @@ func (h *harness) verifyNativeContractMethodCalled(t *testing.T) {
 	require.True(t, ok, "did not call processor: %v", err)
 }
 
-func (h *harness) expectSystemContractCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, returnError error, returnArgs ...interface{}) {
+func (h *harness) expectSystemContractCalled(expectedContractName string, expectedMethodName string, returnError error, returnArgs ...interface{}) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
-			input.ContractName == expectedContractName &&
-			input.MethodName == expectedMethodName
+			string(input.ContractName) == expectedContractName &&
+			string(input.MethodName) == expectedMethodName
 	}
 
 	callResult := protocol.EXECUTION_RESULT_SUCCESS

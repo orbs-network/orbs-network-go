@@ -1,16 +1,15 @@
 package deployments
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 )
 
-var CONTRACT = types.ContractInfo{
+var CONTRACT = sdk.ContractInfo{
 	Name:       "_Deployments",
-	Permission: protocol.PERMISSION_SCOPE_SYSTEM,
-	Methods: map[primitives.MethodName]types.MethodInfo{
+	Permission: sdk.PERMISSION_SCOPE_SYSTEM,
+	Methods: map[string]sdk.MethodInfo{
 		METHOD_INIT.Name:           METHOD_INIT,
 		METHOD_GET_INFO.Name:       METHOD_GET_INFO,
 		METHOD_GET_CODE.Name:       METHOD_GET_CODE,
@@ -19,37 +18,37 @@ var CONTRACT = types.ContractInfo{
 	InitSingleton: newContract,
 }
 
-func newContract(base *types.BaseContract) types.Contract {
+func newContract(base *sdk.BaseContract) sdk.Contract {
 	return &contract{base}
 }
 
-type contract struct{ *types.BaseContract }
+type contract struct{ *sdk.BaseContract }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_INIT = types.MethodInfo{
+var METHOD_INIT = sdk.MethodInfo{
 	Name:           "_init",
 	External:       false,
-	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract)._init,
 }
 
-func (c *contract) _init(ctx types.Context) error {
+func (c *contract) _init(ctx sdk.Context) error {
 	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_GET_INFO = types.MethodInfo{
+var METHOD_GET_INFO = sdk.MethodInfo{
 	Name:           "getInfo",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
 	Implementation: (*contract).getInfo,
 }
 
-func (c *contract) getInfo(ctx types.Context, serviceName string) (uint32, error) {
+func (c *contract) getInfo(ctx sdk.Context, serviceName string) (uint32, error) {
 	if serviceName == "_Deployments" { // getInfo on self
-		return uint32(protocol.PROCESSOR_TYPE_NATIVE), nil
+		return uint32(sdk.PROCESSOR_TYPE_NATIVE), nil
 	}
 	processorType, err := c.State.ReadUint32ByKey(ctx, serviceName+".Processor")
 	if err == nil && processorType == 0 {
@@ -60,14 +59,14 @@ func (c *contract) getInfo(ctx types.Context, serviceName string) (uint32, error
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_GET_CODE = types.MethodInfo{
+var METHOD_GET_CODE = sdk.MethodInfo{
 	Name:           "getCode",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
 	Implementation: (*contract).getCode,
 }
 
-func (c *contract) getCode(ctx types.Context, serviceName string) ([]byte, error) {
+func (c *contract) getCode(ctx sdk.Context, serviceName string) ([]byte, error) {
 	code, err := c.State.ReadBytesByKey(ctx, serviceName+".Code")
 	if err == nil && len(code) == 0 {
 		err = errors.New("contract code not available")
@@ -77,34 +76,36 @@ func (c *contract) getCode(ctx types.Context, serviceName string) ([]byte, error
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_DEPLOY_SERVICE = types.MethodInfo{
+var METHOD_DEPLOY_SERVICE = sdk.MethodInfo{
 	Name:           "deployService",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract).deployService,
 }
 
-func (c *contract) deployService(ctx types.Context, serviceName string, processorType uint32, code []byte) error {
+func (c *contract) deployService(ctx sdk.Context, serviceName string, processorType uint32, code []byte) error {
 	_, err := c.getInfo(ctx, serviceName)
 	if err == nil {
 		return errors.New("contract already deployed")
 	}
 
+	// TODO: sanitize serviceName
+
 	err = c.State.WriteUint32ByKey(ctx, serviceName+".Processor", processorType)
 	if err != nil {
-		return errors.Wrap(err, "failed writing Processor key")
+		return fmt.Errorf("failed writing Processor key: %s", err.Error())
 	}
 
 	if len(code) != 0 {
 		err = c.State.WriteBytesByKey(ctx, serviceName+".Code", code)
 		if err != nil {
-			return errors.Wrap(err, "failed writing Code key")
+			return fmt.Errorf("failed writing Code key: %s", err.Error())
 		}
 	}
 
 	_, err = c.Service.CallMethod(ctx, serviceName, "_init")
 	if err != nil {
-		errors.New("failed to initialize contract")
+		return errors.New("failed to initialize contract")
 	}
 
 	return nil

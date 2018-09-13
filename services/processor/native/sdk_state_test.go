@@ -1,8 +1,8 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
@@ -16,8 +16,8 @@ func exampleKey() string {
 	return "example-key"
 }
 
-func exampleKeyAddress() primitives.Ripmd160Sha256 {
-	return hash.CalcRipmd160Sha256([]byte(exampleKey()))
+func exampleKeyAddress() sdk.Ripmd160Sha256 {
+	return sdk.Ripmd160Sha256(hash.CalcRipmd160Sha256([]byte(exampleKey())))
 }
 
 func TestWriteReadBytesByAddress(t *testing.T) {

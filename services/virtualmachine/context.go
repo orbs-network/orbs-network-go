@@ -66,16 +66,16 @@ func (cp *executionContextProvider) allocateExecutionContext(blockHeight primiti
 	return newContextId, newContext
 }
 
-func (cp *executionContextProvider) destroyExecutionContext(contextId primitives.ExecutionContextId) {
+func (cp *executionContextProvider) destroyExecutionContext(executionContextId primitives.ExecutionContextId) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	delete(cp.activeContexts, contextId)
+	delete(cp.activeContexts, executionContextId)
 }
 
-func (cp *executionContextProvider) loadExecutionContext(contextId primitives.ExecutionContextId) *executionContext {
+func (cp *executionContextProvider) loadExecutionContext(executionContextId primitives.ExecutionContextId) *executionContext {
 	cp.mutex.RLock()
 	defer cp.mutex.RUnlock()
 
-	return cp.activeContexts[contextId]
+	return cp.activeContexts[executionContextId]
 }

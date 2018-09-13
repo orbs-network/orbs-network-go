@@ -1,27 +1,31 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 )
 
-func (s *service) initializePreBuiltRepositoryContractInstances(sdkHandler handlers.ContractSdkCallHandler) map[primitives.ContractName]types.Contract {
-	preBuiltRepository := make(map[primitives.ContractName]types.Contract)
-	for _, contract := range repository.Contracts {
-		preBuiltRepository[contract.Name] = contract.InitSingleton(types.NewBaseContract(
-			&stateSdk{sdkHandler, contract.Permission},
-			&serviceSdk{sdkHandler, contract.Permission},
-		))
+func initializePreBuiltRepositoryContractInstances(sdkHandler handlers.ContractSdkCallHandler) map[string]sdk.Contract {
+	preBuiltRepository := make(map[string]sdk.Contract)
+	for _, contract := range repository.PreBuiltContracts {
+		preBuiltRepository[contract.Name] = initializeContractInstance(&contract, sdkHandler)
 	}
 	return preBuiltRepository
 }
 
-func (s *service) retrieveContractAndMethodInfoFromRepository(executionContextId types.Context, contractName primitives.ContractName, methodName primitives.MethodName) (*types.ContractInfo, *types.MethodInfo, error) {
+func initializeContractInstance(contractInfo *sdk.ContractInfo, sdkHandler handlers.ContractSdkCallHandler) sdk.Contract {
+	return contractInfo.InitSingleton(sdk.NewBaseContract(
+		&stateSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
+		&serviceSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
+	))
+}
+
+func (s *service) retrieveContractAndMethodInfoFromRepository(executionContextId sdk.Context, contractName string, methodName string) (*sdk.ContractInfo, *sdk.MethodInfo, error) {
 	contract, err := s.retrieveContractInfoFromRepository(executionContextId, contractName)
 	if err != nil {
 		return nil, nil, err
@@ -33,9 +37,9 @@ func (s *service) retrieveContractAndMethodInfoFromRepository(executionContextId
 	return contract, &method, nil
 }
 
-func (s *service) retrieveContractInfoFromRepository(executionContextId types.Context, contractName primitives.ContractName) (*types.ContractInfo, error) {
+func (s *service) retrieveContractInfoFromRepository(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
 	// try pre-built repository first
-	contract, found := repository.Contracts[contractName]
+	contract, found := repository.PreBuiltContracts[contractName]
 	if found {
 		return &contract, nil
 	}
@@ -45,22 +49,42 @@ func (s *service) retrieveContractInfoFromRepository(executionContextId types.Co
 	return s.retrieveDeployableContractInfoFromState(executionContextId, contractName)
 }
 
-func (s *service) retrieveDeployableContractInfoFromState(executionContextId types.Context, contractName primitives.ContractName) (*types.ContractInfo, error) {
-	_, err := s.callGetDeploymentCodeSystemContract(executionContextId, contractName)
+const artifactsPath = "/opt/orbs/native-processor/"
+
+func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
+	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+
+	code, err := sanitizeDeployedSourceCode(string(codeBytes))
+	if err != nil {
+		return nil, errors.Wrap(err, "source code for contract '%s' failed security sandbox audit")
+	}
+
+	newContractInfo, err := compileAndLoadDeployedSourceCode(code, artifactsPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "compilation of contract '%s' failed")
+	}
+
+	sdkHandler := s.getContractSdkHandler()
+	if sdkHandler == nil {
+		return nil, errors.New("ContractSdkCallHandler has not registered yet")
+	}
+	contractInstance := initializeContractInstance(newContractInfo, sdkHandler)
+
+	s.addContractInstanceToRepository(contractName, contractInstance)
+	return newContractInfo, nil
 }
 
-func (s *service) callGetDeploymentCodeSystemContract(executionContextId types.Context, contractName primitives.ContractName) ([]byte, error) {
+func (s *service) callGetCodeOfDeploymentSystemContract(executionContextId sdk.Context, contractName string) ([]byte, error) {
 	handler := s.getContractSdkHandler()
 	if handler == nil {
 		return nil, errors.New("ContractSdkCallHandler has not registered yet")
 	}
 
-	systemContractName := deployments.CONTRACT.Name
-	systemMethodName := deployments.METHOD_GET_CODE.Name
+	systemContractName := primitives.ContractName(deployments.CONTRACT.Name)
+	systemMethodName := primitives.MethodName(deployments.METHOD_GET_CODE.Name)
 
 	output, err := handler.HandleSdkCall(&handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),

@@ -3,18 +3,16 @@ package contracts
 import "fmt"
 
 const counterContractCode = `
-package counter
+package main
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 )
 
-var CONTRACT = types.ContractInfo{
+var CONTRACT = sdk.ContractInfo{
 	Name:       "CounterFrom%d",
-	Permission: protocol.PERMISSION_SCOPE_SERVICE,
-	Methods: map[primitives.MethodName]types.MethodInfo{
+	Permission: sdk.PERMISSION_SCOPE_SERVICE,
+	Methods: map[string]sdk.MethodInfo{
 		METHOD_INIT.Name: METHOD_INIT,
 		METHOD_ADD.Name:  METHOD_ADD,
 		METHOD_GET.Name:  METHOD_GET,
@@ -22,35 +20,35 @@ var CONTRACT = types.ContractInfo{
 	InitSingleton: newContract,
 }
 
-func newContract(base *types.BaseContract) types.Contract {
+func newContract(base *sdk.BaseContract) sdk.Contract {
 	return &contract{base}
 }
 
-type contract struct{ *types.BaseContract }
+type contract struct{ *sdk.BaseContract }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_INIT = types.MethodInfo{
+var METHOD_INIT = sdk.MethodInfo{
 	Name:           "_init",
 	External:       false,
-	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract)._init,
 }
 
-func (c *contract) _init(ctx types.Context) error {
+func (c *contract) _init(ctx sdk.Context) error {
 	return c.State.WriteUint64ByKey(ctx, "count", %d)
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_ADD = types.MethodInfo{
+var METHOD_ADD = sdk.MethodInfo{
 	Name:           "add",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract).add,
 }
 
-func (c *contract) add(ctx types.Context, amount uint64) error {
+func (c *contract) add(ctx sdk.Context, amount uint64) error {
 	count, err := c.State.ReadUint64ByKey(ctx, "count")
 	if err != nil {
 		return err
@@ -61,14 +59,14 @@ func (c *contract) add(ctx types.Context, amount uint64) error {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_GET = types.MethodInfo{
+var METHOD_GET = sdk.MethodInfo{
 	Name:           "get",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
 	Implementation: (*contract).get,
 }
 
-func (c *contract) get(ctx types.Context) (uint64, error) {
+func (c *contract) get(ctx sdk.Context) (uint64, error) {
 	return c.State.ReadUint64ByKey(ctx, "count")
 }
 `
