@@ -57,7 +57,7 @@ func main() {
 
 		result, _ := jsonapi.SendTransaction(tx, keyPair, *apiEndpointPtr, *verbosePtr)
 
-		jsonBytes, _ := json.Marshal(result.TransactionReceipt)
+		jsonBytes, _ := json.Marshal(result)
 		fmt.Println(string(jsonBytes))
 	} else if *callMethodPtr != "" {
 		if *verbosePtr {
