@@ -22,7 +22,7 @@ type TestStatePersistence struct {
 func NewTamperingStatePersistence() TamperingStatePersistence {
 	return &TestStatePersistence{
 		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(),
-		blockTrackerForTests:     synchronization.NewBlockTracker(0, 64000, time.Duration(10*time.Second)),
+		blockTrackerForTests:     synchronization.NewBlockTracker(0, 64000, time.Duration(1*time.Second)),
 	}
 }
 
