@@ -105,7 +105,7 @@ func allStates(collecting bool) []blockSyncState {
 	}
 }
 
-func TestPetitionerEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *testing.T) {
+func TestPetitionerEveryStateExceptCollectingMovesToCollectingAfterStartSyncEvent(t *testing.T) {
 	for _, state := range allStates(false) {
 		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
 			harness := newBlockSyncHarness()
@@ -115,7 +115,6 @@ func TestPetitionerEveryStateExceptCollectingRestartsSyncAfterStartSyncEvent(t *
 			harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
 			harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 			harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
-			harness.startSyncTimer.When("Reset").Return().Times(1)
 
 			event := startSyncEvent{}
 
@@ -171,6 +170,8 @@ func TestPetitionerStartSyncGossipFailure(t *testing.T) {
 
 func TestPetitionerCollectingAvailabilityNoResponsesFlow(t *testing.T) {
 	harness := newBlockSyncHarness()
+
+	harness.startSyncTimer.When("FireNow").Return().Times(1)
 
 	event := collectingAvailabilityFinishedEvent{}
 	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{}
