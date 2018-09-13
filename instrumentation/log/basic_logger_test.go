@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -252,35 +253,27 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 	})
 }
 
-func BenchmarkBasicLoggerInfoWithStdout(b *testing.B) {
+func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
 	receipts := []*protocol.TransactionReceipt{
 		builders.TransactionReceipt().WithRandomHash().Build(),
 		builders.TransactionReceipt().WithRandomHash().Build(),
 	}
 
-	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(os.Stdout))
-
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
-	}
-	b.StopTimer()
-}
-
-func BenchmarkBasicLoggerInfoWithDiscardStdout(b *testing.B) {
-	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash().Build(),
-		builders.TransactionReceipt().WithRandomHash().Build(),
-	}
+	formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
 
 	discardStdout(func(writer io.Writer) {
-		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
+		for _, formatter := range formatters {
+			b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
+				serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+					WithOutput(log.NewOutput(writer).WithFormatter(formatter))
 
-		b.StartTimer()
-		for i := 0; i < b.N; i++ {
-			serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+				b.StartTimer()
+				for i := 0; i < b.N; i++ {
+					serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+				}
+				b.StopTimer()
+			})
 		}
-		b.StopTimer()
 	})
 }
 
@@ -290,30 +283,21 @@ func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
 		builders.TransactionReceipt().WithRandomHash().Build(),
 	}
 
-	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(ioutil.Discard))
+	outputs := []io.Writer{os.Stdout, ioutil.Discard}
 
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+	for _, output := range outputs {
+		b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
+
+			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+				WithOutput(log.NewOutput(output).WithFormatter(log.NewHumanReadableFormatter()))
+
+			b.StartTimer()
+			for i := 0; i < b.N; i++ {
+				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+			}
+			b.StopTimer()
+		})
 	}
-	b.StopTimer()
-}
-
-func BenchmarkBasicLoggerInfoWithDiscardStdoutWithHumanReadable(b *testing.B) {
-	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash().Build(),
-		builders.TransactionReceipt().WithRandomHash().Build(),
-	}
-
-	discardStdout(func(writer io.Writer) {
-		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer).WithFormatter(log.NewHumanReadableFormatter()))
-
-		b.StartTimer()
-		for i := 0; i < b.N; i++ {
-			serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
-		}
-		b.StopTimer()
-	})
 }
 
 func checkOutput(t *testing.T, output string) {
