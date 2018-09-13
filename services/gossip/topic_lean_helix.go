@@ -36,7 +36,7 @@ func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepar
 		return nil, err
 	}
 	if input.Message.SignedHeader == nil || input.Message.Sender == nil {
-		return nil, errors.Errorf("cannot encode LeanHelixPrePrepareMessage", log.Stringable("message", input.Message))
+		return nil, errors.Errorf("cannot encode LeanHelixPrePrepareMessage: %s", input.Message.String())
 	}
 	payloads := append([][]byte{header.Raw(), input.Message.SignedHeader.Raw(), input.Message.Sender.Raw()}, blockPairPayloads...)
 
@@ -59,13 +59,16 @@ func (s *service) receivedLeanHelixPrePrepare(header *gossipmessages.Header, pay
 	}
 
 	for _, l := range s.leanHelixHandlers {
-		l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
+		_, err := l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
 			Message: &gossipmessages.LeanHelixPrePrepareMessage{
 				SignedHeader: signedHeader,
 				Sender:       senderSignature,
 				BlockPair:    blockPair,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleLeanHelixPrePrepare failed", log.Error(err))
+		}
 	}
 }
 
@@ -87,7 +90,10 @@ func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput
 
 func (s *service) receivedLeanHelixPrepare(header *gossipmessages.Header, payloads [][]byte) {
 	for _, l := range s.leanHelixHandlers {
-		l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+		_, err := l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+		if err != nil {
+			s.reporting.Info("HandleLeanHelixPrepare failed", log.Error(err))
+		}
 	}
 }
 
@@ -109,7 +115,10 @@ func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) 
 
 func (s *service) receivedLeanHelixCommit(header *gossipmessages.Header, payloads [][]byte) {
 	for _, l := range s.leanHelixHandlers {
-		l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
+		_, err := l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
+		if err != nil {
+			s.reporting.Info("HandleLeanHelixCommit failed", log.Error(err))
+		}
 	}
 }
 

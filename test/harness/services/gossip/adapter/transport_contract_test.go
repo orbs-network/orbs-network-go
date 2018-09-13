@@ -102,13 +102,13 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 		createContractTestConfig(res.publicKeys[3], federationNodes),
 	}
 
-	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	res.transports = []adapter.Transport{
-		adapter.NewDirectTransport(ctx, configs[0], log),
-		adapter.NewDirectTransport(ctx, configs[1], log),
-		adapter.NewDirectTransport(ctx, configs[2], log),
-		adapter.NewDirectTransport(ctx, configs[3], log),
+		adapter.NewDirectTransport(ctx, configs[0], logger),
+		adapter.NewDirectTransport(ctx, configs[1], logger),
+		adapter.NewDirectTransport(ctx, configs[2], logger),
+		adapter.NewDirectTransport(ctx, configs[3], logger),
 	}
 	res.listeners = []*mockListener{
 		listenTo(res.transports[0], res.publicKeys[0]),
