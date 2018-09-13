@@ -1,20 +1,23 @@
 package synchronization
 
-import "time"
+import (
+	"sync/atomic"
+	"time"
+)
 
 type Trigger interface {
 	Start()
 	Reset(duration time.Duration)
-	TimesTriggered() uint
-	TimesReset() uint
-	TimesTriggeredManually() uint
+	TimesTriggered() uint64
+	TimesReset() uint64
+	TimesTriggeredManually() uint64
 	IsRunning() bool
 	FireNow()
 	Stop()
 }
 
 type Telemetry struct {
-	timesReset, timesTriggered, timesTriggeredManually uint
+	timesReset, timesTriggered, timesTriggeredManually uint64
 }
 
 type periodicalTrigger struct {
@@ -60,16 +63,16 @@ func (t *periodicalTrigger) IsRunning() bool {
 	return t.running
 }
 
-func (t *periodicalTrigger) TimesTriggered() uint {
-	return t.metrics.timesTriggered
+func (t *periodicalTrigger) TimesTriggered() uint64 {
+	return atomic.LoadUint64(&t.metrics.timesTriggered)
 }
 
-func (t *periodicalTrigger) TimesReset() uint {
-	return t.metrics.timesReset
+func (t *periodicalTrigger) TimesReset() uint64 {
+	return atomic.LoadUint64(&t.metrics.timesReset)
 }
 
-func (t *periodicalTrigger) TimesTriggeredManually() uint {
-	return t.metrics.timesTriggeredManually
+func (t *periodicalTrigger) TimesTriggeredManually() uint64 {
+	return atomic.LoadUint64(&t.metrics.timesTriggeredManually)
 }
 
 func (t *periodicalTrigger) Start() {
@@ -84,7 +87,7 @@ func (t *periodicalTrigger) Start() {
 				select {
 				case <-t.ticker.C:
 					t.f()
-					t.metrics.timesTriggered++
+					atomic.AddUint64(&t.metrics.timesTriggered, 1)
 				case <-t.stop:
 					t.ticker.Stop()
 					return
@@ -103,7 +106,7 @@ func (t *periodicalTrigger) FireNow() {
 		t.reset(t.d, true)
 	}
 	go t.f()
-	t.metrics.timesTriggeredManually++
+	atomic.AddUint64(&t.metrics.timesTriggeredManually, 1)
 }
 
 func (t *periodicalTrigger) Reset(duration time.Duration) {
@@ -113,7 +116,7 @@ func (t *periodicalTrigger) Reset(duration time.Duration) {
 func (t *periodicalTrigger) reset(duration time.Duration, internal bool) {
 	t.Stop()
 	if !internal {
-		t.metrics.timesReset++
+		atomic.AddUint64(&t.metrics.timesReset, 1)
 	}
 	t.d = duration
 	t.Start()

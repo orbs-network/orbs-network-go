@@ -25,17 +25,17 @@ func (m *PeriodicalTriggerMock) Start() {
 	m.Called()
 }
 
-func (m *PeriodicalTriggerMock) TimesTriggered() uint {
+func (m *PeriodicalTriggerMock) TimesTriggered() uint64 {
 	m.Called()
 	return 0
 }
 
-func (m *PeriodicalTriggerMock) TimesReset() uint {
+func (m *PeriodicalTriggerMock) TimesReset() uint64 {
 	m.Called()
 	return 0
 }
 
-func (m *PeriodicalTriggerMock) TimesTriggeredManually() uint {
+func (m *PeriodicalTriggerMock) TimesTriggeredManually() uint64 {
 	m.Called()
 	return 0
 }
