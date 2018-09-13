@@ -245,6 +245,7 @@ func TestPetitionerCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *test
 
 	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
 	harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+	harness.startSyncTimer.When("FireNow").Return().Times(1)
 
 	event := collectingAvailabilityFinishedEvent{}
 	availabilityResponse := builders.BlockAvailabilityResponseInput().Build().Message

@@ -144,7 +144,7 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			if err != nil {
 				b.reporting.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", syncSource.Sender))
 				currentState = BLOCK_SYNC_STATE_IDLE
-				// what triggers the next sync??
+				startSyncTimer.FireNow()
 			} else {
 				b.reporting.Info("requested block chunk from source", log.Stringable("source", syncSource.Sender))
 				currentState = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
