@@ -240,20 +240,6 @@ func TestPetitionerFinishingCollectingAvailabilityRequestsSendsBlockSyncRequest(
 	harness.verifyMocks(t)
 }
 
-func TestPetitionerCollectingAvailabilityDoesNothingIfNoResponsesCollected(t *testing.T) {
-	harness := newBlockSyncHarness()
-
-	event := collectingAvailabilityFinishedEvent{}
-	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{}
-
-	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, event, availabilityResponses, harness.startSyncTimer)
-
-	require.Equal(t, BLOCK_SYNC_STATE_IDLE, newState, "state change does not match expected")
-	require.Empty(t, availabilityResponses, "availabilityResponses should not have been changed")
-
-	harness.verifyMocks(t)
-}
-
 func TestPetitionerCollectingAvailabilityDoesNothingIfFailsToSendRequest(t *testing.T) {
 	harness := newBlockSyncHarness()
 
