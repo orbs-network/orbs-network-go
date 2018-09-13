@@ -33,6 +33,18 @@ func captureStdout(f func(writer io.Writer)) string {
 	return buf.String()
 }
 
+type discardWriter struct {
+}
+
+func (w *discardWriter) Write(p []byte) (n int, err error) {
+	return 0, nil
+}
+
+func discardStdout(f func(writer io.Writer)) {
+	writer := &discardWriter{}
+	f(writer)
+}
+
 func parseOutput(input string) map[string]interface{} {
 	jsonMap := make(map[string]interface{})
 	_ = json.Unmarshal([]byte(input), &jsonMap)
@@ -237,6 +249,70 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer).WithFormatter(log.NewHumanReadableFormatter()), log.NewOutput(fileOutput))
 			serviceLogger.Info("Service initialized")
 		})
+	})
+}
+
+func BenchmarkBasicLoggerInfoWithStdout(b *testing.B) {
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash().Build(),
+	}
+
+	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(os.Stdout))
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+	}
+	b.StopTimer()
+}
+
+func BenchmarkBasicLoggerInfoWithDiscardStdout(b *testing.B) {
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash().Build(),
+	}
+
+	discardStdout(func(writer io.Writer) {
+		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
+
+		b.StartTimer()
+		for i := 0; i < b.N; i++ {
+			serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+		}
+		b.StopTimer()
+	})
+}
+
+func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash().Build(),
+	}
+
+	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(ioutil.Discard))
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+	}
+	b.StopTimer()
+}
+
+func BenchmarkBasicLoggerInfoWithDiscardStdoutWithHumanReadable(b *testing.B) {
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash().Build(),
+	}
+
+	discardStdout(func(writer io.Writer) {
+		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer).WithFormatter(log.NewHumanReadableFormatter()))
+
+		b.StartTimer()
+		for i := 0; i < b.N; i++ {
+			serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+		}
+		b.StopTimer()
 	})
 }
 
