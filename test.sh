@@ -74,15 +74,15 @@ run_acceptance_tests () {
 # Omitted -a from "tee" command on purpose, so that output file will be truncated
 echo "@@@@@ STARTING TO RUN TESTS (output: ${OUT}) @@@@@\n" | tee ${OUT}
 
-#run_all_tests
-#check_exit_code_and_report
-
-#run_component_tests
-run_specific_test
+run_all_tests
 check_exit_code_and_report
 
-#run_acceptance_tests
-#check_exit_code_and_report
+#run_specific_test
+run_component_tests
+check_exit_code_and_report
+
+run_acceptance_tests
+check_exit_code_and_report
 
 echo "\n@@@@@ FINISHED RUNNING ALL TESTS (output: ${OUT}) @@@@@" | tee -a ${OUT}
 echo "\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n" | tee -a ${OUT}
