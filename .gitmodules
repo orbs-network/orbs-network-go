@@ -62,3 +62,6 @@
 [submodule "vendor/github.com/orbs-network/lean-helix-go"]
 	path = vendor/github.com/orbs-network/lean-helix-go
 	url = https://github.com/orbs-network/lean-helix-go
+[submodule "vendor/github.com/valyala/fasthttp"]
+	path = vendor/github.com/valyala/fasthttp
+	url = https://github.com/valyala/fasthttp
