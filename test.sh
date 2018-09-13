@@ -15,8 +15,8 @@ check_exit_code_and_report () {
     fi
 }
 
-go test -timeout 20s ./... -failfast > test.out
+go test -timeout 1m ./... -failfast > test.out
 check_exit_code_and_report
 
-go test ./test/acceptance -count 100 -timeout 30s -failfast > test.out
+go test ./test/acceptance -count 100 -timeout 3m -failfast > test.out
 check_exit_code_and_report
