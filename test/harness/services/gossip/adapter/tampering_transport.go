@@ -4,8 +4,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"math/rand"
 	"runtime"
 	"sync"
+	"time"
 )
 
 // The TamperingTransport is an in-memory implementation of the Gossip Transport adapter, that adds the ability
@@ -27,6 +29,12 @@ type TamperingTransport interface {
 	// calling LatchingTamper.Wait(). This is useful to force a test goroutine to block until a certain message has
 	// been sent
 	LatchOn(predicate MessagePredicate) LatchingTamper
+
+	// Creates an ongoing tamper which duplicates messages matching the given predicate
+	Duplicate(predicate MessagePredicate) OngoingTamper
+
+	// Creates an ongoing tamper which corrupts messages matching the given predicate
+	Corrupt(predicate MessagePredicate) OngoingTamper
 }
 
 // A predicate for matching messages with a certain property
@@ -42,11 +50,13 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	mutex              *sync.Mutex
-	transportListeners map[string]adapter.TransportListener
-	failingTamperers   []*failingTamperer
-	pausingTamperers   []*pausingTamperer
-	latchingTamperers  []*latchingTamperer
+	mutex                *sync.Mutex
+	transportListeners   map[string]adapter.TransportListener
+	failingTamperers     []*failingTamperer
+	pausingTamperers     []*pausingTamperer
+	latchingTamperers    []*latchingTamperer
+	duplicatingTamperers []*duplicatingTamperer
+	corruptingTamperer   []*corruptingTamperer
 }
 
 func NewTamperingTransport() TamperingTransport {
@@ -73,6 +83,21 @@ func (t *tamperingTransport) Send(data *adapter.TransportData) error {
 		return nil
 	}
 
+	if t.shouldDuplicate(data) {
+		go func() {
+			time.Sleep(10 * time.Millisecond)
+			t.receive(data)
+		}()
+	}
+
+	if t.shouldCorrupt(data) {
+		for i := 0; i < 10; i++ {
+			x := rand.Intn(len(data.Payloads))
+			y := rand.Intn(len(data.Payloads[x]))
+			data.Payloads[x][y] = 0
+		}
+	}
+
 	go t.receive(data)
 	return nil
 }
@@ -90,6 +115,22 @@ func (t *tamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	t.failingTamperers = append(t.failingTamperers, tamperer)
+	return tamperer
+}
+
+func (t *tamperingTransport) Duplicate(predicate MessagePredicate) OngoingTamper {
+	tamperer := &duplicatingTamperer{predicate: predicate, transport: t}
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	t.duplicatingTamperers = append(t.duplicatingTamperers, tamperer)
+	return tamperer
+}
+
+func (t *tamperingTransport) Corrupt(predicate MessagePredicate) OngoingTamper {
+	tamperer := &corruptingTamperer{predicate: predicate, transport: t}
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	t.corruptingTamperer = append(t.corruptingTamperer, tamperer)
 	return tamperer
 }
 
@@ -114,6 +155,42 @@ func (t *tamperingTransport) removeFailTamperer(tamperer *failingTamperer) {
 			a = a[:len(a)-1]
 
 			t.failingTamperers = a
+
+			return
+		}
+	}
+	panic("Tamperer not found in ongoing tamperer list")
+}
+
+func (t *tamperingTransport) removeDuplicatingTamperer(tamperer *duplicatingTamperer) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	a := t.duplicatingTamperers
+	for p, v := range a {
+		if v == tamperer {
+			a[p] = a[len(a)-1]
+			a[len(a)-1] = nil
+			a = a[:len(a)-1]
+
+			t.duplicatingTamperers = a
+
+			return
+		}
+	}
+	panic("Tamperer not found in ongoing tamperer list")
+}
+
+func (t *tamperingTransport) removeCorruptingTamperer(tamperer *corruptingTamperer) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	a := t.corruptingTamperer
+	for p, v := range a {
+		if v == tamperer {
+			a[p] = a[len(a)-1]
+			a[len(a)-1] = nil
+			a = a[:len(a)-1]
+
+			t.corruptingTamperer = a
 
 			return
 		}
@@ -194,6 +271,24 @@ func (t *tamperingTransport) shouldFail(data *adapter.TransportData) bool {
 	return false
 }
 
+func (t *tamperingTransport) shouldDuplicate(data *adapter.TransportData) bool {
+	for _, o := range t.duplicatingTamperers {
+		if o.predicate(data) {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *tamperingTransport) shouldCorrupt(data *adapter.TransportData) bool {
+	for _, o := range t.corruptingTamperer {
+		if o.predicate(data) {
+			return true
+		}
+	}
+	return false
+}
+
 func (t *tamperingTransport) hasPaused(data *adapter.TransportData) bool {
 	for _, p := range t.pausingTamperers {
 		if p.predicate(data) {
@@ -218,6 +313,16 @@ type failingTamperer struct {
 	transport *tamperingTransport
 }
 
+type duplicatingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+}
+
+type corruptingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+}
+
 type pausingTamperer struct {
 	predicate MessagePredicate
 	transport *tamperingTransport
@@ -232,6 +337,14 @@ type latchingTamperer struct {
 
 func (o *failingTamperer) Release() {
 	o.transport.removeFailTamperer(o)
+}
+
+func (o *duplicatingTamperer) Release() {
+	o.transport.removeDuplicatingTamperer(o)
+}
+
+func (o *corruptingTamperer) Release() {
+	o.transport.removeCorruptingTamperer(o)
 }
 
 func (o *pausingTamperer) Release() {
