@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(4).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(network harness.AcceptanceTestNetwork) {
 		network.GossipTransport().Duplicate(AnyNthMessage(7))
 
 		sendTransactions(network, t, 100)
@@ -19,7 +19,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(4).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(network harness.AcceptanceTestNetwork) {
 		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
 		sendTransactions(network, t, 100)
@@ -27,7 +27,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(4).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(network harness.AcceptanceTestNetwork) {
 		network.GossipTransport().Delay(AnyNthMessage(1))
 
 		sendTransactions(network, t, 100)
