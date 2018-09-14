@@ -1,7 +1,6 @@
 package native
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -130,10 +129,8 @@ func (s *service) getDeployableContractInfoFromRepository(contractName string) *
 	defer s.mutex.RUnlock()
 
 	if s.deployableContractsUnderMutex == nil {
-		fmt.Println("****************************** empty")
 		return nil
 	}
-	fmt.Println("****************************** returning", s.deployableContractsUnderMutex[contractName])
 	return s.deployableContractsUnderMutex[contractName]
 }
 
@@ -144,6 +141,5 @@ func (s *service) addDeployableContractInfoToRepository(contractName string, con
 	if s.deployableContractsUnderMutex == nil {
 		return
 	}
-	fmt.Println("****************************** writing", contractInfo)
 	s.deployableContractsUnderMutex[contractName] = contractInfo
 }

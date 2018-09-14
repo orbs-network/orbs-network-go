@@ -2,6 +2,7 @@ package native
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -38,14 +39,19 @@ func (s *service) retrieveContractAndMethodInfoFromRepository(executionContextId
 }
 
 func (s *service) retrieveContractInfoFromRepository(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
-	// try pre-built repository first
-	contract, found := repository.PreBuiltContracts[contractName]
+	// 1. try pre-built repository
+	contractInfo, found := repository.PreBuiltContracts[contractName]
 	if found {
-		return &contract, nil
+		return contractInfo, nil
 	}
 
-	// try state for deployable second
-	// TODO: artifact cache - no need to access state if an artifact is built
+	// 2. try deployable artifact cache (if already compiled)
+	contractInfo = s.getDeployableContractInfoFromRepository(contractName)
+	if contractInfo != nil {
+		return contractInfo, nil
+	}
+
+	// 3. try deployable code from state (if not yet compiled)
 	return s.retrieveDeployableContractInfoFromState(executionContextId, contractName)
 }
 
@@ -77,6 +83,9 @@ func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk
 	contractInstance := initializeContractInstance(newContractInfo, sdkHandler)
 
 	s.addContractInstanceToRepository(contractName, contractInstance)
+	s.addDeployableContractInfoToRepository(contractName, newContractInfo) // must add after instance to avoid race (when somebody RunsMethod at same time)
+	s.reporting.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
+
 	return newContractInfo, nil
 }
 
