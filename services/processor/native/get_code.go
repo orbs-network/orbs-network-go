@@ -10,15 +10,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func initializePreBuiltRepositoryContractInstances(sdkHandler handlers.ContractSdkCallHandler) map[string]sdk.Contract {
-	preBuiltRepository := make(map[string]sdk.Contract)
-	for _, contract := range repository.PreBuiltContracts {
-		preBuiltRepository[contract.Name] = initializeContractInstance(&contract, sdkHandler)
+func initializePreBuiltRepositoryContractInstances(sdkHandler handlers.ContractSdkCallHandler) map[string]sdk.ContractInstance {
+	preBuiltRepository := make(map[string]sdk.ContractInstance)
+	for _, contractInfo := range repository.PreBuiltContracts {
+		preBuiltRepository[contractInfo.Name] = initializeContractInstance(contractInfo, sdkHandler)
 	}
 	return preBuiltRepository
 }
 
-func initializeContractInstance(contractInfo *sdk.ContractInfo, sdkHandler handlers.ContractSdkCallHandler) sdk.Contract {
+func initializeContractInstance(contractInfo *sdk.ContractInfo, sdkHandler handlers.ContractSdkCallHandler) sdk.ContractInstance {
 	return contractInfo.InitSingleton(sdk.NewBaseContract(
 		&stateSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
 		&serviceSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
@@ -49,7 +49,7 @@ func (s *service) retrieveContractInfoFromRepository(executionContextId sdk.Cont
 	return s.retrieveDeployableContractInfoFromState(executionContextId, contractName)
 }
 
-const artifactsPath = "/opt/orbs/native-processor/"
+const artifactsPath = "/tmp/orbs/native-processor/" // TODO: move to config?
 
 func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
 	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(executionContextId, contractName)
@@ -59,12 +59,15 @@ func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk
 
 	code, err := sanitizeDeployedSourceCode(string(codeBytes))
 	if err != nil {
-		return nil, errors.Wrap(err, "source code for contract '%s' failed security sandbox audit")
+		return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 	}
 
 	newContractInfo, err := compileAndLoadDeployedSourceCode(code, artifactsPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "compilation of contract '%s' failed")
+		return nil, errors.Wrapf(err, "compilation of deployable contract '%s' failed", contractName)
+	}
+	if newContractInfo == nil {
+		return nil, errors.Errorf("compilation and load of deployable contract '%s' did not return a valid symbol", contractName)
 	}
 
 	sdkHandler := s.getContractSdkHandler()

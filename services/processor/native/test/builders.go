@@ -51,7 +51,7 @@ func (p *processCall) WithUnknownMethod() *processCall {
 
 func (p *processCall) WithDeployableCounterContract(counterStart uint64) *processCall {
 	p.input.ContractName = primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart))
-	p.input.MethodName = "get"
+	p.input.MethodName = "start"
 	return p
 }
 

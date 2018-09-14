@@ -14,7 +14,7 @@ var CONTRACT = sdk.ContractInfo{
 	InitSingleton: newContract,
 }
 
-func newContract(base *sdk.BaseContract) sdk.Contract {
+func newContract(base *sdk.BaseContract) sdk.ContractInstance {
 	return &contract{base}
 }
 

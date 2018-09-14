@@ -223,7 +223,7 @@ func (n *acceptanceTestNetwork) SendDeployCounterContract(nodeIndex int, counter
 		WithArgs(
 			fmt.Sprintf("CounterFrom%d", counterStart),
 			uint32(protocol.PROCESSOR_TYPE_NATIVE),
-			contracts.SourceCodeForCounter(counterStart),
+			[]byte(contracts.SourceCodeForCounter(counterStart)),
 		)
 	go func() {
 		request := (&client.SendTransactionRequestBuilder{

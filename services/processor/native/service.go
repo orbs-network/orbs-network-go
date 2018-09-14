@@ -1,6 +1,7 @@
 package native
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -12,9 +13,10 @@ import (
 type service struct {
 	reporting log.BasicLogger
 
-	mutex                        *sync.RWMutex
-	contractSdkHandlerUnderMutex handlers.ContractSdkCallHandler
-	contractInstancesUnderMutex  map[string]sdk.Contract
+	mutex                         *sync.RWMutex
+	contractSdkHandlerUnderMutex  handlers.ContractSdkCallHandler
+	contractInstancesUnderMutex   map[string]sdk.ContractInstance
+	deployableContractsUnderMutex map[string]*sdk.ContractInfo
 }
 
 func NewNativeProcessor(
@@ -32,7 +34,11 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	defer s.mutex.Unlock()
 
 	s.contractSdkHandlerUnderMutex = handler
-	s.contractInstancesUnderMutex = initializePreBuiltRepositoryContractInstances(handler)
+
+	if s.contractInstancesUnderMutex == nil && s.deployableContractsUnderMutex == nil {
+		s.contractInstancesUnderMutex = initializePreBuiltRepositoryContractInstances(handler)
+		s.deployableContractsUnderMutex = make(map[string]*sdk.ContractInfo)
+	}
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
@@ -99,7 +105,7 @@ func (s *service) getContractSdkHandler() handlers.ContractSdkCallHandler {
 	return s.contractSdkHandlerUnderMutex
 }
 
-func (s *service) getContractInstanceFromRepository(contractName string) sdk.Contract {
+func (s *service) getContractInstanceFromRepository(contractName string) sdk.ContractInstance {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -109,9 +115,35 @@ func (s *service) getContractInstanceFromRepository(contractName string) sdk.Con
 	return s.contractInstancesUnderMutex[contractName]
 }
 
-func (s *service) addContractInstanceToRepository(contractName string, contractInstance sdk.Contract) {
+func (s *service) addContractInstanceToRepository(contractName string, contractInstance sdk.ContractInstance) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	if s.contractInstancesUnderMutex == nil {
+		return
+	}
 	s.contractInstancesUnderMutex[contractName] = contractInstance
+}
+
+func (s *service) getDeployableContractInfoFromRepository(contractName string) *sdk.ContractInfo {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	if s.deployableContractsUnderMutex == nil {
+		fmt.Println("****************************** empty")
+		return nil
+	}
+	fmt.Println("****************************** returning", s.deployableContractsUnderMutex[contractName])
+	return s.deployableContractsUnderMutex[contractName]
+}
+
+func (s *service) addDeployableContractInfoToRepository(contractName string, contractInfo *sdk.ContractInfo) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.deployableContractsUnderMutex == nil {
+		return
+	}
+	fmt.Println("****************************** writing", contractInfo)
+	s.deployableContractsUnderMutex[contractName] = contractInfo
 }

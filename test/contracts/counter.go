@@ -13,14 +13,15 @@ var CONTRACT = sdk.ContractInfo{
 	Name:       "CounterFrom%d",
 	Permission: sdk.PERMISSION_SCOPE_SERVICE,
 	Methods: map[string]sdk.MethodInfo{
-		METHOD_INIT.Name: METHOD_INIT,
-		METHOD_ADD.Name:  METHOD_ADD,
-		METHOD_GET.Name:  METHOD_GET,
+		METHOD_INIT.Name:  METHOD_INIT,
+		METHOD_ADD.Name:   METHOD_ADD,
+		METHOD_GET.Name:   METHOD_GET,
+		METHOD_START.Name: METHOD_START,
 	},
 	InitSingleton: newContract,
 }
 
-func newContract(base *sdk.BaseContract) sdk.Contract {
+func newContract(base *sdk.BaseContract) sdk.ContractInstance {
 	return &contract{base}
 }
 
@@ -69,8 +70,21 @@ var METHOD_GET = sdk.MethodInfo{
 func (c *contract) get(ctx sdk.Context) (uint64, error) {
 	return c.State.ReadUint64ByKey(ctx, "count")
 }
+
+///////////////////////////////////////////////////////////////////////////
+
+var METHOD_START = sdk.MethodInfo{
+	Name:           "start",
+	External:       true,
+	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
+	Implementation: (*contract).start,
+}
+
+func (c *contract) start(ctx sdk.Context) (uint64, error) {
+	return %d, nil
+}
 `
 
-func SourceCodeForCounter(startFrom uint64) string {
-	return fmt.Sprintf(counterContractCode, startFrom, startFrom)
+func SourceCodeForCounter(startFrom uint64) []byte {
+	return []byte(fmt.Sprintf(counterContractCode, startFrom, startFrom, startFrom))
 }

@@ -10,13 +10,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"plugin"
 	"strings"
 	"time"
 )
 
 const sourceCodePath = "src"
 const sharedObjectPath = "bin"
-const maxCompilationTime = 3 * time.Second // TODO: maybe move to config
+const maxCompilationTime = 5 * time.Second // TODO: maybe move to config
 
 func compileAndLoadDeployedSourceCode(code string, artifactsPath string) (*sdk.ContractInfo, error) {
 	hashOfCode := getHashOfCode(code)
@@ -27,12 +28,12 @@ func compileAndLoadDeployedSourceCode(code string, artifactsPath string) (*sdk.C
 		return nil, err
 	}
 
-	_, err = buildSharedObject(hashOfCode, sourceCodeFilePath, artifactsPath)
+	soFilePath, err := buildSharedObject(hashOfCode, sourceCodeFilePath, artifactsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	return loadSharedObject(soFilePath)
 }
 
 func getHashOfCode(code string) string {
@@ -75,9 +76,10 @@ func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPa
 	ctx, cancel := context.WithTimeout(context.Background(), maxCompilationTime)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "go", "build", "-buildmode=plugin", "-o", soFilePath, sourceFilePath)
-
-	cmd.Env = []string{"GOPATH=" + os.Getenv("GOPATH")}
-
+	cmd.Env = []string{
+		"GOPATH=" + os.Getenv("GOPATH"),
+		"PATH=" + os.Getenv("PATH"),
+	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
@@ -90,4 +92,18 @@ func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPa
 	}
 
 	return soFilePath, nil
+}
+
+func loadSharedObject(soFilePath string) (*sdk.ContractInfo, error) {
+	loadedPlugin, err := plugin.Open(soFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	contractSymbol, err := loadedPlugin.Lookup("CONTRACT")
+	if err != nil {
+		return nil, err
+	}
+
+	return contractSymbol.(*sdk.ContractInfo), nil
 }

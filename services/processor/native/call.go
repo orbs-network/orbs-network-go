@@ -121,7 +121,7 @@ func (s *service) prepareMethodInputArgsForCall(executionContextId sdk.Context, 
 				return nil, errors.Errorf("method '%s' arg %d slice type is not byte", methodInfo.Name, i)
 			}
 			if !arg.IsTypeBytesValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.BytesValue()))
 		default:

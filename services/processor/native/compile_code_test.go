@@ -1,6 +1,7 @@
 package native
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -10,21 +11,31 @@ import (
 
 const counterContractStartFrom = 100
 
-func TestCompileCode(t *testing.T) {
-	t.Skip("Work in progress")
-	code := contracts.SourceCodeForCounter(counterContractStartFrom)
+func TestCompileCodeHappyFlow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping compilation of contracts in short mode")
+	}
+
+	code := string(contracts.SourceCodeForCounter(counterContractStartFrom))
 	tmpDir := createTempTestDir(t)
 	defer os.RemoveAll(tmpDir)
 
-	_, err := compileAndLoadDeployedSourceCode(code, tmpDir)
+	contractInfo, err := compileAndLoadDeployedSourceCode(code, tmpDir)
 	require.NoError(t, err, "compile and load should succeed")
+	require.NotNil(t, contractInfo, "loaded object should not be nil")
+	require.Equal(t, fmt.Sprintf("CounterFrom%d", counterContractStartFrom), contractInfo.Name, "loaded object should be valid")
 }
 
 func TestCompileCodeWithExistingArtifacts(t *testing.T) {
-	t.Skip("Work in progress")
-	code := contracts.SourceCodeForCounter(counterContractStartFrom)
+	if testing.Short() {
+		t.Skip("Skipping compilation of contracts in short mode")
+	}
+
+	code := string(contracts.SourceCodeForCounter(counterContractStartFrom))
 	tmpDir := createTempTestDir(t)
 	defer os.RemoveAll(tmpDir)
+
+	t.Log("Build fresh artifacts")
 
 	sourceFilePath, err := writeSourceCodeToDisk("testPrefix", code, tmpDir)
 	require.NoError(t, err, "write to disk should succeed")
@@ -33,6 +44,8 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	soFilePath, err := buildSharedObject("testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
+
+	t.Log("Simulate corrupted artifacts and rebuild")
 
 	// simulate corrupt file that exists
 	err = ioutil.WriteFile(sourceFilePath, []byte{0x01}, 0644)
@@ -53,6 +66,25 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
+
+	t.Log("Load artifact")
+
+	contractInfo, err := loadSharedObject(soFilePath)
+	require.NoError(t, err, "load should succeed")
+	require.NotNil(t, contractInfo, "loaded object should not be nil")
+	require.Equal(t, fmt.Sprintf("CounterFrom%d", counterContractStartFrom), contractInfo.Name, "loaded object should be valid")
+
+	t.Log("Try to rebuild already loaded artifact")
+
+	soFilePath, err = buildSharedObject("testPrefix", sourceFilePath, tmpDir)
+	require.NoError(t, err, "compilation should succeed")
+	require.FileExists(t, soFilePath, "file should exist")
+	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
+
+	contractInfo, err = loadSharedObject(soFilePath)
+	require.NoError(t, err, "load should succeed")
+	require.NotNil(t, contractInfo, "loaded object should not be nil")
+	require.Equal(t, fmt.Sprintf("CounterFrom%d", counterContractStartFrom), contractInfo.Name, "loaded object should be valid")
 }
 
 func createTempTestDir(t *testing.T) string {

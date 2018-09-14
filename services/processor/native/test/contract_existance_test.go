@@ -34,7 +34,10 @@ func TestGetContractInfoWithUnknownContractFails(t *testing.T) {
 const counterContractStartFrom = 100
 
 func TestProcessCallWithDeployableContractThatCompiles(t *testing.T) {
-	t.Skip("Work in progress")
+	if testing.Short() {
+		t.Skip("Skipping compilation of contracts in short mode")
+	}
+
 	h := newHarness()
 	input := processCallInput().WithDeployableCounterContract(counterContractStartFrom).Build()
 	codeOutput := builders.MethodArgumentsArray([]byte(contracts.SourceCodeForCounter(counterContractStartFrom)))

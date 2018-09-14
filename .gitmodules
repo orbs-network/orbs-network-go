@@ -62,6 +62,3 @@
 [submodule "vendor/github.com/orbs-network/lean-helix-go"]
 	path = vendor/github.com/orbs-network/lean-helix-go
 	url = https://github.com/orbs-network/lean-helix-go
-[submodule "vendor/github.com/orbs-network/orbs-contract-sdk"]
-	path = vendor/github.com/orbs-network/orbs-contract-sdk
-	url = https://github.com/orbs-network/orbs-contract-sdk
