@@ -154,6 +154,7 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 		}
 	case BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK:
 		if msg, ok := event.(*gossipmessages.BlockSyncResponseMessage); ok {
+			b.reporting.Info("received chunk from source", log.Stringable("source", msg.Sender))
 			b.petitionerHandleBlockSyncResponse(msg)
 			currentState = BLOCK_SYNC_STATE_IDLE
 			startSyncTimer.FireNow()
