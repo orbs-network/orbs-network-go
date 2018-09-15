@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -9,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"golang.org/x/crypto/ed25519"
 	"os"
 )
 
@@ -16,6 +18,7 @@ import (
 func main() {
 	sendTransactionPtr := flag.String("send-transaction", "", "<json>")
 	callMethodPtr := flag.String("call-method", "", "<json>")
+	generateTestKeysPtr := flag.Bool("generate-test-keys", false, "generates a pair of TEST keys, public and private; NEVER use them in production")
 	verbosePtr := flag.Bool("v", false, "Show all related logs")
 
 	publicKeyPtr := flag.String("public-key", "", "public key in hex form")
@@ -57,7 +60,7 @@ func main() {
 
 		result, _ := jsonapi.SendTransaction(tx, keyPair, *apiEndpointPtr, *verbosePtr)
 
-		jsonBytes, _ := json.Marshal(result.TransactionReceipt)
+		jsonBytes, _ := json.Marshal(result)
 		fmt.Println(string(jsonBytes))
 	} else if *callMethodPtr != "" {
 		if *verbosePtr {
@@ -73,5 +76,12 @@ func main() {
 
 		jsonBytes, _ := json.Marshal(result)
 		fmt.Println(string(jsonBytes))
+	} else if *generateTestKeysPtr {
+		publicKey, privateKey, _ := ed25519.GenerateKey(rand.Reader)
+
+		fmt.Println(hex.EncodeToString(publicKey))
+		fmt.Println(hex.EncodeToString(privateKey))
+	} else {
+		flag.PrintDefaults()
 	}
 }

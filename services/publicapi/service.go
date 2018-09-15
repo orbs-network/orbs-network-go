@@ -59,11 +59,11 @@ func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorI
 }
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
-	s.reporting.Info("enter SendTransaction")
-	defer s.reporting.Info("exit SendTransaction")
-
 	tx := input.ClientRequest.SignedTransaction()
 	txHash := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
+
+	s.reporting.Info("transaction received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+	defer s.reporting.Info("transaction status returned by public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
 	waitContext := s.txWaiter.createTxWaitCtx(txHash)
 	defer waitContext.cleanup()
@@ -73,7 +73,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	})
 
 	if err != nil {
-		s.reporting.Info("adding transaction to TransactionPool failed", log.Error(err))
+		s.reporting.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 		return prepareResponse(txResponse), errors.Errorf("error '%s' for transaction result", txResponse)
 	}
 	if txResponse.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED {
@@ -82,7 +82,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 
 	ta, err := waitContext.until(s.config.SendTransactionTimeout())
 	if err != nil {
-		s.reporting.Info("waiting for transaction to be processed failed", log.Error(err))
+		s.reporting.Info("waiting for transaction to be processed failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 		return prepareResponse(txResponse), err
 	}
 	return prepareResponse(ta), nil

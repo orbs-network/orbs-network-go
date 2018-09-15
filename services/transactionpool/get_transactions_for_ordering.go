@@ -21,10 +21,10 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 	for _, tx := range transactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
 		if err := vctx.validateTransaction(tx); err != nil {
-			s.logger.Info("dropping invalid transaction", log.Error(err), log.Stringable("transaction", tx))
+			s.logger.Info("dropping invalid transaction", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 			s.pendingPool.remove(txHash)
 		} else if alreadyCommitted := s.committedPool.get(txHash); alreadyCommitted != nil {
-			s.logger.Info("dropping committed transaction", log.Stringable("transaction", tx))
+			s.logger.Info("dropping committed transaction", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 			s.pendingPool.remove(txHash)
 		} else {
 			transactionsForPreOrder = append(transactionsForPreOrder, tx)
@@ -43,7 +43,7 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 			out.SignedTransactions = append(out.SignedTransactions, tx)
 		} else {
 			txHash := digest.CalcTxHash(tx.Transaction()) //TODO we calculate TX hash again even though we calculated it above while iterating. Consider memoization.
-			s.logger.Info("dropping transaction that failed pre-order validation", log.Stringable("transaction", tx))
+			s.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 			s.pendingPool.remove(txHash)
 		}
 	}
