@@ -78,19 +78,17 @@ func TestPeriodicalTrigger_Reset(t *testing.T) {
 }
 
 func TestPeriodicalTrigger_FireNow(t *testing.T) {
-	t.Skip()
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(time.Millisecond*100, func() { x++ })
+	p := synchronization.NewPeriodicalTrigger(time.Millisecond*50, func() { x++ })
 	p.Start()
-	time.Sleep(time.Millisecond * 50)
+	time.Sleep(time.Millisecond * 25)
 	p.FireNow()
-	time.Sleep(time.Millisecond * 70)
-	// at this point we are 100+ ms into the logic, we should see only one tick as we reset though firenow midway
+	time.Sleep(time.Millisecond * 35)
+	// at this point we are 50+ ms into the logic, we should see only one tick as we reset though firenow midway
 	require.Equal(t, 1, x, "expected one tick for now")
-	time.Sleep(200 * time.Millisecond)
+	require.EqualValues(t, 0, p.TimesTriggered(), "expected to not have a timer tick trigger now, got %d ticks", p.TimesTriggered())
 	require.EqualValues(t, 0, p.TimesReset(), "should not count a reset on firenow")
 	require.EqualValues(t, 1, p.TimesTriggeredManually(), "we triggered manually once")
-	require.True(t, p.TimesTriggered() > 1, "expected one or more timer ticks (metric)")
 }
 
 func TestPeriodicalTrigger_Stop(t *testing.T) {
