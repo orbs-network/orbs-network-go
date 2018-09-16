@@ -27,15 +27,21 @@ func newStateStorageDriver(numOfStateRevisionsToRetain uint32) *driver {
 	return newStateStorageDriverWithGrace(numOfStateRevisionsToRetain, 0, 0)
 }
 
+func newStateStorageConfig(graceBlockDiff uint32) statestorage.Config {
+	cfg := config.EmptyConfig()
+	cfg.SetUint32(config.STATE_STORAGE_HISTORY_RETENTION_DISTANCE, numOfStateRevisionsToRetain)
+	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, time.Duration(graceTimeoutMillis)*time.Millisecond)
+	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, graceBlockDiff)
+
+	return cfg
+}
+
 func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlockDiff uint32, graceTimeoutMillis uint64) *driver {
 	if numOfStateRevisionsToRetain <= 0 {
 		numOfStateRevisionsToRetain = 1
 	}
 
-	cfg := config.EmptyConfig()
-	cfg.SetUint32(config.STATE_STORAGE_HISTORY_RETENTION_DISTANCE, numOfStateRevisionsToRetain)
-	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, time.Duration(graceTimeoutMillis)*time.Millisecond)
-	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, graceBlockDiff)
+	cfg := newStateStorageConfig(graceBlockDiff)
 
 	p := adapter.NewInMemoryStatePersistence()
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
