@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -31,9 +32,9 @@ type AcceptanceTestNetwork interface {
 	SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256
 	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(nodeIndex int) chan uint64
-	SendDeployCounterContract(nodeIndex int, counterStart uint64) chan *client.SendTransactionResponse
-	SendCounterAdd(nodeIndex int, counterStart uint64, amount uint64) chan *client.SendTransactionResponse
-	CallCounterGet(nodeIndex int, counterStart uint64) chan uint64
+	SendDeployCounterContract(nodeIndex int) chan *client.SendTransactionResponse
+	SendCounterAdd(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	CallCounterGet(nodeIndex int) chan uint64
 	DumpState()
 	WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256)
 }
@@ -77,6 +78,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 
 		node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 		node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
+		node.nativeCompiler = nativeProcessorAdapter.NewFakeCompiler()
 
 		nodes[i] = node
 	}
@@ -98,6 +100,7 @@ func (n *acceptanceTestNetwork) StartNodes(ctx context.Context) AcceptanceTestNe
 			n.gossipTransport,
 			node.blockPersistence,
 			node.statePersistence,
+			node.nativeCompiler,
 			n.testLogger.For(log.Node(node.name)),
 			node.config,
 		)
@@ -111,6 +114,7 @@ type networkNode struct {
 	config           config.NodeConfig
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
 	statePersistence stateStorageAdapter.TamperingStatePersistence
+	nativeCompiler   nativeProcessorAdapter.FakeCompiler
 	nodeLogic        bootstrap.NodeLogic
 }
 
@@ -216,7 +220,12 @@ func (n *acceptanceTestNetwork) CallGetBalance(nodeIndex int) chan uint64 {
 	return ch
 }
 
-func (n *acceptanceTestNetwork) SendDeployCounterContract(nodeIndex int, counterStart uint64) chan *client.SendTransactionResponse {
+func (n *acceptanceTestNetwork) SendDeployCounterContract(nodeIndex int) chan *client.SendTransactionResponse {
+	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
+	// provide a fake implementation of this contract to all nodes
+	for _, node := range n.nodes {
+		node.nativeCompiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.SourceCodeForCounter(counterStart)))
+	}
 	ch := make(chan *client.SendTransactionResponse)
 	tx := builders.Transaction().
 		WithMethod("_Deployments", "deployService").
@@ -241,7 +250,8 @@ func (n *acceptanceTestNetwork) SendDeployCounterContract(nodeIndex int, counter
 	return ch
 }
 
-func (n *acceptanceTestNetwork) SendCounterAdd(nodeIndex int, counterStart uint64, amount uint64) chan *client.SendTransactionResponse {
+func (n *acceptanceTestNetwork) SendCounterAdd(nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
+	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 	ch := make(chan *client.SendTransactionResponse)
 	tx := builders.Transaction().
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "add").
@@ -262,7 +272,8 @@ func (n *acceptanceTestNetwork) SendCounterAdd(nodeIndex int, counterStart uint6
 	return ch
 }
 
-func (n *acceptanceTestNetwork) CallCounterGet(nodeIndex int, counterStart uint64) chan uint64 {
+func (n *acceptanceTestNetwork) CallCounterGet(nodeIndex int) chan uint64 {
+	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 	ch := make(chan uint64)
 	go func() {
 		request := (&client.CallMethodRequestBuilder{

@@ -1,20 +1,14 @@
-package contracts
+package counter_mock
 
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
 )
 
-const COUNTER_SOURCE_CODE = `
-package main
-
-import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-)
+const COUNTER_CONTRACT_START_FROM = uint64(100)
 
 var CONTRACT = sdk.ContractInfo{
-	Name:       "CounterFrom%d",
+	Name:       fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM),
 	Permission: sdk.PERMISSION_SCOPE_SERVICE,
 	Methods: map[string]sdk.MethodInfo{
 		METHOD_INIT.Name:  METHOD_INIT,
@@ -41,7 +35,7 @@ var METHOD_INIT = sdk.MethodInfo{
 }
 
 func (c *contract) _init(ctx sdk.Context) error {
-	return c.State.WriteUint64ByKey(ctx, "count", %d)
+	return c.State.WriteUint64ByKey(ctx, "count", COUNTER_CONTRACT_START_FROM)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -85,16 +79,5 @@ var METHOD_START = sdk.MethodInfo{
 }
 
 func (c *contract) start(ctx sdk.Context) (uint64, error) {
-	return %d, nil
+	return COUNTER_CONTRACT_START_FROM, nil
 }
-`
-
-func SourceCodeForCounter(startFrom uint64) []byte {
-	return []byte(fmt.Sprintf(COUNTER_SOURCE_CODE, startFrom, startFrom, startFrom))
-}
-
-func MockForCounter() *sdk.ContractInfo {
-	return &counter_mock.CONTRACT
-}
-
-const MOCK_COUNTER_CONTRACT_START_FROM = counter_mock.COUNTER_CONTRACT_START_FROM

@@ -1,31 +1,17 @@
-package native
+package adapter
 
 import (
-	"fmt"
-	"github.com/orbs-network/orbs-network-go/test/contracts"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
 	"testing"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"os"
+	"github.com/stretchr/testify/require"
+	"fmt"
 	"time"
+	"io/ioutil"
+	"strings"
 )
 
 const counterContractStartFrom = 100
-
-func TestCompileCodeHappyFlow(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping compilation of contracts in short mode")
-	}
-
-	code := string(contracts.SourceCodeForCounter(counterContractStartFrom))
-	tmpDir := createTempTestDir(t)
-	defer os.RemoveAll(tmpDir)
-
-	contractInfo, err := compileAndLoadDeployedSourceCode(code, tmpDir)
-	require.NoError(t, err, "compile and load should succeed")
-	require.NotNil(t, contractInfo, "loaded object should not be nil")
-	require.Equal(t, fmt.Sprintf("CounterFrom%d", counterContractStartFrom), contractInfo.Name, "loaded object should be valid")
-}
 
 func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	if testing.Short() {
@@ -97,7 +83,8 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 }
 
 func createTempTestDir(t *testing.T) string {
-	tmpDir, err := ioutil.TempDir("/tmp", t.Name())
+	prefix := strings.Replace(t.Name(), "/", "__", -1)
+	tmpDir, err := ioutil.TempDir("/tmp", prefix)
 	if err != nil {
 		panic("could not create temp dir for test")
 	}
