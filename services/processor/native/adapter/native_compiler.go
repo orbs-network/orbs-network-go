@@ -1,23 +1,25 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"os/exec"
-	"time"
-	"os"
-	"encoding/hex"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"path/filepath"
-	"io/ioutil"
-	"strings"
-	"github.com/pkg/errors"
-	"plugin"
 	"context"
+	"encoding/hex"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/pkg/errors"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"plugin"
+	"strings"
+	"time"
 )
 
 const SOURCE_CODE_PATH = "native-src"
 const SHARED_OBJECT_PATH = "native-bin"
+const GC_CACHE_PATH = "native-cache"
 const MAX_COMPILATION_TIME = 5 * time.Second // TODO: maybe move to config or maybe have caller provide via context
 
 type Config interface {
@@ -30,9 +32,16 @@ type nativeCompiler struct {
 }
 
 func NewNativeCompiler(config Config, reporting log.BasicLogger) Compiler {
+	reporting = reporting.For(log.String("adapter", "processor-native"))
 	c := &nativeCompiler{
 		config:    config,
-		reporting: reporting.For(log.String("adapter", "processor-native")),
+		reporting: reporting,
+	}
+
+	// warm up compilation cache
+	_, err := c.Compile(string(contracts.SourceCodeForNop()))
+	if err != nil {
+		reporting.Error("warm up compilation on init failed", log.Error(err))
 	}
 
 	return c
@@ -99,6 +108,8 @@ func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPa
 	cmd.Env = []string{
 		"GOPATH=" + os.Getenv("GOPATH"),
 		"PATH=" + os.Getenv("PATH"),
+		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
+		"GOGC=off",
 	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {

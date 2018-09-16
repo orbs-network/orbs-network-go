@@ -6,9 +6,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"sync"
@@ -50,7 +50,7 @@ func NewNode(
 
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
 	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence()
-	nativeCompiler := nativeProcessorAdapter.NewFakeCompiler()
+	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nativeCompiler, nodeLogger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
 

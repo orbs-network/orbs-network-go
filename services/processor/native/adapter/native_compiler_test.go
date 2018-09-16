@@ -1,24 +1,24 @@
 package adapter
 
 import (
-	"testing"
-	"github.com/orbs-network/orbs-network-go/test/contracts"
-	"os"
-	"github.com/stretchr/testify/require"
 	"fmt"
-	"time"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"os"
 	"strings"
+	"testing"
+	"time"
 )
 
-const counterContractStartFrom = 100
+const COUNTER_CONTRACT_START_FROM = 100
 
 func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
 
-	code := string(contracts.SourceCodeForCounter(counterContractStartFrom))
+	code := string(contracts.SourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
 	tmpDir := createTempTestDir(t)
 	defer os.RemoveAll(tmpDir)
 
@@ -65,7 +65,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	contractInfo, err := loadSharedObject(soFilePath)
 	require.NoError(t, err, "load should succeed")
 	require.NotNil(t, contractInfo, "loaded object should not be nil")
-	require.Equal(t, fmt.Sprintf("CounterFrom%d", counterContractStartFrom), contractInfo.Name, "loaded object should be valid")
+	require.Equal(t, fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
 
 	t.Log("Try to rebuild already loaded artifact")
 
@@ -74,12 +74,13 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
+	compilationTimeMs = (time.Now().UnixNano() - compilationStartTime) / 1000000
 	t.Logf("Compilation time: %d ms", compilationTimeMs)
 
 	contractInfo, err = loadSharedObject(soFilePath)
 	require.NoError(t, err, "load should succeed")
 	require.NotNil(t, contractInfo, "loaded object should not be nil")
-	require.Equal(t, fmt.Sprintf("CounterFrom%d", counterContractStartFrom), contractInfo.Name, "loaded object should be valid")
+	require.Equal(t, fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
 }
 
 func createTempTestDir(t *testing.T) string {

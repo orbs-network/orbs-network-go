@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestContract_Compile(t *testing.T) {
@@ -31,7 +32,10 @@ func compileTest(newHarness func(t *testing.T) *compilerContractHarness) func(*t
 		t.Log("Compiling a valid contract")
 
 		code := string(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+		compilationStartTime := time.Now().UnixNano()
 		contractInfo, err := h.compiler.Compile(code)
+		compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
+		t.Logf("Compilation time: %d ms", compilationTimeMs)
 
 		require.NoError(t, err, "compile should succeed")
 		require.NotNil(t, contractInfo, "loaded object should not be nil")
