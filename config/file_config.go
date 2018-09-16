@@ -93,6 +93,42 @@ func populateConfig(cfg NodeConfig, data map[string]interface{}) error {
 				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
 			}
 		}
+
+		if key == "federation-nodes" {
+			nodes := make(map[string]FederationNode)
+
+			if nodeList, ok := value.([]interface{}); ok {
+				for _, item := range nodeList {
+					kv := item.(map[string]interface{})
+
+					if publicKey, err := hex.DecodeString(kv["Key"].(string)); err == nil {
+						nodePublicKey := primitives.Ed25519PublicKey(publicKey)
+
+						var gossipPort uint16
+
+						s := fmt.Sprintf("%.0f", kv["Port"])
+						if i, err := strconv.Atoi(s); err == nil {
+							gossipPort = uint16(i)
+						} else {
+							return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+						}
+
+						nodes[nodePublicKey.String()] = &hardCodedFederationNode{
+							nodePublicKey:  nodePublicKey,
+							gossipEndpoint: kv["IP"].(string),
+							gossipPort:     gossipPort,
+						}
+					} else {
+						return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+					}
+
+				}
+
+				cfg.SetFederationNodes(nodes)
+			} else {
+				return fmt.Errorf("could not decode value for config key %s", key)
+			}
+		}
 	}
 
 	return nil

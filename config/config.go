@@ -17,6 +17,8 @@ type NodeConfig interface {
 	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) NodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) NodeConfig
 
+	SetFederationNodes(nodes map[string]FederationNode) NodeConfig
+
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey

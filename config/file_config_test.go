@@ -15,7 +15,12 @@ const FILE_CONFIG_CONTENTS = `
 	"node-public-key": "dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173",
 	"node-private-key": "93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173",
 	"constant-consensus-leader": "92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152",
-	"active-consensus-algo": 1
+	"active-consensus-algo": 1,
+	"federation-nodes": [
+		{"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","Port":4400},
+		{"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","Port":4400},
+		{"Key":"a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0","IP":"192.168.199.4","Port":4400}
+	]
 }
 `
 
@@ -78,4 +83,22 @@ func TestSetActiveConsensusAlgo(t *testing.T) {
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
 	require.EqualValues(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, cfg.ActiveConsensusAlgo())
+}
+
+func TestSetFederationNodes(t *testing.T) {
+	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+
+	require.NotNil(t, cfg)
+	require.NoError(t, err)
+	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
+
+	keyPair := keys.Ed25519KeyPairForTests(0)
+
+	node1 := &hardCodedFederationNode{
+		nodePublicKey:  keyPair.PublicKey(),
+		gossipEndpoint: "192.168.199.2",
+		gossipPort:     4400,
+	}
+
+	require.EqualValues(t, node1, cfg.FederationNodes(0)[keyPair.PublicKey().String()])
 }

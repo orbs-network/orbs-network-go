@@ -7,7 +7,9 @@ import (
 )
 
 type hardCodedFederationNode struct {
-	nodePublicKey primitives.Ed25519PublicKey
+	nodePublicKey  primitives.Ed25519PublicKey
+	gossipPort     uint16
+	gossipEndpoint string
 }
 
 type NodeConfigValue struct {
@@ -151,8 +153,20 @@ func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) No
 	return c
 }
 
+func (c *config) SetFederationNodes(nodes map[string]FederationNode) NodeConfig {
+	c.federationNodes = nodes
+	return c
+}
+
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
+}
+
+func (c *hardCodedFederationNode) GossipPort() uint16 {
+	return c.gossipPort
+}
+func (c *hardCodedFederationNode) GossipEndpoint() string {
+	return c.gossipEndpoint
 }
 
 func (c *config) NodePublicKey() primitives.Ed25519PublicKey {
