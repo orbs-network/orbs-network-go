@@ -25,14 +25,14 @@ const FILE_CONFIG_CONTENTS = `
 `
 
 func TestFileConfigConstructor(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
 }
 
 func TestFileConfigSetUint32(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func TestFileConfigSetUint32(t *testing.T) {
 }
 
 func TestFileConfigSetDuration(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestFileConfigSetDuration(t *testing.T) {
 }
 
 func TestSetNodePublicKey(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -58,7 +58,7 @@ func TestSetNodePublicKey(t *testing.T) {
 }
 
 func TestSetNodePrivateKey(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -68,7 +68,7 @@ func TestSetNodePrivateKey(t *testing.T) {
 }
 
 func TestSetConstantConsensusLeader(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	keyPair := keys.Ed25519KeyPairForTests(1)
 
@@ -78,7 +78,7 @@ func TestSetConstantConsensusLeader(t *testing.T) {
 }
 
 func TestSetActiveConsensusAlgo(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestSetActiveConsensusAlgo(t *testing.T) {
 }
 
 func TestSetFederationNodes(t *testing.T) {
-	cfg, err := NewFileConfig(FILE_CONFIG_CONTENTS)
+	cfg, err := NewEmptyFileConfig(FILE_CONFIG_CONTENTS)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -101,4 +101,23 @@ func TestSetFederationNodes(t *testing.T) {
 	}
 
 	require.EqualValues(t, node1, cfg.FederationNodes(0)[keyPair.PublicKey().String()])
+}
+
+func TestMergeWithFileConfig(t *testing.T) {
+	nodes := make(map[string]FederationNode)
+	keyPair := keys.Ed25519KeyPairForTests(2)
+
+	cfg := ForAcceptanceTests(nodes, keyPair.PublicKey(),
+		keyPair.PrivateKey(), keyPair.PublicKey(),
+		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+
+	require.EqualValues(t, keyPair.PublicKey(), cfg.NodePublicKey())
+	require.EqualValues(t, 0, len(cfg.FederationNodes(0)))
+
+	cfg.MergeWithFileConfig(FILE_CONFIG_CONTENTS)
+
+	newKeyPair := keys.Ed25519KeyPairForTests(0)
+
+	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
+	require.EqualValues(t, newKeyPair.PublicKey(), cfg.NodePublicKey())
 }

@@ -11,19 +11,21 @@ import (
 	"time"
 )
 
-func NewFileConfig(source string) (NodeConfig, error) {
-	cfg := EmptyConfig()
+func NewEmptyFileConfig(source string) (NodeConfig, error) {
+	return NewFileConfig(EmptyConfig(), source)
+}
 
+func NewFileConfig(parent NodeConfig, source string) (NodeConfig, error) {
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(source), &data); err != nil {
 		return nil, err
 	}
 
-	if err := populateConfig(cfg, data); err != nil {
+	if err := populateConfig(parent, data); err != nil {
 		return nil, err
 	}
 
-	return cfg, nil
+	return parent, nil
 }
 
 func convertKeyName(key string) string {

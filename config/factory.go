@@ -64,3 +64,7 @@ func EmptyConfig() NodeConfig {
 		kv: make(map[string]NodeConfigValue),
 	}
 }
+
+func (c *config) MergeWithFileConfig(source string) (NodeConfig, error) {
+	return NewFileConfig(c, source)
+}

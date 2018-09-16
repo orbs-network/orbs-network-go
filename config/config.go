@@ -19,6 +19,8 @@ type NodeConfig interface {
 
 	SetFederationNodes(nodes map[string]FederationNode) NodeConfig
 
+	MergeWithFileConfig(source string) (NodeConfig, error)
+
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
