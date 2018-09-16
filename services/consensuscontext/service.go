@@ -1,6 +1,7 @@
 package consensuscontext
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
@@ -43,6 +44,11 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 	}
 
 	s.reporting.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
+
+	for _, tx := range txBlock.SignedTransactions {
+		txHash := digest.CalcTxHash(tx.Transaction())
+		s.reporting.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
+	}
 
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
