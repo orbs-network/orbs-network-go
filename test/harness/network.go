@@ -32,6 +32,7 @@ type AcceptanceTestNetwork interface {
 	CallGetBalance(nodeIndex int) chan uint64
 	DumpState()
 	WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256)
+	Size() int
 }
 
 type acceptanceTestNetwork struct {
@@ -218,3 +219,9 @@ func (n *acceptanceTestNetwork) DumpState() {
 		n.testLogger.Info("state dump", log.Int("node", i), log.String("data", n.nodes[i].statePersistence.Dump()))
 	}
 }
+
+func (n *acceptanceTestNetwork) Size() int {
+	return len(n.nodes)
+}
+
+

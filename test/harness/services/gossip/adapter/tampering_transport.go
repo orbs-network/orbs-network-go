@@ -4,8 +4,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"math/rand"
 	"runtime"
 	"sync"
+	"time"
 )
 
 // The TamperingTransport is an in-memory implementation of the Gossip Transport adapter, that adds the ability
@@ -27,6 +29,15 @@ type TamperingTransport interface {
 	// calling LatchingTamper.Wait(). This is useful to force a test goroutine to block until a certain message has
 	// been sent
 	LatchOn(predicate MessagePredicate) LatchingTamper
+
+	// Creates an ongoing tamper which duplicates messages matching the given predicate
+	Duplicate(predicate MessagePredicate) OngoingTamper
+
+	// Creates an ongoing tamper which corrupts messages matching the given predicate
+	Corrupt(predicate MessagePredicate) OngoingTamper
+
+	// Creates an ongoing tamper which delays (reshuffles) messages matching the given predicate for a random duration
+	Delay(predicate MessagePredicate) OngoingTamper
 }
 
 // A predicate for matching messages with a certain property
@@ -34,6 +45,7 @@ type MessagePredicate func(data *adapter.TransportData) bool
 
 type OngoingTamper interface {
 	Release()
+	maybeTamper(data *adapter.TransportData) (error, bool)
 }
 
 type LatchingTamper interface {
@@ -42,11 +54,11 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	mutex              *sync.Mutex
-	transportListeners map[string]adapter.TransportListener
-	failingTamperers   []*failingTamperer
-	pausingTamperers   []*pausingTamperer
-	latchingTamperers  []*latchingTamperer
+	mutex                *sync.Mutex
+	transportListeners   map[string]adapter.TransportListener
+	latchingTamperers    []*latchingTamperer
+
+	ongoingTamperers	 []OngoingTamper
 }
 
 func NewTamperingTransport() TamperingTransport {
@@ -65,32 +77,43 @@ func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener
 func (t *tamperingTransport) Send(data *adapter.TransportData) error {
 	t.releaseLatches(data)
 
-	if t.shouldFail(data) {
-		return &adapter.ErrTransportFailed{data}
-	}
-
-	if t.hasPaused(data) {
-		return nil
+	if err, shouldReturn := t.maybeTamper(data); shouldReturn {
+		return err
 	}
 
 	go t.receive(data)
 	return nil
 }
 
+func (t *tamperingTransport) maybeTamper(data *adapter.TransportData) (error, bool) {
+	for _, o := range t.ongoingTamperers {
+		if err, shouldReturn := o.maybeTamper(data); shouldReturn {
+			return err, shouldReturn
+		}
+	}
+
+	return nil, false
+
+}
+
 func (t *tamperingTransport) Pause(predicate MessagePredicate) OngoingTamper {
-	tamperer := &pausingTamperer{predicate: predicate, transport: t}
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.pausingTamperers = append(t.pausingTamperers, tamperer)
-	return tamperer
+	return t.addTamperer(&pausingTamperer{predicate: predicate, transport: t})
 }
 
 func (t *tamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
-	tamperer := &failingTamperer{predicate: predicate, transport: t}
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.failingTamperers = append(t.failingTamperers, tamperer)
-	return tamperer
+	return t.addTamperer(&failingTamperer{predicate: predicate, transport: t})
+}
+
+func (t *tamperingTransport) Duplicate(predicate MessagePredicate) OngoingTamper {
+	return t.addTamperer(&duplicatingTamperer{predicate: predicate, transport: t})
+}
+
+func (t *tamperingTransport) Corrupt(predicate MessagePredicate) OngoingTamper {
+	return t.addTamperer(&corruptingTamperer{predicate: predicate, transport: t})
+}
+
+func (t *tamperingTransport) Delay(predicate MessagePredicate) OngoingTamper {
+	return t.addTamperer(&delayingTamperer{predicate: predicate, transport: t})
 }
 
 func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper {
@@ -103,35 +126,17 @@ func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper 
 	return tamperer
 }
 
-func (t *tamperingTransport) removeFailTamperer(tamperer *failingTamperer) {
+func (t *tamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	a := t.failingTamperers
+	a := t.ongoingTamperers
 	for p, v := range a {
 		if v == tamperer {
 			a[p] = a[len(a)-1]
 			a[len(a)-1] = nil
 			a = a[:len(a)-1]
 
-			t.failingTamperers = a
-
-			return
-		}
-	}
-	panic("Tamperer not found in ongoing tamperer list")
-}
-
-func (t *tamperingTransport) removePauseTamperer(tamperer *pausingTamperer) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	a := t.pausingTamperers
-	for p, v := range a {
-		if v == tamperer {
-			a[p] = a[len(a)-1]
-			a[len(a)-1] = nil
-			a = a[:len(a)-1]
-
-			t.pausingTamperers = a
+			t.ongoingTamperers = a
 
 			return
 		}
@@ -185,26 +190,6 @@ func (t *tamperingTransport) receive(data *adapter.TransportData) {
 
 }
 
-func (t *tamperingTransport) shouldFail(data *adapter.TransportData) bool {
-	for _, o := range t.failingTamperers {
-		if o.predicate(data) {
-			return true
-		}
-	}
-	return false
-}
-
-func (t *tamperingTransport) hasPaused(data *adapter.TransportData) bool {
-	for _, p := range t.pausingTamperers {
-		if p.predicate(data) {
-			t.mutex.Lock()
-			defer t.mutex.Unlock()
-			p.messages = append(p.messages, data)
-			return true
-		}
-	}
-	return false
-}
 func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
 	for _, o := range t.latchingTamperers {
 		if o.predicate(data) {
@@ -213,9 +198,89 @@ func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
 	}
 }
 
+func (t *tamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	t.ongoingTamperers = append(t.ongoingTamperers, tamperer)
+	return tamperer
+}
+
 type failingTamperer struct {
 	predicate MessagePredicate
 	transport *tamperingTransport
+}
+
+func (o *failingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+	if o.predicate(data) {
+		return &adapter.ErrTransportFailed{data}, true
+	}
+
+	return nil, false
+}
+
+func (o *failingTamperer) Release() {
+	o.transport.removeOngoingTamperer(o)
+}
+
+type duplicatingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+}
+
+func (o *duplicatingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+	if o.predicate(data) {
+		go func() {
+			time.Sleep(10 * time.Millisecond)
+			o.transport.receive(data)
+		}()
+	}
+	return nil, false
+}
+
+func (o *duplicatingTamperer) Release() {
+	o.transport.removeOngoingTamperer(o)
+}
+
+type delayingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+}
+
+func (o *delayingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+	if o.predicate(data) {
+		duration := time.Duration(rand.Intn(10000)) * time.Microsecond
+		go func() {
+			time.Sleep(duration)
+			o.transport.receive(data)
+		}()
+		return nil, true
+	}
+
+	return nil, false
+}
+
+func (o *delayingTamperer) Release() {
+	o.transport.removeOngoingTamperer(o)
+}
+
+type corruptingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+}
+
+func (o *corruptingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+	if o.predicate(data) {
+		for i := 0; i < 10; i++ {
+			x := rand.Intn(len(data.Payloads))
+			y := rand.Intn(len(data.Payloads[x]))
+			data.Payloads[x][y] = 0
+		}
+	}
+	return nil, false
+}
+
+func (o *corruptingTamperer) Release() {
+	o.transport.removeOngoingTamperer(o)
 }
 
 type pausingTamperer struct {
@@ -224,22 +289,29 @@ type pausingTamperer struct {
 	messages  []*adapter.TransportData
 }
 
-type latchingTamperer struct {
-	predicate MessagePredicate
-	transport *tamperingTransport
-	cond      *sync.Cond
-}
+func (o *pausingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+	if o.predicate(data) {
+		o.transport.mutex.Lock()
+		defer o.transport.mutex.Unlock()
+		o.messages = append(o.messages, data)
+		return nil, true
+	}
 
-func (o *failingTamperer) Release() {
-	o.transport.removeFailTamperer(o)
+	return nil, false
 }
 
 func (o *pausingTamperer) Release() {
-	o.transport.removePauseTamperer(o)
+	o.transport.removeOngoingTamperer(o)
 	for _, message := range o.messages {
 		o.transport.Send(message)
 		runtime.Gosched() // TODO: this is required or else messages arrive in the opposite order after resume
 	}
+}
+
+type latchingTamperer struct {
+	predicate MessagePredicate
+	transport *tamperingTransport
+	cond      *sync.Cond
 }
 
 func (o *latchingTamperer) Remove() {

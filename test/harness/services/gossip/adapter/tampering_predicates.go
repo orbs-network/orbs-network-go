@@ -6,28 +6,52 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-// a MessagePredicate for capturing Lean Helix Consensus Algorithm gossip messages of the given type
-func LeanHelixMessage(messageType consensus.LeanHelixMessageType) MessagePredicate {
+type HeaderPredicate func(header *gossipmessages.Header) bool
+
+func ATransactionRelayMessage(header *gossipmessages.Header) bool {
+	return header.IsTopicTransactionRelay()
+}
+
+func ABenchmarkConsensusMessage (header *gossipmessages.Header) bool {
+	return header.IsTopicBenchmarkConsensus()
+}
+
+func HasHeader(headerPredicate HeaderPredicate) MessagePredicate {
 	return func(data *adapter.TransportData) bool {
 		header, ok := parseHeader(data)
 
-		return ok && header.IsTopicLeanHelix() && header.LeanHelix() == messageType
+		return ok && headerPredicate(header)
 	}
+}
+
+func Not(predicate MessagePredicate) MessagePredicate {
+	return func(data *adapter.TransportData) bool {
+		return !predicate(data)
+	}
+}
+
+// a MessagePredicate for capturing Lean Helix Consensus Algorithm gossip messages of the given type
+func LeanHelixMessage(messageType consensus.LeanHelixMessageType) MessagePredicate {
+	return HasHeader(func(header *gossipmessages.Header) bool {
+		return header.IsTopicLeanHelix() && header.LeanHelix() == messageType
+	})
 }
 
 func BenchmarkConsensusMessage(messageType consensus.BenchmarkConsensusMessageType) MessagePredicate {
-	return func(data *adapter.TransportData) bool {
-		header, ok := parseHeader(data)
-
-		return ok && header.IsTopicBenchmarkConsensus() && header.BenchmarkConsensus() == messageType
-	}
+	return HasHeader(func(header *gossipmessages.Header) bool {
+		return header.IsTopicBenchmarkConsensus() && header.BenchmarkConsensus() == messageType
+	})
 }
 
 func TransactionRelayMessage(messageType gossipmessages.TransactionsRelayMessageType) MessagePredicate {
-	return func(data *adapter.TransportData) bool {
-		header, ok := parseHeader(data)
+	return HasHeader(func(header *gossipmessages.Header) bool {
+		return header.IsTopicTransactionRelay() && header.TransactionRelay() == messageType
+	})
+}
 
-		return ok && header.IsTopicTransactionRelay() && header.TransactionRelay() == messageType
+func (this MessagePredicate) And(other MessagePredicate) MessagePredicate {
+	return func(data *adapter.TransportData) bool {
+		return this(data) && other(data)
 	}
 }
 
