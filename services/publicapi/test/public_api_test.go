@@ -19,9 +19,9 @@ import (
 	"time"
 )
 
-func newPublicApiConfig() publicapi.Config {
+func newPublicApiConfig(txTimeout time.Duration) publicapi.Config {
 	cfg := config.EmptyConfig()
-	cfg.SetDuration(config.PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 1*time.Millisecond)
+	cfg.SetDuration(config.PUBLIC_API_SEND_TRANSACTION_TIMEOUT, txTimeout)
 
 	return cfg
 }
@@ -31,7 +31,7 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 		txpMock := makeTxMock()
 		vmMock := &services.MockVirtualMachine{}
-		cfg := newPublicApiConfig()
+		cfg := newPublicApiConfig(1 * time.Millisecond)
 		papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, logger)
 
 		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
@@ -57,7 +57,7 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 		txpMock := makeTxMock()
 		vmMock := &services.MockVirtualMachine{}
-		cfg := newPublicApiConfig()
+		cfg := newPublicApiConfig(1 * time.Second)
 		papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, logger)
 
 		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
