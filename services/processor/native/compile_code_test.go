@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 )
 
 const counterContractStartFrom = 100
@@ -41,9 +42,12 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.NoError(t, err, "write to disk should succeed")
 	require.FileExists(t, sourceFilePath, "file should exist")
 
+	compilationStartTime := time.Now().UnixNano()
 	soFilePath, err := buildSharedObject("testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
+	compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
+	t.Logf("Compilation time: %d ms", compilationTimeMs)
 
 	t.Log("Simulate corrupted artifacts and rebuild")
 
@@ -62,10 +66,13 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.FileExists(t, sourceFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(sourceFilePath), "file size should not match")
 
+	compilationStartTime = time.Now().UnixNano()
 	soFilePath, err = buildSharedObject("testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
+	compilationTimeMs = (time.Now().UnixNano() - compilationStartTime) / 1000000
+	t.Logf("Compilation time: %d ms", compilationTimeMs)
 
 	t.Log("Load artifact")
 
@@ -76,10 +83,12 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 
 	t.Log("Try to rebuild already loaded artifact")
 
+	compilationStartTime = time.Now().UnixNano()
 	soFilePath, err = buildSharedObject("testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
+	t.Logf("Compilation time: %d ms", compilationTimeMs)
 
 	contractInfo, err = loadSharedObject(soFilePath)
 	require.NoError(t, err, "load should succeed")
