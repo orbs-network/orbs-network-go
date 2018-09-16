@@ -13,9 +13,25 @@ jobs:
       - store_artifacts:
           path: logs
 
+  acceptance:
+    machine: true
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: ./docker-build.acceptance.sh
+
+  success:
+    machine: true
+    steps:
+      - run: echo 'Success'
+
 workflows:
   version: 2
   build:
     jobs:
       - build
-
+      - acceptance
+      - success:
+          requires:
+            - build
+            - acceptance
