@@ -44,7 +44,7 @@ type service struct {
 	consensusBlocksHandlers []handlers.ConsensusBlocksHandler
 
 	lastCommittedBlock *protocol.BlockPairContainer
-	lastBlockLock      *sync.Mutex
+	lastBlockLock      *sync.RWMutex
 
 	blockSync *BlockSync
 }
@@ -60,7 +60,7 @@ func NewBlockStorage(ctx context.Context, config Config, persistence adapter.Blo
 		txPool:        txPool,
 		reporting:     logger,
 		config:        config,
-		lastBlockLock: &sync.Mutex{},
+		lastBlockLock: &sync.RWMutex{},
 	}
 
 	lastBlock, err := persistence.GetLastBlock()
@@ -125,8 +125,8 @@ func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
 }
 
 func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
-	s.lastBlockLock.Lock()
-	defer s.lastBlockLock.Unlock()
+	s.lastBlockLock.RLock()
+	defer s.lastBlockLock.RUnlock()
 
 	if s.lastCommittedBlock == nil {
 		return 0
@@ -135,13 +135,20 @@ func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
 }
 
 func (s *service) lastCommittedBlockTimestamp() primitives.TimestampNano {
-	s.lastBlockLock.Lock()
-	defer s.lastBlockLock.Unlock()
+	s.lastBlockLock.RLock()
+	defer s.lastBlockLock.RUnlock()
 
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
 	return s.lastCommittedBlock.TransactionsBlock.Header.Timestamp()
+}
+
+func (s *service) getLastCommittedBlock() *protocol.BlockPairContainer {
+	s.lastBlockLock.RLock()
+	defer s.lastBlockLock.RUnlock()
+
+	return s.lastCommittedBlock
 }
 
 func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
@@ -265,12 +272,11 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 }
 
 func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock() {
-	s.lastBlockLock.Lock()
-	defer s.lastBlockLock.Unlock()
+	lastCommitted := s.getLastCommittedBlock()
 
-	if s.lastCommittedBlock != nil {
+	if lastCommitted != nil {
 		// passing nil on purpose, see spec
-		err := s.validateWithConsensusAlgos(nil, s.lastCommittedBlock)
+		err := s.validateWithConsensusAlgos(nil, lastCommitted)
 		if err != nil {
 			s.reporting.Error(err.Error())
 		}

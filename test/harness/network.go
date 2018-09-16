@@ -37,6 +37,7 @@ type AcceptanceTestNetwork interface {
 	CallCounterGet(nodeIndex int) chan uint64
 	DumpState()
 	WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256)
+	Size() int
 }
 
 type acceptanceTestNetwork struct {
@@ -167,6 +168,7 @@ func (n *acceptanceTestNetwork) SendTransfer(nodeIndex int, amount uint64) chan 
 	return ch
 }
 
+// TODO: when publicApi supports returning as soon as SendTransaction is in the pool, switch to blocking implementation that waits for this
 func (n *acceptanceTestNetwork) SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256 {
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: builders.TransferTransaction().WithAmount(amount).Builder(),
@@ -300,3 +302,9 @@ func (n *acceptanceTestNetwork) DumpState() {
 		n.testLogger.Info("state dump", log.Int("node", i), log.String("data", n.nodes[i].statePersistence.Dump()))
 	}
 }
+
+func (n *acceptanceTestNetwork) Size() int {
+	return len(n.nodes)
+}
+
+

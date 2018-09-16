@@ -14,9 +14,9 @@ func ForProduction(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) NodeConfig {
 
-	benchmarkConsensusRetryInterval := 2000 * time.Millisecond
+	benchmarkConsensusRetryInterval := 5000 * time.Millisecond
 	minimumTransactionsInBlock := uint32(1)
-	minimalBlockDelay := 20 * time.Millisecond
+	minimalBlockDelay := 1000 * time.Millisecond // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	queryGraceTimeout := 100 * time.Millisecond
 	sendTransactionTimeout := 30 * time.Second
 	return newHardCodedConfig(
@@ -27,7 +27,7 @@ func ForProduction(
 		activeConsensusAlgo,
 		benchmarkConsensusRetryInterval,
 		minimumTransactionsInBlock,
-		minimalBlockDelay, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
+		minimalBlockDelay,
 		queryGraceTimeout,
 		sendTransactionTimeout)
 
@@ -43,7 +43,7 @@ func ForAcceptanceTests(
 
 	benchmarkConsensusRetryInterval := 1 * time.Millisecond
 	minimumTransactionsInBlock := uint32(1)
-	minimalBlockDelay := 1 * time.Millisecond
+	minimalBlockDelay := 10 * time.Millisecond
 	queryGraceTimeout := 5 * time.Millisecond
 	sendTransactionTimeout := 30 * time.Millisecond
 	return newHardCodedConfig(

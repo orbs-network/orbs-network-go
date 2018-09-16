@@ -4,10 +4,4 @@ WORKDIR /go/src/github.com/orbs-network/orbs-network-go/
 
 ADD . /go/src/github.com/orbs-network/orbs-network-go/
 
-ARG SKIP_TESTS
-
-ARG SKIP_DEVTOOLS
-
-RUN sh -x test.sh
-
-RUN sh -x build-binaries.sh
+RUN sh -x test.acceptance.sh

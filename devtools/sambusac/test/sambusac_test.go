@@ -15,10 +15,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type sendTransactionCliResponse struct {
+type txReceipt struct {
 	TxHash          string
 	ExecutionResult int
 	OutputArguments []string
+}
+
+type sendTransactionCliResponse struct {
+	TransactionReceipt txReceipt
+	BlockHeight        int
+	BlockTimestamp     int
 }
 
 type OutputArgumentCliResponse struct {
@@ -62,12 +68,12 @@ func runCommand(command []string, t *testing.T) string {
 	return stdout.String()
 }
 
-func generateTransferJSON() string {
+func generateTransferJSON(amount uint64) string {
 	transferJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "transfer",
 		Arguments: []jsonapi.MethodArgument{
-			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: 42},
+			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
 		},
 	}
 
@@ -101,7 +107,7 @@ func TestSambusacFlow(t *testing.T) {
 
 	baseCommand := ClientBinary()
 	sendCommand := append(baseCommand,
-		"-send-transaction", generateTransferJSON(),
+		"-send-transaction", generateTransferJSON(42),
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
 
@@ -111,8 +117,8 @@ func TestSambusacFlow(t *testing.T) {
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.ExecutionResult, "Transaction status to be successful = 1")
-	require.NotNil(t, response.TxHash, "got empty txhash")
+	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
+	require.NotNil(t, response.TransactionReceipt.TxHash, "got empty txhash")
 
 	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON())
 

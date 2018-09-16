@@ -25,7 +25,7 @@ type inMemoryBlockPersistence struct {
 	failNextBlocks bool
 	tracker        *synchronization.BlockTracker
 
-	lock                  *sync.Mutex
+	lock                  *sync.RWMutex
 	blockHeightsPerTxHash map[string]blockHeightChan
 }
 
@@ -34,7 +34,7 @@ func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
 		failNextBlocks: false,
 		tracker:        synchronization.NewBlockTracker(0, 5, time.Millisecond*100),
 
-		lock: &sync.Mutex{},
+		lock: &sync.RWMutex{},
 		blockHeightsPerTxHash: make(map[string]blockHeightChan),
 	}
 }
@@ -44,7 +44,11 @@ func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTrac
 }
 
 func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight {
-	h := <-bp.getChanFor(txhash)
+	bp.lock.Lock()
+	ch := bp.getChanFor(txhash)
+	bp.lock.Unlock()
+
+	h := <-ch
 	return h
 }
 
@@ -52,6 +56,9 @@ func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairCont
 	if bp.failNextBlocks {
 		return errors.New("could not write a block")
 	}
+
+	bp.lock.Lock()
+	defer bp.lock.Unlock()
 
 	bp.blockPairs = append(bp.blockPairs, blockPair)
 	bp.tracker.IncrementHeight()
@@ -62,7 +69,7 @@ func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairCont
 }
 
 func (bp *inMemoryBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
-	return bp.blockPairs
+	return bp.getBlockPairs()
 }
 
 func (bp *inMemoryBlockPersistence) GetReceiptRelevantBlocks(txTimeStamp primitives.TimestampNano, rules adapter.BlockSearchRules) []*protocol.BlockPairContainer {
@@ -79,19 +86,23 @@ func (bp *inMemoryBlockPersistence) GetReceiptRelevantBlocks(txTimeStamp primiti
 		return nil
 	}
 
-	for _, b := range bp.blockPairs {
-		delta := end - b.TransactionsBlock.Header.Timestamp()
+	blockPairs := bp.getBlockPairs()
+
+	for _, blockPair := range blockPairs {
+		delta := end - blockPair.TransactionsBlock.Header.Timestamp()
 		if delta > 0 && interval > delta {
-			relevantBlocks = append(relevantBlocks, b)
+			relevantBlocks = append(relevantBlocks, blockPair)
 		}
 	}
 	return relevantBlocks
 }
 
 func (bp *inMemoryBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
-	for _, bp := range bp.blockPairs {
-		if bp.TransactionsBlock.Header.BlockHeight() == height {
-			return bp.TransactionsBlock, nil
+	blockPairs := bp.getBlockPairs()
+
+	for _, blockPair := range blockPairs {
+		if blockPair.TransactionsBlock.Header.BlockHeight() == height {
+			return blockPair.TransactionsBlock, nil
 		}
 	}
 
@@ -99,9 +110,11 @@ func (bp *inMemoryBlockPersistence) GetTransactionsBlock(height primitives.Block
 }
 
 func (bp *inMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
-	for _, bp := range bp.blockPairs {
-		if bp.TransactionsBlock.Header.BlockHeight() == height {
-			return bp.ResultsBlock, nil
+	blockPairs := bp.getBlockPairs()
+
+	for _, blockPair := range blockPairs {
+		if blockPair.TransactionsBlock.Header.BlockHeight() == height {
+			return blockPair.ResultsBlock, nil
 		}
 	}
 
@@ -112,10 +125,8 @@ func (bp *inMemoryBlockPersistence) FailNextBlocks() {
 	bp.failNextBlocks = true
 }
 
+// Is covered by the mutex in WriteBlock
 func (bp *inMemoryBlockPersistence) getChanFor(txhash primitives.Sha256) blockHeightChan {
-	bp.lock.Lock()
-	defer bp.lock.Unlock()
-
 	ch, ok := bp.blockHeightsPerTxHash[txhash.KeyForMap()]
 	if !ok {
 		ch = make(blockHeightChan, 1)
@@ -124,18 +135,34 @@ func (bp *inMemoryBlockPersistence) getChanFor(txhash primitives.Sha256) blockHe
 
 	return ch
 }
+
 func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
 	for _, tx := range block.SignedTransactions {
-		bp.getChanFor(digest.CalcTxHash(tx.Transaction())) <- block.Header.BlockHeight()
+		ch := bp.getChanFor(digest.CalcTxHash(tx.Transaction()))
+		select {
+		case ch <- block.Header.BlockHeight():
+		default:
+			// FIXME: this happens when two txid are in different blocks (or same block), this should never happen and we do not log it here (too low) and we also do not want to stop the loop (break/return error)
+			continue
+		}
 	}
 }
 
 func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
-	count := len(bp.blockPairs)
+	blockPairs := bp.getBlockPairs()
+
+	count := len(blockPairs)
 
 	if count == 0 {
 		return nil, nil
 	}
 
-	return bp.blockPairs[count-1], nil
+	return blockPairs[count-1], nil
+}
+
+func (bp *inMemoryBlockPersistence) getBlockPairs() []*protocol.BlockPairContainer {
+	bp.lock.RLock()
+	defer bp.lock.RUnlock()
+
+	return bp.blockPairs
 }

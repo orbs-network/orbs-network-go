@@ -80,6 +80,8 @@ main
 
 # Logs
 *.log
+logs/
 
 # binaries
 orbs-*
+sambusac
