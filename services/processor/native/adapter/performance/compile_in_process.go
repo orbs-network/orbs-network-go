@@ -1,5 +1,7 @@
 package main
 
+// TODO: this experiment still does not work, requires more research
+
 import (
 	"cmd/compile/internal/gc"
 	gcamd64 "cmd/compile/internal/amd64"

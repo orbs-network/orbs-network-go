@@ -34,7 +34,7 @@ Test: `./more_memory.sh`
 
 Many stdlib packages need to be rebuilt by the toolchain configured for dynamic linking (like `runtime`), and by default `go build` does not cache intermediate package builds.
 
-It seems that Go 1.10 does this by default using `cache` but adding `-i` does this even more aggressively in a way that's difficult to undo.
+It seems that Go 1.10 does this by default using `cache` but adding `-i` does this even more aggressively in a way that's difficult to undo. If you run the test for this method, all of your builds will become fast (about 220ms instead of 1600ms) until you manually delete the built packages (identify their location with `-x`).
 
 See: https://github.com/golang/go/issues/19707
 
@@ -49,6 +49,8 @@ There is overhead in starting a new process for each `go build`. We could attemp
 See: https://github.com/golang/go/blob/master/src/cmd/compile/main.go
 
 See: https://github.com/golang/go/blob/master/src/cmd/link/main.go
+
+Test: `./compile_in_process.sh` (which uses `compile_in_process.go`) - WIP, still does not work
 
 #### Trying alternative compilers
 
