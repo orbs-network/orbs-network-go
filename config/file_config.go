@@ -30,25 +30,56 @@ func convertKeyName(key string) string {
 	return strings.ToUpper(strings.Replace(key, "-", "_", -1))
 }
 
-func populateConfig(cfg NodeConfig, data map[string]interface{}) error {
+func parseUint32(f64 float64) (uint32, error) {
+	s := fmt.Sprintf("%.0f", f64)
+	if i, err := strconv.Atoi(s); err == nil {
+		return uint32(i), nil
+	} else {
+		return 0, err
+	}
+}
+
+// TODO notify about ignored entries?
+func parseNodeList(value interface{}) (nodes map[string]FederationNode, err error) {
+	nodes = make(map[string]FederationNode)
+
+	if nodeList, ok := value.([]interface{}); ok {
+		for _, item := range nodeList {
+			kv := item.(map[string]interface{})
+
+			if publicKey, err := hex.DecodeString(kv["Key"].(string)); err == nil {
+				nodePublicKey := primitives.Ed25519PublicKey(publicKey)
+
+				var gossipPort uint16
+				var i uint32
+
+				if i, err = parseUint32(kv["Port"].(float64)); err == nil {
+					gossipPort = uint16(i)
+
+					nodes[nodePublicKey.String()] = &hardCodedFederationNode{
+						nodePublicKey:  nodePublicKey,
+						gossipEndpoint: kv["IP"].(string),
+						gossipPort:     gossipPort,
+					}
+				}
+			}
+		}
+	}
+
+	return nodes, err
+}
+
+func populateConfig(cfg NodeConfig, data map[string]interface{}) (err error) {
 	for key, value := range data {
 		var duration time.Duration
 		var numericValue uint32
+		var publicKey primitives.Ed25519PublicKey
 
 		switch value.(type) {
 		case float64:
-			f64 := value.(float64)
-
-			s := fmt.Sprintf("%.0f", f64)
-			if i, err := strconv.Atoi(s); err == nil {
-				numericValue = uint32(i)
-			} else {
-				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
-			}
+			numericValue, err = parseUint32(value.(float64))
 		case string:
-			s := value.(string)
-
-			if parsedDuration, err := time.ParseDuration(s); err == nil {
+			if parsedDuration, err := time.ParseDuration(value.(string)); err == nil {
 				duration = parsedDuration
 			}
 		}
@@ -62,72 +93,35 @@ func populateConfig(cfg NodeConfig, data map[string]interface{}) error {
 		}
 
 		if key == "constant-consensus-leader" {
-			if publicKey, err := hex.DecodeString(value.(string)); err == nil {
-				cfg.SetConstantConsensusLeader(primitives.Ed25519PublicKey(publicKey))
-			} else {
-				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
-			}
+			publicKey, err = hex.DecodeString(value.(string))
+			cfg.SetConstantConsensusLeader(primitives.Ed25519PublicKey(publicKey))
 		}
 
 		if key == "active-consensus-algo" {
-			s := fmt.Sprintf("%.0f", value)
-			if i, err := strconv.Atoi(s); err == nil {
-				cfg.SetActiveConsensusAlgo(consensus.ConsensusAlgoType(i))
-			} else {
-				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
-			}
+			var i uint32
+			i, err = parseUint32(value.(float64))
+			cfg.SetActiveConsensusAlgo(consensus.ConsensusAlgoType(i))
 		}
 
 		if key == "node-public-key" {
-			if publicKey, err := hex.DecodeString(value.(string)); err == nil {
-				cfg.SetNodePublicKey(primitives.Ed25519PublicKey(publicKey))
-			} else {
-				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
-			}
+			publicKey, err = hex.DecodeString(value.(string))
+			cfg.SetNodePublicKey(primitives.Ed25519PublicKey(publicKey))
 		}
 
 		if key == "node-private-key" {
-			if publicKey, err := hex.DecodeString(value.(string)); err == nil {
-				cfg.SetNodePrivateKey(primitives.Ed25519PrivateKey(publicKey))
-			} else {
-				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
-			}
+			var privateKey primitives.Ed25519PrivateKey
+			privateKey, err = hex.DecodeString(value.(string))
+			cfg.SetNodePrivateKey(primitives.Ed25519PrivateKey(privateKey))
 		}
 
 		if key == "federation-nodes" {
-			nodes := make(map[string]FederationNode)
+			var nodes map[string]FederationNode
+			nodes, err = parseNodeList(value)
+			cfg.SetFederationNodes(nodes)
+		}
 
-			if nodeList, ok := value.([]interface{}); ok {
-				for _, item := range nodeList {
-					kv := item.(map[string]interface{})
-
-					if publicKey, err := hex.DecodeString(kv["Key"].(string)); err == nil {
-						nodePublicKey := primitives.Ed25519PublicKey(publicKey)
-
-						var gossipPort uint16
-
-						s := fmt.Sprintf("%.0f", kv["Port"])
-						if i, err := strconv.Atoi(s); err == nil {
-							gossipPort = uint16(i)
-						} else {
-							return fmt.Errorf("could not decode value for config key %s: %s", key, err)
-						}
-
-						nodes[nodePublicKey.String()] = &hardCodedFederationNode{
-							nodePublicKey:  nodePublicKey,
-							gossipEndpoint: kv["IP"].(string),
-							gossipPort:     gossipPort,
-						}
-					} else {
-						return fmt.Errorf("could not decode value for config key %s: %s", key, err)
-					}
-
-				}
-
-				cfg.SetFederationNodes(nodes)
-			} else {
-				return fmt.Errorf("could not decode value for config key %s", key)
-			}
+		if err != nil {
+			return fmt.Errorf("could not decode value for config key %s: %s", key, err)
 		}
 	}
 
