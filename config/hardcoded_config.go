@@ -141,6 +141,16 @@ func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig 
 	return c
 }
 
+func (c *config) SetConstantConsensusLeader(key primitives.Ed25519PublicKey) NodeConfig {
+	c.constantConsensusLeader = key
+	return c
+}
+
+func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) NodeConfig {
+	c.activeConsensusAlgo = algoType
+	return c
+}
+
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
 }

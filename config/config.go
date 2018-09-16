@@ -14,6 +14,9 @@ type NodeConfig interface {
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
 
+	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) NodeConfig
+	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) NodeConfig
+
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey

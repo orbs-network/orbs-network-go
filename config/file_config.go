@@ -1,8 +1,11 @@
 package config
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +19,10 @@ func NewFileConfig(source string) (NodeConfig, error) {
 		return nil, err
 	}
 
-	populateConfig(cfg, data)
+	if err := populateConfig(cfg, data); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }
 
@@ -24,7 +30,7 @@ func convertKeyName(key string) string {
 	return strings.ToUpper(strings.Replace(key, "-", "_", -1))
 }
 
-func populateConfig(cfg NodeConfig, data map[string]interface{}) {
+func populateConfig(cfg NodeConfig, data map[string]interface{}) error {
 	for key, value := range data {
 		var duration time.Duration
 		var numericValue uint32
@@ -37,7 +43,7 @@ func populateConfig(cfg NodeConfig, data map[string]interface{}) {
 			if i, err := strconv.Atoi(s); err == nil {
 				numericValue = uint32(i)
 			} else {
-				// TODO handle error
+				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
 			}
 		case string:
 			s := value.(string)
@@ -54,5 +60,40 @@ func populateConfig(cfg NodeConfig, data map[string]interface{}) {
 		if duration != 0 {
 			cfg.SetDuration(convertKeyName(key), duration)
 		}
+
+		if key == "constant-consensus-leader" {
+			if publicKey, err := hex.DecodeString(value.(string)); err == nil {
+				cfg.SetConstantConsensusLeader(primitives.Ed25519PublicKey(publicKey))
+			} else {
+				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+			}
+		}
+
+		if key == "active-consensus-algo" {
+			s := fmt.Sprintf("%.0f", value)
+			if i, err := strconv.Atoi(s); err == nil {
+				cfg.SetActiveConsensusAlgo(consensus.ConsensusAlgoType(i))
+			} else {
+				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+			}
+		}
+
+		if key == "node-public-key" {
+			if publicKey, err := hex.DecodeString(value.(string)); err == nil {
+				cfg.SetNodePublicKey(primitives.Ed25519PublicKey(publicKey))
+			} else {
+				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+			}
+		}
+
+		if key == "node-private-key" {
+			if publicKey, err := hex.DecodeString(value.(string)); err == nil {
+				cfg.SetNodePrivateKey(primitives.Ed25519PrivateKey(publicKey))
+			} else {
+				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+			}
+		}
 	}
+
+	return nil
 }
