@@ -252,7 +252,7 @@ func (t *directTransport) clientMainLoop(ctx context.Context, address string, ms
 		conn, err := net.Dial("tcp", address)
 
 		if err != nil {
-			t.reporting.Info("cannot connect to gossip peer endpoint", log.Error(err))
+			t.reporting.Info("cannot connect to gossip peer endpoint", log.String("peer", address), log.Error(err))
 			time.Sleep(t.config.GossipConnectionKeepAliveInterval())
 			continue
 		}
