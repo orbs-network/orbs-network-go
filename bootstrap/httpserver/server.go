@@ -13,6 +13,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+type httpErr struct {
+	code int
+	logField *log.Field
+	message string
+}
+
 type HttpServer interface {
 	GracefulShutdown(timeout time.Duration)
 }
@@ -49,8 +55,8 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
-	router.Handle("/v1/api/send-transaction", report(s.reporting, http.HandlerFunc(s.sendTransactionHandler)))
-	router.Handle("/v1/api/call-method", report(s.reporting, http.HandlerFunc(s.callMethodHandler)))
+	router.Handle("/api/v1/send-transaction", report(s.reporting, http.HandlerFunc(s.sendTransactionHandler)))
+	router.Handle("/api/v1/call-method", report(s.reporting, http.HandlerFunc(s.callMethodHandler)))
 	return router
 }
 
@@ -63,13 +69,15 @@ func report(reporting log.BasicLogger, h http.Handler) http.Handler {
 }
 
 func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
-	bytes := s.readInput(r, w)
-	if bytes == nil {
+	bytes, e := readInput(r)
+	if e != nil {
+		writeErrorResponseAndLog(s.reporting, w, e)
 		return
 	}
 
 	clientRequest := client.SendTransactionRequestReader(bytes)
-	if !s.isValid(clientRequest, w) {
+	if e := validate(clientRequest); e != nil {
+		writeErrorResponseAndLog(s.reporting, w, e)
 		return
 	}
 
@@ -78,18 +86,20 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
-		writeTextResponse(w, err.Error(), http.StatusInternalServerError)
+		writeErrorResponseAndLog(s.reporting, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
 func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
-	bytes := s.readInput(r, w)
-	if bytes == nil {
+	bytes, e := readInput(r)
+	if e != nil {
+		writeErrorResponseAndLog(s.reporting, w, e)
 		return
 	}
 
 	clientRequest := client.CallMethodRequestReader(bytes)
-	if !s.isValid(clientRequest, w) {
+	if e := validate(clientRequest); e != nil {
+		writeErrorResponseAndLog(s.reporting, w, e)
 		return
 	}
 
@@ -98,33 +108,27 @@ func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
 	} else {
-		writeTextResponse(w, err.Error(), http.StatusInternalServerError)
+		writeErrorResponseAndLog(s.reporting, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
-func (s *server) readInput(r *http.Request, w http.ResponseWriter) []byte {
+func readInput(r *http.Request) ([]byte, *httpErr) {
 	if r.Body == nil {
-		s.reporting.Info("could not read empty http request body")
-		writeTextResponse(w, "http request body is empty", http.StatusBadRequest)
-		return nil
+		return nil, &httpErr{http.StatusBadRequest, nil, "http request body is empty"}
 	}
 
 	bytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		s.reporting.Info("could not read http request body", log.Error(err))
-		writeTextResponse(w, err.Error(), http.StatusBadRequest)
-		return nil
+		return nil, &httpErr{http.StatusBadRequest, log.Error(err), "http request body is empty"}
 	}
-	return bytes
+	return bytes, nil
 }
 
-func (s *server) isValid(m membuffers.Message, w http.ResponseWriter) bool {
+func validate(m membuffers.Message) *httpErr {
 	if !m.IsValid() {
-		s.reporting.Info("http server membuffer not valid", log.Stringable("request", m))
-		writeTextResponse(w, "http request body input is invalid", http.StatusBadRequest)
-		return false
+		return &httpErr{http.StatusBadRequest,  log.Stringable("request", m), "http request is not a valid membuffer"}
 	}
-	return true
+	return nil
 }
 
 func translateStatusToHttpCode(responseCode protocol.RequestStatus) int {
@@ -146,14 +150,19 @@ func translateStatusToHttpCode(responseCode protocol.RequestStatus) int {
 }
 
 func writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, httpCode int, orbsText string) {
-	w.Header().Set("Content-Type", "application/membuffers")
+	w.Header().Set("Content-Type", "application/vnd.membuffers")
 	w.WriteHeader(httpCode)
 	w.Header().Set("X-ORBS-CODE-NAME", orbsText)
 	w.Write(message.Raw())
 }
 
-func writeTextResponse(w http.ResponseWriter, message string, httpCode int) {
-	w.Header().Set("Content-Type", "plain/text")
-	w.WriteHeader(httpCode)
-	w.Write([]byte(message))
+func writeErrorResponseAndLog(reporting log.BasicLogger, w http.ResponseWriter, m *httpErr) {
+	if m.logField == nil {
+		reporting.Info(m.message)
+	} else {
+		reporting.Info(m.message, m.logField)
+	}
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(m.code)
+	w.Write([]byte(m.message))
 }

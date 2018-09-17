@@ -29,7 +29,7 @@ type E2EConfig struct {
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	ApiEndpoint := "http://localhost:8080/v1/api/"
+	ApiEndpoint := "http://localhost:8080/api/v1/"
 
 	if !Bootstrap {
 		ApiEndpoint = os.Getenv("API_ENDPOINT")
@@ -125,9 +125,9 @@ func (h *harness) httpPost(t *testing.T, input membuffers.Message, method string
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res.StatusCode)
 
-	b, err := ioutil.ReadAll(res.Body)
+	bytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	require.NoError(t, err)
 
-	return b
+	return bytes
 }

@@ -1,15 +1,12 @@
 package httpserver
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -17,33 +14,20 @@ import (
 	"os"
 	"testing"
 	"time"
-	"github.com/orbs-network/orbs-network-go/test"
 )
 
-func Test_HttpServer_ReadInput_EmptyPost(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-
-	s := NewHttpServer("", logger, papiMock)
-
+func TestHttpServerReadInput_EmptyPost(t *testing.T) {
 	req, _ := http.NewRequest("POST", "1", nil)
-	rec := httptest.NewRecorder()
-	s.(*server).readInput(req, rec)
+	_, e := readInput(req)
 
-	require.Equal(t, http.StatusBadRequest, rec.Code, "empty body should cause bad request error")
+	require.Equal(t, http.StatusBadRequest, e.code, "empty body should cause bad request error")
 }
 
-func Test_HttpServer_ReadInput_ErrorBodyPost(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-
-	s := NewHttpServer("", logger, papiMock)
-
+func TestHttpServerReadInput_ErrorBodyPost(t *testing.T) {
 	req, _ := http.NewRequest("POST", "1", errReader(0))
-	rec := httptest.NewRecorder()
-	s.(*server).readInput(req, rec)
+	_, e := readInput(req)
 
-	require.Equal(t, http.StatusBadRequest, rec.Code, "empty body should cause bad request error")
+	require.Equal(t, http.StatusBadRequest, e.code, "empty body should cause bad request error")
 }
 
 type errReader int
@@ -52,21 +36,14 @@ func (errReader) Read(p []byte) (n int, err error) {
 	return 0, errors.Errorf("test error")
 }
 
-func Test_HttpServer_IsValid_BadMembuff(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-
-	s := NewHttpServer("", logger, papiMock)
-
+func TestHttpServerIsValid_BadMembuff(t *testing.T) {
 	m := client.CallMethodRequestReader([]byte("Random Bytes"))
+	e := validate(m)
 
-	rec := httptest.NewRecorder()
-	s.(*server).isValid(m, rec)
-
-	require.Equal(t, http.StatusBadRequest, rec.Code, "bad input in body should cause bad request error")
+	require.Equal(t, http.StatusBadRequest, e.code, "bad input in body should cause bad request error")
 }
 
-func Test_HttpServer_TranslateStatusToHttpCode(t *testing.T) {
+func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 	tests := []struct {
 		name   string
 		expect int
@@ -88,7 +65,7 @@ func Test_HttpServer_TranslateStatusToHttpCode(t *testing.T) {
 	}
 }
 
-func Test_HttpServer_writeMembuffResponse(t *testing.T) {
+func TestHttpServerWriteMembuffResponse(t *testing.T) {
 	expectedResponse := (&client.SendTransactionResponseBuilder{
 		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
 		TransactionReceipt: nil,
@@ -101,107 +78,22 @@ func Test_HttpServer_writeMembuffResponse(t *testing.T) {
 	writeMembuffResponse(rec, expectedResponse, http.StatusOK, "hello")
 
 	require.Equal(t, http.StatusOK, rec.Code, "code value is not equal")
-	require.Equal(t, "application/membuffers", rec.Header().Get("Content-Type"), "should have our content type")
+	require.Equal(t, "application/vnd.membuffers", rec.Header().Get("Content-Type"), "should have our content type")
 	require.Equal(t, "hello", rec.Header().Get("X-ORBS-CODE-NAME"), "should have correct x-orbs")
 	responseFromBody := client.SendTransactionResponseReader(rec.Body.Bytes())
 	test.RequireCmpEqual(t, expectedResponse, responseFromBody, "body response and pre-done response are not equal")
 }
 
-func Test_HttpServer_writeTextResponse(t *testing.T) {
+func TestHttpServerWriteTextResponse(t *testing.T) {
+	e := &httpErr{
+		code:     http.StatusAccepted,
+		logField: nil,
+		message:  "hello test",
+	}
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	rec := httptest.NewRecorder()
-	writeTextResponse(rec, "hello test", http.StatusAccepted)
+	writeErrorResponseAndLog(logger, rec, e)
 	require.Equal(t, http.StatusAccepted, rec.Code, "code value is not equal")
-	require.Equal(t, "plain/text", rec.Header().Get("Content-Type"), "should have our content type")
+	require.Equal(t, "text/plain", rec.Header().Get("Content-Type"), "should have our content type")
 	require.Equal(t, "hello test", rec.Body.String(), "should have text value")
 }
-
-func Test_HttpServer_SendTxHandler_Basic(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-	response := &client.SendTransactionResponseBuilder{
-		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
-		TransactionReceipt: nil,
-		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-		BlockHeight:        1,
-		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
-	}
-
-	papiMock.When("SendTransaction", mock.Any).Times(1).Return(&services.SendTransactionOutput{ClientResponse: response.Build()})
-
-	s := NewHttpServer("", logger, papiMock)
-
-	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: builders.TransferTransaction().Builder(),
-	}).Build()
-
-	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
-	rec := httptest.NewRecorder()
-	s.(*server).sendTransactionHandler(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
-}
-
-func Test_HttpServer_SendTxHandler_Error(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-
-	papiMock.When("SendTransaction", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
-
-	s := NewHttpServer("", logger, papiMock)
-
-	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: builders.TransferTransaction().Builder(),
-	}).Build()
-
-	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
-	rec := httptest.NewRecorder()
-	s.(*server).sendTransactionHandler(rec, req)
-
-	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
-}
-
-func Test_HttpServer_CallMethod_Basic(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-	response := &client.CallMethodResponseBuilder{
-		RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
-		OutputArgumentArray: nil,
-		CallMethodResult:    protocol.EXECUTION_RESULT_SUCCESS,
-		BlockHeight:         1,
-		BlockTimestamp:      primitives.TimestampNano(time.Now().Nanosecond()),
-	}
-
-	papiMock.When("CallMethod", mock.Any).Times(1).Return(&services.CallMethodOutput{ClientResponse: response.Build()})
-
-	s := NewHttpServer("", logger, papiMock)
-
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: &protocol.TransactionBuilder{},
-	}).Build()
-
-	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
-	rec := httptest.NewRecorder()
-	s.(*server).callMethodHandler(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
-}
-
-func Test_HttpServer_CallMethod_Error(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-
-	papiMock.When("CallMethod", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
-
-	s := NewHttpServer("", logger, papiMock)
-
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: &protocol.TransactionBuilder{},
-	}).Build()
-
-	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
-	rec := httptest.NewRecorder()
-	s.(*server).callMethodHandler(rec, req)
-
-	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
-}
-

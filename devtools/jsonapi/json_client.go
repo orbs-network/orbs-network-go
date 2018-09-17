@@ -129,7 +129,7 @@ func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, se
 	}
 
 	sendTransactionRequest := (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()
-	res, err := http.Post(serverUrl+"/v1/api/send-transaction", "application/octet-stream", bytes.NewReader(sendTransactionRequest.Raw()))
+	res, err := http.Post(serverUrl+"/api/v1/send-transaction", "application/octet-stream", bytes.NewReader(sendTransactionRequest.Raw()))
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func CallMethod(transferJson *Transaction, serverUrl string, logVerbose bool) (*
 	}
 
 	request := (&client.CallMethodRequestBuilder{Transaction: tx}).Build()
-	res, err := http.Post(serverUrl+"/v1/api/call-method", "application/octet-stream", bytes.NewReader(request.Raw()))
+	res, err := http.Post(serverUrl+"/api/v1/call-method", "application/octet-stream", bytes.NewReader(request.Raw()))
 	if err != nil {
 		return nil, err
 	}
