@@ -72,16 +72,24 @@ func readFastInput(ctx *fasthttp.RequestCtx) ([]byte, *httpErr) {
 }
 
 func (s *fastHttpServer) callMethodHandler(ctx *fasthttp.RequestCtx) {
-	clientRequest := client.CallMethodRequestReader(postBody)
-	if reportErrorOnInvalidRequest(clientRequest, ctx) {
+	bytes, e := readFastInput(ctx)
+	if e != nil {
+		writeFastErrorResponseAndLog(s.reporting, ctx, e)
 		return
 	}
 
+	clientRequest := client.CallMethodRequestReader(bytes)
+	if e := validate(clientRequest); e != nil {
+		writeFastErrorResponseAndLog(s.reporting, ctx, e)
+		return
+	}
+
+	s.reporting.Info("http server received call-method", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
-	if result != nil {
-		writeMessageOrError(result.ClientResponse, err, ctx)
+	if result != nil && result.ClientResponse != nil {
+		writeFastMembuffResponse(ctx, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
 	} else {
-		writeMessageOrError(nil, err, ctx)
+		writeFastErrorResponseAndLog(s.reporting, ctx, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
@@ -91,9 +99,9 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 		defer meter.Done()
 
 		switch string(ctx.Path()) {
-		case "/api/send-transaction":
+		case "/api/v1/send-transaction":
 			s.sendTransactionHandler(ctx)
-		case "/api/call-method":
+		case "/api/v1/call-method":
 			s.callMethodHandler(ctx)
 		}
 	}
@@ -101,27 +109,6 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 
 func (s *fastHttpServer) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown() //TODO timeout context
-}
-
-func reportErrorOnInvalidRequest(m membuffers.Message, ctx *fasthttp.RequestCtx) bool {
-	if !m.IsValid() {
-		//TODO report error to Reporting
-		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		ctx.SetBody([]byte("Input is invalid"))
-		return true
-	}
-
-	return false
-}
-
-func writeMessageOrError(message membuffers.Message, err error, ctx *fasthttp.RequestCtx) {
-	//TODO handle errors
-	ctx.Response.Header.Set("Content-Type", "application/octet-stream")
-	if err != nil {
-		ctx.SetBody([]byte(err.Error()))
-	} else {
-		ctx.SetBody(message.Raw())
-	}
 }
 
 func writeFastErrorResponseAndLog(reporting log.BasicLogger, ctx *fasthttp.RequestCtx, m *httpErr) {
@@ -139,5 +126,5 @@ func writeFastMembuffResponse(ctx *fasthttp.RequestCtx, message membuffers.Messa
 	ctx.Response.Header.Add("Content-Type", "application/vnd.membuffers")
 	ctx.SetStatusCode(httpCode)
 	ctx.Response.Header.Add("X-ORBS-CODE-NAME", orbsText)
-	ctx.SetBody(message.Raw())
+	ctx.Write(message.Raw())
 }
