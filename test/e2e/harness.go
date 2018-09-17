@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -61,6 +62,9 @@ func newHarness() *harness {
 
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
+		wd, _ := os.Getwd()
+		nativeArtifactsPath := wd + "/artifact"
+
 		for i := 0; i < 3; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 			node := bootstrap.NewNode(
@@ -72,6 +76,7 @@ func newHarness() *harness {
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,
 				gossipTransport,
+				nativeArtifactsPath,
 			)
 
 			nodes = append(nodes, node)
@@ -102,7 +107,7 @@ func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransa
 	response := client.SendTransactionResponseReader(responseBytes)
 	if !response.IsValid() {
 		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
-		return nil, errors.Errorf("SendTransaction response invalid, raw as text: %s, raw as hex: %s", string(responseBytes), hex.EncodeToString(responseBytes))
+		return nil, errors.Errorf("SendTransaction response invalid, raw as text: %s, raw as hex: %s, txHash: %s", string(responseBytes), hex.EncodeToString(responseBytes), digest.CalcTxHash(request.SignedTransaction().Transaction()))
 	}
 	return response, nil
 }

@@ -13,7 +13,7 @@ type hardCodedFederationNode struct {
 type NodeConfigValue struct {
 	Uint32Value   uint32
 	DurationValue time.Duration
-	StringValue string
+	StringValue   string
 }
 
 type config struct {
@@ -116,7 +116,7 @@ func newHardCodedConfig(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, sendTransactionTimeout)
 	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
 
-	cfg.SetString(PROCESSOR_ARTIFACT_PATH, "/tmp/orbs/processor-artifacts/")
+	cfg.SetString(PROCESSOR_ARTIFACT_PATH, "/go/src/github.com/orbs-network/orbs-network-go/processor-artifacts/")
 
 	return cfg
 }
@@ -262,6 +262,6 @@ func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT].DurationValue
 }
 
-func (c* config) ProcessorArtifactPath() string {
+func (c *config) ProcessorArtifactPath() string {
 	return c.kv[PROCESSOR_ARTIFACT_PATH].StringValue
 }

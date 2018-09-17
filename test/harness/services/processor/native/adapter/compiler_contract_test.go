@@ -84,7 +84,9 @@ func aFakeCompiler(t *testing.T) *compilerContractHarness {
 
 func createTempTestDir(t *testing.T) string {
 	prefix := strings.Replace(t.Name(), "/", "__", -1)
-	tmpDir, err := ioutil.TempDir("/tmp", prefix)
+	wd, _ := os.Getwd()
+	tmpDir, err := ioutil.TempDir(wd+"/artifact", prefix)
+
 	if err != nil {
 		panic("could not create temp dir for test")
 	}

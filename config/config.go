@@ -10,6 +10,7 @@ type NodeConfig interface {
 	Set(key string, value NodeConfigValue) NodeConfig
 	SetDuration(key string, value time.Duration) NodeConfig
 	SetUint32(key string, value uint32) NodeConfig
+	SetString(key string, value string) NodeConfig
 
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
