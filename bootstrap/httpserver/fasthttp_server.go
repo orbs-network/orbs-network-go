@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/valyala/fasthttp"
+	"net/http"
 )
 
 type FastHttpServer interface {
@@ -39,17 +40,38 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 	return server
 }
 
-func (s *fastHttpServer) sendTransactionHandler(ctx *fasthttp.RequestCtx, postBody []byte) {
-	clientRequest := client.SendTransactionRequestReader(postBody)
-	if reportErrorOnInvalidRequest(clientRequest, ctx) {
+func (s *fastHttpServer) sendTransactionHandler(ctx *fasthttp.RequestCtx) {
+	bytes, e := readFastInput(ctx)
+	if bytes == nil {
+		writeFastErrorResponseAndLog(s.reporting, ctx, e)
 		return
 	}
 
+	clientRequest := client.SendTransactionRequestReader(bytes)
+	if e := validate(clientRequest); e != nil {
+		writeFastErrorResponseAndLog(s.reporting, ctx, e)
+		return
+	}
+
+	s.reporting.Info("http server received send-transaction", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
-	writeMessageOrError(result.ClientResponse, err, ctx)
+	if result != nil && result.ClientResponse != nil {
+		writeFastMembuffResponse(ctx, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
+	} else {
+		writeFastErrorResponseAndLog(s.reporting, ctx, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+	}
 }
 
-func (s *fastHttpServer) callMethodHandler(ctx *fasthttp.RequestCtx, postBody []byte) {
+func readFastInput(ctx *fasthttp.RequestCtx) ([]byte, *httpErr) {
+	if ctx.PostBody() == nil {
+		return nil, &httpErr{http.StatusBadRequest, nil, "http request body is empty"}
+	}
+
+	bytes := ctx.PostBody()
+	return bytes, nil
+}
+
+func (s *fastHttpServer) callMethodHandler(ctx *fasthttp.RequestCtx) {
 	clientRequest := client.CallMethodRequestReader(postBody)
 	if reportErrorOnInvalidRequest(clientRequest, ctx) {
 		return
@@ -68,18 +90,11 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
 		defer meter.Done()
 
-		postBody := ctx.PostBody()
-		if postBody == nil {
-			s.reporting.Info("could not read http request body")
-			ctx.SetStatusCode(fasthttp.StatusInternalServerError)
-			return
-		}
-
 		switch string(ctx.Path()) {
 		case "/api/send-transaction":
-			s.sendTransactionHandler(ctx, postBody)
+			s.sendTransactionHandler(ctx)
 		case "/api/call-method":
-			s.callMethodHandler(ctx, postBody)
+			s.callMethodHandler(ctx)
 		}
 	}
 }
@@ -107,4 +122,22 @@ func writeMessageOrError(message membuffers.Message, err error, ctx *fasthttp.Re
 	} else {
 		ctx.SetBody(message.Raw())
 	}
+}
+
+func writeFastErrorResponseAndLog(reporting log.BasicLogger, ctx *fasthttp.RequestCtx, m *httpErr) {
+	if m.logField == nil {
+		reporting.Info(m.message)
+	} else {
+		reporting.Info(m.message, m.logField)
+	}
+	ctx.Response.Header.Set("Content-Type", "text/plain")
+	ctx.SetStatusCode(m.code)
+	ctx.SetBodyString(m.message)
+}
+
+func writeFastMembuffResponse(ctx *fasthttp.RequestCtx, message membuffers.Message, httpCode int, orbsText string) {
+	ctx.Response.Header.Add("Content-Type", "application/vnd.membuffers")
+	ctx.SetStatusCode(httpCode)
+	ctx.Response.Header.Add("X-ORBS-CODE-NAME", orbsText)
+	ctx.SetBody(message.Raw())
 }
