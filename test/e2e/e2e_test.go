@@ -45,12 +45,10 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 }
 
 func BenchmarkTestNetworkCommitsMultipleTransactions(b *testing.B) {
+	h := newHarness()
+	defer h.gracefulShutdown()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		h := newHarness()
-		defer h.gracefulShutdown()
 
-		b.StartTimer()
 		// send 3 transactions with total of 70
 		amounts := []uint64{15, 22, 33}
 		for _, amount := range amounts {
@@ -68,7 +66,7 @@ func BenchmarkTestNetworkCommitsMultipleTransactions(b *testing.B) {
 		}
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
 			response, err := h.callMethod(b, getBalance)
-			if err == nil && response.CallResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
+			if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
 				outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(response)
 				if outputArgsIterator.HasNext() {
 					return outputArgsIterator.NextArguments().Uint64Value() == 70
@@ -77,6 +75,5 @@ func BenchmarkTestNetworkCommitsMultipleTransactions(b *testing.B) {
 			return false
 		})
 		require.True(b, ok, "getBalance should return total amount")
-		b.StopTimer()
 	}
 }
