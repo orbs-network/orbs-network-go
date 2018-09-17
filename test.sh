@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/sh -x
 
 COUNT=200
 # IMPORTANT: The timeout properly is for OVERALL running time of go test, not per test instance
@@ -73,6 +73,8 @@ run_acceptance_tests () {
 
 # Omitted -a from "tee" command on purpose, so that output file will be truncated
 echo "@@@@@ STARTING TO RUN TESTS (output: ${OUT}) @@@@@\n" | tee ${OUT}
+
+source ./test.common.sh
 
 run_all_tests
 check_exit_code_and_report

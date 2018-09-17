@@ -15,10 +15,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type sendTransactionCliResponse struct {
+type txReceipt struct {
 	TxHash          string
 	ExecutionResult int
 	OutputArguments []string
+}
+
+type sendTransactionCliResponse struct {
+	TransactionReceipt txReceipt
+	BlockHeight        int
+	BlockTimestamp     int
 }
 
 type OutputArgumentCliResponse struct {
@@ -111,8 +117,8 @@ func TestSambusacFlow(t *testing.T) {
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.ExecutionResult, "Transaction status to be successful = 1")
-	require.NotNil(t, response.TxHash, "got empty txhash")
+	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
+	require.NotNil(t, response.TransactionReceipt.TxHash, "got empty txhash")
 
 	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON())
 
