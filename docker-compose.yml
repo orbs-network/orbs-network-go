@@ -67,7 +67,7 @@ services:
   orbs-e2e:
     image: orbs:e2e
     environment:
-      API_ENDPOINT: http://orbs-network-node-3:8080/api/
+      API_ENDPOINT: http://orbs-network-node-3:8080/v1/api/
     command: sh -c "sleep 5 && ./e2e.test"
     networks:
       orbs-network:

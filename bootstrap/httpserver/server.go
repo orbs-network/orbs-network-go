@@ -8,6 +8,7 @@ import (
 
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -42,43 +43,15 @@ func NewHttpServer(address string, reporting log.BasicLogger, publicApi services
 	return server
 }
 
-//TODO extract commonalities between handlers
-func (s *server) createRouter() http.Handler {
-	sendTransactionHandler := s.handler(func(bytes []byte, r *response) {
-		clientRequest := client.SendTransactionRequestReader(bytes)
-		if r.reportErrorOnInvalidRequest(clientRequest) {
-			return
-		}
-
-		s.reporting.Info("http server received send-transaction", log.Stringable("request", clientRequest))
-		result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
-		r.writeMessageOrError(result.ClientResponse, err)
-	})
-
-	callMethodHandler := s.handler(func(bytes []byte, r *response) {
-
-		clientRequest := client.CallMethodRequestReader(bytes)
-		if r.reportErrorOnInvalidRequest(clientRequest) {
-			return
-		}
-
-		s.reporting.Info("http server received call-method", log.Stringable("request", clientRequest))
-		result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
-		if result != nil {
-			r.writeMessageOrError(result.ClientResponse, err)
-		} else {
-			r.writeMessageOrError(nil, err)
-		}
-	})
-
-	router := http.NewServeMux()
-	router.Handle("/api/send-transaction", report(s.reporting, sendTransactionHandler))
-	router.Handle("/api/call-method", report(s.reporting, callMethodHandler))
-	return router
-}
-
 func (s *server) GracefulShutdown(timeout time.Duration) {
 	s.httpServer.Shutdown(context.TODO()) //TODO timeout context
+}
+
+func (s *server) createRouter() http.Handler {
+	router := http.NewServeMux()
+	router.Handle("/v1/api/send-transaction", report(s.reporting, http.HandlerFunc(s.sendTransactionHandler)))
+	router.Handle("/v1/api/call-method", report(s.reporting, http.HandlerFunc(s.callMethodHandler)))
+	return router
 }
 
 func report(reporting log.BasicLogger, h http.Handler) http.Handler {
@@ -89,41 +62,98 @@ func report(reporting log.BasicLogger, h http.Handler) http.Handler {
 	})
 }
 
-func (r *response) reportErrorOnInvalidRequest(m membuffers.Message) bool {
-	if !m.IsValid() {
-		//TODO report error to Reporting
-		r.writer.WriteHeader(http.StatusBadRequest)
-		r.writer.Write([]byte("Input is invalid"))
-		return true
+func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
+	bytes := s.readInput(r, w)
+	if bytes == nil {
+		return
 	}
 
-	return false
-}
+	clientRequest := client.SendTransactionRequestReader(bytes)
+	if !s.isValid(clientRequest, w) {
+		return
+	}
 
-func (r *response) writeMessageOrError(message membuffers.Message, err error) {
-	//TODO handle errors
-	r.writer.Header().Set("Content-Type", "application/octet-stream")
-	if err != nil {
-		r.writer.Write([]byte(err.Error()))
+	s.reporting.Info("http server received send-transaction", log.Stringable("request", clientRequest))
+	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
+	if result != nil && result.ClientResponse != nil {
+		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
-		r.writer.Write(message.Raw())
+		writeTextResponse(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func (s *server) handler(handler func(bytes []byte, r *response)) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			s.reporting.Info("could not read http request body", log.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
+func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
+	bytes := s.readInput(r, w)
+	if bytes == nil {
+		return
+	}
 
-		handler(bytes, &response{writer: w})
-	})
+	clientRequest := client.CallMethodRequestReader(bytes)
+	if !s.isValid(clientRequest, w) {
+		return
+	}
+
+	s.reporting.Info("http server received call-method", log.Stringable("request", clientRequest))
+	result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
+	if result != nil && result.ClientResponse != nil {
+		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
+	} else {
+		writeTextResponse(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
-type response struct {
-	writer http.ResponseWriter
+func (s *server) readInput(r *http.Request, w http.ResponseWriter) []byte {
+	if r.Body == nil {
+		s.reporting.Info("could not read empty http request body")
+		writeTextResponse(w, "http request body is empty", http.StatusBadRequest)
+		return nil
+	}
+
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		s.reporting.Info("could not read http request body", log.Error(err))
+		writeTextResponse(w, err.Error(), http.StatusBadRequest)
+		return nil
+	}
+	return bytes
+}
+
+func (s *server) isValid(m membuffers.Message, w http.ResponseWriter) bool {
+	if !m.IsValid() {
+		s.reporting.Info("http server membuffer not valid", log.Stringable("request", m))
+		writeTextResponse(w, "http request body input is invalid", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+func translateStatusToHttpCode(responseCode protocol.RequestStatus) int {
+	switch responseCode {
+	case protocol.REQUEST_STATUS_COMPLETED:
+		return http.StatusOK
+	case protocol.REQUEST_STATUS_IN_PROCESS:
+		return http.StatusAccepted
+	case protocol.REQUEST_STATUS_NOT_FOUND:
+		return http.StatusNotFound
+	case protocol.REQUEST_STATUS_REJECTED:
+		return http.StatusBadRequest
+	case protocol.REQUEST_STATUS_CONGESTION:
+		return http.StatusServiceUnavailable
+	case protocol.REQUEST_STATUS_RESERVED:
+		return http.StatusInternalServerError
+	}
+	return http.StatusNotImplemented
+}
+
+func writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, httpCode int, orbsText string) {
+	w.Header().Set("Content-Type", "application/membuffers")
+	w.WriteHeader(httpCode)
+	w.Header().Set("X-ORBS-CODE-NAME", orbsText)
+	w.Write(message.Raw())
+}
+
+func writeTextResponse(w http.ResponseWriter, message string, httpCode int) {
+	w.Header().Set("Content-Type", "plain/text")
+	w.WriteHeader(httpCode)
+	w.Write([]byte(message))
 }
