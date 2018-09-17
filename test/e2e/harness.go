@@ -94,7 +94,7 @@ func (h *harness) gracefulShutdown() {
 	}
 }
 
-func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
+func (h *harness) sendTransaction(t testing.TB, txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: txBuilder,
 	}).Build()
@@ -107,7 +107,7 @@ func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransa
 	return response, nil
 }
 
-func (h *harness) callMethod(t *testing.T, txBuilder *protocol.TransactionBuilder) (*client.CallMethodResponse, error) {
+func (h *harness) callMethod(t testing.TB, txBuilder *protocol.TransactionBuilder) (*client.CallMethodResponse, error) {
 	request := (&client.CallMethodRequestBuilder{
 		Transaction: txBuilder,
 	}).Build()
@@ -120,7 +120,7 @@ func (h *harness) callMethod(t *testing.T, txBuilder *protocol.TransactionBuilde
 	return response, nil
 }
 
-func (h *harness) httpPost(t *testing.T, input membuffers.Message, method string) []byte {
+func (h *harness) httpPost(t testing.TB, input membuffers.Message, method string) []byte {
 	res, err := http.Post(getConfig().ApiEndpoint+method, "application/octet-stream", bytes.NewReader(input.Raw()))
 	require.NoError(t, err)
 	require.Equal(t, res.StatusCode, http.StatusOK)
