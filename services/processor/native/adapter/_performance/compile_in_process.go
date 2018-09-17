@@ -3,13 +3,13 @@ package main
 // TODO: this experiment still does not work, requires more research
 
 import (
-	"cmd/compile/internal/gc"
 	gcamd64 "cmd/compile/internal/amd64"
-	"cmd/link/internal/ld"
+	"cmd/compile/internal/gc"
 	ldamd64 "cmd/link/internal/amd64"
+	"cmd/link/internal/ld"
+	"flag"
 	"os"
 	"strings"
-	"flag"
 )
 
 func main() {
