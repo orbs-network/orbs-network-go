@@ -10,13 +10,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 )
 
 func BenchmarkServerCallMethod(b *testing.B) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput()
 	mockApi := getPapiMock()
 
 	s := NewHttpServer("127.0.0.1:8080", logger, mockApi)
@@ -37,7 +36,7 @@ func BenchmarkServerCallMethod(b *testing.B) {
 }
 
 func BenchmarkFastServerCallMethod(b *testing.B) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput()
 	mockApi := getPapiMock()
 
 	s := NewFastHttpServer("127.0.0.1:8081", logger, mockApi)
