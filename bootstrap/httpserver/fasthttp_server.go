@@ -39,32 +39,31 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 	return server
 }
 
-//TODO extract commonalities between handlers
-func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
-	sendTransactionHandler := func(ctx *fasthttp.RequestCtx, postBody []byte) {
-		clientRequest := client.SendTransactionRequestReader(postBody)
-		if reportErrorOnInvalidRequest(clientRequest, ctx) {
-			return
-		}
+func (s *fastHttpServer) sendTransactionHandler(ctx *fasthttp.RequestCtx, postBody []byte) {
+	clientRequest := client.SendTransactionRequestReader(postBody)
+	if reportErrorOnInvalidRequest(clientRequest, ctx) {
+		return
+	}
 
-		result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
+	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
+	writeMessageOrError(result.ClientResponse, err, ctx)
+}
+
+func (s *fastHttpServer) callMethodHandler(ctx *fasthttp.RequestCtx, postBody []byte) {
+	clientRequest := client.CallMethodRequestReader(postBody)
+	if reportErrorOnInvalidRequest(clientRequest, ctx) {
+		return
+	}
+
+	result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
+	if result != nil {
 		writeMessageOrError(result.ClientResponse, err, ctx)
+	} else {
+		writeMessageOrError(nil, err, ctx)
 	}
+}
 
-	callMethodHandler := func(ctx *fasthttp.RequestCtx, postBody []byte) {
-		clientRequest := client.CallMethodRequestReader(postBody)
-		if reportErrorOnInvalidRequest(clientRequest, ctx) {
-			return
-		}
-
-		result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
-		if result != nil {
-			writeMessageOrError(result.ClientResponse, err, ctx)
-		} else {
-			writeMessageOrError(nil, err, ctx)
-		}
-	}
-
+func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 	return func(ctx *fasthttp.RequestCtx) {
 		meter := s.reporting.Meter("request-process-time", log.String("url", string(ctx.Path())))
 		defer meter.Done()
@@ -78,9 +77,9 @@ func (s *fastHttpServer) createRouter() func(ctx *fasthttp.RequestCtx) {
 
 		switch string(ctx.Path()) {
 		case "/api/send-transaction":
-			sendTransactionHandler(ctx, postBody)
+			s.sendTransactionHandler(ctx, postBody)
 		case "/api/call-method":
-			callMethodHandler(ctx, postBody)
+			s.callMethodHandler(ctx, postBody)
 		}
 	}
 }
