@@ -16,7 +16,10 @@ import (
 )
 
 func BenchmarkServerCallMethod(b *testing.B) {
-	s := startServer()
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	mockApi := getPapiMock()
+
+	s := NewHttpServer("127.0.0.1:8080", logger, mockApi)
 	s.GracefulShutdown(time.Second)
 
 	webClient := &http.Client{}
@@ -34,7 +37,10 @@ func BenchmarkServerCallMethod(b *testing.B) {
 }
 
 func BenchmarkFastServerCallMethod(b *testing.B) {
-	s := startFastServer()
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	mockApi := getPapiMock()
+
+	s := NewFastHttpServer("127.0.0.1:8081", logger, mockApi)
 	s.GracefulShutdown(time.Second)
 
 	webClient := &http.Client{}
@@ -43,7 +49,7 @@ func BenchmarkFastServerCallMethod(b *testing.B) {
 		Transaction: &protocol.TransactionBuilder{},
 	}).Build()
 
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8080/api/v1/call-method", bytes.NewReader(request.Raw()))
+	req, _ := http.NewRequest("POST", "http://127.0.0.1:8081/api/v1/call-method", bytes.NewReader(request.Raw()))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -51,8 +57,7 @@ func BenchmarkFastServerCallMethod(b *testing.B) {
 	}
 }
 
-func startServer() HttpServer {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+func getPapiMock() *services.MockPublicApi {
 	papiMock := &services.MockPublicApi{}
 	response := &client.CallMethodResponseBuilder{
 		RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
@@ -61,26 +66,8 @@ func startServer() HttpServer {
 		BlockHeight:         1,
 		BlockTimestamp:      primitives.TimestampNano(time.Now().Nanosecond()),
 	}
-
 	papiMock.When("CallMethod", mock.Any).Times(1).Return(&services.CallMethodOutput{ClientResponse: response.Build()})
-
-	return NewHttpServer("127.0.0.1:8080", logger, papiMock)
-}
-
-func startFastServer() HttpServer {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	papiMock := &services.MockPublicApi{}
-	response := &client.CallMethodResponseBuilder{
-		RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
-		OutputArgumentArray: nil,
-		CallMethodResult:    protocol.EXECUTION_RESULT_SUCCESS,
-		BlockHeight:         1,
-		BlockTimestamp:      primitives.TimestampNano(time.Now().Nanosecond()),
-	}
-
-	papiMock.When("CallMethod", mock.Any).Times(1).Return(&services.CallMethodOutput{ClientResponse: response.Build()})
-
-	return NewFastHttpServer("127.0.0.1:8080", logger, papiMock)
+	return papiMock
 }
 
 func sendRequest(client *http.Client, request *http.Request) {
