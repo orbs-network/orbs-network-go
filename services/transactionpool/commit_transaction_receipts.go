@@ -20,7 +20,7 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 	var myReceipts []*protocol.TransactionReceipt
 
 	for _, receipt := range input.TransactionReceipts {
-		removedTx := s.pendingPool.remove(receipt.Txhash())
+		removedTx := s.pendingPool.remove(receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
 		if s.originatedFromMyPublicApi(removedTx) {
 			myReceipts = append(myReceipts, receipt)
 		}
