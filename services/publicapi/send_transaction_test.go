@@ -16,7 +16,7 @@ func TestPrepareResponse(t *testing.T) {
 	receipt := builders.TransactionReceipt().WithRandomHash().Build()
 
 	response := prepareResponse(&services.AddNewTransactionOutput{
-		TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED,
+		TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
 		TransactionReceipt: receipt,
 		BlockHeight:        126,
 		BlockTimestamp:     blockTime,
@@ -25,7 +25,7 @@ func TestPrepareResponse(t *testing.T) {
 	test.RequireCmpEqual(t, receipt, response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
 	require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
 }
 
 func TestPrepareResponseNilReceipt(t *testing.T) {

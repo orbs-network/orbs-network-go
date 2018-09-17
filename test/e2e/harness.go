@@ -29,7 +29,7 @@ type E2EConfig struct {
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	ApiEndpoint := "http://localhost:8080/api/"
+	ApiEndpoint := "http://localhost:8080/api/v1/"
 
 	if !Bootstrap {
 		ApiEndpoint = os.Getenv("API_ENDPOINT")
@@ -123,7 +123,7 @@ func (h *harness) callMethod(t testing.TB, txBuilder *protocol.TransactionBuilde
 func (h *harness) httpPost(t testing.TB, input membuffers.Message, method string) []byte {
 	res, err := http.Post(getConfig().ApiEndpoint+method, "application/octet-stream", bytes.NewReader(input.Raw()))
 	require.NoError(t, err)
-	require.Equal(t, res.StatusCode, http.StatusOK)
+	require.Equal(t, http.StatusOK, res.StatusCode)
 
 	bytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()

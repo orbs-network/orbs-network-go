@@ -23,7 +23,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	if alreadyCommitted := s.committedPool.get(digest.CalcTxHash(input.SignedTransaction.Transaction())); alreadyCommitted != nil {
 		s.logger.Info("transaction already committed", log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
-		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED), nil
+		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
