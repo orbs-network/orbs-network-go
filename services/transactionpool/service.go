@@ -64,7 +64,7 @@ func NewTransactionPool(ctx context.Context,
 	}
 
 	gossip.RegisterTransactionRelayHandler(s)
-	pendingPool.onTransactionRemoved = s.onTransactionRemoved
+	pendingPool.onTransactionRemoved = s.onTransactionError
 
 	//TODO supervise
 	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool, logger)
@@ -161,14 +161,16 @@ func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status proto
 	}
 }
 
-func (s *service) onTransactionRemoved(txHash primitives.Sha256, status protocol.TransactionStatus) {
-	for _, trh := range s.transactionResultsHandlers {
-		trh.HandleTransactionError(&handlers.HandleTransactionErrorInput{
-			Txhash:txHash,
-			TransactionStatus: status,
-			BlockTimestamp: s.lastCommittedBlockTimestamp,
-			BlockHeight: s.lastCommittedBlockHeight,
-		})
+func (s *service) onTransactionError(txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
+	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
+		for _, trh := range s.transactionResultsHandlers {
+			trh.HandleTransactionError(&handlers.HandleTransactionErrorInput{
+				Txhash:txHash,
+				TransactionStatus: removalReason,
+				BlockTimestamp: s.lastCommittedBlockTimestamp,
+				BlockHeight: s.lastCommittedBlockHeight,
+			})
+		}
 	}
 }
 

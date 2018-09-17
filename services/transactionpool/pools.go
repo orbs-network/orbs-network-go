@@ -86,7 +86,7 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256, removalReason protocol.
 		p.currentSizeInBytes -= sizeOf(pendingTx.transaction)
 		p.transactionList.Remove(pendingTx.listElement)
 
-		if p.onTransactionRemoved != nil && removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
+		if p.onTransactionRemoved != nil {
 			p.onTransactionRemoved(txhash, removalReason)
 		}
 
