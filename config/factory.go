@@ -12,6 +12,7 @@ func ForProduction(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	processorArtifactPath string,
 ) NodeConfig {
 
 	benchmarkConsensusRetryInterval := 5000 * time.Millisecond
@@ -29,7 +30,9 @@ func ForProduction(
 		minimumTransactionsInBlock,
 		minimalBlockDelay,
 		queryGraceTimeout,
-		sendTransactionTimeout)
+		sendTransactionTimeout,
+		processorArtifactPath,
+	)
 }
 
 func ForAcceptanceTests(
@@ -55,7 +58,9 @@ func ForAcceptanceTests(
 		minimumTransactionsInBlock,
 		minimalBlockDelay,
 		queryGraceTimeout,
-		sendTransactionTimeout)
+		sendTransactionTimeout,
+		"", // default
+	)
 }
 
 func ForDevelopment(
@@ -81,7 +86,9 @@ func ForDevelopment(
 		minimumTransactionsInBlock,
 		minimalBlockDelay,
 		queryGraceTimeout,
-		sendTransactionTimeout)
+		sendTransactionTimeout,
+		"", // default
+	)
 }
 
 func EmptyConfig() NodeConfig {

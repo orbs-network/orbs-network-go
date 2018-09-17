@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -62,8 +63,8 @@ func newHarness() *harness {
 
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
-		wd, _ := os.Getwd()
-		nativeArtifactsPath := wd + "/artifact"
+		processorArtifactPath, dirToCleanup := getProcessorArtifactPath()
+		os.RemoveAll(dirToCleanup)
 
 		for i := 0; i < 3; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
@@ -76,7 +77,7 @@ func newHarness() *harness {
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,
 				gossipTransport,
-				nativeArtifactsPath,
+				processorArtifactPath,
 			)
 
 			nodes = append(nodes, node)
@@ -97,6 +98,8 @@ func (h *harness) gracefulShutdown() {
 			node.GracefulShutdown(1 * time.Second)
 		}
 	}
+	_, dirToCleanup := getProcessorArtifactPath()
+	os.RemoveAll(dirToCleanup)
 }
 
 func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
@@ -135,4 +138,9 @@ func (h *harness) httpPost(t *testing.T, input membuffers.Message, method string
 	require.NoError(t, err)
 
 	return bytes
+}
+
+func getProcessorArtifactPath() (string, string) {
+	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
+	return filepath.Join(dir, "processor-artifacts"), dir
 }

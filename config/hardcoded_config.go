@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"path/filepath"
 	"time"
 )
 
@@ -76,6 +77,7 @@ func newHardCodedConfig(
 	minimalBlockDelay time.Duration,
 	queryGraceTimeout time.Duration,
 	sendTransactionTimeout time.Duration,
+	processorArtifactPath string,
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
@@ -116,7 +118,11 @@ func newHardCodedConfig(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, sendTransactionTimeout)
 	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
 
-	cfg.SetString(PROCESSOR_ARTIFACT_PATH, "/go/src/github.com/orbs-network/orbs-network-go/processor-artifacts/")
+	if processorArtifactPath == "" {
+		cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	} else {
+		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
+	}
 
 	return cfg
 }

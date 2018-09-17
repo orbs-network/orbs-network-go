@@ -36,7 +36,7 @@ func NewNode(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	logger log.BasicLogger,
 	transport gossipAdapter.Transport,
-	nativeArtifactsPath string,
+	processorArtifactPath string,
 ) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.ForProduction(
@@ -45,11 +45,8 @@ func NewNode(
 		nodePrivateKey,
 		constantConsensusLeader,
 		activeConsensusAlgo,
+		processorArtifactPath,
 	)
-
-	if nativeArtifactsPath != "" {
-		nodeConfig.SetString(config.PROCESSOR_ARTIFACT_PATH, nativeArtifactsPath)
-	}
 
 	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
 
