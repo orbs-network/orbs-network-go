@@ -158,6 +158,17 @@ func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status proto
 	}
 }
 
+func (s *service) onTransactionRemoved(txHash primitives.Sha256, status protocol.TransactionStatus) {
+	for _, trh := range s.transactionResultsHandlers {
+		trh.HandleTransactionError(&handlers.HandleTransactionErrorInput{
+			Txhash:txHash,
+			TransactionStatus: status,
+			BlockTimestamp: s.lastCommittedBlockTimestamp,
+			BlockHeight: s.lastCommittedBlockHeight,
+		})
+	}
+}
+
 type cleaner interface {
 	clearTransactionsOlderThan(time time.Time)
 }

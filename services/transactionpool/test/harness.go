@@ -122,8 +122,17 @@ func (h *harness) expectTransactionResultsCallbackFor(transactions ...*protocol.
 	}).Times(1).Return(&handlers.HandleTransactionResultsOutput{}, nil)
 }
 
+func (h *harness) expectTransactionErrorCallbackFor(tx *protocol.SignedTransaction, status protocol.TransactionStatus) {
+	txHash := digest.CalcTxHash(tx.Transaction())
+	h.trh.When("HandleTransactionError", mock.AnyIf("transaction error matching the given transaction", func(i interface{}) bool {
+		tri := i.(*handlers.HandleTransactionErrorInput)
+		return tri.Txhash.Equal(txHash) && tri.TransactionStatus == status
+	})).Return(&handlers.HandleTransactionErrorOutput{}).Times(1)
+}
+
 func (h *harness) ignoringTransactionResults() {
 	h.trh.When("HandleTransactionResults", mock.Any)
+	h.trh.When("HandleTransactionError", mock.Any)
 }
 
 func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
