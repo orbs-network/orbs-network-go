@@ -10,14 +10,21 @@ type hardCodedFederationNode struct {
 	nodePublicKey primitives.Ed25519PublicKey
 }
 
+type hardCodedGossipPeer struct {
+	gossipPort     uint16
+	gossipEndpoint string
+}
+
 type NodeConfigValue struct {
 	Uint32Value   uint32
+	Uint16Value   uint16
 	DurationValue time.Duration
 }
 
 type config struct {
 	kv                      map[string]NodeConfigValue
 	federationNodes         map[string]FederationNode
+	gossipPeers             map[string]GossipPeer
 	nodePublicKey           primitives.Ed25519PublicKey
 	nodePrivateKey          primitives.Ed25519PrivateKey
 	constantConsensusLeader primitives.Ed25519PublicKey
@@ -51,6 +58,10 @@ const (
 	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 
+	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
+	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
+	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
+
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
 	PUBLIC_API_TRANSACTION_STATUS_GRACE = "PUBLIC_API_TRANSACTION_STATUS_GRACE"
 )
@@ -59,23 +70,26 @@ func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) Feder
 	return &hardCodedFederationNode{
 		nodePublicKey: nodePublicKey,
 	}
-	return nil
+}
+
+func NewHardCodedGossipPeer(gossipPort uint16, gossipEndpoint string) GossipPeer {
+	return &hardCodedGossipPeer{
+		gossipPort:     gossipPort,
+		gossipEndpoint: gossipEndpoint,
+	}
 }
 
 func newHardCodedConfig(
 	federationNodes map[string]FederationNode,
+	gossipPeers map[string]GossipPeer,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	benchmarkConsensusRetryInterval time.Duration,
-	minimumTransactionsInBlock uint32,
-	minimalBlockDelay time.Duration,
-	queryGraceTimeout time.Duration,
-	sendTransactionTimeout time.Duration,
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
+		gossipPeers:             gossipPeers,
 		nodePublicKey:           nodePublicKey,
 		nodePrivateKey:          nodePrivateKey,
 		constantConsensusLeader: constantConsensusLeader,
@@ -84,9 +98,7 @@ func newHardCodedConfig(
 	}
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, benchmarkConsensusRetryInterval)
 
-	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, queryGraceTimeout)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 
 	cfg.SetDuration(BLOCK_SYNC_BATCH_SIZE, 10000)
@@ -100,18 +112,12 @@ func newHardCodedConfig(
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
 
-	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, minimalBlockDelay)
-	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, minimumTransactionsInBlock)
-
-	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, uint32(1))
 
 	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
 	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
-
-	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, sendTransactionTimeout)
-	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
 
 	return cfg
 }
@@ -131,6 +137,11 @@ func (c *config) SetUint32(key string, value uint32) NodeConfig {
 	return c
 }
 
+func (c *config) SetUint16(key string, value uint16) NodeConfig {
+	c.kv[key] = NodeConfigValue{Uint16Value: value}
+	return c
+}
+
 func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig {
 	c.nodePublicKey = key
 	return c
@@ -141,8 +152,26 @@ func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig 
 	return c
 }
 
+func (c *config) SetFederationNodes(federationNodes map[string]FederationNode) NodeConfig {
+	c.federationNodes = federationNodes
+	return c
+}
+
+func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) NodeConfig {
+	c.gossipPeers = gossipPeers
+	return c
+}
+
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
+}
+
+func (c *hardCodedGossipPeer) GossipPort() uint16 {
+	return c.gossipPort
+}
+
+func (c *hardCodedGossipPeer) GossipEndpoint() string {
+	return c.gossipEndpoint
 }
 
 func (c *config) NodePublicKey() primitives.Ed25519PublicKey {
@@ -165,6 +194,10 @@ func (c *config) FederationNodes(asOfBlock uint64) map[string]FederationNode {
 	return c.federationNodes
 }
 
+func (c *config) GossipPeers(asOfBlock uint64) map[string]GossipPeer {
+	return c.gossipPeers
+}
+
 func (c *config) ConstantConsensusLeader() primitives.Ed25519PublicKey {
 	return c.constantConsensusLeader
 }
@@ -175,7 +208,6 @@ func (c *config) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 
 func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
 	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL].DurationValue
-
 }
 
 func (c *config) BlockSyncBatchSize() uint32 {
@@ -193,9 +225,11 @@ func (c *config) BlockSyncCollectResponseTimeout() time.Duration {
 func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START].DurationValue
 }
+
 func (c *config) BlockTransactionReceiptQueryGraceEnd() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END].DurationValue
 }
+
 func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
 }
@@ -250,4 +284,16 @@ func (c *config) GetTransactionStatusGrace() time.Duration {
 
 func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT].DurationValue
+}
+
+func (c *config) GossipListenPort() uint16 {
+	return c.kv[GOSSIP_LISTEN_PORT].Uint16Value
+}
+
+func (c *config) GossipConnectionKeepAliveInterval() time.Duration {
+	return c.kv[GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL].DurationValue
+}
+
+func (c *config) GossipNetworkTimeout() time.Duration {
+	return c.kv[GOSSIP_NETWORK_TIMEOUT].DurationValue
 }

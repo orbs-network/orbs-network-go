@@ -7,18 +7,23 @@ import (
 )
 
 type NodeConfig interface {
+	// setters (for creation)
 	Set(key string, value NodeConfigValue) NodeConfig
 	SetDuration(key string, value time.Duration) NodeConfig
 	SetUint32(key string, value uint32) NodeConfig
-
+	SetUint16(key string, value uint16) NodeConfig
+	SetFederationNodes(map[string]FederationNode) NodeConfig
+	SetGossipPeers(map[string]GossipPeer) NodeConfig
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
 
+	// shared
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
@@ -54,6 +59,11 @@ type NodeConfig interface {
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 
+	// gossip
+	GossipListenPort() uint16
+	GossipConnectionKeepAliveInterval() time.Duration
+	GossipNetworkTimeout() time.Duration
+
 	// public api
 	SendTransactionTimeout() time.Duration
 	GetTransactionStatusGrace() time.Duration
@@ -61,4 +71,9 @@ type NodeConfig interface {
 
 type FederationNode interface {
 	NodePublicKey() primitives.Ed25519PublicKey
+}
+
+type GossipPeer interface {
+	GossipPort() uint16
+	GossipEndpoint() string
 }
