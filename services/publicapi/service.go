@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
-)
+	)
 
 type Config interface {
 	SendTransactionTimeout() time.Duration
@@ -76,7 +76,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 		s.reporting.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 		return prepareResponse(txResponse), errors.Errorf("error '%s' for transaction result", txResponse)
 	}
-	if txResponse.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED {
+	if txResponse.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED {
 		return prepareResponse(txResponse), nil
 	}
 
@@ -100,6 +100,7 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 	}
 
 	response := &client.SendTransactionResponseBuilder{
+		RequestStatus:      translateTxStatusToResponseCode(transactionOutput.TransactionStatus),
 		TransactionReceipt: receiptForClient,
 		TransactionStatus:  transactionOutput.TransactionStatus,
 		BlockHeight:        transactionOutput.BlockHeight,
@@ -107,6 +108,42 @@ func prepareResponse(transactionOutput *services.AddNewTransactionOutput) *servi
 	}
 
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}
+}
+
+func translateTxStatusToResponseCode(txStatus protocol.TransactionStatus) protocol.RequestStatus {
+	switch txStatus {
+	case protocol.TRANSACTION_STATUS_COMMITTED:
+		return protocol.REQUEST_STATUS_COMPLETED
+	case protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED:
+		return protocol.REQUEST_STATUS_COMPLETED
+	case protocol.TRANSACTION_STATUS_PENDING:
+		return protocol.REQUEST_STATUS_IN_PROCESS
+	case protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING:
+		return protocol.REQUEST_STATUS_IN_PROCESS
+	case protocol.TRANSACTION_STATUS_NO_RECORD_FOUND:
+		return protocol.REQUEST_STATUS_NOT_FOUND
+	case protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_PRE_ORDER:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_PRECEDES_NODE_TIME:
+		return protocol.REQUEST_STATUS_REJECTED
+	case protocol.TRANSACTION_STATUS_REJECTED_CONGESTION:
+		return protocol.REQUEST_STATUS_CONGESTION
+	}
+	return protocol.REQUEST_STATUS_RESERVED
 }
 
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
@@ -122,6 +159,8 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	}
 	return &services.CallMethodOutput{
 		ClientResponse: (&client.CallMethodResponseBuilder{
+			// TODO need to fill up this struct
+			RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
 			OutputArgumentArray: output.OutputArgumentArray,
 		}).Build(),
 	}, nil
