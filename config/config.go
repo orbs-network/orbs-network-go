@@ -11,7 +11,6 @@ type NodeConfig interface {
 	Set(key string, value NodeConfigValue) NodeConfig
 	SetDuration(key string, value time.Duration) NodeConfig
 	SetUint32(key string, value uint32) NodeConfig
-	SetUint16(key string, value uint16) NodeConfig
 	SetFederationNodes(map[string]FederationNode) NodeConfig
 	SetGossipPeers(map[string]GossipPeer) NodeConfig
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
