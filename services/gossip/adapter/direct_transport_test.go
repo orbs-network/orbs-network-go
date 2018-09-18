@@ -86,7 +86,7 @@ func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 		for i := 0; i < NETWORK_SIZE-1; i++ {
 			data, err := h.peerListenerReadTotal(i, 20)
 			require.NoError(t, err, "test peer server could not read from local transport")
-			require.Equal(t, []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}, data)
+			require.Equal(t, exampleWireProtocolEncoding_Payloads_0x11_0x2233(), data)
 		}
 	})
 }
@@ -107,7 +107,7 @@ func TestDirectOutgoing_AdapterSendsUnicast(t *testing.T) {
 
 		data, err := h.peerListenerReadTotal(1, 20)
 		require.NoError(t, err, "test peer server could not read from local transport")
-		require.Equal(t, []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}, data)
+		require.Equal(t, exampleWireProtocolEncoding_Payloads_0x11_0x2233(), data)
 	})
 }
 
@@ -120,7 +120,7 @@ func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
 		h.transport.RegisterListener(h.listenerMock, nil)
 		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
 
-		buffer := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
 		written, err := h.peerTalkerConnection.Write(buffer)
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
@@ -138,7 +138,7 @@ func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
 
 		h.expectTransportListenerNotCalled()
 
-		buffer := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
 		written, err := h.peerTalkerConnection.Write(buffer)
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
@@ -157,7 +157,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t
 		h.transport.RegisterListener(h.listenerMock, nil)
 		h.expectTransportListenerNotCalled()
 
-		buffer := []byte{0x99, 0x99, 0x99, 0x99, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00}
+		buffer := exampleWireProtocolEncoding_CorruptNumPayloads()
 		written, err := h.peerTalkerConnection.Write(buffer)
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
@@ -180,7 +180,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t
 		h.transport.RegisterListener(h.listenerMock, nil)
 		h.expectTransportListenerNotCalled()
 
-		buffer := []byte{0x01, 0x00, 0x00, 0x00, 0x99, 0x99, 0x99, 0x99, 0x11, 0x00, 0x00, 0x00}
+		buffer := exampleWireProtocolEncoding_CorruptPayloadSize()
 		written, err := h.peerTalkerConnection.Write(buffer)
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
@@ -202,7 +202,7 @@ func TestDirectOutgoing_SendsKeepAliveWhenNothingToSend(t *testing.T) {
 		for numKeepAliveSent := 0; numKeepAliveSent < 2; numKeepAliveSent++ {
 			data, err := h.peerListenerReadTotal(1, 4)
 			require.NoError(t, err, "test peer server could not read keepalive from local transport")
-			require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00}, data) // keepalive content (zero payloads)
+			require.Equal(t, exampleWireProtocolEncoding_KeepAlive(), data)
 		}
 	})
 }
@@ -217,13 +217,13 @@ func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
 		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
 
 		for numKeepAliveReceived := 0; numKeepAliveReceived < 2; numKeepAliveReceived++ {
-			buffer := []byte{0x00, 0x00, 0x00, 0x00} // keepalive content (zero payloads)
+			buffer := exampleWireProtocolEncoding_KeepAlive()
 			written, err := h.peerTalkerConnection.Write(buffer)
 			require.NoError(t, err, "test peer could not write to local transport")
 			require.Equal(t, len(buffer), written)
 		}
 
-		buffer := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
 		written, err := h.peerTalkerConnection.Write(buffer)
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
@@ -255,7 +255,7 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 		// TODO: maybe we should retransmit the original Send here?
 		data, err := h.peerListenerReadTotal(1, 4)
 		require.NoError(t, err, "test peer server could not read keepalive from local transport")
-		require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00}, data)
+		require.Equal(t, exampleWireProtocolEncoding_KeepAlive(), data)
 	})
 }
 
@@ -266,7 +266,7 @@ func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		buffer := []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00} // only 6 out of 20 bytes transferred
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()[:6] // only 6 out of 20 bytes transferred
 		written, err := h.peerTalkerConnection.Write(buffer)
 		require.NoError(t, err, "test peer could not write to local transport")
 		require.Equal(t, len(buffer), written)
@@ -275,4 +275,49 @@ func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
 		_, err = h.peerTalkerConnection.Read(buffer)
 		require.Error(t, err, "test peer should be disconnected from local transport")
 	})
+}
+
+func concatSlices(slices ...[]byte) []byte {
+	var tmp []byte
+	for _, s := range slices {
+		tmp = append(tmp, s...)
+	}
+	return tmp
+}
+
+// encoded examples of the gossip wire protocol spec:
+// https://github.com/orbs-network/orbs-spec/blob/master/encoding/gossip/membuffers-over-tcp.md
+
+func exampleWireProtocolEncoding_Payloads_0x11_0x2233() []byte {
+	// encoding payloads: [][]byte{{0x11}, {0x22, 0x33}}
+	field_NumPayloads := []byte{0x02, 0x00, 0x00, 0x00}      // little endian
+	field_FirstPayloadSize := []byte{0x01, 0x00, 0x00, 0x00} // little endian
+	field_FirstPayloadData := []byte{0x11}
+	field_FirstPayloadPadding := []byte{0x00, 0x00, 0x00}     // round payload data to 4 bytes
+	field_SecondPayloadSize := []byte{0x02, 0x00, 0x00, 0x00} // little endian
+	field_SecondPayloadData := []byte{0x22, 0x33}
+	field_SecondPayloadPadding := []byte{0x00, 0x00} // round payload data to 4 bytes
+	return concatSlices(field_NumPayloads, field_FirstPayloadSize, field_FirstPayloadData, field_FirstPayloadPadding, field_SecondPayloadSize, field_SecondPayloadData, field_SecondPayloadPadding)
+}
+
+func exampleWireProtocolEncoding_CorruptNumPayloads() []byte {
+	field_NumPayloads := []byte{0x99, 0x99, 0x99, 0x99}      // corrupt value (too big)
+	field_FirstPayloadSize := []byte{0x01, 0x00, 0x00, 0x00} // little endian
+	field_FirstPayloadData := []byte{0x11}
+	field_FirstPayloadPadding := []byte{0x00, 0x00, 0x00} // round payload data to 4 bytes
+	return concatSlices(field_NumPayloads, field_FirstPayloadSize, field_FirstPayloadData, field_FirstPayloadPadding)
+}
+
+func exampleWireProtocolEncoding_CorruptPayloadSize() []byte {
+	field_NumPayloads := []byte{0x01, 0x00, 0x00, 0x00}      // little endian
+	field_FirstPayloadSize := []byte{0x99, 0x99, 0x99, 0x99} // corrupt value (too big)
+	field_FirstPayloadData := []byte{0x11}
+	field_FirstPayloadPadding := []byte{0x00, 0x00, 0x00} // round payload data to 4 bytes
+	return concatSlices(field_NumPayloads, field_FirstPayloadSize, field_FirstPayloadData, field_FirstPayloadPadding)
+}
+
+func exampleWireProtocolEncoding_KeepAlive() []byte {
+	// encoding payloads: [][]byte{} (this is how a keep alive looks like = zero payloads)
+	field_NumPayloads := []byte{0x00, 0x00, 0x00, 0x00} // little endian
+	return concatSlices(field_NumPayloads)
 }
