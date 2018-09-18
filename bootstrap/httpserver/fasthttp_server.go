@@ -29,7 +29,7 @@ func NewFastHttpServer(address string, reporting log.BasicLogger, publicApi serv
 
 	server.httpServer = &fasthttp.Server{
 		Handler:     server.createRouter(),
-		ReadTimeout: time.Second,
+		ReadTimeout: time.Millisecond,
 	}
 
 	go func() {

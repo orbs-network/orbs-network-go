@@ -13,13 +13,17 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"strconv"
+	"strings"
 )
 
 func BenchmarkServerCallMethod(b *testing.B) {
 	logger := log.GetLogger().WithOutput()
 	mockApi := getPapiMock()
 
-	s := NewHttpServer("127.0.0.1:8080", logger, mockApi)
+	address, url := getDestiantions(8080)
+
+	s := NewHttpServer(address, logger, mockApi)
 	defer s.GracefulShutdown(time.Second)
 
 	webClient := &http.Client{}
@@ -28,7 +32,7 @@ func BenchmarkServerCallMethod(b *testing.B) {
 		Transaction: &protocol.TransactionBuilder{},
 	}).Build()
 
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8080/api/v1/call-method", bytes.NewReader(request.Raw()))
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(request.Raw()))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -41,7 +45,9 @@ func BenchmarkFastServerCallMethod(b *testing.B) {
 	logger := log.GetLogger().WithOutput()
 	mockApi := getPapiMock()
 
-	s := NewFastHttpServer("127.0.0.1:8081", logger, mockApi)
+	address, url := getDestiantions(8081)
+
+	s := NewFastHttpServer(address, logger, mockApi)
 	defer s.GracefulShutdown(time.Second)
 
 	webClient := &http.Client{}
@@ -50,7 +56,7 @@ func BenchmarkFastServerCallMethod(b *testing.B) {
 		Transaction: &protocol.TransactionBuilder{},
 	}).Build()
 
-	req, _ := http.NewRequest("POST", "http://127.0.0.1:8081/api/v1/call-method", bytes.NewReader(request.Raw()))
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(request.Raw()))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -91,4 +97,10 @@ func sendRequest(client *http.Client, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func getDestiantions(port int) (address string, url string) {
+	address = strings.Join([]string{"127.0.0.1", ":", strconv.Itoa(port)}, "")
+	url = strings.Join([]string{"http://", address, "/api/v1/call-method"}, "")
+	return address, url
 }
