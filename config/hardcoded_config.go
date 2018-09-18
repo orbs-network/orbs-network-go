@@ -17,7 +17,6 @@ type hardCodedGossipPeer struct {
 
 type NodeConfigValue struct {
 	Uint32Value   uint32
-	Uint16Value   uint16
 	DurationValue time.Duration
 }
 
@@ -134,11 +133,6 @@ func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
 
 func (c *config) SetUint32(key string, value uint32) NodeConfig {
 	c.kv[key] = NodeConfigValue{Uint32Value: value}
-	return c
-}
-
-func (c *config) SetUint16(key string, value uint16) NodeConfig {
-	c.kv[key] = NodeConfigValue{Uint16Value: value}
 	return c
 }
 
@@ -287,7 +281,7 @@ func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 }
 
 func (c *config) GossipListenPort() uint16 {
-	return c.kv[GOSSIP_LISTEN_PORT].Uint16Value
+	return uint16(c.kv[GOSSIP_LISTEN_PORT].Uint32Value)
 }
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {

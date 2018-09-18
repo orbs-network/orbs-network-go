@@ -44,7 +44,7 @@ func newDirectHarness() *directHarness {
 	cfg := config.EmptyConfig()
 	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
 	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetUint16(config.GOSSIP_LISTEN_PORT, uint16(firstRandomPort))
+	cfg.SetUint32(config.GOSSIP_LISTEN_PORT, uint32(firstRandomPort))
 	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
 
