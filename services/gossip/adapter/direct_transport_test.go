@@ -26,8 +26,16 @@ func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T)
 	require.Equal(t, 0, read, "test peer should disconnect from local transport without reading anything")
 	require.Error(t, err, "test peer should disconnect from local transport")
 
-	_, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
-	require.Error(t, err, "test peer should not be able to connect to local transport")
+	eventuallyFailsConnecting := test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
+		connection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
+		if err != nil {
+			return true
+		} else {
+			connection.Close()
+			return false
+		}
+	})
+	require.True(t, eventuallyFailsConnecting, "test peer should not be able to connect to local transport")
 }
 
 func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
