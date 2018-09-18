@@ -65,7 +65,7 @@ func (h *directHarness) start(ctx context.Context) *directHarness {
 
 	// to synchronize tests, wait until server is ready
 	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-		return h.transport.isServerReady()
+		return h.transport.isServerListening()
 	})
 
 	return h

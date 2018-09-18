@@ -31,9 +31,9 @@ type directTransport struct {
 
 	peerQueues map[string]chan *TransportData // does not require mutex to read
 
-	mutex             *sync.RWMutex
-	transportListener TransportListener
-	serverReady       bool
+	mutex                       *sync.RWMutex
+	transportListenerUnderMutex TransportListener
+	serverListeningUnderMutex   bool
 }
 
 func NewDirectTransport(ctx context.Context, config Config, reporting log.BasicLogger) Transport {
@@ -71,7 +71,7 @@ func (t *directTransport) RegisterListener(listener TransportListener, listenerP
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	t.transportListener = listener
+	t.transportListenerUnderMutex = listener
 }
 
 func (t *directTransport) Send(data *TransportData) error {
@@ -110,22 +110,22 @@ func (t *directTransport) serverListenForIncomingConnections(ctx context.Context
 		<-ctx.Done()
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
-		t.serverReady = false
+		t.serverListeningUnderMutex = false
 		listener.Close()
 	}()
 
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	t.serverReady = true
+	t.serverListeningUnderMutex = true
 
 	return listener, err
 }
 
-func (t *directTransport) isServerReady() bool {
+func (t *directTransport) isServerListening() bool {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
-	return t.serverReady
+	return t.serverListeningUnderMutex
 }
 
 func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16) {
@@ -146,7 +146,7 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			if !t.isServerReady() {
+			if !t.isServerListening() {
 				t.reporting.Info("incoming connection accept stopped since server is shutting down")
 				return
 			}
@@ -239,7 +239,7 @@ func (t *directTransport) getListener() TransportListener {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
-	return t.transportListener
+	return t.transportListenerUnderMutex
 }
 
 func (t *directTransport) clientMainLoop(ctx context.Context, address string, msgs chan *TransportData) {
