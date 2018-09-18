@@ -31,6 +31,7 @@ func NewNode(
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	federationNodes map[string]config.FederationNode,
+	gossipPeers map[string]config.GossipPeer,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	logger log.BasicLogger,
@@ -38,6 +39,7 @@ func NewNode(
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.ForProduction(
 		federationNodes,
+		gossipPeers,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,

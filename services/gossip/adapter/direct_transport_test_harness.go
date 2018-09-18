@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const networkSize = 3
+const NETWORK_SIZE = 3
 
 type directHarness struct {
 	config    Config
@@ -35,15 +35,15 @@ func newDirectHarness() *directHarness {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	firstRandomPort := 20000 + r.Intn(40000)
 
-	federationNodes := make(map[string]config.FederationNode)
-	for i := 0; i < networkSize; i++ {
+	gossipPeers := make(map[string]config.GossipPeer)
+	for i := 0; i < NETWORK_SIZE; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey, uint16(firstRandomPort+i), "127.0.0.1")
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 	}
 
 	cfg := config.EmptyConfig()
 	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
-	cfg.SetFederationNodes(federationNodes)
+	cfg.SetGossipPeers(gossipPeers)
 	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
 
@@ -74,16 +74,16 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	h := newDirectHarness()
 
 	var err error
-	h.peersListeners = make([]net.Listener, networkSize-1)
-	for i := 0; i < networkSize-1; i++ {
+	h.peersListeners = make([]net.Listener, NETWORK_SIZE-1)
+	for i := 0; i < NETWORK_SIZE-1; i++ {
 		h.peersListeners[i], err = net.Listen("tcp", fmt.Sprintf(":%d", h.portForPeer(i)))
 		require.NoError(t, err, "test peer server could not listen")
 	}
 
 	h.start(ctx)
 
-	h.peersListenersConnections = make([]net.Conn, networkSize-1)
-	for i := 0; i < networkSize-1; i++ {
+	h.peersListenersConnections = make([]net.Conn, NETWORK_SIZE-1)
+	for i := 0; i < NETWORK_SIZE-1; i++ {
 		h.peersListenersConnections[i], err = h.peersListeners[i].Accept()
 		require.NoError(t, err, "test peer server could not accept connection from local transport")
 	}
@@ -112,7 +112,7 @@ func (h *directHarness) peerListenerReadTotal(peerIndex int, totalSize int) ([]b
 
 func (h *directHarness) cleanupConnectedPeers() {
 	h.peerTalkerConnection.Close()
-	for i := 0; i < networkSize-1; i++ {
+	for i := 0; i < NETWORK_SIZE-1; i++ {
 		h.peersListenersConnections[i].Close()
 		h.peersListeners[i].Close()
 	}
@@ -124,7 +124,7 @@ func (h *directHarness) publicKeyForPeer(index int) primitives.Ed25519PublicKey 
 
 func (h *directHarness) portForPeer(index int) uint16 {
 	peerPublicKey := h.publicKeyForPeer(index)
-	return h.config.FederationNodes(0)[peerPublicKey.KeyForMap()].GossipPort()
+	return h.config.GossipPeers(0)[peerPublicKey.KeyForMap()].GossipPort()
 }
 
 func (h *directHarness) expectTransportListenerCalled(payloads [][]byte) {

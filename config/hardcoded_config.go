@@ -7,7 +7,10 @@ import (
 )
 
 type hardCodedFederationNode struct {
-	nodePublicKey  primitives.Ed25519PublicKey
+	nodePublicKey primitives.Ed25519PublicKey
+}
+
+type hardCodedGossipPeer struct {
 	gossipPort     uint16
 	gossipEndpoint string
 }
@@ -20,6 +23,7 @@ type NodeConfigValue struct {
 type config struct {
 	kv                      map[string]NodeConfigValue
 	federationNodes         map[string]FederationNode
+	gossipPeers             map[string]GossipPeer
 	nodePublicKey           primitives.Ed25519PublicKey
 	nodePrivateKey          primitives.Ed25519PrivateKey
 	constantConsensusLeader primitives.Ed25519PublicKey
@@ -60,17 +64,22 @@ const (
 	PUBLIC_API_TRANSACTION_STATUS_GRACE = "PUBLIC_API_TRANSACTION_STATUS_GRACE"
 )
 
-func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey, gossipPort uint16, gossipEndpoint string) FederationNode {
+func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
 	return &hardCodedFederationNode{
-		nodePublicKey:  nodePublicKey,
+		nodePublicKey: nodePublicKey,
+	}
+}
+
+func NewHardCodedGossipPeer(gossipPort uint16, gossipEndpoint string) GossipPeer {
+	return &hardCodedGossipPeer{
 		gossipPort:     gossipPort,
 		gossipEndpoint: gossipEndpoint,
 	}
-	return nil
 }
 
 func newHardCodedConfig(
 	federationNodes map[string]FederationNode,
+	gossipPeers map[string]GossipPeer,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
@@ -78,6 +87,7 @@ func newHardCodedConfig(
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
+		gossipPeers:             gossipPeers,
 		nodePublicKey:           nodePublicKey,
 		nodePrivateKey:          nodePrivateKey,
 		constantConsensusLeader: constantConsensusLeader,
@@ -140,15 +150,20 @@ func (c *config) SetFederationNodes(federationNodes map[string]FederationNode) N
 	return c
 }
 
+func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) NodeConfig {
+	c.gossipPeers = gossipPeers
+	return c
+}
+
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
 }
 
-func (c *hardCodedFederationNode) GossipPort() uint16 {
+func (c *hardCodedGossipPeer) GossipPort() uint16 {
 	return c.gossipPort
 }
 
-func (c *hardCodedFederationNode) GossipEndpoint() string {
+func (c *hardCodedGossipPeer) GossipEndpoint() string {
 	return c.gossipEndpoint
 }
 
@@ -170,6 +185,10 @@ func (c *config) NetworkSize(asOfBlock uint64) uint32 {
 
 func (c *config) FederationNodes(asOfBlock uint64) map[string]FederationNode {
 	return c.federationNodes
+}
+
+func (c *config) GossipPeers(asOfBlock uint64) map[string]GossipPeer {
+	return c.gossipPeers
 }
 
 func (c *config) ConstantConsensusLeader() primitives.Ed25519PublicKey {

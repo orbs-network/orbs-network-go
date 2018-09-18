@@ -12,6 +12,7 @@ type NodeConfig interface {
 	SetDuration(key string, value time.Duration) NodeConfig
 	SetUint32(key string, value uint32) NodeConfig
 	SetFederationNodes(map[string]FederationNode) NodeConfig
+	SetGossipPeers(map[string]GossipPeer) NodeConfig
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
 	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
 
@@ -21,6 +22,7 @@ type NodeConfig interface {
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
@@ -67,6 +69,9 @@ type NodeConfig interface {
 
 type FederationNode interface {
 	NodePublicKey() primitives.Ed25519PublicKey
+}
+
+type GossipPeer interface {
 	GossipPort() uint16
 	GossipEndpoint() string
 }

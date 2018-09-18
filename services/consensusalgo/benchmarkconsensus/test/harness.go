@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const networkSize = 5
+const NETWORK_SIZE = 5
 
 type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
@@ -45,9 +45,9 @@ func newHarness(
 ) *harness {
 
 	federationNodes := make(map[string]config.FederationNode)
-	for i := 0; i < networkSize; i++ {
+	for i := 0; i < NETWORK_SIZE; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey, 0, "")
+		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 	}
 
 	nodeKeyPair := leaderKeyPair()
@@ -57,6 +57,7 @@ func newHarness(
 
 	cfg := config.ForAcceptanceTests(
 		federationNodes,
+		make(map[string]config.GossipPeer),
 		nodeKeyPair.PublicKey(),
 		nodeKeyPair.PrivateKey(),
 		leaderKeyPair().PublicKey(),

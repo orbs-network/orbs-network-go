@@ -42,11 +42,12 @@ type peer struct {
 	Port uint16
 }
 
-func getFederationNodes(logger log.BasicLogger, input string) map[string]config.FederationNode {
+func getPeers(logger log.BasicLogger, input string) (map[string]config.FederationNode, map[string]config.GossipPeer) {
 	federationNodes := make(map[string]config.FederationNode)
+	gossipPeers := make(map[string]config.GossipPeer)
 
 	if input == "" {
-		return federationNodes
+		return federationNodes, gossipPeers
 	}
 
 	var peers []peer
@@ -54,15 +55,16 @@ func getFederationNodes(logger log.BasicLogger, input string) map[string]config.
 	err := json.Unmarshal([]byte(input), &peers)
 	if err != nil {
 		logger.Error("Failed to parse peers configuration", log.Error(err))
-		return federationNodes
+		return federationNodes, gossipPeers
 	}
 
 	for _, peer := range peers {
 		publicKey, _ := hex.DecodeString(peer.Key)
-		federationNodes[string(publicKey)] = config.NewHardCodedFederationNode(publicKey, peer.Port, peer.IP)
+		federationNodes[string(publicKey)] = config.NewHardCodedFederationNode(publicKey)
+		gossipPeers[string(publicKey)] = config.NewHardCodedGossipPeer(peer.Port, peer.IP)
 	}
 
-	return federationNodes
+	return federationNodes, gossipPeers
 }
 
 func main() {
@@ -70,7 +72,7 @@ func main() {
 	port, _ := strconv.ParseInt(os.Getenv("PORT"), 10, 0)
 	nodePublicKey, _ := hex.DecodeString(os.Getenv("NODE_PUBLIC_KEY"))
 	nodePrivateKey, _ := hex.DecodeString(os.Getenv("NODE_PRIVATE_KEY"))
-	federationNodes := os.Getenv("FEDERATION_NODES")
+	peers := os.Getenv("FEDERATION_NODES") // TODO(netoneko) - split this into 2 env vars (FEDERATION_NODES, GOSSIP_PEERS)
 	consensusLeader, _ := hex.DecodeString(os.Getenv("CONSENSUS_LEADER"))
 	httpAddress := ":" + strconv.FormatInt(port, 10)
 	logPath := os.Getenv("LOG_PATH")
@@ -80,13 +82,14 @@ func main() {
 
 	// TODO: move this code to the config we decided to add, the HardCodedConfig stuff is just placeholder
 
-	peers := getFederationNodes(logger, federationNodes)
+	federationNodes, gossipPeers := getPeers(logger, peers)
 
 	bootstrap.NewNode(
 		httpAddress,
 		nodePublicKey,
 		nodePrivateKey,
-		peers,
+		federationNodes,
+		gossipPeers,
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		logger,

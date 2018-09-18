@@ -38,7 +38,7 @@ func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing
 
 	cancel()
 
-	for i := 0; i < networkSize-1; i++ {
+	for i := 0; i < NETWORK_SIZE-1; i++ {
 		buffer := []byte{0}
 		read, err := h.peersListenersConnections[i].Read(buffer)
 		require.Equal(t, 0, read, "local transport should disconnect from test peer without reading anything")
@@ -83,7 +83,7 @@ func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 		})
 		require.NoError(t, err, "adapter Send should not fail")
 
-		for i := 0; i < networkSize-1; i++ {
+		for i := 0; i < NETWORK_SIZE-1; i++ {
 			data, err := h.peerListenerReadTotal(i, 20)
 			require.NoError(t, err, "test peer server could not read from local transport")
 			require.Equal(t, []byte{0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x22, 0x33, 0x00, 0x00}, data)

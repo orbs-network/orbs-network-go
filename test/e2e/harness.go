@@ -54,9 +54,11 @@ func newHarness() *harness {
 		firstRandomPort := 20000 + r.Intn(40000)
 
 		federationNodes := make(map[string]config.FederationNode)
+		gossipPeers := make(map[string]config.GossipPeer)
 		for i := 0; i < 3; i++ {
 			publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-			federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey, uint16(firstRandomPort+i), "127.0.0.1")
+			federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+			gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 		}
 
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
@@ -69,6 +71,7 @@ func newHarness() *harness {
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey(),
 				federationNodes,
+				gossipPeers,
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,

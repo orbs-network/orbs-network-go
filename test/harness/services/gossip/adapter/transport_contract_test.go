@@ -58,6 +58,15 @@ type transportContractContext struct {
 	listeners  []*mockListener
 }
 
+func createContractTestConfig(publicKey primitives.Ed25519PublicKey, gossipPeers map[string]config.GossipPeer) adapter.Config {
+	cfg := config.EmptyConfig()
+	cfg.SetNodePublicKey(publicKey)
+	cfg.SetGossipPeers(gossipPeers)
+	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
+	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
+	return cfg
+}
+
 func aTamperingTransport(ctx context.Context) *transportContractContext {
 	res := &transportContractContext{}
 	transport := NewTamperingTransport()
@@ -72,15 +81,6 @@ func aTamperingTransport(ctx context.Context) *transportContractContext {
 	return res
 }
 
-func createContractTestConfig(publicKey primitives.Ed25519PublicKey, federationNodes map[string]config.FederationNode) adapter.Config {
-	cfg := config.EmptyConfig()
-	cfg.SetNodePublicKey(publicKey)
-	cfg.SetFederationNodes(federationNodes)
-	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
-	return cfg
-}
-
 func aDirectTransport(ctx context.Context) *transportContractContext {
 	res := &transportContractContext{}
 
@@ -88,18 +88,18 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	firstRandomPort := 20000 + r.Intn(40000)
 
-	federationNodes := make(map[string]config.FederationNode)
+	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < 4; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey, uint16(firstRandomPort+i), "127.0.0.1")
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 		res.publicKeys = append(res.publicKeys, publicKey)
 	}
 
 	configs := []adapter.Config{
-		createContractTestConfig(res.publicKeys[0], federationNodes),
-		createContractTestConfig(res.publicKeys[1], federationNodes),
-		createContractTestConfig(res.publicKeys[2], federationNodes),
-		createContractTestConfig(res.publicKeys[3], federationNodes),
+		createContractTestConfig(res.publicKeys[0], gossipPeers),
+		createContractTestConfig(res.publicKeys[1], gossipPeers),
+		createContractTestConfig(res.publicKeys[2], gossipPeers),
+		createContractTestConfig(res.publicKeys[3], gossipPeers),
 	}
 
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))

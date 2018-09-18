@@ -8,6 +8,7 @@ import (
 
 func ForProduction(
 	federationNodes map[string]FederationNode,
+	gossipPeers map[string]GossipPeer,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
@@ -16,6 +17,7 @@ func ForProduction(
 
 	cfg := newHardCodedConfig(
 		federationNodes,
+		gossipPeers,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,
@@ -34,6 +36,7 @@ func ForProduction(
 
 func ForAcceptanceTests(
 	federationNodes map[string]FederationNode,
+	gossipPeers map[string]GossipPeer,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
@@ -42,6 +45,7 @@ func ForAcceptanceTests(
 
 	cfg := newHardCodedConfig(
 		federationNodes,
+		gossipPeers,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,

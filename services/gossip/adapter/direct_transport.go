@@ -19,7 +19,7 @@ const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
 
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
-	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
+	GossipPeers(asOfBlock uint64) map[string]config.GossipPeer
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 }
@@ -46,8 +46,8 @@ func NewDirectTransport(ctx context.Context, config Config, reporting log.BasicL
 	}
 
 	// client channels (not under mutex, before all goroutines)
-	for peerNodeKey, peer := range t.config.FederationNodes(0) {
-		if !peer.NodePublicKey().Equal(t.config.NodePublicKey()) {
+	for peerNodeKey, _ := range t.config.GossipPeers(0) {
+		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
 			t.peerQueues[peerNodeKey] = make(chan *TransportData)
 		}
 	}
@@ -56,8 +56,8 @@ func NewDirectTransport(ctx context.Context, config Config, reporting log.BasicL
 	go t.serverMainLoop(ctx, t.getListenPort())
 
 	// client goroutines
-	for peerNodeKey, peer := range t.config.FederationNodes(0) {
-		if !peer.NodePublicKey().Equal(t.config.NodePublicKey()) {
+	for peerNodeKey, peer := range t.config.GossipPeers(0) {
+		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 			go t.clientMainLoop(ctx, peerAddress, t.peerQueues[peerNodeKey])
 		}
@@ -99,7 +99,7 @@ func (t *directTransport) Send(data *TransportData) error {
 
 func (t *directTransport) getListenPort() uint16 {
 	nodePublicKey := t.config.NodePublicKey()
-	nodeConfig, found := t.config.FederationNodes(0)[nodePublicKey.KeyForMap()]
+	nodeConfig, found := t.config.GossipPeers(0)[nodePublicKey.KeyForMap()]
 	if !found {
 		err := errors.Errorf("fatal error - gossip configuration (port and endpoint) not found for my public key: %s", nodePublicKey.String())
 		t.reporting.Error(err.Error())
