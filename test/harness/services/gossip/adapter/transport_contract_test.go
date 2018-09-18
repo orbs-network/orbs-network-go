@@ -120,6 +120,7 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 
 	// TODO: improve this, we need some time until everybody connects to everybody else
 	// TODO: maybe add an adapter function to check how many active outgoing connections we have
+	// @electricmonk proposal: Adapter could take a ConnectionListener that gets notified on connects/disconnects, and the test could provide such a listener to block until the desired number of connections has been reached
 	time.Sleep(2 * configs[0].GossipConnectionKeepAliveInterval())
 
 	return res
