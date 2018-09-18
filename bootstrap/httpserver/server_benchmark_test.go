@@ -2,16 +2,17 @@ package httpserver
 
 import (
 	"bytes"
+	"io/ioutil"
+	"net/http"
+	"testing"
+	"time"
+
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"io/ioutil"
-	"net/http"
-	"testing"
-	"time"
 )
 
 func BenchmarkServerCallMethod(b *testing.B) {
@@ -19,7 +20,7 @@ func BenchmarkServerCallMethod(b *testing.B) {
 	mockApi := getPapiMock()
 
 	s := NewHttpServer("127.0.0.1:8080", logger, mockApi)
-	s.GracefulShutdown(time.Second)
+	defer s.GracefulShutdown(time.Second)
 
 	webClient := &http.Client{}
 
@@ -33,6 +34,7 @@ func BenchmarkServerCallMethod(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		sendRequest(webClient, req)
 	}
+	b.StopTimer()
 }
 
 func BenchmarkFastServerCallMethod(b *testing.B) {
@@ -40,7 +42,7 @@ func BenchmarkFastServerCallMethod(b *testing.B) {
 	mockApi := getPapiMock()
 
 	s := NewFastHttpServer("127.0.0.1:8081", logger, mockApi)
-	s.GracefulShutdown(time.Second)
+	defer s.GracefulShutdown(time.Second)
 
 	webClient := &http.Client{}
 
@@ -54,6 +56,7 @@ func BenchmarkFastServerCallMethod(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		sendRequest(webClient, req)
 	}
+	b.StopTimer()
 }
 
 func getPapiMock() *services.MockPublicApi {
