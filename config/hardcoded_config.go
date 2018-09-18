@@ -17,6 +17,7 @@ type hardCodedGossipPeer struct {
 
 type NodeConfigValue struct {
 	Uint32Value   uint32
+	Uint16Value   uint16
 	DurationValue time.Duration
 }
 
@@ -57,6 +58,7 @@ const (
 	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 
+	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
 
@@ -132,6 +134,11 @@ func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
 
 func (c *config) SetUint32(key string, value uint32) NodeConfig {
 	c.kv[key] = NodeConfigValue{Uint32Value: value}
+	return c
+}
+
+func (c *config) SetUint16(key string, value uint16) NodeConfig {
+	c.kv[key] = NodeConfigValue{Uint16Value: value}
 	return c
 }
 
@@ -277,6 +284,10 @@ func (c *config) GetTransactionStatusGrace() time.Duration {
 
 func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT].DurationValue
+}
+
+func (c *config) GossipListenPort() uint16 {
+	return c.kv[GOSSIP_LISTEN_PORT].Uint16Value
 }
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {

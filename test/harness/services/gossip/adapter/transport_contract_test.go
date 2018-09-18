@@ -58,10 +58,11 @@ type transportContractContext struct {
 	listeners  []*mockListener
 }
 
-func createContractTestConfig(publicKey primitives.Ed25519PublicKey, gossipPeers map[string]config.GossipPeer) adapter.Config {
+func createContractTestConfig(publicKey primitives.Ed25519PublicKey, gossipListenPort uint16, gossipPeers map[string]config.GossipPeer) adapter.Config {
 	cfg := config.EmptyConfig()
 	cfg.SetNodePublicKey(publicKey)
 	cfg.SetGossipPeers(gossipPeers)
+	cfg.SetUint16(config.GOSSIP_LISTEN_PORT, gossipListenPort)
 	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	return cfg
@@ -96,10 +97,10 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 	}
 
 	configs := []adapter.Config{
-		createContractTestConfig(res.publicKeys[0], gossipPeers),
-		createContractTestConfig(res.publicKeys[1], gossipPeers),
-		createContractTestConfig(res.publicKeys[2], gossipPeers),
-		createContractTestConfig(res.publicKeys[3], gossipPeers),
+		createContractTestConfig(res.publicKeys[0], uint16(firstRandomPort+0), gossipPeers),
+		createContractTestConfig(res.publicKeys[1], uint16(firstRandomPort+1), gossipPeers),
+		createContractTestConfig(res.publicKeys[2], uint16(firstRandomPort+2), gossipPeers),
+		createContractTestConfig(res.publicKeys[3], uint16(firstRandomPort+3), gossipPeers),
 	}
 
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))

@@ -27,6 +27,8 @@ type E2EConfig struct {
 	ApiEndpoint string
 }
 
+const LOCAL_NETWORK_SIZE = 3
+
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	ApiEndpoint := "http://localhost:8080/api/"
@@ -55,7 +57,7 @@ func newHarness() *harness {
 
 		federationNodes := make(map[string]config.FederationNode)
 		gossipPeers := make(map[string]config.GossipPeer)
-		for i := 0; i < 3; i++ {
+		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
 			federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 			gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
@@ -64,7 +66,7 @@ func newHarness() *harness {
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
-		for i := 0; i < 3; i++ {
+		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 			node := bootstrap.NewNode(
 				fmt.Sprintf(":%d", 8080+i),
@@ -72,6 +74,7 @@ func newHarness() *harness {
 				nodeKeyPair.PrivateKey(),
 				federationNodes,
 				gossipPeers,
+				uint16(firstRandomPort+i),
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,

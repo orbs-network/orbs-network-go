@@ -32,6 +32,7 @@ func NewNode(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	federationNodes map[string]config.FederationNode,
 	gossipPeers map[string]config.GossipPeer,
+	gossipListenPort uint16,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	logger log.BasicLogger,
@@ -42,6 +43,7 @@ func NewNode(
 		gossipPeers,
 		nodePublicKey,
 		nodePrivateKey,
+		gossipListenPort,
 		constantConsensusLeader,
 		activeConsensusAlgo,
 	)

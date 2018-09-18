@@ -20,6 +20,7 @@ const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	GossipPeers(asOfBlock uint64) map[string]config.GossipPeer
+	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 }
@@ -53,7 +54,7 @@ func NewDirectTransport(ctx context.Context, config Config, reporting log.BasicL
 	}
 
 	// server goroutine
-	go t.serverMainLoop(ctx, t.getListenPort())
+	go t.serverMainLoop(ctx, t.config.GossipListenPort())
 
 	// client goroutines
 	for peerNodeKey, peer := range t.config.GossipPeers(0) {
@@ -97,17 +98,6 @@ func (t *directTransport) Send(data *TransportData) error {
 	return errors.Errorf("unknown recipient mode: %s", data.RecipientMode.String())
 }
 
-func (t *directTransport) getListenPort() uint16 {
-	nodePublicKey := t.config.NodePublicKey()
-	nodeConfig, found := t.config.GossipPeers(0)[nodePublicKey.KeyForMap()]
-	if !found {
-		err := errors.Errorf("fatal error - gossip configuration (port and endpoint) not found for my public key: %s", nodePublicKey.String())
-		t.reporting.Error(err.Error())
-		panic(err)
-	}
-	return nodeConfig.GossipPort()
-}
-
 func (t *directTransport) serverListenForIncomingConnections(ctx context.Context, listenPort uint16) (net.Listener, error) {
 	// TODO: migrate to ListenConfig which has better support of contexts (go 1.11 required)
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", listenPort))
@@ -139,6 +129,12 @@ func (t *directTransport) isServerReady() bool {
 }
 
 func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16) {
+	if listenPort == 0 {
+		err := errors.New("gossip listen port is not initialized (zero)")
+		t.reporting.Error(err.Error())
+		panic(err)
+	}
+
 	listener, err := t.serverListenForIncomingConnections(ctx, listenPort)
 	if err != nil {
 		err = errors.Wrapf(err, "gossip transport cannot listen on port %d", listenPort)
