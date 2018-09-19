@@ -77,7 +77,7 @@ fabric.properties
 
 
 # End of https://www.gitignore.io/api/go,intellij
-main
+# main
 
 .DS_Store
 
@@ -87,6 +87,3 @@ logs/
 
 # binaries
 orbs-*
-cli
-sambusac
-kitstat*

@@ -1,0 +1,5 @@
+{
+  "ContractName": "BenchmarkToken",
+  "MethodName":   "getBalance",
+  "Arguments": []
+}
