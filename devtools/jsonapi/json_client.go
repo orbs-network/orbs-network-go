@@ -2,6 +2,8 @@ package jsonapi
 
 import (
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -13,11 +15,21 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 )
 
+const METHOD_ARGUMENT_TYPE_UINT32 string = "uint32"
+const METHOD_ARGUMENT_TYPE_UINT64 string = "uint64"
+const METHOD_ARGUMENT_TYPE_STRING string = "string"
+const METHOD_ARGUMENT_TYPE_BYTES string = "bytes"
+
 func ConvertAndSignTransaction(tx *Transaction, keyPair *keys.Ed25519KeyPair) (*protocol.SignedTransactionBuilder, error) {
-	transaction := ConvertTransaction(tx)
+	transaction, err := ConvertTransaction(tx)
+	if err != nil { // Something in the JSON is not valid so we exit with a non zero exit code.
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	transaction.Signer = &protocol.SignerBuilder{
 		Scheme: protocol.SIGNER_SCHEME_EDDSA, //TODO move to Transaction
 		Eddsa: &protocol.EdDSA01SignerBuilder{
@@ -37,20 +49,34 @@ func ConvertAndSignTransaction(tx *Transaction, keyPair *keys.Ed25519KeyPair) (*
 		signedTransaction.Signature = sig
 		return signedTransaction, nil
 	}
-
 }
 
-func ConvertTransaction(tx *Transaction) *protocol.TransactionBuilder {
+func ConvertTransaction(tx *Transaction) (*protocol.TransactionBuilder, error) {
 	var inputArguments []*protocol.MethodArgumentBuilder
 	for _, arg := range tx.Arguments {
-		inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
-			Name:        arg.Name,
-			Type:        arg.Type,
-			BytesValue:  arg.BytesValue,
-			StringValue: arg.StringValue,
-			Uint32Value: arg.Uint32Value,
-			Uint64Value: arg.Uint64Value,
-		})
+		switch arg.Type {
+		case METHOD_ARGUMENT_TYPE_UINT32:
+			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
+				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: uint32(arg.Value.(float64)),
+			})
+		case METHOD_ARGUMENT_TYPE_UINT64:
+			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
+				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: uint64(arg.Value.(float64)),
+			})
+		case METHOD_ARGUMENT_TYPE_STRING:
+			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
+				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Value.(string),
+			})
+		case METHOD_ARGUMENT_TYPE_BYTES:
+			argBytesValue, err := hex.DecodeString(arg.Value.(string))
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("Could not decode hex string for argument %s value", arg.Name))
+			}
+
+			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
+				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: argBytesValue,
+			})
+		}
 	}
 	inputArgumentArray := (&protocol.MethodArgumentArrayBuilder{Arguments: inputArguments}).Build()
 
@@ -61,7 +87,7 @@ func ConvertTransaction(tx *Transaction) *protocol.TransactionBuilder {
 		MethodName:         primitives.MethodName(tx.MethodName),
 		Timestamp:          primitives.TimestampNano(time.Now().UnixNano()),
 		InputArgumentArray: inputArgumentArray.RawArgumentsArray(),
-	}
+	}, nil
 
 }
 
@@ -106,17 +132,21 @@ func ConvertCallMethodOutput(cmo *client.CallMethodResponse) *CallMethodOutput {
 func convertMethodArgument(arg *protocol.MethodArgument) MethodArgument {
 	methodArg := MethodArgument{
 		Name: arg.Name(),
-		Type: arg.Type(),
 	}
 	switch arg.Type() {
 	case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
-		methodArg.Uint64Value = arg.Uint64Value()
+		methodArg.Type = METHOD_ARGUMENT_TYPE_UINT64
+		methodArg.Value = arg.Uint64Value()
 	case protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE:
-		methodArg.Uint32Value = arg.Uint32Value()
+		methodArg.Type = METHOD_ARGUMENT_TYPE_UINT32
+		methodArg.Value = arg.Uint32Value()
 	case protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE:
-		methodArg.StringValue = arg.StringValue()
+		methodArg.Type = METHOD_ARGUMENT_TYPE_STRING
+		methodArg.Value = arg.StringValue()
 	case protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE:
-		methodArg.BytesValue = arg.BytesValue()
+		argValueEncodedToString := hex.EncodeToString(arg.BytesValue())
+		methodArg.Type = METHOD_ARGUMENT_TYPE_BYTES
+		methodArg.Value = argValueEncodedToString
 	}
 	return methodArg
 }
@@ -129,13 +159,14 @@ func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, se
 	}
 
 	sendTransactionRequest := (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build()
-	res, err := http.Post(serverUrl+"/api/v1/send-transaction", "application/octet-stream", bytes.NewReader(sendTransactionRequest.Raw()))
+	res, err := http.Post(serverUrl+"/api/v1/send-transaction", "application/vnd.membuffers", bytes.NewReader(sendTransactionRequest.Raw()))
+
 	if err != nil {
 		return nil, err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got unexpected http status code %s", res.StatusCode)
+		return nil, errors.Errorf(fmt.Sprintf("got unexpected http status code %d", res.StatusCode))
 	}
 
 	readBytes, err := ioutil.ReadAll(res.Body)
@@ -148,14 +179,18 @@ func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, se
 }
 
 func CallMethod(transferJson *Transaction, serverUrl string, logVerbose bool) (*CallMethodOutput, error) {
-	tx := ConvertTransaction(transferJson)
+	tx, err := ConvertTransaction(transferJson)
+	if err != nil { // The JSON we got is probably invalid so we exit
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	if logVerbose {
 		log.GetLogger().Info("calling method", log.Stringable("transaction", tx.Build()))
 	}
 
 	request := (&client.CallMethodRequestBuilder{Transaction: tx}).Build()
-	res, err := http.Post(serverUrl+"/api/v1/call-method", "application/octet-stream", bytes.NewReader(request.Raw()))
+	res, err := http.Post(serverUrl+"/api/v1/call-method", "application/vnd.membuffers", bytes.NewReader(request.Raw()))
 	if err != nil {
 		return nil, err
 	}

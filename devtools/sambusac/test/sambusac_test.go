@@ -11,29 +11,26 @@ import (
 
 	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 )
 
-type txReceipt struct {
-	TxHash          string
+type TransactionReceipt struct {
+	Txhash          string
 	ExecutionResult int
-	OutputArguments []string
+	OutputArguments interface{}
 }
 
 type sendTransactionCliResponse struct {
-	TransactionReceipt txReceipt
+	TransactionReceipt TransactionReceipt
+	TransactionStatus  int
 	BlockHeight        int
 	BlockTimestamp     int
 }
 
 type OutputArgumentCliResponse struct {
-	Name        string
-	Type        int
-	Uint32Value int32
-	Uint64Value int64
-	StringValue string
-	BytesValue  []byte
+	Name  string
+	Type  string
+	Value interface{}
 }
 
 type callMethodCliResponse struct {
@@ -68,29 +65,6 @@ func runCommand(command []string, t *testing.T) string {
 	return stdout.String()
 }
 
-func generateTransferJSON(amount uint64) string {
-	transferJSON := &jsonapi.Transaction{
-		ContractName: "BenchmarkToken",
-		MethodName:   "transfer",
-		Arguments: []jsonapi.MethodArgument{
-			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
-		},
-	}
-
-	jsonBytes, _ := json.Marshal(&transferJSON)
-	return string(jsonBytes)
-}
-
-func generateGetBalanceJSON() string {
-	getBalanceJSON := &jsonapi.Transaction{
-		ContractName: "BenchmarkToken",
-		MethodName:   "getBalance",
-	}
-
-	callJSONBytes, _ := json.Marshal(&getBalanceJSON)
-	return string(callJSONBytes)
-}
-
 func TestSambusacFlow(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e tests in short mode")
@@ -107,7 +81,7 @@ func TestSambusacFlow(t *testing.T) {
 
 	baseCommand := ClientBinary()
 	sendCommand := append(baseCommand,
-		"-send-transaction", generateTransferJSON(42),
+		"run", "send", "../json/transfer.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
 
@@ -118,9 +92,10 @@ func TestSambusacFlow(t *testing.T) {
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
 	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
-	require.NotNil(t, response.TransactionReceipt.TxHash, "got empty txhash")
+	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
+	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 
-	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON())
+	getCommand := append(baseCommand, "run", "call", "../json/getBalance.json")
 
 	callOutputAsString := runCommand(getCommand, t)
 	fmt.Println(callOutputAsString)
@@ -131,5 +106,5 @@ func TestSambusacFlow(t *testing.T) {
 	require.NoError(t, callUnmarshalErr, "error calling call_method")
 	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
 	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
-	require.EqualValues(t, 42, callResponse.OutputArguments[0].Uint64Value, "expected balance to equal 42")
+	require.EqualValues(t, uint64(42), uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
 }

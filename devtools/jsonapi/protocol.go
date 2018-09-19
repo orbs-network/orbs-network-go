@@ -1,20 +1,16 @@
 package jsonapi
 
 import (
+	"encoding/hex"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"strconv"
 )
 
-//TODO []byte are marshalled as base64. Should we use base58?
-
+// Bytes are hex and are converted to []byte after json unmarshal
 type MethodArgument struct {
-	Name        string
-	Type        protocol.MethodArgumentType
-	Uint32Value uint32
-	Uint64Value uint64
-	StringValue string
-	BytesValue  []byte
+	Name  string
+	Type  string
+	Value interface{}
 }
 
 type Transaction struct {
@@ -44,16 +40,21 @@ type CallMethodOutput struct {
 }
 
 func (ma *MethodArgument) String() string {
-	if ma.Uint32Value != 0 {
-		return ma.Name + ":" + strconv.FormatUint(uint64(ma.Uint32Value), 10)
-	} else if ma.Uint64Value != 0 {
-		return ma.Name + ":" + strconv.FormatUint(uint64(ma.Uint64Value), 10)
-	} else if ma.StringValue != "" {
-		return ma.Name + ":" + ma.StringValue
-	} else if len(ma.BytesValue) != 0 {
-		// FIXME encode properly
-		return ma.Name + ":" + string(ma.BytesValue)
+	returnString := ma.Name + ":"
+
+	switch ma.Type {
+	case METHOD_ARGUMENT_TYPE_UINT32:
+		returnString = returnString + string(ma.Value.(uint32))
+	case METHOD_ARGUMENT_TYPE_UINT64:
+		returnString = returnString + string(ma.Value.(uint64))
+	case METHOD_ARGUMENT_TYPE_STRING:
+		returnString = returnString + string(ma.Value.(string))
+	case METHOD_ARGUMENT_TYPE_BYTES:
+		decodedString, _ := hex.DecodeString(ma.Value.(string))
+		returnString = returnString + string(decodedString)
+	default:
+		returnString = returnString + "<nil>"
 	}
 
-	return ma.Name + ":<nil>"
+	return returnString
 }
