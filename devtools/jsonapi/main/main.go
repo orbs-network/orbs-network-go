@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/devtools/jsonapi/main/commands"
+	"github.com/orbs-network/orbs-network-go/devtools/jsonapi/commands"
 	"os"
 )
 
@@ -33,12 +33,12 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		commands.HandleRunCommand(os.Args[2:])
-	case "start":
-		commands.HandleStartCommand(os.Args[2:])
-	case "deploy":
-		commands.HandleDeployCommand(os.Args[2:])
-	case "genKeys":
-		commands.HandleGenKeysCommand()
+		//case "start":
+		//	commands.HandleStartCommand(os.Args[2:])
+		//case "deploy":
+		//	commands.HandleDeployCommand(os.Args[2:])
+		//case "genKeys":
+		//	commands.HandleGenKeysCommand()
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
