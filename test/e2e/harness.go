@@ -9,13 +9,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"testing"
@@ -26,6 +26,8 @@ type E2EConfig struct {
 	Bootstrap   bool
 	ApiEndpoint string
 }
+
+const LOCAL_NETWORK_SIZE = 3
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
@@ -50,28 +52,32 @@ func newHarness() *harness {
 
 	// TODO: kill me - why do we need this override?
 	if getConfig().Bootstrap {
-		gossipTransport := gossipAdapter.NewTamperingTransport()
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		firstRandomPort := 20000 + r.Intn(40000)
 
 		federationNodes := make(map[string]config.FederationNode)
-		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
-		for i := 0; i < 3; i++ {
-			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-			federationNodes[nodeKeyPair.PublicKey().KeyForMap()] = config.NewHardCodedFederationNode(nodeKeyPair.PublicKey())
+		gossipPeers := make(map[string]config.GossipPeer)
+		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
+			publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+			federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+			gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 		}
 
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
-		for i := 0; i < 3; i++ {
+		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 			node := bootstrap.NewNode(
 				fmt.Sprintf(":%d", 8080+i),
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey(),
 				federationNodes,
+				gossipPeers,
+				uint16(firstRandomPort+i),
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,
-				gossipTransport,
 			)
 
 			nodes = append(nodes, node)
