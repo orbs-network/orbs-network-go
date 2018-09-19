@@ -27,7 +27,7 @@ func main() {
 		fmt.Println("$ gamma-cli run call path/to/operation.json")
 		fmt.Println("  Perform a contract method which reads from state")
 		fmt.Println("")
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 	switch os.Args[1] {
