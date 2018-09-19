@@ -12,8 +12,16 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		// TODO implement a welcome message here
-		fmt.Println("must specify which command to run")
+		fmt.Println("Welcome to gamma-cli")
+		fmt.Println("Example usage:")
+		fmt.Println("$ gamma-cli start")
+		fmt.Println("  Start gamma-server with 3 Orbs virtual nodes")
+		fmt.Println("$ gamma-cli deploy MyContractName path/to/some/contract.go")
+		fmt.Println("  Deploy your contract code onto the running blockchain on your local machine")
+		fmt.Println("$ gamma-cli run send path/to/operation.json")
+		fmt.Println("  Perform a contract method which mutates state")
+		fmt.Println("$ gamma-cli run call path/to/operation.json")
+		fmt.Println("  Perform a contract method which reads from state")
 		os.Exit(1)
 	}
 
