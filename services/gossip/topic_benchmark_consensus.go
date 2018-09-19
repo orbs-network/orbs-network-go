@@ -46,6 +46,7 @@ func (s *service) BroadcastBenchmarkConsensusCommit(input *gossiptopics.Benchmar
 func (s *service) receivedBenchmarkConsensusCommit(header *gossipmessages.Header, payloads [][]byte) {
 	blockPair, err := decodeBlockPair(payloads)
 	if err != nil {
+		s.reporting.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
 		return
 	}
 

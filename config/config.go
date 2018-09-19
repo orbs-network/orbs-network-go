@@ -11,6 +11,7 @@ type NodeConfig interface {
 	Set(key string, value NodeConfigValue) NodeConfig
 	SetDuration(key string, value time.Duration) NodeConfig
 	SetUint32(key string, value uint32) NodeConfig
+	SetString(key string, value string) NodeConfig
 	SetFederationNodes(map[string]FederationNode) NodeConfig
 	SetGossipPeers(map[string]GossipPeer) NodeConfig
 	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
@@ -66,6 +67,9 @@ type NodeConfig interface {
 	// public api
 	SendTransactionTimeout() time.Duration
 	GetTransactionStatusGrace() time.Duration
+
+	// processor
+	ProcessorArtifactPath() string
 }
 
 type FederationNode interface {

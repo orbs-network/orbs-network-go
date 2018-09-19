@@ -2,15 +2,13 @@ package benchmarktoken
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 )
 
-var CONTRACT = types.ContractInfo{
+var CONTRACT = sdk.ContractInfo{
 	Name:       "BenchmarkToken",
-	Permission: protocol.PERMISSION_SCOPE_SERVICE,
-	Methods: map[primitives.MethodName]types.MethodInfo{
+	Permission: sdk.PERMISSION_SCOPE_SERVICE,
+	Methods: map[string]sdk.MethodInfo{
 		METHOD_INIT.Name:        METHOD_INIT,
 		METHOD_TRANSFER.Name:    METHOD_TRANSFER,
 		METHOD_GET_BALANCE.Name: METHOD_GET_BALANCE,
@@ -18,35 +16,35 @@ var CONTRACT = types.ContractInfo{
 	InitSingleton: newContract,
 }
 
-func newContract(base *types.BaseContract) types.Contract {
+func newContract(base *sdk.BaseContract) sdk.ContractInstance {
 	return &contract{base}
 }
 
-type contract struct{ *types.BaseContract }
+type contract struct{ *sdk.BaseContract }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_INIT = types.MethodInfo{
+var METHOD_INIT = sdk.MethodInfo{
 	Name:           "_init",
 	External:       false,
-	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract)._init,
 }
 
-func (c *contract) _init(ctx types.Context) error {
+func (c *contract) _init(ctx sdk.Context) error {
 	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_TRANSFER = types.MethodInfo{
+var METHOD_TRANSFER = sdk.MethodInfo{
 	Name:           "transfer",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract).transfer,
 }
 
-func (c *contract) transfer(ctx types.Context, amount uint64) error {
+func (c *contract) transfer(ctx sdk.Context, amount uint64) error {
 	if amount > 1000 {
 		return fmt.Errorf("cannot transfer amounts above 1000: %d", amount)
 	}
@@ -60,13 +58,13 @@ func (c *contract) transfer(ctx types.Context, amount uint64) error {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_GET_BALANCE = types.MethodInfo{
+var METHOD_GET_BALANCE = sdk.MethodInfo{
 	Name:           "getBalance",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
 	Implementation: (*contract).getBalance,
 }
 
-func (c *contract) getBalance(ctx types.Context) (uint64, error) {
+func (c *contract) getBalance(ctx sdk.Context) (uint64, error) {
 	return c.State.ReadUint64ByKey(ctx, "total-balance")
 }

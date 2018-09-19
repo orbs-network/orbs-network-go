@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"path/filepath"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type hardCodedGossipPeer struct {
 type NodeConfigValue struct {
 	Uint32Value   uint32
 	DurationValue time.Duration
+	StringValue   string
 }
 
 type config struct {
@@ -63,6 +65,8 @@ const (
 
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
 	PUBLIC_API_TRANSACTION_STATUS_GRACE = "PUBLIC_API_TRANSACTION_STATUS_GRACE"
+
+	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -85,6 +89,7 @@ func newHardCodedConfig(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	processorArtifactPath string,
 ) NodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
@@ -118,6 +123,12 @@ func newHardCodedConfig(
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
 
+	if processorArtifactPath == "" {
+		cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	} else {
+		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
+	}
+
 	return cfg
 }
 
@@ -133,6 +144,11 @@ func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
 
 func (c *config) SetUint32(key string, value uint32) NodeConfig {
 	c.kv[key] = NodeConfigValue{Uint32Value: value}
+	return c
+}
+
+func (c *config) SetString(key string, value string) NodeConfig {
+	c.kv[key] = NodeConfigValue{StringValue: value}
 	return c
 }
 
@@ -278,6 +294,10 @@ func (c *config) GetTransactionStatusGrace() time.Duration {
 
 func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT].DurationValue
+}
+
+func (c *config) ProcessorArtifactPath() string {
+	return c.kv[PROCESSOR_ARTIFACT_PATH].StringValue
 }
 
 func (c *config) GossipListenPort() uint16 {

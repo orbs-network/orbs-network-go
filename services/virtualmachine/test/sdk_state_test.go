@@ -23,7 +23,7 @@ func TestSdkStateReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("First read should reach state storage")
 		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")
@@ -51,7 +51,7 @@ func TestSdkStateWriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Attempt to write without proper access")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02})
 		require.Error(t, err, "handleSdkCall should fail")
@@ -69,7 +69,7 @@ func TestSdkStateReadWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
 	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("First read should reach state storage")
 		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")
@@ -98,7 +98,7 @@ func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
 	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: first write should change in transient state")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02})
 		require.NoError(t, err, "handleSdkCall should succeed")
@@ -109,7 +109,7 @@ func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 2: first write should replace in transient state")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x05, 0x06})
 		require.NoError(t, err, "handleSdkCall should succeed")
@@ -140,26 +140,26 @@ func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 	h := newHarness()
 	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: write to key in first contract")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02})
 		require.NoError(t, err, "handleSdkCall should succeed")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 2: write to same key in second contract")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x03, 0x04})
 		require.NoError(t, err, "handleSdkCall should succeed")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 3: read from first contract")
 		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")
 		require.Equal(t, []byte{0x02}, res[0].BytesValue(), "handleSdkCall result should be equal")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract2", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract2", "method2", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 4: read from second contract")
 		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")
@@ -190,13 +190,13 @@ func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testi
 	h := newHarness()
 	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1 (successful): first write should change in transient state")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02})
 		require.NoError(t, err, "handleSdkCall should succeed")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 2 (failed): write should be ignored")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x03, 0x04})
 		require.NoError(t, err, "handleSdkCall should succeed")
@@ -208,7 +208,7 @@ func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testi
 
 		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.MethodArgumentsArray(), errors.New("contract error")
 	})
-	h.expectNativeContractMethodCalled("Contract1", "method3", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method3", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 3 (successful): read should return last successful write")
 		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")

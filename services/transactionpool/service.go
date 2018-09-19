@@ -132,9 +132,10 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 	}
 
 	for _, tx := range input.Message.SignedTransactions {
-		s.logger.Info("adding forwarded transaction to the pool", log.Stringable("transaction", tx))
+		txHash := digest.CalcTxHash(tx.Transaction())
+		s.logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", tx), log.Stringable("txHash", txHash))
 		if _, err := s.pendingPool.add(tx, sender.SenderPublicKey()); err != nil {
-			s.logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx))
+			s.logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), log.Stringable("txHash", txHash))
 		}
 	}
 	return nil, nil

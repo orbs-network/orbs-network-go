@@ -14,11 +14,6 @@ func TestProcessCallPermissions(t *testing.T) {
 		expectedSdkWrite bool
 	}{
 		{
-			name:          "UnknownContractFails",
-			input:         processCallInput().WithUnknownContract().Build(),
-			expectedError: true,
-		},
-		{
 			name:          "UnknownMethodFails",
 			input:         processCallInput().WithUnknownMethod().Build(),
 			expectedError: true,

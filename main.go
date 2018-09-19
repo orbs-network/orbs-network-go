@@ -95,5 +95,6 @@ func main() {
 		consensusLeader,
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		logger,
+		"", // default
 	).WaitUntilShutdown()
 }

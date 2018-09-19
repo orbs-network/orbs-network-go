@@ -10,7 +10,7 @@ import (
 
 func (s *service) getServiceDeployment(executionContext *executionContext, serviceName primitives.ContractName) (services.Processor, error) {
 	// call the system contract to identify the processor
-	processorType, err := s.callGetDeploymentInfoSystemContract(executionContext, serviceName)
+	processorType, err := s.callGetInfoOfDeploymentSystemContract(executionContext, serviceName)
 
 	// on failure (contract not deployed), attempt to auto deploy native contract
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *service) attemptToAutoDeployNativeContract(executionContext *executionC
 	}
 
 	// auto deploy native contract
-	err = s.callDeployServiceSystemContract(executionContext, serviceName)
+	err = s.callDeployServiceOfDeploymentSystemContract(executionContext, serviceName)
 	if err != nil {
 		return 0, err
 	}
@@ -53,9 +53,9 @@ func (s *service) attemptToAutoDeployNativeContract(executionContext *executionC
 	return protocol.PROCESSOR_TYPE_NATIVE, nil
 }
 
-func (s *service) callGetDeploymentInfoSystemContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
-	systemContractName := deployments.CONTRACT.Name
-	systemMethodName := deployments.METHOD_GET_INFO.Name
+func (s *service) callGetInfoOfDeploymentSystemContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
+	systemContractName := primitives.ContractName(deployments.CONTRACT.Name)
+	systemMethodName := primitives.MethodName(deployments.METHOD_GET_INFO.Name)
 
 	// modify execution context
 	executionContext.serviceStackPush(systemContractName)
@@ -95,9 +95,9 @@ func (s *service) callGetDeploymentInfoSystemContract(executionContext *executio
 	return protocol.ProcessorType(outputArg0.Uint32Value()), nil
 }
 
-func (s *service) callDeployServiceSystemContract(executionContext *executionContext, serviceName primitives.ContractName) error {
-	systemContractName := deployments.CONTRACT.Name
-	systemMethodName := deployments.METHOD_DEPLOY_SERVICE.Name
+func (s *service) callDeployServiceOfDeploymentSystemContract(executionContext *executionContext, serviceName primitives.ContractName) error {
+	systemContractName := primitives.ContractName(deployments.CONTRACT.Name)
+	systemMethodName := primitives.MethodName(deployments.METHOD_DEPLOY_SERVICE.Name)
 
 	// modify execution context
 	executionContext.serviceStackPush(systemContractName)

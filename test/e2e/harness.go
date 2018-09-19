@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -18,6 +19,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -31,7 +33,7 @@ const LOCAL_NETWORK_SIZE = 3
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	ApiEndpoint := "http://localhost:8080/api/v1/"
+	ApiEndpoint := "http://localhost:8082/api/v1/" // 8080 is leader, 8082 is node-3
 
 	if !Bootstrap {
 		ApiEndpoint = os.Getenv("API_ENDPOINT")
@@ -65,6 +67,9 @@ func newHarness() *harness {
 
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
+		processorArtifactPath, dirToCleanup := getProcessorArtifactPath()
+		os.RemoveAll(dirToCleanup)
+
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
@@ -78,6 +83,7 @@ func newHarness() *harness {
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,
+				processorArtifactPath,
 			)
 
 			nodes = append(nodes, node)
@@ -98,6 +104,8 @@ func (h *harness) gracefulShutdown() {
 			node.GracefulShutdown(1 * time.Second)
 		}
 	}
+	_, dirToCleanup := getProcessorArtifactPath()
+	os.RemoveAll(dirToCleanup)
 }
 
 func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
@@ -108,7 +116,7 @@ func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransa
 	response := client.SendTransactionResponseReader(responseBytes)
 	if !response.IsValid() {
 		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
-		return nil, errors.Errorf("SendTransaction response invalid, raw as text: %s, raw as hex: %s", string(responseBytes), hex.EncodeToString(responseBytes))
+		return nil, errors.Errorf("SendTransaction response invalid, raw as text: %s, raw as hex: %s, txHash: %s", string(responseBytes), hex.EncodeToString(responseBytes), digest.CalcTxHash(request.SignedTransaction().Transaction()))
 	}
 	return response, nil
 }
@@ -136,4 +144,9 @@ func (h *harness) httpPost(t *testing.T, input membuffers.Message, method string
 	require.NoError(t, err)
 
 	return bytes
+}
+
+func getProcessorArtifactPath() (string, string) {
+	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
+	return filepath.Join(dir, "processor-artifacts"), dir
 }

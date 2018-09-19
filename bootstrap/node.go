@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -36,6 +37,7 @@ func NewNode(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	logger log.BasicLogger,
+	processorArtifactPath string,
 ) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.ForProduction(
@@ -46,14 +48,16 @@ func NewNode(
 		gossipListenPort,
 		constantConsensusLeader,
 		activeConsensusAlgo,
+		processorArtifactPath,
 	)
 
 	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
-	stateStorageAdapter := stateStorageAdapter.NewInMemoryStatePersistence()
-	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, stateStorageAdapter, nodeLogger, nodeConfig)
+	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence()
+	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
+	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nativeCompiler, nodeLogger, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
 
 	return &node{
