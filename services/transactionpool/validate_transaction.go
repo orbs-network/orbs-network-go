@@ -49,7 +49,7 @@ func validateSignerAndContractName(transaction *protocol.SignedTransaction) *Err
 	tx := transaction.Transaction()
 	if tx.ContractName() == "" ||
 		!tx.Signer().IsSchemeEddsa() ||
-		len(tx.Signer().Eddsa().SignerPublicKey()) != signature.ED25519_PUBLIC_KEY_SIZE {
+		len(tx.Signer().Eddsa().SignerPublicKey()) != signature.ED25519_PUBLIC_KEY_SIZE_BYTES {
 		//TODO is this the correct status?
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}
 	}

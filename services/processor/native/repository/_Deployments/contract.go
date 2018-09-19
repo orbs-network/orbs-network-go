@@ -1,4 +1,4 @@
-package deployments
+package deployments_systemcontract
 
 import (
 	"errors"

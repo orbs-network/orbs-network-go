@@ -6,6 +6,10 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
+const (
+	RIPMD160_HASH_SIZE_BYTES = 20
+)
+
 func CalcRipmd160Sha256(data []byte) primitives.Ripmd160Sha256 {
 	hash := sha256.Sum256(data)
 	return ripemd160.New().Sum(hash[:])

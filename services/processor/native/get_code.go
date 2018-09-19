@@ -23,6 +23,7 @@ func initializeContractInstance(contractInfo *sdk.ContractInfo, sdkHandler handl
 	return contractInfo.InitSingleton(sdk.NewBaseContract(
 		&stateSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
 		&serviceSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
+		&addressSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
 	))
 }
 
@@ -95,8 +96,8 @@ func (s *service) callGetCodeOfDeploymentSystemContract(executionContextId sdk.C
 		return nil, errors.New("ContractSdkCallHandler has not registered yet")
 	}
 
-	systemContractName := primitives.ContractName(deployments.CONTRACT.Name)
-	systemMethodName := primitives.MethodName(deployments.METHOD_GET_CODE.Name)
+	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
+	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE.Name)
 
 	output, err := handler.HandleSdkCall(&handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),

@@ -45,7 +45,7 @@ func Transaction() *TransactionBuilder {
 }
 
 func (t *TransactionBuilder) Build() *protocol.SignedTransaction {
-	t.builder.Signature = make([]byte, signature.ED25519_SIGNATURE_SIZE)
+	t.builder.Signature = make([]byte, signature.ED25519_SIGNATURE_SIZE_BYTES)
 	signedTransaction := t.builder.Build()
 	txHash := digest.CalcTxHash(signedTransaction.Transaction())
 	sig, err := signature.SignEd25519(t.signer, txHash)

@@ -8,8 +8,8 @@ import (
 )
 
 func (s *service) callGlobalPreOrderSystemContract(blockHeight primitives.BlockHeight) error {
-	systemContractName := primitives.ContractName(globalpreorder.CONTRACT.Name)
-	systemMethodName := primitives.MethodName(globalpreorder.METHOD_APPROVE.Name)
+	systemContractName := primitives.ContractName(globalpreorder_systemcontract.CONTRACT.Name)
+	systemMethodName := primitives.MethodName(globalpreorder_systemcontract.METHOD_APPROVE.Name)
 
 	// create execution context
 	contextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, protocol.ACCESS_SCOPE_READ_ONLY)
