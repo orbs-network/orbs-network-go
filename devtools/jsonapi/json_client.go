@@ -57,11 +57,11 @@ func ConvertTransaction(tx *Transaction) (*protocol.TransactionBuilder, error) {
 		switch arg.Type {
 		case METHOD_ARGUMENT_TYPE_UINT32:
 			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
-				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.Value.(uint32),
+				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: uint32(arg.Value.(float64)),
 			})
 		case METHOD_ARGUMENT_TYPE_UINT64:
 			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
-				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.Value.(uint64),
+				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: uint64(arg.Value.(float64)),
 			})
 		case METHOD_ARGUMENT_TYPE_STRING:
 			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{

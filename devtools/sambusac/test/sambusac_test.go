@@ -14,19 +14,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type sendTransactionCliResponse struct {
-	TxHash          string
+type TransactionReceipt struct {
+	Txhash          string
 	ExecutionResult int
-	OutputArguments []string
+	OutputArguments interface{}
+}
+
+type sendTransactionCliResponse struct {
+	TransactionReceipt TransactionReceipt
+	TransactionStatus  int
+	BlockHeight        int
+	BlockTimestamp     int
 }
 
 type OutputArgumentCliResponse struct {
-	Name        string
-	Type        int
-	Uint32Value int32
-	Uint64Value int64
-	StringValue string
-	BytesValue  []byte
+	Name  string
+	Type  string
+	Value interface{}
 }
 
 type callMethodCliResponse struct {
@@ -87,8 +91,9 @@ func TestSambusacFlow(t *testing.T) {
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.ExecutionResult, "Transaction status to be successful = 1")
-	require.NotNil(t, response.TxHash, "got empty txhash")
+	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
+	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
+	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 
 	getCommand := append(baseCommand, "run", "call", "./jsons/getBalance.json")
 
@@ -101,5 +106,5 @@ func TestSambusacFlow(t *testing.T) {
 	require.NoError(t, callUnmarshalErr, "error calling call_method")
 	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
 	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
-	require.EqualValues(t, 42, callResponse.OutputArguments[0].Uint64Value, "expected balance to equal 42")
+	require.EqualValues(t, uint64(42), uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
 }
