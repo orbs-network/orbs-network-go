@@ -18,7 +18,7 @@ type acceptanceTestNetworkBuilder struct {
 	numNodes       uint32
 	consensusAlgos []consensus.ConsensusAlgoType
 	testId         string
-	setupFunc      func(network AcceptanceTestNetwork)
+	setupFunc      func(network InProcessNetwork)
 }
 
 func Network(t *testing.T) *acceptanceTestNetworkBuilder {
@@ -46,12 +46,12 @@ func (b *acceptanceTestNetworkBuilder) WithConsensusAlgos(algos ...consensus.Con
 }
 
 // setup runs when all adapters have been created but before the nodes are started
-func (b *acceptanceTestNetworkBuilder) WithSetup(f func(network AcceptanceTestNetwork)) *acceptanceTestNetworkBuilder {
+func (b *acceptanceTestNetworkBuilder) WithSetup(f func(network InProcessNetwork)) *acceptanceTestNetworkBuilder {
 	b.setupFunc = f
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) Start(f func(network AcceptanceTestNetwork)) {
+func (b *acceptanceTestNetworkBuilder) Start(f func(network InProcessNetwork)) {
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
@@ -72,7 +72,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(network AcceptanceTestNetwor
 		})
 		// end test
 
-		time.Sleep(1 * time.Millisecond) // give context dependent goroutines 1 ms to terminate gracefully
+		time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 	}
 }
 
@@ -82,7 +82,7 @@ func printTestIdOnFailure(t *testing.T, testId string) {
 	}
 }
 
-func dumpStateOnFailure(t *testing.T, network AcceptanceTestNetwork) {
+func dumpStateOnFailure(t *testing.T, network InProcessNetwork) {
 	if t.Failed() {
 		network.DumpState()
 	}

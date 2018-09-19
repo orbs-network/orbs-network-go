@@ -11,3 +11,8 @@ func ClientCallMethodResponseOutputArgumentsDecode(r *client.CallMethodResponse)
 }
 
 // encode MethodArgumentsOpaque with MethodArgumentsOpaqueEncode
+
+func ClientCallMethodResponseOutputArgumentsPrint(r *client.CallMethodResponse) string {
+	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
+	return argsArray.String()
+}

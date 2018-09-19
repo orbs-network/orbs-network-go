@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
@@ -37,12 +38,13 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
+	nativeCompiler nativeProcessorAdapter.Compiler,
 	reporting log.BasicLogger,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
-	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(reporting)
+	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, reporting)
 
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()

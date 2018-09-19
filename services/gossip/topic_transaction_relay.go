@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -19,6 +20,8 @@ func (s *service) receivedTransactionRelayMessage(header *gossipmessages.Header,
 }
 
 func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+	s.reporting.Info("broadcasting forwarded transactions", log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
+
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
 		TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
@@ -48,12 +51,17 @@ func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, p
 		txs = append(txs, tx)
 	}
 
+	s.reporting.Info("received forwarded transactions", log.Stringable("sender", senderSignature), log.StringableSlice("transactions", txs))
+
 	for _, l := range s.transactionHandlers {
-		l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+		_, err := l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 			Message: &gossipmessages.ForwardedTransactionsMessage{
 				Sender:             senderSignature,
 				SignedTransactions: txs,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleForwardedTransactions failed", log.Error(err))
+		}
 	}
 }

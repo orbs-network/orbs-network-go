@@ -1,8 +1,12 @@
 package contracts
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
+)
 
-const counterContractCode = `
+const COUNTER_SOURCE_CODE = `
 package main
 
 import (
@@ -86,5 +90,11 @@ func (c *contract) start(ctx sdk.Context) (uint64, error) {
 `
 
 func SourceCodeForCounter(startFrom uint64) []byte {
-	return []byte(fmt.Sprintf(counterContractCode, startFrom, startFrom, startFrom))
+	return []byte(fmt.Sprintf(COUNTER_SOURCE_CODE, startFrom, startFrom, startFrom))
 }
+
+func MockForCounter() *sdk.ContractInfo {
+	return &counter_mock.CONTRACT
+}
+
+const MOCK_COUNTER_CONTRACT_START_FROM = counter_mock.COUNTER_CONTRACT_START_FROM

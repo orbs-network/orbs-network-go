@@ -156,7 +156,7 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
-		harness.verifyMocks(t, 1)
+		harness.verifyMocks(t, 2)
 	})
 }
 
@@ -184,7 +184,9 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 		harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
 		harness.blockStorage.HandleBlockAvailabilityResponse(anotherBlockAvailabilityResponse)
 
-		time.Sleep(4 * time.Millisecond)
+		// we use this to verify that the SendBlockSyncRequest was sent out, meaning that the AvailabilityResponse stage is done
+		// we saw it can take up to 15ms in some cases (although it is suppose to take just 1ms this is the docker timing delay we see in CI)
+		test.EventuallyVerify(50*time.Millisecond, harness.gossip)
 
 		blockSyncResponse := builders.BlockSyncResponseInput().
 			WithFirstBlockHeight(primitives.BlockHeight(1)).

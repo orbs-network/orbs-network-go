@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -66,6 +67,7 @@ func aTamperingTransport() *transportContractContext {
 }
 
 func aMemberlistTransport() *transportContractContext {
+	logger := log.GetLogger()
 	res := &transportContractContext{}
 	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
 	configs := []adapter.MemberlistGossipConfig{
@@ -75,10 +77,10 @@ func aMemberlistTransport() *transportContractContext {
 		{res.publicKeys[3], 60004, []string{"127.0.0.1:60001", "127.0.0.1:60002", "127.0.0.1:60003"}},
 	}
 	res.transports = []adapter.Transport{
-		adapter.NewMemberlistTransport(configs[0]),
-		adapter.NewMemberlistTransport(configs[1]),
-		adapter.NewMemberlistTransport(configs[2]),
-		adapter.NewMemberlistTransport(configs[3]),
+		adapter.NewMemberlistTransport(configs[0], logger),
+		adapter.NewMemberlistTransport(configs[1], logger),
+		adapter.NewMemberlistTransport(configs[2], logger),
+		adapter.NewMemberlistTransport(configs[3], logger),
 	}
 	res.listeners = []*mockListener{
 		listenTo(res.transports[0], res.publicKeys[0]),

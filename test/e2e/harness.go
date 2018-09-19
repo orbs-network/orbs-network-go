@@ -2,23 +2,24 @@ package e2e
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -42,11 +43,11 @@ func getConfig() E2EConfig {
 	}
 }
 
-func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E tests in short mode")
-	}
+type harness struct {
+	nodes []bootstrap.Node
+}
 
+func newHarness() *harness {
 	var nodes []bootstrap.Node
 
 	// TODO: kill me - why do we need this override?
@@ -62,6 +63,9 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 
 		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
+		processorArtifactPath, dirToCleanup := getProcessorArtifactPath()
+		os.RemoveAll(dirToCleanup)
+
 		for i := 0; i < 3; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 			node := bootstrap.NewNode(
@@ -73,6 +77,7 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				logger,
 				gossipTransport,
+				processorArtifactPath,
 			)
 
 			nodes = append(nodes, node)
@@ -82,49 +87,48 @@ func TestOrbsNetworkAcceptsTransactionAndCommitsIt(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	tx := builders.TransferTransaction().WithAmount(17).Builder()
-
-	_ = sendTransaction(t, tx)
-
-	m := &protocol.TransactionBuilder{
-		ContractName: "BenchmarkToken",
-		MethodName:   "getBalance",
+	return &harness{
+		nodes: nodes,
 	}
+}
 
-	test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(callMethod(t, m).ClientResponse)
-		if outputArgsIterator.HasNext() {
-			return outputArgsIterator.NextArguments().Uint64Value() == 17
-		} else {
-			return false
-		}
-	})
-
+func (h *harness) gracefulShutdown() {
 	if getConfig().Bootstrap {
-		for _, node := range nodes {
+		for _, node := range h.nodes {
 			node.GracefulShutdown(1 * time.Second)
 		}
 	}
+	_, dirToCleanup := getProcessorArtifactPath()
+	os.RemoveAll(dirToCleanup)
 }
 
-func sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) *services.SendTransactionOutput {
-	input := (&client.SendTransactionRequestBuilder{
+func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
+	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: txBuilder,
 	}).Build()
-
-	return &services.SendTransactionOutput{ClientResponse: client.SendTransactionResponseReader(httpPost(t, input, "send-transaction"))}
+	responseBytes := h.httpPost(t, request, "send-transaction")
+	response := client.SendTransactionResponseReader(responseBytes)
+	if !response.IsValid() {
+		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
+		return nil, errors.Errorf("SendTransaction response invalid, raw as text: %s, raw as hex: %s, txHash: %s", string(responseBytes), hex.EncodeToString(responseBytes), digest.CalcTxHash(request.SignedTransaction().Transaction()))
+	}
+	return response, nil
 }
 
-func callMethod(t *testing.T, txBuilder *protocol.TransactionBuilder) *services.CallMethodOutput {
-	input := (&client.CallMethodRequestBuilder{
+func (h *harness) callMethod(t *testing.T, txBuilder *protocol.TransactionBuilder) (*client.CallMethodResponse, error) {
+	request := (&client.CallMethodRequestBuilder{
 		Transaction: txBuilder,
 	}).Build()
-
-	return &services.CallMethodOutput{ClientResponse: client.CallMethodResponseReader(httpPost(t, input, "call-method"))}
-
+	responseBytes := h.httpPost(t, request, "call-method")
+	response := client.CallMethodResponseReader(responseBytes)
+	if !response.IsValid() {
+		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
+		return nil, errors.Errorf("CallMethod response invalid, raw as text: %s, raw as hex: %s", string(responseBytes), hex.EncodeToString(responseBytes))
+	}
+	return response, nil
 }
 
-func httpPost(t *testing.T, input membuffers.Message, method string) []byte {
+func (h *harness) httpPost(t *testing.T, input membuffers.Message, method string) []byte {
 	res, err := http.Post(getConfig().ApiEndpoint+method, "application/octet-stream", bytes.NewReader(input.Raw()))
 	require.NoError(t, err)
 	require.Equal(t, res.StatusCode, http.StatusOK)
@@ -134,4 +138,9 @@ func httpPost(t *testing.T, input membuffers.Message, method string) []byte {
 	require.NoError(t, err)
 
 	return bytes
+}
+
+func getProcessorArtifactPath() (string, string) {
+	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
+	return filepath.Join(dir, "processor-artifacts"), dir
 }

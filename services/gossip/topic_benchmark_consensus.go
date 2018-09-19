@@ -46,15 +46,19 @@ func (s *service) BroadcastBenchmarkConsensusCommit(input *gossiptopics.Benchmar
 func (s *service) receivedBenchmarkConsensusCommit(header *gossipmessages.Header, payloads [][]byte) {
 	blockPair, err := decodeBlockPair(payloads)
 	if err != nil {
+		s.reporting.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
 		return
 	}
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		l.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+		_, err := l.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
 			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
 				BlockPair: blockPair,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBenchmarkConsensusCommit failed", log.Error(err))
+		}
 	}
 }
 
@@ -67,7 +71,7 @@ func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkC
 	}).Build()
 
 	if input.Message.Status == nil {
-		return nil, errors.Errorf("cannot encode BenchmarkConsensusCommittedMessage", log.Stringable("message", input.Message))
+		return nil, errors.Errorf("cannot encode BenchmarkConsensusCommittedMessage: %s", input.Message.String())
 	}
 	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), input.Message.Sender.Raw()}
 
@@ -87,11 +91,14 @@ func (s *service) receivedBenchmarkConsensusCommitted(header *gossipmessages.Hea
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		l.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+		_, err := l.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 			Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
 				Status: status,
 				Sender: senderSignature,
 			},
 		})
+		if err != nil {
+			s.reporting.Info("HandleBenchmarkConsensusCommitted failed", log.Error(err))
+		}
 	}
 }

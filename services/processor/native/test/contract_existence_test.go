@@ -31,28 +31,22 @@ func TestGetContractInfoWithUnknownContractFails(t *testing.T) {
 	h.verifySdkCallMade(t)
 }
 
-const counterContractStartFrom = 100
-
 func TestProcessCallWithDeployableContractThatCompiles(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping compilation of contracts in short mode")
-	}
-
 	h := newHarness()
-	input := processCallInput().WithDeployableCounterContract(counterContractStartFrom).Build()
-	codeOutput := builders.MethodArgumentsArray([]byte(contracts.SourceCodeForCounter(counterContractStartFrom)))
+	input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
+	codeOutput := builders.MethodArgumentsArray([]byte(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
 	h.expectSdkCallMadeWithServiceCallMethod(deployments.CONTRACT.Name, deployments.METHOD_GET_CODE.Name, builders.MethodArgumentsArray(string(input.ContractName)), codeOutput, nil)
 
 	output, err := h.service.ProcessCall(input)
 	require.NoError(t, err, "call should succeed")
-	require.Equal(t, uint64(counterContractStartFrom), output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
+	require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
 
 	t.Log("First call (not compiled) should getCode for compilation")
 	h.verifySdkCallMade(t)
 
 	output, err = h.service.ProcessCall(input)
 	require.NoError(t, err, "call should succeed")
-	require.Equal(t, uint64(counterContractStartFrom), output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
+	require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
 
 	t.Log("Make sure second call (already compiled) does not getCode again")
 	h.verifySdkCallMade(t)

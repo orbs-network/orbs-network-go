@@ -7,10 +7,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 )
 
 type service struct {
 	reporting log.BasicLogger
+	compiler adapter.Compiler
 
 	mutex                         *sync.RWMutex
 	contractSdkHandlerUnderMutex  handlers.ContractSdkCallHandler
@@ -19,9 +21,11 @@ type service struct {
 }
 
 func NewNativeProcessor(
+	compiler adapter.Compiler,
 	reporting log.BasicLogger,
 ) services.Processor {
 	return &service{
+		compiler: compiler,
 		reporting: reporting.For(log.Service("processor-native")),
 		mutex:     &sync.RWMutex{},
 	}

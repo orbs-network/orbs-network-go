@@ -32,7 +32,7 @@ func getLogger(path string, silent bool) log.BasicLogger {
 	}
 
 	stdoutOutput := log.NewOutput(stdout).WithFormatter(log.NewHumanReadableFormatter())
-	fileOutput := log.NewOutput(logFile)
+	fileOutput := log.NewOutput(logFile).WithFormatter(log.NewHumanReadableFormatter()) // until system stabilizes we temporarily log files with human readable to assist debugging
 
 	return log.GetLogger().WithOutput(stdoutOutput, fileOutput)
 }
@@ -61,7 +61,7 @@ func main() {
 
 	// TODO: change MemberlistGossipConfig to the standard config mechanism
 	config := gossipAdapter.MemberlistGossipConfig{nodePublicKey, int(gossipPort), peers}
-	gossipTransport := gossipAdapter.NewMemberlistTransport(config)
+	gossipTransport := gossipAdapter.NewMemberlistTransport(config, logger)
 
 	bootstrap.NewNode(
 		httpAddress,
@@ -72,5 +72,6 @@ func main() {
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		logger,
 		gossipTransport,
+		"", // default
 	).WaitUntilShutdown()
 }

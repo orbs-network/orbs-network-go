@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -31,6 +32,18 @@ func captureStdout(f func(writer io.Writer)) string {
 	var buf bytes.Buffer
 	io.Copy(&buf, r)
 	return buf.String()
+}
+
+type discardWriter struct {
+}
+
+func (w *discardWriter) Write(p []byte) (n int, err error) {
+	return 0, nil
+}
+
+func discardStdout(f func(writer io.Writer)) {
+	writer := &discardWriter{}
+	f(writer)
 }
 
 func parseOutput(input string) map[string]interface{} {
@@ -238,6 +251,53 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 			serviceLogger.Info("Service initialized")
 		})
 	})
+}
+
+func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash().Build(),
+	}
+
+	formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
+
+	discardStdout(func(writer io.Writer) {
+		for _, formatter := range formatters {
+			b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
+				serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+					WithOutput(log.NewOutput(writer).WithFormatter(formatter))
+
+				b.StartTimer()
+				for i := 0; i < b.N; i++ {
+					serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+				}
+				b.StopTimer()
+			})
+		}
+	})
+}
+
+func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash().Build(),
+	}
+
+	outputs := []io.Writer{os.Stdout, ioutil.Discard}
+
+	for _, output := range outputs {
+		b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
+
+			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+				WithOutput(log.NewOutput(output).WithFormatter(log.NewHumanReadableFormatter()))
+
+			b.StartTimer()
+			for i := 0; i < b.N; i++ {
+				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+			}
+			b.StopTimer()
+		})
+	}
 }
 
 func checkOutput(t *testing.T, output string) {

@@ -12,42 +12,42 @@ import (
 )
 
 func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
+
+	s.logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 
 	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
-		s.logger.Info("transaction is invalid", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
+		s.logger.Info("transaction is invalid", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 
-	if s.pendingPool.has(input.SignedTransaction) {
-		status := protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION
-		return s.addTransactionOutputFor(nil, status), &ErrTransactionRejected{status}
-	}
-
 	if alreadyCommitted := s.committedPool.get(digest.CalcTxHash(input.SignedTransaction.Transaction())); alreadyCommitted != nil {
-		s.logger.Info("transaction already committed", log.Stringable("transaction", input.SignedTransaction))
+		s.logger.Info("transaction already committed", log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
 		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+		s.logger.Error("error validating transaction for preorder", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(nil, status), err
 	}
 
-	s.logger.Info("adding new transaction to the pool", log.Stringable("transaction", input.SignedTransaction))
 	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodePublicKey()); err != nil {
-		s.logger.Error("error adding transaction to pending pool", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
+		s.logger.Error("error adding transaction to pending pool", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 
 	}
 	//TODO batch
 	if err := s.forwardTransaction(input.SignedTransaction); err != nil {
-		s.logger.Error("error forwarding transaction via gossip", log.Error(err), log.Stringable("transaction", input.SignedTransaction))
+		s.logger.Error("error forwarding transaction via gossip", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 	}
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
 func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
+	s.logger.Info("forwarding transaction to peers", log.Stringable("transaction", tx))
+
 	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), tx.Raw())
 	if err != nil {
 		return err

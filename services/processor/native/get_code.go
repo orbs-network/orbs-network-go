@@ -55,8 +55,6 @@ func (s *service) retrieveContractInfoFromRepository(executionContextId sdk.Cont
 	return s.retrieveDeployableContractInfoFromState(executionContextId, contractName)
 }
 
-const artifactsPath = "/tmp/orbs/native-processor/" // TODO: move to config?
-
 func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
 	meter := s.reporting.Meter("native-contract-deploy-time")
 	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(executionContextId, contractName)
@@ -69,7 +67,7 @@ func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk
 		return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 	}
 
-	newContractInfo, err := compileAndLoadDeployedSourceCode(code, artifactsPath)
+	newContractInfo, err := s.compiler.Compile(code)
 	if err != nil {
 		return nil, errors.Wrapf(err, "compilation of deployable contract '%s' failed", contractName)
 	}

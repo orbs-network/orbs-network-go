@@ -12,11 +12,12 @@ func ForProduction(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	processorArtifactPath string,
 ) NodeConfig {
 
-	benchmarkConsensusRetryInterval := 2000 * time.Millisecond
+	benchmarkConsensusRetryInterval := 5000 * time.Millisecond
 	minimumTransactionsInBlock := uint32(1)
-	minimalBlockDelay := 20 * time.Millisecond
+	minimalBlockDelay := 1000 * time.Millisecond // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	queryGraceTimeout := 100 * time.Millisecond
 	sendTransactionTimeout := 30 * time.Second
 	return newHardCodedConfig(
@@ -27,10 +28,11 @@ func ForProduction(
 		activeConsensusAlgo,
 		benchmarkConsensusRetryInterval,
 		minimumTransactionsInBlock,
-		minimalBlockDelay, // longer than in acceptance test because otherwise e2e flakes. TODO figure out why
+		minimalBlockDelay,
 		queryGraceTimeout,
-		sendTransactionTimeout)
-
+		sendTransactionTimeout,
+		processorArtifactPath,
+	)
 }
 
 func ForAcceptanceTests(
@@ -43,7 +45,7 @@ func ForAcceptanceTests(
 
 	benchmarkConsensusRetryInterval := 1 * time.Millisecond
 	minimumTransactionsInBlock := uint32(1)
-	minimalBlockDelay := 1 * time.Millisecond
+	minimalBlockDelay := 10 * time.Millisecond
 	queryGraceTimeout := 5 * time.Millisecond
 	sendTransactionTimeout := 30 * time.Millisecond
 	return newHardCodedConfig(
@@ -56,7 +58,37 @@ func ForAcceptanceTests(
 		minimumTransactionsInBlock,
 		minimalBlockDelay,
 		queryGraceTimeout,
-		sendTransactionTimeout)
+		sendTransactionTimeout,
+		"", // default
+	)
+}
+
+func ForDevelopment(
+	federationNodes map[string]FederationNode,
+	nodePublicKey primitives.Ed25519PublicKey,
+	nodePrivateKey primitives.Ed25519PrivateKey,
+	constantConsensusLeader primitives.Ed25519PublicKey,
+	activeConsensusAlgo consensus.ConsensusAlgoType,
+) NodeConfig {
+
+	benchmarkConsensusRetryInterval := 1000 * time.Millisecond
+	minimumTransactionsInBlock := uint32(1)
+	minimalBlockDelay := 500 * time.Millisecond // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
+	queryGraceTimeout := 100 * time.Millisecond
+	sendTransactionTimeout := 10 * time.Second
+	return newHardCodedConfig(
+		federationNodes,
+		nodePublicKey,
+		nodePrivateKey,
+		constantConsensusLeader,
+		activeConsensusAlgo,
+		benchmarkConsensusRetryInterval,
+		minimumTransactionsInBlock,
+		minimalBlockDelay,
+		queryGraceTimeout,
+		sendTransactionTimeout,
+		"", // default
+	)
 }
 
 func EmptyConfig() NodeConfig {

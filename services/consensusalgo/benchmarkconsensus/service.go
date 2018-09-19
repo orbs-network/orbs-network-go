@@ -39,9 +39,10 @@ type service struct {
 	lastCommittedBlock *protocol.BlockPairContainer
 
 	// leader only
-	lastSuccessfullyVotedBlock primitives.BlockHeight
-	successfullyVotedBlocks    chan primitives.BlockHeight
-	lastCommittedBlockVoters   map[string]bool
+	lastSuccessfullyVotedBlock            primitives.BlockHeight
+	successfullyVotedBlocks               chan primitives.BlockHeight
+	lastCommittedBlockVoters              map[string]bool
+	lastCommittedBlockVotersReachedQuorum bool
 }
 
 func NewBenchmarkConsensusAlgo(
@@ -64,9 +65,10 @@ func NewBenchmarkConsensusAlgo(
 
 		// leader only
 		mutex: &sync.Mutex{},
-		lastSuccessfullyVotedBlock: blockHeightNone,
-		successfullyVotedBlocks:    make(chan primitives.BlockHeight),
-		lastCommittedBlockVoters:   make(map[string]bool),
+		lastSuccessfullyVotedBlock:            blockHeightNone,
+		successfullyVotedBlocks:               make(chan primitives.BlockHeight),
+		lastCommittedBlockVoters:              make(map[string]bool),
+		lastCommittedBlockVotersReachedQuorum: false,
 	}
 
 	gossip.RegisterBenchmarkConsensusHandler(s)

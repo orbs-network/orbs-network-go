@@ -6,6 +6,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -22,9 +24,12 @@ type harness struct {
 func newHarness() *harness {
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
+	compiler := adapter.NewFakeCompiler()
+	compiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
+
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 
-	service := native.NewNativeProcessor(log)
+	service := native.NewNativeProcessor(compiler, log)
 	service.RegisterContractSdkCallHandler(sdkCallHandler)
 
 	return &harness{
