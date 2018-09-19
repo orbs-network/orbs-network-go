@@ -33,8 +33,8 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		commands.HandleRunCommand(os.Args[2:])
-		//case "start":
-		//	commands.HandleStartCommand(os.Args[2:])
+	case "start":
+		commands.HandleStartCommand(os.Args[2:])
 		//case "deploy":
 		//	commands.HandleDeployCommand(os.Args[2:])
 		//case "genKeys":
