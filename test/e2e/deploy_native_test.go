@@ -42,7 +42,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	}
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
 		response, err := h.callMethod(t, getCounter)
-		if err == nil && response.CallResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
+		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
 				return outputArgsIterator.NextArguments().Uint64Value() == counterStart
@@ -66,7 +66,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	// check counter
 	ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
 		response, err := h.callMethod(t, getCounter)
-		if err == nil && response.CallResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
+		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
 				return outputArgsIterator.NextArguments().Uint64Value() == counterStart+amount

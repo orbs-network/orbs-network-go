@@ -23,9 +23,11 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
+	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < int(numNodes); i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
 	nodes := make([]*networkNode, numNodes)
@@ -37,6 +39,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 
 		node.config = config.ForAcceptanceTests(
 			federationNodes,
+			gossipPeers,
 			nodeKeyPair.PublicKey(),
 			nodeKeyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),

@@ -81,7 +81,7 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 
 	require.Error(t, err, "a transaction was added twice to the pool")
 	require.NotNil(t, receipt, "receipt should never be nil")
-	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION, receipt.TransactionStatus, "expected transaction status: duplicate pending")
+	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING, receipt.TransactionStatus, "expected transaction status: duplicate pending")
 	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 }
 
@@ -101,7 +101,7 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	receipt, err := h.addNewTransaction(tx)
 
 	require.NoError(t, err, "a committed transaction that was added again was wrongly rejected")
-	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
+	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, receipt.TransactionStatus, "expected transaction status to be committed")
 	require.Equal(t, digest.CalcTxHash(tx.Transaction()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
 
 	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")

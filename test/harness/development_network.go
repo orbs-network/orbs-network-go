@@ -24,9 +24,11 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
+	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < int(numNodes); i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
 	nodes := make([]*networkNode, numNodes)
@@ -38,6 +40,7 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 
 		node.config = config.ForDevelopment(
 			federationNodes,
+			gossipPeers,
 			nodeKeyPair.PublicKey(),
 			nodeKeyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
