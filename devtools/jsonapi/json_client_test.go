@@ -1,6 +1,7 @@
 package jsonapi
 
 import (
+	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -13,13 +14,11 @@ import (
 	"time"
 )
 
-//TODO test method argument conversion for uint32, uint64, byte array
-
-func TestConvertTransaction(t *testing.T) {
+func TestConvertTransactionWithArgumentsOfTypeString(t *testing.T) {
 	arg := MethodArgument{
-		Name:        "arg1",
-		Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-		StringValue: "foo",
+		Name:  "arg1",
+		Type:  "string",
+		Value: "foo",
 	}
 
 	req := &Transaction{
@@ -28,7 +27,8 @@ func TestConvertTransaction(t *testing.T) {
 		Arguments:    []MethodArgument{arg},
 	}
 
-	txb := ConvertTransaction(req)
+	txb, err := ConvertTransaction(req)
+	require.NoError(t, err, "Expected no error from convertTransaction")
 	tx := txb.Build()
 
 	require.True(t, tx.IsValid(), "created binary is invalid")
@@ -40,17 +40,112 @@ func TestConvertTransaction(t *testing.T) {
 	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
 	arg1 := inputArgsIterator.NextArguments()
 	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
-	require.EqualValues(t, req.Arguments[0].Type, arg1.Type(), "argument type was not converted properly")
-	require.EqualValues(t, req.Arguments[0].StringValue, arg1.StringValue(), "argument string value was not converted properly")
+	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, arg1.Type(), "argument type was not converted properly")
+	require.EqualValues(t, req.Arguments[0].Value, arg1.StringValue(), "argument string value was not converted properly")
+}
+
+func TestConvertTransactionWithArgumentsOfTypeUInt64(t *testing.T) {
+	arg := MethodArgument{
+		Name:  "arg1",
+		Type:  "uint64",
+		Value: uint64(291288),
+	}
+
+	req := &Transaction{
+		ContractName: "contract",
+		MethodName:   "method",
+		Arguments:    []MethodArgument{arg},
+	}
+
+	txb, err := ConvertTransaction(req)
+	require.NoError(t, err, "Expected no error from convertTransaction")
+	tx := txb.Build()
+
+	require.True(t, tx.IsValid(), "created binary is invalid")
+	require.Equal(t, primitives.ProtocolVersion(1), tx.ProtocolVersion(), "protocol version mismatch")
+	require.EqualValues(t, req.ContractName, tx.ContractName(), "contract name was not converted properly")
+	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
+	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
+
+	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
+	arg1 := inputArgsIterator.NextArguments()
+	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
+	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, arg1.Type(), "argument type was not converted properly")
+	require.EqualValues(t, req.Arguments[0].Value, arg1.Uint64Value(), "argument uint64 value was not converted properly")
+}
+
+func TestConvertTransactionWithArgumentsOfTypeUInt32(t *testing.T) {
+	arg := MethodArgument{
+		Name:  "arg1",
+		Type:  "uint32",
+		Value: uint32(1234),
+	}
+
+	req := &Transaction{
+		ContractName: "contract",
+		MethodName:   "method",
+		Arguments:    []MethodArgument{arg},
+	}
+
+	txb, err := ConvertTransaction(req)
+	require.NoError(t, err, "Expected no error from convertTransaction")
+	tx := txb.Build()
+
+	require.True(t, tx.IsValid(), "created binary is invalid")
+	require.Equal(t, primitives.ProtocolVersion(1), tx.ProtocolVersion(), "protocol version mismatch")
+	require.EqualValues(t, req.ContractName, tx.ContractName(), "contract name was not converted properly")
+	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
+	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
+
+	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
+	arg1 := inputArgsIterator.NextArguments()
+	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
+	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, arg1.Type(), "argument type was not converted properly")
+	require.EqualValues(t, req.Arguments[0].Value, arg1.Uint32Value(), "argument uint32 value was not converted properly")
+}
+
+func TestConvertTransactionWithArgumentsOfTypeHexBytes(t *testing.T) {
+	hexString := "74686973206973206120776f6e64657266756c20686578207465737421" // this is a wonderful hex test!
+
+	arg := MethodArgument{
+		Name:  "arg1",
+		Type:  "bytes",
+		Value: hexString,
+	}
+
+	req := &Transaction{
+		ContractName: "contract",
+		MethodName:   "method",
+		Arguments:    []MethodArgument{arg},
+	}
+
+	txb, err := ConvertTransaction(req)
+	require.NoError(t, err, "Expected no error from convertTransaction")
+	tx := txb.Build()
+
+	require.True(t, tx.IsValid(), "created binary is invalid")
+	require.Equal(t, primitives.ProtocolVersion(1), tx.ProtocolVersion(), "protocol version mismatch")
+	require.EqualValues(t, req.ContractName, tx.ContractName(), "contract name was not converted properly")
+	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
+	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
+
+	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
+	arg1 := inputArgsIterator.NextArguments()
+	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
+	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, arg1.Type(), "argument type was not converted properly")
+
+	// Convert hex to string
+	hexConvertedToString, _ := hex.DecodeString(hexString)
+	require.EqualValues(t, hexConvertedToString, string(arg1.BytesValue()), "argument bytes value was not converted properly")
 }
 
 func TestConvertAndSignTransaction(t *testing.T) {
 	keyPair := keys.Ed25519KeyPairForTests(1)
 
 	arg := MethodArgument{
-		Name:        "arg1",
-		Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
-		StringValue: "foo",
+		Name:  "arg1",
+		Type:  "string",
+		Value: "foo",
 	}
 
 	req := &Transaction{
@@ -102,7 +197,7 @@ func TestConvertSendTransactionOutput(t *testing.T) {
 	actualArg := out.TransactionReceipt.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")
 	require.EqualValues(t, expectedArg.Type(), actualArg.Type, "argument type mismatched")
-	require.EqualValues(t, expectedArg.Uint64Value(), actualArg.Uint64Value, "argument value mismatched")
+	require.EqualValues(t, expectedArg.Uint64Value(), actualArg.Value, "argument value mismatched")
 
 }
 
@@ -135,7 +230,7 @@ func TestConvertCallMethodOutput(t *testing.T) {
 	actualArg := out.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")
 	require.EqualValues(t, expectedArg.Type(), actualArg.Type, "argument type mismatched")
-	require.EqualValues(t, expectedArg.StringValue(), actualArg.StringValue, "argument value mismatched")
+	require.EqualValues(t, expectedArg.StringValue(), actualArg.Value, "argument value mismatched")
 }
 
 //TODO dedup from virtual machine (extract to crypto package?)

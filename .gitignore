@@ -83,3 +83,6 @@ main
 
 # binaries
 orbs-*
+cli
+sambusac
+kitstat*
