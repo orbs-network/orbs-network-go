@@ -81,7 +81,7 @@ func TestSambusacFlow(t *testing.T) {
 
 	baseCommand := ClientBinary()
 	sendCommand := append(baseCommand,
-		"run", "send", "json/transfer.json",
+		"run", "send", "../json/transfer.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
 
@@ -95,7 +95,7 @@ func TestSambusacFlow(t *testing.T) {
 	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 
-	getCommand := append(baseCommand, "run", "call", "json/getBalance.json")
+	getCommand := append(baseCommand, "run", "call", "../json/getBalance.json")
 
 	callOutputAsString := runCommand(getCommand, t)
 	fmt.Println(callOutputAsString)
