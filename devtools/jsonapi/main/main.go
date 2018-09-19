@@ -22,6 +22,8 @@ func main() {
 		commands.HandleRunCommand(os.Args[2:])
 	case "start":
 		commands.HandleStartCommand(os.Args[2:])
+	case "deploy":
+		commands.HandleDeployCommand(os.Args[2:])
 	case "genKeys":
 		commands.HandleGenKeysCommand()
 	default:
