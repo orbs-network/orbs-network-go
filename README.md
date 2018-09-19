@@ -8,9 +8,11 @@ The project is thoroughly tested with unit tests, component tests per microservi
 
 ## Building Docker images only
 
-If you only want to build the Docker images containing the node binaries, you don't need to have Golang on your own machine (the node will be compiled inside the image).
+If you only want to build the Docker images containing the node binaries, you don't need to have golang on your own machine (the node will be compiled inside the image).
 
-* Make sure Docker is [installed](https://docs.docker.com/install/) on your machine.
+* Make sure Docker is [installed](https://docs.docker.com/install/).
+
+  > Verify with `docker version`
 
 * Run `./docker-build.sh` to create the images:
 
@@ -42,18 +44,18 @@ If you only want to build the Docker images containing the node binaries, you do
 ### Build
 
 * Clone the repo to your Go workspace:
-```
-cd `go env GOPATH`
-go get github.com/orbs-network/orbs-network-go
-cd src/github.com/orbs-network/orbs-network-go
-git checkout master
-```
+  ```
+  cd `go env GOPATH`
+  go get github.com/orbs-network/orbs-network-go
+  cd src/github.com/orbs-network/orbs-network-go
+  git checkout master
+  ```
 
 * Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
 
 * Build with `go install`
 
-* You can build all the binaries (`orbs-node`, `orbs-json-client` and `sambusac`) with `./build-binaries.sh`. All binaries are statically linked.
+* You can build all the binaries (`orbs-node`, `orbs-json-client` and `sambusac`) with `./build-binaries.sh`.
 
 ### Run
 
@@ -77,13 +79,21 @@ We use the official go test runner `go test`. It has minimal UI and result cachi
 
 ### Test
 
-* Run **all** tests using a script: `./test.sh`
+* Run **all** tests using a script:
 
-* Manually run **all** tests from project root: `go test ./...`
+    `./test.sh`
 
-* Manually run only **fast** tests (no E2E and similar): `go test -short ./...`
+* Manually run **all** tests from project root:
+
+    `go test ./...`
+
+* Manually run only **fast** tests (no E2E and similar):
+
+    `go test -short ./...`
   
-* Check unit test coverage: ``go test -cover `go list ./...` ``
+* Check unit test coverage:
+
+    ``go test -cover `go list ./...` ``
 
 ### Test types
 
@@ -125,7 +135,7 @@ We use the official go test runner `go test`. It has minimal UI and result cachi
 
 ### Testing on Docker
 
-All tests run automatically when the Docker images are built. `./test.sh` is part of the Docker build. 
+All tests run automatically when the Docker images are built. The script `./test.sh` is part of the Docker build. 
 
 * Run `./docker-build.sh && ./docker-test.sh` to build all images and run E2E tests in a dockerized environment.
 
