@@ -60,16 +60,16 @@ If you only want to build the Docker images containing the node binaries, you do
 ### Run
 
 * To run the pre-built binary (should be in path):
-```
-orbs-network-go
-```
+  ```
+  orbs-network-go
+  ```
 
 * To rebuild from source and run (this will take you to project root):
-```
-cd `go env GOPATH`
-cd src/github.com/orbs-network/orbs-network-go
-go run *.go
-```
+  ```
+  cd `go env GOPATH`
+  cd src/github.com/orbs-network/orbs-network-go
+  go run *.go
+  ```
 
 ## Testing from command line
 
@@ -170,10 +170,10 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
 
 * If you experience lags while working with GoLand, increasing its default VM heap size can help:
  * Go to `Help | Edit Custom VM Options...` and set:
- ```
- -Xms256m
- -Xmx1536m
- ```
+   ```
+   -Xms256m
+   -Xmx1536m
+   ```
 
 ## License
 
