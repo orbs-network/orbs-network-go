@@ -74,7 +74,7 @@ func newHarness() *harness {
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 
-			cfg := config.DefaultConfig().SetEssentials(
+			cfg := config.MinimalConfig(
 				federationNodes,
 				gossipPeers,
 				uint32(firstRandomPort+i),

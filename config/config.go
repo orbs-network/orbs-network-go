@@ -77,15 +77,6 @@ type MutableNodeConfig interface {
 	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) MutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig
 
-	SetEssentials(
-		federationNodes map[string]FederationNode,
-		gossipPeers map[string]GossipPeer,
-		gossipListenPort uint32,
-		nodePublicKey primitives.Ed25519PublicKey,
-		nodePrivateKey primitives.Ed25519PrivateKey,
-		constantConsensusLeader primitives.Ed25519PublicKey,
-		activeConsensusAlgo consensus.ConsensusAlgoType) MutableNodeConfig
-
 	MergeWithFileConfig(source string) (MutableNodeConfig, error)
 }
 

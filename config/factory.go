@@ -29,7 +29,7 @@ func ForAcceptanceTests(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := DefaultConfig().SetEssentials(federationNodes,
+	cfg := MinimalConfig(federationNodes,
 		gossipPeers,
 		0,
 		nodePublicKey,
@@ -56,7 +56,7 @@ func ForDevelopment(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := DefaultConfig().SetEssentials(federationNodes,
+	cfg := MinimalConfig(federationNodes,
 		gossipPeers,
 		0,
 		nodePublicKey,
@@ -113,7 +113,7 @@ func DefaultConfig() MutableNodeConfig {
 	return cfg
 }
 
-func (c *config) SetEssentials(
+func MinimalConfig(
 	federationNodes map[string]FederationNode,
 	gossipPeers map[string]GossipPeer,
 	gossipListenPort uint32,
@@ -122,7 +122,7 @@ func (c *config) SetEssentials(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType) MutableNodeConfig {
 
-	cfg := ForProduction()
+	cfg := DefaultConfig()
 
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetGossipPeers(gossipPeers)
