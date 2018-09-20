@@ -3,7 +3,6 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"path/filepath"
 	"time"
 )
 
@@ -82,56 +81,6 @@ func NewHardCodedGossipPeer(gossipPort uint16, gossipEndpoint string) GossipPeer
 		gossipPort:     gossipPort,
 		gossipEndpoint: gossipEndpoint,
 	}
-}
-
-func newHardCodedConfig(
-	federationNodes map[string]FederationNode,
-	gossipPeers map[string]GossipPeer,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey,
-	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType,
-	processorArtifactPath string,
-) MutableNodeConfig {
-	cfg := &config{
-		federationNodes:         federationNodes,
-		gossipPeers:             gossipPeers,
-		nodePublicKey:           nodePublicKey,
-		nodePrivateKey:          nodePrivateKey,
-		constantConsensusLeader: constantConsensusLeader,
-		activeConsensusAlgo:     activeConsensusAlgo,
-		kv:                      make(map[string]NodeConfigValue),
-	}
-
-	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-
-	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
-
-	cfg.SetDuration(BLOCK_SYNC_BATCH_SIZE, 10000)
-	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 5*time.Second)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 3*time.Second)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
-
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 3*time.Minute)
-
-	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
-
-	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, uint32(1))
-
-	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
-	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
-	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
-	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
-
-	if processorArtifactPath == "" {
-		cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
-	} else {
-		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
-	}
-
-	return cfg
 }
 
 func (c *config) Set(key string, value NodeConfigValue) MutableNodeConfig {

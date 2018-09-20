@@ -29,21 +29,17 @@ func ForAcceptanceTests(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-
-	cfg := newHardCodedConfig(
-		federationNodes,
+	cfg := DefaultConfig().SetEssentials(federationNodes,
 		gossipPeers,
+		0,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,
-		activeConsensusAlgo,
-		"", // default
-	)
+		activeConsensusAlgo)
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 10*time.Millisecond)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 5*time.Millisecond)
-	cfg.SetUint32(GOSSIP_LISTEN_PORT, 0)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Millisecond)
@@ -60,21 +56,17 @@ func ForDevelopment(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-
-	cfg := newHardCodedConfig(
-		federationNodes,
+	cfg := DefaultConfig().SetEssentials(federationNodes,
 		gossipPeers,
+		0,
 		nodePublicKey,
 		nodePrivateKey,
 		constantConsensusLeader,
-		activeConsensusAlgo,
-		"", // default
-	)
+		activeConsensusAlgo)
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1000*time.Millisecond)
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 500*time.Millisecond) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
-	cfg.SetUint32(GOSSIP_LISTEN_PORT, 0)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
@@ -121,15 +113,14 @@ func DefaultConfig() MutableNodeConfig {
 	return cfg
 }
 
-func ForE2EBootstrap(
+func (c *config) SetEssentials(
 	federationNodes map[string]FederationNode,
 	gossipPeers map[string]GossipPeer,
 	gossipListenPort uint32,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType,
-	processorArtifactPath string) NodeConfig {
+	activeConsensusAlgo consensus.ConsensusAlgoType) MutableNodeConfig {
 
 	cfg := ForProduction()
 
@@ -139,7 +130,6 @@ func ForE2EBootstrap(
 	cfg.SetNodePrivateKey(nodePrivateKey)
 	cfg.SetConstantConsensusLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, gossipListenPort)
 
 	return cfg

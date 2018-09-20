@@ -74,15 +74,15 @@ func newHarness() *harness {
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 
-			cfg := config.ForE2EBootstrap(
+			cfg := config.DefaultConfig().SetEssentials(
 				federationNodes,
 				gossipPeers,
 				uint32(firstRandomPort+i),
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey(),
 				leaderKeyPair.PublicKey(),
-				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-				processorArtifactPath)
+				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+			cfg.SetString(config.PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
 
 			node := bootstrap.NewNode(cfg, logger, fmt.Sprintf(":%d", 8080+i))
 
