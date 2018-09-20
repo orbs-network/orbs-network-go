@@ -9,7 +9,7 @@ import (
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.Network(t).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).Start(func(network harness.InProcessNetwork) {
 
 		network.DeployBenchmarkToken()
 
@@ -35,7 +35,7 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	harness.Network(t).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).Start(func(network harness.InProcessNetwork) {
 
 		network.DeployBenchmarkToken()
 

@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(3).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Duplicate(AnyNthMessage(7))
 
 		sendTransactions(network, t, 100)
@@ -19,7 +19,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(3).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
 		sendTransactions(network, t, 100)
@@ -27,7 +27,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(3).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Delay(AnyNthMessage(1))
 
 		sendTransactions(network, t, 100)
@@ -36,14 +36,14 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("this test causes the system to hang, seems like consensus algo stops")
-	harness.Network(t).WithNumNodes(3).Start(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
 		sendTransactions(network, t, 100)
 	})
 }
 
-func sendTransactions(network harness.AcceptanceTestNetwork, t *testing.T, numTransactions int) {
+func sendTransactions(network harness.InProcessNetwork, t *testing.T, numTransactions int) {
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256
 	for i := 0; i < numTransactions; i++ {

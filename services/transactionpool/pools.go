@@ -54,7 +54,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	key := digest.CalcTxHash(transaction.Transaction())
 
 	if _, exists := p.transactionsByHash[key.KeyForMap()]; exists {
-		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION}
+		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 	}
 
 	p.currentSizeInBytes += size

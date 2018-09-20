@@ -105,10 +105,11 @@ func TestSetFederationNodes(t *testing.T) {
 
 func TestMergeWithFileConfig(t *testing.T) {
 	nodes := make(map[string]FederationNode)
+	peers := make(map[string]GossipPeer)
 	keyPair := keys.Ed25519KeyPairForTests(2)
 
-	cfg := ForAcceptanceTests(nodes, keyPair.PublicKey(),
-		keyPair.PrivateKey(), keyPair.PublicKey(),
+	cfg := ForAcceptanceTests(nodes, peers,
+		keyPair.PublicKey(), keyPair.PrivateKey(), keyPair.PublicKey(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
 	require.EqualValues(t, keyPair.PublicKey(), cfg.NodePublicKey())

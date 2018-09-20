@@ -1,4 +1,6 @@
-FROM busybox
+FROM golang:1.10-alpine
+
+RUN apk add --no-cache gcc musl-dev
 
 ADD ./sambusac ./orbs-json-client /opt/orbs/
 

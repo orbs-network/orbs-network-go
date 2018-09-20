@@ -119,7 +119,7 @@ func TestConvertCallMethodOutput(t *testing.T) {
 	cmo := (&client.CallMethodResponseBuilder{
 		BlockHeight:         4,
 		BlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
-		CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
+		CallMethodResult:          protocol.EXECUTION_RESULT_SUCCESS,
 		OutputArgumentArray: outputArgumentArray.RawArgumentsArray(),
 	}).Build()
 
@@ -127,10 +127,10 @@ func TestConvertCallMethodOutput(t *testing.T) {
 
 	require.EqualValues(t, cmo.BlockHeight(), out.BlockHeight, "block height mismatched")
 	require.EqualValues(t, cmo.BlockTimestamp(), out.BlockTimestamp, "block timestamp mismatched")
-	require.EqualValues(t, cmo.CallResult(), out.CallResult, "call result mismatched")
+	require.EqualValues(t, cmo.CallMethodResult(), out.CallResult, "call result mismatched")
 	require.Len(t, out.OutputArguments, 1, "expected exactly 1 output argument")
 
-	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsParse(cmo)
+	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(cmo)
 	expectedArg := outputArgsIterator.NextArguments()
 	actualArg := out.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")

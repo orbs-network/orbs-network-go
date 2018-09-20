@@ -120,6 +120,8 @@ func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.H
 		output, err = s.handleSdkStateCall(executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	case native.SDK_OPERATION_NAME_SERVICE:
 		output, err = s.handleSdkServiceCall(executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
+	case native.SDK_OPERATION_NAME_ADDRESS:
+		output, err = s.handleSdkAddressCall(executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	default:
 		return nil, errors.Errorf("unknown SDK call operation: %s", input.OperationName)
 	}

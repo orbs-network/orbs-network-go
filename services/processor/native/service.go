@@ -1,51 +1,53 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/pkg/errors"
+	"sync"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 )
 
 type service struct {
 	reporting log.BasicLogger
+	compiler adapter.Compiler
 
-	contractRepository map[primitives.ContractName]types.Contract
+	mutex                         *sync.RWMutex
+	contractSdkHandlerUnderMutex  handlers.ContractSdkCallHandler
+	contractInstancesUnderMutex   map[string]sdk.ContractInstance
+	deployableContractsUnderMutex map[string]*sdk.ContractInfo
 }
 
 func NewNativeProcessor(
+	compiler adapter.Compiler,
 	reporting log.BasicLogger,
 ) services.Processor {
 	return &service{
+		compiler: compiler,
 		reporting: reporting.For(log.Service("processor-native")),
+		mutex:     &sync.RWMutex{},
 	}
 }
 
 // runs once on system initialization (called by the virtual machine constructor)
 func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
-	s.contractRepository = make(map[primitives.ContractName]types.Contract)
-	for _, contract := range repository.Contracts {
-		s.contractRepository[contract.Name] = contract.InitSingleton(types.NewBaseContract(
-			&stateSdk{handler, contract.Permission},
-			&serviceSdk{handler, contract.Permission},
-		))
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.contractSdkHandlerUnderMutex = handler
+
+	if s.contractInstancesUnderMutex == nil && s.deployableContractsUnderMutex == nil {
+		s.contractInstancesUnderMutex = initializePreBuiltRepositoryContractInstances(handler)
+		s.deployableContractsUnderMutex = make(map[string]*sdk.ContractInfo)
 	}
 }
 
 func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-	if s.contractRepository == nil {
-		return &services.ProcessCallOutput{
-			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
-			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
-		}, errors.New("contractRepository is not initialized")
-	}
-
 	// retrieve code
-	contractInfo, methodInfo, err := s.getContractAndMethodFromRepository(input.ContractName, input.MethodName)
+	executionContextId := sdk.Context(input.ContextId)
+	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, string(input.ContractName), string(input.MethodName))
 	if err != nil {
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
@@ -63,8 +65,7 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}
 
 	// execute
-	ctx := types.Context(input.ContextId)
-	outputArgs, contractErr, err := s.processMethodCall(ctx, contractInfo, methodInfo, input.InputArgumentArray)
+	outputArgs, contractErr, err := s.processMethodCall(executionContextId, contractInfo, methodInfo, input.InputArgumentArray)
 	if outputArgs == nil {
 		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
 	}
@@ -87,18 +88,62 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 }
 
 func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
-	if s.contractRepository == nil {
-		return nil, errors.New("contractRepository is not initialized")
-	}
-
 	// retrieve code
-	contractInfo, err := s.getContractFromRepository(input.ContractName)
+	executionContextId := sdk.Context(input.ContextId)
+	contractInfo, err := s.retrieveContractInfoFromRepository(executionContextId, string(input.ContractName))
 	if err != nil {
 		return nil, err
 	}
 
 	// result
 	return &services.GetContractInfoOutput{
-		PermissionScope: contractInfo.Permission,
+		PermissionScope: protocol.ExecutionPermissionScope(contractInfo.Permission),
 	}, nil
+}
+
+func (s *service) getContractSdkHandler() handlers.ContractSdkCallHandler {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return s.contractSdkHandlerUnderMutex
+}
+
+func (s *service) getContractInstanceFromRepository(contractName string) sdk.ContractInstance {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	if s.contractInstancesUnderMutex == nil {
+		return nil
+	}
+	return s.contractInstancesUnderMutex[contractName]
+}
+
+func (s *service) addContractInstanceToRepository(contractName string, contractInstance sdk.ContractInstance) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.contractInstancesUnderMutex == nil {
+		return
+	}
+	s.contractInstancesUnderMutex[contractName] = contractInstance
+}
+
+func (s *service) getDeployableContractInfoFromRepository(contractName string) *sdk.ContractInfo {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	if s.deployableContractsUnderMutex == nil {
+		return nil
+	}
+	return s.deployableContractsUnderMutex[contractName]
+}
+
+func (s *service) addDeployableContractInfoToRepository(contractName string, contractInfo *sdk.ContractInfo) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.deployableContractsUnderMutex == nil {
+		return
+	}
+	s.deployableContractsUnderMutex[contractName] = contractInfo
 }

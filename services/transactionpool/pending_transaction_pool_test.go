@@ -130,11 +130,11 @@ func TestPendingTransactionPoolDoesNotAddTheSameTransactionTwiceRegardlessOfPubl
 	require.Nil(t, err, "got an unexpected error adding the first transaction")
 
 	_, err = p.add(tx, pk)
-	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION, err.TransactionStatus, "did not get expected status code")
+	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING, err.TransactionStatus, "did not get expected status code")
 
 	someOtherPk := keys.Ed25519KeyPairForTests(3).PublicKey()
 	_, err = p.add(tx, someOtherPk)
-	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_DUPLCIATE_PENDING_TRANSACTION, err.TransactionStatus, "did not get expected status code")
+	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING, err.TransactionStatus, "did not get expected status code")
 
 }
 

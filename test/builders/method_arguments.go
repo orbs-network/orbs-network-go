@@ -37,7 +37,9 @@ func MethodArgumentsArray(args ...interface{}) *protocol.MethodArgumentArray {
 	return (&protocol.MethodArgumentArrayBuilder{Arguments: res}).Build()
 }
 
-func MethodArgumentsOpaque(args ...interface{}) []byte {
+func MethodArgumentsOpaqueEncode(args ...interface{}) []byte {
 	argArray := MethodArgumentsArray(args...)
 	return argArray.RawArgumentsArray()
 }
+
+// decode with MethodArgumentsOpaque functions like ClientCallMethodResponseOutputArgumentsDecode

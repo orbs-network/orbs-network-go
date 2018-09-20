@@ -36,7 +36,7 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 
 		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 		txpMock.When("AddNewTransaction", mock.Any).Return(&services.AddNewTransactionOutput{
-			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLCIATE_TRANSACTION_ALREADY_COMMITTED,
+			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
 			TransactionReceipt: builders.TransactionReceipt().Build(),
 			BlockHeight:        1,
 			BlockTimestamp:     blockTime,
