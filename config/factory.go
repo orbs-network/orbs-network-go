@@ -29,7 +29,7 @@ func ForAcceptanceTests(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := MinimalConfig(federationNodes,
+	cfg := DefaultConfig().OverrideNodeSpecificValues(federationNodes,
 		gossipPeers,
 		0,
 		nodePublicKey,
@@ -56,7 +56,7 @@ func ForDevelopment(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := MinimalConfig(federationNodes,
+	cfg := DefaultConfig().OverrideNodeSpecificValues(federationNodes,
 		gossipPeers,
 		0,
 		nodePublicKey,
@@ -113,7 +113,7 @@ func DefaultConfig() MutableNodeConfig {
 	return cfg
 }
 
-func MinimalConfig(
+func (c *config) OverrideNodeSpecificValues(
 	federationNodes map[string]FederationNode,
 	gossipPeers map[string]GossipPeer,
 	gossipListenPort uint16,
@@ -122,17 +122,15 @@ func MinimalConfig(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType) MutableNodeConfig {
 
-	cfg := DefaultConfig()
+	c.SetFederationNodes(federationNodes)
+	c.SetGossipPeers(gossipPeers)
+	c.SetNodePublicKey(nodePublicKey)
+	c.SetNodePrivateKey(nodePrivateKey)
+	c.SetConstantConsensusLeader(constantConsensusLeader)
+	c.SetActiveConsensusAlgo(activeConsensusAlgo)
+	c.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
 
-	cfg.SetFederationNodes(federationNodes)
-	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetNodePublicKey(nodePublicKey)
-	cfg.SetNodePrivateKey(nodePrivateKey)
-	cfg.SetConstantConsensusLeader(constantConsensusLeader)
-	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
-
-	return cfg
+	return c
 }
 
 func (c *config) MergeWithFileConfig(source string) (MutableNodeConfig, error) {
