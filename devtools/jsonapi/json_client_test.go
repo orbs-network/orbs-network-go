@@ -48,7 +48,8 @@ func TestConvertTransactionWithArgumentsOfTypeUInt64(t *testing.T) {
 	arg := MethodArgument{
 		Name:  "arg1",
 		Type:  "uint64",
-		Value: uint64(291288),
+		Value: float64(291288), // We choose float64 here since that's the realistic case of when we receive a JSON converted
+		// To a Go struct as it's taking numbers always into float64 by default.
 	}
 
 	req := &Transaction{
@@ -78,7 +79,7 @@ func TestConvertTransactionWithArgumentsOfTypeUInt32(t *testing.T) {
 	arg := MethodArgument{
 		Name:  "arg1",
 		Type:  "uint32",
-		Value: uint32(1234),
+		Value: float64(1234),
 	}
 
 	req := &Transaction{
@@ -196,8 +197,8 @@ func TestConvertSendTransactionOutput(t *testing.T) {
 	expectedArg := outputArgsIterator.NextArguments()
 	actualArg := out.TransactionReceipt.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")
-	require.EqualValues(t, expectedArg.Type(), actualArg.Type, "argument type mismatched")
-	require.EqualValues(t, expectedArg.Uint64Value(), actualArg.Value, "argument value mismatched")
+	require.EqualValues(t, string("uint64"), actualArg.Type, "argument type mismatched")
+	require.EqualValues(t, uint64(200), actualArg.Value, "argument value mismatched")
 
 }
 
@@ -229,8 +230,8 @@ func TestConvertCallMethodOutput(t *testing.T) {
 	expectedArg := outputArgsIterator.NextArguments()
 	actualArg := out.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")
-	require.EqualValues(t, expectedArg.Type(), actualArg.Type, "argument type mismatched")
-	require.EqualValues(t, expectedArg.StringValue(), actualArg.Value, "argument value mismatched")
+	require.EqualValues(t, "string", actualArg.Type, "argument type mismatched")
+	require.EqualValues(t, "bar", actualArg.Value, "argument value mismatched")
 }
 
 //TODO dedup from virtual machine (extract to crypto package?)
