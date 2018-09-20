@@ -110,7 +110,7 @@ func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPa
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
 		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
-		"GOGC=off",
+		// "GOGC=off", (this improves compilation time by a small factor)
 	}
 	if GOPATH := os.Getenv("GOPATH"); GOPATH != "" {
 		cmd.Env = append(cmd.Env, "GOPATH="+GOPATH)
