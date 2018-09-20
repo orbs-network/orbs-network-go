@@ -21,8 +21,8 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	}
 
 	code := string(contracts.SourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
-	tmpDir, tmpDirToCleanup := createTempTestDir(t)
-	defer os.RemoveAll(tmpDirToCleanup)
+	tmpDir := createTempTestDir(t)
+	defer os.RemoveAll(tmpDir)
 
 	t.Log("Build fresh artifacts")
 
@@ -85,7 +85,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
 }
 
-func createTempTestDir(t *testing.T) (string, string) {
+func createTempTestDir(t *testing.T) string {
 	prefix := strings.Replace(t.Name(), "/", "__", -1)
 	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
 	os.MkdirAll(dir, 0755)
@@ -93,7 +93,7 @@ func createTempTestDir(t *testing.T) (string, string) {
 	if err != nil {
 		panic("could not create temp dir for test")
 	}
-	return tmpDir, dir
+	return tmpDir
 }
 
 func getFileSize(filePath string) int64 {

@@ -71,7 +71,7 @@ func getHashOfCode(code string) string {
 
 func writeSourceCodeToDisk(filenamePrefix string, code string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SOURCE_CODE_PATH)
-	err := os.MkdirAll(dir, 0700)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +87,7 @@ func writeSourceCodeToDisk(filenamePrefix string, code string, artifactsPath str
 
 func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SHARED_OBJECT_PATH)
-	err := os.MkdirAll(dir, 0700)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return "", err
 	}
@@ -105,11 +105,15 @@ func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPa
 	ctx, cancel := context.WithTimeout(context.Background(), MAX_COMPILATION_TIME)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "go", "build", "-buildmode=plugin", "-o", soFilePath, sourceFilePath)
+
 	cmd.Env = []string{
-		"GOPATH=" + os.Getenv("GOPATH"),
+		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
 		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
 		"GOGC=off",
+	}
+	if GOPATH := os.Getenv("GOPATH"); GOPATH != "" {
+		cmd.Env = append(cmd.Env, "GOPATH="+GOPATH)
 	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -137,4 +141,12 @@ func loadSharedObject(soFilePath string) (*sdk.ContractInfo, error) {
 	}
 
 	return contractSymbol.(*sdk.ContractInfo), nil
+}
+
+func getGOPATH() string {
+	res := os.Getenv("GOPATH")
+	if res == "" {
+		return filepath.Join(os.Getenv("HOME"), "go")
+	}
+	return res
 }
