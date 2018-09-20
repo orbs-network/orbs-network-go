@@ -99,7 +99,7 @@ func TestSetFederationNodes(t *testing.T) {
 		nodePublicKey: keyPair.PublicKey(),
 	}
 
-	require.EqualValues(t, node1, cfg.FederationNodes(0)[keyPair.PublicKey().String()])
+	require.EqualValues(t, node1, cfg.FederationNodes(0)[keyPair.PublicKey().KeyForMap()])
 }
 
 func TestSetGossipPeers(t *testing.T) {
@@ -116,7 +116,7 @@ func TestSetGossipPeers(t *testing.T) {
 		gossipPort:     4400,
 	}
 
-	require.EqualValues(t, node1, cfg.GossipPeers(0)[keyPair.PublicKey().String()])
+	require.EqualValues(t, node1, cfg.GossipPeers(0)[keyPair.PublicKey().KeyForMap()])
 }
 
 func TestSetGossipPort(t *testing.T) {

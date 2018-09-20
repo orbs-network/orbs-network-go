@@ -59,11 +59,11 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 				if i, err = parseUint32(kv["Port"].(float64)); err == nil {
 					gossipPort = uint16(i)
 
-					nodes[nodePublicKey.String()] = &hardCodedFederationNode{
+					nodes[nodePublicKey.KeyForMap()] = &hardCodedFederationNode{
 						nodePublicKey: nodePublicKey,
 					}
 
-					peers[nodePublicKey.String()] = &hardCodedGossipPeer{
+					peers[nodePublicKey.KeyForMap()] = &hardCodedGossipPeer{
 						gossipEndpoint: kv["IP"].(string),
 						gossipPort:     gossipPort,
 					}
