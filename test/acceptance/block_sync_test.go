@@ -10,12 +10,12 @@ import (
 func TestBlockSync(t *testing.T) {
 	t.Skip("hmm")
 
-	harness.Network(t).WithSetup(func(network harness.AcceptanceTestNetwork) {
+	harness.Network(t).WithSetup(func(network harness.InProcessNetwork) {
 		for i := 1; i <= 10; i++ {
 			blockPair := builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build()
 			network.BlockPersistence(0).WriteBlock(blockPair)
 		}
-	}).Start(func(network harness.AcceptanceTestNetwork) {
+	}).Start(func(network harness.InProcessNetwork) {
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}

@@ -15,11 +15,6 @@ func TestGetContractInfo(t *testing.T) {
 		expectedPermissions protocol.ExecutionPermissionScope
 	}{
 		{
-			name:          "UnknownContract",
-			input:         getContractInfoInput().WithUnknownContract().Build(),
-			expectedError: true,
-		},
-		{
 			name:                "SystemService",
 			input:               getContractInfoInput().WithSystemService().Build(),
 			expectedError:       false,

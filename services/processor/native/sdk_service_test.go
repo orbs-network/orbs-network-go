@@ -11,8 +11,9 @@ import (
 func TestCallMethod(t *testing.T) {
 	s := createServiceSdk()
 
-	err := s.CallMethod(EXAMPLE_CONTEXT, "AnotherContract", "someMethod")
+	res, err := s.CallMethod(EXAMPLE_CONTEXT, "AnotherContract", "someMethod", uint64(17), "hello")
 	require.NoError(t, err, "callMethod should succeed")
+	require.Equal(t, []interface{}{uint64(17), "hello"}, res, "callMethod result should match expected")
 }
 
 func createServiceSdk() *serviceSdk {
@@ -31,7 +32,9 @@ func (c *contractSdkServiceCallHandlerStub) HandleSdkCall(input *handlers.Handle
 	}
 	switch input.MethodName {
 	case "callMethod":
-		return nil, nil
+		return &handlers.HandleSdkCallOutput{
+			OutputArguments: []*protocol.MethodArgument{input.InputArguments[2]},
+		}, nil
 	default:
 		return nil, errors.New("unknown method")
 	}

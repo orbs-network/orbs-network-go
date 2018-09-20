@@ -65,7 +65,7 @@ func (c *committed) Build() (res []*gossipmessages.BenchmarkConsensusCommittedMe
 	for i := 0; i < c.count; i++ {
 		keyPair := keys.Ed25519KeyPairForTests(i + 1) // leader is set 0
 		if c.nonFederationMembers {
-			keyPair = keys.Ed25519KeyPairForTests(i + networkSize)
+			keyPair = keys.Ed25519KeyPairForTests(i + NETWORK_SIZE)
 		}
 		if c.invalidSignatures {
 			res = append(res, aCommitted.WithInvalidSenderSignature(keyPair).Build())

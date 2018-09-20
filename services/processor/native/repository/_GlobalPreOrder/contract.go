@@ -1,50 +1,48 @@
-package globalpreorder
+package globalpreorder_systemcontract
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 )
 
-var CONTRACT = types.ContractInfo{
+var CONTRACT = sdk.ContractInfo{
 	Name:       "_GlobalPreOrder",
-	Permission: protocol.PERMISSION_SCOPE_SYSTEM,
-	Methods: map[primitives.MethodName]types.MethodInfo{
+	Permission: sdk.PERMISSION_SCOPE_SYSTEM,
+	Methods: map[string]sdk.MethodInfo{
 		METHOD_INIT.Name:    METHOD_INIT,
 		METHOD_APPROVE.Name: METHOD_APPROVE,
 	},
 	InitSingleton: newContract,
 }
 
-func newContract(base *types.BaseContract) types.Contract {
+func newContract(base *sdk.BaseContract) sdk.ContractInstance {
 	return &contract{base}
 }
 
-type contract struct{ *types.BaseContract }
+type contract struct{ *sdk.BaseContract }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_INIT = types.MethodInfo{
+var METHOD_INIT = sdk.MethodInfo{
 	Name:           "_init",
 	External:       false,
-	Access:         protocol.ACCESS_SCOPE_READ_WRITE,
+	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
 	Implementation: (*contract)._init,
 }
 
-func (c *contract) _init(ctx types.Context) error {
+func (c *contract) _init(ctx sdk.Context) error {
 	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_APPROVE = types.MethodInfo{
+var METHOD_APPROVE = sdk.MethodInfo{
 	Name:           "approve",
 	External:       true,
-	Access:         protocol.ACCESS_SCOPE_READ_ONLY,
+	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
 	Implementation: (*contract).approve,
 }
 
-func (c *contract) approve(ctx types.Context) error {
+func (c *contract) approve(ctx sdk.Context) error {
 	// TODO: add subscription check here
 	return nil
 }

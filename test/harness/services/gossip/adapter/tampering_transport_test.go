@@ -9,31 +9,31 @@ import (
 	"testing"
 )
 
-type context struct {
+type tamperingHarness struct {
 	senderKey string
 	transport TamperingTransport
 	listener  *mockListener
 }
 
-func newContext() *context {
+func newTamperingHarness() *tamperingHarness {
 	senderKey := "sender"
 	listenerKey := "listener"
 	listener := &mockListener{}
 	transport := NewTamperingTransport()
 	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
 
-	return &context{
+	return &tamperingHarness{
 		senderKey: senderKey,
 		transport: transport,
 		listener:  listener,
 	}
 }
 
-func (c *context) send(payloads [][]byte) {
+func (c *tamperingHarness) send(payloads [][]byte) {
 	c.broadcast(c.senderKey, payloads)
 }
 
-func (c *context) broadcast(sender string, payloads [][]byte) error {
+func (c *tamperingHarness) broadcast(sender string, payloads [][]byte) error {
 	return c.transport.Send(&adapter.TransportData{
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		SenderPublicKey: primitives.Ed25519PublicKey(sender),
@@ -42,7 +42,7 @@ func (c *context) broadcast(sender string, payloads [][]byte) error {
 }
 
 func TestFailingTamperer(t *testing.T) {
-	c := newContext()
+	c := newTamperingHarness()
 
 	c.transport.Fail(anyMessage())
 
@@ -57,7 +57,7 @@ func TestFailingTamperer(t *testing.T) {
 }
 
 func TestPausingTamperer(t *testing.T) {
-	c := newContext()
+	c := newTamperingHarness()
 
 	digits := make(chan byte, 10)
 
@@ -87,7 +87,7 @@ func TestPausingTamperer(t *testing.T) {
 }
 
 func TestLatchingTamperer(t *testing.T) {
-	c := newContext()
+	c := newTamperingHarness()
 
 	called := make(chan bool)
 

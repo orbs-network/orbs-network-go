@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	ED25519_PUBLIC_KEY_SIZE  = 32
-	ED25519_PRIVATE_KEY_SIZE = 64
-	ED25519_SIGNATURE_SIZE   = 64
+	ED25519_PUBLIC_KEY_SIZE_BYTES  = 32
+	ED25519_PRIVATE_KEY_SIZE_BYTES = 64
+	ED25519_SIGNATURE_SIZE_BYTES   = 64
 )
 
 func SignEd25519(privateKey primitives.Ed25519PrivateKey, data []byte) (primitives.Ed25519Sig, error) {
-	if len(privateKey) != ED25519_PRIVATE_KEY_SIZE {
+	if len(privateKey) != ED25519_PRIVATE_KEY_SIZE_BYTES {
 		return nil, fmt.Errorf("cannot sign with ed25519, private key invalid")
 	}
 	signedData := ed25519.Sign([]byte(privateKey), data)
@@ -23,7 +23,7 @@ func SignEd25519(privateKey primitives.Ed25519PrivateKey, data []byte) (primitiv
 }
 
 func VerifyEd25519(publicKey primitives.Ed25519PublicKey, data []byte, signature primitives.Ed25519Sig) bool {
-	if len(publicKey) != ED25519_PUBLIC_KEY_SIZE {
+	if len(publicKey) != ED25519_PUBLIC_KEY_SIZE_BYTES {
 		return false
 	}
 	return ed25519.Verify([]byte(publicKey), data, signature)
@@ -50,8 +50,8 @@ func newSignerFromRandUnsafe() (*ed25519Signer, error) {
 }
 
 func newEd25519SignerPublicKey(publicKey []byte) (*ed25519Signer, error) {
-	if len(publicKey) != ED25519_PUBLIC_KEY_SIZE {
-		return nil, fmt.Errorf("invalid public key, length expected to be %d but data recevied was %v", ED25519_PUBLIC_KEY_SIZE, publicKey)
+	if len(publicKey) != ED25519_PUBLIC_KEY_SIZE_BYTES {
+		return nil, fmt.Errorf("invalid public key, length expected to be %d but data recevied was %v", ED25519_PUBLIC_KEY_SIZE_BYTES, publicKey)
 	}
 	s := &ed25519Signer{
 		publicKey: publicKey,
@@ -62,7 +62,7 @@ func newEd25519SignerPublicKey(publicKey []byte) (*ed25519Signer, error) {
 
 func newEd25519SignerSecretKeyUnsafe(privateKey []byte) (*ed25519Signer, error) {
 	if len(privateKey) != ed25519.PrivateKeySize {
-		return nil, fmt.Errorf("invalid private key, length expected to be %d but data recevied was %v", ED25519_PRIVATE_KEY_SIZE, privateKey)
+		return nil, fmt.Errorf("invalid private key, length expected to be %d but data recevied was %v", ED25519_PRIVATE_KEY_SIZE_BYTES, privateKey)
 	}
 
 	pub := make([]byte, 32)

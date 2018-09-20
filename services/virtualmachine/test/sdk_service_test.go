@@ -11,17 +11,17 @@ import (
 	"testing"
 )
 
-func TestSdkServiceCallMethodFailingCall(t *testing.T) {
+func TestSdkService_CallMethodFailingCall(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("CallMethod on failing contract")
-		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "FailingContract", "method1")
+		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "FailingContract", "method1", builders.MethodArgumentsArray().Raw())
 		require.Error(t, err, "handleSdkCall should fail")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("FailingContract", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("FailingContract", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.MethodArgumentsArray(), errors.New("call error")
 	})
 
@@ -33,22 +33,22 @@ func TestSdkServiceCallMethodFailingCall(t *testing.T) {
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestSdkServiceCallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T) {
+func TestSdkService_CallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Write to key in first contract")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02, 0x03})
 		require.NoError(t, err, "handleSdkCall should succeed")
 
 		t.Log("CallMethod on a the same contract")
-		_, err = h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract1", "method2")
+		_, err = h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract1", "method2", builders.MethodArgumentsArray().Raw())
 		require.NoError(t, err, "handleSdkCall should succeed")
 
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Read the same key in the first contract")
 		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")
@@ -66,17 +66,17 @@ func TestSdkServiceCallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
+func TestSdkService_CallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Write to key in first contract")
 		_, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02, 0x03})
 		require.NoError(t, err, "handleSdkCall should succeed")
 
 		t.Log("CallMethod on a different contract")
-		_, err = h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1")
+		_, err = h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.MethodArgumentsArray().Raw())
 		require.NoError(t, err, "handleSdkCall should succeed")
 
 		t.Log("Read the same key in the first contract after the call")
@@ -86,7 +86,7 @@ func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
 
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Read the same key in the second contract")
 		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.NoError(t, err, "handleSdkCall should not fail")
@@ -104,19 +104,46 @@ func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkServiceCallMethodWithSystemPermissions(t *testing.T) {
+func TestSdkService_CallMethodWithSystemPermissions(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("CallMethod on a different contract with system permissions")
-		_, err := h.handleSdkCallWithSystemPermissions(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1")
+		_, err := h.handleSdkCallWithSystemPermissions(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.MethodArgumentsArray().Raw())
 		require.NoError(t, err, "handleSdkCall should succeed")
 
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
 	h.expectNativeContractMethodCalledWithSystemPermissions("Contract2", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+	})
+
+	h.processTransactionSet([]*contractAndMethod{
+		{"Contract1", "method1"},
+	})
+
+	h.verifySystemContractCalled(t)
+	h.verifyNativeContractMethodCalled(t)
+}
+
+func TestSdkService_CallMethodWithMultipleArguments(t *testing.T) {
+	h := newHarness()
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+		t.Log("CallMethod with multiple arguments")
+		sdkCallInputArgs := builders.MethodArgumentsArray(uint64(17), "hello").Raw()
+		res, err := h.handleSdkCall(contextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", sdkCallInputArgs)
+		require.NoError(t, err, "handleSdkCall should not fail")
+		require.Equal(t, builders.MethodArgumentsArray(uint64(18), "hello2").Raw(), res[0].BytesValue(), "handleSdkCall result should be equal")
+		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+	})
+	h.expectNativeContractMethodCalled("Contract2", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+		inputArgsIterator := inputArgs.ArgumentsIterator()
+		arg0 := inputArgsIterator.NextArguments().Uint64Value() + 1
+		arg1 := inputArgsIterator.NextArguments().StringValue() + "2"
+		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(arg0, arg1), nil
 	})
 
 	h.processTransactionSet([]*contractAndMethod{

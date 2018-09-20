@@ -6,15 +6,20 @@ This repo contains the node core reference implementation in golang.
 
 The project is thoroughly tested with unit tests, component tests per microservice, acceptance tests, E2E tests and E2E stress tests running the system under load.
 
+## Building Docker images only
+
+If you only want to build the Docker images containing the node binaries, you don't need to have golang on your own machine (the node will be compiled inside the image).
+
+* Make sure Docker is [installed](https://docs.docker.com/install/).
+
+  > Verify with `docker version`
+
+* Run `./docker-build.sh` to create the images:
+
+  * `orbs:export` contains `orbs-node` and `orbs-json-client` binaries in the `/opt/orbs` directory.
+  * `orbs:sambusac` contains self-sufficient development binary (similar to Ethereum's Ganache) and the json client binary.
+
 ## Building from source
-
-### Docker
-
-If you only want to build the binaries, you don't need to have Golang on your machine. Having Docker is sufficient.
-
-`./docker-build.sh` will create the images for you:
-* `orbs:export` contains `orbs-node` and `orbs-json-client` binaries in `/opt/orbs` directory.
-* `orbs:sambusac` contains self-sufficient development binary (similar to Ethereum's Ganache) and json client binary.
 
 ### Prerequisites
 
@@ -32,55 +37,63 @@ If you only want to build the binaries, you don't need to have Golang on your ma
 
   > Verify with `git --version`
 
+* If you're interested in building Docker images as well, install [Docker](https://docs.docker.com/install/).
+
+  > Verify with `docker version`
+
 ### Build
 
 * Clone the repo to your Go workspace:
-```
-cd `go env GOPATH`
-go get github.com/orbs-network/orbs-network-go
-cd src/github.com/orbs-network/orbs-network-go
-git checkout master
-```
+  ```
+  cd `go env GOPATH`
+  go get github.com/orbs-network/orbs-network-go
+  cd src/github.com/orbs-network/orbs-network-go
+  git checkout master
+  ```
 
 * Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
 
 * Build with `go install`
 
-* You can build all the binaries (`orbs-node`, `orbs-json-client` and `sambusac`) with `./build-binaries.sh`. All binaries are statically linked.
+* You can build all the binaries (`orbs-node`, `orbs-json-client` and `sambusac`) with `./build-binaries.sh`.
 
 ### Run
 
 * To run the pre-built binary (should be in path):
-```
-orbs-network-go
-```
+  ```
+  orbs-network-go
+  ```
 
 * To rebuild from source and run (this will take you to project root):
-```
-cd `go env GOPATH`
-cd src/github.com/orbs-network/orbs-network-go
-go run *.go
-```
+  ```
+  cd `go env GOPATH`
+  cd src/github.com/orbs-network/orbs-network-go
+  go run *.go
+  ```
 
 ## Testing from command line
 
-### Available test runners
+### Test runner
 
-The official go test runner `go test` (has minimal UI and result caching). All tests can be run with `./test.sh`
+We use the official go test runner `go test`. It has minimal UI and result caching.
 
 ### Test
 
-* Run **all** tests from project root:
+* Run **all** tests using a script:
 
-  * Using go test with `go test ./...`
+    `./test.sh`
 
-* Run only **fast** tests (no E2E and similar):
-  
-  * Using go test with `go test -short ./...`
+* Manually run **all** tests from project root:
+
+    `go test ./...`
+
+* Manually run only **fast** tests (no E2E and similar):
+
+    `go test -short ./...`
   
 * Check unit test coverage:
 
-  * Using go test with ``go test -cover `go list ./...` ``
+    ``go test -cover `go list ./...` ``
 
 ### Test types
 
@@ -120,19 +133,23 @@ The official go test runner `go test` (has minimal UI and result caching). All t
 
   * The tests are found next to the actual unit in a file with `_test.go` suffix, eg. `sha256_test.go` sitting next to `sha256.go`
 
-### Testing with Docker
+### Testing on Docker
 
-Tests run automatically while we build Docker images because `test.sh` is part of the Docker build. `./docker-build.sh && ./docker-test.sh` will build all the images and then run e2e test in dockerized environment.
+All tests run automatically when the Docker images are built. The script `./test.sh` is part of the Docker build. 
 
-The logs for all e2e nodes are in `./logs` directory and will be deleted on every e2e run.
+* Run `./docker-build.sh && ./docker-test.sh` to build all images and run E2E tests in a dockerized environment.
+
+* The logs for all E2E nodes will be placed on your machine under the `./logs` directory of the project (and will be overridden on every E2E run).
 
 ## Developer experience
 
-### Debugging with Docker
+### Debugging issues on Docker
 
-`./docker-build.debug.sh` and `docker-test.debug.sh` provide shorter development cycle by skipping tests and avoiding building development tools while building the image. The purpose is to let developers run e2e as soon as possible because some of the issues only manifest inside Docker.
+Occasionally, local tests with `go test` will pass but the same tests on Docker will fail. This usually happens when tests are flaky and sensitive to timing (we do our best to avoid this). 
 
-If the e2e gets stuck or `docker-compose` stops working properly, try to **remove all containers** with this handy command: `docker rm -f $(docker ps -aq)`. But remember that **ALL YOUR CONTAINERS WILL BE GONE**. All of them.
+* Run `./docker-build.debug.sh` and `./docker-test.debug.sh` to have a shorter development cycle by skipping tests and avoiding building development tools when the image is built. The purpose of these files is to let developers run E2E on Docker as fast as possible.
+
+* If the E2E test gets stuck or `docker-compose` stops working properly, try to **remove all containers** with this handy command: `docker rm -f $(docker ps -aq)`. But remember that **ALL YOUR LOCAL CONTAINERS WILL BE GONE** (even from other projects).
 
 ### IDE
 
@@ -153,10 +170,10 @@ If the e2e gets stuck or `docker-compose` stops working properly, try to **remov
 
 * If you experience lags while working with GoLand, increasing its default VM heap size can help:
  * Go to `Help | Edit Custom VM Options...` and set:
- ```
- -Xms256m
- -Xmx1536m
- ```
+   ```
+   -Xms256m
+   -Xmx1536m
+   ```
 
 ## License
 

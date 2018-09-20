@@ -33,6 +33,8 @@ func (s *service) handleSdkStateCall(context *executionContext, methodName primi
 	}
 }
 
+// inputArg0: key ([]byte)
+// outputArg0: value ([]byte)
 func (s *service) handleSdkStateRead(context *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
 	if len(args) != 1 || !args[0].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK state read args: %v", args)
@@ -76,6 +78,8 @@ func (s *service) handleSdkStateRead(context *executionContext, args []*protocol
 	return value, nil
 }
 
+// inputArg0: key ([]byte)
+// inputArg1: value ([]byte)
 func (s *service) handleSdkStateWrite(context *executionContext, args []*protocol.MethodArgument) error {
 	if context.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
 		return errors.Errorf("write attempted without write access: %s", context.accessScope)

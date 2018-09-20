@@ -10,15 +10,15 @@ import (
 	"testing"
 )
 
-func TestProcessTransactionSetSuccess(t *testing.T) {
+func TestProcessTransactionSet_Success(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: successful")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 	})
-	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 2: successful")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(uint32(17), "hello", []byte{0x01, 0x02}), nil
 	})
@@ -33,22 +33,22 @@ func TestProcessTransactionSetSuccess(t *testing.T) {
 	}, "processTransactionSet returned receipts should match")
 	require.Equal(t, outputArgs, [][]byte{
 		{},
-		builders.MethodArgumentsOpaque(uint32(17), "hello", []byte{0x01, 0x02}),
+		builders.MethodArgumentsOpaqueEncode(uint32(17), "hello", []byte{0x01, 0x02}),
 	}, "processTransactionSet returned output args should match")
 
 	h.verifySystemContractCalled(t)
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestProcessTransactionSetWithErrors(t *testing.T) {
+func TestProcessTransactionSet_WithErrors(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: failed (contract error)")
 		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.MethodArgumentsArray(), errors.New("contract error")
 	})
-	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method2", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 2: failed (unexpected error)")
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.MethodArgumentsArray(), errors.New("unexpected error")
 	})
