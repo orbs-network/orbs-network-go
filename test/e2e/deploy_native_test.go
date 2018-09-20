@@ -36,11 +36,11 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "deploy transaction should execute successfully")
 
 	// check counter
-	getCounter := &protocol.TransactionBuilder{
-		ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
-		MethodName:   "get",
-	}
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
+		getCounter := &protocol.TransactionBuilder{
+			ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
+			MethodName:   "get",
+		}
 		response, err := h.callMethod(t, getCounter)
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
@@ -65,6 +65,10 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 	// check counter
 	ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
+		getCounter := &protocol.TransactionBuilder{
+			ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
+			MethodName:   "get",
+		}
 		response, err := h.callMethod(t, getCounter)
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)

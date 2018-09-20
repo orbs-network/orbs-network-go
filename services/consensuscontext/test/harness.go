@@ -42,7 +42,8 @@ func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactions
 	}
 
 	for i := uint32(0); i < numTransactionsToReturn; i++ {
-		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmount(uint64(i+1)*10).Build())
+		targetAddress := builders.AddressForEd25519SignerForTests(2)
+		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, targetAddress).Build())
 	}
 
 	h.transactionPool.When("GetTransactionsForOrdering", mock.Any).Return(output, nil).Times(1)

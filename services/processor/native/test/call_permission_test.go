@@ -54,7 +54,7 @@ func TestProcessCallPermissions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			h := newHarness()
 			if test.expectedSdkWrite {
-				h.expectSdkCallMadeWithStateWrite()
+				h.expectSdkCallMadeWithStateWrite(nil, nil)
 			}
 
 			_, err := h.service.ProcessCall(test.input)

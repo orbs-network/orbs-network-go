@@ -50,7 +50,7 @@ func sendTransactions(network harness.InProcessNetwork, t *testing.T, numTransac
 		amount := uint64(rand.Int63n(100))
 		expectedSum += amount
 
-		txHash := network.SendTransferInBackground(rand.Intn(network.Size()), amount)
+		txHash := network.SendTransferInBackground(rand.Intn(network.Size()), amount, 5, 6)
 		txHashes = append(txHashes, txHash)
 	}
 	for _, txHash := range txHashes {
@@ -60,7 +60,7 @@ func sendTransactions(network harness.InProcessNetwork, t *testing.T, numTransac
 	}
 
 	for i := 0; i < network.Size(); i++ {
-		require.EqualValuesf(t, expectedSum, <-network.CallGetBalance(i), "balance did not equal expected balance in node %d", i)
+		require.EqualValuesf(t, expectedSum, <-network.CallGetBalance(i, 6), "balance did not equal expected balance in node %d", i)
 	}
 }
 

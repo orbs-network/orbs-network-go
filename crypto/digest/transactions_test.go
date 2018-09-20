@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	ExpectedTransactionHashHex = "52327d1453546881af6df8a85ab89f7f855253df1cfab3266f0a54d5fd0fdbcb"
+	ExpectedTransactionHashHex = "4c78c82f8cdd40a923630d38c6b5f48bc257b7a307fb8873495b4b462ef51898"
 )
 
 func getTransaction() *protocol.Transaction {
 	timeOfTransaction := time.Date(2018, 01, 01, 0, 0, 0, 0, time.UTC)
-	tx := builders.TransferTransaction().WithAmount(10).WithTimestamp(timeOfTransaction).Build()
+	tx := builders.TransferTransaction().WithTimestamp(timeOfTransaction).Build()
 	return tx.Transaction()
 }
 

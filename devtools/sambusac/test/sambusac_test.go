@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -68,12 +69,13 @@ func runCommand(command []string, t *testing.T) string {
 	return stdout.String()
 }
 
-func generateTransferJSON(amount uint64) string {
+func generateTransferJSON(amount uint64, targetAddress []byte) string {
 	transferJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "transfer",
 		Arguments: []jsonapi.MethodArgument{
 			{Name: "amount", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: amount},
+			{Name: "targetAddress", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: targetAddress},
 		},
 	}
 
@@ -81,10 +83,13 @@ func generateTransferJSON(amount uint64) string {
 	return string(jsonBytes)
 }
 
-func generateGetBalanceJSON() string {
+func generateGetBalanceJSON(targetAddress []byte) string {
 	getBalanceJSON := &jsonapi.Transaction{
 		ContractName: "BenchmarkToken",
 		MethodName:   "getBalance",
+		Arguments: []jsonapi.MethodArgument{
+			{Name: "targetAddress", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: targetAddress},
+		},
 	}
 
 	callJSONBytes, _ := json.Marshal(&getBalanceJSON)
@@ -104,10 +109,11 @@ func TestSambusacFlow(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
+	targetAddress := builders.AddressForEd25519SignerForTests(2)
 
 	baseCommand := ClientBinary()
 	sendCommand := append(baseCommand,
-		"-send-transaction", generateTransferJSON(42),
+		"-send-transaction", generateTransferJSON(42, targetAddress),
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
 
@@ -120,7 +126,7 @@ func TestSambusacFlow(t *testing.T) {
 	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.TxHash, "got empty txhash")
 
-	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON())
+	getCommand := append(baseCommand, "-call-method", generateGetBalanceJSON(targetAddress))
 
 	callOutputAsString := runCommand(getCommand, t)
 	fmt.Println(callOutputAsString)

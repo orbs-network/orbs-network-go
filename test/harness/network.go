@@ -10,6 +10,7 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	testNativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
@@ -22,14 +23,14 @@ import (
 
 type InProcessNetwork interface {
 	Description() string
-	DeployBenchmarkToken()
+	DeployBenchmarkToken(ownerAddressIndex int)
 	GossipTransport() gossipAdapter.TamperingTransport
 	PublicApi(nodeIndex int) services.PublicApi
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
-	SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
-	SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256
-	SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse
-	CallGetBalance(nodeIndex int) chan uint64
+	SendTransfer(nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse
+	SendTransferInBackground(nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256
+	SendInvalidTransfer(nodeIndex int, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse
+	CallGetBalance(nodeIndex int, forAddressIndex int) chan uint64
 	SendDeployCounterContract(nodeIndex int) chan *client.SendTransactionResponse
 	SendCounterAdd(nodeIndex int, amount uint64) chan *client.SendTransactionResponse
 	CallCounterGet(nodeIndex int) chan uint64
@@ -94,19 +95,22 @@ func (n *inProcessNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.I
 	return n.nodes[nodeIndex].blockPersistence
 }
 
-func (n *inProcessNetwork) DeployBenchmarkToken() {
-	tx := <-n.SendTransfer(0, 0) // deploy BenchmarkToken by running an empty transaction
+func (n *inProcessNetwork) DeployBenchmarkToken(ownerAddressIndex int) {
+	tx := <-n.SendTransfer(0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
 	for i := range n.nodes {
 		n.WaitForTransactionInState(i, tx.TransactionReceipt().Txhash())
 	}
 }
 
-func (n *inProcessNetwork) SendTransfer(nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
+func (n *inProcessNetwork) SendTransfer(nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse {
+	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
+	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)
+	request := (&client.SendTransactionRequestBuilder{
+		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder(),
+	}).Build()
+
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
-		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: builders.TransferTransaction().WithAmount(amount).Builder(),
-		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: request,
@@ -120,10 +124,13 @@ func (n *inProcessNetwork) SendTransfer(nodeIndex int, amount uint64) chan *clie
 }
 
 // TODO: when publicApi supports returning as soon as SendTransaction is in the pool, switch to blocking implementation that waits for this
-func (n *inProcessNetwork) SendTransferInBackground(nodeIndex int, amount uint64) primitives.Sha256 {
+func (n *inProcessNetwork) SendTransferInBackground(nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256 {
+	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
+	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)
 	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: builders.TransferTransaction().WithAmount(amount).Builder(),
+		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder(),
 	}).Build()
+
 	go func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		publicApi.SendTransaction(&services.SendTransactionInput{ // we ignore timeout here.
@@ -133,12 +140,15 @@ func (n *inProcessNetwork) SendTransferInBackground(nodeIndex int, amount uint64
 	return digest.CalcTxHash(request.SignedTransaction().Transaction())
 }
 
-func (n *inProcessNetwork) SendInvalidTransfer(nodeIndex int) chan *client.SendTransactionResponse {
+func (n *inProcessNetwork) SendInvalidTransfer(nodeIndex int, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse {
+	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
+	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)
+	request := (&client.SendTransactionRequestBuilder{
+		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithInvalidAmount(targetAddress).Builder(),
+	}).Build()
+
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
-		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: builders.TransferTransaction().WithInvalidAmount().Builder(),
-		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: request,
@@ -151,15 +161,15 @@ func (n *inProcessNetwork) SendInvalidTransfer(nodeIndex int) chan *client.SendT
 	return ch
 }
 
-func (n *inProcessNetwork) CallGetBalance(nodeIndex int) chan uint64 {
+func (n *inProcessNetwork) CallGetBalance(nodeIndex int, forAddressIndex int) chan uint64 {
+	signerKeyPair := keys.Ed25519KeyPairForTests(forAddressIndex)
+	targetAddress := builders.AddressForEd25519SignerForTests(forAddressIndex)
+	request := (&client.CallMethodRequestBuilder{
+		Transaction: builders.GetBalanceTransaction().WithEd25519Signer(signerKeyPair).WithTargetAddress(targetAddress).Builder().Transaction,
+	}).Build()
+
 	ch := make(chan uint64)
 	go func() {
-		request := (&client.CallMethodRequestBuilder{
-			Transaction: &protocol.TransactionBuilder{
-				ContractName: "BenchmarkToken",
-				MethodName:   "getBalance",
-			},
-		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.CallMethod(&services.CallMethodInput{
 			ClientRequest: request,
@@ -183,7 +193,6 @@ func (n *inProcessNetwork) SendDeployCounterContract(nodeIndex int) chan *client
 		}
 	}
 
-	ch := make(chan *client.SendTransactionResponse)
 	tx := builders.Transaction().
 		WithMethod("_Deployments", "deployService").
 		WithArgs(
@@ -191,10 +200,12 @@ func (n *inProcessNetwork) SendDeployCounterContract(nodeIndex int) chan *client
 			uint32(protocol.PROCESSOR_TYPE_NATIVE),
 			[]byte(contracts.SourceCodeForCounter(counterStart)),
 		)
+	request := (&client.SendTransactionRequestBuilder{
+		SignedTransaction: tx.Builder(),
+	}).Build()
+
+	ch := make(chan *client.SendTransactionResponse)
 	go func() {
-		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: tx.Builder(),
-		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: request,
@@ -209,14 +220,16 @@ func (n *inProcessNetwork) SendDeployCounterContract(nodeIndex int) chan *client
 
 func (n *inProcessNetwork) SendCounterAdd(nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
-	ch := make(chan *client.SendTransactionResponse)
+
 	tx := builders.Transaction().
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "add").
 		WithArgs(amount)
+	request := (&client.SendTransactionRequestBuilder{
+		SignedTransaction: tx.Builder(),
+	}).Build()
+
+	ch := make(chan *client.SendTransactionResponse)
 	go func() {
-		request := (&client.SendTransactionRequestBuilder{
-			SignedTransaction: tx.Builder(),
-		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: request,
@@ -231,14 +244,16 @@ func (n *inProcessNetwork) SendCounterAdd(nodeIndex int, amount uint64) chan *cl
 
 func (n *inProcessNetwork) CallCounterGet(nodeIndex int) chan uint64 {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
+
+	request := (&client.CallMethodRequestBuilder{
+		Transaction: &protocol.TransactionBuilder{
+			ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
+			MethodName:   "get",
+		},
+	}).Build()
+
 	ch := make(chan uint64)
 	go func() {
-		request := (&client.CallMethodRequestBuilder{
-			Transaction: &protocol.TransactionBuilder{
-				ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
-				MethodName:   "get",
-			},
-		}).Build()
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.CallMethod(&services.CallMethodInput{
 			ClientRequest: request,
