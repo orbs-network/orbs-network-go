@@ -77,7 +77,7 @@ func newHarness() *harness {
 			cfg := config.MinimalConfig(
 				federationNodes,
 				gossipPeers,
-				uint32(firstRandomPort+i),
+				uint16(firstRandomPort+i),
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey(),
 				leaderKeyPair.PublicKey(),

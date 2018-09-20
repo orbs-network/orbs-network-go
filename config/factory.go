@@ -106,7 +106,7 @@ func DefaultConfig() MutableNodeConfig {
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
 
-	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(4400))
+	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
 
@@ -116,7 +116,7 @@ func DefaultConfig() MutableNodeConfig {
 func MinimalConfig(
 	federationNodes map[string]FederationNode,
 	gossipPeers map[string]GossipPeer,
-	gossipListenPort uint32,
+	gossipListenPort uint16,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
@@ -130,7 +130,7 @@ func MinimalConfig(
 	cfg.SetNodePrivateKey(nodePrivateKey)
 	cfg.SetConstantConsensusLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	cfg.SetUint32(GOSSIP_LISTEN_PORT, gossipListenPort)
+	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
 
 	return cfg
 }
