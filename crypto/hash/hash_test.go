@@ -9,7 +9,7 @@ var someData = []byte("testing")
 
 const (
 	ExpectedSha256         = "cf80cd8aed482d5d1527d7dc72fceff84e6326592848447d2dc0b0e87dfc9a90"
-	ExpectedSha256Ripmd160 = "cf80cd8aed482d5d1527d7dc72fceff84e6326592848447d2dc0b0e87dfc9a909c1185a5c5e9fc54612808977ee8f548b2258d31"
+	ExpectedSha256Ripmd160 = "1acb19a469206161ed7e5ed9feb996a6e24be441"
 )
 
 func TestCalcSha256(t *testing.T) {

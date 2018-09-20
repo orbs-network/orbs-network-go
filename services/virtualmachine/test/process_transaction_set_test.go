@@ -10,9 +10,9 @@ import (
 	"testing"
 )
 
-func TestProcessTransactionSetSuccess(t *testing.T) {
+func TestProcessTransactionSet_Success(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: successful")
@@ -40,9 +40,9 @@ func TestProcessTransactionSetSuccess(t *testing.T) {
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestProcessTransactionSetWithErrors(t *testing.T) {
+func TestProcessTransactionSet_WithErrors(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: failed (contract error)")

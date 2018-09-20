@@ -1,15 +1,15 @@
-package globalpreorder_systemcontract
+package info_systemcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 )
 
 var CONTRACT = sdk.ContractInfo{
-	Name:       "_GlobalPreOrder",
+	Name:       "_Info",
 	Permission: sdk.PERMISSION_SCOPE_SYSTEM,
 	Methods: map[string]sdk.MethodInfo{
-		METHOD_INIT.Name:    METHOD_INIT,
-		METHOD_APPROVE.Name: METHOD_APPROVE,
+		METHOD_INIT.Name:               METHOD_INIT,
+		METHOD_GET_SIGNER_ADDRESS.Name: METHOD_GET_SIGNER_ADDRESS,
 	},
 	InitSingleton: newContract,
 }
@@ -35,14 +35,13 @@ func (c *contract) _init(ctx sdk.Context) error {
 
 ///////////////////////////////////////////////////////////////////////////
 
-var METHOD_APPROVE = sdk.MethodInfo{
-	Name:           "approve",
+var METHOD_GET_SIGNER_ADDRESS = sdk.MethodInfo{
+	Name:           "getSignerAddress",
 	External:       true,
 	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
-	Implementation: (*contract).approve,
+	Implementation: (*contract).getSignerAddress,
 }
 
-func (c *contract) approve(ctx sdk.Context) error {
-	// TODO: add subscription check here
-	return nil
+func (c *contract) getSignerAddress(ctx sdk.Context) ([]byte, error) {
+	return c.Address.GetSignerAddress(ctx)
 }
