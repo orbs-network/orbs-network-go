@@ -28,14 +28,9 @@ func BenchmarkServerCallMethod(b *testing.B) {
 
 	webClient := &http.Client{}
 
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: &protocol.TransactionBuilder{},
-	}).Build()
-
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(request.Raw()))
-
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		req := buildReqeust(url)
 		sendRequest(webClient, req)
 	}
 	b.StopTimer()
@@ -52,14 +47,9 @@ func BenchmarkFastServerCallMethod(b *testing.B) {
 
 	webClient := &http.Client{}
 
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: &protocol.TransactionBuilder{},
-	}).Build()
-
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(request.Raw()))
-
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		req := buildReqeust(url)
 		sendRequest(webClient, req)
 	}
 	b.StopTimer()
@@ -99,8 +89,17 @@ func sendRequest(client *http.Client, request *http.Request) {
 	}
 }
 
-func getDestiantions(port int) (address string, url string) {
-	address = strings.Join([]string{"127.0.0.1", ":", strconv.Itoa(port)}, "")
-	url = strings.Join([]string{"http://", address, "/api/v1/call-method"}, "")
+func getDestiantions(port int) (string, string) {
+	address := strings.Join([]string{"127.0.0.1", ":", strconv.Itoa(port)}, "")
+	url := strings.Join([]string{"http://", address, "/api/v1/call-method"}, "")
 	return address, url
+}
+
+func buildReqeust(url string) *http.Request {
+	request := (&client.CallMethodRequestBuilder{
+		Transaction: &protocol.TransactionBuilder{},
+	}).Build()
+
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(request.Raw()))
+	return req
 }
