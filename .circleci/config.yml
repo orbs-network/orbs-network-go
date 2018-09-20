@@ -16,12 +16,12 @@ jobs:
   acceptance:
     machine: true
     steps:
-    - checkout
-    - run: ./git-submodule-checkout.sh
-    - run:
-      name: acceptance
-      command: ./docker-build.acceptance.sh
-      no_output_timeout: 30m
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run:
+        name: acceptance
+        command: ./docker-build.acceptance.sh
+        no_output_timeout: 30m
 
   success:
     machine: true
