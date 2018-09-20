@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-func NewEmptyFileConfig(source string) (NodeConfig, error) {
+func NewEmptyFileConfig(source string) (MutableNodeConfig, error) {
 	return NewFileConfig(EmptyConfig(), source)
 }
 
-func NewFileConfig(parent NodeConfig, source string) (NodeConfig, error) {
+func NewFileConfig(parent MutableNodeConfig, source string) (MutableNodeConfig, error) {
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(source), &data); err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func parseNodeList(value interface{}) (nodes map[string]FederationNode, err erro
 	return nodes, err
 }
 
-func populateConfig(cfg NodeConfig, data map[string]interface{}) (err error) {
+func populateConfig(cfg MutableNodeConfig, data map[string]interface{}) (err error) {
 	for key, value := range data {
 		var duration time.Duration
 		var numericValue uint32

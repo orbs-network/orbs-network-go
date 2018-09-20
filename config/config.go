@@ -7,21 +7,6 @@ import (
 )
 
 type NodeConfig interface {
-	// setters (for creation)
-	Set(key string, value NodeConfigValue) NodeConfig
-	SetDuration(key string, value time.Duration) NodeConfig
-	SetUint32(key string, value uint32) NodeConfig
-	SetString(key string, value string) NodeConfig
-	SetFederationNodes(nodes map[string]FederationNode) NodeConfig
-	SetGossipPeers(peers map[string]GossipPeer) NodeConfig
-	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
-	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
-
-	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) NodeConfig
-	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) NodeConfig
-
-	MergeWithFileConfig(source string) (NodeConfig, error)
-
 	// shared
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
@@ -75,6 +60,24 @@ type NodeConfig interface {
 
 	// processor
 	ProcessorArtifactPath() string
+}
+
+type MutableNodeConfig interface {
+	NodeConfig
+
+	Set(key string, value NodeConfigValue) MutableNodeConfig
+	SetDuration(key string, value time.Duration) MutableNodeConfig
+	SetUint32(key string, value uint32) MutableNodeConfig
+	SetString(key string, value string) MutableNodeConfig
+	SetFederationNodes(nodes map[string]FederationNode) MutableNodeConfig
+	SetGossipPeers(peers map[string]GossipPeer) MutableNodeConfig
+	SetNodePublicKey(key primitives.Ed25519PublicKey) MutableNodeConfig
+	SetNodePrivateKey(key primitives.Ed25519PrivateKey) MutableNodeConfig
+
+	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) MutableNodeConfig
+	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig
+
+	MergeWithFileConfig(source string) (MutableNodeConfig, error)
 }
 
 type FederationNode interface {

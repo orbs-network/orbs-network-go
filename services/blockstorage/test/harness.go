@@ -78,7 +78,7 @@ func (d *harness) failNextBlocks() {
 }
 
 func (d *harness) setBatchSize(batchSize uint32) {
-	d.config.(config.NodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
+	d.config.(config.MutableNodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
 }
 
 func newBlockStorageConfig(nodePublicKey primitives.Ed25519PublicKey) blockstorage.Config {

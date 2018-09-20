@@ -46,7 +46,7 @@ func ForAcceptanceTests(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-) NodeConfig {
+) MutableNodeConfig {
 
 	cfg := newHardCodedConfig(
 		federationNodes,
@@ -77,7 +77,7 @@ func ForDevelopment(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-) NodeConfig {
+) MutableNodeConfig {
 
 	cfg := newHardCodedConfig(
 		federationNodes,
@@ -101,12 +101,12 @@ func ForDevelopment(
 	return cfg
 }
 
-func EmptyConfig() NodeConfig {
+func EmptyConfig() MutableNodeConfig {
 	return &config{
 		kv: make(map[string]NodeConfigValue),
 	}
 }
 
-func (c *config) MergeWithFileConfig(source string) (NodeConfig, error) {
+func (c *config) MergeWithFileConfig(source string) (MutableNodeConfig, error) {
 	return NewFileConfig(c, source)
 }
