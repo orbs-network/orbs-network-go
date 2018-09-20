@@ -7,10 +7,12 @@ import (
 )
 
 const (
-	RIPMD160_HASH_SIZE_BYTES = 52 // TODO: this needs to be 20 (fix once we fix the calculation)
+	RIPMD160_HASH_SIZE_BYTES = 20
 )
 
 func CalcRipmd160Sha256(data []byte) primitives.Ripmd160Sha256 {
 	hash := sha256.Sum256(data)
-	return ripemd160.New().Sum(hash[:])
+	r := ripemd160.New()
+	r.Write(hash[:])
+	return r.Sum(nil)
 }
