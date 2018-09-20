@@ -16,7 +16,7 @@ func (s *service) runMethod(
 ) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 
 	// create execution context
-	contextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, accessScope)
+	contextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, accessScope, transaction)
 	defer s.contexts.destroyExecutionContext(contextId)
 
 	// get deployment info

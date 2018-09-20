@@ -11,16 +11,16 @@ import (
 	"testing"
 )
 
-func TestSdkStateReadWithoutContext(t *testing.T) {
+func TestSdkState_ReadWithoutContext(t *testing.T) {
 	h := newHarness()
 
 	_, err := h.handleSdkCall(999, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 	require.Error(t, err, "handleSdkCall should fail")
 }
 
-func TestSdkStateReadWithLocalMethodReadOnlyAccess(t *testing.T) {
+func TestSdkState_ReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
@@ -46,9 +46,9 @@ func TestSdkStateReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkStateWriteWithLocalMethodReadOnlyAccess(t *testing.T) {
+func TestSdkState_WriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
@@ -65,9 +65,9 @@ func TestSdkStateWriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestSdkStateReadWithTransactionSetReadWriteAccess(t *testing.T) {
+func TestSdkState_ReadWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("First read should reach state storage")
@@ -94,9 +94,9 @@ func TestSdkStateReadWithTransactionSetReadWriteAccess(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
+func TestSdkState_WriteWithTransactionSetReadWriteAccess(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: first write should change in transient state")
@@ -136,9 +136,9 @@ func TestSdkStateWriteWithTransactionSetReadWriteAccess(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
+func TestSdkState_WriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1: write to key in first contract")
@@ -186,9 +186,9 @@ func TestSdkStateWriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkStateWriteIgnoredWithTransactionSetHavingFailedTransactions(t *testing.T) {
+func TestSdkState_WriteIgnoredWithTransactionSetHavingFailedTransactions(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Transaction 1 (successful): first write should change in transient state")

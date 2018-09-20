@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestPreOrderDifferentSignerSchemes(t *testing.T) {
+func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 	tests := []struct {
 		name   string
 		tx     *protocol.SignedTransaction
@@ -36,7 +36,7 @@ func TestPreOrderDifferentSignerSchemes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			h := newHarness()
 
-			h.expectSystemContractCalled(globalpreorder.CONTRACT.Name, globalpreorder.METHOD_APPROVE.Name, nil)
+			h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, nil)
 
 			results, err := h.transactionSetPreOrder([]*protocol.SignedTransaction{test.tx})
 			if test.status == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
@@ -51,10 +51,10 @@ func TestPreOrderDifferentSignerSchemes(t *testing.T) {
 	}
 }
 
-func TestPreOrderGlobalSubscriptionContractNotApproved(t *testing.T) {
+func TestPreOrder_GlobalSubscriptionContractNotApproved(t *testing.T) {
 	h := newHarness()
 
-	h.expectSystemContractCalled(globalpreorder.CONTRACT.Name, globalpreorder.METHOD_APPROVE.Name, errors.New("contract not approved"))
+	h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, errors.New("contract not approved"))
 
 	tx := builders.Transaction().Build()
 	results, err := h.transactionSetPreOrder([]*protocol.SignedTransaction{tx})

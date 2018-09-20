@@ -33,7 +33,7 @@ const LOCAL_NETWORK_SIZE = 3
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	ApiEndpoint := "http://localhost:8080/api/v1/"
+	ApiEndpoint := "http://localhost:8082/api/v1/" // 8080 is leader, 8082 is node-3
 
 	if !Bootstrap {
 		ApiEndpoint = os.Getenv("API_ENDPOINT")

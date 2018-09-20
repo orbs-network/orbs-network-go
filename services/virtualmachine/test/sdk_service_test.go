@@ -11,9 +11,9 @@ import (
 	"testing"
 )
 
-func TestSdkServiceCallMethodFailingCall(t *testing.T) {
+func TestSdkService_CallMethodFailingCall(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("CallMethod on failing contract")
@@ -33,9 +33,9 @@ func TestSdkServiceCallMethodFailingCall(t *testing.T) {
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestSdkServiceCallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T) {
+func TestSdkService_CallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Write to key in first contract")
@@ -66,9 +66,9 @@ func TestSdkServiceCallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
+func TestSdkService_CallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("Write to key in first contract")
@@ -104,9 +104,9 @@ func TestSdkServiceCallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
 	h.verifyStateStorageRead(t)
 }
 
-func TestSdkServiceCallMethodWithSystemPermissions(t *testing.T) {
+func TestSdkService_CallMethodWithSystemPermissions(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("CallMethod on a different contract with system permissions")
@@ -127,9 +127,9 @@ func TestSdkServiceCallMethodWithSystemPermissions(t *testing.T) {
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestSdkServiceCallMethodWithMultipleArguments(t *testing.T) {
+func TestSdkService_CallMethodWithMultipleArguments(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		t.Log("CallMethod with multiple arguments")
