@@ -68,6 +68,26 @@ func NewNode(
 	}
 }
 
+func NewNodeFromConfig(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress string) Node {
+	ctx, ctxCancel := context.WithCancel(context.Background())
+
+	nodeLogger := logger.For(log.Node(nodeConfig.NodePublicKey().String()))
+
+	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
+	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
+	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence()
+	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
+	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nativeCompiler, nodeLogger, nodeConfig)
+	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
+
+	return &node{
+		logic:        nodeLogic,
+		httpServer:   httpServer,
+		shutdownCond: sync.NewCond(&sync.Mutex{}),
+		ctxCancel:    ctxCancel,
+	}
+}
+
 func (n *node) GracefulShutdown(timeout time.Duration) {
 	n.ctxCancel()
 	n.httpServer.GracefulShutdown(timeout)

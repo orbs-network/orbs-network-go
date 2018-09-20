@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"path/filepath"
 	"time"
 )
 
@@ -31,6 +32,20 @@ func ForProduction(
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
+	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 5*time.Second)
+	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
+	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
+
+	return cfg
+}
+
+func ForProduction2() MutableNodeConfig {
+	cfg := DefaultConfig()
+
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Second)
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 5*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
@@ -105,6 +120,38 @@ func EmptyConfig() MutableNodeConfig {
 	return &config{
 		kv: make(map[string]NodeConfigValue),
 	}
+}
+
+func DefaultConfig() MutableNodeConfig {
+	cfg := EmptyConfig()
+
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
+
+	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
+
+	cfg.SetDuration(BLOCK_SYNC_BATCH_SIZE, 10000)
+	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 5*time.Second)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 3*time.Second)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
+
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
+	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 3*time.Minute)
+
+	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
+
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, uint32(1))
+
+	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
+	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
+	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
+
+	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(4400))
+
+	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+
+	return cfg
 }
 
 func (c *config) MergeWithFileConfig(source string) (MutableNodeConfig, error) {

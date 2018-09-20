@@ -6,21 +6,21 @@ services:
     extends:
       file: docker-compose.yml
       service: orbs-network-node-1
-    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node
+    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
 
   orbs-network-node-2:
     image: orbs:debug
     extends:
       file: docker-compose.yml
       service: orbs-network-node-2
-    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node
+    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
 
   orbs-network-node-3:
     image: orbs:debug
     extends:
       file: docker-compose.yml
       service: orbs-network-node-3
-    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node
+    command: /go/src/github.com/orbs-network/orbs-network-go/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
 
   orbs-e2e:
     image: orbs:debug
