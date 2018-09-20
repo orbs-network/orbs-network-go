@@ -10,8 +10,9 @@ import (
 	"testing"
 )
 
-var exampleAddress1, _ = hex.DecodeString("9c1185a5c5e9fc54612808977ee8f548b2258d31") // ripmd160
-var exampleAddress2, _ = hex.DecodeString("223385a5c5e9fc54612808977ee8f548b2258d31") // ripmd160
+// TODO: change both examples to valid ripmd160 hashes once we fix the calculation
+var exampleAddress1, _ = hex.DecodeString("cf80cd8aed482d5d1527d7dc72fceff84e6326592848447d2dc0b0e87dfc9a909c1185a5c5e9fc54612808977ee8f548b2258d31") // ripmd160
+var exampleAddress2, _ = hex.DecodeString("2233448aed482d5d1527d7dc72fceff84e6326592848447d2dc0b0e87dfc9a909c1185a5c5e9fc54612808977ee8f548b2258d31") // ripmd160
 
 func TestValidateAddress(t *testing.T) {
 	s := createAddressSdk()
