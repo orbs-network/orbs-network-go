@@ -13,21 +13,21 @@ import (
 
 var testLogger = log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
-type Sambusac struct {
+type GammaServer struct {
 	httpServer   httpserver.HttpServer
 	logic        bootstrap.NodeLogic
 	shutdownCond *sync.Cond
 	ctxCancel    context.CancelFunc
 }
 
-func StartSambusac(serverAddress string, pathToContracts string, blocking bool) *Sambusac {
+func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	network := harness.NewDevelopmentNetwork().StartNodes(ctx)
 
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
 
-	s := &Sambusac{
+	s := &GammaServer{
 		ctxCancel:    cancel,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
 		httpServer:   httpServer,
@@ -42,13 +42,13 @@ func StartSambusac(serverAddress string, pathToContracts string, blocking bool) 
 	return s
 }
 
-func (n *Sambusac) GracefulShutdown(timeout time.Duration) {
+func (n *GammaServer) GracefulShutdown(timeout time.Duration) {
 	n.ctxCancel()
 	n.httpServer.GracefulShutdown(timeout)
 	n.shutdownCond.Broadcast()
 }
 
-func (n *Sambusac) WaitUntilShutdown() {
+func (n *GammaServer) WaitUntilShutdown() {
 	n.shutdownCond.L.Lock()
 	n.shutdownCond.Wait()
 	n.shutdownCond.L.Unlock()

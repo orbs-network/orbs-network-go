@@ -87,4 +87,6 @@ logs/
 
 # binaries
 orbs-*
-sambusac
+gamma-server
+gamma-cli
+.deploy.json
