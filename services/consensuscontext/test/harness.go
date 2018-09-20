@@ -59,14 +59,19 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	require.True(t, ok)
 }
 
+func newConsensusContextConfig() consensuscontext.Config {
+	cfg := config.EmptyConfig()
+	cfg.SetDuration(config.CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
+	cfg.SetUint32(config.CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 2)
+
+	return cfg
+}
+
 func newHarness() *harness {
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	transactionPool := &services.MockTransactionPool{}
-
-	cfg := config.EmptyConfig()
-	cfg.SetDuration(config.CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
-	cfg.SetUint32(config.CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 2)
+	cfg := newConsensusContextConfig()
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
 		cfg, log)

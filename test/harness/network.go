@@ -222,7 +222,7 @@ func (n *inProcessNetwork) SendCounterAdd(nodeIndex int, amount uint64) chan *cl
 			ClientRequest: request,
 		})
 		if err != nil {
-			panic(fmt.Sprintf("error sending counter add: %v", err)) // TODO: improve
+			panic(fmt.Sprintf("error sending counter add for the amount %d: %v", amount, err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
 	}()
