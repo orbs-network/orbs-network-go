@@ -36,7 +36,7 @@ func getLogger(path string, silent bool) log.BasicLogger {
 }
 
 func getConfig(pathToConfig string) (config.NodeConfig, error) {
-	cfg := config.ForProduction2()
+	cfg := config.ForProduction()
 
 	if pathToConfig != "" {
 		if _, err := os.Stat(pathToConfig); os.IsNotExist(err) {
@@ -75,7 +75,7 @@ func main() {
 
 	logger := getLogger(*pathToLog, *silentLog)
 
-	bootstrap.NewNodeFromConfig(
+	bootstrap.NewNode(
 		cfg,
 		logger,
 		httpAddress,
