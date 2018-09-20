@@ -48,11 +48,7 @@ func getConfig(pathToConfig string) (config.NodeConfig, error) {
 			return nil, err
 		}
 
-		if mergedConfig, err := cfg.MergeWithFileConfig(string(contents)); err == nil {
-			return mergedConfig, nil
-		} else {
-			return nil, err
-		}
+		return cfg.MergeWithFileConfig(string(contents))
 	}
 
 	return cfg, nil

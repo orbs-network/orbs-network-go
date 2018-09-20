@@ -42,8 +42,9 @@ func parseUint32(f64 float64) (uint32, error) {
 }
 
 // TODO notify about ignored entries?
-func parseNodeList(value interface{}) (nodes map[string]FederationNode, err error) {
+func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, peers map[string]GossipPeer, err error) {
 	nodes = make(map[string]FederationNode)
+	peers = make(map[string]GossipPeer)
 
 	if nodeList, ok := value.([]interface{}); ok {
 		for _, item := range nodeList {
@@ -59,7 +60,10 @@ func parseNodeList(value interface{}) (nodes map[string]FederationNode, err erro
 					gossipPort = uint16(i)
 
 					nodes[nodePublicKey.String()] = &hardCodedFederationNode{
-						nodePublicKey:  nodePublicKey,
+						nodePublicKey: nodePublicKey,
+					}
+
+					peers[nodePublicKey.String()] = &hardCodedGossipPeer{
 						gossipEndpoint: kv["IP"].(string),
 						gossipPort:     gossipPort,
 					}
@@ -68,7 +72,7 @@ func parseNodeList(value interface{}) (nodes map[string]FederationNode, err erro
 		}
 	}
 
-	return nodes, err
+	return nodes, peers, err
 }
 
 func populateConfig(cfg MutableNodeConfig, data map[string]interface{}) (err error) {
@@ -116,10 +120,19 @@ func populateConfig(cfg MutableNodeConfig, data map[string]interface{}) (err err
 			cfg.SetNodePrivateKey(primitives.Ed25519PrivateKey(privateKey))
 		}
 
+		if key == "gossip-port" {
+			var gossipPort uint32
+			gossipPort, err = parseUint32(value.(float64))
+			cfg.SetUint32(GOSSIP_LISTEN_PORT, gossipPort)
+		}
+
 		if key == "federation-nodes" {
 			var nodes map[string]FederationNode
-			nodes, err = parseNodeList(value)
+			var peers map[string]GossipPeer
+
+			nodes, peers, err = parseNodesAndPeers(value)
 			cfg.SetFederationNodes(nodes)
+			cfg.SetGossipPeers(peers)
 		}
 
 		if err != nil {

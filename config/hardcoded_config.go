@@ -7,9 +7,7 @@ import (
 )
 
 type hardCodedFederationNode struct {
-	nodePublicKey  primitives.Ed25519PublicKey
-	gossipPort     uint16
-	gossipEndpoint string
+	nodePublicKey primitives.Ed25519PublicKey
 }
 
 type hardCodedGossipPeer struct {
@@ -135,13 +133,6 @@ func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) MutableNodeCo
 
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
-}
-
-func (c *hardCodedFederationNode) GossipPort() uint16 {
-	return c.gossipPort
-}
-func (c *hardCodedFederationNode) GossipEndpoint() string {
-	return c.gossipEndpoint
 }
 
 func (c *hardCodedGossipPeer) GossipPort() uint16 {

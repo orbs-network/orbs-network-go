@@ -84,6 +84,8 @@ func EmptyConfig() MutableNodeConfig {
 func DefaultConfig() MutableNodeConfig {
 	cfg := EmptyConfig()
 
+	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)

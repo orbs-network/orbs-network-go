@@ -1,10 +1,10 @@
 {
-  "public-key": "92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152",
-  "private-key": "3b24b5f9e6b1371c3b5de2e402a96930eeafe52111bb4a1b003e5ecad3fab53892d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152",
+  "node-public-key": "92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152",
+  "node-private-key": "3b24b5f9e6b1371c3b5de2e402a96930eeafe52111bb4a1b003e5ecad3fab53892d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152",
   "constant-consensus-leader": "dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173",
-  "peers": [
-    {"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","GossipPort":4400},
-    {"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","GossipPort":4400},
-    {"Key":"a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0","IP":"192.168.199.4","GossipPort":4400}
+  "federation-nodes": [
+    {"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","Port":4400},
+    {"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","Port":4400},
+    {"Key":"a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0","IP":"192.168.199.4","Port":4400}
   ]
 }
