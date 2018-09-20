@@ -1,36 +1,15 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"reflect"
 )
 
-func (s *service) getContractFromRepository(contractName primitives.ContractName) (*types.ContractInfo, error) {
-	contract, found := repository.Contracts[contractName]
-	if !found {
-		return nil, errors.Errorf("contract '%s' not found", contractName)
-	}
-	return &contract, nil
-}
-
-func (s *service) getContractAndMethodFromRepository(contractName primitives.ContractName, methodName primitives.MethodName) (*types.ContractInfo, *types.MethodInfo, error) {
-	contract, err := s.getContractFromRepository(contractName)
-	if err != nil {
-		return nil, nil, err
-	}
-	method, found := contract.Methods[methodName]
-	if !found {
-		return nil, nil, errors.Errorf("method '%s' not found in contract '%s'", methodName, contractName)
-	}
-	return contract, &method, nil
-}
-
-func (s *service) verifyMethodPermissions(contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope, accessScope protocol.ExecutionAccessScope) error {
+func (s *service) verifyMethodPermissions(contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope, accessScope protocol.ExecutionAccessScope) error {
 	// allow external but protect internal
 	if !methodInfo.External {
 		err := s.verifyInternalMethodCall(contractInfo, methodInfo, callingService, permissionScope)
@@ -40,7 +19,7 @@ func (s *service) verifyMethodPermissions(contractInfo *types.ContractInfo, meth
 	}
 
 	// allow read but protect write
-	if methodInfo.Access == protocol.ACCESS_SCOPE_READ_WRITE {
+	if methodInfo.Access == sdk.ACCESS_SCOPE_READ_WRITE {
 		if accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
 			return errors.Errorf("write method '%s' called without write access", methodInfo.Name)
 		}
@@ -49,8 +28,8 @@ func (s *service) verifyMethodPermissions(contractInfo *types.ContractInfo, meth
 	return nil
 }
 
-func (s *service) verifyInternalMethodCall(contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope) error {
-	if callingService.Equal(contractInfo.Name) {
+func (s *service) verifyInternalMethodCall(contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope) error {
+	if callingService.Equal(primitives.ContractName(contractInfo.Name)) {
 		return nil
 	}
 	if permissionScope == protocol.PERMISSION_SCOPE_SYSTEM {
@@ -59,7 +38,7 @@ func (s *service) verifyInternalMethodCall(contractInfo *types.ContractInfo, met
 	return errors.Errorf("internal method '%s' called from different service '%s' without system permissions", methodInfo.Name, callingService)
 }
 
-func (s *service) processMethodCall(ctx types.Context, contractInfo *types.ContractInfo, methodInfo *types.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
+func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("call method '%s' panicked: %v", methodInfo.Name, r)
@@ -67,15 +46,19 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	}()
 
 	// verify input args
-	argValues, err := s.prepareMethodInputArgsForCall(ctx, methodInfo, methodInfo.Implementation, args)
+	argValues, err := s.prepareMethodInputArgsForCall(executionContextId, methodInfo, methodInfo.Implementation, args)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// execute the call
-	s.reporting.Info("processor executing contract", log.Stringable("contract", contractInfo.Name), log.Stringable("method", methodInfo.Name))
-	contractValue := reflect.ValueOf(s.contractRepository[contractInfo.Name])
-	contextValue := reflect.ValueOf(ctx)
+	s.reporting.Info("processor executing contract", log.String("contract", contractInfo.Name), log.String("method", methodInfo.Name))
+	contractInstance := s.getContractInstanceFromRepository(contractInfo.Name)
+	if contractInstance == nil {
+		return nil, nil, errors.New("contract repository is not initialized yet")
+	}
+	contractValue := reflect.ValueOf(contractInstance)
+	contextValue := reflect.ValueOf(executionContextId)
 	inValues := append([]reflect.Value{contractValue, contextValue}, argValues...)
 	outValues := reflect.ValueOf(methodInfo.Implementation).Call(inValues)
 	if len(outValues) == 0 {
@@ -96,12 +79,12 @@ func (s *service) processMethodCall(ctx types.Context, contractInfo *types.Contr
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *types.MethodInfo, implementation interface{}, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
+func (s *service) prepareMethodInputArgsForCall(executionContextId sdk.Context, methodInfo *sdk.MethodInfo, implementation interface{}, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
 	const NUM_ARGS_RECEIVER_AND_CONTEXT = 2
 
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(implementation).Type()
-	if methodType.NumIn() < NUM_ARGS_RECEIVER_AND_CONTEXT || methodType.In(1) != reflect.TypeOf(ctx) {
+	if methodType.NumIn() < NUM_ARGS_RECEIVER_AND_CONTEXT || methodType.In(1) != reflect.TypeOf(executionContextId) {
 		return nil, errors.Errorf("method '%s' first arg is not Context", methodInfo.Name)
 	}
 
@@ -138,7 +121,7 @@ func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *t
 				return nil, errors.Errorf("method '%s' arg %d slice type is not byte", methodInfo.Name, i)
 			}
 			if !arg.IsTypeBytesValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.BytesValue()))
 		default:
@@ -155,7 +138,7 @@ func (s *service) prepareMethodInputArgsForCall(ctx types.Context, methodInfo *t
 	return res, nil
 }
 
-func (s *service) createMethodOutputArgs(methodInfo *types.MethodInfo, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
+func (s *service) createMethodOutputArgs(methodInfo *sdk.MethodInfo, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
 	res := []*protocol.MethodArgumentBuilder{}
 	for i, arg := range args {
 		switch arg.Kind() {
@@ -179,7 +162,7 @@ func (s *service) createMethodOutputArgs(methodInfo *types.MethodInfo, args []re
 	}).Build(), nil
 }
 
-func (s *service) createContractOutputError(methodInfo *types.MethodInfo, value reflect.Value) (outErr error, err error) {
+func (s *service) createContractOutputError(methodInfo *sdk.MethodInfo, value reflect.Value) (outErr error, err error) {
 	if value.Interface() != nil {
 		var ok bool
 		outErr, ok = value.Interface().(error)

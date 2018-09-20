@@ -1,11 +1,11 @@
 #!/bin/bash -x
 
-CGO_ENABLED=0 time go build -o orbs-node -a -ldflags '-extldflags "-static"' main.go
+time go build -o orbs-node -a main.go
 
-CGO_ENABLED=0 time go test -a -ldflags '-extldflags "-static"' -c ./test/e2e
+time go test -a -c ./test/e2e
 
 if [ "$SKIP_DEVTOOLS" == "" ]; then
-    CGO_ENABLED=0 time go build -o orbs-json-client -a -ldflags '-extldflags "-static"' devtools/jsonapi/main/main.go
+    time go build -o orbs-json-client -a devtools/jsonapi/main/main.go
 
-    CGO_ENABLED=0 time go build -o sambusac -a -ldflags '-extldflags "-static"' devtools/sambusac/main/main.go
+    time go build -o sambusac -a devtools/sambusac/main/main.go
 fi

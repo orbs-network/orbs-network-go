@@ -20,7 +20,7 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) expectNativeContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error)) {
+func (h *harness) expectNativeContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId, *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error)) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
@@ -30,7 +30,7 @@ func (h *harness) expectNativeContractMethodCalled(expectedContractName primitiv
 	}
 
 	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are service", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
-		callResult, outputArgsArray, err := contractFunction(input.ContextId)
+		callResult, outputArgsArray, err := contractFunction(input.ContextId, input.InputArgumentArray)
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: outputArgsArray,
 			CallResult:          callResult,
@@ -72,12 +72,12 @@ func (h *harness) verifyNativeContractMethodCalled(t *testing.T) {
 	require.True(t, ok, "did not call processor: %v", err)
 }
 
-func (h *harness) expectSystemContractCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, returnError error, returnArgs ...interface{}) {
+func (h *harness) expectSystemContractCalled(expectedContractName string, expectedMethodName string, returnError error, returnArgs ...interface{}) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
-			input.ContractName == expectedContractName &&
-			input.MethodName == expectedMethodName
+			string(input.ContractName) == expectedContractName &&
+			string(input.MethodName) == expectedMethodName
 	}
 
 	callResult := protocol.EXECUTION_RESULT_SUCCESS

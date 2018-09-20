@@ -13,6 +13,7 @@ type executionContext struct {
 	transientState      *transientState
 	accessScope         protocol.ExecutionAccessScope
 	batchTransientState *transientState
+	transaction         *protocol.Transaction
 }
 
 func (c *executionContext) serviceStackTop() primitives.ContractName {
@@ -34,6 +35,24 @@ func (c *executionContext) serviceStackPop() {
 	c.serviceStack = c.serviceStack[0 : len(c.serviceStack)-1]
 }
 
+func (c *executionContext) serviceStackDepth() int {
+	return len(c.serviceStack)
+}
+
+func (c *executionContext) serviceStackPeekCurrent() primitives.ContractName {
+	if len(c.serviceStack) == 0 {
+		return ""
+	}
+	return c.serviceStack[len(c.serviceStack)-1]
+}
+
+func (c *executionContext) serviceStackPeekCaller() primitives.ContractName {
+	if len(c.serviceStack) <= 1 {
+		return ""
+	}
+	return c.serviceStack[len(c.serviceStack)-2]
+}
+
 type executionContextProvider struct {
 	mutex          *sync.RWMutex
 	activeContexts map[primitives.ExecutionContextId]*executionContext
@@ -47,7 +66,7 @@ func newExecutionContextProvider() *executionContextProvider {
 	}
 }
 
-func (cp *executionContextProvider) allocateExecutionContext(blockHeight primitives.BlockHeight, accessScope protocol.ExecutionAccessScope) (primitives.ExecutionContextId, *executionContext) {
+func (cp *executionContextProvider) allocateExecutionContext(blockHeight primitives.BlockHeight, accessScope protocol.ExecutionAccessScope, transaction *protocol.Transaction) (primitives.ExecutionContextId, *executionContext) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
@@ -56,6 +75,7 @@ func (cp *executionContextProvider) allocateExecutionContext(blockHeight primiti
 		serviceStack:   []primitives.ContractName{},
 		transientState: newTransientState(),
 		accessScope:    accessScope,
+		transaction:    transaction,
 	}
 
 	// TODO: improve this mechanism because it wraps around on overflow
@@ -66,16 +86,16 @@ func (cp *executionContextProvider) allocateExecutionContext(blockHeight primiti
 	return newContextId, newContext
 }
 
-func (cp *executionContextProvider) destroyExecutionContext(contextId primitives.ExecutionContextId) {
+func (cp *executionContextProvider) destroyExecutionContext(executionContextId primitives.ExecutionContextId) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	delete(cp.activeContexts, contextId)
+	delete(cp.activeContexts, executionContextId)
 }
 
-func (cp *executionContextProvider) loadExecutionContext(contextId primitives.ExecutionContextId) *executionContext {
+func (cp *executionContextProvider) loadExecutionContext(executionContextId primitives.ExecutionContextId) *executionContext {
 	cp.mutex.RLock()
 	defer cp.mutex.RUnlock()
 
-	return cp.activeContexts[contextId]
+	return cp.activeContexts[executionContextId]
 }

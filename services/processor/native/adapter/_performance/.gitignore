@@ -1,0 +1,4 @@
+*.so
+*.o
+*.a
+compile_in_process_test

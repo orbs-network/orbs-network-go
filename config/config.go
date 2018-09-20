@@ -7,18 +7,13 @@ import (
 )
 
 type NodeConfig interface {
-	Set(key string, value NodeConfigValue) NodeConfig
-	SetDuration(key string, value time.Duration) NodeConfig
-	SetUint32(key string, value uint32) NodeConfig
-
-	SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig
-	SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig
-
+	// shared
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
@@ -54,11 +49,42 @@ type NodeConfig interface {
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 
+	// gossip
+	GossipListenPort() uint16
+	GossipConnectionKeepAliveInterval() time.Duration
+	GossipNetworkTimeout() time.Duration
+
 	// public api
 	SendTransactionTimeout() time.Duration
 	GetTransactionStatusGrace() time.Duration
+
+	// processor
+	ProcessorArtifactPath() string
+}
+
+type MutableNodeConfig interface {
+	NodeConfig
+
+	Set(key string, value NodeConfigValue) MutableNodeConfig
+	SetDuration(key string, value time.Duration) MutableNodeConfig
+	SetUint32(key string, value uint32) MutableNodeConfig
+	SetString(key string, value string) MutableNodeConfig
+	SetFederationNodes(nodes map[string]FederationNode) MutableNodeConfig
+	SetGossipPeers(peers map[string]GossipPeer) MutableNodeConfig
+	SetNodePublicKey(key primitives.Ed25519PublicKey) MutableNodeConfig
+	SetNodePrivateKey(key primitives.Ed25519PrivateKey) MutableNodeConfig
+
+	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) MutableNodeConfig
+	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig
+
+	MergeWithFileConfig(source string) (MutableNodeConfig, error)
 }
 
 type FederationNode interface {
 	NodePublicKey() primitives.Ed25519PublicKey
+}
+
+type GossipPeer interface {
+	GossipPort() uint16
+	GossipEndpoint() string
 }

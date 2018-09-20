@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/harness"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"os"
 	"sync"
 	"time"
@@ -24,8 +23,7 @@ type Sambusac struct {
 func StartSambusac(serverAddress string, pathToContracts string, blocking bool) *Sambusac {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	testId := "Sambusac-Test-Network"
-	network := harness.NewAcceptanceTestNetwork(2, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, testId).StartNodes(ctx)
+	network := harness.NewDevelopmentNetwork().StartNodes(ctx)
 
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
 

@@ -10,19 +10,19 @@ import (
 	"testing"
 )
 
-func TestRunLocalMethodSuccess(t *testing.T) {
+func TestRunLocalMethod_Success(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(uint32(17), "hello", []byte{0x01, 0x02}), nil
 	})
 
 	result, outputArgs, refHeight, err := h.runLocalMethod("Contract1", "method1")
 	require.NoError(t, err, "run local method should not fail")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
-	require.Equal(t, builders.MethodArgumentsOpaque(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "run local method should return matching output args")
+	require.Equal(t, builders.MethodArgumentsOpaqueEncode(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "run local method should return matching output args")
 	require.EqualValues(t, 12, refHeight)
 
 	h.verifySystemContractCalled(t)
@@ -30,12 +30,12 @@ func TestRunLocalMethodSuccess(t *testing.T) {
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestRunLocalMethodContractError(t *testing.T) {
+func TestRunLocalMethod_ContractError(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.MethodArgumentsArray(), errors.New("contract error")
 	})
 
@@ -50,12 +50,12 @@ func TestRunLocalMethodContractError(t *testing.T) {
 	h.verifyNativeContractMethodCalled(t)
 }
 
-func TestRunLocalMethodUnexpectedError(t *testing.T) {
+func TestRunLocalMethod_UnexpectedError(t *testing.T) {
 	h := newHarness()
-	h.expectSystemContractCalled(deployments.CONTRACT.Name, deployments.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+	h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 	h.expectStateStorageBlockHeightRequested(12)
-	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled("Contract1", "method1", func(contextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.MethodArgumentsArray(), errors.New("unexpected error")
 	})
 
