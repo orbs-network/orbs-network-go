@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
-	)
+)
 
 type Config interface {
 	SendTransactionTimeout() time.Duration
@@ -24,6 +24,7 @@ type service struct {
 	reporting       log.BasicLogger
 
 	txWaiter *txWaiter
+	//mapper   *mapper
 }
 
 func NewPublicApi(
@@ -40,6 +41,7 @@ func NewPublicApi(
 		reporting:       reporting.For(log.Service("public-api")),
 
 		txWaiter: newTxWaiter(ctx),
+		//mapper: newMapper(),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(s)
@@ -67,6 +69,11 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 
 	waitContext := s.txWaiter.createTxWaitCtx(txHash)
 	defer waitContext.cleanup()
+
+	//waitResult, alreadyActive := s.mapper.addWaiter(txHash.KeyForMap())
+	//if alreadyActive != nil {
+	//	return nil, errors.Errorf("transaction '%s' is already in pending state", txHash) // TODO NOAM create response instead of nil what err ?
+	//}
 
 	txResponse, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{
 		SignedTransaction: tx,
