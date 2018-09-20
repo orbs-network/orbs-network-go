@@ -199,8 +199,6 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 		harness.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
 
-		time.Sleep(1 * time.Millisecond)
-
 		harness.verifyMocks(t, 4)
 	})
 }
