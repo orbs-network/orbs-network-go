@@ -59,8 +59,7 @@ func getConfig(pathToConfig string) (config.NodeConfig, error) {
 }
 
 func main() {
-	httpAddress := ":8080"
-
+	httpAddress := flag.String("listen", ":8080", "ip address and port for http server")
 	silentLog := flag.Bool("silent", false, "disable output to stdout")
 	pathToLog := flag.String("log", "", "path/to/node.log")
 	pathToConfig := flag.String("config", "", "path/to/config.json")
@@ -78,6 +77,6 @@ func main() {
 	bootstrap.NewNode(
 		cfg,
 		logger,
-		httpAddress,
+		*httpAddress,
 	).WaitUntilShutdown()
 }
