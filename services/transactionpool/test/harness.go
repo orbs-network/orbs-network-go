@@ -197,7 +197,7 @@ func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
-func getConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, keyPair *keys.Ed25519KeyPair) transactionpool.Config {
+func newTransactionPoolConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, keyPair *keys.Ed25519KeyPair) transactionpool.Config {
 	cfg := config.EmptyConfig()
 
 	cfg.SetNodePublicKey(keyPair.PublicKey())
@@ -226,8 +226,8 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	config := getConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, config, log.GetLogger(), ts)
+	cfg := newTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger(), ts)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)

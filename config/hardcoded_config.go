@@ -8,7 +8,9 @@ import (
 )
 
 type hardCodedFederationNode struct {
-	nodePublicKey primitives.Ed25519PublicKey
+	nodePublicKey  primitives.Ed25519PublicKey
+	gossipPort     uint16
+	gossipEndpoint string
 }
 
 type hardCodedGossipPeer struct {
@@ -90,7 +92,7 @@ func newHardCodedConfig(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	processorArtifactPath string,
-) NodeConfig {
+) MutableNodeConfig {
 	cfg := &config{
 		federationNodes:         federationNodes,
 		gossipPeers:             gossipPeers,
@@ -132,48 +134,65 @@ func newHardCodedConfig(
 	return cfg
 }
 
-func (c *config) Set(key string, value NodeConfigValue) NodeConfig {
+func (c *config) Set(key string, value NodeConfigValue) MutableNodeConfig {
 	c.kv[key] = value
 	return c
 }
 
-func (c *config) SetDuration(key string, value time.Duration) NodeConfig {
+func (c *config) SetDuration(key string, value time.Duration) MutableNodeConfig {
 	c.kv[key] = NodeConfigValue{DurationValue: value}
 	return c
 }
 
-func (c *config) SetUint32(key string, value uint32) NodeConfig {
+func (c *config) SetUint32(key string, value uint32) MutableNodeConfig {
 	c.kv[key] = NodeConfigValue{Uint32Value: value}
 	return c
 }
 
-func (c *config) SetString(key string, value string) NodeConfig {
+func (c *config) SetString(key string, value string) MutableNodeConfig {
 	c.kv[key] = NodeConfigValue{StringValue: value}
 	return c
 }
 
-func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) NodeConfig {
+func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) MutableNodeConfig {
 	c.nodePublicKey = key
 	return c
 }
 
-func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) NodeConfig {
+func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) MutableNodeConfig {
 	c.nodePrivateKey = key
 	return c
 }
 
-func (c *config) SetFederationNodes(federationNodes map[string]FederationNode) NodeConfig {
-	c.federationNodes = federationNodes
+func (c *config) SetConstantConsensusLeader(key primitives.Ed25519PublicKey) MutableNodeConfig {
+	c.constantConsensusLeader = key
 	return c
 }
 
-func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) NodeConfig {
+func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig {
+	c.activeConsensusAlgo = algoType
+	return c
+}
+
+func (c *config) SetFederationNodes(nodes map[string]FederationNode) MutableNodeConfig {
+	c.federationNodes = nodes
+	return c
+}
+
+func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) MutableNodeConfig {
 	c.gossipPeers = gossipPeers
 	return c
 }
 
 func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
+}
+
+func (c *hardCodedFederationNode) GossipPort() uint16 {
+	return c.gossipPort
+}
+func (c *hardCodedFederationNode) GossipEndpoint() string {
+	return c.gossipEndpoint
 }
 
 func (c *hardCodedGossipPeer) GossipPort() uint16 {
