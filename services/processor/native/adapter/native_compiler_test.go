@@ -20,7 +20,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
 
-	code := string(contracts.SourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
+	code := string(contracts.NativeSourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
 	tmpDir, tmpDirToCleanup := createTempTestDir(t)
 	defer os.RemoveAll(tmpDirToCleanup)
 

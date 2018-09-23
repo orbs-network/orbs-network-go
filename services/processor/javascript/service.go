@@ -1,0 +1,98 @@
+package javascript
+
+import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"sync"
+)
+
+type service struct {
+	reporting log.BasicLogger
+
+	mutex                        *sync.RWMutex
+	contractSdkHandlerUnderMutex handlers.ContractSdkCallHandler
+	contractsUnderMutex          map[primitives.ContractName]string
+}
+
+func NewJavaScriptProcessor(reporting log.BasicLogger) services.Processor {
+	return &service{
+		reporting:           reporting.For(log.Service("processor-javascript")),
+		mutex:               &sync.RWMutex{},
+		contractsUnderMutex: make(map[primitives.ContractName]string),
+	}
+}
+
+// runs once on system initialization (called by the virtual machine constructor)
+func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.contractSdkHandlerUnderMutex = handler
+}
+
+func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	// retrieve code
+	code, err := s.retrieveContractCodeFromRepository(input.ContextId, input.ContractName)
+	if err != nil {
+		return &services.ProcessCallOutput{
+			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+		}, err
+	}
+
+	// execute
+	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, code, input.MethodName, input.InputArgumentArray)
+	if outputArgs == nil {
+		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+	}
+	if err != nil {
+		return &services.ProcessCallOutput{
+			OutputArgumentArray: outputArgs,
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+		}, err
+	}
+
+	// result
+	callResult := protocol.EXECUTION_RESULT_SUCCESS
+	if contractErr != nil {
+		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
+	}
+	return &services.ProcessCallOutput{
+		OutputArgumentArray: outputArgs,
+		CallResult:          callResult,
+	}, contractErr
+}
+
+func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
+	panic("Not implemented")
+}
+
+func (s *service) getContractSdkHandler() handlers.ContractSdkCallHandler {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return s.contractSdkHandlerUnderMutex
+}
+
+func (s *service) getContractFromRepository(contractName primitives.ContractName) string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	if s.contractsUnderMutex == nil {
+		return ""
+	}
+	return s.contractsUnderMutex[contractName]
+}
+
+func (s *service) addContractToRepository(contractName primitives.ContractName, code string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.contractsUnderMutex == nil {
+		return
+	}
+	s.contractsUnderMutex[contractName] = code
+}

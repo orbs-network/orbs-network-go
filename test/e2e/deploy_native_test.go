@@ -28,7 +28,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		WithArgs(
 			fmt.Sprintf("CounterFrom%d", counterStart),
 			uint32(protocol.PROCESSOR_TYPE_NATIVE),
-			[]byte(contracts.SourceCodeForCounter(counterStart)),
+			[]byte(contracts.NativeSourceCodeForCounter(counterStart)),
 		).Builder()
 	response, err := h.sendTransaction(t, deploy)
 	require.NoError(t, err, "deploy transaction should not return error")
