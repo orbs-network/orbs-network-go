@@ -2,11 +2,12 @@ package merkle
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 type Proof []*Node
@@ -22,14 +23,14 @@ var zeroValueHash = getZeroValueHash()
 type Node struct {
 	path     string // TODO replace with []byte + parity bool when moving to trieRadix = 16
 	value    primitives.Sha256
-	branches [trieRadix]primitives.MerkleSha256
+	branches *[trieRadix]primitives.MerkleSha256
 }
 
 func createNode(path string, valueHash primitives.Sha256) *Node {
 	return &Node{
 		path:     path,
 		value:    valueHash,
-		branches: [trieRadix]primitives.MerkleSha256{},
+		branches: &[trieRadix]primitives.MerkleSha256{},
 	}
 }
 func (n *Node) hasValue() bool {
@@ -41,12 +42,11 @@ func (n *Node) hash() primitives.MerkleSha256 {
 	return primitives.MerkleSha256(hash.CalcSha256([]byte(serializedNode)))
 }
 func (n *Node) clone() *Node {
-	newBranches := [trieRadix]primitives.MerkleSha256{}
-	copy(newBranches[:], n.branches[:])
+
 	result := &Node{
 		path:     n.path,
 		value:    n.value, // TODO - copy?
-		branches: newBranches,
+		branches: n.branches,
 	}
 	for k, v := range n.branches {
 		result.branches[k] = v // TODO - copy?
