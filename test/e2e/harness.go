@@ -88,9 +88,6 @@ func newHarness() *harness {
 
 			nodes = append(nodes, node)
 		}
-
-		// To let node start up properly, otherwise in Docker we get connection refused
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	return &harness{
