@@ -115,13 +115,10 @@ func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPa
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			// "go build", invoked with a file name, puts this odd message before any compile errors; strip it.
-			errs := strings.Replace(string(out), "# command-line-arguments\n", "", 1)
-			errs = strings.Replace(errs, "\n", "; ", -1)
-			return "", errors.Errorf("error building go source: %v", errs)
-		}
-		return "", errors.Errorf("error building go source: %v", err)
+		buildOutput := string(out)
+		buildOutput = strings.Replace(buildOutput, "# command-line-arguments\n", "", 1) // "go build", invoked with a file name, puts this odd message before any compile errors; strip it.
+		buildOutput = strings.Replace(buildOutput, "\n", "; ", -1)
+		return "", errors.Errorf("error building go source: %s, go build output: %s", err.Error(), buildOutput)
 	}
 
 	return soFilePath, nil
