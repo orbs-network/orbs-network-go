@@ -1,18 +1,16 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 )
@@ -31,11 +29,15 @@ func compileTest(newHarness func(t *testing.T) *compilerContractHarness) func(*t
 		h := newHarness(t)
 		defer h.cleanup()
 
+		// give the test one minute timeout to compile
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
 		t.Log("Compiling a valid contract")
 
 		code := string(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
 		compilationStartTime := time.Now().UnixNano()
-		contractInfo, err := h.compiler.Compile(code)
+		contractInfo, err := h.compiler.Compile(ctx, code)
 		compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
 		t.Logf("Compilation time: %d ms", compilationTimeMs)
 
@@ -51,7 +53,7 @@ func compileTest(newHarness func(t *testing.T) *compilerContractHarness) func(*t
 		t.Log("Compiling an invalid contract")
 
 		invalidCode := "invalid code example"
-		_, err = h.compiler.Compile(invalidCode)
+		_, err = h.compiler.Compile(ctx, invalidCode)
 		require.Error(t, err, "compile should fail")
 	}
 }
@@ -62,14 +64,14 @@ type compilerContractHarness struct {
 }
 
 func aNativeCompiler(t *testing.T) *compilerContractHarness {
-	tmpDir, tmpDirToCleanup := createTempTestDir(t)
+	tmpDir := test.CreateTempDirForTest(t)
 	cfg := &hardcodedConfig{artifactPath: tmpDir}
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	compiler := adapter.NewNativeCompiler(cfg, log)
 	return &compilerContractHarness{
 		compiler: compiler,
 		cleanup: func() {
-			os.RemoveAll(tmpDirToCleanup)
+			os.RemoveAll(tmpDir)
 		},
 	}
 }
@@ -82,17 +84,6 @@ func aFakeCompiler(t *testing.T) *compilerContractHarness {
 		compiler: compiler,
 		cleanup:  func() {},
 	}
-}
-
-func createTempTestDir(t *testing.T) (string, string) {
-	prefix := strings.Replace(t.Name(), "/", "__", -1)
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	os.MkdirAll(dir, 0755)
-	tmpDir, err := ioutil.TempDir(dir, prefix)
-	if err != nil {
-		panic("could not create temp dir for test")
-	}
-	return tmpDir, dir
 }
 
 type hardcodedConfig struct {

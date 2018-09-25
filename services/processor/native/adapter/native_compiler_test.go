@@ -1,14 +1,13 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
@@ -20,9 +19,13 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
 
+	// give the test one minute timeout to compile
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	code := string(contracts.SourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
-	tmpDir, tmpDirToCleanup := createTempTestDir(t)
-	defer os.RemoveAll(tmpDirToCleanup)
+	tmpDir := test.CreateTempDirForTest(t)
+	defer os.RemoveAll(tmpDir)
 
 	t.Log("Build fresh artifacts")
 
@@ -31,7 +34,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.FileExists(t, sourceFilePath, "file should exist")
 
 	compilationStartTime := time.Now().UnixNano()
-	soFilePath, err := buildSharedObject("testPrefix", sourceFilePath, tmpDir)
+	soFilePath, err := buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
@@ -40,12 +43,12 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	t.Log("Simulate corrupted artifacts and rebuild")
 
 	// simulate corrupt file that exists
-	err = ioutil.WriteFile(sourceFilePath, []byte{0x01}, 0644)
+	err = ioutil.WriteFile(sourceFilePath, []byte{0x01}, 0600)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), getFileSize(sourceFilePath), "file size should match")
 
 	// simulate corrupt file that exists
-	err = ioutil.WriteFile(soFilePath, []byte{0x01}, 0644)
+	err = ioutil.WriteFile(soFilePath, []byte{0x01}, 0600)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), getFileSize(soFilePath), "file size should match")
 
@@ -55,7 +58,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.NotEqual(t, int64(1), getFileSize(sourceFilePath), "file size should not match")
 
 	compilationStartTime = time.Now().UnixNano()
-	soFilePath, err = buildSharedObject("testPrefix", sourceFilePath, tmpDir)
+	soFilePath, err = buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
@@ -72,7 +75,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	t.Log("Try to rebuild already loaded artifact")
 
 	compilationStartTime = time.Now().UnixNano()
-	soFilePath, err = buildSharedObject("testPrefix", sourceFilePath, tmpDir)
+	soFilePath, err = buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
@@ -83,17 +86,6 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.NoError(t, err, "load should succeed")
 	require.NotNil(t, contractInfo, "loaded object should not be nil")
 	require.Equal(t, fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
-}
-
-func createTempTestDir(t *testing.T) (string, string) {
-	prefix := strings.Replace(t.Name(), "/", "__", -1)
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	os.MkdirAll(dir, 0755)
-	tmpDir, err := ioutil.TempDir(dir, prefix)
-	if err != nil {
-		panic("could not create temp dir for test")
-	}
-	return tmpDir, dir
 }
 
 func getFileSize(filePath string) int64 {
