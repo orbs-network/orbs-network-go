@@ -141,6 +141,17 @@ All tests run automatically when the Docker images are built. The script `./test
 
 * The logs for all E2E nodes will be placed on your machine under the `./logs` directory of the project (and will be overridden on every E2E run).
 
+#### Component tests on Docker
+To detect flaky tests of specific components, run **component** tests multiple times on Docker:
+* To enable running component tests multiple times, edit `test.sh` and uncomment the line `./test.components.sh`
+* To modify the number of times each component test runs, edit `test.components.sh` and modify the value of the **COUNT** variable (you may also need to modify the various timeouts)
+* *optional* To run a specific test (component, unit, of any other) multiple times (useful when debugging a specific scenario for flakiness), edit `test.components.sh`, comment the line `run_component_tests`,
+then uncomment the line starting with `run_specific_test` and modify the test name to run that one specific test multiple times on Docker.
+
+After you've finished editing, run `./docker-build.sh && ./docker-test.sh`
+
+> You should probably not commit any of these edits you've made for testing, as they are transient in nature.
+
 ## Developer experience
 
 ### Debugging issues on Docker

@@ -103,17 +103,17 @@ func (s *service) prepareMethodInputArgsForCall(executionContextId sdk.Context, 
 		switch methodType.In(i + NUM_ARGS_RECEIVER_AND_CONTEXT).Kind() {
 		case reflect.Uint32:
 			if !arg.IsTypeUint32Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.Uint32Value()))
 		case reflect.Uint64:
 			if !arg.IsTypeUint64Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.Uint64Value()))
 		case reflect.String:
 			if !arg.IsTypeStringValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.StringValue()))
 		case reflect.Slice:
@@ -125,7 +125,7 @@ func (s *service) prepareMethodInputArgsForCall(executionContextId sdk.Context, 
 			}
 			res = append(res, reflect.ValueOf(arg.BytesValue()))
 		default:
-			return nil, errors.Errorf("method '%s' expects arg %d to be unknown type", methodInfo.Name, i, arg.Type())
+			return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", methodInfo.Name, i, arg.StringType())
 		}
 
 	}
