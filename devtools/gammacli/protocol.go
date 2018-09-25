@@ -1,4 +1,4 @@
-package jsonapi
+package gammacli
 
 import (
 	"encoding/hex"
@@ -7,22 +7,22 @@ import (
 )
 
 // Bytes are hex and are converted to []byte after json unmarshal
-type MethodArgument struct {
+type JSONMethodArgument struct {
 	Name  string
 	Type  string
 	Value interface{}
 }
 
-type Transaction struct {
+type JSONTransaction struct {
 	ContractName string
 	MethodName   string
-	Arguments    []MethodArgument
+	Arguments    []JSONMethodArgument
 }
 
 type TransactionReceipt struct {
 	Txhash          primitives.Sha256
 	ExecutionResult protocol.ExecutionResult
-	OutputArguments []MethodArgument
+	OutputArguments []JSONMethodArgument
 }
 
 type SendTransactionOutput struct {
@@ -33,13 +33,13 @@ type SendTransactionOutput struct {
 }
 
 type CallMethodOutput struct {
-	OutputArguments []MethodArgument
+	OutputArguments []JSONMethodArgument
 	CallResult      protocol.ExecutionResult
 	BlockHeight     primitives.BlockHeight
 	BlockTimestamp  primitives.TimestampNano
 }
 
-func (ma *MethodArgument) String() string {
+func (ma *JSONMethodArgument) String() string {
 	returnString := ma.Name + ":"
 
 	switch ma.Type {

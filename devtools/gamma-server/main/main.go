@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"strconv"
 )
 
@@ -13,5 +13,5 @@ func main() {
 	var serverAddress = ":" + strconv.Itoa(*port)
 
 	// TODO Remove the blocking boolean flag from here and make it an environment variable. (Shouldn't concern our users who will see how we bootstrap this)
-	jsonapi.StartGammaServer(serverAddress, true)
+	gammacli.StartGammaServer(serverAddress, true)
 }

@@ -1,4 +1,4 @@
-package jsonapi
+package gammacli
 
 import (
 	"encoding/hex"
@@ -14,20 +14,20 @@ import (
 	"time"
 )
 
-func TestConvertTransactionWithArgumentsOfTypeString(t *testing.T) {
-	arg := MethodArgument{
+func TestConvertJSONTransactionWithArgumentsOfTypeString(t *testing.T) {
+	arg := JSONMethodArgument{
 		Name:  "arg1",
 		Type:  "string",
 		Value: "foo",
 	}
 
-	req := &Transaction{
+	req := &JSONTransaction{
 		ContractName: "contract",
 		MethodName:   "method",
-		Arguments:    []MethodArgument{arg},
+		Arguments:    []JSONMethodArgument{arg},
 	}
 
-	txb, err := ConvertTransaction(req)
+	txb, err := ConvertJSONTransactionToMemBuff(req)
 	require.NoError(t, err, "Expected no error from convertTransaction")
 	tx := txb.Build()
 
@@ -45,20 +45,20 @@ func TestConvertTransactionWithArgumentsOfTypeString(t *testing.T) {
 }
 
 func TestConvertTransactionWithArgumentsOfTypeUInt64(t *testing.T) {
-	arg := MethodArgument{
+	arg := JSONMethodArgument{
 		Name:  "arg1",
 		Type:  "uint64",
 		Value: float64(291288), // We choose float64 here since that's the realistic case of when we receive a JSON converted
 		// To a Go struct as it's taking numbers always into float64 by default.
 	}
 
-	req := &Transaction{
+	req := &JSONTransaction{
 		ContractName: "contract",
 		MethodName:   "method",
-		Arguments:    []MethodArgument{arg},
+		Arguments:    []JSONMethodArgument{arg},
 	}
 
-	txb, err := ConvertTransaction(req)
+	txb, err := ConvertJSONTransactionToMemBuff(req)
 	require.NoError(t, err, "Expected no error from convertTransaction")
 	tx := txb.Build()
 
@@ -76,19 +76,19 @@ func TestConvertTransactionWithArgumentsOfTypeUInt64(t *testing.T) {
 }
 
 func TestConvertTransactionWithArgumentsOfTypeUInt32(t *testing.T) {
-	arg := MethodArgument{
+	arg := JSONMethodArgument{
 		Name:  "arg1",
 		Type:  "uint32",
 		Value: float64(1234),
 	}
 
-	req := &Transaction{
+	req := &JSONTransaction{
 		ContractName: "contract",
 		MethodName:   "method",
-		Arguments:    []MethodArgument{arg},
+		Arguments:    []JSONMethodArgument{arg},
 	}
 
-	txb, err := ConvertTransaction(req)
+	txb, err := ConvertJSONTransactionToMemBuff(req)
 	require.NoError(t, err, "Expected no error from convertTransaction")
 	tx := txb.Build()
 
@@ -108,19 +108,19 @@ func TestConvertTransactionWithArgumentsOfTypeUInt32(t *testing.T) {
 func TestConvertTransactionWithArgumentsOfTypeHexBytes(t *testing.T) {
 	hexString := "74686973206973206120776f6e64657266756c20686578207465737421" // this is a wonderful hex test!
 
-	arg := MethodArgument{
+	arg := JSONMethodArgument{
 		Name:  "arg1",
 		Type:  "bytes",
 		Value: hexString,
 	}
 
-	req := &Transaction{
+	req := &JSONTransaction{
 		ContractName: "contract",
 		MethodName:   "method",
-		Arguments:    []MethodArgument{arg},
+		Arguments:    []JSONMethodArgument{arg},
 	}
 
-	txb, err := ConvertTransaction(req)
+	txb, err := ConvertJSONTransactionToMemBuff(req)
 	require.NoError(t, err, "Expected no error from convertTransaction")
 	tx := txb.Build()
 
@@ -143,16 +143,16 @@ func TestConvertTransactionWithArgumentsOfTypeHexBytes(t *testing.T) {
 func TestConvertAndSignTransaction(t *testing.T) {
 	keyPair := keys.Ed25519KeyPairForTests(1)
 
-	arg := MethodArgument{
+	arg := JSONMethodArgument{
 		Name:  "arg1",
 		Type:  "string",
 		Value: "foo",
 	}
 
-	req := &Transaction{
+	req := &JSONTransaction{
 		ContractName: "contract",
 		MethodName:   "method",
-		Arguments:    []MethodArgument{arg},
+		Arguments:    []JSONMethodArgument{arg},
 	}
 
 	stxb, err := ConvertAndSignTransaction(req, keyPair)

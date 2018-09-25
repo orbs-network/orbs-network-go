@@ -1,4 +1,4 @@
-package jsonapi
+package gammacli
 
 import (
 	"context"

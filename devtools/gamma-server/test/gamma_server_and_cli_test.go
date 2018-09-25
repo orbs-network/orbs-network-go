@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/stretchr/testify/require"
 )
@@ -71,7 +71,7 @@ func TestGammaFlow(t *testing.T) {
 	}
 
 	port := ":8080"
-	gamma := jsonapi.StartGammaServer(port, false)
+	gamma := gammacli.StartGammaServer(port, false)
 	defer gamma.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
@@ -90,8 +90,8 @@ func TestGammaFlow(t *testing.T) {
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
-	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
+	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "JSONTransaction status to be successful = 1")
+	require.Equal(t, 1, response.TransactionStatus, "JSONTransaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 
 	getCommand := append(baseCommand, "run", "call", "../json/getBalance.json")

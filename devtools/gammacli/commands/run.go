@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"io/ioutil"
@@ -69,7 +69,7 @@ func getKeypairFromFlags(publicKey string, privateKey string) *keys.Ed25519KeyPa
 	return keyPair
 }
 
-func fixInputNumbers(tx *jsonapi.Transaction) {
+func fixInputNumbers(tx *gammacli.JSONTransaction) {
 	for _, arg := range tx.Arguments {
 		if arg.Type == "uint64" {
 			arg.Value = uint64(arg.Value.(float64))
@@ -97,7 +97,7 @@ func HandleRunCommand(args []string) {
 	runType := args[0]
 	pathToJson := args[1]
 
-	tx := &jsonapi.Transaction{}
+	tx := &gammacli.JSONTransaction{}
 	var jsonBytes []byte
 	_, err := os.Stat(pathToJson)
 	if err != nil {
@@ -128,7 +128,7 @@ func HandleRunCommand(args []string) {
 			keyPair = getKeypairFromOrbsKeyFile()
 		}
 
-		result, err := jsonapi.SendTransaction(tx, keyPair, *hostPtr, false)
+		result, err := gammacli.SendTransaction(tx, keyPair, *hostPtr, false)
 		if err != nil {
 			fmt.Println("Error sending your transaction", err)
 			os.Exit(1)
@@ -138,7 +138,7 @@ func HandleRunCommand(args []string) {
 		fmt.Println(string(jsonBytes))
 		os.Exit(0)
 	case "call":
-		result, _ := jsonapi.CallMethod(tx, *hostPtr, false)
+		result, _ := gammacli.CallMethod(tx, *hostPtr, false)
 
 		jsonBytes, _ := json.Marshal(result)
 		fmt.Println(string(jsonBytes))

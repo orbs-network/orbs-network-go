@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"io/ioutil"
 	"os"
 )
@@ -36,13 +36,13 @@ func HandleDeployCommand(args []string) {
 		os.Exit(1)
 	}
 
-	argName := jsonapi.MethodArgument{
+	argName := gammacli.JSONMethodArgument{
 		Name:  "serviceName",
 		Type:  "string",
 		Value: contractName,
 	}
 
-	argProcessor := jsonapi.MethodArgument{
+	argProcessor := gammacli.JSONMethodArgument{
 		Name:  "processorType",
 		Type:  "uint32",
 		Value: uint32(1), // Native processor - for Go contracts
@@ -50,16 +50,16 @@ func HandleDeployCommand(args []string) {
 
 	codeInHex := hex.EncodeToString(codeBytes)
 
-	argCode := jsonapi.MethodArgument{
+	argCode := gammacli.JSONMethodArgument{
 		Name:  "code",
 		Type:  "bytes",
 		Value: codeInHex,
 	}
 
-	deployTx := jsonapi.Transaction{
+	deployTx := gammacli.JSONTransaction{
 		ContractName: "_Deployments",
 		MethodName:   "deployService",
-		Arguments:    []jsonapi.MethodArgument{argName, argProcessor, argCode},
+		Arguments:    []gammacli.JSONMethodArgument{argName, argProcessor, argCode},
 	}
 
 	jsonBytes, err := json.Marshal(deployTx)

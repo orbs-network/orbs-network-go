@@ -1,4 +1,4 @@
-package jsonapi
+package gammacli
 
 import (
 	"bytes"
@@ -24,16 +24,16 @@ const METHOD_ARGUMENT_TYPE_UINT64 string = "uint64"
 const METHOD_ARGUMENT_TYPE_STRING string = "string"
 const METHOD_ARGUMENT_TYPE_BYTES string = "bytes"
 
-func ConvertAndSignTransaction(tx *Transaction, keyPair *keys.Ed25519KeyPair) (*protocol.SignedTransactionBuilder, error) {
-	transaction, err := ConvertTransaction(tx)
+func ConvertAndSignTransaction(tx *JSONTransaction, keyPair *keys.Ed25519KeyPair) (*protocol.SignedTransactionBuilder, error) {
+	transaction, err := ConvertJSONTransactionToMemBuff(tx)
 	if err != nil { // Something in the JSON is not valid so we exit with a non zero exit code.
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	transaction.Signer = &protocol.SignerBuilder{
-		Scheme: protocol.SIGNER_SCHEME_EDDSA, //TODO move to Transaction
+		Scheme: protocol.SIGNER_SCHEME_EDDSA, //TODO move to JSONTransaction
 		Eddsa: &protocol.EdDSA01SignerBuilder{
-			NetworkType:     protocol.NETWORK_TYPE_TEST_NET, //TODO move to Transaction
+			NetworkType:     protocol.NETWORK_TYPE_TEST_NET, //TODO move to JSONTransaction
 			SignerPublicKey: primitives.Ed25519PublicKey(keyPair.PublicKey()),
 		},
 	}
@@ -51,7 +51,7 @@ func ConvertAndSignTransaction(tx *Transaction, keyPair *keys.Ed25519KeyPair) (*
 	}
 }
 
-func ConvertTransaction(tx *Transaction) (*protocol.TransactionBuilder, error) {
+func ConvertJSONTransactionToMemBuff(tx *JSONTransaction) (*protocol.TransactionBuilder, error) {
 	var inputArguments []*protocol.MethodArgumentBuilder
 	for _, arg := range tx.Arguments {
 		switch arg.Type {
@@ -82,7 +82,7 @@ func ConvertTransaction(tx *Transaction) (*protocol.TransactionBuilder, error) {
 
 	return &protocol.TransactionBuilder{
 		ProtocolVersion:    1,
-		VirtualChainId:     builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID, //TODO move to Transaction
+		VirtualChainId:     builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID, //TODO move to JSONTransaction
 		ContractName:       primitives.ContractName(tx.ContractName),
 		MethodName:         primitives.MethodName(tx.MethodName),
 		Timestamp:          primitives.TimestampNano(time.Now().UnixNano()),
@@ -93,7 +93,7 @@ func ConvertTransaction(tx *Transaction) (*protocol.TransactionBuilder, error) {
 
 func ConvertSendTransactionOutput(sto *client.SendTransactionResponse) *SendTransactionOutput {
 	outputArgsIterator := builders.TransactionReceiptOutputArgumentsParse(sto.TransactionReceipt())
-	var outputArguments []MethodArgument
+	var outputArguments []JSONMethodArgument
 	for iter := outputArgsIterator; iter.HasNext(); {
 		arg := iter.NextArguments()
 		methodArg := convertMethodArgument(arg)
@@ -114,7 +114,7 @@ func ConvertSendTransactionOutput(sto *client.SendTransactionResponse) *SendTran
 
 func ConvertCallMethodOutput(cmo *client.CallMethodResponse) *CallMethodOutput {
 	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(cmo)
-	var outputArguments []MethodArgument
+	var outputArguments []JSONMethodArgument
 	for iter := outputArgsIterator; iter.HasNext(); {
 		arg := iter.NextArguments()
 		methodArg := convertMethodArgument(arg)
@@ -129,8 +129,8 @@ func ConvertCallMethodOutput(cmo *client.CallMethodResponse) *CallMethodOutput {
 	}
 }
 
-func convertMethodArgument(arg *protocol.MethodArgument) MethodArgument {
-	methodArg := MethodArgument{
+func convertMethodArgument(arg *protocol.MethodArgument) JSONMethodArgument {
+	methodArg := JSONMethodArgument{
 		Name: arg.Name(),
 	}
 	switch arg.Type() {
@@ -151,7 +151,7 @@ func convertMethodArgument(arg *protocol.MethodArgument) MethodArgument {
 	return methodArg
 }
 
-func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, serverUrl string, logVerbose bool) (*SendTransactionOutput, error) {
+func SendTransaction(transferJson *JSONTransaction, keyPair *keys.Ed25519KeyPair, serverUrl string, logVerbose bool) (*SendTransactionOutput, error) {
 	tx, err := ConvertAndSignTransaction(transferJson, keyPair)
 
 	if logVerbose {
@@ -178,8 +178,8 @@ func SendTransaction(transferJson *Transaction, keyPair *keys.Ed25519KeyPair, se
 	return ConvertSendTransactionOutput(client.SendTransactionResponseReader(readBytes)), err
 }
 
-func CallMethod(transferJson *Transaction, serverUrl string, logVerbose bool) (*CallMethodOutput, error) {
-	tx, err := ConvertTransaction(transferJson)
+func CallMethod(transferJson *JSONTransaction, serverUrl string, logVerbose bool) (*CallMethodOutput, error) {
+	tx, err := ConvertJSONTransactionToMemBuff(transferJson)
 	if err != nil { // The JSON we got is probably invalid so we exit
 		fmt.Println(err)
 		os.Exit(1)

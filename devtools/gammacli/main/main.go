@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/devtools/jsonapi/commands"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli/commands"
 	"os"
 )
 
 // gamma-cli start [-port=8080]
+// gamma-cli deploy Counter path/to/your/code.go
 // gamma-cli run call|send [-public-key=<pubkey>] [-private-key=<privkey>] [-host=<http://....>]
 
 func main() {
