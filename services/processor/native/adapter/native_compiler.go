@@ -38,16 +38,22 @@ func NewNativeCompiler(config Config, reporting log.BasicLogger) Compiler {
 		reporting: reporting,
 	}
 
-	// warm up compilation cache
-	_, err := c.Compile(string(contracts.SourceCodeForNop()))
-	if err != nil {
-		reporting.Error("warm up compilation on init failed", log.Error(err))
-	}
+	c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
 
 	return c
 }
 
-func (c *nativeCompiler) Compile(code string) (*sdk.ContractInfo, error) {
+func (c *nativeCompiler) warmUpCompilationCache() {
+	ctx, cancel := context.WithTimeout(context.Background(), MAX_COMPILATION_TIME)
+	defer cancel()
+
+	_, err := c.Compile(ctx, string(contracts.SourceCodeForNop()))
+	if err != nil {
+		c.reporting.Error("warm up compilation on init failed", log.Error(err))
+	}
+}
+
+func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdk.ContractInfo, error) {
 	artifactsPath := c.config.ProcessorArtifactPath()
 	hashOfCode := getHashOfCode(code)
 
@@ -57,7 +63,7 @@ func (c *nativeCompiler) Compile(code string) (*sdk.ContractInfo, error) {
 		return nil, err
 	}
 
-	soFilePath, err := buildSharedObject(hashOfCode, sourceCodeFilePath, artifactsPath)
+	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePath, artifactsPath)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +91,7 @@ func writeSourceCodeToDisk(filenamePrefix string, code string, artifactsPath str
 	return sourceFilePath, nil
 }
 
-func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPath string) (string, error) {
+func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePath string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SHARED_OBJECT_PATH)
 	err := os.MkdirAll(dir, 0700)
 	if err != nil {
@@ -102,17 +108,13 @@ func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPa
 	}
 
 	// compile
-	ctx, cancel := context.WithTimeout(context.Background(), MAX_COMPILATION_TIME)
-	defer cancel()
 	cmd := exec.CommandContext(ctx, "go", "build", "-buildmode=plugin", "-o", soFilePath, sourceFilePath)
-
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
 		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
 		// "GOGC=off", (this improves compilation time by a small factor)
 	}
-
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		buildOutput := string(out)

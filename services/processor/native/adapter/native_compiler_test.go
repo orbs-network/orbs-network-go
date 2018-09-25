@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -18,6 +19,10 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
 
+	// give the test one minute timeout to compile
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	code := string(contracts.SourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
 	tmpDir := test.CreateTempDirForTest(t)
 	defer os.RemoveAll(tmpDir)
@@ -29,7 +34,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.FileExists(t, sourceFilePath, "file should exist")
 
 	compilationStartTime := time.Now().UnixNano()
-	soFilePath, err := buildSharedObject("testPrefix", sourceFilePath, tmpDir)
+	soFilePath, err := buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
@@ -53,7 +58,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.NotEqual(t, int64(1), getFileSize(sourceFilePath), "file size should not match")
 
 	compilationStartTime = time.Now().UnixNano()
-	soFilePath, err = buildSharedObject("testPrefix", sourceFilePath, tmpDir)
+	soFilePath, err = buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
@@ -70,7 +75,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	t.Log("Try to rebuild already loaded artifact")
 
 	compilationStartTime = time.Now().UnixNano()
-	soFilePath, err = buildSharedObject("testPrefix", sourceFilePath, tmpDir)
+	soFilePath, err = buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)
 	require.NoError(t, err, "compilation should succeed")
 	require.FileExists(t, soFilePath, "file should exist")
 	require.NotEqual(t, int64(1), getFileSize(soFilePath), "file size should not match")
