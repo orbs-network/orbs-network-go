@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"testing"
@@ -101,7 +102,31 @@ func generateGetBalanceJSON(targetAddress []byte) []byte {
 	return callJSONBytes
 }
 
-func TestGammaFlowWithActualJSONFiles(t *testing.T) {
+func generateGetCounterJSON() []byte {
+	getCounterJSON := &gammacli.JSONTransaction{
+		ContractName: "Counter",
+		MethodName:   "get",
+		Arguments:    []gammacli.JSONMethodArgument{},
+	}
+
+	callJSONBytes, _ := json.Marshal(&getCounterJSON)
+	return callJSONBytes
+}
+
+func generateAddCounterJSON(amount uint64) []byte {
+	arg := gammacli.JSONMethodArgument{Name: "amount", Type: "uint64", Value: amount}
+
+	addAmountToCounterJSON := &gammacli.JSONTransaction{
+		ContractName: "Counter",
+		MethodName:   "add",
+		Arguments:    []gammacli.JSONMethodArgument{arg},
+	}
+
+	addJSONBytes, _ := json.Marshal(&addAmountToCounterJSON)
+	return addJSONBytes
+}
+
+func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e tests in short mode")
 	}
@@ -158,4 +183,94 @@ func TestGammaFlowWithActualJSONFiles(t *testing.T) {
 	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
 	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
 	require.EqualValues(t, uint64(42), uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
+}
+
+func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping e2e tests in short mode")
+	}
+
+	port := ":8080"
+	gamma := gammacli.StartGammaServer(port, false)
+	defer gamma.GracefulShutdown(1 * time.Second)
+
+	time.Sleep(100 * time.Millisecond) // wait for server to start
+
+	keyPair := keys.Ed25519KeyPairForTests(0)
+
+	baseCommand := ClientBinary()
+	deployCommand := append(baseCommand,
+		"deploy", "Counter", "../counterContract/counter.go",
+		"-public-key", keyPair.PublicKey().String(),
+		"-private-key", keyPair.PrivateKey().String())
+
+	deployCommandOutput := runCommand(deployCommand, t)
+
+	response := &sendTransactionCliResponse{}
+	unmarshalErr := json.Unmarshal([]byte(deployCommandOutput), &response)
+
+	require.NoError(t, unmarshalErr, "error unmarshal cli response")
+	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
+	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
+	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
+
+	getCounterJSONBytes := generateGetCounterJSON()
+	err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
+	if err != nil {
+		fmt.Println("Couldn't write file", err)
+	}
+	require.NoError(t, err, "Couldn't write transfer JSON file")
+
+	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
+	getCommand := append(baseCommand, "run", "call", "../json/getCounter.json")
+
+	callOutputAsString := runCommand(getCommand, t)
+	fmt.Println(callOutputAsString)
+
+	callResponse := &callMethodCliResponse{}
+	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
+
+	require.NoError(t, callUnmarshalErr, "error calling call_method")
+	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
+	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from Counter.get()")
+	require.EqualValues(t, uint64(0), uint64(callResponse.OutputArguments[0].Value.(float64)), "expected counter value to equal 0")
+
+	// Add a random amount to the counter using Counter.add()
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomAddAmount := uint64(r.Intn(4000)) + 1000 // Random int between 1000 and 5000
+
+	addCounterJSONBytes := generateAddCounterJSON(randomAddAmount)
+	err = ioutil.WriteFile("../json/add.json", addCounterJSONBytes, 0644)
+	if err != nil {
+		fmt.Println("Couldn't write file", err)
+	}
+	require.NoError(t, err, "Couldn't write transfer JSON file")
+
+	addCommand := append(baseCommand, "run", "send", "../json/add.json",
+		"-public-key", keyPair.PublicKey().String(),
+		"-private-key", keyPair.PrivateKey().String())
+
+	addOutputAsString := runCommand(addCommand, t)
+	fmt.Println(callOutputAsString)
+
+	addResponse := &sendTransactionCliResponse{}
+	addResponseUnmarshalErr := json.Unmarshal([]byte(addOutputAsString), &addResponse)
+
+	require.NoError(t, addResponseUnmarshalErr, "error calling Counter.add()")
+	require.Equal(t, 1, addResponse.TransactionReceipt.ExecutionResult, "Wrong ExecutionResult value (expected 1 for success)")
+	require.EqualValues(t, nil, addResponse.TransactionReceipt.OutputArguments, "expected no output arguments")
+
+	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
+	getCommand = append(baseCommand, "run", "call", "../json/getCounter.json")
+
+	callOutputSecondTimeAsString := runCommand(getCommand, t)
+	fmt.Println(callOutputSecondTimeAsString)
+
+	callSecondResponse := &callMethodCliResponse{}
+	err = json.Unmarshal([]byte(callOutputSecondTimeAsString), &callSecondResponse)
+
+	require.NoError(t, err, "error calling Counter.get()")
+	require.Equal(t, 0, callSecondResponse.CallResult, "Wrong callResult value")
+	require.Len(t, callSecondResponse.OutputArguments, 1, "expected exactly one output argument returned from Counter.get()")
+	require.EqualValues(t, randomAddAmount, uint64(callSecondResponse.OutputArguments[0].Value.(float64)), "expected counter value to equal our newly set value")
 }
