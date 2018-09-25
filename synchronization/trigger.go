@@ -90,6 +90,7 @@ func (t *periodicalTrigger) Start() {
 					atomic.AddUint64(&t.metrics.timesTriggered, 1)
 				case <-t.stop:
 					t.ticker.Stop()
+					t.running = false
 					return
 				}
 			}
@@ -119,6 +120,10 @@ func (t *periodicalTrigger) reset(duration time.Duration, internal bool) {
 		atomic.AddUint64(&t.metrics.timesReset, 1)
 	}
 	t.d = duration
+	// its possible in a periodical mode, that stop did not happen by this time, we do not want to start until it does
+	for t.running {
+		time.Sleep(time.Nanosecond)
+	}
 	t.Start()
 }
 
@@ -129,9 +134,9 @@ func (t *periodicalTrigger) Stop() {
 
 	if t.periodical {
 		t.stop <- struct{}{}
+		// we set running to false only once the gofunc terminates (other side of this channel)
 	} else {
 		t.timer.Stop()
+		t.running = false
 	}
-
-	t.running = false
 }
