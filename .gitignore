@@ -3,6 +3,7 @@
 
 ### tmp build artifacts ###
 _tmp
+*.prof
 
 ### Go ###
 # Binaries for programs and plugins
@@ -84,3 +85,4 @@ logs/
 # binaries
 orbs-*
 .deploy.json
+devtools/gamma-server/json/*.json

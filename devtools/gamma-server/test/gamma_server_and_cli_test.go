@@ -2,14 +2,17 @@ package test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +49,7 @@ func ClientBinary() []string {
 		return []string{ciBinaryPath}
 	}
 
-	return []string{"go", "run", "../../jsonapi/main/main.go"}
+	return []string{"go", "run", "../../gammacli/main/main.go"}
 }
 
 func runCommand(command []string, t *testing.T) string {
@@ -60,12 +63,45 @@ func runCommand(command []string, t *testing.T) string {
 	fmt.Println("command stdout:", stdout.String())
 	fmt.Println("command stderr:", stderr.String())
 
-	require.NoError(t, err, "jsonapi cli command should not fail")
+	require.NoError(t, err, "gamma cli command should not fail")
 
 	return stdout.String()
 }
 
-func TestGammaFlow(t *testing.T) {
+func generateTransferJSON(amount uint64, targetAddress []byte) []byte {
+	// Encode the address as hex
+	hexTargetAddress := hex.EncodeToString(targetAddress)
+
+	transferJSON := &gammacli.JSONTransaction{
+		ContractName: "BenchmarkToken",
+		MethodName:   "transfer",
+		Arguments: []gammacli.JSONMethodArgument{
+			{Name: "amount", Type: "uint64", Value: amount},
+			{Name: "targetAddress", Type: "bytes", Value: hexTargetAddress},
+		},
+	}
+
+	jsonBytes, _ := json.Marshal(&transferJSON)
+	return jsonBytes
+}
+
+func generateGetBalanceJSON(targetAddress []byte) []byte {
+	// Encode the address as hex
+	hexTargetAddress := hex.EncodeToString(targetAddress)
+
+	getBalanceJSON := &gammacli.JSONTransaction{
+		ContractName: "BenchmarkToken",
+		MethodName:   "getBalance",
+		Arguments: []gammacli.JSONMethodArgument{
+			{Name: "targetAddress", Type: "bytes", Value: hexTargetAddress},
+		},
+	}
+
+	callJSONBytes, _ := json.Marshal(&getBalanceJSON)
+	return callJSONBytes
+}
+
+func TestGammaFlowWithActualJSONFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e tests in short mode")
 	}
@@ -77,6 +113,15 @@ func TestGammaFlow(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
+	targetAddress := builders.AddressForEd25519SignerForTests(2)
+
+	transferJSONBytes := generateTransferJSON(42, targetAddress)
+
+	err := ioutil.WriteFile("../json/transfer.json", transferJSONBytes, 0644)
+	if err != nil {
+		fmt.Println("Couldn't write file", err)
+	}
+	require.NoError(t, err, "Couldn't write transfer JSON file")
 
 	baseCommand := ClientBinary()
 	sendCommand := append(baseCommand,
@@ -93,6 +138,13 @@ func TestGammaFlow(t *testing.T) {
 	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "JSONTransaction status to be successful = 1")
 	require.Equal(t, 1, response.TransactionStatus, "JSONTransaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
+
+	getBalanceJSONBytes := generateGetBalanceJSON(targetAddress)
+	err = ioutil.WriteFile("../json/getBalance.json", getBalanceJSONBytes, 0644)
+	if err != nil {
+		fmt.Println("Couldn't write file", err)
+	}
+	require.NoError(t, err, "Couldn't write getBalance JSON file")
 
 	getCommand := append(baseCommand, "run", "call", "../json/getBalance.json")
 

@@ -105,6 +105,7 @@ func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
 	p.Start()
 	time.Sleep(time.Microsecond * 1100)
 	p.Stop()
-	time.Sleep(time.Millisecond * 2)
-	require.Equal(t, 1, x, "expected one tick due to stop")
+	xValueOnStop := x
+	time.Sleep(time.Millisecond * 5)
+	require.Equal(t, xValueOnStop, x, "expected one tick due to stop")
 }

@@ -6,4 +6,3 @@ WORKDIR /go/src/github.com/orbs-network/orbs-network-go/
 
 ADD . /go/src/github.com/orbs-network/orbs-network-go/
 
-RUN sh -x test.acceptance.sh
