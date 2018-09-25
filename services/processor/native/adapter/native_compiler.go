@@ -71,13 +71,13 @@ func getHashOfCode(code string) string {
 
 func writeSourceCodeToDisk(filenamePrefix string, code string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SOURCE_CODE_PATH)
-	err := os.MkdirAll(dir, 0755)
+	err := os.MkdirAll(dir, 0700)
 	if err != nil {
 		return "", err
 	}
 	sourceFilePath := filepath.Join(dir, filenamePrefix) + ".go"
 
-	err = ioutil.WriteFile(sourceFilePath, []byte(code), 0644)
+	err = ioutil.WriteFile(sourceFilePath, []byte(code), 0600)
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +87,7 @@ func writeSourceCodeToDisk(filenamePrefix string, code string, artifactsPath str
 
 func buildSharedObject(filenamePrefix string, sourceFilePath string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SHARED_OBJECT_PATH)
-	err := os.MkdirAll(dir, 0755)
+	err := os.MkdirAll(dir, 0700)
 	if err != nil {
 		return "", err
 	}

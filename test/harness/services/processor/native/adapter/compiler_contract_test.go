@@ -87,7 +87,7 @@ func aFakeCompiler(t *testing.T) *compilerContractHarness {
 func createTempTestDir(t *testing.T) (string, string) {
 	prefix := strings.Replace(t.Name(), "/", "__", -1)
 	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	os.MkdirAll(dir, 0755)
+	os.MkdirAll(dir, 0700)
 	tmpDir, err := ioutil.TempDir(dir, prefix)
 	if err != nil {
 		panic("could not create temp dir for test")

@@ -40,12 +40,12 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	t.Log("Simulate corrupted artifacts and rebuild")
 
 	// simulate corrupt file that exists
-	err = ioutil.WriteFile(sourceFilePath, []byte{0x01}, 0644)
+	err = ioutil.WriteFile(sourceFilePath, []byte{0x01}, 0600)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), getFileSize(sourceFilePath), "file size should match")
 
 	// simulate corrupt file that exists
-	err = ioutil.WriteFile(soFilePath, []byte{0x01}, 0644)
+	err = ioutil.WriteFile(soFilePath, []byte{0x01}, 0600)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), getFileSize(soFilePath), "file size should match")
 
@@ -88,7 +88,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 func createTempTestDir(t *testing.T) string {
 	prefix := strings.Replace(t.Name(), "/", "__", -1)
 	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	os.MkdirAll(dir, 0755)
+	os.MkdirAll(dir, 0700)
 	tmpDir, err := ioutil.TempDir(dir, prefix)
 	if err != nil {
 		panic("could not create temp dir for test")
