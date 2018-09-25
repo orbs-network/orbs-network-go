@@ -19,6 +19,11 @@ jobs:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: ./docker-build.acceptance.sh
+      - run:
+          command: ./docker-test.acceptance.sh
+          no_output_timout: 20m
+      - store_artifacts:
+          path: logs
 
   success:
     machine: true
