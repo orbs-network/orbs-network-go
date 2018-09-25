@@ -3,16 +3,13 @@ package adapter
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 )
@@ -62,14 +59,14 @@ type compilerContractHarness struct {
 }
 
 func aNativeCompiler(t *testing.T) *compilerContractHarness {
-	tmpDir, tmpDirToCleanup := createTempTestDir(t)
+	tmpDir := test.CreateTempDirForTest(t)
 	cfg := &hardcodedConfig{artifactPath: tmpDir}
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	compiler := adapter.NewNativeCompiler(cfg, log)
 	return &compilerContractHarness{
 		compiler: compiler,
 		cleanup: func() {
-			os.RemoveAll(tmpDirToCleanup)
+			os.RemoveAll(tmpDir)
 		},
 	}
 }
@@ -82,17 +79,6 @@ func aFakeCompiler(t *testing.T) *compilerContractHarness {
 		compiler: compiler,
 		cleanup:  func() {},
 	}
-}
-
-func createTempTestDir(t *testing.T) (string, string) {
-	prefix := strings.Replace(t.Name(), "/", "__", -1)
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	os.MkdirAll(dir, 0700)
-	tmpDir, err := ioutil.TempDir(dir, prefix)
-	if err != nil {
-		panic("could not create temp dir for test")
-	}
-	return tmpDir, dir
 }
 
 type hardcodedConfig struct {

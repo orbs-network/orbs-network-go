@@ -2,13 +2,11 @@ package adapter
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
@@ -21,7 +19,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	}
 
 	code := string(contracts.SourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
-	tmpDir := createTempTestDir(t)
+	tmpDir := test.CreateTempDirForTest(t)
 	defer os.RemoveAll(tmpDir)
 
 	t.Log("Build fresh artifacts")
@@ -83,17 +81,6 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	require.NoError(t, err, "load should succeed")
 	require.NotNil(t, contractInfo, "loaded object should not be nil")
 	require.Equal(t, fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
-}
-
-func createTempTestDir(t *testing.T) string {
-	prefix := strings.Replace(t.Name(), "/", "__", -1)
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	os.MkdirAll(dir, 0700)
-	tmpDir, err := ioutil.TempDir(dir, prefix)
-	if err != nil {
-		panic("could not create temp dir for test")
-	}
-	return tmpDir
 }
 
 func getFileSize(filePath string) int64 {
