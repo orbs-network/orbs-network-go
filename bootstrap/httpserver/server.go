@@ -64,6 +64,8 @@ func NewHttpServer(address string, reporting log.BasicLogger, publicApi services
 		go server.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
 	}
 
+	reporting.Info("started http server", log.String("address", address))
+
 	return server
 }
 
