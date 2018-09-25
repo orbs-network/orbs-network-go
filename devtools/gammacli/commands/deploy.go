@@ -14,9 +14,10 @@ func ShowDeployUsage() {
 	os.Exit(2)
 }
 
-func HandleDeployCommand(args []string) {
+func HandleDeployCommand(args []string) int {
 	if len(args) < 2 {
 		ShowDeployUsage()
+		return 1
 	}
 
 	contractName := args[0]
@@ -27,13 +28,13 @@ func HandleDeployCommand(args []string) {
 	if err != nil {
 		fmt.Println("Could not find contract source code at the provided path")
 		fmt.Println(pathToCodeFile)
-		os.Exit(1)
+		return 1
 	}
 
 	codeBytes, err := ioutil.ReadFile(pathToCodeFile)
 	if err != nil {
 		fmt.Println("Could not load Go source code", err)
-		os.Exit(1)
+		return 1
 	}
 
 	argName := gammacli.JSONMethodArgument{
@@ -67,11 +68,11 @@ func HandleDeployCommand(args []string) {
 	err = ioutil.WriteFile("./.deploy.json", jsonBytes, 0644)
 	if err != nil {
 		fmt.Println("Could not write deployment action json", err)
-		os.Exit(1)
+		return 1
 	}
 
 	runArgs := []string{"send", "./.deploy.json"}
 	runArgs = append(runArgs, args[2:]...)
 
-	HandleRunCommand(runArgs)
+	return HandleRunCommand(runArgs)
 }

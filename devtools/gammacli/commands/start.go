@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func runCommand(command []string) {
@@ -21,7 +22,7 @@ func runCommand(command []string) {
 	}
 }
 
-func HandleStartCommand(args []string) {
+func HandleStartCommand(args []string) int {
 	flagSet := flag.NewFlagSet("start", flag.ExitOnError)
 
 	binaryPtr := flagSet.String("binaryPath", "", "Provide your own path to a pre-compiled gamma binary")
@@ -42,14 +43,14 @@ func HandleStartCommand(args []string) {
 		if err == nil {
 			// Found a workable binary , let's execute it.
 			fmt.Println(fmt.Sprintf("gamma-server started and listening on port %s", *portPtr))
+			fmt.Println("For debugging/logging please run gamma-server directly")
 
 			execCommand := []string{binaryPath, "-port", *portPtr, "&>/dev/null", "&"}
-			execCommand[0] = "./" + execCommand[0]
+			execCommand[0] = "./" + strings.TrimLeft(execCommand[0], "/")
 			runCommand(execCommand)
-			os.Exit(0)
 		}
 	}
 
 	fmt.Println("Could not find gamma-server on this machine")
-	os.Exit(1)
+	return 1
 }

@@ -16,20 +16,19 @@ import (
 func ShowUsage() {
 	fmt.Println("Usage:  $ gamma-cli run send path/to/send.json")
 	fmt.Println("Usage:  $ gamma-cli run call path/to/get.json")
-	os.Exit(2)
 }
 
-func getKeypairFromOrbsKeyFile() *keys.Ed25519KeyPair {
+func getKeypairFromOrbsKeyFile() (*keys.Ed25519KeyPair, error) {
 	keyFile := "./.orbsKeys"
 	if _, err := os.Stat(keyFile); err != nil {
 		fmt.Println("Could not find a .orbsKeys file in the current directory")
-		os.Exit(2)
+		return nil, err
 	}
 
 	keyFileBytes, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		fmt.Println("Could not open key file", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	keysExploded := strings.Split(string(keyFileBytes), "\n")
@@ -37,53 +36,42 @@ func getKeypairFromOrbsKeyFile() *keys.Ed25519KeyPair {
 	publicKey, err := hex.DecodeString(keysExploded[0])
 	if err != nil {
 		fmt.Println("Could not decode public key from hex", err)
-		os.Exit(1)
+		return nil, err
 	}
 	privateKey, err := hex.DecodeString(keysExploded[1])
 	if err != nil {
 		fmt.Println("Could not decode private key from hex", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	keyPair := keys.NewEd25519KeyPair(primitives.Ed25519PublicKey(publicKey), primitives.Ed25519PrivateKey(privateKey))
 
-	return keyPair
+	return keyPair, nil
 }
 
-func getKeypairFromFlags(publicKey string, privateKey string) *keys.Ed25519KeyPair {
+func getKeypairFromFlags(publicKey string, privateKey string) (*keys.Ed25519KeyPair, error) {
 	decodedPublicKey, publicKeyDecodeError := hex.DecodeString(publicKey)
 	decodedPrivateKey, privateKeyDecodeError := hex.DecodeString(privateKey)
 
 	if publicKeyDecodeError != nil {
 		fmt.Println("Could not decode public key from HEX", publicKeyDecodeError)
-		os.Exit(1)
+		return nil, publicKeyDecodeError
 	}
 
 	if privateKeyDecodeError != nil {
 		fmt.Println("Could not decode private key from HEX", privateKeyDecodeError)
-		os.Exit(1)
+		return nil, privateKeyDecodeError
 	}
 
 	keyPair := keys.NewEd25519KeyPair(primitives.Ed25519PublicKey(decodedPublicKey), primitives.Ed25519PrivateKey(decodedPrivateKey))
 
-	return keyPair
+	return keyPair, nil
 }
 
-func fixInputNumbers(tx *gammacli.JSONTransaction) {
-	for _, arg := range tx.Arguments {
-		if arg.Type == "uint64" {
-			arg.Value = uint64(arg.Value.(float64))
-		}
-
-		if arg.Type == "uint32" {
-			arg.Value = uint32(arg.Value.(float64))
-		}
-	}
-}
-
-func HandleRunCommand(args []string) {
+func HandleRunCommand(args []string) int {
 	if len(args) < 2 {
 		ShowUsage()
+		return 1
 	}
 
 	flagSet := flag.NewFlagSet("run", flag.ExitOnError)
@@ -102,7 +90,7 @@ func HandleRunCommand(args []string) {
 	_, err := os.Stat(pathToJson)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
+		return 1
 	}
 
 	if err == nil {
@@ -110,11 +98,12 @@ func HandleRunCommand(args []string) {
 
 		if err != nil {
 			fmt.Println("Could not open JSON file", err)
-			os.Exit(1)
+			return 1
 		}
 
 		if err := json.Unmarshal(jsonBytes, tx); err != nil {
 			fmt.Println("could not parse JSON", err)
+			return 1
 		}
 	}
 
@@ -123,27 +112,32 @@ func HandleRunCommand(args []string) {
 		var keyPair *keys.Ed25519KeyPair
 
 		if *publicKeyPtr != "" && *privateKeyPtr != "" {
-			keyPair = getKeypairFromFlags(*publicKeyPtr, *privateKeyPtr)
+			keyPair, err = getKeypairFromFlags(*publicKeyPtr, *privateKeyPtr)
 		} else {
-			keyPair = getKeypairFromOrbsKeyFile()
+			keyPair, err = getKeypairFromOrbsKeyFile()
+		}
+
+		if err != nil {
+			return 1
 		}
 
 		result, err := gammacli.SendTransaction(tx, keyPair, *hostPtr, false)
 		if err != nil {
 			fmt.Println("Error sending your transaction", err)
-			os.Exit(1)
+			return 1
 		}
 
 		jsonBytes, _ := json.Marshal(result)
 		fmt.Println(string(jsonBytes))
-		os.Exit(0)
+		return 0
 	case "call":
 		result, _ := gammacli.CallMethod(tx, *hostPtr, false)
 
 		jsonBytes, _ := json.Marshal(result)
 		fmt.Println(string(jsonBytes))
-		os.Exit(0)
+		return 0
 	default:
 		ShowUsage()
 	}
+	return 1
 }

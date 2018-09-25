@@ -16,6 +16,9 @@ func main() {
 		fmt.Println("Welcome to gamma-cli")
 		fmt.Println("Example usage:")
 		fmt.Println("")
+		fmt.Println("$ gamma-cli genKeys")
+		fmt.Println("  Generates a new test key pair to perform calls with against this cli")
+		fmt.Println("")
 		fmt.Println("$ gamma-cli start")
 		fmt.Println("  Start gamma-server with 3 Orbs virtual nodes")
 		fmt.Println("")
@@ -31,17 +34,20 @@ func main() {
 		os.Exit(0)
 	}
 
+	var exitCode int
+
 	switch os.Args[1] {
 	case "run":
-		commands.HandleRunCommand(os.Args[2:])
+		exitCode = commands.HandleRunCommand(os.Args[2:])
 	case "start":
-		commands.HandleStartCommand(os.Args[2:])
+		exitCode = commands.HandleStartCommand(os.Args[2:])
 	case "deploy":
-		commands.HandleDeployCommand(os.Args[2:])
+		exitCode = commands.HandleDeployCommand(os.Args[2:])
 	case "genKeys":
-		commands.HandleGenKeysCommand()
+		exitCode = commands.HandleGenKeysCommand()
 	default:
 		flag.PrintDefaults()
-		os.Exit(1)
 	}
+
+	os.Exit(exitCode)
 }
