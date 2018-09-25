@@ -37,7 +37,33 @@ func TransferTransaction() *TransactionBuilder {
 			},
 		},
 	}
-	return t.WithAmount(10)
+	targetAddress := AddressForEd25519SignerForTests(2)
+	return t.WithAmountAndTargetAddress(10, targetAddress)
+}
+
+func GetBalanceTransaction() *TransactionBuilder {
+	keyPair := keys.Ed25519KeyPairForTests(1)
+	t := &TransactionBuilder{
+		signer: keyPair.PrivateKey(),
+		builder: &protocol.SignedTransactionBuilder{
+			Transaction: &protocol.TransactionBuilder{
+				ProtocolVersion: 1,
+				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+				ContractName:    "BenchmarkToken",
+				MethodName:      "getBalance",
+				Signer: &protocol.SignerBuilder{
+					Scheme: protocol.SIGNER_SCHEME_EDDSA,
+					Eddsa: &protocol.EdDSA01SignerBuilder{
+						NetworkType:     protocol.NETWORK_TYPE_TEST_NET,
+						SignerPublicKey: keyPair.PublicKey(),
+					},
+				},
+				Timestamp: primitives.TimestampNano(time.Now().UnixNano()),
+			},
+		},
+	}
+	targetAddress := AddressForEd25519SignerForTests(2)
+	return t.WithTargetAddress(targetAddress)
 }
 
 func Transaction() *TransactionBuilder {
@@ -92,8 +118,8 @@ func (t *TransactionBuilder) WithInvalidTimestamp() *TransactionBuilder {
 	return t
 }
 
-func (t *TransactionBuilder) WithInvalidAmount() *TransactionBuilder {
-	return t.WithAmount(2000) // Benchmark Contract fails amount over 100
+func (t *TransactionBuilder) WithInvalidAmount(targetAddress []byte) *TransactionBuilder {
+	return t.WithAmountAndTargetAddress(99999999, targetAddress) // Benchmark Contract fails amount over total supply of 1000
 }
 
 func (t *TransactionBuilder) WithMethod(contractName primitives.ContractName, methodName primitives.MethodName) *TransactionBuilder {
@@ -107,8 +133,12 @@ func (t *TransactionBuilder) WithArgs(args ...interface{}) *TransactionBuilder {
 	return t
 }
 
-func (t *TransactionBuilder) WithAmount(amount uint64) *TransactionBuilder {
-	return t.WithArgs(amount)
+func (t *TransactionBuilder) WithAmountAndTargetAddress(amount uint64, targetAddress []byte) *TransactionBuilder {
+	return t.WithArgs(amount, targetAddress)
+}
+
+func (t *TransactionBuilder) WithTargetAddress(targetAddress []byte) *TransactionBuilder {
+	return t.WithArgs(targetAddress)
 }
 
 func (t *TransactionBuilder) WithProtocolVersion(v primitives.ProtocolVersion) *TransactionBuilder {

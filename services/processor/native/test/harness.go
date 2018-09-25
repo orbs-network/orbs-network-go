@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
@@ -38,30 +39,35 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) expectSdkCallMadeWithStateRead(returnValue []byte) {
+func (h *harness) expectSdkCallMadeWithStateRead(expectedKey []byte, returnValue []byte) {
 	stateReadCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
 			input.OperationName == native.SDK_OPERATION_NAME_STATE &&
-			input.MethodName == "read"
+			input.MethodName == "read" &&
+			len(input.InputArguments) == 1 &&
+			(expectedKey == nil || bytes.Equal(input.InputArguments[0].BytesValue(), expectedKey))
 	}
 
 	readReturn := &handlers.HandleSdkCallOutput{
 		OutputArguments: builders.MethodArguments(returnValue),
 	}
 
-	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State and method equals read", stateReadCallMatcher)).Return(readReturn, nil).Times(1)
+	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State, method equals read and 1 arg matches", stateReadCallMatcher)).Return(readReturn, nil).Times(1)
 }
 
-func (h *harness) expectSdkCallMadeWithStateWrite() {
+func (h *harness) expectSdkCallMadeWithStateWrite(expectedKey []byte, expectedValue []byte) {
 	stateWriteCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
 			input.OperationName == native.SDK_OPERATION_NAME_STATE &&
-			input.MethodName == "write"
+			input.MethodName == "write" &&
+			len(input.InputArguments) == 2 &&
+			(expectedKey == nil || bytes.Equal(input.InputArguments[0].BytesValue(), expectedKey)) &&
+			(expectedValue == nil || bytes.Equal(input.InputArguments[1].BytesValue(), expectedValue))
 	}
 
-	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State and method equals write", stateWriteCallMatcher)).Return(nil, nil).Times(1)
+	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State, method equals write and 2 args match", stateWriteCallMatcher)).Return(nil, nil).Times(1)
 }
 
 func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName string, expectedMethodName string, expectedArgArray *protocol.MethodArgumentArray, returnArgArray *protocol.MethodArgumentArray, returnError error) {
@@ -86,7 +92,28 @@ func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName st
 	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.Service, method equals callMethod and 3 args match", serviceCallMethodCallMatcher)).Return(returnOutput, returnError).Times(1)
 }
 
+func (h *harness) expectSdkCallMadeWithAddressGetCaller(returnAddress []byte) {
+	addressGetCallerCallMatcher := func(i interface{}) bool {
+		input, ok := i.(*handlers.HandleSdkCallInput)
+		return ok &&
+			input.OperationName == native.SDK_OPERATION_NAME_ADDRESS &&
+			input.MethodName == "getCallerAddress"
+	}
+
+	returnOutput := &handlers.HandleSdkCallOutput{
+		OutputArguments: builders.MethodArguments(returnAddress),
+	}
+
+	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.Address, method equals getCallerAddress and 1 arg match", addressGetCallerCallMatcher)).Return(returnOutput, nil).Times(1)
+}
+
 func (h *harness) verifySdkCallMade(t *testing.T) {
 	_, err := h.sdkCallHandler.Verify()
 	require.NoError(t, err, "sdkCallHandler should be called as expected")
+}
+
+func uint64ToBytes(num uint64) []byte {
+	res := make([]byte, 8)
+	binary.LittleEndian.PutUint64(res, num)
+	return res
 }

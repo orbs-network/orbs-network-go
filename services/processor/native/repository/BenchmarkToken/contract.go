@@ -24,6 +24,10 @@ type contract struct{ *sdk.BaseContract }
 
 ///////////////////////////////////////////////////////////////////////////
 
+const TOTAL_SUPPLY = 10000
+
+///////////////////////////////////////////////////////////////////////////
+
 var METHOD_INIT = sdk.MethodInfo{
 	Name:           "_init",
 	External:       false,
@@ -32,7 +36,11 @@ var METHOD_INIT = sdk.MethodInfo{
 }
 
 func (c *contract) _init(ctx sdk.Context) error {
-	return nil
+	ownerAddress, err := c.Address.GetSignerAddress(ctx)
+	if err != nil {
+		return err
+	}
+	return c.State.WriteUint64ByAddress(ctx, ownerAddress, TOTAL_SUPPLY)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -44,16 +52,34 @@ var METHOD_TRANSFER = sdk.MethodInfo{
 	Implementation: (*contract).transfer,
 }
 
-func (c *contract) transfer(ctx sdk.Context, amount uint64) error {
-	if amount > 1000 {
-		return fmt.Errorf("cannot transfer amounts above 1000: %d", amount)
-	}
-	balance, err := c.State.ReadUint64ByKey(ctx, "total-balance")
+func (c *contract) transfer(ctx sdk.Context, amount uint64, targetAddress []byte) error {
+	// sender
+	callerAddress, err := c.Address.GetCallerAddress(ctx)
 	if err != nil {
 		return err
 	}
-	balance += amount
-	return c.State.WriteUint64ByKey(ctx, "total-balance", balance)
+	callerBalance, err := c.State.ReadUint64ByAddress(ctx, callerAddress)
+	if err != nil {
+		return err
+	}
+	if callerBalance < amount {
+		return fmt.Errorf("transfer of %d failed since balance is only %d", amount, callerBalance)
+	}
+	err = c.State.WriteUint64ByAddress(ctx, callerAddress, callerBalance-amount)
+	if err != nil {
+		return err
+	}
+
+	// recipient
+	err = c.Address.ValidateAddress(ctx, targetAddress)
+	if err != nil {
+		return err
+	}
+	targetBalance, err := c.State.ReadUint64ByAddress(ctx, targetAddress)
+	if err != nil {
+		return err
+	}
+	return c.State.WriteUint64ByAddress(ctx, targetAddress, targetBalance+amount)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -65,6 +91,10 @@ var METHOD_GET_BALANCE = sdk.MethodInfo{
 	Implementation: (*contract).getBalance,
 }
 
-func (c *contract) getBalance(ctx sdk.Context) (uint64, error) {
-	return c.State.ReadUint64ByKey(ctx, "total-balance")
+func (c *contract) getBalance(ctx sdk.Context, targetAddress []byte) (uint64, error) {
+	err := c.Address.ValidateAddress(ctx, targetAddress)
+	if err != nil {
+		return 0, err
+	}
+	return c.State.ReadUint64ByAddress(ctx, targetAddress)
 }

@@ -33,7 +33,7 @@ func BlockPair() *blockPair {
 		},
 		txMetadata: &protocol.TransactionsBlockMetadataBuilder{},
 		transactions: []*protocol.SignedTransaction{
-			(TransferTransaction().WithAmount(10)).Build(),
+			(TransferTransaction().WithAmountAndTargetAddress(10, AddressForEd25519SignerForTests(6))).Build(),
 		},
 		txProof: nil,
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
@@ -107,7 +107,7 @@ func (b *blockPair) WithProtocolVersion(version primitives.ProtocolVersion) *blo
 func (b *blockPair) WithTransactions(num uint32) *blockPair {
 	b.transactions = make([]*protocol.SignedTransaction, 0, num)
 	for i := uint32(0); i < num; i++ {
-		b.transactions = append(b.transactions, TransferTransaction().WithAmount(uint64(10*num)).Build())
+		b.transactions = append(b.transactions, TransferTransaction().WithAmountAndTargetAddress(uint64(10*num), AddressForEd25519SignerForTests(6)).Build())
 	}
 	b.txHeader.NumSignedTransactions = num
 	return b
