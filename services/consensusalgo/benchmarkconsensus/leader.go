@@ -33,6 +33,8 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			s.reporting.Info("consensus round run loop terminating with context")
+			// FIXME remove once we start passing context everywhere
+			close(s.successfullyVotedBlocks)
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			s.reporting.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
@@ -175,6 +177,18 @@ func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairCon
 }
 
 func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) {
+	defer func() {
+		// FIXME remove once we start passing context everywhere
+		if r := recover(); r != nil {
+			fields := []*log.Field{}
+			if err, ok := r.(error); ok {
+				fields = append(fields, log.Error(err))
+			}
+
+			s.reporting.Info("recovering from failure to collect vote, possibly because consensus was shut down", fields...)
+		}
+	}()
+
 	successfullyVotedBlock := blockHeightNone
 	defer func() {
 		// this needs to happen after s.mutex.Unlock() to avoid deadlock

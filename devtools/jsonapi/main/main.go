@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/devtools/jsonapi"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -18,7 +19,7 @@ import (
 func main() {
 	sendTransactionPtr := flag.String("send-transaction", "", "<json>")
 	callMethodPtr := flag.String("call-method", "", "<json>")
-	generateTestKeysPtr := flag.Bool("generate-test-keys", false, "generates a pair of TEST keys, public and private; NEVER use them in production")
+	generateTestKeysPtr := flag.Bool("generate-test-keys", false, "generates a pair of TEST keys, public and private; NEVER use them in production; returns [address, publicKey, privateKey]")
 	verbosePtr := flag.Bool("v", false, "Show all related logs")
 
 	publicKeyPtr := flag.String("public-key", "", "public key in hex form")
@@ -78,7 +79,9 @@ func main() {
 		fmt.Println(string(jsonBytes))
 	} else if *generateTestKeysPtr {
 		publicKey, privateKey, _ := ed25519.GenerateKey(rand.Reader)
+		address := hash.CalcRipmd160Sha256(publicKey)
 
+		fmt.Println(hex.EncodeToString(address))
 		fmt.Println(hex.EncodeToString(publicKey))
 		fmt.Println(hex.EncodeToString(privateKey))
 	} else {

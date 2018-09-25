@@ -54,24 +54,23 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	mutex                *sync.Mutex
-	transportListeners   map[string]adapter.TransportListener
-	latchingTamperers    []*latchingTamperer
-
-	ongoingTamperers	 []OngoingTamper
+	mutex                        *sync.RWMutex
+	transportListenersUnderMutex map[string]adapter.TransportListener
+	latchingTamperersUnderMutex  []*latchingTamperer
+	ongoingTamperersUnderMutex   []OngoingTamper
 }
 
 func NewTamperingTransport() TamperingTransport {
 	return &tamperingTransport{
-		transportListeners: make(map[string]adapter.TransportListener),
-		mutex:              &sync.Mutex{},
+		transportListenersUnderMutex: make(map[string]adapter.TransportListener),
+		mutex: &sync.RWMutex{},
 	}
 }
 
 func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	t.transportListeners[string(listenerPublicKey)] = listener
+	t.transportListenersUnderMutex[string(listenerPublicKey)] = listener
 }
 
 func (t *tamperingTransport) Send(data *adapter.TransportData) error {
@@ -86,7 +85,7 @@ func (t *tamperingTransport) Send(data *adapter.TransportData) error {
 }
 
 func (t *tamperingTransport) maybeTamper(data *adapter.TransportData) (error, bool) {
-	for _, o := range t.ongoingTamperers {
+	for _, o := range t.ongoingTamperersUnderMutex {
 		if err, shouldReturn := o.maybeTamper(data); shouldReturn {
 			return err, shouldReturn
 		}
@@ -120,7 +119,7 @@ func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper 
 	tamperer := &latchingTamperer{predicate: predicate, transport: t, cond: sync.NewCond(&sync.Mutex{})}
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	t.latchingTamperers = append(t.latchingTamperers, tamperer)
+	t.latchingTamperersUnderMutex = append(t.latchingTamperersUnderMutex, tamperer)
 
 	tamperer.cond.L.Lock()
 	return tamperer
@@ -129,14 +128,14 @@ func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper 
 func (t *tamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	a := t.ongoingTamperers
+	a := t.ongoingTamperersUnderMutex
 	for p, v := range a {
 		if v == tamperer {
 			a[p] = a[len(a)-1]
 			a[len(a)-1] = nil
 			a = a[:len(a)-1]
 
-			t.ongoingTamperers = a
+			t.ongoingTamperersUnderMutex = a
 
 			return
 		}
@@ -147,14 +146,14 @@ func (t *tamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	a := t.latchingTamperers
+	a := t.latchingTamperersUnderMutex
 	for p, v := range a {
 		if v == tamperer {
 			a[p] = a[len(a)-1]
 			a[len(a)-1] = nil
 			a = a[:len(a)-1]
 
-			t.latchingTamperers = a
+			t.latchingTamperersUnderMutex = a
 
 			return
 		}
@@ -166,22 +165,13 @@ func (t *tamperingTransport) receive(data *adapter.TransportData) {
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		t.mutex.Lock()
-		defer t.mutex.Unlock()
-
-		for stringPublicKey, l := range t.transportListeners {
-			if stringPublicKey != string(data.SenderPublicKey) {
-				l.OnTransportMessageReceived(data.Payloads)
-			}
+		for _, l := range t.getTransportListenersExceptPublicKeys(data.SenderPublicKey) {
+			l.OnTransportMessageReceived(data.Payloads)
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
-		t.mutex.Lock()
-		defer t.mutex.Unlock()
-
-		for _, recipientPublicKey := range data.RecipientPublicKeys {
-			stringPublicKey := string(recipientPublicKey)
-			t.transportListeners[stringPublicKey].OnTransportMessageReceived(data.Payloads)
+		for _, l := range t.getTransportListenersByPublicKeys(data.RecipientPublicKeys) {
+			l.OnTransportMessageReceived(data.Payloads)
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
@@ -190,8 +180,35 @@ func (t *tamperingTransport) receive(data *adapter.TransportData) {
 
 }
 
+func (t *tamperingTransport) getTransportListenersExceptPublicKeys(exceptPublicKey primitives.Ed25519PublicKey) (listeners []adapter.TransportListener) {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
+	for stringPublicKey, l := range t.transportListenersUnderMutex {
+		if stringPublicKey != string(exceptPublicKey) {
+			listeners = append(listeners, l)
+		}
+	}
+
+	return listeners
+}
+
+func (t *tamperingTransport) getTransportListenersByPublicKeys(publicKeys []primitives.Ed25519PublicKey) (listeners []adapter.TransportListener) {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
+	for _, recipientPublicKey := range publicKeys {
+		stringPublicKey := string(recipientPublicKey)
+		if listener, found := t.transportListenersUnderMutex[stringPublicKey]; found {
+			listeners = append(listeners, listener)
+		}
+	}
+
+	return listeners
+}
+
 func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
-	for _, o := range t.latchingTamperers {
+	for _, o := range t.latchingTamperersUnderMutex {
 		if o.predicate(data) {
 			o.cond.Signal()
 		}
@@ -201,7 +218,7 @@ func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
 func (t *tamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	t.ongoingTamperers = append(t.ongoingTamperers, tamperer)
+	t.ongoingTamperersUnderMutex = append(t.ongoingTamperersUnderMutex, tamperer)
 	return tamperer
 }
 

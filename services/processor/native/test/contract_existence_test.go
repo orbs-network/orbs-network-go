@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestProcessCallWithUnknownContractFails(t *testing.T) {
+func TestProcessCall_WithUnknownContractFails(t *testing.T) {
 	h := newHarness()
 	input := processCallInput().WithUnknownContract().Build()
 	h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_CODE.Name, builders.MethodArgumentsArray(string(input.ContractName)), nil, errors.New("code not found error"))
@@ -20,7 +20,7 @@ func TestProcessCallWithUnknownContractFails(t *testing.T) {
 	h.verifySdkCallMade(t)
 }
 
-func TestGetContractInfoWithUnknownContractFails(t *testing.T) {
+func TestGetContractInfo_WithUnknownContractFails(t *testing.T) {
 	h := newHarness()
 	input := getContractInfoInput().WithUnknownContract().Build()
 	h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_CODE.Name, builders.MethodArgumentsArray(string(input.ContractName)), nil, errors.New("code not found error"))
@@ -31,7 +31,7 @@ func TestGetContractInfoWithUnknownContractFails(t *testing.T) {
 	h.verifySdkCallMade(t)
 }
 
-func TestProcessCallWithDeployableContractThatCompiles(t *testing.T) {
+func TestProcessCall_WithDeployableContractThatCompiles(t *testing.T) {
 	h := newHarness()
 	input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
 	codeOutput := builders.MethodArgumentsArray([]byte(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))

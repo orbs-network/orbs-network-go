@@ -1,14 +1,13 @@
 package test
 
 import (
-	"encoding/binary"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestBenchmarkContractAddMethod(t *testing.T) {
+func TestBenchmarkContract_AddMethod(t *testing.T) {
 	h := newHarness()
 
 	t.Log("Runs BenchmarkContract.add to add two numbers")
@@ -21,16 +20,14 @@ func TestBenchmarkContractAddMethod(t *testing.T) {
 	require.Equal(t, builders.MethodArgumentsArray(uint64(12+27)), output.OutputArgumentArray, "call return args should be equal")
 }
 
-func TestBenchmarkContractSetGetMethods(t *testing.T) {
+func TestBenchmarkContract_SetGetMethods(t *testing.T) {
 	h := newHarness()
-	const valueAsUint64 = uint64(41)
-	valueAsBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valueAsBytes, valueAsUint64)
+	const value = uint64(41)
 
 	t.Log("Runs BenchmarkContract.set to save a value in state")
 
-	call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(valueAsUint64).WithWriteAccess().Build()
-	h.expectSdkCallMadeWithStateWrite()
+	call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(value).WithWriteAccess().Build()
+	h.expectSdkCallMadeWithStateWrite(nil, nil)
 
 	output, err := h.service.ProcessCall(call)
 	require.NoError(t, err, "call should succeed")
@@ -41,11 +38,11 @@ func TestBenchmarkContractSetGetMethods(t *testing.T) {
 	t.Log("Runs BenchmarkContract.get to read that value back from state")
 
 	call = processCallInput().WithMethod("BenchmarkContract", "get").Build()
-	h.expectSdkCallMadeWithStateRead(valueAsBytes)
+	h.expectSdkCallMadeWithStateRead(nil, uint64ToBytes(value))
 
 	output, err = h.service.ProcessCall(call)
 	require.NoError(t, err, "call should succeed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-	require.Equal(t, builders.MethodArgumentsArray(valueAsUint64), output.OutputArgumentArray, "call return args should be equal")
+	require.Equal(t, builders.MethodArgumentsArray(value), output.OutputArgumentArray, "call return args should be equal")
 	h.verifySdkCallMade(t)
 }

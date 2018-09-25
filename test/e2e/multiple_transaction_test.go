@@ -3,6 +3,7 @@ package e2e
 import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -19,7 +20,9 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 	// send 3 transactions with total of 70
 	amounts := []uint64{15, 22, 33}
 	for _, amount := range amounts {
-		transfer := builders.TransferTransaction().WithAmount(amount).Builder()
+		signerKeyPair := keys.Ed25519KeyPairForTests(5)
+		targetAddress := builders.AddressForEd25519SignerForTests(6)
+		transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
 		response, err := h.sendTransaction(t, transfer)
 		require.NoError(t, err, "transaction for amount %d should not return error", amount)
 		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction for amount %d should be successfully committed", amount)
@@ -27,12 +30,10 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 	}
 
 	// check balance
-	getBalance := &protocol.TransactionBuilder{
-		ContractName: "BenchmarkToken",
-		MethodName:   "getBalance",
-	}
-
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
+		signerKeyPair := keys.Ed25519KeyPairForTests(6)
+		targetAddress := builders.AddressForEd25519SignerForTests(6)
+		getBalance := builders.GetBalanceTransaction().WithEd25519Signer(signerKeyPair).WithTargetAddress(targetAddress).Builder().Transaction
 		response, err := h.callMethod(t, getBalance)
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
