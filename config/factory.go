@@ -12,6 +12,7 @@ func ForProduction() MutableNodeConfig {
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Second)
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 50)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 5*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
@@ -101,7 +102,8 @@ func DefaultConfig() MutableNodeConfig {
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
 
-	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, uint32(1))
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 1)
 
 	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
 	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)

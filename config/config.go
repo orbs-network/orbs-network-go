@@ -41,6 +41,7 @@ type NodeConfig interface {
 	// consensus context
 	ConsensusContextMinimalBlockDelay() time.Duration
 	ConsensusContextMinimumTransactionsInBlock() uint32
+	ConsensusContextMaximumTransactionsInBlock() uint32
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
