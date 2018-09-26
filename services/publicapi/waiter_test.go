@@ -10,6 +10,7 @@ import (
 )
 
 func TestPublicApiWaiter_Add(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		waiter := newWaiter(ctx)
 		wc := waiter.add("key")
@@ -19,6 +20,7 @@ func TestPublicApiWaiter_Add(t *testing.T) {
 }
 
 func TestPublicApiWaiter_AddTwice(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		waiter := newWaiter(ctx)
 		wc1 := waiter.add("key")
@@ -32,6 +34,7 @@ func TestPublicApiWaiter_AddTwice(t *testing.T) {
 }
 
 func TestPublicApiWaiter_AddTwoKeys(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		waiter := newWaiter(ctx)
 		waiter.add("key1")
@@ -41,7 +44,23 @@ func TestPublicApiWaiter_AddTwoKeys(t *testing.T) {
 	})
 }
 
+func TestPublicApiWaiter_DeleteKey(t *testing.T) {
+	t.Parallel()
+	test.WithContext(func(ctx context.Context) {
+		waiter := newWaiter(ctx)
+		wc1 := waiter.add("key1")
+		waiter.add("key2")
+		wcs1 := waiter._deleteByKey("key1")
+
+		require.Equal(t, 1, len(waiter.m), "must have one key-value pair in upper level")
+		require.NotNil(t, wcs1, "wait object channels is nil when it should exist")
+		_, exists := wcs1[wc1]
+		require.True(t, exists, "the deleted channel was destroyed when it was suppose to be returned")
+	})
+}
+
 func TestPublicApiWaiter_DeleteChan(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter(ctx)
@@ -70,6 +89,7 @@ func TestPublicApiWaiter_DeleteAllChan(t *testing.T) {
 }
 
 func TestPublicApiWaiter_WaitFor(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		waiter := newWaiter(ctx)
 		wc := waiter.add("key")
@@ -82,6 +102,7 @@ func TestPublicApiWaiter_WaitFor(t *testing.T) {
 }
 
 func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter(ctx)
@@ -115,6 +136,7 @@ func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
 }
 
 func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter(ctx)
@@ -149,6 +171,7 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) 
 }
 
 func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
+	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter(ctx)
@@ -183,6 +206,7 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
 }
 
 func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
+	t.Parallel()
 	var waiter *waiter
 	c := make(chan struct{})
 
@@ -207,5 +231,3 @@ func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 	<-c
 	<-c
 }
-
-// TODO  MUTEX TESTS ? and/or timing tests
