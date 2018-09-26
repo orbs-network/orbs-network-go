@@ -58,9 +58,9 @@ func ForAcceptanceTests(
 		"", // default
 	)
 
-	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 10*time.Millisecond)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 10*time.Millisecond)
-	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 10*time.Millisecond)
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 5*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Millisecond)
 

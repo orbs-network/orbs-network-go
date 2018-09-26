@@ -18,10 +18,12 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
+      - run: ./docker-build.acceptance.sh
       - run:
-          name: acceptance
-          command: ./docker-build.acceptance.sh
-          no_output_timeout: 30m
+          command: ./docker-test.acceptance.sh
+          no_output_timout: 20m
+      - store_artifacts:
+          path: logs
 
   success:
     machine: true

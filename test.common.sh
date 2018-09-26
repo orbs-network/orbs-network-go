@@ -16,6 +16,11 @@ check_exit_code_and_report () {
 
         if [ ! -s fail.out ] && [ ! -s timed.out ]; then
             tail -500 test.out
+
+            # copy full log for further investigation
+            mkdir -p logs
+            cp test.out logs
+            bzip2 logs/test.out
         fi
 
         exit $EXIT_CODE

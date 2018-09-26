@@ -73,7 +73,6 @@ func TestGetTransactionsForOrderingDropsTransactionsThatAreAlreadyCommitted(t *t
 	require.NoError(t, err, "failed getting transactions unexpectedly")
 	require.ElementsMatch(t, transactionpool.Transactions{tx2}, txSet.SignedTransactions, "got a transaction that has already been committed")
 
-
 }
 
 func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testing.T) {
@@ -113,7 +112,7 @@ func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFr
 	h.ignoringForwardMessages()
 
 	tx1 := builders.TransferTransaction().Build()
-	tx2 := builders.TransferTransaction().WithAmount(8).Build()
+	tx2 := builders.TransferTransaction().WithAmountAndTargetAddress(8, builders.AddressForEd25519SignerForTests(2)).Build()
 
 	h.addTransactions(tx1, tx2)
 
@@ -187,4 +186,3 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 
 	require.NoError(t, <-doneWait, "did not resolve after block has been committed")
 }
-
