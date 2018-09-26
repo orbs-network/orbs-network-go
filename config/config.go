@@ -41,6 +41,7 @@ type NodeConfig interface {
 	// consensus context
 	ConsensusContextMinimalBlockDelay() time.Duration
 	ConsensusContextMinimumTransactionsInBlock() uint32
+	ConsensusContextMaximumTransactionsInBlock() uint32
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
@@ -78,6 +79,15 @@ type MutableNodeConfig interface {
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig
 
 	MergeWithFileConfig(source string) (MutableNodeConfig, error)
+
+	OverrideNodeSpecificValues(
+		federationNodes map[string]FederationNode,
+		gossipPeers map[string]GossipPeer,
+		gossipListenPort uint16,
+		nodePublicKey primitives.Ed25519PublicKey,
+		nodePrivateKey primitives.Ed25519PrivateKey,
+		constantConsensusLeader primitives.Ed25519PublicKey,
+		activeConsensusAlgo consensus.ConsensusAlgoType)
 }
 
 type FederationNode interface {

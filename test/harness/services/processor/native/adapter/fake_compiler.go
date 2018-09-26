@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/pkg/errors"
@@ -31,7 +32,7 @@ func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdk.ContractInfo, c
 	c.provided[code] = fakeContractInfo
 }
 
-func (c *fakeCompiler) Compile(code string) (*sdk.ContractInfo, error) {
+func (c *fakeCompiler) Compile(ctx context.Context, code string) (*sdk.ContractInfo, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
