@@ -1,6 +1,7 @@
 package synchronization
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -29,6 +30,7 @@ type periodicalTrigger struct {
 	running    bool
 	stop       chan struct{}
 	periodical bool
+	wgSync     sync.WaitGroup
 }
 
 func NewTrigger(interval time.Duration, trigger func()) Trigger {
@@ -82,6 +84,7 @@ func (t *periodicalTrigger) Start() {
 	t.running = true
 	if t.periodical {
 		t.ticker = time.NewTicker(t.d)
+		t.wgSync.Add(1)
 		go func() {
 			for {
 				select {
@@ -91,6 +94,7 @@ func (t *periodicalTrigger) Start() {
 				case <-t.stop:
 					t.ticker.Stop()
 					t.running = false
+					t.wgSync.Done()
 					return
 				}
 			}
@@ -121,9 +125,7 @@ func (t *periodicalTrigger) reset(duration time.Duration, internal bool) {
 	}
 	t.d = duration
 	// its possible in a periodical mode, that stop did not happen by this time, we do not want to start until it does
-	for t.running {
-		time.Sleep(time.Nanosecond)
-	}
+	t.wgSync.Wait()
 	t.Start()
 }
 
