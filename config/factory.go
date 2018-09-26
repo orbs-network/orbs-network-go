@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func ForProduction() MutableNodeConfig {
+func ForProduction(processorArtifactPath string) MutableNodeConfig {
 	cfg := DefaultConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Second)
@@ -18,6 +18,10 @@ func ForProduction() MutableNodeConfig {
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
 	cfg.SetDuration(PUBLIC_API_TRANSACTION_STATUS_GRACE, 5*time.Second)
+
+	if processorArtifactPath != "" {
+		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
+	}
 
 	return cfg
 }
@@ -30,7 +34,8 @@ func ForAcceptanceTests(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := DefaultConfig().OverrideNodeSpecificValues(federationNodes,
+	cfg := DefaultConfig()
+	cfg.OverrideNodeSpecificValues(federationNodes,
 		gossipPeers,
 		0,
 		nodePublicKey,
@@ -57,7 +62,8 @@ func ForDevelopment(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := DefaultConfig().OverrideNodeSpecificValues(federationNodes,
+	cfg := DefaultConfig()
+	cfg.OverrideNodeSpecificValues(federationNodes,
 		gossipPeers,
 		0,
 		nodePublicKey,
@@ -124,7 +130,7 @@ func (c *config) OverrideNodeSpecificValues(
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType) MutableNodeConfig {
+	activeConsensusAlgo consensus.ConsensusAlgoType) {
 
 	c.SetFederationNodes(federationNodes)
 	c.SetGossipPeers(gossipPeers)
@@ -133,8 +139,6 @@ func (c *config) OverrideNodeSpecificValues(
 	c.SetConstantConsensusLeader(constantConsensusLeader)
 	c.SetActiveConsensusAlgo(activeConsensusAlgo)
 	c.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
-
-	return c
 }
 
 func (c *config) MergeWithFileConfig(source string) (MutableNodeConfig, error) {

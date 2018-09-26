@@ -87,7 +87,7 @@ type MutableNodeConfig interface {
 		nodePublicKey primitives.Ed25519PublicKey,
 		nodePrivateKey primitives.Ed25519PrivateKey,
 		constantConsensusLeader primitives.Ed25519PublicKey,
-		activeConsensusAlgo consensus.ConsensusAlgoType) MutableNodeConfig
+		activeConsensusAlgo consensus.ConsensusAlgoType)
 }
 
 type FederationNode interface {

@@ -36,7 +36,7 @@ func getLogger(path string, silent bool) log.BasicLogger {
 }
 
 func getConfig(pathToConfig string) (config.NodeConfig, error) {
-	cfg := config.ForProduction()
+	cfg := config.ForProduction("")
 
 	if pathToConfig != "" {
 		if _, err := os.Stat(pathToConfig); os.IsNotExist(err) {

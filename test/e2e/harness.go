@@ -74,7 +74,8 @@ func newHarness() *harness {
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 
-			cfg := config.ForProduction().OverrideNodeSpecificValues(
+			cfg := config.ForProduction(processorArtifactPath)
+			cfg.OverrideNodeSpecificValues(
 				federationNodes,
 				gossipPeers,
 				uint16(firstRandomPort+i),
@@ -82,7 +83,6 @@ func newHarness() *harness {
 				nodeKeyPair.PrivateKey(),
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
-			cfg.SetString(config.PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
 
 			node := bootstrap.NewNode(cfg, logger, fmt.Sprintf(":%d", 8080+i))
 
