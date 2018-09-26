@@ -3,105 +3,209 @@ package publicapi
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"testing"
 	"time"
 )
 
-func TestWaitForTransaction_ReturnsReceiptWhenCallbackArrivesAfterWaitIsCalled(t *testing.T) {
+func TestPublicApiWaiter_Add(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		w := newTxWaiter(ctx)
+		waiter := newWaiter(ctx)
+		wc := waiter.add("key")
 
-		receipt := builders.TransactionReceipt().WithRandomHash().Build()
+		require.NotNil(t, wc, "wait object is nil when it should exist")
+	})
+}
 
-		waitContext := w.createTxWaitCtx(receipt.Txhash())
-		defer waitContext.cleanup()
+func TestPublicApiWaiter_AddTwice(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		waiter := newWaiter(ctx)
+		wc1 := waiter.add("key")
+		wc2 := waiter.add("key")
 
-		c := make(txResultChan)
+		require.NotNil(t, wc1, "wait object is nil when it should exist")
+		require.NotNil(t, wc2, "wait object is nil when it should exist")
+		require.NotEqual(t, wc1, wc2, "both wait objects must be different")
+		require.Equal(t, 1, len(waiter.m), "must have one key-value pair in upper level")
+	})
+}
+
+func TestPublicApiWaiter_AddTwoKeys(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		waiter := newWaiter(ctx)
+		waiter.add("key1")
+		waiter.add("key2")
+
+		require.Equal(t, 2, len(waiter.m), "must have two key-value pair in upper level")
+	})
+}
+
+func TestPublicApiWaiter_DeleteChan(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		key := "key"
+		waiter := newWaiter(ctx)
+		wc1 := waiter.add(key)
+		wc2 := waiter.add(key)
+		waiter.deleteByChannel(wc1)
+
+		require.Equal(t, 1, len(waiter.m), "must have one key-value pair in upper level")
+		require.Equal(t, 1, len(waiter.m[key]), "must have one channel left in lower level")
+
+		_, exists := waiter.m[key][wc2]
+		require.True(t, exists, "second chan must still exits")
+	})
+}
+
+func TestPublicApiWaiter_DeleteAllChan(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		waiter := newWaiter(ctx)
+		wc1 := waiter.add("key")
+		wc2 := waiter.add("key")
+		waiter.deleteByChannel(wc1)
+		waiter.deleteByChannel(wc2)
+
+		require.Equal(t, 0, len(waiter.m), "must be empty")
+	})
+}
+
+func TestPublicApiWaiter_WaitFor(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		waiter := newWaiter(ctx)
+		wc := waiter.add("key")
+
+		startTime := time.Now()
+		_, err := waiter.wait(wc, 10*time.Millisecond)
+		require.Error(t, err, "expected waiting to be aborted")
+		require.WithinDuration(t, time.Now(), startTime, 13*time.Millisecond, "expected not to reach timeout")
+	})
+}
+
+func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		key := "key"
+		waiter := newWaiter(ctx)
+		wc1 := waiter.add(key)
+		wc2 := waiter.add(key)
+
+		c := make(chan struct{}, 2)
+
 		go func() {
-			o, err := waitContext.until(100 * time.Millisecond)
+			wo, err := waiter.wait(wc1, 100*time.Millisecond)
 			assert.NoError(t, err)
-			if err != nil {
-				close(c)
-			} else {
-				c <- o
-			}
+			require.NotNil(t, wo, "wait object (1) is nil when it should")
+			c <- struct{}{}
 		}()
 
-		w.reportCompleted(receipt, 0, 0)
-
-		output := <-c
-		require.NotZero(t, output)
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, output.TransactionStatus, "expected response with status committed")
-	})
-}
-
-func TestWaitForTransaction_TwoWaitersOnSameTransactionDoNotBothBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		w := newTxWaiter(ctx)
-
-		receipt := builders.TransactionReceipt().WithRandomHash().Build()
-
-		waitContext1 := w.createTxWaitCtx(receipt.Txhash())
-		defer waitContext1.cleanup()
-		waitContext2 := w.createTxWaitCtx(receipt.Txhash())
-		defer waitContext2.cleanup()
-
-		c := make(chan struct{})
 		go func() {
-			_, e1 := waitContext1.until(100 * time.Millisecond)
-			_, e2 := waitContext2.until(100 * time.Millisecond)
-			assert.Error(t, e1)
-			assert.NoError(t, e2)
-			close(c)
+			wo, err := waiter.wait(wc2, 100*time.Millisecond)
+			assert.NoError(t, err)
+			require.NotNil(t, wo, "wait object (2) is nil when it should")
+			c <- struct{}{}
 		}()
 
-		w.reportCompleted(receipt, 0, 0)
+		waiter.complete(key, &waiterObject{"hello"})
 		<-c
+		<-c
+		_, open := <-wc1.c
+		require.False(t, open, "channel 1 should be closed")
+		_, open = <-wc2.c
+		require.False(t, open, "channel 2 should be closed")
 	})
 }
 
-func TestWaitForTransaction_Timeout(t *testing.T) {
+func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		w := newTxWaiter(ctx)
-		txHash := make(primitives.Sha256, 32)
-		rand.Read(txHash)
+		key := "key"
+		waiter := newWaiter(ctx)
+		wc1 := waiter.add(key)
+		wc2 := waiter.add(key)
 
-		waitContext := w.createTxWaitCtx(txHash)
-		defer waitContext.cleanup()
+		c := make(chan struct{}, 2)
+		go func() {
+			wo, err := waiter.wait(wc1, 100*time.Millisecond)
+			assert.Error(t, err)
+			require.Nil(t, wo, "wait object (1) should be nil")
+			c <- struct{}{}
+		}()
 
-		_, err := waitContext.until(1 * time.Millisecond)
+		go func() {
+			wo, err := waiter.wait(wc2, 100*time.Millisecond)
+			assert.NoError(t, err)
+			require.NotNil(t, wo, "wait object (2) is not nil when it should")
+			c <- struct{}{}
+		}()
 
-		require.EqualError(t, err, "timed out waiting for transaction result", "Timeout did not occur")
+		waiter.deleteByChannel(wc1) // as if it was returned error quickly
+		waiter.complete(key, &waiterObject{"hello"})
+		<-c
+		<-c
+
+		_, open := <-wc1.c
+		require.False(t, open, "channel 1 should be closed")
+		_, open = <-wc2.c
+		require.False(t, open, "channel 2 should be closed")
 	})
 }
 
-func TestWaitForTransaction_GracefulShutdownFreesAllWaitingGoroutines(t *testing.T) {
-	var w *txWaiter
-	done := make(chan struct{})
+func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		w = newTxWaiter(ctx)
+		key := "key"
+		waiter := newWaiter(ctx)
+		wc1 := waiter.add(key)
+		wc2 := waiter.add(key)
 
-		var waitTillCancelled = func() {
-			txHash := make(primitives.Sha256, 32)
-			rand.Read(txHash)
-			waitContext := w.createTxWaitCtx(txHash)
-			defer waitContext.cleanup()
+		c := make(chan struct{}, 2)
+		go func() {
+			wo, err := waiter.wait(wc1, 5*time.Millisecond)
+			assert.Error(t, err)
+			require.Nil(t, wo, "wait object (1) should be nil")
+			c <- struct{}{}
+		}()
 
+		go func() {
+			wo, err := waiter.wait(wc2, 1*time.Second)
+			assert.NoError(t, err)
+			require.NotNil(t, wo, "wait object (2) is not nil when it should")
+			c <- struct{}{}
+		}()
+
+		time.Sleep(15 * time.Millisecond)
+		waiter.complete(key, &waiterObject{"hello"})
+		<-c
+		<-c
+
+		_, open := <-wc1.c
+		require.False(t, open, "channel 1 should be closed")
+		_, open = <-wc2.c
+		require.False(t, open, "channel 2 should be closed")
+	})
+}
+
+func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
+	var waiter *waiter
+	c := make(chan struct{})
+
+	test.WithContext(func(ctx context.Context) {
+		key := "key"
+		waiter = newWaiter(ctx)
+		wc1 := waiter.add(key)
+		wc2 := waiter.add(key)
+
+		var waitTillCancelled = func(wc *waiterChannel) {
 			startTime := time.Now()
-			_, err := waitContext.until(1 * time.Second)
+			wo, err := waiter.wait(wc, 1*time.Second)
 			assert.Error(t, err, "expected waiting to be aborted")
 			assert.WithinDuration(t, time.Now(), startTime, 100*time.Millisecond, "expected not to reach timeout")
-			done <- struct{}{}
+			require.Nil(t, wo, "wait object (1) should be nil")
+			c <- struct{}{}
 		}
-		go waitTillCancelled()
-		go waitTillCancelled()
+
+		go waitTillCancelled(wc1)
+		go waitTillCancelled(wc2)
 	})
-	<-done
-	<-done
+	<-c
+	<-c
 }
+
+// TODO  MUTEX TESTS ? and/or timing tests
