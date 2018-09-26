@@ -10,6 +10,17 @@ import (
 	"testing"
 )
 
+func sendAmount(t *testing.T, h *harness, amount uint64) {
+	signerKeyPair := keys.Ed25519KeyPairForTests(5)
+	targetAddress := builders.AddressForEd25519SignerForTests(6)
+	transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
+	response, err := h.sendTransaction(t, transfer)
+	require.NoError(t, err, "transaction for amount %d should not return error", amount)
+	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction for amount %d should be successfully committed", amount)
+	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "transaction for amount %d should execute successfully", amount)
+
+}
+
 func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
@@ -21,13 +32,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 	// send 3 transactions with total of 70
 	amounts := []uint64{15, 22, 33}
 	for _, amount := range amounts {
-		signerKeyPair := keys.Ed25519KeyPairForTests(5)
-		targetAddress := builders.AddressForEd25519SignerForTests(6)
-		transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
-		response, err := h.sendTransaction(t, transfer)
-		require.NoError(t, err, "transaction for amount %d should not return error", amount)
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction for amount %d should be successfully committed", amount)
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "transaction for amount %d should execute successfully", amount)
+		sendAmount(t, h, amount)
 	}
 
 	// check balance
@@ -55,22 +60,28 @@ func TestMultipleTransactionsProcessingTime(t *testing.T) {
 	h := newHarness()
 	defer h.gracefulShutdown()
 
-	amounts := [100]uint64{}
+	const numOfBrackets = 10
+	const txPerBracket = 1
+
+	amounts := [numOfBrackets][txPerBracket]uint64{}
 	sum := uint64(0)
 
-	for i := 0; i < 100; i++ {
-		amounts[i] = uint64(rand.Intn(20))
-		sum += amounts[i]
+	for i := 0; i < numOfBrackets; i++ {
+		for j := 0; j < txPerBracket; j++ {
+			amount := uint64(rand.Intn(20))
+			amounts[i][j] = amount
+			sum += amount
+		}
 	}
 
-	for _, amount := range amounts {
-		signerKeyPair := keys.Ed25519KeyPairForTests(5)
-		targetAddress := builders.AddressForEd25519SignerForTests(6)
-		transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
-		response, err := h.sendTransaction(t, transfer)
-		require.NoError(t, err, "transaction for amount %d should not return error", amount)
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction for amount %d should be successfully committed", amount)
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "transaction for amount %d should execute successfully", amount)
+	sendAmount(t, h, 0)
+
+	for _, bracket := range amounts {
+		for _, amount := range bracket {
+			go func() {
+				sendAmount(t, h, amount)
+			}()
+		}
 	}
 
 	// check balance
@@ -82,7 +93,8 @@ func TestMultipleTransactionsProcessingTime(t *testing.T) {
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
-				return outputArgsIterator.NextArguments().Uint64Value() == sum
+				val := outputArgsIterator.NextArguments().Uint64Value()
+				return val == sum
 			}
 		}
 		return false
