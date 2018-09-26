@@ -10,6 +10,25 @@ import (
 	"time"
 )
 
+func TestGetTransactionsForOrderingReturnsArrayOfTransactions(t *testing.T) {
+	t.Parallel()
+	h := newHarness()
+
+	transactions := []*protocol.SignedTransaction{}
+
+	for i := 0; i < 10; i++ {
+		transactions = append(transactions, builders.TransferTransaction().Build())
+	}
+
+	// we use forward rather than add to simulate a scenario where a byzantine node submitted invalid transactions
+	h.handleForwardFrom(otherNodeKeyPair, transactions...)
+
+	txSet, err := h.getTransactionsForOrdering(20)
+
+	require.NoError(t, err, "expected transaction set but got an error")
+	require.Equal(t, transactions, txSet.SignedTransactions, "got an expired transaction")
+}
+
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	t.Parallel()
 	h := newHarness()
