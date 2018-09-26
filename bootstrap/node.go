@@ -39,6 +39,10 @@ func NewNode(
 	logger log.BasicLogger,
 	processorArtifactPath string,
 ) Node {
+	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
+	meter := nodeLogger.Meter("node-startup-time")
+	defer meter.Done()
+
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	nodeConfig := config.ForProduction(
 		federationNodes,
@@ -50,8 +54,6 @@ func NewNode(
 		activeConsensusAlgo,
 		processorArtifactPath,
 	)
-
-	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
