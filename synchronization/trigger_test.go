@@ -14,24 +14,10 @@ func getExpected(startTime, endTime time.Time, tickTime time.Duration) uint32 {
 	return expected
 }
 
-func TestNewTrigger(t *testing.T) {
-	p := synchronization.NewTrigger(time.Duration(5), func() {})
-	require.NotNil(t, p, "failed to initialize the ticker")
-	require.False(t, p.IsRunning(), "should not be running when created")
-}
-
 func TestNewPeriodicalTrigger(t *testing.T) {
 	p := synchronization.NewPeriodicalTrigger(time.Duration(5), func() {})
 	require.NotNil(t, p, "failed to initialize the ticker")
 	require.False(t, p.IsRunning(), "should not be running when created")
-}
-
-func TestTrigger_FiresOnlyOnce(t *testing.T) {
-	x := 0
-	p := synchronization.NewTrigger(time.Millisecond*1, func() { x++ })
-	p.Start()
-	time.Sleep(time.Millisecond * 10)
-	require.Equal(t, 1, x, "expected one tick")
 }
 
 func TestPeriodicalTrigger_NoStartDoesNotFireFunc(t *testing.T) {

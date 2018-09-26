@@ -22,41 +22,23 @@ type Telemetry struct {
 }
 
 type periodicalTrigger struct {
-	d          time.Duration
-	f          func()
-	ticker     *time.Ticker
-	timer      *time.Timer
-	metrics    *Telemetry
-	running    bool
-	stop       chan struct{}
-	periodical bool
-	wgSync     sync.WaitGroup
-}
-
-func NewTrigger(interval time.Duration, trigger func()) Trigger {
-	t := &periodicalTrigger{
-		ticker:     nil,
-		timer:      nil,
-		d:          interval,
-		f:          trigger,
-		metrics:    &Telemetry{},
-		stop:       nil,
-		running:    false,
-		periodical: false,
-	}
-	return t
+	d       time.Duration
+	f       func()
+	ticker  *time.Ticker
+	metrics *Telemetry
+	running bool
+	stop    chan struct{}
+	wgSync  sync.WaitGroup
 }
 
 func NewPeriodicalTrigger(interval time.Duration, trigger func()) Trigger {
 	t := &periodicalTrigger{
-		ticker:     nil,
-		timer:      nil,
-		d:          interval,
-		f:          trigger,
-		metrics:    &Telemetry{},
-		stop:       make(chan struct{}),
-		running:    false,
-		periodical: true,
+		ticker:  nil,
+		d:       interval,
+		f:       trigger,
+		metrics: &Telemetry{},
+		stop:    make(chan struct{}),
+		running: false,
 	}
 	return t
 }
@@ -82,34 +64,26 @@ func (t *periodicalTrigger) Start() {
 		return
 	}
 	t.running = true
-	if t.periodical {
-		t.ticker = time.NewTicker(t.d)
-		t.wgSync.Add(1)
-		go func() {
-			for {
-				select {
-				case <-t.ticker.C:
-					t.f()
-					atomic.AddUint64(&t.metrics.timesTriggered, 1)
-				case <-t.stop:
-					t.ticker.Stop()
-					t.running = false
-					t.wgSync.Done()
-					return
-				}
+	t.ticker = time.NewTicker(t.d)
+	t.wgSync.Add(1)
+	go func() {
+		for {
+			select {
+			case <-t.ticker.C:
+				t.f()
+				atomic.AddUint64(&t.metrics.timesTriggered, 1)
+			case <-t.stop:
+				t.ticker.Stop()
+				t.running = false
+				t.wgSync.Done()
+				return
 			}
-		}()
-	} else {
-		t.timer = time.AfterFunc(t.d, t.f)
-	}
+		}
+	}()
 }
 
 func (t *periodicalTrigger) FireNow() {
-	if !t.periodical {
-		t.Stop()
-	} else {
-		t.reset(t.d, true)
-	}
+	t.reset(t.d, true)
 	go t.f()
 	atomic.AddUint64(&t.metrics.timesTriggeredManually, 1)
 }
@@ -124,8 +98,6 @@ func (t *periodicalTrigger) reset(duration time.Duration, internal bool) {
 		atomic.AddUint64(&t.metrics.timesReset, 1)
 	}
 	t.d = duration
-	// its possible in a periodical mode, that stop did not happen by this time, we do not want to start until it does
-	t.wgSync.Wait()
 	t.Start()
 }
 
@@ -134,11 +106,7 @@ func (t *periodicalTrigger) Stop() {
 		return
 	}
 
-	if t.periodical {
-		t.stop <- struct{}{}
-		// we set running to false only once the gofunc terminates (other side of this channel)
-	} else {
-		t.timer.Stop()
-		t.running = false
-	}
+	t.stop <- struct{}{}
+	// we set running to false only once the gofunc terminates and we will block (possibly, for a few nanosecs) until that channel is processed
+	t.wgSync.Wait()
 }
