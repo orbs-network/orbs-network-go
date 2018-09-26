@@ -9,6 +9,9 @@ import (
 )
 
 func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
+	meter := s.reporting.Meter("tx-block-creation")
+	defer meter.Done()
+
 	proposedTransactions, err := s.fetchTransactions(s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
 	if err != nil {
 		return nil, err
@@ -30,6 +33,8 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 }
 
 func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
+	meter := s.reporting.Meter("rs-block-creation")
+	defer meter.Done()
 
 	output, err := s.virtualMachine.ProcessTransactionSet(&services.ProcessTransactionSetInput{
 		BlockHeight:        blockHeight,
