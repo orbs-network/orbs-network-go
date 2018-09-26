@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"time"
-	)
+)
 
 type Config interface {
 	SendTransactionTimeout() time.Duration
@@ -64,6 +64,9 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 
 	s.reporting.Info("transaction received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 	defer s.reporting.Info("transaction status returned by public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+
+	meter := s.reporting.Meter("tx-processing-time", log.Stringable("txHash", txHash))
+	defer meter.Done()
 
 	waitContext := s.txWaiter.createTxWaitCtx(txHash)
 	defer waitContext.cleanup()
