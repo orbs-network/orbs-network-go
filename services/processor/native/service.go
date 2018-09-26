@@ -50,6 +50,7 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, string(input.ContractName), string(input.MethodName))
 	if err != nil {
 		return &services.ProcessCallOutput{
+			// TODO: discussion, showing the error string in call output will store this on the transactions on-chain but may be difficult to reproduce during audit if code changes
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
