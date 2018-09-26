@@ -36,8 +36,8 @@ type TamperingTransport interface {
 	// Creates an ongoing tamper which corrupts messages matching the given predicate
 	Corrupt(predicate MessagePredicate) OngoingTamper
 
-	// Creates an ongoing tamper which delays (reshuffles) messages matching the given predicate for a random duration
-	Delay(predicate MessagePredicate) OngoingTamper
+	// Creates an ongoing tamper which delays (reshuffles) messages matching the given predicate for the specified duration
+	Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper
 }
 
 // A predicate for matching messages with a certain property
@@ -111,8 +111,8 @@ func (t *tamperingTransport) Corrupt(predicate MessagePredicate) OngoingTamper {
 	return t.addTamperer(&corruptingTamperer{predicate: predicate, transport: t})
 }
 
-func (t *tamperingTransport) Delay(predicate MessagePredicate) OngoingTamper {
-	return t.addTamperer(&delayingTamperer{predicate: predicate, transport: t})
+func (t *tamperingTransport) Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper {
+	return t.addTamperer(&delayingTamperer{predicate: predicate, transport: t, duration: duration})
 }
 
 func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper {
@@ -261,13 +261,13 @@ func (o *duplicatingTamperer) Release() {
 type delayingTamperer struct {
 	predicate MessagePredicate
 	transport *tamperingTransport
+	duration  func() time.Duration
 }
 
 func (o *delayingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		duration := time.Duration(rand.Intn(10000)) * time.Microsecond
 		go func() {
-			time.Sleep(duration)
+			time.Sleep(o.duration())
 			o.transport.receive(data)
 		}()
 		return nil, true
