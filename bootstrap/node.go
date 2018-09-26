@@ -9,8 +9,6 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"sync"
 	"time"
 )
@@ -27,33 +25,11 @@ type node struct {
 	ctxCancel    context.CancelFunc
 }
 
-func NewNode(
-	httpAddress string,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey,
-	federationNodes map[string]config.FederationNode,
-	gossipPeers map[string]config.GossipPeer,
-	gossipListenPort uint16,
-	constantConsensusLeader primitives.Ed25519PublicKey,
-	activeConsensusAlgo consensus.ConsensusAlgoType,
-	logger log.BasicLogger,
-	processorArtifactPath string,
-) Node {
-	nodeLogger := logger.For(log.Node(nodePublicKey.String()))
+func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress string) Node {
+	nodeLogger := logger.For(log.Node(nodeConfig.NodePublicKey().String()))
 	meter := nodeLogger.Meter("node-startup-time")
 	defer meter.Done()
-
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	nodeConfig := config.ForProduction(
-		federationNodes,
-		gossipPeers,
-		nodePublicKey,
-		nodePrivateKey,
-		gossipListenPort,
-		constantConsensusLeader,
-		activeConsensusAlgo,
-		processorArtifactPath,
-	)
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
