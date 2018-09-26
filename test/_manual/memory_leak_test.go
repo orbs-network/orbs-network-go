@@ -69,7 +69,7 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	harness.Network(t).Start(func(network harness.InProcessNetwork) {
 		network.DeployBenchmarkToken(5)
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
-		for i := 0; i < 5; i++ {
+		for i := 0; i < 20; i++ {
 			sendTransactionAndWaitUntilInState(network)
 		}
 	})
