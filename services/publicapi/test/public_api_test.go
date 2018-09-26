@@ -86,6 +86,45 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 	})
 }
 
+func TestSendTransaction_TimesOut(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+		txpMock := makeTxMock()
+		vmMock := &services.MockVirtualMachine{}
+
+		timeoutDuration := 1 * time.Millisecond
+
+		cfg := newPublicApiConfig(timeoutDuration)
+		papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, logger)
+
+		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+		txb := builders.Transaction().Builder()
+		txpMock.When("AddNewTransaction", mock.Any).Times(1).
+			Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+				go func() {
+					time.Sleep(5 * time.Millisecond)
+					papi.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
+						TransactionReceipts: []*protocol.TransactionReceipt{builders.TransactionReceipt().WithTransaction(txb.Build().Transaction()).Build()},
+						BlockHeight:         2,
+						Timestamp:           blockTime,
+					})
+				}()
+				return &services.AddNewTransactionOutput{TransactionStatus: protocol.TRANSACTION_STATUS_PENDING}, nil
+			})
+
+		start := time.Now()
+		tx, err := papi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: (&client.SendTransactionRequestBuilder{
+				SignedTransaction: txb,
+			}).Build(),
+		})
+
+		require.EqualError(t, err, "timed out waiting for transaction result")
+		require.WithinDuration(t, time.Now(), start, timeoutDuration*2, "timeout duration exceeded")
+		require.NotNil(t, tx, "Send transaction returned nil instead of object")
+	})
+}
+
 func makeTxMock() *services.MockTransactionPool {
 	txpMock := &services.MockTransactionPool{}
 	txpMock.When("RegisterTransactionResultsHandler", mock.Any).Return(nil)
