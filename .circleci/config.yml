@@ -21,7 +21,7 @@ jobs:
       - run: ./docker-build.acceptance.sh
       - run:
           command: ./docker-test.acceptance.sh
-          no_output_timout: 20m
+          no_output_timeout: 20m
       - store_artifacts:
           path: logs
 
