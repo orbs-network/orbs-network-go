@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestProcessCallArguments(t *testing.T) {
+func TestProcessCall_Arguments(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          *services.ProcessCallInput
@@ -61,18 +61,6 @@ func TestProcessCallArguments(t *testing.T) {
 			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		},
 		{
-			name:           "ThatThrowsError",
-			input:          processCallInput().WithMethod("BenchmarkContract", "throw").Build(),
-			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
-		},
-		{
-			name:           "ThatPanics",
-			input:          processCallInput().WithMethod("BenchmarkContract", "panic").Build(),
-			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
-		},
-		{
 			name:           "WithInvalidMethodMissingErrorFails",
 			input:          processCallInput().WithMethod("BenchmarkContract", "invalidNoError").Build(),
 			expectedError:  true,
@@ -92,6 +80,7 @@ func TestProcessCallArguments(t *testing.T) {
 			output, err := h.service.ProcessCall(test.input)
 			if test.expectedError {
 				require.Error(t, err, "call should fail")
+				require.NotEmpty(t, output.OutputArgumentArray.ArgumentsIterator().NextArguments().StringValue(), "call return args should contain an error string")
 			} else {
 				require.NoError(t, err, "call should succeed")
 				require.Equal(t, test.expectedOutput, output.OutputArgumentArray, "call return args should be equal")

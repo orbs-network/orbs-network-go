@@ -117,7 +117,7 @@ var METHOD_THROW = sdk.MethodInfo{
 }
 
 func (c *contract) throw(ctx sdk.Context) error {
-	return errors.New("contract returns error")
+	return errors.New("example error returned by contract")
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -130,7 +130,7 @@ var METHOD_PANIC = sdk.MethodInfo{
 }
 
 func (c *contract) panic(ctx sdk.Context) error {
-	panic("contract panicked")
+	panic("example panic thrown by contract")
 }
 
 ///////////////////////////////////////////////////////////////////////////
