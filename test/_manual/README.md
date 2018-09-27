@@ -8,7 +8,7 @@ It is possible that as we gather more evidence, some of these tests will become 
 
 This test attempts to show the top memory consumers of a running acceptance node. The test shows a report of all memory consumers and the amount of memory they currently have in-use.
 
-* Run with `PROJECT-ROOT/test.memory-leaks.sh`
+* Run with `PROJECT-ROOT/test.manual-memory-leaks.sh`
 
 * Test scenarios:
 
