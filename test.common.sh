@@ -23,7 +23,6 @@ check_exit_code_and_report () {
     # copy full log for further investigation
     mkdir -p logs
     cp *.out logs
-    find logs/ -type f -exec bzip2 {} \;
 
     exit $EXIT_CODE
 }
