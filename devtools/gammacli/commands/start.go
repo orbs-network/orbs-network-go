@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 func runCommand(command []string) {
@@ -22,6 +21,25 @@ func runCommand(command []string) {
 	}
 }
 
+func findGammaServerBinary(pathToBinary string) string {
+	var lookups []string
+
+	if pathToBinary != "" {
+		lookups = append(lookups, pathToBinary)
+	}
+
+	lookups = append(lookups, "./gamma-server", "/usr/local/bin/gamma-server")
+
+	for _, binaryPath := range lookups {
+		_, err := os.Stat(binaryPath)
+		if err == nil {
+			return binaryPath
+		}
+	}
+
+	return ""
+}
+
 func HandleStartCommand(args []string) int {
 	flagSet := flag.NewFlagSet("start", flag.ExitOnError)
 
@@ -30,27 +48,15 @@ func HandleStartCommand(args []string) int {
 
 	flagSet.Parse(args)
 
-	var lookups []string
+	pathToBinary := findGammaServerBinary(*binaryPtr)
+	if pathToBinary != "" {
+		fmt.Println(fmt.Sprintf("gamma-server started and listening on port %s", *portPtr))
+		fmt.Println("For debugging/logging please run gamma-server directly")
 
-	if *binaryPtr != "" {
-		lookups = append(lookups, *binaryPtr)
+		execCommand := []string{pathToBinary, "-port", *portPtr, "&>/dev/null", "&"}
+		runCommand(execCommand)
+	} else {
+		fmt.Println("Could not find gamma-server on this machine")
 	}
-
-	lookups = append(lookups, "/usr/local/bin/gamma-server", "gamma-server")
-
-	for _, binaryPath := range lookups {
-		_, err := os.Stat(binaryPath)
-		if err == nil {
-			// Found a workable binary , let's execute it.
-			fmt.Println(fmt.Sprintf("gamma-server started and listening on port %s", *portPtr))
-			fmt.Println("For debugging/logging please run gamma-server directly")
-
-			execCommand := []string{binaryPath, "-port", *portPtr, "&>/dev/null", "&"}
-			execCommand[0] = "./" + strings.TrimLeft(execCommand[0], "/")
-			runCommand(execCommand)
-		}
-	}
-
-	fmt.Println("Could not find gamma-server on this machine")
 	return 1
 }
