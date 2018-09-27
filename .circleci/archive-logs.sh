@@ -1,3 +1,5 @@
 #!/bin/sh -x
 
-find logs/ -type f -exec bzip2 {} \;
+bzip2 logs/*.out
+
+tar jcvf logs/acceptance.tar.bz2 logs/acceptance/ && rm -rf logs/acceptance
