@@ -83,10 +83,12 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256) *pendingTransaction {
 }
 
 func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions {
-
-	// this is not locked on purpose, the reasoning is that in the worst case scenario, we will iterate over another element that's just been added to the front of the list
 	txs := make(Transactions, 0, maxNumOfTransactions)
 	accumulatedSize := uint32(0)
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
 	e := p.transactionList.Back()
 	for {
 		if e == nil {
