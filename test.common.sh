@@ -15,7 +15,7 @@ check_exit_code_and_report () {
         cat timed.out
 
         if [ ! -s fail.out ] && [ ! -s timed.out ]; then
-            tail -500 test.out
+            cat test.out
         fi
 
     fi
