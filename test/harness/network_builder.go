@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"math/rand"
 	"runtime"
 	"strconv"
 	"strings"
@@ -31,7 +30,7 @@ func Network(t *testing.T) *acceptanceTestNetworkBuilder {
 }
 
 func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTestNetworkBuilder {
-	b.testId = "acceptance-" + testId + "-" + strconv.FormatUint(rand.Uint64(), 10)
+	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 	return b
 }
 
