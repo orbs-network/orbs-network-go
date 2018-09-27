@@ -18,7 +18,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 	var output io.Writer
 	output = os.Stdout
 
-	if os.Getenv("STANDALONE") == "true" {
+	if os.Getenv("NO_LOG_STDOUT") == "true" {
 		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			panic(err)
