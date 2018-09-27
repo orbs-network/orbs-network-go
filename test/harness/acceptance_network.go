@@ -14,7 +14,11 @@ import (
 )
 
 func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.ConsensusAlgoType, testId string) *inProcessNetwork {
-	testLogger := log.GetLogger(log.String("_test-id", testId)).WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	testLogger := log.GetLogger(log.String("_test-id", testId)).
+		WithOutput(log.NewOutput(os.Stdout).
+		WithFormatter(log.NewHumanReadableFormatter())).
+		WithFilter(log.String("flow", "block-sync")).
+		WithFilter(log.String("service", "gossip"))
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
