@@ -18,11 +18,12 @@ check_exit_code_and_report () {
             tail -500 test.out
         fi
 
-        # copy full log for further investigation
-        mkdir -p logs
-        cp *.out logs
-        bzip2 logs/*
-
-        exit $EXIT_CODE
     fi
+
+    # copy full log for further investigation
+    mkdir -p logs
+    cp *.out logs
+    find logs/ -type f -exec bzip2 {} \;
+
+    exit $EXIT_CODE
 }
