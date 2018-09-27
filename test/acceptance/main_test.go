@@ -9,7 +9,7 @@ import (
 func TestMain(m *testing.M) {
 	logs := config.GetProjectSourceRootPath() + "/logs/acceptance/"
 	os.RemoveAll(logs)
-	os.MkdirAll(logs, 0700)
+	os.MkdirAll(logs, 0755)
 
 	os.Exit(m.Run())
 }
