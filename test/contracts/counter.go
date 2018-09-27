@@ -6,7 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
 )
 
-const COUNTER_SOURCE_CODE = `
+const COUNTER_NATIVE_SOURCE_CODE = `
 package main
 
 import (
@@ -89,8 +89,36 @@ func (c *contract) start(ctx sdk.Context) (uint64, error) {
 }
 `
 
-func SourceCodeForCounter(startFrom uint64) []byte {
-	return []byte(fmt.Sprintf(COUNTER_SOURCE_CODE, startFrom, startFrom, startFrom))
+func NativeSourceCodeForCounter(startFrom uint64) []byte {
+	return []byte(fmt.Sprintf(COUNTER_NATIVE_SOURCE_CODE, startFrom, startFrom, startFrom))
+}
+
+const COUNTER_JAVASCRIPT_SOURCE_CODE = `
+class CounterFrom%d {
+	
+	static _init() {
+		$sdk.state.writeUint64ByKey("count", %d);
+	}
+
+	static add(amount) {
+		let count = $sdk.state.readUint64ByKey("count");
+		count += amount;
+		$sdk.state.writeUint64ByKey("count", count);
+	}
+
+	static get() {
+		return $sdk.state.readUint64ByKey("count");
+	}
+
+	static start() {
+		return %d;
+	}
+
+}
+`
+
+func JavaScriptSourceCodeForCounter(startFrom uint64) []byte {
+	return []byte(fmt.Sprintf(COUNTER_JAVASCRIPT_SOURCE_CODE, startFrom, startFrom, startFrom))
 }
 
 func MockForCounter() *sdk.ContractInfo {

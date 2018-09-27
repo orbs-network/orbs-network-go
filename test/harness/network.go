@@ -189,7 +189,7 @@ func (n *inProcessNetwork) SendDeployCounterContract(nodeIndex int) chan *client
 	// if needed, provide a fake implementation of this contract to all nodes
 	for _, node := range n.nodes {
 		if fakeCompiler, ok := node.nativeCompiler.(testNativeProcessorAdapter.FakeCompiler); ok {
-			fakeCompiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.SourceCodeForCounter(counterStart)))
+			fakeCompiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
 		}
 	}
 
@@ -198,7 +198,7 @@ func (n *inProcessNetwork) SendDeployCounterContract(nodeIndex int) chan *client
 		WithArgs(
 			fmt.Sprintf("CounterFrom%d", counterStart),
 			uint32(protocol.PROCESSOR_TYPE_NATIVE),
-			[]byte(contracts.SourceCodeForCounter(counterStart)),
+			[]byte(contracts.NativeSourceCodeForCounter(counterStart)),
 		)
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: tx.Builder(),
