@@ -12,7 +12,7 @@ func ATransactionRelayMessage(header *gossipmessages.Header) bool {
 	return header.IsTopicTransactionRelay()
 }
 
-func ABenchmarkConsensusMessage (header *gossipmessages.Header) bool {
+func ABenchmarkConsensusMessage(header *gossipmessages.Header) bool {
 	return header.IsTopicBenchmarkConsensus()
 }
 

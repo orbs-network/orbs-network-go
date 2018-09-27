@@ -119,7 +119,7 @@ func TestConvertCallMethodOutput(t *testing.T) {
 	cmo := (&client.CallMethodResponseBuilder{
 		BlockHeight:         4,
 		BlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
-		CallMethodResult:          protocol.EXECUTION_RESULT_SUCCESS,
+		CallMethodResult:    protocol.EXECUTION_RESULT_SUCCESS,
 		OutputArgumentArray: outputArgumentArray.RawArgumentsArray(),
 	}).Build()
 
