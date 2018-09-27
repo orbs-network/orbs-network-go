@@ -10,11 +10,24 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"io"
 	"os"
 )
 
 func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.ConsensusAlgoType, testId string) *inProcessNetwork {
-	testLogger := log.GetLogger(log.String("_test-id", testId)).WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	var output io.Writer
+	output = os.Stdout
+
+	if os.Getenv("NO_LOG_STDOUT") == "true" {
+		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			panic(err)
+		}
+
+		output = logFile
+	}
+
+	testLogger := log.GetLogger(log.String("_test-id", testId)).WithOutput(log.NewOutput(output).WithFormatter(log.NewHumanReadableFormatter()))
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
