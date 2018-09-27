@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestProcessCallPermissions(t *testing.T) {
+func TestProcessCall_Permissions(t *testing.T) {
 	tests := []struct {
 		name             string
 		input            *services.ProcessCallInput
