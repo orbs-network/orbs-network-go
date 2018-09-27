@@ -1,153 +1,101 @@
 package publicapi
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"context"
+	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/pkg/errors"
+	"sync"
 	"time"
 )
 
-import (
-	"context"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/pkg/errors"
-)
-
-type txWaiter struct {
-	queue   chan txWaiterMessage
-	stopped chan struct{}
+type waiterObject struct {
+	payload interface{}
 }
 
-type txResultChan chan *services.AddNewTransactionOutput
-
-const retryCount = 10
-const retryDelay = 10 * time.Millisecond
-
-type txWaiterMessage struct {
-	txId       string
-	c          txResultChan
-	output     *services.AddNewTransactionOutput
-	cleanup    bool
-	retryCount byte
+type waiterChannel struct {
+	c chan *waiterObject
+	k string
 }
 
-func newTxWaiter(ctx context.Context) *txWaiter {
+type waiterChannels map[*waiterChannel]*waiterChannel
+
+type waiter struct {
+	ctx   context.Context
+	mutex sync.Mutex
+	m     map[string]waiterChannels
+}
+
+func newWaiter(ctx context.Context) *waiter {
 	// TODO supervise
-	result := &txWaiter{queue: make(chan txWaiterMessage)}
-	result._start(ctx)
-	return result
-}
-
-func (w *txWaiter) _start(ctx context.Context) {
-	w.stopped = make(chan struct{})
-	go func(ctx context.Context) {
-		txChan := map[string]txResultChan{}
-		for {
-			select {
-			case message := <-w.queue:
-				outputChan, _ := txChan[message.txId]
-				if message.c != nil && outputChan == nil && !message.cleanup { // first request
-					txChan[message.txId] = message.c
-				} else if message.c != nil && outputChan != nil && !message.cleanup { // second request
-					close(outputChan)
-					outputChan = nil
-					txChan[message.txId] = message.c
-				} else if message.output != nil && outputChan != nil && !message.cleanup { // send output and cleanup
-					select {
-					case outputChan <- message.output:
-						close(outputChan)
-						outputChan = nil
-						delete(txChan, message.txId)
-					default:
-						if message.retryCount > 0 {
-							message.retryCount--
-							go func() {
-								time.Sleep(retryDelay)
-								w._tryEnqueue(&message)
-							}()
-						}
-					}
-				} else if message.cleanup && message.c == outputChan && outputChan != nil { // cleanup
-					close(outputChan)
-					outputChan = nil
-					delete(txChan, message.txId)
-				}
-
-			case <-ctx.Done():
-				close(w.queue)
-				for _, c := range txChan {
-					close(c)
-				}
-				close(w.stopped)
-				return
-			}
-		}
-	}(ctx)
-}
-
-func (w *txWaiter) _tryEnqueue(message *txWaiterMessage) {
-	defer func() { recover() }()
-	w.queue <- *message
-}
-
-func (w *txWaiter) createTxWaitCtx(txHash primitives.Sha256) (waitContext *txWaitContext) {
-	receiptChannel := make(txResultChan)
-	waitContext = &txWaitContext{c: receiptChannel, txHash: txHash, waiter: w}
-
-	defer func() {
-		if p := recover(); p != nil {
-			close(waitContext.c)
-		}
-	}()
-	w.queue <- txWaiterMessage{
-		txId: txHash.KeyForMap(),
-		c:    receiptChannel,
+	return &waiter{
+		ctx:   ctx,
+		mutex: sync.Mutex{},
+		m:     make(map[string]waiterChannels),
 	}
-
-	return
 }
 
-func (w *txWaiter) reportCompleted(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, timestampNano primitives.TimestampNano) {
-	w._tryEnqueue(&txWaiterMessage{
-		txId:       receipt.Txhash().KeyForMap(),
-		retryCount: retryCount,
-		output: &services.AddNewTransactionOutput{
-			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-			TransactionReceipt: receipt,
-			BlockHeight:        blockHeight,
-			BlockTimestamp:     timestampNano,
-		},
-	})
+func (w *waiter) add(k string) *waiterChannel {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	var wcs waiterChannels
+	exists := false
+	if wcs, exists = w.m[k]; !exists {
+		wcs = make(waiterChannels)
+		w.m[k] = wcs
+	}
+	wc := &waiterChannel{make(chan *waiterObject, 1), k} // channel is buffered for quick release
+	wcs[wc] = wc
+
+	return wc
 }
 
-func (w *txWaiter) forget(txHash primitives.Sha256, c txResultChan) {
-	w._tryEnqueue(&txWaiterMessage{
-		txId:    txHash.KeyForMap(),
-		c:       c,
-		cleanup: true,
-	})
+func (w *waiter) _deleteByKey(k string) waiterChannels { // this is internal function only
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	if wcs, exists := w.m[k]; exists {
+		delete(w.m, k)
+		return wcs
+	}
+	return nil
 }
 
-type txWaitContext struct {
-	c      txResultChan
-	txHash primitives.Sha256
-	waiter *txWaiter
+func (w *waiter) deleteByChannel(wc *waiterChannel) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	if wcs, exists := w.m[wc.k]; exists {
+		if _, existsC := wcs[wc]; existsC {
+			delete(wcs, wc)
+			if len(wcs) == 0 { // if we were the last ones clean up
+				delete(w.m, wc.k)
+			}
+			close(wc.c)
+		}
+	}
 }
 
-func (w *txWaitContext) until(timeout time.Duration) (*services.AddNewTransactionOutput, error) {
-	timer := time.NewTimer(timeout)
+func (w *waiter) wait(wc *waiterChannel, duration time.Duration) (*waiterObject, error) {
+	timer := synchronization.NewTimer(duration)
 	defer timer.Stop()
 
 	select {
+	case <-w.ctx.Done(): // currently ctx is global so only shutdown and no need to kill the map.
+		//	w.deleteByChannel(wc)
+		return nil, errors.Errorf("shutting down")
 	case <-timer.C:
-		return nil, errors.Errorf("timed out waiting for transaction result %s", w.txHash)
-	case ta, open := <-w.c:
+		w.deleteByChannel(wc)
+		return nil, errors.Errorf("timed out waiting for transaction result %s", wc.k)
+	case response, open := <-wc.c: // intentional not close channel here
 		if !open {
 			return nil, errors.Errorf("waiting aborted")
 		}
-		return ta, nil
+		return response, nil
 	}
 }
 
-func (w *txWaitContext) cleanup() {
-	w.waiter.forget(w.txHash, w.c)
+func (w *waiter) complete(k string, wo *waiterObject) {
+	for wc := range w._deleteByKey(k) {
+		wc.c <- wo
+		close(wc.c)
+	}
 }
