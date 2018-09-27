@@ -139,7 +139,7 @@ func (w *txWaitContext) until(timeout time.Duration) (*services.AddNewTransactio
 
 	select {
 	case <-timer.C:
-		return nil, errors.Errorf("timed out waiting for transaction result")
+		return nil, errors.Errorf("timed out waiting for transaction result %s", w.txHash)
 	case ta, open := <-w.c:
 		if !open {
 			return nil, errors.Errorf("waiting aborted")
