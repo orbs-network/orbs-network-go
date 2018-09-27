@@ -104,8 +104,14 @@ func (b *basicLogger) Metric(metric string, params ...*Field) {
 }
 
 func (b *basicLogger) Log(level string, message string, params ...*Field) {
-	for _, p := range params {
-		for _, f := range b.filters {
+	for _, f := range b.filters {
+		for _, p := range b.prefixes {
+			if p.Equal(f) {
+				return
+			}
+		}
+
+		for _, p := range params {
 			if p.Equal(f) {
 				return
 			}
