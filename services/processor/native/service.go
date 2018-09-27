@@ -50,7 +50,7 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, string(input.ContractName), string(input.MethodName))
 	if err != nil {
 		return &services.ProcessCallOutput{
-			// TODO: discussion, showing the error string in call output will store this on the transactions on-chain but may be difficult to reproduce during audit if code changes
+			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
@@ -60,6 +60,7 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	err = s.verifyMethodPermissions(contractInfo, methodInfo, input.CallingService, input.CallingPermissionScope, input.AccessScope)
 	if err != nil {
 		return &services.ProcessCallOutput{
+			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
@@ -72,6 +73,7 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}
 	if err != nil {
 		return &services.ProcessCallOutput{
+			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
