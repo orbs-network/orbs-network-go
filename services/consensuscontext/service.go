@@ -8,6 +8,7 @@ import (
 )
 
 type Config interface {
+	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMinimalBlockDelay() time.Duration
 }

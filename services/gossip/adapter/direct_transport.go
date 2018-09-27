@@ -87,7 +87,7 @@ func (t *directTransport) Send(data *TransportData) error {
 			if peerQueue, found := t.peerQueues[recipientPublicKey.KeyForMap()]; found {
 				peerQueue <- data
 			} else {
-				return errors.Errorf("unknown recepient public key: %s", recipientPublicKey.String())
+				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.KeyForMap())
 			}
 		}
 		// TODO: how can we tell if was actually sent without error?

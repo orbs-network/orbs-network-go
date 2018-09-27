@@ -9,10 +9,7 @@ import (
 )
 
 func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
-
-	// TODO extract to config
-	var maxNumberOfTransactions uint32 = 1
-	proposedTransactions, err := s.fetchTransactions(maxNumberOfTransactions, s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
+	proposedTransactions, err := s.fetchTransactions(s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
 	if err != nil {
 		return nil, err
 	}

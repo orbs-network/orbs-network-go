@@ -3,16 +3,16 @@ package native
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 )
 
 type service struct {
 	reporting log.BasicLogger
-	compiler adapter.Compiler
+	compiler  adapter.Compiler
 
 	mutex                         *sync.RWMutex
 	contractSdkHandlerUnderMutex  handlers.ContractSdkCallHandler
@@ -25,7 +25,7 @@ func NewNativeProcessor(
 	reporting log.BasicLogger,
 ) services.Processor {
 	return &service{
-		compiler: compiler,
+		compiler:  compiler,
 		reporting: reporting.For(log.Service("processor-native")),
 		mutex:     &sync.RWMutex{},
 	}
@@ -50,7 +50,8 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, string(input.ContractName), string(input.MethodName))
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
+			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
@@ -59,7 +60,8 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	err = s.verifyMethodPermissions(contractInfo, methodInfo, input.CallingService, input.CallingPermissionScope, input.AccessScope)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
+			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
@@ -71,7 +73,8 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArgumentArray: outputArgs,
+			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
+			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}

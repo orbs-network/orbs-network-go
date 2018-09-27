@@ -19,6 +19,12 @@ jobs:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: ./docker-build.acceptance.sh
+      - run:
+          command: ./docker-test.acceptance.sh
+          no_output_timout: 20m
+      - run: sudo chown -R circleci:circleci logs && ./.circleci/archive-logs.sh
+      - store_artifacts:
+          path: logs
 
   success:
     machine: true

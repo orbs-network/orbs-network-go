@@ -3,6 +3,7 @@
     <module name="orbs-network-go" />
     <working_directory value="$PROJECT_DIR$/" />
     <go_parameters value="-i" />
+    <useCustomBuildTags value="true" />
     <parameters value="-test.count 300 -test.failfast" />
     <framework value="gotest" />
     <kind value="PACKAGE" />

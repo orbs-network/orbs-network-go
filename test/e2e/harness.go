@@ -73,24 +73,21 @@ func newHarness() *harness {
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-			node := bootstrap.NewNode(
-				fmt.Sprintf(":%d", 8080+i),
-				nodeKeyPair.PublicKey(),
-				nodeKeyPair.PrivateKey(),
+
+			cfg := config.ForProduction(processorArtifactPath)
+			cfg.OverrideNodeSpecificValues(
 				federationNodes,
 				gossipPeers,
 				uint16(firstRandomPort+i),
+				nodeKeyPair.PublicKey(),
+				nodeKeyPair.PrivateKey(),
 				leaderKeyPair.PublicKey(),
-				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-				logger,
-				processorArtifactPath,
-			)
+				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+
+			node := bootstrap.NewNode(cfg, logger, fmt.Sprintf(":%d", 8080+i))
 
 			nodes = append(nodes, node)
 		}
-
-		// To let node start up properly, otherwise in Docker we get connection refused
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	return &harness{

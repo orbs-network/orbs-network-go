@@ -68,13 +68,16 @@ func TestTriggerInternalMetrics(t *testing.T) {
 }
 
 func TestPeriodicalTrigger_Reset(t *testing.T) {
-	x := 0
-	p := synchronization.NewPeriodicalTrigger(time.Millisecond*2, func() { x++ })
+	release := make(chan struct{})
+	p := synchronization.NewPeriodicalTrigger(time.Millisecond*1, func() { release <- struct{}{} })
+	start := time.Now()
 	p.Start()
-	p.Reset(time.Millisecond * 3)
-	require.Equal(t, 0, x, "expected zero ticks for now")
-	time.Sleep(time.Millisecond * 5)
-	require.Equal(t, 1, x, "expected one ticks with new reset value")
+	p.Reset(time.Millisecond * 2)
+	require.EqualValues(t, 1, p.TimesReset(), "expected reset counter to be one")
+	<-release
+	duration := time.Since(start)
+	require.True(t, duration.Seconds() > 0.002, "expected test to take at least 2ms, but not less, it took %f", duration.Seconds())
+	p.Stop()
 }
 
 func TestPeriodicalTrigger_FireNow(t *testing.T) {
@@ -89,6 +92,7 @@ func TestPeriodicalTrigger_FireNow(t *testing.T) {
 	require.EqualValues(t, 0, p.TimesTriggered(), "expected to not have a timer tick trigger now, got %d ticks", p.TimesTriggered())
 	require.EqualValues(t, 0, p.TimesReset(), "should not count a reset on firenow")
 	require.EqualValues(t, 1, p.TimesTriggeredManually(), "we triggered manually once")
+	p.Stop()
 }
 
 func TestPeriodicalTrigger_Stop(t *testing.T) {
@@ -105,6 +109,7 @@ func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
 	p.Start()
 	time.Sleep(time.Microsecond * 1100)
 	p.Stop()
-	time.Sleep(time.Millisecond * 2)
-	require.Equal(t, 1, x, "expected one tick due to stop")
+	xValueOnStop := x
+	time.Sleep(time.Millisecond * 5)
+	require.Equal(t, xValueOnStop, x, "expected one tick due to stop")
 }

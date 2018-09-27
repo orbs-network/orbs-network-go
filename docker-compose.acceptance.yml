@@ -1,0 +1,8 @@
+version: '2'
+
+services:
+  orbs-acceptance:
+    image: orbs:acceptance
+    command: sh -x test.acceptance.sh
+    volumes:
+      - ./logs:/go/src/github.com/orbs-network/orbs-network-go/logs

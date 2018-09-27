@@ -1,8 +1,10 @@
 package native
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -68,7 +70,11 @@ func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk
 		return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 	}
 
-	newContractInfo, err := s.compiler.Compile(code)
+	// TODO: replace with given wrapped given context
+	ctx, cancel := context.WithTimeout(context.Background(), adapter.MAX_COMPILATION_TIME)
+	defer cancel()
+
+	newContractInfo, err := s.compiler.Compile(ctx, code)
 	if err != nil {
 		return nil, errors.Wrapf(err, "compilation of deployable contract '%s' failed", contractName)
 	}

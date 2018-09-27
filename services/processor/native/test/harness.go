@@ -26,7 +26,7 @@ func newHarness() *harness {
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	compiler := adapter.NewFakeCompiler()
-	compiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
+	compiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 
