@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"net"
 	"os"
 	"testing"
@@ -22,7 +21,6 @@ const NETWORK_SIZE = 3
 type directHarness struct {
 	config    Config
 	transport *directTransport
-	myPort    uint16
 
 	peersListeners            []net.Listener
 	peersListenersConnections []net.Conn
@@ -32,8 +30,6 @@ type directHarness struct {
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
 	// randomize listen port between tests to reduce flakiness and chances of listening clashes
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	firstRandomPort := 20000 + r.Intn(40000)
 
 	gossipPeers := make(map[string]config.GossipPeer)
 	peersListeners := make([]net.Listener, NETWORK_SIZE-1)
@@ -48,16 +44,12 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(conn.Addr().(*net.TCPAddr).Port), "127.0.0.1")
 	}
 
-	var err error
-
-	port := uint16(firstRandomPort)
-
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	cfg := config.EmptyConfig()
 	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
 	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetUint32(config.GOSSIP_LISTEN_PORT, uint32(firstRandomPort))
+	cfg.SetUint32(config.GOSSIP_LISTEN_PORT, 0)
 	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
 	transport := NewDirectTransport(ctx, cfg, log).(*directTransport)
@@ -69,17 +61,18 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 
 
 	for i := 0; i < NETWORK_SIZE-1; i++ {
-		peersListenersConnections[i], err = peersListeners[i].Accept()
+		conn, err := peersListeners[i].Accept()
 		require.NoError(t, err, "test peer server could not accept connection from local transport")
+
+		peersListenersConnections[i] = conn
 	}
 
-	peerTalkerConnection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	peerTalkerConnection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", transport.serverPort))
 	require.NoError(t, err, "test should be able connect to local transport")
 
 	h := &directHarness{
 		config:                    cfg,
 		transport:                 transport,
-		myPort:                    port,
 		listenerMock:              &transportListenerMock{},
 		peerTalkerConnection:      peerTalkerConnection,
 		peersListenersConnections: peersListenersConnections,

@@ -15,9 +15,9 @@ func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T)
 	ctx, cancel := context.WithCancel(context.Background())
 	h := newDirectHarnessWithConnectedPeers(t, ctx)
 
-	connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
-	defer connection.Close()
+	connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.serverPort))
 	require.NoError(t, err, "test peer should be able connect to local transport")
+	defer connection.Close()
 
 	cancel()
 
@@ -27,7 +27,7 @@ func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T)
 	require.Error(t, err, "test peer should disconnect from local transport")
 
 	eventuallyFailsConnecting := test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-		connection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
+		connection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.serverPort))
 		if err != nil {
 			return true
 		} else {
