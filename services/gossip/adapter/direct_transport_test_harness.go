@@ -29,46 +29,12 @@ type directHarness struct {
 }
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
-	// randomize listen port between tests to reduce flakiness and chances of listening clashes
 
-	gossipPeers := make(map[string]config.GossipPeer)
-	peersListeners := make([]net.Listener, NETWORK_SIZE-1)
-	peersListenersConnections := make([]net.Conn, NETWORK_SIZE-1)
-
-	for i := 0; i < NETWORK_SIZE-1; i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i + 1).PublicKey()
-		conn, err := net.Listen("tcp", ":0")
-		require.NoError(t, err, "test peer server could not listen")
-
-		peersListeners[i] = conn
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(conn.Addr().(*net.TCPAddr).Port), "127.0.0.1")
-	}
-
-	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-
-	cfg := config.EmptyConfig()
-	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
-	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetUint32(config.GOSSIP_LISTEN_PORT, 0)
-	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
-	transport := NewDirectTransport(ctx, cfg, log).(*directTransport)
-
-	// to synchronize tests, wait until server is ready
-	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-		return transport.isServerListening()
-	})
-
-
-	for i := 0; i < NETWORK_SIZE-1; i++ {
-		conn, err := peersListeners[i].Accept()
-		require.NoError(t, err, "test peer server could not accept connection from local transport")
-
-		peersListenersConnections[i] = conn
-	}
-
-	peerTalkerConnection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", transport.serverPort))
-	require.NoError(t, err, "test should be able connect to local transport")
+	gossipPeers, peersListeners := makePeers(t)
+	cfg := makeTransportConfig(gossipPeers)
+	transport := makeTransport(ctx, cfg)
+	peersListenersConnections := establishPeerServers(t, peersListeners)
+	peerTalkerConnection := establishPeerClient(t, transport.serverPort)
 
 	h := &directHarness{
 		config:                    cfg,
@@ -80,6 +46,58 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	}
 
 	return h
+}
+
+func makeTransport(ctx context.Context, cfg Config) *directTransport {
+	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	transport := NewDirectTransport(ctx, cfg, log).(*directTransport)
+	// to synchronize tests, wait until server is ready
+	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
+		return transport.isServerListening()
+	})
+	return transport
+}
+
+func establishPeerClient(t *testing.T, serverPort int) net.Conn {
+	peerTalkerConnection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", serverPort))
+	require.NoError(t, err, "test should be able connect to local transport")
+	return peerTalkerConnection
+}
+
+func establishPeerServers(t *testing.T, peersListeners []net.Listener) []net.Conn {
+	peersListenersConnections := make([]net.Conn, NETWORK_SIZE-1)
+	for i := 0; i < NETWORK_SIZE-1; i++ {
+		conn, err := peersListeners[i].Accept()
+		require.NoError(t, err, "test peer server could not accept connection from local transport")
+
+		peersListenersConnections[i] = conn
+	}
+	return peersListenersConnections
+}
+
+func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
+	gossipPeers := make(map[string]config.GossipPeer)
+	peersListeners := make([]net.Listener, NETWORK_SIZE-1)
+
+	for i := 0; i < NETWORK_SIZE-1; i++ {
+		publicKey := keys.Ed25519KeyPairForTests(i + 1).PublicKey()
+		conn, err := net.Listen("tcp", ":0")
+		require.NoError(t, err, "test peer server could not listen")
+
+		peersListeners[i] = conn
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(conn.Addr().(*net.TCPAddr).Port), "127.0.0.1")
+	}
+	return gossipPeers, peersListeners
+}
+
+func makeTransportConfig(gossipPeers map[string]config.GossipPeer) Config {
+	cfg := config.EmptyConfig()
+	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
+	cfg.SetGossipPeers(gossipPeers)
+	cfg.SetUint32(config.GOSSIP_LISTEN_PORT, 0)
+	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
+	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
+	return cfg
 }
 
 func (h *directHarness) peerListenerReadTotal(peerIndex int, totalSize int) ([]byte, error) {
