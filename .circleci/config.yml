@@ -20,7 +20,8 @@ jobs:
       - run: ./git-submodule-checkout.sh
       - run: ./docker-build.acceptance.sh
       - run:
-          command: ./docker-test.acceptance.sh
+          # remove logs if the test was successful for quicker feedback loop
+          command: ./docker-test.acceptance.sh && sudo find logs/acceptance -type f -delete
           no_output_timout: 20m
       - run: sudo chown -R circleci:circleci logs && ./.circleci/archive-logs.sh
       - store_artifacts:
