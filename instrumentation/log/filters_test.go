@@ -1,6 +1,7 @@
 package log
 
 import (
+	"github.com/go-errors/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -21,6 +22,10 @@ func TestFilters(t *testing.T) {
 		{"IncludeParamWithKeyRejectsWhenExpectedKeyNotFound", IncludeFieldWithKey("foo"), "", "", nil,false},
 		{"OnlyErrorsRejectsInfo", OnlyErrors(), "info", "", nil,false},
 		{"OnlyErrorsAllowsError", OnlyErrors(), "error", "", nil,true},
+		{"IgnoreMessagesMatchingRejectMessageMatching", IgnoreMessagesMatching("foo.*"), "", "food", nil,false},
+		{"IgnoreMessagesMatchingAllowsMismatchingMessages", IgnoreMessagesMatching("food"), "", "foo", nil,true},
+		{"IgnoreErrorsMatchingRejectMessageMatching", IgnoreErrorsMatching("foo.*"), "", "", []*Field{Error(errors.Errorf("food"))},false},
+		{"IgnoreErrorsMatchingAllowsMismatchingMessages", IgnoreErrorsMatching("food"), "", "", []*Field{Error(errors.Errorf("foo"))},true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

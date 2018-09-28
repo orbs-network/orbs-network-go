@@ -73,7 +73,7 @@ func TestSimpleLogger(t *testing.T) {
 func TestBasicLogger_WithFilter(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger().WithOutput(log.NewOutput(b)).
-		WithFilter(log.OnlyErrors()).
+		WithFilters(log.OnlyErrors()).
 		Info("foo")
 	require.Empty(t, b.String(), "output was not empty")
 }

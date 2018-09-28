@@ -4,11 +4,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
-	"github.com/orbs-network/orbs-network-go/services/gossip"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
-	"github.com/orbs-network/orbs-network-go/services/publicapi"
-	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -19,7 +14,7 @@ import (
 	"os"
 )
 
-func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.ConsensusAlgoType, testId string) *inProcessNetwork {
+func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensusAlgo consensus.ConsensusAlgoType, testId string) *inProcessNetwork {
 	var output io.Writer
 	output = os.Stdout
 
@@ -35,11 +30,8 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 	testLogger := log.GetLogger(log.String("_test-id", testId)).
 		WithOutput(log.NewOutput(output).
 		WithFormatter(log.NewHumanReadableFormatter())).
-		WithFilter(blockstorage.BlockSyncFlowLogTag).
-		WithFilter(gossip.LogTag).
-		WithFilter(publicapi.LogTag).
-		WithFilter(native.LogTag).
-		WithFilter(virtualmachine.LogTag)
+		WithFilters(logFilters...).
+		WithFilters(log.OnlyErrors())
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))

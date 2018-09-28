@@ -18,7 +18,7 @@ type BasicLogger interface {
 	Meter(name string, params ...*Field) BasicMeter
 	Tags() []*Field
 	WithOutput(writer ...Output) BasicLogger
-	WithFilter(filter Filter) BasicLogger
+	WithFilters(filter ...Filter) BasicLogger
 }
 
 type basicLogger struct {
@@ -151,7 +151,7 @@ func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {
 	return b
 }
 
-func (b *basicLogger) WithFilter(filter Filter) BasicLogger {
-	b.filters = append(b.filters, filter) // this is not thread safe, I know
+func (b *basicLogger) WithFilters(filter ...Filter) BasicLogger {
+	b.filters = append(b.filters, filter...) // this is not thread safe, I know
 	return b
 }

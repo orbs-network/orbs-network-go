@@ -28,7 +28,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	for {
 		err := s.leaderConsensusRoundTick()
 		if err != nil {
-			s.logger.Error(err.Error())
+			s.logger.Error("consensus round tick failed", log.Error(err))
 		}
 		select {
 		case <-ctx.Done():

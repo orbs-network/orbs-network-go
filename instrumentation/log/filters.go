@@ -1,5 +1,7 @@
 package log
 
+import "regexp"
+
 type Filter interface {
 	Allows(level string, message string, fields []*Field) bool
 }
@@ -14,6 +16,40 @@ func IncludeFieldWithKey(key string) Filter {
 
 func OnlyErrors() Filter {
 	return &levelMatch{level: "error"}
+}
+
+func IgnoreMessagesMatching(pattern string) Filter {
+	return &messageRegexp{pattern: pattern}
+}
+
+func IgnoreErrorsMatching(pattern string) Filter {
+	return &errorRegexp{pattern: pattern}
+}
+
+type errorRegexp struct {
+	pattern string
+}
+
+func (f *errorRegexp) Allows(level string, message string, fields []*Field) bool {
+	for _, field := range fields {
+		if field.Type == ErrorType {
+
+			if match, _ := regexp.MatchString(f.pattern, field.Error.Error()); match {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+type messageRegexp struct {
+	pattern string
+}
+
+func (f *messageRegexp) Allows(level string, message string, fields []*Field) bool {
+	match, _ := regexp.MatchString(f.pattern, message)
+	return !match
 }
 
 type levelMatch struct {

@@ -1,7 +1,6 @@
 package acceptance
 
 import (
-	"fmt"
 	"github.com/orbs-network/lean-helix-go/go/leanhelix"
 	"testing"
 )
@@ -11,7 +10,7 @@ import (
 
 func TestLeanHelixNoOp(t *testing.T) {
 
-	s := leanhelix.NewLeanHelix()
-	fmt.Println(s)
+	leanhelix.NewLeanHelix()
+
 
 }
