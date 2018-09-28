@@ -23,7 +23,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	code := string(contracts.SourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
+	code := string(contracts.NativeSourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
 	tmpDir := test.CreateTempDirForTest(t)
 	defer os.RemoveAll(tmpDir)
 
