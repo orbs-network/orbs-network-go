@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/go-errors/errors"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
