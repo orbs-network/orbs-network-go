@@ -30,7 +30,7 @@ type directHarness struct {
 	listenerMock              *transportListenerMock
 }
 
-func newDirectHarness(ctx context.Context) *directHarness {
+func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
 	// randomize listen port between tests to reduce flakiness and chances of listening clashes
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	firstRandomPort := 20000 + r.Intn(40000)
@@ -59,16 +59,12 @@ func newDirectHarness(ctx context.Context) *directHarness {
 		return transport.isServerListening()
 	})
 
-	return &directHarness{
+	h := &directHarness{
 		config:       cfg,
 		transport:    transport,
 		myPort:       port,
 		listenerMock: &transportListenerMock{},
 	}
-}
-
-func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
-	h := newDirectHarness(ctx)
 
 	var err error
 	h.peersListeners = make([]net.Listener, NETWORK_SIZE-1)
@@ -111,6 +107,14 @@ func (h *directHarness) cleanupConnectedPeers() {
 		h.peersListenersConnections[i].Close()
 		h.peersListeners[i].Close()
 	}
+}
+
+func (h *directHarness) reconnect(listenerIndex int) error {
+	h.peersListenersConnections[listenerIndex].Close() // disconnect transport forcefully
+	conn, err := h.peersListeners[listenerIndex].Accept() // reconnect transport forcefully
+	h.peersListenersConnections[listenerIndex] = conn
+
+	return err
 }
 
 func (h *directHarness) publicKeyForPeer(index int) primitives.Ed25519PublicKey {

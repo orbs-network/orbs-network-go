@@ -13,7 +13,7 @@ import (
 
 func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newDirectHarness(ctx)
+	h := newDirectHarnessWithConnectedPeers(t, ctx)
 
 	connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
 	defer connection.Close()
@@ -55,23 +55,14 @@ func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing
 }
 
 func TestDirectOutgoing_ConnectionReconnectsOnFailure(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 
-		h := newDirectHarness(ctx)
-
-		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", h.portForPeer(0)))
-		defer listener.Close()
-		require.NoError(t, err, "test peer server could not listen")
-
-		connection, err := listener.Accept()
-		defer connection.Close()
-		require.NoError(t, err, "test peer server could not accept connection from local transport")
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
 
 		for numForcefulDisconnect := 0; numForcefulDisconnect < 2; numForcefulDisconnect++ {
-			connection.Close() // disconnect local transport forcefully
+			err := h.reconnect(numForcefulDisconnect % NETWORK_SIZE)
 
-			connection, err = listener.Accept()
 			require.NoError(t, err, "test peer server could not accept connection from local transport")
 		}
 	})
