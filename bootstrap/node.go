@@ -26,9 +26,10 @@ type node struct {
 }
 
 func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress string) Node {
-	ctx, ctxCancel := context.WithCancel(context.Background())
-
 	nodeLogger := logger.For(log.Node(nodeConfig.NodePublicKey().String()))
+	meter := nodeLogger.Meter("node-startup-time")
+	defer meter.Done()
+	ctx, ctxCancel := context.WithCancel(context.Background())
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
