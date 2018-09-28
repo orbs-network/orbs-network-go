@@ -36,8 +36,8 @@ type TamperingTransport interface {
 	// Creates an ongoing tamper which corrupts messages matching the given predicate
 	Corrupt(predicate MessagePredicate) OngoingTamper
 
-	// Creates an ongoing tamper which delays (reshuffles) messages matching the given predicate for a random duration
-	Delay(predicate MessagePredicate) OngoingTamper
+	// Creates an ongoing tamper which delays (reshuffles) messages matching the given predicate for the specified duration
+	Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper
 }
 
 // A predicate for matching messages with a certain property
@@ -54,22 +54,25 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	mutex                        *sync.RWMutex
+	listenerLock                *sync.RWMutex
 	transportListenersUnderMutex map[string]adapter.TransportListener
-	latchingTamperersUnderMutex  []*latchingTamperer
-	ongoingTamperersUnderMutex   []OngoingTamper
+
+	tampererLock                *sync.RWMutex
+	latchingTamperersUnderMutex []*latchingTamperer
+	ongoingTamperersUnderMutex  []OngoingTamper
 }
 
 func NewTamperingTransport() TamperingTransport {
 	return &tamperingTransport{
 		transportListenersUnderMutex: make(map[string]adapter.TransportListener),
-		mutex: &sync.RWMutex{},
+		tampererLock:                 &sync.RWMutex{},
+		listenerLock:                 &sync.RWMutex{},
 	}
 }
 
 func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+	t.listenerLock.Lock()
+	defer t.listenerLock.Unlock()
 	t.transportListenersUnderMutex[string(listenerPublicKey)] = listener
 }
 
@@ -85,6 +88,8 @@ func (t *tamperingTransport) Send(data *adapter.TransportData) error {
 }
 
 func (t *tamperingTransport) maybeTamper(data *adapter.TransportData) (error, bool) {
+	t.tampererLock.RLock()
+	defer t.tampererLock.RUnlock()
 	for _, o := range t.ongoingTamperersUnderMutex {
 		if err, shouldReturn := o.maybeTamper(data); shouldReturn {
 			return err, shouldReturn
@@ -96,7 +101,7 @@ func (t *tamperingTransport) maybeTamper(data *adapter.TransportData) (error, bo
 }
 
 func (t *tamperingTransport) Pause(predicate MessagePredicate) OngoingTamper {
-	return t.addTamperer(&pausingTamperer{predicate: predicate, transport: t})
+	return t.addTamperer(&pausingTamperer{predicate: predicate, transport: t, lock: &sync.Mutex{}})
 }
 
 func (t *tamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
@@ -111,14 +116,14 @@ func (t *tamperingTransport) Corrupt(predicate MessagePredicate) OngoingTamper {
 	return t.addTamperer(&corruptingTamperer{predicate: predicate, transport: t})
 }
 
-func (t *tamperingTransport) Delay(predicate MessagePredicate) OngoingTamper {
-	return t.addTamperer(&delayingTamperer{predicate: predicate, transport: t})
+func (t *tamperingTransport) Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper {
+	return t.addTamperer(&delayingTamperer{predicate: predicate, transport: t, duration: duration})
 }
 
 func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper {
 	tamperer := &latchingTamperer{predicate: predicate, transport: t, cond: sync.NewCond(&sync.Mutex{})}
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+	t.tampererLock.Lock()
+	defer t.tampererLock.Unlock()
 	t.latchingTamperersUnderMutex = append(t.latchingTamperersUnderMutex, tamperer)
 
 	tamperer.cond.L.Lock()
@@ -126,8 +131,8 @@ func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper 
 }
 
 func (t *tamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+	t.tampererLock.Lock()
+	defer t.tampererLock.Unlock()
 	a := t.ongoingTamperersUnderMutex
 	for p, v := range a {
 		if v == tamperer {
@@ -144,8 +149,8 @@ func (t *tamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 }
 
 func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+	t.tampererLock.Lock()
+	defer t.tampererLock.Unlock()
 	a := t.latchingTamperersUnderMutex
 	for p, v := range a {
 		if v == tamperer {
@@ -181,8 +186,8 @@ func (t *tamperingTransport) receive(data *adapter.TransportData) {
 }
 
 func (t *tamperingTransport) getTransportListenersExceptPublicKeys(exceptPublicKey primitives.Ed25519PublicKey) (listeners []adapter.TransportListener) {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
+	t.listenerLock.RLock()
+	defer t.listenerLock.RUnlock()
 
 	for stringPublicKey, l := range t.transportListenersUnderMutex {
 		if stringPublicKey != string(exceptPublicKey) {
@@ -194,8 +199,8 @@ func (t *tamperingTransport) getTransportListenersExceptPublicKeys(exceptPublicK
 }
 
 func (t *tamperingTransport) getTransportListenersByPublicKeys(publicKeys []primitives.Ed25519PublicKey) (listeners []adapter.TransportListener) {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
+	t.listenerLock.RLock()
+	defer t.listenerLock.RUnlock()
 
 	for _, recipientPublicKey := range publicKeys {
 		stringPublicKey := string(recipientPublicKey)
@@ -208,6 +213,9 @@ func (t *tamperingTransport) getTransportListenersByPublicKeys(publicKeys []prim
 }
 
 func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
+	t.tampererLock.RLock()
+	defer t.tampererLock.RUnlock()
+
 	for _, o := range t.latchingTamperersUnderMutex {
 		if o.predicate(data) {
 			o.cond.Signal()
@@ -216,8 +224,8 @@ func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
 }
 
 func (t *tamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+	t.tampererLock.Lock()
+	defer t.tampererLock.Unlock()
 	t.ongoingTamperersUnderMutex = append(t.ongoingTamperersUnderMutex, tamperer)
 	return tamperer
 }
@@ -261,13 +269,13 @@ func (o *duplicatingTamperer) Release() {
 type delayingTamperer struct {
 	predicate MessagePredicate
 	transport *tamperingTransport
+	duration  func() time.Duration
 }
 
 func (o *delayingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		duration := time.Duration(rand.Intn(10000)) * time.Microsecond
 		go func() {
-			time.Sleep(duration)
+			time.Sleep(o.duration())
 			o.transport.receive(data)
 		}()
 		return nil, true
@@ -304,12 +312,13 @@ type pausingTamperer struct {
 	predicate MessagePredicate
 	transport *tamperingTransport
 	messages  []*adapter.TransportData
+	lock      *sync.Mutex
 }
 
 func (o *pausingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		o.transport.mutex.Lock()
-		defer o.transport.mutex.Unlock()
+		o.lock.Lock()
+		defer o.lock.Unlock()
 		o.messages = append(o.messages, data)
 		return nil, true
 	}

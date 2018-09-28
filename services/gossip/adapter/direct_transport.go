@@ -34,6 +34,7 @@ type directTransport struct {
 	mutex                       *sync.RWMutex
 	transportListenerUnderMutex TransportListener
 	serverListeningUnderMutex   bool
+	serverPort                  int
 }
 
 func NewDirectTransport(ctx context.Context, config Config, reporting log.BasicLogger) Transport {
@@ -129,19 +130,15 @@ func (t *directTransport) isServerListening() bool {
 }
 
 func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16) {
-	if listenPort == 0 {
-		err := errors.New("gossip listen port is not initialized (zero)")
-		t.reporting.Error(err.Error())
-		panic(err)
-	}
-
 	listener, err := t.serverListenForIncomingConnections(ctx, listenPort)
 	if err != nil {
 		err = errors.Wrapf(err, "gossip transport cannot listen on port %d", listenPort)
 		t.reporting.Error(err.Error())
 		panic(err)
 	}
-	t.reporting.Info("gossip transport server listening", log.Uint32("port", uint32(listenPort)))
+
+	t.serverPort = listener.Addr().(*net.TCPAddr).Port
+	t.reporting.Info("gossip transport server listening", log.Uint32("port", uint32(t.serverPort)))
 
 	for {
 		conn, err := listener.Accept()

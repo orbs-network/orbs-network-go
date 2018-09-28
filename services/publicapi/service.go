@@ -52,6 +52,7 @@ func NewPublicApi(
 
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
 	for _, txReceipt := range input.TransactionReceipts {
+		s.reporting.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Stringable("txHash", txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
 			&waiterObject{&txResponse{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
@@ -64,6 +65,8 @@ func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResu
 }
 
 func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
+	//TODO implement
+	s.reporting.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
 	//s.waiter.complete(input.Txhash.KeyForMap(),
 	//	&waiterObject{&txResponse{
 	//		transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
@@ -72,8 +75,7 @@ func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorI
 	//		blockTimestamp:     input.Timestamp,
 	//	}})
 	//
-	//return &handlers.HandleTransactionErrorOutput{}, nil
-	panic("Not implemented")
+	return &handlers.HandleTransactionErrorOutput{}, nil
 }
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
@@ -81,7 +83,6 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	txHash := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
 
 	s.reporting.Info("transaction received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
-	defer s.reporting.Info("transaction status returned by public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 

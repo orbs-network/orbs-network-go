@@ -22,10 +22,11 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 		txHash := digest.CalcTxHash(tx.Transaction())
 		if err := vctx.validateTransaction(tx); err != nil {
 			s.logger.Info("dropping invalid transaction", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
-			s.pendingPool.remove(txHash)
+			s.pendingPool.remove(txHash, err.TransactionStatus)
 		} else if alreadyCommitted := s.committedPool.get(txHash); alreadyCommitted != nil {
 			s.logger.Info("dropping committed transaction", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
-			s.pendingPool.remove(txHash)
+			s.pendingPool.remove(txHash, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED)
+
 		} else {
 			transactionsForPreOrder = append(transactionsForPreOrder, tx)
 		}
@@ -44,7 +45,7 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 		} else {
 			txHash := digest.CalcTxHash(tx.Transaction()) //TODO we calculate TX hash again even though we calculated it above while iterating. Consider memoization.
 			s.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
-			s.pendingPool.remove(txHash)
+			s.pendingPool.remove(txHash, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
 		}
 	}
 

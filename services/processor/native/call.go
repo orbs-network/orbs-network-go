@@ -41,7 +41,9 @@ func (s *service) verifyInternalMethodCall(contractInfo *sdk.ContractInfo, metho
 func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.Errorf("call method '%s' panicked: %v", methodInfo.Name, r)
+			contractOutputErr = errors.Errorf("%s", r)
+			s.reporting.Info("contract execution failed by contract panic", log.Error(contractOutputErr))
+			contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()
 
@@ -76,6 +78,12 @@ func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo
 
 	// create contract output error
 	contractOutputErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
+	if contractOutputErr != nil {
+		s.reporting.Info("contract execution failed by contract error", log.Error(contractOutputErr))
+		contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
+	}
+
+	// done
 	return contractOutputArgs, contractOutputErr, err
 }
 
@@ -172,4 +180,12 @@ func (s *service) createContractOutputError(methodInfo *sdk.MethodInfo, value re
 		return outErr, nil
 	}
 	return nil, nil
+}
+
+func (s *service) createMethodOutputArgsWithString(str string) *protocol.MethodArgumentArray {
+	return (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: str},
+		},
+	}).Build()
 }
