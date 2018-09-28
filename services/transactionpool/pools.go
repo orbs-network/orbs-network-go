@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+type transactionRemovedListener func(txHash primitives.Sha256, reason protocol.TransactionStatus)
+
 func NewPendingPool(pendingPoolSizeInBytes func() uint32) *pendingTxPool {
 	return &pendingTxPool{
 		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
@@ -39,6 +41,7 @@ type pendingTxPool struct {
 
 	//FIXME get rid of it
 	pendingPoolSizeInBytes func() uint32
+	onTransactionRemoved   transactionRemovedListener
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
@@ -74,7 +77,7 @@ func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	return ok
 }
 
-func (p *pendingTxPool) remove(txhash primitives.Sha256) *pendingTransaction {
+func (p *pendingTxPool) remove(txhash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	pendingTx, ok := p.transactionsByHash[txhash.KeyForMap()]
@@ -82,6 +85,11 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256) *pendingTransaction {
 		delete(p.transactionsByHash, txhash.KeyForMap())
 		p.currentSizeInBytes -= sizeOf(pendingTx.transaction)
 		p.transactionList.Remove(pendingTx.listElement)
+
+		if p.onTransactionRemoved != nil {
+			p.onTransactionRemoved(txhash, removalReason)
+		}
+
 		return pendingTx
 	}
 
@@ -139,7 +147,7 @@ func (p *pendingTxPool) clearTransactionsOlderThan(time time.Time) {
 		e = e.Prev()
 
 		if int64(tx.Transaction().Timestamp()) < time.UnixNano() {
-			p.remove(digest.CalcTxHash(tx.Transaction()))
+			p.remove(digest.CalcTxHash(tx.Transaction()), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
 		}
 	}
 }

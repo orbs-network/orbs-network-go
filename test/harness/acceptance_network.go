@@ -32,6 +32,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 		WithFormatter(log.NewHumanReadableFormatter())).
 		WithFilter(log.String("flow", "block-sync")).
 		WithFilter(log.String("service", "gossip"))
+
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)

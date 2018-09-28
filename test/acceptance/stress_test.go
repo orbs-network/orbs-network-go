@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
@@ -28,7 +29,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
-		network.GossipTransport().Delay(AnyNthMessage(1))
+		network.GossipTransport().Delay(func() time.Duration {
+			return (time.Duration(rand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
+		}, AnyNthMessage(2))
 
 		sendTransactions(network, t, 100)
 	})

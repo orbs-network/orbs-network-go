@@ -2,6 +2,7 @@ package publicapi
 
 import (
 	"context"
+	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/pkg/errors"
 	"sync"
@@ -84,7 +85,7 @@ func (w *waiter) wait(wc *waiterChannel, duration time.Duration) (*waiterObject,
 		return nil, errors.Errorf("shutting down")
 	case <-timer.C:
 		w.deleteByChannel(wc)
-		return nil, errors.Errorf("timed out waiting for transaction result")
+		return nil, errors.Errorf("timed out waiting for transaction result %s", hex.EncodeToString([]byte(wc.k)))
 	case response, open := <-wc.c: // intentional not close channel here
 		if !open {
 			return nil, errors.Errorf("waiting aborted")

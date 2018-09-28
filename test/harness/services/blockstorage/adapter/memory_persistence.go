@@ -48,8 +48,12 @@ func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256)
 	ch := bp.getChanFor(txhash)
 	bp.lock.Unlock()
 
-	h := <-ch
-	return h
+	select {
+	case h := <-ch:
+		return h
+	case <-time.After(10 * time.Second):
+		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txhash))
+	}
 }
 
 func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) error {
