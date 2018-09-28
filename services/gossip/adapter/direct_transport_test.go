@@ -13,7 +13,7 @@ import (
 
 func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newDirectHarness().start(ctx)
+	h := newDirectHarness(ctx)
 
 	connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.myPort))
 	defer connection.Close()
@@ -58,7 +58,7 @@ func TestDirectOutgoing_ConnectionReconnectsOnFailure(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 
-		h := newDirectHarness().start(ctx)
+		h := newDirectHarness(ctx)
 
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", h.portForPeer(0)))
 		defer listener.Close()

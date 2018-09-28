@@ -30,7 +30,7 @@ type directHarness struct {
 	listenerMock              *transportListenerMock
 }
 
-func newDirectHarness() *directHarness {
+func newDirectHarness(ctx context.Context) *directHarness {
 	// randomize listen port between tests to reduce flakiness and chances of listening clashes
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	firstRandomPort := 20000 + r.Intn(40000)
@@ -50,29 +50,25 @@ func newDirectHarness() *directHarness {
 
 	port := uint16(firstRandomPort)
 
+	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+
+	transport := NewDirectTransport(ctx, cfg, log).(*directTransport)
+
+	// to synchronize tests, wait until server is ready
+	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
+		return transport.isServerListening()
+	})
+
 	return &directHarness{
 		config:       cfg,
-		transport:    nil,
+		transport:    transport,
 		myPort:       port,
 		listenerMock: &transportListenerMock{},
 	}
 }
 
-func (h *directHarness) start(ctx context.Context) *directHarness {
-	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-
-	h.transport = NewDirectTransport(ctx, h.config, log).(*directTransport)
-
-	// to synchronize tests, wait until server is ready
-	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-		return h.transport.isServerListening()
-	})
-
-	return h
-}
-
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
-	h := newDirectHarness()
+	h := newDirectHarness(ctx)
 
 	var err error
 	h.peersListeners = make([]net.Listener, NETWORK_SIZE-1)
@@ -80,8 +76,6 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 		h.peersListeners[i], err = net.Listen("tcp", fmt.Sprintf(":%d", h.portForPeer(i)))
 		require.NoError(t, err, "test peer server could not listen")
 	}
-
-	h.start(ctx)
 
 	h.peersListenersConnections = make([]net.Conn, NETWORK_SIZE-1)
 	for i := 0; i < NETWORK_SIZE-1; i++ {
