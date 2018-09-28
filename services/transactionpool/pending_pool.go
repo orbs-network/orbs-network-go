@@ -20,13 +20,6 @@ func NewPendingPool(pendingPoolSizeInBytes func() uint32) *pendingTxPool {
 	}
 }
 
-func NewCommittedPool() *committedTxPool {
-	return &committedTxPool{
-		transactions: make(map[string]*committedTransaction),
-		lock:         &sync.Mutex{},
-	}
-}
-
 type pendingTransaction struct {
 	gatewayPublicKey primitives.Ed25519PublicKey
 	transaction      *protocol.SignedTransaction
@@ -45,9 +38,6 @@ type pendingTxPool struct {
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
 	size := sizeOf(transaction)
 
 	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
@@ -56,6 +46,8 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 
 	key := digest.CalcTxHash(transaction.Transaction())
 
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	if _, exists := p.transactionsByHash[key.KeyForMap()]; exists {
 		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 	}
@@ -69,6 +61,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 
 	return key, nil
 }
+
 func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -80,6 +73,7 @@ func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 func (p *pendingTxPool) remove(txhash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
 	pendingTx, ok := p.transactionsByHash[txhash.KeyForMap()]
 	if ok {
 		delete(p.transactionsByHash, txhash.KeyForMap())
@@ -99,6 +93,10 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256, removalReason protocol.
 func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions {
 	txs := make(Transactions, 0, maxNumOfTransactions)
 	accumulatedSize := uint32(0)
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
 	e := p.transactionList.Back()
 	for {
 		if e == nil {
@@ -112,7 +110,7 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 		tx := e.Value.(*protocol.SignedTransaction)
 		//
 		accumulatedSize += sizeOf(tx)
-		if uint32(len(txs)) >= maxNumOfTransactions || (sizeLimitInBytes > 0 && accumulatedSize > sizeLimitInBytes) {
+		if sizeLimitInBytes > 0 && accumulatedSize > sizeLimitInBytes {
 			break
 		}
 
@@ -125,6 +123,9 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 }
 
 func (p *pendingTxPool) get(txHash primitives.Sha256) *protocol.SignedTransaction {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
 	if ptx, ok := p.transactionsByHash[txHash.KeyForMap()]; ok {
 		return ptx.transaction
 	}
@@ -150,49 +151,6 @@ func (p *pendingTxPool) clearTransactionsOlderThan(time time.Time) {
 			p.remove(digest.CalcTxHash(tx.Transaction()), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
 		}
 	}
-}
-
-type committedTxPool struct {
-	transactions map[string]*committedTransaction
-	lock         *sync.Mutex
-}
-
-func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, ts primitives.TimestampNano) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.transactions[receipt.Txhash().KeyForMap()] = &committedTransaction{
-		receipt:   receipt,
-		timestamp: ts,
-	}
-}
-
-func (p *committedTxPool) get(txHash primitives.Sha256) *committedTransaction {
-	key := txHash.KeyForMap()
-
-	tx := p.transactions[key]
-
-	return tx
-}
-
-func (p *committedTxPool) has(txHash primitives.Sha256) bool {
-	_, ok := p.transactions[txHash.KeyForMap()]
-	return ok
-}
-
-func (p *committedTxPool) clearTransactionsOlderThan(time time.Time) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	for _, tx := range p.transactions {
-		if int64(tx.timestamp) < time.UnixNano() {
-			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
-		}
-	}
-}
-
-type committedTransaction struct {
-	receipt   *protocol.TransactionReceipt
-	timestamp primitives.TimestampNano
 }
 
 func sizeOf(transaction *protocol.SignedTransaction) uint32 {
