@@ -70,19 +70,11 @@ func TestSimpleLogger(t *testing.T) {
 	require.NotNil(t, jsonMap["timestamp"])
 }
 
-func TestBasicLogger_WithFilter_ForPrefix(t *testing.T) {
-	b := new(bytes.Buffer)
-	log.GetLogger(log.String("flow", "flow1")).WithOutput(log.NewOutput(b)).
-		WithFilter(log.String("flow", "flow1")).
-		Info("foo")
-	require.Empty(t, b.String(), "output was not empty")
-}
-
-func TestBasicLogger_WithFilter_ForParam(t *testing.T) {
+func TestBasicLogger_WithFilter(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger().WithOutput(log.NewOutput(b)).
-		WithFilter(log.String("foo", "bar")).
-		Info("baz", log.String("foo", "bar"))
+		WithFilter(log.OnlyErrors()).
+		Info("foo")
 	require.Empty(t, b.String(), "output was not empty")
 }
 
@@ -111,7 +103,7 @@ func TestNestedLogger(t *testing.T) {
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
-		txFlowLogger := serviceLogger.For(log.String("flow", TransactionFlow))
+		txFlowLogger := serviceLogger.WithTag(log.String("flow", TransactionFlow))
 		txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99, 250}))
 	})
 
@@ -189,7 +181,7 @@ func TestMeter(t *testing.T) {
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
-		txFlowLogger := serviceLogger.For(log.String("flow", TransactionFlow))
+		txFlowLogger := serviceLogger.WithTag(log.String("flow", TransactionFlow))
 		meter := txFlowLogger.Meter("tx-process-time", txId)
 		defer meter.Done()
 

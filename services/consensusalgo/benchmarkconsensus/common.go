@@ -30,7 +30,7 @@ func (s *service) saveToBlockStorage(blockPair *protocol.BlockPairContainer) err
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return nil
 	}
-	s.reporting.Info("saving block to storage", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	s.logger.Info("saving block to storage", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
 		BlockPair: blockPair,
 	})

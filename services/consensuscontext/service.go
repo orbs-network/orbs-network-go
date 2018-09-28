@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var LogTag = log.Service("consensus-context")
+
 type Config interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
@@ -18,7 +20,7 @@ type service struct {
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
 	config          Config
-	reporting       log.BasicLogger
+	logger          log.BasicLogger
 }
 
 func NewConsensusContext(
@@ -26,7 +28,7 @@ func NewConsensusContext(
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
 	config Config,
-	reporting log.BasicLogger,
+	logger log.BasicLogger,
 ) services.ConsensusContext {
 
 	return &service{
@@ -34,7 +36,7 @@ func NewConsensusContext(
 		virtualMachine:  virtualMachine,
 		stateStorage:    stateStorage,
 		config:          config,
-		reporting:       reporting.For(log.Service("consensus-context")),
+		logger:          logger.WithTag(LogTag),
 	}
 }
 
@@ -44,11 +46,11 @@ func (s *service) RequestNewTransactionsBlock(input *services.RequestNewTransact
 		return nil, err
 	}
 
-	s.reporting.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
+	s.logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
 
 	for _, tx := range txBlock.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		s.reporting.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
+		s.logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
 	}
 
 	return &services.RequestNewTransactionsBlockOutput{
@@ -62,7 +64,7 @@ func (s *service) RequestNewResultsBlock(input *services.RequestNewResultsBlockI
 		return nil, err
 	}
 
-	s.reporting.Info("created Results block", log.Stringable("results-block", rxBlock))
+	s.logger.Info("created Results block", log.Stringable("results-block", rxBlock))
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,

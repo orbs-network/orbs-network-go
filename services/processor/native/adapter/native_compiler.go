@@ -23,20 +23,21 @@ const GC_CACHE_PATH = "native-cache"
 const MAX_COMPILATION_TIME = 5 * time.Second          // TODO: maybe move to config or maybe have caller provide via context
 const MAX_WARM_UP_COMPILATION_TIME = 15 * time.Second // TODO: maybe move to config or maybe have caller provide via context
 
+var LogTag = log.String("adapter", "processor-native")
+
 type Config interface {
 	ProcessorArtifactPath() string
 }
 
 type nativeCompiler struct {
-	config    Config
-	reporting log.BasicLogger
+	config Config
+	logger log.BasicLogger
 }
 
-func NewNativeCompiler(config Config, reporting log.BasicLogger) Compiler {
-	reporting = reporting.For(log.String("adapter", "processor-native"))
+func NewNativeCompiler(config Config, logger log.BasicLogger) Compiler {
 	c := &nativeCompiler{
-		config:    config,
-		reporting: reporting,
+		config: config,
+		logger: logger.WithTag(LogTag),
 	}
 
 	c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
@@ -50,7 +51,7 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 
 	_, err := c.Compile(ctx, string(contracts.SourceCodeForNop()))
 	if err != nil {
-		c.reporting.Error("warm up compilation on init failed", log.Error(err))
+		c.logger.Error("warm up compilation on init failed", log.Error(err))
 	}
 }
 

@@ -14,19 +14,19 @@ type BasicLogger interface {
 	Info(message string, params ...*Field)
 	Error(message string, params ...*Field)
 	Metric(name string, params ...*Field)
-	For(params ...*Field) BasicLogger
+	WithTag(params ...*Field) BasicLogger
 	Meter(name string, params ...*Field) BasicMeter
-	Prefixes() []*Field
+	Tags() []*Field
 	WithOutput(writer ...Output) BasicLogger
-	WithFilter(filter *Field) BasicLogger
+	WithFilter(filter Filter) BasicLogger
 }
 
 type basicLogger struct {
 	outputs               []Output
-	prefixes              []*Field
+	tags                  []*Field
 	nestingLevel          int
 	sourceRootPrefixIndex int
-	filters               []*Field
+	filters               []Filter
 }
 
 const (
@@ -46,7 +46,7 @@ const (
 
 func GetLogger(params ...*Field) BasicLogger {
 	logger := &basicLogger{
-		prefixes:     params,
+		tags:         params,
 		nestingLevel: 4,
 		outputs:      []Output{&basicOutput{output: os.Stdout, formatter: NewJsonFormatter()}},
 	}
@@ -89,13 +89,13 @@ func (b *basicLogger) getCaller(level int) (function string, source string) {
 	return fName, fmt.Sprintf("%s:%d", file[b.sourceRootPrefixIndex:], line)
 }
 
-func (b *basicLogger) Prefixes() []*Field {
-	return b.prefixes
+func (b *basicLogger) Tags() []*Field {
+	return b.tags
 }
 
-func (b *basicLogger) For(params ...*Field) BasicLogger {
-	prefixes := append(b.prefixes, params...)
-	return &basicLogger{prefixes: prefixes, nestingLevel: b.nestingLevel, outputs: b.outputs, sourceRootPrefixIndex: b.sourceRootPrefixIndex, filters: b.filters}
+func (b *basicLogger) WithTag(params ...*Field) BasicLogger {
+	prefixes := append(b.tags, params...)
+	return &basicLogger{tags: prefixes, nestingLevel: b.nestingLevel, outputs: b.outputs, sourceRootPrefixIndex: b.sourceRootPrefixIndex, filters: b.filters}
 }
 
 func (b *basicLogger) Metric(metric string, params ...*Field) {
@@ -104,20 +104,6 @@ func (b *basicLogger) Metric(metric string, params ...*Field) {
 }
 
 func (b *basicLogger) Log(level string, message string, params ...*Field) {
-	for _, f := range b.filters {
-		for _, p := range b.prefixes {
-			if p.Equal(f) {
-				return
-			}
-		}
-
-		for _, p := range params {
-			if p.Equal(f) {
-				return
-			}
-		}
-	}
-
 	function, source := b.getCaller(b.nestingLevel)
 
 	enrichmentParams := []*Field{
@@ -125,8 +111,14 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 		Source(source),
 	}
 
-	enrichmentParams = append(enrichmentParams, b.prefixes...)
+	enrichmentParams = append(enrichmentParams, b.tags...)
 	enrichmentParams = append(enrichmentParams, params...)
+
+	for _, f := range b.filters {
+		if !f.Allows(level, message, enrichmentParams) {
+			return
+		}
+	}
 
 	for _, output := range b.outputs {
 		logLine := output.Formatter().FormatRow(level, message, enrichmentParams...)
@@ -150,7 +142,7 @@ func (b *basicLogger) LogFailedExpectation(message string, expected *Field, actu
 }
 
 func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
-	meterLogger := &basicLogger{nestingLevel: 5, prefixes: b.prefixes, outputs: b.outputs}
+	meterLogger := &basicLogger{nestingLevel: 5, tags: b.tags, outputs: b.outputs}
 	return &basicMeter{name: name, start: time.Now().UnixNano(), logger: meterLogger, params: params}
 }
 
@@ -159,7 +151,7 @@ func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {
 	return b
 }
 
-func (b *basicLogger) WithFilter(filter *Field) BasicLogger {
+func (b *basicLogger) WithFilter(filter Filter) BasicLogger {
 	b.filters = append(b.filters, filter) // this is not thread safe, I know
 	return b
 }

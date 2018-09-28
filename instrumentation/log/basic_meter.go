@@ -24,7 +24,7 @@ func (m *basicMeter) Done() {
 	diff := time.Duration(m.end - m.start)
 
 	var names []string
-	for _, prefix := range m.logger.Prefixes() {
+	for _, prefix := range m.logger.Tags() {
 		if prefix.Type == NodeType {
 			continue
 		}

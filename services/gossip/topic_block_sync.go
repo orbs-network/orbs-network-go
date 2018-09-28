@@ -60,7 +60,7 @@ func (s *service) receivedBlockSyncAvailabilityRequest(header *gossipmessages.He
 			},
 		})
 		if err != nil {
-			s.reporting.Info("HandleBlockAvailabilityRequest failed", log.Error(err))
+			s.logger.Info("HandleBlockAvailabilityRequest failed", log.Error(err))
 		}
 	}
 }
@@ -99,7 +99,7 @@ func (s *service) receivedBlockSyncAvailabilityResponse(header *gossipmessages.H
 			},
 		})
 		if err != nil {
-			s.reporting.Info("HandleBlockAvailabilityResponse failed", log.Error(err))
+			s.logger.Info("HandleBlockAvailabilityResponse failed", log.Error(err))
 		}
 	}
 }
@@ -140,7 +140,7 @@ func (s *service) receivedBlockSyncRequest(header *gossipmessages.Header, payloa
 			},
 		})
 		if err != nil {
-			s.reporting.Info("HandleBlockSyncRequest failed", log.Error(err))
+			s.logger.Info("HandleBlockSyncRequest failed", log.Error(err))
 		}
 	}
 }
@@ -182,7 +182,7 @@ func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, paylo
 	blocks, err := decodeBlockPairs(payloads)
 
 	if err != nil {
-		s.reporting.Error("could not decode block pair from block sync", log.Error(err))
+		s.logger.Error("could not decode block pair from block sync", log.Error(err))
 		return
 	}
 
@@ -195,7 +195,7 @@ func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, paylo
 			},
 		})
 		if err != nil {
-			s.reporting.Info("HandleBlockSyncResponse failed", log.Error(err))
+			s.logger.Info("HandleBlockSyncResponse failed", log.Error(err))
 		}
 	}
 }

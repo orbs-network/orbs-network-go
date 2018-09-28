@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+var LogTag = log.Service("transaction-pool")
+
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
@@ -55,7 +57,7 @@ func NewTransactionPool(ctx context.Context,
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
 		config:         config,
-		logger:         logger.For(log.Service("transaction-pool")),
+		logger:         logger.WithTag(LogTag),
 
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
 		pendingPool:                 pendingPool,

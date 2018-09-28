@@ -14,6 +14,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+var LogTag = log.String("adapter", "http-server")
+
 type httpErr struct {
 	code     int
 	logField *log.Field
@@ -26,7 +28,7 @@ type HttpServer interface {
 
 type server struct {
 	httpServer *http.Server
-	reporting  log.BasicLogger
+	logger     log.BasicLogger
 	publicApi  services.PublicApi
 }
 
@@ -44,15 +46,14 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(address string, reporting log.BasicLogger, publicApi services.PublicApi) HttpServer {
-	reporting = reporting.For(log.String("adapter", "http-server"))
+func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi) HttpServer {
 	server := &server{
-		reporting: reporting,
+		logger:    logger.WithTag(LogTag),
 		publicApi: publicApi,
 	}
 
 	if listener, err := server.listen(address); err != nil {
-		reporting.Error("failed to start http server", log.Error(err))
+		logger.Error("failed to start http server", log.Error(err))
 		panic("failed to start http server")
 	} else {
 		server.httpServer = &http.Server{
@@ -64,7 +65,7 @@ func NewHttpServer(address string, reporting log.BasicLogger, publicApi services
 		go server.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
 	}
 
-	reporting.Info("started http server", log.String("address", address))
+	logger.Info("started http server", log.String("address", address))
 
 	return server
 }
@@ -76,14 +77,14 @@ func (s *server) listen(addr string) (net.Listener, error) {
 func (s *server) GracefulShutdown(timeout time.Duration) {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		s.reporting.Error("failed to stop http server gracefully", log.Error(err))
+		s.logger.Error("failed to stop http server gracefully", log.Error(err))
 	}
 }
 
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
-	router.Handle("/api/v1/send-transaction", report(s.reporting, http.HandlerFunc(s.sendTransactionHandler)))
-	router.Handle("/api/v1/call-method", report(s.reporting, http.HandlerFunc(s.callMethodHandler)))
+	router.Handle("/api/v1/send-transaction", report(s.logger, http.HandlerFunc(s.sendTransactionHandler)))
+	router.Handle("/api/v1/call-method", report(s.logger, http.HandlerFunc(s.callMethodHandler)))
 	return router
 }
 
@@ -98,44 +99,44 @@ func report(reporting log.BasicLogger, h http.Handler) http.Handler {
 func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
-		writeErrorResponseAndLog(s.reporting, w, e)
+		writeErrorResponseAndLog(s.logger, w, e)
 		return
 	}
 
 	clientRequest := client.SendTransactionRequestReader(bytes)
 	if e := validate(clientRequest); e != nil {
-		writeErrorResponseAndLog(s.reporting, w, e)
+		writeErrorResponseAndLog(s.logger, w, e)
 		return
 	}
 
-	s.reporting.Info("http server received send-transaction", log.Stringable("request", clientRequest))
+	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
-		writeErrorResponseAndLog(s.reporting, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+		writeErrorResponseAndLog(s.logger, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
 func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
-		writeErrorResponseAndLog(s.reporting, w, e)
+		writeErrorResponseAndLog(s.logger, w, e)
 		return
 	}
 
 	clientRequest := client.CallMethodRequestReader(bytes)
 	if e := validate(clientRequest); e != nil {
-		writeErrorResponseAndLog(s.reporting, w, e)
+		writeErrorResponseAndLog(s.logger, w, e)
 		return
 	}
 
-	s.reporting.Info("http server received call-method", log.Stringable("request", clientRequest))
+	s.logger.Info("http server received call-method", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
 	} else {
-		writeErrorResponseAndLog(s.reporting, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+		writeErrorResponseAndLog(s.logger, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 

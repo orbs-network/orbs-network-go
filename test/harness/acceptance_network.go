@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-network-go/services/gossip"
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/services/publicapi"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -30,8 +35,11 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 	testLogger := log.GetLogger(log.String("_test-id", testId)).
 		WithOutput(log.NewOutput(output).
 		WithFormatter(log.NewHumanReadableFormatter())).
-		WithFilter(log.String("flow", "block-sync")).
-		WithFilter(log.String("service", "gossip"))
+		WithFilter(blockstorage.BlockSyncFlowLogTag).
+		WithFilter(gossip.LogTag).
+		WithFilter(publicapi.LogTag).
+		WithFilter(native.LogTag).
+		WithFilter(virtualmachine.LogTag)
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
