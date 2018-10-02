@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -24,21 +23,18 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Millisecond)
 
-		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 		harness.txpMock.When("AddNewTransaction", mock.Any).Return(&services.AddNewTransactionOutput{
 			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
 			TransactionReceipt: builders.TransactionReceipt().Build(),
-			BlockHeight:        1,
-			BlockTimestamp:     blockTime,
 		}).Times(1)
 
-		tx, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: builders.Transaction().Builder()}).Build(),
 		})
 
 		require.NoError(t, err, "error happened when it should not")
-		require.NotNil(t, tx, "Send transaction returned nil instead of object")
+		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
 }
 
@@ -46,29 +42,21 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
 
-		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 		txb := builders.Transaction().Builder()
-		harness.txpMock.When("AddNewTransaction", mock.Any).Times(1).
-			Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
-				go func() {
-					time.Sleep(1 * time.Millisecond)
-					harness.papi.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
-						TransactionReceipts: []*protocol.TransactionReceipt{builders.TransactionReceipt().WithTransaction(txb.Build().Transaction()).Build()},
-						BlockHeight:         2,
-						Timestamp:           blockTime,
-					})
-				}()
-				return &services.AddNewTransactionOutput{TransactionStatus: protocol.TRANSACTION_STATUS_PENDING}, nil
+		harness.OnAddNewTransaction(func () {
+			harness.papi.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
+				TransactionReceipts: []*protocol.TransactionReceipt{builders.TransactionReceipt().WithTransaction(txb.Build().Transaction()).Build()},
 			})
+		})
 
-		tx, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: txb,
 			}).Build(),
 		})
 
 		require.NoError(t, err, "error happened when it should not")
-		require.NotNil(t, tx, "Send transaction returned nil instead of object")
+		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
 }
 
@@ -76,33 +64,25 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
 
-		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
-		harness.txpMock.When("AddNewTransaction", mock.Any).Times(1).
-			Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
-				go func() {
-					time.Sleep(1 * time.Millisecond)
-					harness.papi.HandleTransactionError(&handlers.HandleTransactionErrorInput{
-						Txhash:            txHash,
-						TransactionStatus: protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED,
-						BlockHeight:       8,
-						BlockTimestamp:    blockTime,
-					})
-				}()
-				return &services.AddNewTransactionOutput{TransactionStatus: protocol.TRANSACTION_STATUS_PENDING}, nil
+		harness.OnAddNewTransaction(func () {
+			harness.papi.HandleTransactionError(&handlers.HandleTransactionErrorInput{
+				Txhash:            txHash,
+				TransactionStatus: protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED,
 			})
+		})
 
-		tx, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: txb,
 			}).Build(),
 		})
 
 		require.NoError(t, err, "error happened when it should not")
-		require.NotNil(t, tx, "Send transaction returned nil instead of object")
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, tx.ClientResponse.TransactionStatus(), "got wrong status")
+		require.NotNil(t, result, "Send transaction returned nil instead of object")
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, result.ClientResponse.TransactionStatus(), "got wrong status")
 	})
 }
 
@@ -134,4 +114,15 @@ func makeTxMock() *services.MockTransactionPool {
 	txpMock := &services.MockTransactionPool{}
 	txpMock.When("RegisterTransactionResultsHandler", mock.Any).Return(nil)
 	return txpMock
+}
+
+func (h *harness)OnAddNewTransaction(f func ()) {
+	h.txpMock.When("AddNewTransaction", mock.Any).Times(1).
+		Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+			go func() {
+				time.Sleep(1 * time.Millisecond)
+				f()
+			}()
+			return &services.AddNewTransactionOutput{TransactionStatus: protocol.TRANSACTION_STATUS_PENDING}, nil
+		})
 }
