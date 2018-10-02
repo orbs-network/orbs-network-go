@@ -52,7 +52,7 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	s.blocksForRounds[nextBlockHeight] = proposedBlockPair
 	s.blocksForRoundsMutex.Unlock()
 
-	s.reporting.Info("proposed block pair", log.BlockHeight(nextBlockHeight))
+	s.logger.Info("proposed block pair", log.BlockHeight(nextBlockHeight))
 
 	return nil
 }
@@ -81,7 +81,7 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 		<-s.votesForActiveRound
 	}
 
-	s.reporting.Info("got the required votes", log.Int("votes", numOfRequiredVotes))
+	s.logger.Info("got the required votes", log.Int("votes", numOfRequiredVotes))
 
 	return nil
 }
@@ -93,7 +93,7 @@ func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPair
 	s.blocksForRounds[blockHeight] = blockPair
 	s.blocksForRoundsMutex.Unlock()
 
-	s.reporting.Info("voting as validator for block", log.BlockHeight(blockHeight))
+	s.logger.Info("voting as validator for block", log.BlockHeight(blockHeight))
 	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 	return err
 }
@@ -116,7 +116,7 @@ func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 	s.blocksForRoundsMutex.RUnlock()
 
 	if !found {
-		s.reporting.Error("trying to commit a block that wasn't prepared", log.BlockHeight(blockHeight))
+		s.logger.Error("trying to commit a block that wasn't prepared", log.BlockHeight(blockHeight))
 		return s.lastCommittedBlockHeight
 	}
 

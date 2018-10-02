@@ -20,7 +20,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			// TODO: in production we need to restart our long running goroutine (decide on supervision mechanism)
-			s.reporting.Error("panic in BenchmarkConsensus.leaderConsensusRoundRunLoop long running goroutine", log.String("panic", fmt.Sprintf("%v", r)))
+			s.logger.Error("panic in BenchmarkConsensus.leaderConsensusRoundRunLoop long running goroutine", log.String("panic", fmt.Sprintf("%v", r)))
 		}
 	}()
 
@@ -28,11 +28,11 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	for {
 		err := s.leaderConsensusRoundTick()
 		if err != nil {
-			s.reporting.Error(err.Error())
+			s.logger.Error("consensus round tick failed", log.Error(err))
 		}
 		select {
 		case <-ctx.Done():
-			s.reporting.Info("consensus round run loop terminating with context")
+			s.logger.Info("consensus round run loop terminating with context")
 			// FIXME remove the channel close once we start passing context everywhere
 			// TODO (talkol) - it's a pattern we need to decide on: many short lived writers, one long lived reader
 			// closing the channel when long lived reader terminates will cause the writers to panic - a smell
@@ -41,10 +41,10 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 			close(s.successfullyVotedBlocks)
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			s.reporting.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
+			s.logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
-			s.reporting.Info("consensus round waking up after retry timeout")
+			s.logger.Info("consensus round waking up after retry timeout")
 			continue
 		}
 	}
@@ -99,14 +99,14 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
-		s.reporting.Error("leader failed to sign genesis block", log.Error(err))
+		s.logger.Error("leader failed to sign genesis block", log.Error(err))
 		return nil
 	}
 	return blockPair
 }
 
 func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
-	s.reporting.Info("generating new proposed block", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()+1))
+	s.logger.Info("generating new proposed block", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
@@ -164,7 +164,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 }
 
 func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairContainer) error {
-	s.reporting.Info("broadcasting commit block", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	s.logger.Info("broadcasting commit block", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
 	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
@@ -193,7 +193,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 				fields = append(fields, log.Error(err))
 			}
 
-			s.reporting.Info("recovering from failure to collect vote, possibly because consensus was shut down", fields...)
+			s.logger.Info("recovering from failure to collect vote, possibly because consensus was shut down", fields...)
 		}
 	}()
 
@@ -211,7 +211,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	// validate the vote
 	err := s.leaderValidateVoteUnderMutex(sender, status)
 	if err != nil {
-		s.reporting.Error("leader failed to validate vote", log.Error(err))
+		s.logger.Error("leader failed to validate vote", log.Error(err))
 		return
 	}
 
@@ -220,7 +220,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	s.reporting.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
+	s.logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorum {
 		s.lastCommittedBlockVotersReachedQuorum = true
 		successfullyVotedBlock = s.lastCommittedBlockHeightUnderMutex()

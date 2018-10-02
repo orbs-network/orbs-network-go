@@ -42,7 +42,7 @@ func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo
 	defer func() {
 		if r := recover(); r != nil {
 			contractOutputErr = errors.Errorf("%s", r)
-			s.reporting.Info("contract execution failed by contract panic", log.Error(contractOutputErr))
+			s.logger.Info("contract execution failed by contract panic", log.Error(contractOutputErr))
 			contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()
@@ -54,7 +54,7 @@ func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo
 	}
 
 	// execute the call
-	s.reporting.Info("processor executing contract", log.String("contract", contractInfo.Name), log.String("method", methodInfo.Name))
+	s.logger.Info("processor executing contract", log.String("contract", contractInfo.Name), log.String("method", methodInfo.Name))
 	contractInstance := s.getContractInstanceFromRepository(contractInfo.Name)
 	if contractInstance == nil {
 		return nil, nil, errors.New("contract repository is not initialized yet")
@@ -79,7 +79,7 @@ func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo
 	// create contract output error
 	contractOutputErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
 	if contractOutputErr != nil {
-		s.reporting.Info("contract execution failed by contract error", log.Error(contractOutputErr))
+		s.logger.Info("contract execution failed by contract error", log.Error(contractOutputErr))
 		contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 	}
 

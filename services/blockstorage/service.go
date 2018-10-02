@@ -32,6 +32,8 @@ const (
 	ProtocolVersion = 1
 )
 
+var LogTag = log.Service("block-storage")
+
 type service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
@@ -40,7 +42,7 @@ type service struct {
 
 	config Config
 
-	reporting               log.BasicLogger
+	logger                  log.BasicLogger
 	consensusBlocksHandlers []handlers.ConsensusBlocksHandler
 
 	lastCommittedBlock *protocol.BlockPairContainer
@@ -50,15 +52,13 @@ type service struct {
 }
 
 func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
-	txPool services.TransactionPool, reporting log.BasicLogger) services.BlockStorage {
-	logger := reporting.For(log.Service("block-storage"))
-
+	txPool services.TransactionPool, logger log.BasicLogger) services.BlockStorage {
 	storage := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
 		gossip:        gossip,
 		txPool:        txPool,
-		reporting:     logger,
+		logger:        logger.WithTags(LogTag),
 		config:        config,
 		lastBlockLock: &sync.RWMutex{},
 	}
@@ -74,14 +74,14 @@ func NewBlockStorage(ctx context.Context, config Config, persistence adapter.Blo
 	}
 
 	gossip.RegisterBlockSyncHandler(storage)
-	storage.blockSync = NewBlockSync(ctx, config, storage, gossip, reporting)
+	storage.blockSync = NewBlockSync(ctx, config, storage, gossip, logger)
 
 	return storage
 }
 
 func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
-	s.reporting.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	s.logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
@@ -102,16 +102,16 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 
 	s.updateLastCommittedBlock(input.BlockPair)
 
-	s.reporting.Info("Committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	s.logger.Info("Committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
-		s.reporting.Error("intra-node sync to state storage failed", log.Error(err))
+		s.logger.Error("intra-node sync to state storage failed", log.Error(err))
 	}
 
 	if err := s.syncBlockToTxPool(input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, should we fail if pool fails ?
-		s.reporting.Error("intra-node sync to tx pool failed", log.Error(err))
+		s.logger.Error("intra-node sync to tx pool failed", log.Error(err))
 	}
 
 	return nil, nil
@@ -257,7 +257,7 @@ func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitI
 	}
 
 	if err := s.validateWithConsensusAlgos(s.lastCommittedBlock, input.BlockPair); err != nil {
-		s.reporting.Error("intra-node sync to consensus algo failed", log.Error(err))
+		s.logger.Error("intra-node sync to consensus algo failed", log.Error(err))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -278,7 +278,7 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock() {
 		// passing nil on purpose, see spec
 		err := s.validateWithConsensusAlgos(nil, lastCommitted)
 		if err != nil {
-			s.reporting.Error(err.Error())
+			s.logger.Error(err.Error())
 		}
 	}
 }
@@ -317,11 +317,11 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 	if txBlockHeader.BlockHeight() <= currentBlockHeight {
 		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "block already in storage, timestamp mismatch"
-			s.reporting.Error(errorMessage, log.BlockHeight(currentBlockHeight))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight))
 			return false, errors.New(errorMessage)
 		}
 
-		s.reporting.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight))
+		s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight))
 		return false, nil
 	}
 
@@ -352,13 +352,13 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	// FIXME we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
 	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
 		errorMessage := "protocol version mismatch"
-		s.reporting.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
+		s.logger.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
 	}
 
 	if rsBlockHeader.ProtocolVersion() != ProtocolVersion {
 		errorMessage := "protocol version mismatch"
-		s.reporting.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
+		s.logger.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
 	}
 
@@ -410,7 +410,7 @@ func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockH
 	allBlocks := s.persistence.ReadAllBlocks()
 	allBlocksLength := primitives.BlockHeight(len(allBlocks))
 
-	s.reporting.Info("Reading all blocks", log.Stringable("blocks-total", allBlocksLength))
+	s.logger.Info("Reading all blocks", log.Stringable("blocks-total", allBlocksLength))
 
 	firstAvailableBlockHeight = first
 
@@ -424,7 +424,7 @@ func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockH
 	}
 
 	for i := first - 1; i < lastAvailableBlockHeight; i++ {
-		s.reporting.Info("Retrieving block", log.BlockHeight(i), log.Stringable("blocks-total", i))
+		s.logger.Info("Retrieving block", log.BlockHeight(i), log.Stringable("blocks-total", i))
 		blocks = append(blocks, allBlocks[i])
 	}
 

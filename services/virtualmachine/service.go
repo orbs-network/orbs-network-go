@@ -9,12 +9,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+var LogTag = log.Service("virtual-machine")
+
 type service struct {
 	blockStorage         services.BlockStorage
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
-	reporting            log.BasicLogger
+	logger               log.BasicLogger
 
 	contexts *executionContextProvider
 }
@@ -23,14 +25,14 @@ func NewVirtualMachine(
 	stateStorage services.StateStorage,
 	processors map[protocol.ProcessorType]services.Processor,
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector,
-	reporting log.BasicLogger,
+	logger log.BasicLogger,
 ) services.VirtualMachine {
 
 	s := &service{
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
-		reporting:            reporting.For(log.Service("virtual-machine")),
+		logger:               logger.WithTags(LogTag),
 
 		contexts: newExecutionContextProvider(),
 	}
@@ -53,7 +55,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 		}, err
 	}
 
-	s.reporting.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
+	s.logger.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
 	callResult, outputArgs, err := s.runMethod(blockHeight, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
@@ -70,7 +72,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
-	s.reporting.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
+	s.logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
 	receipts, stateDiffs := s.processTransactionSet(previousBlockHeight, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
@@ -96,9 +98,9 @@ func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderI
 	}
 
 	if err != nil {
-		s.reporting.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+		s.logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
 	} else {
-		s.reporting.Info("performed pre order checks", log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+		s.logger.Info("performed pre order checks", log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
 	}
 
 	return &services.TransactionSetPreOrderOutput{

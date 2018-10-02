@@ -16,6 +16,7 @@ import (
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
 const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
+var LogTag = log.String("adapter", "gossip")
 
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
@@ -26,8 +27,8 @@ type Config interface {
 }
 
 type directTransport struct {
-	config    Config
-	reporting log.BasicLogger
+	config Config
+	logger log.BasicLogger
 
 	peerQueues map[string]chan *TransportData // does not require mutex to read
 
@@ -37,10 +38,10 @@ type directTransport struct {
 	serverPort                  int
 }
 
-func NewDirectTransport(ctx context.Context, config Config, reporting log.BasicLogger) Transport {
+func NewDirectTransport(ctx context.Context, config Config, logger log.BasicLogger) Transport {
 	t := &directTransport{
-		config:    config,
-		reporting: reporting.For(log.String("adapter", "gossip")),
+		config: config,
+		logger: logger.WithTags(LogTag),
 
 		peerQueues: make(map[string]chan *TransportData),
 
@@ -133,21 +134,21 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 	listener, err := t.serverListenForIncomingConnections(ctx, listenPort)
 	if err != nil {
 		err = errors.Wrapf(err, "gossip transport cannot listen on port %d", listenPort)
-		t.reporting.Error(err.Error())
+		t.logger.Error(err.Error())
 		panic(err)
 	}
 
 	t.serverPort = listener.Addr().(*net.TCPAddr).Port
-	t.reporting.Info("gossip transport server listening", log.Uint32("port", uint32(t.serverPort)))
+	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.serverPort)))
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			if !t.isServerListening() {
-				t.reporting.Info("incoming connection accept stopped since server is shutting down")
+				t.logger.Info("incoming connection accept stopped since server is shutting down")
 				return
 			}
-			t.reporting.Info("incoming connection accept error", log.Error(err))
+			t.logger.Info("incoming connection accept error", log.Error(err))
 			continue
 		}
 		go t.serverHandleIncomingConnection(ctx, conn)
@@ -155,14 +156,14 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 }
 
 func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, conn net.Conn) {
-	t.reporting.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
 	// TODO: add a white list for IPs we're willing to accept connections from
 	// TODO: make sure each IP from the white list connects only once
 
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
 		if err != nil {
-			t.reporting.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
+			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
 			conn.Close()
 			return
 		}
@@ -175,7 +176,7 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 }
 
 func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
-	t.reporting.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()))
 
 	// TODO: think about timeout policy on receive, we might not want it
 	timeout := t.config.GossipNetworkTimeout()
@@ -241,11 +242,11 @@ func (t *directTransport) getListener() TransportListener {
 
 func (t *directTransport) clientMainLoop(ctx context.Context, address string, msgs chan *TransportData) {
 	for {
-		t.reporting.Info("attempting outgoing transport connection", log.String("server", address))
+		t.logger.Info("attempting outgoing transport connection", log.String("server", address))
 		conn, err := net.Dial("tcp", address)
 
 		if err != nil {
-			t.reporting.Info("cannot connect to gossip peer endpoint", log.String("peer", address), log.Error(err))
+			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", address), log.Error(err))
 			time.Sleep(t.config.GossipConnectionKeepAliveInterval())
 			continue
 		}
@@ -258,26 +259,26 @@ func (t *directTransport) clientMainLoop(ctx context.Context, address string, ms
 
 // returns true if should attempt reconnect on error
 func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, msgs chan *TransportData) bool {
-	t.reporting.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
 
 	for {
 		select {
 		case data := <-msgs:
 			err := t.sendTransportData(ctx, conn, data)
 			if err != nil {
-				t.reporting.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
+				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
 				conn.Close()
 				return true
 			}
 		case <-time.After(t.config.GossipConnectionKeepAliveInterval()):
 			err := t.sendKeepAlive(ctx, conn)
 			if err != nil {
-				t.reporting.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
+				t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
 				conn.Close()
 				return true
 			}
 		case <-ctx.Done():
-			t.reporting.Info("client loop stopped since server is shutting down")
+			t.logger.Info("client loop stopped since server is shutting down")
 			conn.Close()
 			return false
 		}
@@ -285,7 +286,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 }
 
 func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *TransportData) error {
-	t.reporting.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()))
 
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
@@ -332,7 +333,7 @@ func calcPaddingSize(size uint32) uint32 {
 }
 
 func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
-	t.reporting.Info("sending keepalive", log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("sending keepalive", log.String("peer", conn.RemoteAddr().String()))
 
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)

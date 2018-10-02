@@ -9,17 +9,19 @@ import (
 	"sync"
 )
 
+var LogTag = log.Service("processor-javascript")
+
 type service struct {
-	reporting log.BasicLogger
+	logger log.BasicLogger
 
 	mutex                        *sync.RWMutex
 	contractSdkHandlerUnderMutex handlers.ContractSdkCallHandler
 	contractsUnderMutex          map[primitives.ContractName]string
 }
 
-func NewJavaScriptProcessor(reporting log.BasicLogger) services.Processor {
+func NewJavaScriptProcessor(logger log.BasicLogger) services.Processor {
 	return &service{
-		reporting:           reporting.For(log.Service("processor-javascript")),
+		logger:              logger.WithTags(LogTag),
 		mutex:               &sync.RWMutex{},
 		contractsUnderMutex: make(map[primitives.ContractName]string),
 	}

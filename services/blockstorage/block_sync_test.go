@@ -37,11 +37,11 @@ func newBlockSyncHarness() *blockSyncHarness {
 	collectAvailabilityTrigger := &synchronization.PeriodicalTriggerMock{}
 
 	blockSync := &BlockSync{
-		reporting: log.GetLogger(),
-		config:    cfg,
-		storage:   storage,
-		gossip:    gossip,
-		events:    nil,
+		logger:  log.GetLogger(),
+		config:  cfg,
+		storage: storage,
+		gossip:  gossip,
+		events:  nil,
 	}
 
 	return &blockSyncHarness{
