@@ -67,16 +67,14 @@ func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResu
 }
 
 func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
-	//TODO implement
 	s.logger.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
-	//s.waiter.complete(input.Txhash.KeyForMap(),
-	//	&waiterObject{&txResponse{
-	//		transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-	//		transactionReceipt: input.txReceipt,
-	//		blockHeight:        input.BlockHeight,
-	//		blockTimestamp:     input.Timestamp,
-	//	}})
-	//
+	s.waiter.complete(input.Txhash.KeyForMap(),
+		&waiterObject{&txResponse{
+			transactionStatus:  input.TransactionStatus,
+			transactionReceipt: nil,
+			blockHeight:        input.BlockHeight,
+			blockTimestamp:     input.BlockTimestamp,
+		}})
 	return &handlers.HandleTransactionErrorOutput{}, nil
 }
 
