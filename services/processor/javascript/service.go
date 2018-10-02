@@ -21,7 +21,7 @@ type service struct {
 
 func NewJavaScriptProcessor(logger log.BasicLogger) services.Processor {
 	return &service{
-		logger:              logger.WithTag(LogTag),
+		logger:              logger.WithTags(LogTag),
 		mutex:               &sync.RWMutex{},
 		contractsUnderMutex: make(map[primitives.ContractName]string),
 	}

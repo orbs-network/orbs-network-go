@@ -29,7 +29,7 @@ func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogge
 	s := &service{
 		transport: transport,
 		config:    config,
-		logger:    logger.WithTag(LogTag),
+		logger:    logger.WithTags(LogTag),
 	}
 	transport.RegisterListener(s, s.config.NodePublicKey())
 	return s

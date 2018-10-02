@@ -44,7 +44,7 @@ type BlockSync struct {
 
 func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, gossip gossiptopics.BlockSync, logger log.BasicLogger) *BlockSync {
 	blockSync := &BlockSync{
-		logger:  logger.WithTag(BlockSyncFlowLogTag),
+		logger:  logger.WithTags(BlockSyncFlowLogTag),
 		config:  config,
 		storage: storage,
 		gossip:  gossip,

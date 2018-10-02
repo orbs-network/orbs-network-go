@@ -60,7 +60,7 @@ func NewBenchmarkConsensusAlgo(
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		logger:           logger.WithTag(LogTag),
+		logger:           logger.WithTags(LogTag),
 		config:           config,
 
 		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),

@@ -57,7 +57,7 @@ func NewTransactionPool(ctx context.Context,
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
 		config:         config,
-		logger:         logger.WithTag(LogTag),
+		logger:         logger.WithTags(LogTag),
 
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
 		pendingPool:                 pendingPool,

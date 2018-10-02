@@ -48,7 +48,7 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 
 func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi) HttpServer {
 	server := &server{
-		logger:    logger.WithTag(LogTag),
+		logger:    logger.WithTags(LogTag),
 		publicApi: publicApi,
 	}
 

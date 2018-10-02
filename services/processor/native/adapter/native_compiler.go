@@ -37,7 +37,7 @@ type nativeCompiler struct {
 func NewNativeCompiler(config Config, logger log.BasicLogger) Compiler {
 	c := &nativeCompiler{
 		config: config,
-		logger: logger.WithTag(LogTag),
+		logger: logger.WithTags(LogTag),
 	}
 
 	c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec

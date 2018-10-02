@@ -41,7 +41,7 @@ type directTransport struct {
 func NewDirectTransport(ctx context.Context, config Config, logger log.BasicLogger) Transport {
 	t := &directTransport{
 		config: config,
-		logger: logger.WithTag(LogTag),
+		logger: logger.WithTags(LogTag),
 
 		peerQueues: make(map[string]chan *TransportData),
 

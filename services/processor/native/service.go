@@ -28,7 +28,7 @@ func NewNativeProcessor(
 ) services.Processor {
 	return &service{
 		compiler: compiler,
-		logger:   logger.WithTag(LogTag),
+		logger:   logger.WithTags(LogTag),
 		mutex:    &sync.RWMutex{},
 	}
 }

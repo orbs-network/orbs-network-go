@@ -32,7 +32,7 @@ func NewVirtualMachine(
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
-		logger:               logger.WithTag(LogTag),
+		logger:               logger.WithTags(LogTag),
 
 		contexts: newExecutionContextProvider(),
 	}

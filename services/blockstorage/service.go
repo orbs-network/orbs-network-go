@@ -58,7 +58,7 @@ func NewBlockStorage(ctx context.Context, config Config, persistence adapter.Blo
 		stateStorage:  stateStorage,
 		gossip:        gossip,
 		txPool:        txPool,
-		logger:        logger.WithTag(LogTag),
+		logger:        logger.WithTags(LogTag),
 		config:        config,
 		lastBlockLock: &sync.RWMutex{},
 	}

@@ -36,7 +36,7 @@ func NewConsensusContext(
 		virtualMachine:  virtualMachine,
 		stateStorage:    stateStorage,
 		config:          config,
-		logger:          logger.WithTag(LogTag),
+		logger:          logger.WithTags(LogTag),
 	}
 }
 

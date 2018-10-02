@@ -42,7 +42,7 @@ func NewPublicApi(
 		config:          config,
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
-		logger:          logger.WithTag(LogTag),
+		logger:          logger.WithTags(LogTag),
 
 		waiter: newWaiter(ctx),
 	}

@@ -59,7 +59,7 @@ func NewLeanHelixConsensusAlgo(
 		blockStorage:     blockStorage,
 		transactionPool:  transactionPool,
 		consensusContext: consensusContext,
-		logger:           logger.WithTag(LogTag),
+		logger:           logger.WithTags(LogTag),
 		config:           config,
 		lastCommittedBlockHeight: 0, // TODO: improve startup
 		blocksForRounds:          make(map[primitives.BlockHeight]*protocol.BlockPairContainer),

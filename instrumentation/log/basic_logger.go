@@ -14,7 +14,7 @@ type BasicLogger interface {
 	Info(message string, params ...*Field)
 	Error(message string, params ...*Field)
 	Metric(name string, params ...*Field)
-	WithTag(params ...*Field) BasicLogger
+	WithTags(params ...*Field) BasicLogger
 	Meter(name string, params ...*Field) BasicMeter
 	Tags() []*Field
 	WithOutput(writer ...Output) BasicLogger
@@ -93,7 +93,7 @@ func (b *basicLogger) Tags() []*Field {
 	return b.tags
 }
 
-func (b *basicLogger) WithTag(params ...*Field) BasicLogger {
+func (b *basicLogger) WithTags(params ...*Field) BasicLogger {
 	prefixes := append(b.tags, params...)
 	return &basicLogger{tags: prefixes, nestingLevel: b.nestingLevel, outputs: b.outputs, sourceRootPrefixIndex: b.sourceRootPrefixIndex, filters: b.filters}
 }

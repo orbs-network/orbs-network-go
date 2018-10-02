@@ -103,7 +103,7 @@ func TestNestedLogger(t *testing.T) {
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
-		txFlowLogger := serviceLogger.WithTag(log.String("flow", TransactionFlow))
+		txFlowLogger := serviceLogger.WithTags(log.String("flow", TransactionFlow))
 		txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99, 250}))
 	})
 
@@ -181,7 +181,7 @@ func TestMeter(t *testing.T) {
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
-		txFlowLogger := serviceLogger.WithTag(log.String("flow", TransactionFlow))
+		txFlowLogger := serviceLogger.WithTags(log.String("flow", TransactionFlow))
 		meter := txFlowLogger.Meter("tx-process-time", txId)
 		defer meter.Done()
 

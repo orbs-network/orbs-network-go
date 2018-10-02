@@ -41,7 +41,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence, logger
 		config:       config,
 		merkle:       merkle,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
-		logger:       logger.WithTag(LogTag),
+		logger:       logger.WithTags(LogTag),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
