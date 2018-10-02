@@ -49,6 +49,8 @@ func NewTransactionPool(ctx context.Context,
 	config Config,
 	logger log.BasicLogger,
 	initialTimestamp primitives.TimestampNano) services.TransactionPool {
+	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes)
+
 	s := &service{
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
@@ -56,12 +58,13 @@ func NewTransactionPool(ctx context.Context,
 		logger:         logger.For(log.Service("transaction-pool")),
 
 		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
-		pendingPool:                 NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes),
+		pendingPool:                 pendingPool,
 		committedPool:               NewCommittedPool(),
 		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
 	}
 
 	gossip.RegisterTransactionRelayHandler(s)
+	pendingPool.onTransactionRemoved = s.onTransactionError
 
 	//TODO supervise
 	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool, logger)
@@ -156,6 +159,19 @@ func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status proto
 		TransactionReceipt: receipt,
 		BlockHeight:        s.lastCommittedBlockHeight,
 		BlockTimestamp:     s.lastCommittedBlockTimestamp,
+	}
+}
+
+func (s *service) onTransactionError(txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
+	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
+		for _, trh := range s.transactionResultsHandlers {
+			trh.HandleTransactionError(&handlers.HandleTransactionErrorInput{
+				Txhash:txHash,
+				TransactionStatus: removalReason,
+				BlockTimestamp: s.lastCommittedBlockTimestamp,
+				BlockHeight: s.lastCommittedBlockHeight,
+			})
+		}
 	}
 }
 

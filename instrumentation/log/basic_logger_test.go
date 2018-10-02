@@ -70,6 +70,22 @@ func TestSimpleLogger(t *testing.T) {
 	require.NotNil(t, jsonMap["timestamp"])
 }
 
+func TestBasicLogger_WithFilter_ForPrefix(t *testing.T) {
+	b := new(bytes.Buffer)
+	log.GetLogger(log.String("flow", "flow1")).WithOutput(log.NewOutput(b)).
+		WithFilter(log.String("flow", "flow1")).
+		Info("foo")
+	require.Empty(t, b.String(), "output was not empty")
+}
+
+func TestBasicLogger_WithFilter_ForParam(t *testing.T) {
+	b := new(bytes.Buffer)
+	log.GetLogger().WithOutput(log.NewOutput(b)).
+		WithFilter(log.String("foo", "bar")).
+		Info("baz", log.String("foo", "bar"))
+	require.Empty(t, b.String(), "output was not empty")
+}
+
 func TestCompareLogger(t *testing.T) {
 	stdout := captureStdout(func(writer io.Writer) {
 		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))

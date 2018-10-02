@@ -35,7 +35,7 @@ func compileTest(newHarness func(t *testing.T) *compilerContractHarness) func(*t
 
 		t.Log("Compiling a valid contract")
 
-		code := string(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+		code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
 		compilationStartTime := time.Now().UnixNano()
 		contractInfo, err := h.compiler.Compile(ctx, code)
 		compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
@@ -78,7 +78,7 @@ func aNativeCompiler(t *testing.T) *compilerContractHarness {
 
 func aFakeCompiler(t *testing.T) *compilerContractHarness {
 	compiler := NewFakeCompiler()
-	code := string(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+	code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
 	compiler.ProvideFakeContract(contracts.MockForCounter(), code)
 	return &compilerContractHarness{
 		compiler: compiler,
