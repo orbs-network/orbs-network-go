@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -144,7 +145,9 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 			}).Build(),
 		})
 
-		require.EqualError(t, err, "timed out waiting for transaction result")
+		txHash := digest.CalcTxHash(txb.Build().Transaction())
+
+		require.EqualError(t, err, fmt.Sprintf("timed out waiting for transaction result %s", txHash.String()))
 		require.WithinDuration(t, time.Now(), start, timeoutDuration*2, "timeout duration exceeded")
 		require.NotNil(t, tx, "Send transaction returned nil instead of object")
 	})
