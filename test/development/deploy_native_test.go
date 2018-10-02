@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Sambusac is based on harness.NewDevelopmentNetwork instead of harness.NewAcceptanceTestNetwork
+// Gamma is based on harness.NewDevelopmentNetwork instead of harness.NewAcceptanceTestNetwork
 // NewDevelopmentNetwork is almost identical to NewAcceptanceTestNetwork (in-memory adapters) except it uses real compilation (real processor/native/adapter)
 // this test is very similar to the acceptance test, just checks contract deployment with real compilation
 func TestNonLeaderDeploysNativeContract(t *testing.T) {
