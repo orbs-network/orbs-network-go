@@ -39,7 +39,7 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 	// get deployment info
 	processor, err := s.getServiceDeployment(context, primitives.ContractName(serviceName))
 	if err != nil {
-		s.reporting.Info("get deployment info for contract failed during Sdk.Service.CallMethod", log.Error(err), log.String("contract", serviceName))
+		s.logger.Info("get deployment info for contract failed during Sdk.Service.CallMethod", log.Error(err), log.String("contract", serviceName))
 		return nil, err
 	}
 
@@ -60,7 +60,7 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 		TransactionSigner:      nil,
 	})
 	if err != nil {
-		s.reporting.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("caller", callingService), log.Stringable("callee", primitives.ContractName(serviceName)))
+		s.logger.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("caller", callingService), log.Stringable("callee", primitives.ContractName(serviceName)))
 		return nil, err
 	}
 

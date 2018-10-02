@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var LogTag = log.Service("consensus-algo-lean-helix")
+
 type Config interface {
 	NetworkSize(asOfBlock uint64) uint32
 	NodePublicKey() primitives.Ed25519PublicKey
@@ -32,7 +34,7 @@ type service struct {
 	blockStorage     services.BlockStorage
 	transactionPool  services.TransactionPool
 	consensusContext services.ConsensusContext
-	reporting        log.BasicLogger
+	logger           log.BasicLogger
 	config           Config
 
 	lastCommittedBlockHeight primitives.BlockHeight
@@ -46,7 +48,7 @@ func NewLeanHelixConsensusAlgo(
 	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
 	consensusContext services.ConsensusContext,
-	reporting log.BasicLogger,
+	logger log.BasicLogger,
 	config Config,
 ) services.ConsensusAlgoLeanHelix {
 
@@ -57,7 +59,7 @@ func NewLeanHelixConsensusAlgo(
 		blockStorage:     blockStorage,
 		transactionPool:  transactionPool,
 		consensusContext: consensusContext,
-		reporting:        reporting.For(log.Service("consensus-algo-lean-helix")),
+		logger:           logger.WithTags(LogTag),
 		config:           config,
 		lastCommittedBlockHeight: 0, // TODO: improve startup
 		blocksForRounds:          make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
@@ -101,12 +103,12 @@ func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInp
 func (s *service) consensusRoundRunLoop() {
 
 	for {
-		s.reporting.Info("entered consensus round with last committed block height", log.BlockHeight(s.lastCommittedBlockHeight))
+		s.logger.Info("entered consensus round with last committed block height", log.BlockHeight(s.lastCommittedBlockHeight))
 
 		// see if we need to propose a new block
 		err := s.leaderProposeNextBlockIfNeeded()
 		if err != nil {
-			s.reporting.Error("leader failed to propose next block", log.Error(err))
+			s.logger.Error("leader failed to propose next block", log.Error(err))
 			continue
 		}
 
@@ -117,7 +119,7 @@ func (s *service) consensusRoundRunLoop() {
 		if activeBlock != nil {
 			err := s.leaderCollectVotesForBlock(activeBlock)
 			if err != nil {
-				s.reporting.Error("leader failed to collect votes for block", log.Error(err))
+				s.logger.Error("leader failed to collect votes for block", log.Error(err))
 				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff
 				continue
 			}

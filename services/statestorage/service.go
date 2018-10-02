@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var LogTag = log.Service("state-storage")
+
 type Config interface {
 	StateStorageHistoryRetentionDistance() uint32
 	BlockTrackerGraceDistance() uint32
@@ -23,14 +25,14 @@ type service struct {
 	config       Config
 	merkle       *merkle.Forest
 	blockTracker *synchronization.BlockTracker
-	reporting    log.BasicLogger
+	logger       log.BasicLogger
 
 	mutex                    *sync.RWMutex
 	persistence              adapter.StatePersistence
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 }
 
-func NewStateStorage(config Config, persistence adapter.StatePersistence, reporting log.BasicLogger) services.StateStorage {
+func NewStateStorage(config Config, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	merkle, rootHash := merkle.NewForest()
 	// TODO this is equivalent of genesis block deploy in persistence -> move to correct deploy
 	persistence.WriteMerkleRoot(0, rootHash)
@@ -39,7 +41,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence, report
 		config:       config,
 		merkle:       merkle,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
-		reporting:    reporting.For(log.Service("state-storage")),
+		logger:       logger.WithTags(LogTag),
 
 		mutex:                    &sync.RWMutex{},
 		persistence:              persistence,
@@ -57,7 +59,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 
 	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
 
-	s.reporting.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
+	s.logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
 	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != commitBlockHeight {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil

@@ -17,6 +17,8 @@ import (
 
 const blockHeightNone = primitives.BlockHeight(math.MaxUint64)
 
+var LogTag = log.Service("consensus-algo-benchmark")
+
 type Config interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
@@ -31,7 +33,7 @@ type service struct {
 	gossip           gossiptopics.BenchmarkConsensus
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
-	reporting        log.BasicLogger
+	logger           log.BasicLogger
 	config           Config
 
 	isLeader           bool
@@ -50,7 +52,7 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	reporting log.BasicLogger,
+	logger log.BasicLogger,
 	config Config,
 ) services.ConsensusAlgoBenchmark {
 
@@ -58,7 +60,7 @@ func NewBenchmarkConsensusAlgo(
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		reporting:        reporting.For(log.Service("consensus-algo-benchmark")),
+		logger:           logger.WithTags(LogTag),
 		config:           config,
 
 		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),

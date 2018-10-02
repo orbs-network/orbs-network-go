@@ -10,9 +10,11 @@ import (
 	"sync"
 )
 
+var LogTag = log.Service("processor-native")
+
 type service struct {
-	reporting log.BasicLogger
-	compiler  adapter.Compiler
+	logger   log.BasicLogger
+	compiler adapter.Compiler
 
 	mutex                         *sync.RWMutex
 	contractSdkHandlerUnderMutex  handlers.ContractSdkCallHandler
@@ -22,12 +24,12 @@ type service struct {
 
 func NewNativeProcessor(
 	compiler adapter.Compiler,
-	reporting log.BasicLogger,
+	logger log.BasicLogger,
 ) services.Processor {
 	return &service{
-		compiler:  compiler,
-		reporting: reporting.For(log.Service("processor-native")),
-		mutex:     &sync.RWMutex{},
+		compiler: compiler,
+		logger:   logger.WithTags(LogTag),
+		mutex:    &sync.RWMutex{},
 	}
 }
 

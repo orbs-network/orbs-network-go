@@ -54,7 +54,7 @@ func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
 			node.blockPersistence,
 			node.statePersistence,
 			node.nativeCompiler,
-			n.testLogger.For(log.Node(node.name)),
+			n.testLogger.WithTags(log.Node(node.name)),
 			node.config,
 		)
 	}

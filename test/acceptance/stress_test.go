@@ -1,6 +1,7 @@
 package acceptance
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	. "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -12,7 +13,9 @@ import (
 )
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
+	harness.Network(t).
+		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
+		WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Duplicate(AnyNthMessage(7))
 
 		sendTransactions(network, t, 100)
@@ -20,7 +23,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
+	harness.Network(t).
+		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
+		WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
 		sendTransactions(network, t, 100)
@@ -28,7 +33,10 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
+	harness.Network(t).
+		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
+		WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
+
 		network.GossipTransport().Delay(func() time.Duration {
 			return (time.Duration(rand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
 		}, AnyNthMessage(2))
