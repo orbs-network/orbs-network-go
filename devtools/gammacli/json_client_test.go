@@ -215,9 +215,8 @@ func TestConvertSendTransactionOutput(t *testing.T) {
 	expectedArg := outputArgsIterator.NextArguments()
 	actualArg := out.TransactionReceipt.OutputArguments[0]
 	require.EqualValues(t, expectedArg.Name(), actualArg.Name, "argument name mismatched")
-	require.EqualValues(t, string("uint64"), actualArg.Type, "argument type mismatched")
+	require.EqualValues(t, "uint64", actualArg.Type, "argument type mismatched")
 	require.EqualValues(t, uint64(200), actualArg.Value, "argument value mismatched")
-
 }
 
 func TestConvertCallMethodOutput(t *testing.T) {
