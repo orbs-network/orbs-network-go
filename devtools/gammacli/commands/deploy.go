@@ -3,21 +3,18 @@ package commands
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"io/ioutil"
 	"os"
 )
 
-func ShowDeployUsage() {
-	fmt.Println("Usage:  $ gamma-cli deploy MyContractName path/to/contract.go")
-	os.Exit(2)
+func ShowDeployUsage() string {
+	return "Usage:  $ gamma-cli deploy MyContractName path/to/contract.go"
 }
 
-func HandleDeployCommand(args []string) int {
+func HandleDeployCommand(args []string) (string, error) {
 	if len(args) < 2 {
-		ShowDeployUsage()
-		return 1
+		return ShowDeployUsage(), nil
 	}
 
 	contractName := args[0]
@@ -26,15 +23,16 @@ func HandleDeployCommand(args []string) int {
 	_, err := os.Stat(pathToCodeFile)
 
 	if err != nil {
-		fmt.Println("Could not find contract source code at the provided path")
-		fmt.Println(pathToCodeFile)
-		return 1
+		returnString := `
+Could not find contract source code at the provided path
+pathToCodeFile
+`
+		return returnString, nil
 	}
 
 	codeBytes, err := ioutil.ReadFile(pathToCodeFile)
 	if err != nil {
-		fmt.Println("Could not load Go source code", err)
-		return 1
+		return "", err
 	}
 
 	argName := gammacli.JSONMethodArgument{
@@ -67,8 +65,7 @@ func HandleDeployCommand(args []string) int {
 
 	err = ioutil.WriteFile("./.deploy.json", jsonBytes, 0644)
 	if err != nil {
-		fmt.Println("Could not write deployment action json", err)
-		return 1
+		return "", err
 	}
 
 	runArgs := []string{"send", "./.deploy.json"}

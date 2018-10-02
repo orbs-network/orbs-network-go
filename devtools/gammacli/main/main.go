@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/devtools/gammacli/commands"
 	"os"
@@ -48,20 +47,23 @@ Enjoy!
 		os.Exit(0)
 	}
 
-	var exitCode int
+	var result string
+	var err error
 
 	switch os.Args[1] {
 	case "run":
-		exitCode = commands.HandleRunCommand(os.Args[2:])
+		result, err = commands.HandleRunCommand(os.Args[2:])
 	case "start":
-		exitCode = commands.HandleStartCommand(os.Args[2:])
+		result, err = commands.HandleStartCommand(os.Args[2:])
 	case "deploy":
-		exitCode = commands.HandleDeployCommand(os.Args[2:])
+		result, err = commands.HandleDeployCommand(os.Args[2:])
 	case "genKeys":
-		exitCode = commands.HandleGenKeysCommand()
-	default:
-		flag.PrintDefaults()
+		result, err = commands.HandleGenKeysCommand()
 	}
 
-	os.Exit(exitCode)
+	fmt.Println(result)
+	if err != nil {
+		os.Exit(1)
+	}
+	os.Exit(0)
 }

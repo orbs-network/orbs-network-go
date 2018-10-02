@@ -225,8 +225,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	port := ":8080"
-	gamma := gammacli.StartGammaServer(port, false)
+	gamma := gammacli.StartGammaServer(":8080", false)
 	defer gamma.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
@@ -244,8 +243,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	port := ":8080"
-	gamma := gammacli.StartGammaServer(port, false)
+	gamma := gammacli.StartGammaServer(":8080", false)
 	defer gamma.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start

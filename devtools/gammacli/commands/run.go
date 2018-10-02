@@ -13,9 +13,11 @@ import (
 	"strings"
 )
 
-func ShowUsage() {
-	fmt.Println("Usage:  $ gamma-cli run send path/to/send.json")
-	fmt.Println("Usage:  $ gamma-cli run call path/to/get.json")
+func ShowUsage() string {
+	return `
+Usage:  $ gamma-cli run send path/to/send.json
+Usage:  $ gamma-cli run call path/to/get.json
+`
 }
 
 func getKeypairFromOrbsKeyFile() (*keys.Ed25519KeyPair, error) {
@@ -68,10 +70,9 @@ func getKeypairFromFlags(publicKey string, privateKey string) (*keys.Ed25519KeyP
 	return keyPair, nil
 }
 
-func HandleRunCommand(args []string) int {
+func HandleRunCommand(args []string) (string, error) {
 	if len(args) < 2 {
-		ShowUsage()
-		return 1
+		return ShowUsage(), nil
 	}
 
 	flagSet := flag.NewFlagSet("run", flag.ExitOnError)
@@ -89,21 +90,18 @@ func HandleRunCommand(args []string) int {
 	var jsonBytes []byte
 	_, err := os.Stat(pathToJson)
 	if err != nil {
-		fmt.Println(err)
-		return 1
+		return "", err
 	}
 
 	if err == nil {
 		jsonBytes, err = ioutil.ReadFile(pathToJson)
 
 		if err != nil {
-			fmt.Println("Could not open JSON file", err)
-			return 1
+			return "", err
 		}
 
 		if err := json.Unmarshal(jsonBytes, tx); err != nil {
-			fmt.Println("could not parse JSON", err)
-			return 1
+			return "", err
 		}
 	}
 
@@ -118,26 +116,22 @@ func HandleRunCommand(args []string) int {
 		}
 
 		if err != nil {
-			return 1
+			return "", err
 		}
 
 		result, err := gammacli.SendTransaction(tx, keyPair, *hostPtr, false)
 		if err != nil {
-			fmt.Println("Error sending your transaction", err)
-			return 1
+			return "", err
 		}
 
 		jsonBytes, _ := json.Marshal(result)
-		fmt.Println(string(jsonBytes))
-		return 0
+		return string(jsonBytes), nil
 	case "call":
 		result, _ := gammacli.CallMethod(tx, *hostPtr, false)
 
 		jsonBytes, _ := json.Marshal(result)
-		fmt.Println(string(jsonBytes))
-		return 0
+		return string(jsonBytes), nil
 	default:
-		ShowUsage()
+		return ShowUsage(), nil
 	}
-	return 1
 }
