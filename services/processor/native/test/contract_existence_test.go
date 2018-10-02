@@ -34,7 +34,7 @@ func TestGetContractInfo_WithUnknownContractFails(t *testing.T) {
 func TestProcessCall_WithDeployableContractThatCompiles(t *testing.T) {
 	h := newHarness()
 	input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
-	codeOutput := builders.MethodArgumentsArray([]byte(contracts.SourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
+	codeOutput := builders.MethodArgumentsArray([]byte(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
 	h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_CODE.Name, builders.MethodArgumentsArray(string(input.ContractName)), codeOutput, nil)
 
 	output, err := h.service.ProcessCall(input)

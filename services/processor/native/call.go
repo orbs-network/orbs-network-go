@@ -41,7 +41,9 @@ func (s *service) verifyInternalMethodCall(contractInfo *sdk.ContractInfo, metho
 func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.Errorf("call method '%s' panicked: %v", methodInfo.Name, r)
+			contractOutputErr = errors.Errorf("%s", r)
+			s.reporting.Info("contract execution failed by contract panic", log.Error(contractOutputErr))
+			contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()
 
@@ -76,6 +78,12 @@ func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo
 
 	// create contract output error
 	contractOutputErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
+	if contractOutputErr != nil {
+		s.reporting.Info("contract execution failed by contract error", log.Error(contractOutputErr))
+		contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
+	}
+
+	// done
 	return contractOutputArgs, contractOutputErr, err
 }
 
@@ -103,17 +111,17 @@ func (s *service) prepareMethodInputArgsForCall(executionContextId sdk.Context, 
 		switch methodType.In(i + NUM_ARGS_RECEIVER_AND_CONTEXT).Kind() {
 		case reflect.Uint32:
 			if !arg.IsTypeUint32Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.Uint32Value()))
 		case reflect.Uint64:
 			if !arg.IsTypeUint64Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.Uint64Value()))
 		case reflect.String:
 			if !arg.IsTypeStringValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i, arg.Type())
+				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.StringValue()))
 		case reflect.Slice:
@@ -125,7 +133,7 @@ func (s *service) prepareMethodInputArgsForCall(executionContextId sdk.Context, 
 			}
 			res = append(res, reflect.ValueOf(arg.BytesValue()))
 		default:
-			return nil, errors.Errorf("method '%s' expects arg %d to be unknown type", methodInfo.Name, i, arg.Type())
+			return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", methodInfo.Name, i, arg.StringType())
 		}
 
 	}
@@ -172,4 +180,12 @@ func (s *service) createContractOutputError(methodInfo *sdk.MethodInfo, value re
 		return outErr, nil
 	}
 	return nil, nil
+}
+
+func (s *service) createMethodOutputArgsWithString(str string) *protocol.MethodArgumentArray {
+	return (&protocol.MethodArgumentArrayBuilder{
+		Arguments: []*protocol.MethodArgumentBuilder{
+			{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: str},
+		},
+	}).Build()
 }

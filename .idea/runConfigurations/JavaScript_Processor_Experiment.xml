@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="JavaScript Processor Experiment" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="orbs-network-go" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <go_parameters value="-i -tags jsprocessor" />
+    <framework value="gotest" />
+    <kind value="DIRECTORY" />
+    <package value="github.com/orbs-network/orbs-network-go" />
+    <directory value="$PROJECT_DIR$/services/processor/javascript/test" />
+    <filePath value="$PROJECT_DIR$/" />
+    <method v="2" />
+  </configuration>
+</component>

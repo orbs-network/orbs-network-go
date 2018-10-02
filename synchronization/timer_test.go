@@ -61,6 +61,13 @@ func TestValidTimerStopOp(t *testing.T) {
 	}
 }
 
+func TestValidTimerStopOpDoesNotBlock(t *testing.T) {
+	// testing that a timer stopped after it pings, is not blocking
+	timer := synchronization.NewTimer(1 * time.Millisecond)
+	<-timer.C
+	timer.Stop()
+}
+
 func TestValidTimerResetOp(t *testing.T) {
 	// testing that a timer reset before it was expired does not ping too early
 	start := time.Now()

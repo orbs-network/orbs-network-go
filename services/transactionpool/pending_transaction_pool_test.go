@@ -1,8 +1,10 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -25,10 +27,10 @@ func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testi
 	k2, _ := p.add(tx2, pk)
 	require.Equal(t, uint32(len(tx1.Raw())+len(tx2.Raw())), p.currentSizeInBytes, "pending pool size did not reflect combined sizes of tx1 + tx2")
 
-	p.remove(k1)
+	p.remove(k1, 0)
 	require.Equal(t, uint32(len(tx2.Raw())), p.currentSizeInBytes, "pending pool size did not reflect removal of tx1")
 
-	p.remove(k2)
+	p.remove(k2, 0)
 	require.Zero(t, p.currentSizeInBytes, "pending pool size did not reflect removal of tx2")
 }
 
@@ -41,12 +43,12 @@ func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing
 	require.True(t, p.has(tx1), "has() returned false for an added item")
 	require.Len(t, p.getBatch(1, 0), 1, "getBatch() did not return an added item")
 
-	p.remove(k)
+	p.remove(k, 0)
 	require.False(t, p.has(tx1), "has() returned true for removed item")
 	require.Empty(t, p.getBatch(1, 0), "getBatch() returned a removed item")
 
 	require.NotPanics(t, func() {
-		p.remove(k)
+		p.remove(k, 0)
 	}, "removing a key that does not exist resulted in a panic")
 }
 
@@ -136,6 +138,25 @@ func TestPendingTransactionPoolDoesNotAddTheSameTransactionTwiceRegardlessOfPubl
 	_, err = p.add(tx, someOtherPk)
 	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING, err.TransactionStatus, "did not get expected status code")
 
+}
+
+func TestPendingTransactionPoolCallsRemovalListenerWhenRemovingTransaction(t *testing.T) {
+	var removedTxHash primitives.Sha256
+	var removalReason protocol.TransactionStatus
+
+	p := makePendingPool()
+	p.onTransactionRemoved = func(txHash primitives.Sha256, reason protocol.TransactionStatus) {
+		removedTxHash = txHash
+		removalReason = reason
+	}
+
+	tx := builders.Transaction().Build()
+	p.add(tx, pk)
+	txHash := digest.CalcTxHash(tx.Transaction())
+	p.remove(txHash, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
+
+	require.Equal(t, txHash, removedTxHash, "removed txhash didn't equal expected txhash")
+	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, removalReason, "removal reason didn't equal expected reason")
 }
 
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {

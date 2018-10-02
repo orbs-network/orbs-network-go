@@ -15,14 +15,14 @@ check_exit_code_and_report () {
         cat timed.out
 
         if [ ! -s fail.out ] && [ ! -s timed.out ]; then
-            tail -500 test.out
-
-            # copy full log for further investigation
-            mkdir -p logs
-            cp test.out logs
-            bzip2 logs/test.out
+            cat test.out
         fi
 
-        exit $EXIT_CODE
     fi
+
+    # copy full log for further investigation
+    mkdir -p logs
+    cp *.out logs
+
+    exit $EXIT_CODE
 }

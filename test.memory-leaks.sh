@@ -1,22 +1,17 @@
 #!/bin/sh
 
-rm -rf /tmp/*.prof
+go test ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1 > test.out
 
-go test ./test/_manual -count 1
+export EXIT_CODE=$?
 
-go tool pprof --inuse_space -nodecount 10 -weblist orbs-network-go -hide /orbs-network-go/test/ --base /tmp/mem-tx-before.prof /tmp/mem-tx-after.prof
-go tool pprof --inuse_space -nodecount 20 -weblist orbs-network-go -hide /orbs-network-go/test/ --base /tmp/mem-shutdown-before.prof /tmp/mem-shutdown-after.prof
+if [ $EXIT_CODE != 0 ]; then
+  echo "Test failed! Found leaking memory"
 
-echo ""
-echo ""
-echo "TestMemoryLeaks_AfterSomeTransactions:"
-echo ""
+  echo ""
+  echo ""
+  echo "****** Memory delta:"
+  echo ""
+  go tool pprof --inuse_space -nodecount 10 -top --base /tmp/mem-shutdown-before.prof /tmp/mem-shutdown-after.prof
 
-go tool pprof --inuse_space -nodecount 10 -top -show orbs-network-go -hide /orbs-network-go/test/ --base /tmp/mem-tx-before.prof /tmp/mem-tx-after.prof
-
-echo ""
-echo ""
-echo "TestMemoryLeaks_OnSystemShutdown:"
-echo ""
-
-go tool pprof --inuse_space -nodecount 20 -top  --base /tmp/mem-shutdown-before.prof /tmp/mem-shutdown-after.prof
+  exit $EXIT_CODE
+fi

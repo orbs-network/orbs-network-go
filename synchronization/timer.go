@@ -28,7 +28,10 @@ func (t *Timer) Reset(d time.Duration) bool {
 func (t *Timer) Stop() bool {
 	active := t.timer.Stop()
 	if !active {
-		<-t.C
+		select {
+		case <-t.C:
+		default:
+		}
 	}
 	return active
 }
