@@ -187,7 +187,7 @@ func TestStringableSliceCustomFormat(t *testing.T) {
 
 func TestMeter(t *testing.T) {
 	stdout := captureStdout(func(writer io.Writer) {
-		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(writer))
+		serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api"), log.String("_test", "some-test")).WithOutput(log.NewOutput(writer))
 		txId := log.String("txId", "1234567")
 		txFlowLogger := serviceLogger.For(log.String("flow", TransactionFlow))
 		meter := txFlowLogger.Meter("tx-process-time", txId)

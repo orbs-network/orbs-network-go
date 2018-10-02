@@ -25,7 +25,7 @@ func (m *basicMeter) Done() {
 
 	var names []string
 	for _, prefix := range m.logger.Prefixes() {
-		if prefix.Type == NodeType {
+		if prefix.Type == NodeType || prefix.Key[0] == '_' {
 			continue
 		}
 		names = append(names, fmt.Sprintf("%s", prefix.Value()))
