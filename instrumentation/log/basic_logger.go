@@ -51,14 +51,20 @@ func GetLogger(params ...*Field) BasicLogger {
 		outputs:      []Output{&basicOutput{output: os.Stdout, formatter: NewJsonFormatter()}},
 	}
 
-	fpcs := make([]uintptr, 1)
-	n := runtime.Callers(logger.nestingLevel, fpcs)
+	fpcs := make([]uintptr, 2)
+	n := runtime.Callers(0, fpcs)
 	if n != 0 {
-		fun := runtime.FuncForPC(fpcs[0] - 1)
-		if fun != nil {
-			file, _ := fun.FileLine(fpcs[0] - 1)
-			if l := strings.Index(file, "orbs-network-go/"); l > -1 {
+		frames := runtime.CallersFrames(fpcs[:n])
+
+		for {
+			frame, more := frames.Next()
+			if l := strings.Index(frame.File, "orbs-network-go/"); l > -1 {
 				logger.sourceRootPrefixIndex = l + len("orbs-network-go/")
+				break
+			}
+
+			if !more {
+				break
 			}
 		}
 	}
