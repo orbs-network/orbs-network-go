@@ -30,9 +30,13 @@ func getLogger(path string, silent bool) log.BasicLogger {
 	}
 
 	stdoutOutput := log.NewOutput(stdout).WithFormatter(log.NewHumanReadableFormatter())
-	fileOutput := log.NewOutput(logFile).WithFormatter(log.NewHumanReadableFormatter()) // until system stabilizes we temporarily log files with human readable to assist debugging
+	fileOutput := log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter())
 
-	return log.GetLogger().WithOutput(stdoutOutput, fileOutput)
+	return log.GetLogger().For(
+		log.String("_branch", os.Getenv("GIT_BRANCH")),
+		log.String("_commit", os.Getenv("GIT_COMMIT")),
+		log.String("_test", os.Getenv("TEST_NAME")),
+	).WithOutput(stdoutOutput, fileOutput)
 }
 
 func getConfig(pathToConfig string) (config.NodeConfig, error) {

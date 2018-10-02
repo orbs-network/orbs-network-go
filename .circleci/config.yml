@@ -7,6 +7,7 @@ jobs:
       - run: ./git-submodule-checkout.sh
       - run: ./docker-build.sh
       - run: ./docker-test.sh
+      - run: ./upload-node-metrics.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker-tag.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE

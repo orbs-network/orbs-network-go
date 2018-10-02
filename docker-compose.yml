@@ -3,6 +3,10 @@ version: '2'
 services:
   orbs-network-node-1:
     image: orbs:export
+    environment:
+      GIT_BRANCH: $GIT_BRANCH
+      GIT_COMMIT: $GIT_COMMIT
+      TEST_NAME: e2e
     ports:
       - 8080:8080
     volumes:
@@ -16,7 +20,9 @@ services:
   orbs-network-node-2:
     image: orbs:export
     environment:
-      LOG_PATH: /opt/orbs/logs/node2.log
+      GIT_BRANCH: $GIT_BRANCH
+      GIT_COMMIT: $GIT_COMMIT
+      TEST_NAME: e2e
     ports:
       - 8081:8080
     volumes:
@@ -30,7 +36,9 @@ services:
   orbs-network-node-3:
     image: orbs:export
     environment:
-      LOG_PATH: /opt/orbs/logs/node3.log
+      GIT_BRANCH: $GIT_BRANCH
+      GIT_COMMIT: $GIT_COMMIT
+      TEST_NAME: e2e
     ports:
       - 8082:8080
     volumes:

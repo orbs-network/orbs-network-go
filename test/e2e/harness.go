@@ -65,6 +65,8 @@ func newHarness() *harness {
 			gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 		}
 
+		os.MkdirAll(config.GetProjectSourceRootPath()+"/logs", 0755)
+
 		logger := log.GetLogger().For(
 			log.String("_test", "e2e"),
 			log.String("_branch", os.Getenv("GIT_BRANCH")),
