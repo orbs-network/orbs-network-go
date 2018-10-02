@@ -40,21 +40,20 @@ type CallMethodOutput struct {
 }
 
 func (ma *JSONMethodArgument) String() string {
-	returnString := ma.Name + ":"
-
+	var argumentValue string
 	switch ma.Type {
 	case METHOD_ARGUMENT_TYPE_UINT32:
-		returnString = returnString + string(ma.Value.(uint32))
+		argumentValue = string(ma.Value.(uint32))
 	case METHOD_ARGUMENT_TYPE_UINT64:
-		returnString = returnString + string(ma.Value.(uint64))
+		argumentValue = string(ma.Value.(uint64))
 	case METHOD_ARGUMENT_TYPE_STRING:
-		returnString = returnString + string(ma.Value.(string))
+		argumentValue = string(ma.Value.(string))
 	case METHOD_ARGUMENT_TYPE_BYTES:
 		decodedString, _ := hex.DecodeString(ma.Value.(string))
-		returnString = returnString + string(decodedString)
+		argumentValue = string(decodedString)
 	default:
-		returnString = returnString + "<nil>"
+		argumentValue = "<nil>"
 	}
 
-	return returnString
+	return ma.Name + ":" + argumentValue
 }

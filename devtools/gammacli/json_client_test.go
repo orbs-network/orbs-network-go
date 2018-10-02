@@ -2,6 +2,7 @@ package gammacli
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -14,102 +15,114 @@ import (
 	"time"
 )
 
-func TestConvertJSONTransactionWithArgumentsOfTypeString(t *testing.T) {
-	arg := JSONMethodArgument{
-		Name:  "arg1",
+func matchJSONContentToMatchInMemBuffVersion(t *testing.T, argMemBuffType protocol.MethodArgumentType, jsonArgument *JSONMethodArgument, memBufferPreBuiltArgument *protocol.MethodArgumentBuilder) {
+	valueMessage := "Argument of type %s value was not converted properly"
+
+	require.EqualValues(t, jsonArgument.Name, memBufferPreBuiltArgument.Name, "argument name was not converted properly")
+	require.EqualValues(t, argMemBuffType, memBufferPreBuiltArgument.Type, "argument type was not converted properly")
+
+	switch argMemBuffType {
+	case protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE:
+		require.EqualValues(t, jsonArgument.Value, memBufferPreBuiltArgument.StringValue, fmt.Sprintf(valueMessage, "string"))
+	case protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE:
+		require.EqualValues(t, jsonArgument.Value, memBufferPreBuiltArgument.Uint32Value, fmt.Sprintf(valueMessage, "uint32"))
+	case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
+		require.EqualValues(t, jsonArgument.Value, memBufferPreBuiltArgument.Uint64Value, fmt.Sprintf(valueMessage, "uint64"))
+	case protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE:
+		decodedHex, decodeHexError := hex.DecodeString(jsonArgument.Value.(string))
+		require.NoError(t, decodeHexError, "Expecting no problems when decoding hex string from argument")
+		require.EqualValues(t, decodedHex, memBufferPreBuiltArgument.BytesValue, fmt.Sprintf(valueMessage, "bytes"))
+	}
+}
+
+func matchJSONContentToMatchInMemBuffBuiltVersion(t *testing.T, argMemBuffType protocol.MethodArgumentType, jsonArgument *JSONMethodArgument, memBufferArgument *protocol.MethodArgument) {
+	valueMessage := "Argument of type %s value was not converted properly"
+
+	require.EqualValues(t, jsonArgument.Name, memBufferArgument.Name(), "argument name was not converted properly")
+	require.EqualValues(t, argMemBuffType, memBufferArgument.Type(), "argument type was not converted properly")
+
+	switch argMemBuffType {
+	case protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE:
+		require.EqualValues(t, jsonArgument.Value, memBufferArgument.StringValue(), fmt.Sprintf(valueMessage, "string"))
+	case protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE:
+		require.EqualValues(t, jsonArgument.Value, memBufferArgument.Uint32Value(), fmt.Sprintf(valueMessage, "uint32"))
+	case protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE:
+		require.EqualValues(t, jsonArgument.Value, memBufferArgument.Uint64Value(), fmt.Sprintf(valueMessage, "uint64"))
+	case protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE:
+		decodedHex, decodeHexError := hex.DecodeString(jsonArgument.Value.(string))
+		require.NoError(t, decodeHexError, "Expecting no problems when decoding hex string from argument")
+		require.EqualValues(t, decodedHex, memBufferArgument.BytesValue(), fmt.Sprintf(valueMessage, "bytes"))
+	}
+}
+
+func TestConvertJSONMethodArgumentsToMemBuff(t *testing.T) {
+	argString := JSONMethodArgument{
+		Name:  "argString",
 		Type:  "string",
 		Value: "foo",
 	}
 
-	req := &JSONTransaction{
-		ContractName: "contract",
-		MethodName:   "method",
-		Arguments:    []JSONMethodArgument{arg},
-	}
-
-	txb, err := ConvertJSONTransactionToMemBuff(req)
-	require.NoError(t, err, "Expected no error from convertTransaction")
-	tx := txb.Build()
-
-	require.True(t, tx.IsValid(), "created binary is invalid")
-	require.Equal(t, primitives.ProtocolVersion(1), tx.ProtocolVersion(), "protocol version mismatch")
-	require.EqualValues(t, req.ContractName, tx.ContractName(), "contract name was not converted properly")
-	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
-	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
-
-	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
-	arg1 := inputArgsIterator.NextArguments()
-	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
-	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, arg1.Type(), "argument type was not converted properly")
-	require.EqualValues(t, req.Arguments[0].Value, arg1.StringValue(), "argument string value was not converted properly")
-}
-
-func TestConvertTransactionWithArgumentsOfTypeUInt64(t *testing.T) {
-	arg := JSONMethodArgument{
-		Name:  "arg1",
+	argUInt64 := JSONMethodArgument{
+		Name:  "argInt64",
 		Type:  "uint64",
 		Value: float64(291288), // We choose float64 here since that's the realistic case of when we receive a JSON converted
 		// To a Go struct as it's taking numbers always into float64 by default.
 	}
 
-	req := &JSONTransaction{
-		ContractName: "contract",
-		MethodName:   "method",
-		Arguments:    []JSONMethodArgument{arg},
-	}
-
-	txb, err := ConvertJSONTransactionToMemBuff(req)
-	require.NoError(t, err, "Expected no error from convertTransaction")
-	tx := txb.Build()
-
-	require.True(t, tx.IsValid(), "created binary is invalid")
-	require.Equal(t, primitives.ProtocolVersion(1), tx.ProtocolVersion(), "protocol version mismatch")
-	require.EqualValues(t, req.ContractName, tx.ContractName(), "contract name was not converted properly")
-	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
-	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
-
-	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
-	arg1 := inputArgsIterator.NextArguments()
-	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
-	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, arg1.Type(), "argument type was not converted properly")
-	require.EqualValues(t, req.Arguments[0].Value, arg1.Uint64Value(), "argument uint64 value was not converted properly")
-}
-
-func TestConvertTransactionWithArgumentsOfTypeUInt32(t *testing.T) {
-	arg := JSONMethodArgument{
-		Name:  "arg1",
+	argUInt32 := JSONMethodArgument{
+		Name:  "argInt32",
 		Type:  "uint32",
 		Value: float64(1234),
 	}
 
-	req := &JSONTransaction{
-		ContractName: "contract",
-		MethodName:   "method",
-		Arguments:    []JSONMethodArgument{arg},
-	}
-
-	txb, err := ConvertJSONTransactionToMemBuff(req)
-	require.NoError(t, err, "Expected no error from convertTransaction")
-	tx := txb.Build()
-
-	require.True(t, tx.IsValid(), "created binary is invalid")
-	require.Equal(t, primitives.ProtocolVersion(1), tx.ProtocolVersion(), "protocol version mismatch")
-	require.EqualValues(t, req.ContractName, tx.ContractName(), "contract name was not converted properly")
-	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
-	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
-
-	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
-	arg1 := inputArgsIterator.NextArguments()
-	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
-	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, arg1.Type(), "argument type was not converted properly")
-	require.EqualValues(t, req.Arguments[0].Value, arg1.Uint32Value(), "argument uint32 value was not converted properly")
-}
-
-func TestConvertTransactionWithArgumentsOfTypeHexBytes(t *testing.T) {
 	hexString := "74686973206973206120776f6e64657266756c20686578207465737421" // this is a wonderful hex test!
 
-	arg := JSONMethodArgument{
-		Name:  "arg1",
+	argBytes := JSONMethodArgument{
+		Name:  "argBytes",
+		Type:  "bytes",
+		Value: hexString,
+	}
+
+	input := []JSONMethodArgument{argString, argUInt64, argUInt32, argBytes}
+
+	result, err := convertJSONMethodArgumentsToMemBuff(input)
+	require.NoError(t, err, "Expected no error from convertJSONMethodArgumentsToMemBuff()")
+	require.Len(t, input, len(result), "Expecting the same amount of arguments back after the operation is done")
+
+	for _, arg := range result {
+		require.IsType(t, &protocol.MethodArgumentBuilder{}, arg)
+	}
+
+	matchJSONContentToMatchInMemBuffVersion(t, protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, &argString, result[0])
+	matchJSONContentToMatchInMemBuffVersion(t, protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, &argUInt64, result[1])
+	matchJSONContentToMatchInMemBuffVersion(t, protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, &argUInt32, result[2])
+	matchJSONContentToMatchInMemBuffVersion(t, protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, &argBytes, result[3])
+}
+
+func TestConvertTransactionWithArgumentsPostTransactionBuild(t *testing.T) {
+	argString := JSONMethodArgument{
+		Name:  "argString",
+		Type:  "string",
+		Value: "foo",
+	}
+
+	argUInt64 := JSONMethodArgument{
+		Name:  "argInt64",
+		Type:  "uint64",
+		Value: float64(291288), // We choose float64 here since that's the realistic case of when we receive a JSON converted
+		// To a Go struct as it's taking numbers always into float64 by default.
+	}
+
+	argUInt32 := JSONMethodArgument{
+		Name:  "argInt32",
+		Type:  "uint32",
+		Value: float64(1234),
+	}
+
+	hexString := "74686973206973206120776f6e64657266756c20686578207465737421" // this is a wonderful hex test!
+
+	argBytes := JSONMethodArgument{
+		Name:  "argBytes",
 		Type:  "bytes",
 		Value: hexString,
 	}
@@ -117,7 +130,7 @@ func TestConvertTransactionWithArgumentsOfTypeHexBytes(t *testing.T) {
 	req := &JSONTransaction{
 		ContractName: "contract",
 		MethodName:   "method",
-		Arguments:    []JSONMethodArgument{arg},
+		Arguments:    []JSONMethodArgument{argString, argUInt64, argUInt32, argBytes},
 	}
 
 	txb, err := ConvertJSONTransactionToMemBuff(req)
@@ -128,16 +141,21 @@ func TestConvertTransactionWithArgumentsOfTypeHexBytes(t *testing.T) {
 	require.Equal(t, primitives.ProtocolVersion(1), tx.ProtocolVersion(), "protocol version mismatch")
 	require.EqualValues(t, req.ContractName, tx.ContractName(), "contract name was not converted properly")
 	require.EqualValues(t, req.MethodName, tx.MethodName(), "method name was not converted properly")
-	require.Len(t, req.Arguments, 1, "argument slice was not converted properly")
+	require.Len(t, req.Arguments, 4, "argument slice was not converted properly")
 
 	inputArgsIterator := builders.TransactionInputArgumentsParse(tx)
-	arg1 := inputArgsIterator.NextArguments()
-	require.EqualValues(t, req.Arguments[0].Name, arg1.Name(), "argument name was not converted properly")
-	require.EqualValues(t, protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, arg1.Type(), "argument type was not converted properly")
+	builtStringArgument := inputArgsIterator.NextArguments()
 
-	// Convert hex to string
-	hexConvertedToString, _ := hex.DecodeString(hexString)
-	require.EqualValues(t, hexConvertedToString, string(arg1.BytesValue()), "argument bytes value was not converted properly")
+	matchJSONContentToMatchInMemBuffBuiltVersion(t, protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, &argString, builtStringArgument)
+
+	builtUInt64Argument := inputArgsIterator.NextArguments()
+	matchJSONContentToMatchInMemBuffBuiltVersion(t, protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, &argUInt64, builtUInt64Argument)
+
+	builtUInt32Argument := inputArgsIterator.NextArguments()
+	matchJSONContentToMatchInMemBuffBuiltVersion(t, protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, &argUInt32, builtUInt32Argument)
+
+	builtBytesArgument := inputArgsIterator.NextArguments()
+	matchJSONContentToMatchInMemBuffBuiltVersion(t, protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, &argBytes, builtBytesArgument)
 }
 
 func TestConvertAndSignTransaction(t *testing.T) {

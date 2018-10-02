@@ -50,9 +50,10 @@ func ConvertAndSignTransaction(tx *JSONTransaction, keyPair *keys.Ed25519KeyPair
 	}
 }
 
-func ConvertJSONTransactionToMemBuff(tx *JSONTransaction) (*protocol.TransactionBuilder, error) {
+func convertJSONMethodArgumentsToMemBuff(jsonTxArguments []JSONMethodArgument) ([]*protocol.MethodArgumentBuilder, error) {
 	var inputArguments []*protocol.MethodArgumentBuilder
-	for _, arg := range tx.Arguments {
+
+	for _, arg := range jsonTxArguments {
 		switch arg.Type {
 		case METHOD_ARGUMENT_TYPE_UINT32:
 			inputArguments = append(inputArguments, &protocol.MethodArgumentBuilder{
@@ -76,6 +77,15 @@ func ConvertJSONTransactionToMemBuff(tx *JSONTransaction) (*protocol.Transaction
 				Name: arg.Name, Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: argBytesValue,
 			})
 		}
+	}
+
+	return inputArguments, nil
+}
+
+func ConvertJSONTransactionToMemBuff(tx *JSONTransaction) (*protocol.TransactionBuilder, error) {
+	inputArguments, err := convertJSONMethodArgumentsToMemBuff(tx.Arguments)
+	if err != nil {
+		return nil, err
 	}
 	inputArgumentArray := (&protocol.MethodArgumentArrayBuilder{Arguments: inputArguments}).Build()
 
