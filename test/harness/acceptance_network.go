@@ -29,7 +29,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, consensusAlgo consensus.Consensus
 
 	testLogger := log.GetLogger(log.String("_test-id", testId)).
 		WithOutput(log.NewOutput(output).
-		WithFormatter(log.NewHumanReadableFormatter())).
+			WithFormatter(log.NewHumanReadableFormatter())).
 		WithFilter(log.String("flow", "block-sync")).
 		WithFilter(log.String("service", "gossip"))
 
