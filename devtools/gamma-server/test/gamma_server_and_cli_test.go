@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -62,10 +61,6 @@ func runCliCommand(t *testing.T, cliArgs ...string) string {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-
-	fmt.Println("jsonapi exec command:", command)
-	fmt.Println("command stdout:", stdout.String())
-	fmt.Println("command stderr:", stderr.String())
 
 	require.NoError(t, err, "gamma cli command should not fail")
 
@@ -147,7 +142,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 
 	err := ioutil.WriteFile("../json/transfer.json", transferJSONBytes, 0644)
 	if err != nil {
-		fmt.Println("Couldn't write file", err)
+		t.Log("Couldn't write file", err)
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
@@ -166,12 +161,11 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	getBalanceJSONBytes := generateGetBalanceJSON(targetAddress)
 	err = ioutil.WriteFile("../json/getBalance.json", getBalanceJSONBytes, 0644)
 	if err != nil {
-		fmt.Println("Couldn't write file", err)
+		t.Log("Couldn't write file", err)
 	}
 	require.NoError(t, err, "Couldn't write getBalance JSON file")
 
 	callOutputAsString := runCliCommand(t, "run", "call", "../json/getBalance.json")
-	fmt.Println(callOutputAsString)
 
 	callResponse := &callMethodCliResponse{}
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
@@ -210,13 +204,12 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	getCounterJSONBytes := generateGetCounterJSON()
 	err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
 	if err != nil {
-		fmt.Println("Couldn't write file", err)
+		t.Log("Couldn't write file", err)
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
 	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
 	callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json")
-	fmt.Println(callOutputAsString)
 
 	callResponse := &callMethodCliResponse{}
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
@@ -233,14 +226,13 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	addCounterJSONBytes := generateAddCounterJSON(randomAddAmount)
 	err = ioutil.WriteFile("../json/add.json", addCounterJSONBytes, 0644)
 	if err != nil {
-		fmt.Println("Couldn't write file", err)
+		t.Log("Couldn't write file", err)
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
 	addOutputAsString := runCliCommand(t, "run", "send", "../json/add.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
-	fmt.Println(callOutputAsString)
 
 	addResponse := &sendTransactionCliResponse{}
 	addResponseUnmarshalErr := json.Unmarshal([]byte(addOutputAsString), &addResponse)
@@ -251,7 +243,6 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 
 	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
 	callOutputSecondTimeAsString := runCliCommand(t, "run", "call", "../json/getCounter.json")
-	fmt.Println(callOutputSecondTimeAsString)
 
 	callSecondResponse := &callMethodCliResponse{}
 	err = json.Unmarshal([]byte(callOutputSecondTimeAsString), &callSecondResponse)
