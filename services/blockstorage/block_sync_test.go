@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
+	"time"
 )
 
 var blockSyncStateNameLookup = map[blockSyncState]string{
@@ -104,6 +106,29 @@ func allStates(collecting bool) []blockSyncState {
 			BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK,
 		}
 	}
+}
+
+func TestPetitionerTransitionFromIdleWhenNoSuccessfulCommits(t *testing.T) {
+	harness := newBlockSyncHarness()
+	harness.blockSync.config.(config.MutableNodeConfig).SetDuration(config.BLOCK_SYNC_INTERVAL, 5*time.Millisecond)
+
+	availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
+	harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Times(1)
+	harness.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+
+	var event interface{}
+	event = startSyncEvent{}
+
+	newState, availabilityResponses := harness.blockSync.transitionState(BLOCK_SYNC_STATE_IDLE, event, availabilityResponses, harness.startSyncTimer)
+
+	require.Equal(t, BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES, newState, "expecting to search for availability responses")
+	require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "expected searching to happen twice until now")
+
+	// and now we will expect another search to happen in the future, if this fails the timeout will happen in the harness mock verifications
+	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+
+	harness.verifyMocks(t)
 }
 
 func TestPetitionerEveryStateExceptCollectingMovesToCollectingAfterStartSyncEvent(t *testing.T) {

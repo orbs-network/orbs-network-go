@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 	"math/rand"
+	"reflect"
 	"time"
 )
 
@@ -91,10 +92,10 @@ type startSyncEvent struct{}
 type collectingAvailabilityFinishedEvent struct{}
 
 func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, startSyncTimer synchronization.Trigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
+	b.reporting.Info("block sync transitioning state", log.Int("state", int(currentState)), log.String("event", reflect.TypeOf(event).String()))
 	// Ignore start sync because collecting availability responses has its own timer
 	if _, ok := event.(startSyncEvent); ok && currentState != BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
 		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
-
 		err := b.petitionerBroadcastBlockAvailabilityRequest()
 
 		if err != nil {
@@ -132,6 +133,7 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 			count := len(availabilityResponses)
 
 			if count == 0 {
+
 				currentState = BLOCK_SYNC_STATE_IDLE
 				startSyncTimer.FireNow()
 				break

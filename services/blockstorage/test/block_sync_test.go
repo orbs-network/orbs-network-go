@@ -185,7 +185,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 		// we use this to verify that the SendBlockSyncRequest was sent out, meaning that the AvailabilityResponse stage is done
 		// we saw it can take up to 15ms in some cases (although it is suppose to take just 1ms this is the docker timing delay we see in CI)
-		test.EventuallyVerify(50*time.Millisecond, harness.gossip)
+		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
 
 		blockSyncResponse := builders.BlockSyncResponseInput().
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
