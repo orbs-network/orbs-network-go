@@ -44,16 +44,19 @@ type callMethodCliResponse struct {
 	BlockTimestamp  int
 }
 
-func ClientBinary() []string {
-	ciBinaryPath := "/opt/orbs/gamma-cli"
-	if _, err := os.Stat(ciBinaryPath); err == nil {
-		return []string{ciBinaryPath}
+func cliBinaryPath() []string {
+	ciCliBinaryPath := "/opt/orbs/gamma-cli"
+	if _, err := os.Stat(ciCliBinaryPath); err == nil {
+		return []string{ciCliBinaryPath}
 	}
 
 	return []string{"go", "run", "../../gammacli/main/main.go"}
 }
 
-func runCommand(command []string, t *testing.T) string {
+func runCliCommand(t *testing.T, cliArgs ...string) string {
+	command := cliBinaryPath()
+	command = append(command, cliArgs...)
+
 	cmd := exec.Command(command[0], command[1:]...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -148,13 +151,9 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	baseCommand := ClientBinary()
-	sendCommand := append(baseCommand,
-		"run", "send", "../json/transfer.json",
+	sendCommandOutput := runCliCommand(t, "run", "send", "../json/transfer.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
-
-	sendCommandOutput := runCommand(sendCommand, t)
 
 	response := &sendTransactionCliResponse{}
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
@@ -171,9 +170,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	}
 	require.NoError(t, err, "Couldn't write getBalance JSON file")
 
-	getCommand := append(baseCommand, "run", "call", "../json/getBalance.json")
-
-	callOutputAsString := runCommand(getCommand, t)
+	callOutputAsString := runCliCommand(t, "run", "call", "../json/getBalance.json")
 	fmt.Println(callOutputAsString)
 
 	callResponse := &callMethodCliResponse{}
@@ -198,13 +195,9 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
-	baseCommand := ClientBinary()
-	deployCommand := append(baseCommand,
-		"deploy", "Counter", "../counterContract/counter.go",
+	deployCommandOutput := runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
-
-	deployCommandOutput := runCommand(deployCommand, t)
 
 	response := &sendTransactionCliResponse{}
 	unmarshalErr := json.Unmarshal([]byte(deployCommandOutput), &response)
@@ -222,9 +215,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
 	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
-	getCommand := append(baseCommand, "run", "call", "../json/getCounter.json")
-
-	callOutputAsString := runCommand(getCommand, t)
+	callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json")
 	fmt.Println(callOutputAsString)
 
 	callResponse := &callMethodCliResponse{}
@@ -246,11 +237,9 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	addCommand := append(baseCommand, "run", "send", "../json/add.json",
+	addOutputAsString := runCliCommand(t, "run", "send", "../json/add.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String())
-
-	addOutputAsString := runCommand(addCommand, t)
 	fmt.Println(callOutputAsString)
 
 	addResponse := &sendTransactionCliResponse{}
@@ -261,9 +250,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	require.EqualValues(t, nil, addResponse.TransactionReceipt.OutputArguments, "expected no output arguments")
 
 	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
-	getCommand = append(baseCommand, "run", "call", "../json/getCounter.json")
-
-	callOutputSecondTimeAsString := runCommand(getCommand, t)
+	callOutputSecondTimeAsString := runCliCommand(t, "run", "call", "../json/getCounter.json")
 	fmt.Println(callOutputSecondTimeAsString)
 
 	callSecondResponse := &callMethodCliResponse{}
