@@ -15,7 +15,7 @@ func IncludeFieldWithKey(key string) Filter {
 }
 
 func OnlyErrors() Filter {
-	return &levelMatch{level: "error"}
+	return &onlyErrors{}
 }
 
 func IgnoreMessagesMatching(pattern string) Filter {
@@ -52,12 +52,21 @@ func (f *messageRegexp) Allows(level string, message string, fields []*Field) bo
 	return !match
 }
 
-type levelMatch struct {
-	level string
+type onlyErrors struct {
 }
 
-func (f *levelMatch) Allows(level string, message string, fields []*Field) bool {
-	return level == f.level
+func (f *onlyErrors) Allows(level string, message string, fields []*Field) bool {
+	if level == "error" {
+		return true
+	}
+
+	for _, f := range fields {
+		if f.Type == ErrorType {
+			return true
+		}
+	}
+
+	return false
 }
 
 type includeFieldWithKey struct {

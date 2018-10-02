@@ -22,6 +22,7 @@ func TestFilters(t *testing.T) {
 		{"IncludeParamWithKeyRejectsWhenExpectedKeyNotFound", IncludeFieldWithKey("foo"), "", "", nil,false},
 		{"OnlyErrorsRejectsInfo", OnlyErrors(), "info", "", nil,false},
 		{"OnlyErrorsAllowsError", OnlyErrors(), "error", "", nil,true},
+		{"OnlyErrorsAllowsInfoWithErrorParam", OnlyErrors(), "info", "", []*Field{Error(errors.Errorf("foo"))},true},
 		{"IgnoreMessagesMatchingRejectMessageMatching", IgnoreMessagesMatching("foo.*"), "", "food", nil,false},
 		{"IgnoreMessagesMatchingAllowsMismatchingMessages", IgnoreMessagesMatching("food"), "", "foo", nil,true},
 		{"IgnoreErrorsMatchingRejectMessageMatching", IgnoreErrorsMatching("foo.*"), "", "", []*Field{Error(errors.Errorf("food"))},false},
