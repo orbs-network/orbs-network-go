@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var LogTag = log.Service("public-api")
+
 type Config interface {
 	SendTransactionTimeout() time.Duration
 	GetTransactionStatusGrace() time.Duration
@@ -23,7 +25,7 @@ type service struct {
 	config          Config
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
-	reporting       log.BasicLogger
+	logger          log.BasicLogger
 
 	waiter *waiter
 }
@@ -33,14 +35,14 @@ func NewPublicApi(
 	config Config,
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
-	reporting log.BasicLogger,
+	logger log.BasicLogger,
 ) services.PublicApi {
 	s := &service{
 		ctx:             ctx,
 		config:          config,
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
-		reporting:       reporting.For(log.Service("public-api")),
+		logger:          logger.WithTags(LogTag),
 
 		waiter: newWaiter(ctx),
 	}
@@ -52,7 +54,7 @@ func NewPublicApi(
 
 func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
 	for _, txReceipt := range input.TransactionReceipts {
-		s.reporting.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Stringable("txHash", txReceipt.Txhash()))
+		s.logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Stringable("txHash", txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
 			&waiterObject{&txResponse{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
@@ -65,16 +67,14 @@ func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResu
 }
 
 func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
-	//TODO implement
-	s.reporting.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
-	//s.waiter.complete(input.Txhash.KeyForMap(),
-	//	&waiterObject{&txResponse{
-	//		transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-	//		transactionReceipt: input.txReceipt,
-	//		blockHeight:        input.BlockHeight,
-	//		blockTimestamp:     input.Timestamp,
-	//	}})
-	//
+	s.logger.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
+	s.waiter.complete(input.Txhash.KeyForMap(),
+		&waiterObject{&txResponse{
+			transactionStatus:  input.TransactionStatus,
+			transactionReceipt: nil,
+			blockHeight:        input.BlockHeight,
+			blockTimestamp:     input.BlockTimestamp,
+		}})
 	return &handlers.HandleTransactionErrorOutput{}, nil
 }
 
@@ -82,9 +82,9 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	tx := input.ClientRequest.SignedTransaction()
 	txHash := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
 
-	s.reporting.Info("transaction received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+	s.logger.Info("transaction received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
-	meter := s.reporting.Meter("tx-processing-time", log.Stringable("txHash", txHash))
+	meter := s.logger.Meter("tx-processing-time", log.Stringable("txHash", txHash))
 	defer meter.Done()
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
@@ -93,7 +93,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
-		s.reporting.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		s.logger.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 		return toTxOutput(toTxResponse(addResp)), errors.Errorf("error '%s' for transaction result", addResp)
 	}
 
@@ -104,7 +104,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 
 	obj, err := s.waiter.wait(waitResult, s.config.SendTransactionTimeout())
 	if err != nil {
-		s.reporting.Info("waiting for transaction to be processed failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		s.logger.Info("waiting for transaction to be processed failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 		return toTxOutput(toTxResponse(addResp)), err
 	}
 	return toTxOutput(obj.payload.(*txResponse)), nil
@@ -185,14 +185,14 @@ func translateTxStatusToResponseCode(txStatus protocol.TransactionStatus) protoc
 }
 
 func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
-	s.reporting.Info("enter CallMethod")
-	defer s.reporting.Info("exit CallMethod")
+	s.logger.Info("enter CallMethod")
+	defer s.logger.Info("exit CallMethod")
 
 	output, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: input.ClientRequest.Transaction(),
 	})
 	if err != nil {
-		s.reporting.Info("running local method on VirtualMachine failed", log.Error(err))
+		s.logger.Info("running local method on VirtualMachine failed", log.Error(err))
 		return nil, err
 	}
 	return &services.CallMethodOutput{

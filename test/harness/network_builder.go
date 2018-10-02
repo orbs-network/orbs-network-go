@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"runtime"
@@ -18,6 +19,7 @@ type acceptanceTestNetworkBuilder struct {
 	consensusAlgos []consensus.ConsensusAlgoType
 	testId         string
 	setupFunc      func(network InProcessNetwork)
+	logFilters     []log.Filter
 }
 
 func Network(t *testing.T) *acceptanceTestNetworkBuilder {
@@ -27,6 +29,11 @@ func Network(t *testing.T) *acceptanceTestNetworkBuilder {
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(2).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+}
+
+func (b *acceptanceTestNetworkBuilder) WithLogFilters(filters ...log.Filter) *acceptanceTestNetworkBuilder {
+	b.logFilters = filters
+	return b
 }
 
 func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTestNetworkBuilder {
@@ -56,7 +63,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(network InProcessNetwork)) {
 		// start test
 		test.WithContext(func(ctx context.Context) {
 			testId := b.testId + "-" + consensusAlgo.String()
-			network := NewAcceptanceTestNetwork(b.numNodes, consensusAlgo, testId)
+			network := NewAcceptanceTestNetwork(b.numNodes, b.logFilters, consensusAlgo, testId)
 
 			defer printTestIdOnFailure(b.t, testId)
 			defer dumpStateOnFailure(b.t, network)

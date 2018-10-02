@@ -67,7 +67,7 @@ func (s *service) receivedLeanHelixPrePrepare(header *gossipmessages.Header, pay
 			},
 		})
 		if err != nil {
-			s.reporting.Info("HandleLeanHelixPrePrepare failed", log.Error(err))
+			s.logger.Info("HandleLeanHelixPrePrepare failed", log.Error(err))
 		}
 	}
 }
@@ -92,7 +92,7 @@ func (s *service) receivedLeanHelixPrepare(header *gossipmessages.Header, payloa
 	for _, l := range s.leanHelixHandlers {
 		_, err := l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
 		if err != nil {
-			s.reporting.Info("HandleLeanHelixPrepare failed", log.Error(err))
+			s.logger.Info("HandleLeanHelixPrepare failed", log.Error(err))
 		}
 	}
 }
@@ -117,7 +117,7 @@ func (s *service) receivedLeanHelixCommit(header *gossipmessages.Header, payload
 	for _, l := range s.leanHelixHandlers {
 		_, err := l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
 		if err != nil {
-			s.reporting.Info("HandleLeanHelixCommit failed", log.Error(err))
+			s.logger.Info("HandleLeanHelixCommit failed", log.Error(err))
 		}
 	}
 }

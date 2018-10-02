@@ -20,7 +20,7 @@ func (s *service) receivedTransactionRelayMessage(header *gossipmessages.Header,
 }
 
 func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
-	s.reporting.Info("broadcasting forwarded transactions", log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
+	s.logger.Info("broadcasting forwarded transactions", log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
 
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
@@ -51,7 +51,7 @@ func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, p
 		txs = append(txs, tx)
 	}
 
-	s.reporting.Info("received forwarded transactions", log.Stringable("sender", senderSignature), log.StringableSlice("transactions", txs))
+	s.logger.Info("received forwarded transactions", log.Stringable("sender", senderSignature), log.StringableSlice("transactions", txs))
 
 	for _, l := range s.transactionHandlers {
 		_, err := l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
@@ -61,7 +61,7 @@ func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, p
 			},
 		})
 		if err != nil {
-			s.reporting.Info("HandleForwardedTransactions failed", log.Error(err))
+			s.logger.Info("HandleForwardedTransactions failed", log.Error(err))
 		}
 	}
 }

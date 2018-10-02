@@ -67,7 +67,7 @@ func newHarness() *harness {
 
 		os.MkdirAll(config.GetProjectSourceRootPath()+"/logs", 0755)
 
-		logger := log.GetLogger().For(
+		logger := log.GetLogger().WithTags(
 			log.String("_test", "e2e"),
 			log.String("_branch", os.Getenv("GIT_BRANCH")),
 			log.String("_commit", os.Getenv("GIT_COMMIT"))).

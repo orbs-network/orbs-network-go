@@ -59,7 +59,7 @@ func (s *service) retrieveContractInfoFromRepository(executionContextId sdk.Cont
 }
 
 func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
-	meter := s.reporting.Meter("native-contract-deploy-time")
+	meter := s.logger.Meter("native-contract-deploy-time")
 	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(executionContextId, contractName)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk
 
 	s.addContractInstanceToRepository(contractName, contractInstance)
 	s.addDeployableContractInfoToRepository(contractName, newContractInfo) // must add after instance to avoid race (when somebody RunsMethod at same time)
-	s.reporting.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
+	s.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
 	meter.Done() // only want to log meter on success (so this line is not under defer)
 
 	return newContractInfo, nil

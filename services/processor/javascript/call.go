@@ -15,7 +15,7 @@ import (
 
 func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, code string, methodName primitives.MethodName, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 	worker := v8worker2.New(func(msg []byte) []byte {
-		s.reporting.Info("bridge msg received", log.String("msg", hex.EncodeToString(msg)))
+		s.logger.Info("bridge msg received", log.String("msg", hex.EncodeToString(msg)))
 		contractOutputArgs, err = s.createMethodOutputArgs(msg)
 		return nil
 	})

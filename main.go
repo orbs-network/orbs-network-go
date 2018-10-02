@@ -32,7 +32,7 @@ func getLogger(path string, silent bool) log.BasicLogger {
 	stdoutOutput := log.NewOutput(stdout).WithFormatter(log.NewHumanReadableFormatter())
 	fileOutput := log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter())
 
-	return log.GetLogger().For(
+	return log.GetLogger().WithTags(
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test", os.Getenv("TEST_NAME")),

@@ -16,12 +16,12 @@ func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) 
 
 	err := s.nonLeaderValidateBlockUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error("non leader failed to validate block", log.Error(err))
+		s.logger.Error("non leader failed to validate block", log.Error(err))
 		return
 	}
 	err = s.nonLeaderCommitAndReplyUnderMutex(blockPair)
 	if err != nil {
-		s.reporting.Error("non leader failed to commit and reply vote", log.Error(err))
+		s.logger.Error("non leader failed to commit and reply vote", log.Error(err))
 		return
 	}
 }
@@ -83,7 +83,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
-	s.reporting.Info("replying committed with last committed height", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()), log.Stringable("signed-data", signedData))
+	s.logger.Info("replying committed with last committed height", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()), log.Stringable("signed-data", signedData))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: recipient,
 		Message:            message,

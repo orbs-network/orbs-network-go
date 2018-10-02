@@ -25,7 +25,7 @@ func (s *service) retrieveContractCodeFromRepository(executionContextId primitiv
 
 	code = string(codeBytes)
 	s.addContractToRepository(contractName, code)
-	s.reporting.Info("loaded deployable contract successfully", log.Stringable("contract", contractName))
+	s.logger.Info("loaded deployable contract successfully", log.Stringable("contract", contractName))
 
 	return code, nil
 }
