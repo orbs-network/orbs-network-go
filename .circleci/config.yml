@@ -7,7 +7,7 @@ jobs:
       - run: ./git-submodule-checkout.sh
       - run: ./docker-build.sh
       - run: ./docker-test.sh
-      - run: ./.circleci/upload-node-metrics.sh
+      - run: sudo chown -R circleci:circleci logs && ./.circleci/upload-node-metrics.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker-tag.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
@@ -22,9 +22,9 @@ jobs:
       - run: ./docker-build.acceptance.sh
       - run:
           # remove logs if the test was successful for quicker feedback loop
-          command: ./docker-test.acceptance.sh && sudo find logs/acceptance -type f -delete
+          command: ./docker-test.acceptance.sh #&& sudo find logs/acceptance -type f -delete
           no_output_timout: 20m
-      - run: sudo chown -R circleci:circleci logs && ./.circleci/archive-logs.sh
+      - run: sudo chown -R circleci:circleci logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
       - store_artifacts:
           path: logs
 

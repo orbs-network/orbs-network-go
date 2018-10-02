@@ -27,9 +27,13 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 		output = logFile
 	}
 
-	testLogger := log.GetLogger(log.String("_test-id", testId)).
-		WithOutput(log.NewOutput(output).
-			WithFormatter(log.NewHumanReadableFormatter())).
+	testLogger := log.GetLogger(
+		log.String("_test", "acceptance"),
+		log.String("_branch", os.Getenv("GIT_BRANCH")),
+		log.String("_commit", os.Getenv("GIT_COMMIT")),
+		log.String("_test-id", testId),
+	).
+		WithOutput(log.NewOutput(output).WithFormatter(log.NewJsonFormatter())).
 		WithFilters(logFilters...).
 		WithFilters(log.OnlyErrors())
 
