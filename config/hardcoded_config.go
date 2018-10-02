@@ -183,7 +183,7 @@ func (c *config) BlockSyncBatchSize() uint32 {
 	return c.kv[BLOCK_SYNC_BATCH_SIZE].Uint32Value
 }
 
-func (c *config) BlockSyncInterval() time.Duration {
+func (c *config) BlockSyncNoCommitInterval() time.Duration {
 	return c.kv[BLOCK_SYNC_INTERVAL].DurationValue
 }
 

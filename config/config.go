@@ -24,7 +24,7 @@ type NodeConfig interface {
 
 	// block storage
 	BlockSyncBatchSize() uint32
-	BlockSyncInterval() time.Duration
+	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration

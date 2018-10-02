@@ -71,7 +71,7 @@ func (b *BlockSync) mainLoop(ctx context.Context) {
 
 	event = startSyncEvent{}
 
-	startSyncTimer := synchronization.NewTrigger(b.config.BlockSyncInterval(), func() {
+	startSyncTimer := synchronization.NewTrigger(b.config.BlockSyncNoCommitInterval(), func() {
 		b.events <- startSyncEvent{}
 	})
 
