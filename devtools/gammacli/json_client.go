@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -28,7 +27,7 @@ func ConvertAndSignTransaction(tx *JSONTransaction, keyPair *keys.Ed25519KeyPair
 	transaction, err := ConvertJSONTransactionToMemBuff(tx)
 	if err != nil { // Something in the JSON is not valid so we exit with a non zero exit code.
 		fmt.Println(err)
-		os.Exit(1)
+		return nil, err
 	}
 	transaction.Signer = &protocol.SignerBuilder{
 		Scheme: protocol.SIGNER_SCHEME_EDDSA, //TODO move to JSONTransaction

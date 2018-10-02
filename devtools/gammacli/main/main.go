@@ -13,24 +13,38 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Welcome to gamma-cli")
-		fmt.Println("Example usage:")
-		fmt.Println("")
-		fmt.Println("$ gamma-cli genKeys")
-		fmt.Println("  Generates a new test key pair to perform calls with against this cli")
-		fmt.Println("")
-		fmt.Println("$ gamma-cli start")
-		fmt.Println("  Start gamma-server with 3 Orbs virtual nodes")
-		fmt.Println("")
-		fmt.Println("$ gamma-cli deploy MyContractName path/to/some/contract.go")
-		fmt.Println("  Deploy your contract code onto the running blockchain on your local machine")
-		fmt.Println("")
-		fmt.Println("$ gamma-cli run send path/to/operation.json")
-		fmt.Println("  Perform a contract method which mutates state")
-		fmt.Println("")
-		fmt.Println("$ gamma-cli run call path/to/operation.json")
-		fmt.Println("  Perform a contract method which reads from state")
-		fmt.Println("")
+		fmt.Println(
+			`
+Gamma by ORBS v0.5
+Gamma is a local ORBS blockchain to empower developers to easily and efficiently deploy, run & test smart contracts. 
+Gamma runs an in-memory virtual chain on top of an ORBS blockchain with N nodes on your local machine.
+Gamma-cli - the command line interface is deigned to help you to interact with the virtual chain.
+
+Commands supported:
+
+$ gamma-cli start 
+  starts a local virtual chain over ORBS blockchain network, running on 3 nodes. 
+
+$ gamma-cli deploy [contract name] [contract file] 
+   Compile the smart contract with go v10.0 and deploy it on the personal orbs blockchain on your machine. 
+   Example:  
+   cd "$GOPATH/src/github.com/orbs-network/orbs-contract-sdk/" gamma-cli deploy Counter ./go/examples/counter/counter.go 
+
+$ gamma-cli run  send [json file] 
+  Use send when you want to send a transaction to a smart contract method that may
+  change the the contract state. The transaction will be added to the blockchain under consensus.
+   Example: gamma-cli run send ./go/examples/counter/jsons/add.json  
+
+$ gamma-cli run call [json file] Use  when you want to access a smart contract method that reads from your state
+  variables. In this case, the read is done on a local node, without undergoing consensus. 
+  Example: gamma-cli run call ./go/examples/counter/jsons/get.json 
+
+$ gamma-cli genKeys generates a new pair public and private key to sign on the transactions you send or your
+  contract sends. The keys are stored on your computer on a file named .orbsKeys
+
+For more information : https://github.com/orbs-network/orbs-contract-sdk.
+Enjoy!
+	`)
 		os.Exit(0)
 	}
 
