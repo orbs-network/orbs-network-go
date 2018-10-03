@@ -106,14 +106,14 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 func TestGetTransactionStatus_CallsTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
-		harness.OnGetTransactionSetNotFound()
+		harness.OnGetTransactionSetPending()
 
 		harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{}).Build(),
 		})
 
 		ok, err := harness.txpMock.Verify()
-		require.True(t, ok, "shoulc have called the txp func")
+		require.True(t, ok, "should have called the txp func")
 		require.NoError(t, err, "error happened when it should not")
 	})
 }
@@ -140,9 +140,53 @@ func TestGetTransactionStatus_GetCommitStatusFromTxPool(t *testing.T) {
 	})
 }
 
+func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newPublicApiHarness(ctx, 1*time.Second)
+
+		txb := builders.Transaction().Builder()
+		txHash := digest.CalcTxHash(txb.Build().Transaction())
+
+		harness.OnGetTransactionSetPending()
+		result, err := harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
+			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
+				Txhash: txHash,
+			}).Build(),
+		})
+
+		require.NoError(t, err, "error happened when it should not")
+		require.NotNil(t, result, "get transaction status returned nil instead of object")
+		require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "got wrong status")
+		test.RequireCmpEqual(t, (*protocol.TransactionReceiptBuilder)(nil).Build(), result.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
+	})
+}
+
+func TestGetTransactionStatus_GetTxFromBlockStorage(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newPublicApiHarness(ctx, 1*time.Second)
+
+		txb := builders.Transaction().Builder()
+		txHash := digest.CalcTxHash(txb.Build().Transaction())
+
+		harness.OnGetTransactionSetNotFound()
+		harness.OnGetTransactionSetBlockStorageFind()
+		result, err := harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
+			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
+				Txhash: txHash,
+			}).Build(),
+		})
+
+		require.NoError(t, err, "error happened when it should not")
+		require.NotNil(t, result, "get transaction status returned nil instead of object")
+		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, result.ClientResponse.TransactionStatus(), "got wrong status")
+		require.NotNil(t, result.ClientResponse.TransactionReceipt(), "got empty receipt")
+	})
+}
+
 type harness struct {
 	papi    services.PublicApi
 	txpMock *services.MockTransactionPool
+	bksMock *services.MockBlockStorage
 }
 
 func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness {
@@ -150,10 +194,12 @@ func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness 
 	cfg := newPublicApiConfig(txTimeout)
 	txpMock := makeTxMock()
 	vmMock := &services.MockVirtualMachine{}
-	papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, logger)
+	bksMock := &services.MockBlockStorage{}
+	papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, bksMock, logger)
 	return &harness{
 		papi:    papi,
 		txpMock: txpMock,
+		bksMock: bksMock,
 	}
 }
 
@@ -199,6 +245,15 @@ func (h *harness)OnGetTransactionSetCommit() {
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: builders.TransactionReceipt().Build(),
 	}).Times(1)
+}
+
+func (h *harness) OnGetTransactionSetBlockStorageFind() {
+	h.bksMock.When("GetTransactionReceipt", mock.Any).Return(
+		&services.GetTransactionReceiptOutput{
+			TransactionReceipt: builders.TransactionReceipt().Build(),
+			BlockHeight:        0,
+			BlockTimestamp:     0,
+		}).Times(1)
 }
 
 

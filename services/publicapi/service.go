@@ -21,11 +21,19 @@ type Config interface {
 	VirtualChainId() primitives.VirtualChainId
 }
 
+type txResponse struct {
+	transactionStatus  protocol.TransactionStatus
+	transactionReceipt *protocol.TransactionReceipt
+	blockHeight        primitives.BlockHeight
+	blockTimestamp     primitives.TimestampNano
+}
+
 type service struct {
 	ctx             context.Context
 	config          Config
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
+	blockStorage    services.BlockStorage
 	logger          log.BasicLogger
 
 	waiter *waiter
@@ -36,6 +44,7 @@ func NewPublicApi(
 	config Config,
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
+	blockStorage services.BlockStorage,
 	logger log.BasicLogger,
 ) services.PublicApi {
 	s := &service{
@@ -43,6 +52,7 @@ func NewPublicApi(
 		config:          config,
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
+		blockStorage:    blockStorage,
 		logger:          logger.WithTags(LogTag),
 
 		waiter: newWaiter(ctx),
@@ -116,13 +126,6 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	return toSendTxOutput(obj.payload.(*txResponse)), nil
 }
 
-type txResponse struct {
-	transactionStatus  protocol.TransactionStatus
-	transactionReceipt *protocol.TransactionReceipt
-	blockHeight        primitives.BlockHeight
-	blockTimestamp     primitives.TimestampNano
-}
-
 func toTxResponse(t *services.AddNewTransactionOutput) *txResponse {
 	return &txResponse{
 		transactionStatus:  t.TransactionStatus,
@@ -182,22 +185,53 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 	}
 
 	s.logger.Info("get transaction status request received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
-	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{})
+	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
+		Txhash:               input.ClientRequest.Txhash(),
+		TransactionTimestamp: input.ClientRequest.TransactionTimestamp(),
+	})
 	if err != nil {
-		return toGetTxOutput(txReceipt), err
+		return toGetTxOutput(txStatusToTxResponse(txReceipt)), err
 	}
 	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
-		return toGetTxOutput(txReceipt), nil
+		return toGetTxOutput(txStatusToTxResponse(txReceipt)), nil
 	}
 
-
-	return nil, nil
+	blockReceipt, err := s.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+		Txhash:               input.ClientRequest.Txhash(),
+		TransactionTimestamp: input.ClientRequest.TransactionTimestamp(),
+	})
+	if err != nil {
+		return toGetTxOutput(blockToTxResponse(blockReceipt)), err
+	}
+	return toGetTxOutput(blockToTxResponse(blockReceipt)), nil
 }
 
-func toGetTxOutput(txStatus *services.GetCommittedTransactionReceiptOutput) *services.GetTransactionStatusOutput {
+func txStatusToTxResponse(txStatus *services.GetCommittedTransactionReceiptOutput) *txResponse {
+	return &txResponse{
+		transactionStatus:  txStatus.TransactionStatus,
+		transactionReceipt: txStatus.TransactionReceipt,
+		blockHeight:        txStatus.BlockHeight,
+		blockTimestamp:     txStatus.BlockTimestamp,
+	}
+}
+
+func blockToTxResponse(bReceipt *services.GetTransactionReceiptOutput) *txResponse {
+	status := protocol.TRANSACTION_STATUS_NO_RECORD_FOUND
+	if bReceipt.TransactionReceipt != nil {
+		status = protocol.TRANSACTION_STATUS_COMMITTED
+	}
+	return &txResponse{
+		transactionStatus:  status,
+		transactionReceipt: bReceipt.TransactionReceipt,
+		blockHeight:        bReceipt.BlockHeight,
+		blockTimestamp:     bReceipt.BlockTimestamp,
+	}
+}
+
+func toGetTxOutput(transactionOutput *txResponse) *services.GetTransactionStatusOutput {
 	var receiptForClient *protocol.TransactionReceiptBuilder = nil
 
-	if receipt := txStatus.TransactionReceipt; receipt != nil && txStatus.TransactionStatus == protocol.TRANSACTION_STATUS_COMMITTED {
+	if receipt := transactionOutput.transactionReceipt; receipt != nil {
 		receiptForClient = &protocol.TransactionReceiptBuilder{
 			Txhash:              receipt.Txhash(),
 			ExecutionResult:     receipt.ExecutionResult(),
@@ -206,16 +240,15 @@ func toGetTxOutput(txStatus *services.GetCommittedTransactionReceiptOutput) *ser
 	}
 
 	response := &client.GetTransactionStatusResponseBuilder{
-		RequestStatus:      translateTxStatusToResponseCode(txStatus.TransactionStatus),
+		RequestStatus:      translateTxStatusToResponseCode(transactionOutput.transactionStatus),
 		TransactionReceipt: receiptForClient,
-		TransactionStatus:  txStatus.TransactionStatus,
-		BlockHeight:        txStatus.BlockHeight,
-		BlockTimestamp:     txStatus.BlockTimestamp,
+		TransactionStatus:  transactionOutput.transactionStatus,
+		BlockHeight:        transactionOutput.blockHeight,
+		BlockTimestamp:     transactionOutput.blockTimestamp,
 	}
 
 	return &services.GetTransactionStatusOutput{ClientResponse: response.Build()}
 }
-
 
 // General helpers
 func isTransactionRequestValid(config Config, vcId primitives.VirtualChainId) protocol.TransactionStatus {
