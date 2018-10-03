@@ -18,6 +18,7 @@ var LogTag = log.Service("public-api")
 type Config interface {
 	SendTransactionTimeout() time.Duration
 	GetTransactionStatusGrace() time.Duration
+	VirtualChainId() primitives.VirtualChainId
 }
 
 type service struct {
@@ -79,32 +80,40 @@ func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorI
 }
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
-	tx := input.ClientRequest.SignedTransaction()
-	txHash := digest.CalcTxHash(input.ClientRequest.SignedTransaction().Transaction())
+	if input.ClientRequest == nil {
+		err := errors.Errorf("error missing input (client request is nil")
+		s.logger.Info("send transaction received via public api", log.Error(err))
+		return nil, err
+	}
 
+	tx := input.ClientRequest.SignedTransaction()
+	if txStatus := isTransactionRequestValid(s.config, tx.Transaction().VirtualChainId()); txStatus != protocol.TRANSACTION_STATUS_RESERVED {
+		return toSendTxOutput(&txResponse{transactionStatus: txStatus}), nil
+	}
+
+	txHash := digest.CalcTxHash(tx.Transaction())
 	s.logger.Info("transaction received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
 	addResp, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{SignedTransaction: tx})
-
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
 		s.logger.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
-		return toTxOutput(toTxResponse(addResp)), errors.Errorf("error '%s' for transaction result", addResp)
+		return toSendTxOutput(toTxResponse(addResp)), errors.Errorf("error '%s' for transaction result", addResp)
 	}
 
 	if addResp.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED {
 		s.waiter.deleteByChannel(waitResult)
-		return toTxOutput(toTxResponse(addResp)), nil
+		return toSendTxOutput(toTxResponse(addResp)), nil
 	}
 
 	obj, err := s.waiter.wait(waitResult, s.config.SendTransactionTimeout())
 	if err != nil {
 		s.logger.Info("waiting for transaction to be processed failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
-		return toTxOutput(toTxResponse(addResp)), err
+		return toSendTxOutput(toTxResponse(addResp)), err
 	}
-	return toTxOutput(obj.payload.(*txResponse)), nil
+	return toSendTxOutput(obj.payload.(*txResponse)), nil
 }
 
 type txResponse struct {
@@ -123,7 +132,7 @@ func toTxResponse(t *services.AddNewTransactionOutput) *txResponse {
 	}
 }
 
-func toTxOutput(transactionOutput *txResponse) *services.SendTransactionOutput {
+func toSendTxOutput(transactionOutput *txResponse) *services.SendTransactionOutput {
 	var receiptForClient *protocol.TransactionReceiptBuilder = nil
 
 	if receipt := transactionOutput.transactionReceipt; receipt != nil {
@@ -143,6 +152,78 @@ func toTxOutput(transactionOutput *txResponse) *services.SendTransactionOutput {
 	}
 
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}
+}
+
+func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
+	s.logger.Info("enter CallMethod")
+	defer s.logger.Info("exit CallMethod")
+
+	output, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
+		Transaction: input.ClientRequest.Transaction(),
+	})
+	if err != nil {
+		s.logger.Info("running local method on VirtualMachine failed", log.Error(err))
+		return nil, err
+	}
+	return &services.CallMethodOutput{
+		ClientResponse: (&client.CallMethodResponseBuilder{
+			// TODO need to fill up this struct
+			RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
+			OutputArgumentArray: output.OutputArgumentArray,
+		}).Build(),
+	}, nil
+}
+
+func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
+	if input.ClientRequest == nil {
+		err := errors.Errorf("error: missing input (client request is nil")
+		s.logger.Info("get transaction status received via public api", log.Error(err))
+		return nil, err
+	}
+
+	s.logger.Info("get transaction status request received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
+	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{})
+	if err != nil {
+		return toGetTxOutput(txReceipt), err
+	}
+	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
+		return toGetTxOutput(txReceipt), nil
+	}
+
+
+	return nil, nil
+}
+
+func toGetTxOutput(txStatus *services.GetCommittedTransactionReceiptOutput) *services.GetTransactionStatusOutput {
+	var receiptForClient *protocol.TransactionReceiptBuilder = nil
+
+	if receipt := txStatus.TransactionReceipt; receipt != nil && txStatus.TransactionStatus == protocol.TRANSACTION_STATUS_COMMITTED {
+		receiptForClient = &protocol.TransactionReceiptBuilder{
+			Txhash:              receipt.Txhash(),
+			ExecutionResult:     receipt.ExecutionResult(),
+			OutputArgumentArray: receipt.OutputArgumentArray(),
+		}
+	}
+
+	response := &client.GetTransactionStatusResponseBuilder{
+		RequestStatus:      translateTxStatusToResponseCode(txStatus.TransactionStatus),
+		TransactionReceipt: receiptForClient,
+		TransactionStatus:  txStatus.TransactionStatus,
+		BlockHeight:        txStatus.BlockHeight,
+		BlockTimestamp:     txStatus.BlockTimestamp,
+	}
+
+	return &services.GetTransactionStatusOutput{ClientResponse: response.Build()}
+}
+
+
+// General helpers
+func isTransactionRequestValid(config Config, vcId primitives.VirtualChainId) protocol.TransactionStatus {
+	if config.VirtualChainId() != vcId {
+		return protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH
+	}
+
+	return protocol.TRANSACTION_STATUS_RESERVED // used as an OK
 }
 
 func translateTxStatusToResponseCode(txStatus protocol.TransactionStatus) protocol.RequestStatus {
@@ -179,28 +260,4 @@ func translateTxStatusToResponseCode(txStatus protocol.TransactionStatus) protoc
 		return protocol.REQUEST_STATUS_CONGESTION
 	}
 	return protocol.REQUEST_STATUS_RESERVED
-}
-
-func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
-	s.logger.Info("enter CallMethod")
-	defer s.logger.Info("exit CallMethod")
-
-	output, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
-		Transaction: input.ClientRequest.Transaction(),
-	})
-	if err != nil {
-		s.logger.Info("running local method on VirtualMachine failed", log.Error(err))
-		return nil, err
-	}
-	return &services.CallMethodOutput{
-		ClientResponse: (&client.CallMethodResponseBuilder{
-			// TODO need to fill up this struct
-			RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
-			OutputArgumentArray: output.OutputArgumentArray,
-		}).Build(),
-	}, nil
-}
-
-func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
-	panic("Not implemented")
 }

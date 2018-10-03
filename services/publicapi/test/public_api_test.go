@@ -19,6 +19,23 @@ import (
 	"time"
 )
 
+func TestSendTransaction_CallsTxPool(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newPublicApiHarness(ctx, 1*time.Millisecond)
+
+		harness.txpMock.When("AddNewTransaction", mock.Any).Return(&services.AddNewTransactionOutput{}).Times(1)
+
+		harness.papi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: (&client.SendTransactionRequestBuilder{
+				SignedTransaction: builders.Transaction().Builder()}).Build(),
+		})
+
+		ok, err := harness.txpMock.Verify()
+		require.True(t, ok, "should have called the txp func")
+		require.NoError(t, err, "error happened when it should not")
+	})
+}
+
 func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Millisecond)
@@ -86,6 +103,43 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 	})
 }
 
+func TestGetTransactionStatus_CallsTxPool(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newPublicApiHarness(ctx, 1*time.Second)
+		harness.OnGetTransactionSetNotFound()
+
+		harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
+			ClientRequest: (&client.GetTransactionStatusRequestBuilder{}).Build(),
+		})
+
+		ok, err := harness.txpMock.Verify()
+		require.True(t, ok, "shoulc have called the txp func")
+		require.NoError(t, err, "error happened when it should not")
+	})
+}
+
+
+func TestGetTransactionStatus_GetCommitStatusFromTxPool(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newPublicApiHarness(ctx, 1*time.Second)
+
+		txb := builders.Transaction().Builder()
+		txHash := digest.CalcTxHash(txb.Build().Transaction())
+
+		harness.OnGetTransactionSetCommit()
+		result, err := harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
+			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
+				Txhash: txHash,
+			}).Build(),
+		})
+
+		require.NoError(t, err, "error happened when it should not")
+		require.NotNil(t, result, "get transaction status returned nil instead of object")
+		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, result.ClientResponse.TransactionStatus(), "got wrong status")
+		require.NotNil(t, result.ClientResponse.TransactionReceipt(), "got empty receipt")
+	})
+}
+
 type harness struct {
 	papi    services.PublicApi
 	txpMock *services.MockTransactionPool
@@ -106,6 +160,7 @@ func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness 
 func newPublicApiConfig(txTimeout time.Duration) publicapi.Config {
 	cfg := config.EmptyConfig()
 	cfg.SetDuration(config.PUBLIC_API_SEND_TRANSACTION_TIMEOUT, txTimeout)
+	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, uint32(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID))
 
 	return cfg
 }
@@ -126,3 +181,24 @@ func (h *harness)OnAddNewTransaction(f func ()) {
 			return &services.AddNewTransactionOutput{TransactionStatus: protocol.TRANSACTION_STATUS_PENDING}, nil
 		})
 }
+
+func (h *harness)OnGetTransactionSetPending() {
+	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
+		TransactionStatus:  protocol.TRANSACTION_STATUS_PENDING,
+	}).Times(1)
+}
+
+func (h *harness)OnGetTransactionSetNotFound() {
+	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
+		TransactionStatus:  protocol.TRANSACTION_STATUS_NO_RECORD_FOUND,
+	}).Times(1)
+}
+
+func (h *harness)OnGetTransactionSetCommit() {
+	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
+		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+		TransactionReceipt: builders.TransactionReceipt().Build(),
+	}).Times(1)
+}
+
+
