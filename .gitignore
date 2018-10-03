@@ -86,3 +86,5 @@ logs/
 orbs-*
 .deploy.json
 devtools/gamma-server/json/*.json
+gamma-cli
+gamma-server
