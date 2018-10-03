@@ -14,8 +14,21 @@ func IncludeFieldWithKey(key string) Filter {
 	return &includeFieldWithKey{key: key}
 }
 
+func Or(filters ...Filter) Filter {
+	return &or{filters}
+}
+
+// FIXME add failed expectations here
 func OnlyErrors() Filter {
 	return &onlyErrors{}
+}
+
+func OnlyCheckpoints() Filter {
+	return &matchField{String("flow", "checkpoint")}
+}
+
+func MatchField(f *Field) Filter {
+	return &matchField{f}
 }
 
 func IgnoreMessagesMatching(pattern string) Filter {
@@ -97,5 +110,30 @@ func (f *excludeField) Allows(level string, message string, fields []*Field) boo
 	return true
 }
 
+type matchField struct {
+	field *Field
+}
 
+func (f *matchField) Allows(level string, message string, fields []*Field) bool {
+	for _, p := range fields {
+		if p.Equal(f.field) {
+			return true
+		}
+	}
 
+	return false
+}
+
+type or struct {
+	filters []Filter
+}
+
+func (f *or) Allows(level string, message string, fields []*Field) bool {
+	result := false
+
+	for _, f := range f.filters {
+		result = result || f.Allows(level, message, fields)
+	}
+
+	return result
+}
