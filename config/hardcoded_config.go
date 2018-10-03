@@ -64,7 +64,6 @@ const (
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
 
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
-	PUBLIC_API_TRANSACTION_STATUS_GRACE = "PUBLIC_API_TRANSACTION_STATUS_GRACE"
 
 	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
 )
@@ -250,10 +249,6 @@ func (c *config) TransactionPoolCommittedPoolClearExpiredInterval() time.Duratio
 
 func (c *config) SendTransactionTimeout() time.Duration {
 	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
-}
-
-func (c *config) GetTransactionStatusGrace() time.Duration {
-	return c.kv[PUBLIC_API_TRANSACTION_STATUS_GRACE].DurationValue
 }
 
 func (c *config) BlockSyncCollectChunksTimeout() time.Duration {

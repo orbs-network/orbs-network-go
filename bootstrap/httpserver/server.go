@@ -85,6 +85,7 @@ func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
 	router.Handle("/api/v1/send-transaction", report(s.logger, http.HandlerFunc(s.sendTransactionHandler)))
 	router.Handle("/api/v1/call-method", report(s.logger, http.HandlerFunc(s.callMethodHandler)))
+	router.Handle("/api/v1/get-transaction-status", report(s.logger, http.HandlerFunc(s.getTransactionStatusHandler)))
 	return router
 }
 
@@ -135,6 +136,28 @@ func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
 	result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
+	} else {
+		writeErrorResponseAndLog(s.logger, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+	}
+}
+
+func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Request) {
+	bytes, e := readInput(r)
+	if e != nil {
+		writeErrorResponseAndLog(s.logger, w, e)
+		return
+	}
+
+	clientRequest := client.GetTransactionStatusRequestReader(bytes)
+	if e := validate(clientRequest); e != nil {
+		writeErrorResponseAndLog(s.logger, w, e)
+		return
+	}
+
+	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
+	result, err := s.publicApi.GetTransactionStatus(&services.GetTransactionStatusInput{ClientRequest: clientRequest})
+	if result != nil && result.ClientResponse != nil {
+		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
 		writeErrorResponseAndLog(s.logger, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}

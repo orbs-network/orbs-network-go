@@ -17,7 +17,6 @@ var LogTag = log.Service("public-api")
 
 type Config interface {
 	SendTransactionTimeout() time.Duration
-	GetTransactionStatusGrace() time.Duration
 	VirtualChainId() primitives.VirtualChainId
 }
 
@@ -190,6 +189,7 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 		TransactionTimestamp: input.ClientRequest.TransactionTimestamp(),
 	})
 	if err != nil {
+		s.logger.Info("get transaction status via public api failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
 		return toGetTxOutput(txStatusToTxResponse(txReceipt)), err
 	}
 	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
@@ -201,6 +201,7 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 		TransactionTimestamp: input.ClientRequest.TransactionTimestamp(),
 	})
 	if err != nil {
+		s.logger.Info("get transaction status via public api failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
 		return toGetTxOutput(blockToTxResponse(blockReceipt)), err
 	}
 	return toGetTxOutput(blockToTxResponse(blockReceipt)), nil
@@ -287,7 +288,7 @@ func translateTxStatusToResponseCode(txStatus protocol.TransactionStatus) protoc
 		return protocol.REQUEST_STATUS_REJECTED
 	case protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER:
 		return protocol.REQUEST_STATUS_REJECTED
-	case protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_PRECEDES_NODE_TIME:
+	case protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME:
 		return protocol.REQUEST_STATUS_REJECTED
 	case protocol.TRANSACTION_STATUS_REJECTED_CONGESTION:
 		return protocol.REQUEST_STATUS_CONGESTION
