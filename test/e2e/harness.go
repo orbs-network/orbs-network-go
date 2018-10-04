@@ -65,7 +65,13 @@ func newHarness() *harness {
 			gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 		}
 
-		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+		os.MkdirAll(config.GetProjectSourceRootPath()+"/logs", 0755)
+
+		logger := log.GetLogger().WithTags(
+			log.String("_test", "e2e"),
+			log.String("_branch", os.Getenv("GIT_BRANCH")),
+			log.String("_commit", os.Getenv("GIT_COMMIT"))).
+			WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 		processorArtifactPath, dirToCleanup := getProcessorArtifactPath()
 		os.RemoveAll(dirToCleanup)
@@ -73,6 +79,13 @@ func newHarness() *harness {
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+
+			logFile, err := os.OpenFile(fmt.Sprintf("%s/logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				panic(err)
+			}
+
+			nodeLogger := logger.WithOutput(log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter()))
 
 			cfg := config.ForProduction(processorArtifactPath)
 			cfg.OverrideNodeSpecificValues(
@@ -84,7 +97,7 @@ func newHarness() *harness {
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
-			node := bootstrap.NewNode(cfg, logger, fmt.Sprintf(":%d", 8080+i))
+			node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", 8080+i))
 
 			nodes = append(nodes, node)
 		}

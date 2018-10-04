@@ -15,11 +15,13 @@ type LogFormatter interface {
 type jsonFormatter struct {
 }
 
+const TIMESTAMP_FORMAT = "2006-01-02T15:04:05.999999999Z"
+
 func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
-	logLine["timestamp"] = time.Now().UTC().UnixNano()
+	logLine["timestamp"] = time.Now().UTC().Format(TIMESTAMP_FORMAT)
 	logLine["message"] = message
 
 	for _, param := range params {
