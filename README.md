@@ -16,8 +16,8 @@ If you only want to build the Docker images containing the node binaries, you do
 
 * Run `./docker-build.sh` to create the images:
 
-  * `orbs:export` contains `orbs-node` and `orbs-json-client` binaries in the `/opt/orbs` directory.
-  * `orbs:sambusac` contains self-sufficient development binary (similar to Ethereum's Ganache) and the json client binary.
+  * `orbs:export` contains `orbs-node` and `gamma-cli` binaries in the `/opt/orbs` directory.
+  * `orbs:gamma-server` contains self-sufficient development binary (similar to Ethereum's Ganache) and `gamma-cli` to communicate with it's server counterpart.
 
 ## Building from source
 
@@ -55,7 +55,7 @@ If you only want to build the Docker images containing the node binaries, you do
 
 * Build with `go install`
 
-* You can build all the binaries (`orbs-node`, `orbs-json-client` and `sambusac`) with `./build-binaries.sh`.
+* You can build all the binaries (`orbs-node`, `gamma-cli` and `gamma-server`) with `./build-binaries.sh`.
 
 ### Run
 

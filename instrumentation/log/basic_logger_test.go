@@ -20,18 +20,6 @@ const (
 	TransactionAccepted = "Transaction accepted"
 )
 
-type discardWriter struct {
-}
-
-func (w *discardWriter) Write(p []byte) (n int, err error) {
-	return 0, nil
-}
-
-func discardStdout(f func(writer io.Writer)) {
-	writer := &discardWriter{}
-	f(writer)
-}
-
 func parseOutput(input string) map[string]interface{} {
 	jsonMap := make(map[string]interface{})
 	_ = json.Unmarshal([]byte(input), &jsonMap)

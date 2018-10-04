@@ -76,10 +76,6 @@ fabric.properties
 # Sonarlint plugin
 .idea/sonarlint
 
-
-# End of https://www.gitignore.io/api/go,intellij
-main
-
 .DS_Store
 
 # Logs
@@ -88,4 +84,7 @@ logs/
 
 # binaries
 orbs-*
-sambusac
+.deploy.json
+devtools/gamma-server/json/*.json
+gamma-cli
+gamma-server
