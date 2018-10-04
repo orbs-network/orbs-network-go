@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -90,5 +91,30 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, result.ClientResponse.TransactionStatus(), "got wrong status")
+	})
+}
+
+func TestSendTransaction_TimesOut(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		timeout := 1 * time.Second
+		harness := newPublicApiHarness(ctx, timeout)
+
+		txb := builders.Transaction().Builder()
+		harness.onAddNewTransaction(func() {
+			time.Sleep(5 * time.Millisecond)
+		})
+
+		start := time.Now()
+		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+			ClientRequest: (&client.SendTransactionRequestBuilder{
+				SignedTransaction: txb,
+			}).Build(),
+		})
+
+		txHash := digest.CalcTxHash(txb.Build().Transaction())
+
+		require.EqualError(t, err, fmt.Sprintf("timed out waiting for transaction result %s", txHash.String()))
+		require.WithinDuration(t, time.Now(), start, 2*timeout, "timeout duration exceeded")
+		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
 }

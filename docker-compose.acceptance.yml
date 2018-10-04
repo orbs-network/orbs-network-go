@@ -4,5 +4,8 @@ services:
   orbs-acceptance:
     image: orbs:acceptance
     command: sh -x test.acceptance.sh
+    environment:
+      GIT_BRANCH: $GIT_BRANCH
+      GIT_COMMIT: $GIT_COMMIT
     volumes:
       - ./logs:/go/src/github.com/orbs-network/orbs-network-go/logs
