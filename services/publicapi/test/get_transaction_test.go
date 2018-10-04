@@ -16,7 +16,7 @@ import (
 func TestGetTransactionStatus_CallsTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
-		harness.OnGetTransactionSetPending()
+		harness.transactionIsPendingInPool()
 
 		harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{}).Build(),
@@ -35,7 +35,7 @@ func TestGetTransactionStatus_GetCommitStatusFromTxPool(t *testing.T) {
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
-		harness.OnGetTransactionSetCommit()
+		harness.transactionIsCommitedInPool()
 		result, err := harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
 				Txhash: txHash,
@@ -56,7 +56,7 @@ func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
-		harness.OnGetTransactionSetPending()
+		harness.transactionIsPendingInPool()
 		result, err := harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
 				Txhash: txHash,
@@ -77,8 +77,8 @@ func TestGetTransactionStatus_GetTxFromBlockStorage(t *testing.T) {
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
-		harness.OnGetTransactionSetNotFound()
-		harness.OnGetTransactionSetBlockStorageFind()
+		harness.transactionIsNotInPool()
+		harness.transactionIsInBlockStorage()
 		result, err := harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
 				Txhash: txHash,

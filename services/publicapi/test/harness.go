@@ -47,7 +47,7 @@ func makeTxMock() *services.MockTransactionPool {
 	return txpMock
 }
 
-func (h *harness) OnAddNewTransaction(f func()) {
+func (h *harness) onAddNewTransaction(f func()) {
 	h.txpMock.When("AddNewTransaction", mock.Any).Times(1).
 		Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 			go func() {
@@ -58,26 +58,26 @@ func (h *harness) OnAddNewTransaction(f func()) {
 		})
 }
 
-func (h *harness) OnGetTransactionSetPending() {
+func (h *harness) transactionIsPendingInPool() {
 	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
 		TransactionStatus: protocol.TRANSACTION_STATUS_PENDING,
 	}).Times(1)
 }
 
-func (h *harness) OnGetTransactionSetNotFound() {
+func (h *harness) transactionIsNotInPool() {
 	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
 		TransactionStatus: protocol.TRANSACTION_STATUS_NO_RECORD_FOUND,
 	}).Times(1)
 }
 
-func (h *harness) OnGetTransactionSetCommit() {
+func (h *harness) transactionIsCommitedInPool() {
 	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: builders.TransactionReceipt().Build(),
 	}).Times(1)
 }
 
-func (h *harness) OnGetTransactionSetBlockStorageFind() {
+func (h *harness) transactionIsInBlockStorage() {
 	h.bksMock.When("GetTransactionReceipt", mock.Any).Return(
 		&services.GetTransactionReceiptOutput{
 			TransactionReceipt: builders.TransactionReceipt().Build(),

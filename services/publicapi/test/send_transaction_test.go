@@ -56,7 +56,7 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
 
 		txb := builders.Transaction().Builder()
-		harness.OnAddNewTransaction(func() {
+		harness.onAddNewTransaction(func() {
 			harness.papi.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
 				TransactionReceipts: []*protocol.TransactionReceipt{builders.TransactionReceipt().WithTransaction(txb.Build().Transaction()).Build()},
 			})
@@ -80,7 +80,7 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
-		harness.OnAddNewTransaction(func() {
+		harness.onAddNewTransaction(func() {
 			harness.papi.HandleTransactionError(&handlers.HandleTransactionErrorInput{
 				Txhash:            txHash,
 				TransactionStatus: protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED,
