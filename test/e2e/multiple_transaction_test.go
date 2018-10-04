@@ -35,7 +35,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		targetAddress := builders.AddressForEd25519SignerForTests(6)
 		getBalance := builders.GetBalanceTransaction().WithEd25519Signer(signerKeyPair).WithTargetAddress(targetAddress).Builder().Transaction
 		response, err := h.callMethod(t, getBalance)
-		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
+		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
 				return outputArgsIterator.NextArguments().Uint64Value() == 70

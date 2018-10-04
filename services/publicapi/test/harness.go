@@ -17,6 +17,7 @@ type harness struct {
 	papi    services.PublicApi
 	txpMock *services.MockTransactionPool
 	bksMock *services.MockBlockStorage
+	vmMock  *services.MockVirtualMachine
 }
 
 func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness {
@@ -30,6 +31,7 @@ func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness 
 		papi:    papi,
 		txpMock: txpMock,
 		bksMock: bksMock,
+		vmMock:  vmMock,
 	}
 }
 
@@ -47,6 +49,13 @@ func makeTxMock() *services.MockTransactionPool {
 	return txpMock
 }
 
+func (h *harness) addTransactionReturnsAlreadyCommitted() {
+	h.txpMock.When("AddNewTransaction", mock.Any).Return(&services.AddNewTransactionOutput{
+		TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
+		TransactionReceipt: builders.TransactionReceipt().Build(),
+	}).Times(1)
+}
+
 func (h *harness) onAddNewTransaction(f func()) {
 	h.txpMock.When("AddNewTransaction", mock.Any).Times(1).
 		Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
@@ -62,12 +71,7 @@ func (h *harness) transactionIsPendingInPool() {
 	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
 		TransactionStatus: protocol.TRANSACTION_STATUS_PENDING,
 	}).Times(1)
-}
-
-func (h *harness) transactionIsNotInPool() {
-	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
-		TransactionStatus: protocol.TRANSACTION_STATUS_NO_RECORD_FOUND,
-	}).Times(1)
+	h.bksMock.Never("GetTransactionReceipt", mock.Any)
 }
 
 func (h *harness) transactionIsCommitedInPool() {
@@ -75,13 +79,23 @@ func (h *harness) transactionIsCommitedInPool() {
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: builders.TransactionReceipt().Build(),
 	}).Times(1)
+	h.bksMock.Never("GetTransactionReceipt", mock.Any)
 }
 
-func (h *harness) transactionIsInBlockStorage() {
+func (h *harness) transactionIsNotInPoolIsInBlockStorage() {
+	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
+		TransactionStatus: protocol.TRANSACTION_STATUS_NO_RECORD_FOUND,
+	}).Times(1)
 	h.bksMock.When("GetTransactionReceipt", mock.Any).Return(
 		&services.GetTransactionReceiptOutput{
 			TransactionReceipt: builders.TransactionReceipt().Build(),
-			BlockHeight:        0,
-			BlockTimestamp:     0,
 		}).Times(1)
+}
+
+func (h *harness) runTransactionSuccess() {
+	h.vmMock.When("RunLocalMethod", mock.Any).Times(1).
+		Return(&services.RunLocalMethodOutput{
+			CallResult:              protocol.EXECUTION_RESULT_SUCCESS,
+			OutputArgumentArray:     nil,
+		})
 }

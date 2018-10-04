@@ -167,3 +167,45 @@ func TransactionInputArgumentsParse(t *protocol.Transaction) *protocol.MethodArg
 	argsArray := protocol.MethodArgumentArrayReader(t.RawInputArgumentArrayWithHeader())
 	return argsArray.ArgumentsIterator()
 }
+
+type NonSignedTransactionBuilder struct {
+	builder *protocol.TransactionBuilder
+}
+
+func NonSignedTransaction() *NonSignedTransactionBuilder {
+	keyPair := keys.Ed25519KeyPairForTests(1)
+	return &NonSignedTransactionBuilder{
+		&protocol.TransactionBuilder{
+			ProtocolVersion: 1,
+			VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+			ContractName:    "BenchmarkToken",
+			MethodName:      "transfer",
+			Signer: &protocol.SignerBuilder{
+				Scheme: protocol.SIGNER_SCHEME_EDDSA,
+				Eddsa: &protocol.EdDSA01SignerBuilder{
+					NetworkType:     protocol.NETWORK_TYPE_TEST_NET,
+					SignerPublicKey: keyPair.PublicKey(),
+				},
+			},
+			Timestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		},
+	}
+}
+
+func (t *NonSignedTransactionBuilder) WithMethod(contractName primitives.ContractName, methodName primitives.MethodName) *NonSignedTransactionBuilder {
+	t.builder.ContractName = contractName
+	t.builder.MethodName = methodName
+	return t
+}
+
+func (t *NonSignedTransactionBuilder) Build() *protocol.Transaction {
+	transaction := t.builder.Build()
+	return transaction
+}
+
+func (t *NonSignedTransactionBuilder) Builder() *protocol.TransactionBuilder {
+	return t.builder
+}
+
+
+

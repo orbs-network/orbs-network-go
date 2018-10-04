@@ -37,12 +37,11 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 	// check counter
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		getCounter := &protocol.TransactionBuilder{
-			ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
-			MethodName:   "get",
-		}
-		response, err := h.callMethod(t, getCounter)
-		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
+		getCounter := builders.NonSignedTransaction().
+			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get")
+
+		response, err := h.callMethod(t, getCounter.Builder())
+		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
 				return outputArgsIterator.NextArguments().Uint64Value() == counterStart
@@ -65,12 +64,11 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 	// check counter
 	ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		getCounter := &protocol.TransactionBuilder{
-			ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
-			MethodName:   "get",
-		}
-		response, err := h.callMethod(t, getCounter)
-		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_RESERVED { // TODO: this is a bug, change to EXECUTION_RESULT_SUCCESS
+		getCounter := builders.NonSignedTransaction().
+			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get")
+
+		response, err := h.callMethod(t, getCounter.Builder())
+		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
 				return outputArgsIterator.NextArguments().Uint64Value() == counterStart+amount
