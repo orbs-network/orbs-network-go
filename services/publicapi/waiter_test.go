@@ -94,10 +94,9 @@ func TestPublicApiWaiter_WaitFor(t *testing.T) {
 		waiter := newWaiter(ctx)
 		wc := waiter.add("key")
 
-		startTime := time.Now()
 		_, err := waiter.wait(wc, 10*time.Millisecond)
 		require.Error(t, err, "expected waiting to be aborted")
-		require.WithinDuration(t, time.Now(), startTime, 13*time.Millisecond, "expected not to reach timeout")
+		require.Contains(t, err.Error(), "timed out waiting for transaction" , "expected waiting to be aborted with timeout")
 	})
 }
 

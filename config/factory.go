@@ -17,6 +17,8 @@ func ForProduction(processorArtifactPath string) MutableNodeConfig {
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 5*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 10)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 100)
 
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
@@ -46,6 +48,8 @@ func ForAcceptanceTests(
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 10*time.Millisecond)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 5*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 100*time.Millisecond)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 30)
 
 	return cfg
 }
@@ -71,6 +75,8 @@ func ForDevelopment(
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 500*time.Millisecond) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 100)
 
 	return cfg
 }
@@ -100,9 +106,6 @@ func DefaultConfig() MutableNodeConfig {
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 3*time.Minute)
 
 	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, 5)
-
-	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
-	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 1)
 
 	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, 20*1024*1024)
 	cfg.SetDuration(TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)

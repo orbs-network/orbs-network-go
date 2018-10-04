@@ -1,7 +1,7 @@
 FROM golang:1.10-alpine
 
 ADD ./e2e.test /opt/orbs/
-ADD ./orbs-json-client /opt/orbs/
+ADD ./gamma-cli /opt/orbs/
 
 WORKDIR /opt/orbs
 
