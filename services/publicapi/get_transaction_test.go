@@ -10,12 +10,12 @@ import (
 	"time"
 )
 
-func TestPublicApiSendTx_PrepareResponse(t *testing.T) {
+func TestPublicApiGetTx_PrepareResponse(t *testing.T) {
 	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 	receipt := builders.TransactionReceipt().WithRandomHash().Build()
 
-	response := toSendTxOutput(&txResponse{
-		transactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
+	response := toGetTxOutput(&txResponse{
+		transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		transactionReceipt: receipt,
 		blockHeight:        126,
 		blockTimestamp:     blockTime,
@@ -24,14 +24,14 @@ func TestPublicApiSendTx_PrepareResponse(t *testing.T) {
 	test.RequireCmpEqual(t, receipt, response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
 	require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
 }
 
-func TestPublicApiSendTx_PrepareResponseNilReceipt(t *testing.T) {
+func TestPublicApiGetTx_PrepareResponseNilReceipt(t *testing.T) {
 	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 
-	response := toSendTxOutput(&txResponse{
-		transactionStatus:  protocol.TRANSACTION_STATUS_REJECTED_CONGESTION,
+	response := toGetTxOutput(&txResponse{
+		transactionStatus:  protocol.TRANSACTION_STATUS_PENDING,
 		transactionReceipt: nil,
 		blockHeight:        8,
 		blockTimestamp:     blockTime,
@@ -41,5 +41,7 @@ func TestPublicApiSendTx_PrepareResponseNilReceipt(t *testing.T) {
 	require.Equal(t, 0, len(response.ClientResponse.TransactionReceipt().Raw()), "Transaction receipt is not equal") // different way
 	require.EqualValues(t, 8, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_REJECTED_CONGESTION, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, response.ClientResponse.TransactionStatus(), "status response is wrong")
 }
+
+

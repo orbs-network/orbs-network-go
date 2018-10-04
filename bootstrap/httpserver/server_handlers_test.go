@@ -107,3 +107,45 @@ func TestHttpServerCallMethod_Error(t *testing.T) {
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 }
+
+
+func TestHttpServerGetTx_Basic(t *testing.T) {
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	papiMock := &services.MockPublicApi{}
+	response := &client.GetTransactionStatusResponseBuilder{
+		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
+		TransactionReceipt: nil,
+		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+		BlockHeight:        1,
+		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
+	}
+
+	papiMock.When("GetTransactionStatus", mock.Any).Times(1).Return(&services.GetTransactionStatusOutput{ClientResponse: response.Build()})
+
+	s := NewHttpServer("", logger, papiMock)
+
+	request := (&client.GetTransactionStatusRequestBuilder{}).Build()
+
+	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
+	rec := httptest.NewRecorder()
+	s.(*server).getTransactionStatusHandler(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
+}
+
+func TestHttpServerGetTx_Error(t *testing.T) {
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	papiMock := &services.MockPublicApi{}
+
+	papiMock.When("GetTransactionStatus", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
+
+	s := NewHttpServer("", logger, papiMock)
+
+	request := (&client.GetTransactionStatusRequestBuilder{}).Build()
+
+	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
+	rec := httptest.NewRecorder()
+	s.(*server).getTransactionStatusHandler(rec, req)
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
+}

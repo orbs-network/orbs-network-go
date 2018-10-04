@@ -54,7 +54,7 @@ func NewNodeLogic(
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, primitives.TimestampNano(time.Now().UnixNano()))
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorageService, gossipService, transactionPoolService, logger)
-	publicApiService := publicapi.NewPublicApi(ctx, nodeConfig, transactionPoolService, virtualMachineService, logger)
+	publicApiService := publicapi.NewPublicApi(ctx, nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger)
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, logger)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
