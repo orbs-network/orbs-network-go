@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -114,32 +113,16 @@ func newPublicApiConfig(txTimeout time.Duration) publicapi.Config {
 
 func TestSendTransaction_TimesOut(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-		txpMock := makeTxMock()
-		vmMock := &services.MockVirtualMachine{}
+		timeout := 1 * time.Second
+		harness := newPublicApiHarness(ctx, timeout)
 
-		timeoutDuration := 1 * time.Millisecond
-
-		cfg := newPublicApiConfig(timeoutDuration)
-		papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, logger)
-
-		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 		txb := builders.Transaction().Builder()
-		txpMock.When("AddNewTransaction", mock.Any).Times(1).
-			Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
-				go func() {
-					time.Sleep(5 * time.Millisecond)
-					papi.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
-						TransactionReceipts: []*protocol.TransactionReceipt{builders.TransactionReceipt().WithTransaction(txb.Build().Transaction()).Build()},
-						BlockHeight:         2,
-						Timestamp:           blockTime,
-					})
-				}()
-				return &services.AddNewTransactionOutput{TransactionStatus: protocol.TRANSACTION_STATUS_PENDING}, nil
-			})
+		harness.OnAddNewTransaction(func() {
+			time.Sleep(5 * time.Millisecond)
+		})
 
 		start := time.Now()
-		tx, err := papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: txb,
 			}).Build(),
@@ -148,8 +131,8 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		require.EqualError(t, err, fmt.Sprintf("timed out waiting for transaction result %s", txHash.String()))
-		require.WithinDuration(t, time.Now(), start, timeoutDuration*2, "timeout duration exceeded")
-		require.NotNil(t, tx, "Send transaction returned nil instead of object")
+		require.WithinDuration(t, time.Now(), start, 2*timeout, "timeout duration exceeded")
+		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
 }
 
