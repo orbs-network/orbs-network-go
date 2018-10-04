@@ -57,7 +57,6 @@ type NodeConfig interface {
 
 	// public api
 	SendTransactionTimeout() time.Duration
-	GetTransactionStatusGrace() time.Duration
 
 	// processor
 	ProcessorArtifactPath() string
