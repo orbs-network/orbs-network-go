@@ -28,6 +28,12 @@ jobs:
       - store_artifacts:
           path: logs
 
+  notify_github_about_dashboard:
+    machine: true
+    steps:
+      - checkout
+      - run: python ./.circleci/post-dashboard-link.py
+
   success:
     machine: true
     steps:
@@ -39,6 +45,7 @@ workflows:
     jobs:
       - build
       - acceptance
+      - notify_github_about_dashboard
       - success:
           requires:
             - build
