@@ -13,21 +13,6 @@ import (
 	"time"
 )
 
-func TestGetTransactionStatus_CallsTxPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second)
-		harness.transactionIsPendingInPool()
-
-		harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
-			ClientRequest: (&client.GetTransactionStatusRequestBuilder{}).Build(),
-		})
-
-		ok, err := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, err, "error happened when it should not")
-	})
-}
-
 func TestGetTransactionStatus_GetCommitStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
@@ -42,6 +27,9 @@ func TestGetTransactionStatus_GetCommitStatusFromTxPool(t *testing.T) {
 			}).Build(),
 		})
 
+		harness.verifyMocks(t) // contract test
+
+		// value test
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "get transaction status returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, result.ClientResponse.TransactionStatus(), "got wrong status")
@@ -63,6 +51,9 @@ func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
 			}).Build(),
 		})
 
+		harness.verifyMocks(t) // contract test
+
+		// value test
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "get transaction status returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "got wrong status")
@@ -77,14 +68,16 @@ func TestGetTransactionStatus_GetTxFromBlockStorage(t *testing.T) {
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
-		harness.transactionIsNotInPool()
-		harness.transactionIsInBlockStorage()
+		harness.transactionIsNotInPoolIsInBlockStorage()
 		result, err := harness.papi.GetTransactionStatus(&services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
 				Txhash: txHash,
 			}).Build(),
 		})
 
+		harness.verifyMocks(t) // contract test
+
+		// value test
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "get transaction status returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, result.ClientResponse.TransactionStatus(), "got wrong status")

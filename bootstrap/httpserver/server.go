@@ -194,6 +194,8 @@ func translateStatusToHttpCode(responseCode protocol.RequestStatus) int {
 		return http.StatusBadRequest
 	case protocol.REQUEST_STATUS_CONGESTION:
 		return http.StatusServiceUnavailable
+	case protocol.REQUEST_STATUS_SYSTEM_ERROR:
+		return http.StatusInternalServerError
 	case protocol.REQUEST_STATUS_RESERVED:
 		return http.StatusInternalServerError
 	}

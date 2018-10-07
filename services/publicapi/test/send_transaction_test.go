@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -16,37 +15,19 @@ import (
 	"time"
 )
 
-func TestSendTransaction_CallsTxPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Millisecond)
-
-		harness.txpMock.When("AddNewTransaction", mock.Any).Return(&services.AddNewTransactionOutput{}).Times(1)
-
-		harness.papi.SendTransaction(&services.SendTransactionInput{
-			ClientRequest: (&client.SendTransactionRequestBuilder{
-				SignedTransaction: builders.Transaction().Builder()}).Build(),
-		})
-
-		ok, err := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, err, "error happened when it should not")
-	})
-}
-
 func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Millisecond)
-
-		harness.txpMock.When("AddNewTransaction", mock.Any).Return(&services.AddNewTransactionOutput{
-			TransactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
-			TransactionReceipt: builders.TransactionReceipt().Build(),
-		}).Times(1)
+		harness.addTransactionReturnsAlreadyCommitted()
 
 		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: builders.Transaction().Builder()}).Build(),
 		})
 
+		harness.verifyMocks(t) // contract test
+
+		// value test
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
@@ -68,6 +49,8 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 				SignedTransaction: txb,
 			}).Build(),
 		})
+
+		harness.verifyMocks(t) // contract test
 
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
@@ -94,6 +77,8 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 			}).Build(),
 		})
 
+		harness.verifyMocks(t) // contract test
+
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, result.ClientResponse.TransactionStatus(), "got wrong status")
@@ -117,6 +102,9 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 			}).Build(),
 		})
 
+		harness.verifyMocks(t) // contract test
+
+		// value test
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		require.EqualError(t, err, fmt.Sprintf("timed out waiting for transaction result %s", txHash.String()))

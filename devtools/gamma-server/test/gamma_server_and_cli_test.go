@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -161,7 +162,7 @@ func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, 
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
 
 	require.NoError(t, callUnmarshalErr, "error calling call_method")
-	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, callResponse.CallResult, "Wrong callResult value")
 	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from getBalance")
 	require.EqualValues(t, expectedAmount, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
 }
@@ -195,7 +196,7 @@ func getCounterValue(t *testing.T, expectedReturnValue uint64) {
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
 
 	require.NoError(t, callUnmarshalErr, "error calling call_method")
-	require.Equal(t, 0, callResponse.CallResult, "Wrong callResult value")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, callResponse.CallResult, "Wrong callResult value")
 	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from Counter.get()")
 	require.EqualValues(t, expectedReturnValue, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected counter value to equal 0")
 }

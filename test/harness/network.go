@@ -246,10 +246,8 @@ func (n *inProcessNetwork) CallCounterGet(nodeIndex int) chan uint64 {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	request := (&client.CallMethodRequestBuilder{
-		Transaction: &protocol.TransactionBuilder{
-			ContractName: primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)),
-			MethodName:   "get",
-		},
+		Transaction: builders.NonSignedTransaction().
+			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get").Builder(),
 	}).Build()
 
 	ch := make(chan uint64)
