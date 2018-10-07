@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -12,7 +13,7 @@ func (s *collectingAvailabilityResponsesState) name() string {
 	return "collecting-availability-responses"
 }
 
-func (s *collectingAvailabilityResponsesState) next() syncState {
+func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
 	panic("implement me")
 }
 

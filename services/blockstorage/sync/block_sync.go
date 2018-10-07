@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -10,7 +11,7 @@ import (
 
 type syncState interface {
 	name() string
-	next() syncState
+	processState(ctx context.Context) syncState
 	blockCommitted(blockHeight primitives.BlockHeight)
 	gotAvailabilityResponse(message gossipmessages.BlockAvailabilityResponseMessage)
 	gotBlocks(source primitives.Ed25519PublicKey, blocks []*protocol.BlockPairContainer)
@@ -24,7 +25,7 @@ type blockSync struct {
 	sf               *stateFactory
 }
 
-func NewBlockSync(bh primitives.BlockHeight, idleStateTimeout time.Duration) *blockSync {
+func NewBlockSync(ctx context.Context, bh primitives.BlockHeight, idleStateTimeout time.Duration) *blockSync {
 	bs := &blockSync{
 		logger:           log.GetLogger(log.Source("block-sync")),
 		lastBlockHeight:  bh,
@@ -33,7 +34,7 @@ func NewBlockSync(bh primitives.BlockHeight, idleStateTimeout time.Duration) *bl
 		sf:               NewStateFactory(),
 	}
 
-	go bs.syncLoop()
+	go bs.syncLoop(ctx)
 	return bs
 }
 
@@ -41,11 +42,11 @@ func (bs *blockSync) Shutdown() {
 	bs.shouldStop = true
 }
 
-func (bs *blockSync) syncLoop() {
+func (bs *blockSync) syncLoop(ctx context.Context) {
 	bs.logger.Info("starting block sync main loop")
 	for state := bs.sf.CreateIdleState(bs.idleStateTimeout); state != nil && !bs.shouldStop; {
 		bs.logger.Info("state transitioning", log.String("current-state", state.name()))
-		state = state.next()
+		state = state.processState(ctx)
 	}
 
 	bs.logger.Info("block sync main loop ended")
