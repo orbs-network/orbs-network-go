@@ -44,7 +44,7 @@ func (s *collectingAvailabilityResponsesState) blockCommitted(blockHeight primit
 }
 
 func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
-	panic("implement me")
+	s.responses = append(s.responses, message)
 }
 
 func (s *collectingAvailabilityResponsesState) gotBlocks(source primitives.Ed25519PublicKey, blocks []*protocol.BlockPairContainer) {

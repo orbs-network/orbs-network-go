@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -32,13 +33,22 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
-	nextShouldBeIdle := collectingState.processState(h.ctx)
+	nextShouldBeFinished := collectingState.processState(h.ctx)
 
-	_, isIdle := nextShouldBeIdle.(*finishedCARState)
+	_, isIdle := nextShouldBeFinished.(*finishedCARState)
 
 	require.True(t, isIdle, "state transition incorrect")
 
 	h.verifyMocks(t)
+}
+
+func TestCollectingAvailabilityResponsesAddsAResponse(t *testing.T) {
+	h := newBlockSyncHarness().WithCollectResponseTimeout(1 * time.Millisecond)
+
+	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	require.True(t, len(collectingState.(*collectingAvailabilityResponsesState).responses) == 0, "should have 0 responses on init")
+	collectingState.gotAvailabilityResponse(&gossipmessages.BlockAvailabilityResponseMessage{nil, nil})
+	require.True(t, len(collectingState.(*collectingAvailabilityResponsesState).responses) == 1, "should have 1 response after adding it")
 }
 
 func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
