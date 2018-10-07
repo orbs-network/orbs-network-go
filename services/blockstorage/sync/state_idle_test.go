@@ -37,3 +37,11 @@ func TestIdleStateTerminatesOnContextTermination(t *testing.T) {
 
 	require.Nil(t, next, "context termination should return a nil new state")
 }
+
+func TestIdleNOP(t *testing.T) {
+	h := newBlockSyncHarness()
+	idle := h.sf.CreateIdleState()
+	// these calls should do nothing, this is just a sanity that they do not panic and return nothing
+	idle.gotAvailabilityResponse(nil)
+	idle.gotBlocks(h.config.NodePublicKey(), nil)
+}

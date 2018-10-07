@@ -40,3 +40,11 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 
 	h.verifyMocks(t)
 }
+
+func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
+	h := newBlockSyncHarness()
+	car := h.sf.CreateCollectingAvailabilityResponseState()
+	// these calls should do nothing, this is just a sanity that they do not panic and return nothing
+	car.gotBlocks(h.config.NodePublicKey(), nil)
+	car.blockCommitted(primitives.BlockHeight(0))
+}

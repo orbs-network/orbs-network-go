@@ -43,7 +43,7 @@ func (s *collectingAvailabilityResponsesState) blockCommitted(blockHeight primit
 	return
 }
 
-func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
 	panic("implement me")
 }
 

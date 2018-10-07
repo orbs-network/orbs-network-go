@@ -34,7 +34,7 @@ func (s *idleState) blockCommitted(blockHeight primitives.BlockHeight) {
 	s.restartIdle <- struct{}{}
 }
 
-func (s *idleState) gotAvailabilityResponse(message gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *idleState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
 	return
 }
 

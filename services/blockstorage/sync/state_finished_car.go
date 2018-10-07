@@ -21,7 +21,7 @@ func (finishedCARState) blockCommitted(blockHeight primitives.BlockHeight) {
 	panic("implement me")
 }
 
-func (finishedCARState) gotAvailabilityResponse(message gossipmessages.BlockAvailabilityResponseMessage) {
+func (finishedCARState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
 	panic("implement me")
 }
 

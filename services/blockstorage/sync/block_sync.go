@@ -15,7 +15,7 @@ type syncState interface {
 	name() string
 	processState(ctx context.Context) syncState
 	blockCommitted(blockHeight primitives.BlockHeight)
-	gotAvailabilityResponse(message gossipmessages.BlockAvailabilityResponseMessage)
+	gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage)
 	gotBlocks(source primitives.Ed25519PublicKey, blocks []*protocol.BlockPairContainer)
 }
 
