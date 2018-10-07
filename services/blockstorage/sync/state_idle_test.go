@@ -8,19 +8,11 @@ import (
 )
 
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
-	idle := createIdleState(30 * time.Millisecond)
+	idle := createIdleState(3 * time.Millisecond)
 	var next syncState = nil
-	// in parallel, we will request to advance to the next state and commit blocks,
-	// while blocks are committed we should never advance
 	go func() { next = idle.next() }()
-	go func() {
-		for i := 11; i < 10000; i++ {
-			time.Sleep(1 * time.Millisecond)
-			idle.blockCommitted(primitives.BlockHeight(i))
-		}
-	}()
-	time.Sleep(10 * time.Millisecond)
-	require.Nil(t, next, "next state should not have happened yet")
+	idle.blockCommitted(primitives.BlockHeight(11))
+	require.True(t, &next != &idle, "next state should be a different idle state (which was restarted)")
 }
 
 func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {

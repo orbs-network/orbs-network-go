@@ -17,7 +17,7 @@ type syncState interface {
 }
 
 type blockSync struct {
-	reporting        log.BasicLogger
+	logger           log.BasicLogger
 	lastBlockHeight  primitives.BlockHeight
 	idleStateTimeout time.Duration
 	shouldStop       bool
@@ -25,7 +25,7 @@ type blockSync struct {
 
 func NewBlockSync(bh primitives.BlockHeight, idleStateTimeout time.Duration) *blockSync {
 	bs := &blockSync{
-		reporting:        log.GetLogger(log.Source("block-sync")),
+		logger:           log.GetLogger(log.Source("block-sync")),
 		lastBlockHeight:  bh,
 		idleStateTimeout: idleStateTimeout,
 		shouldStop:       false,
@@ -40,12 +40,11 @@ func (bs *blockSync) Shutdown() {
 }
 
 func (bs *blockSync) syncLoop() {
-	bs.reporting.Info("starting block sync main loop")
-	var state syncState = nil
-	for state = createIdleState(bs.idleStateTimeout); state != nil && !bs.shouldStop; {
-		bs.reporting.Info("state transitioning", log.String("current-state", state.name()))
+	bs.logger.Info("starting block sync main loop")
+	for state := createIdleState(bs.idleStateTimeout); state != nil && !bs.shouldStop; {
+		bs.logger.Info("state transitioning", log.String("current-state", state.name()))
 		state = state.next()
 	}
 
-	bs.reporting.Info("block sync main loop ended")
+	bs.logger.Info("block sync main loop ended")
 }

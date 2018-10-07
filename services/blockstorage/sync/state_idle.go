@@ -11,12 +11,14 @@ import (
 type idleState struct {
 	noCommitTimeout time.Duration
 	noCommitTimer   *synchronization.Timer
+	restartIdle     chan struct{}
 }
 
-func createIdleState(noCommitTimeout time.Duration) *idleState {
+func createIdleState(noCommitTimeout time.Duration) syncState {
 	return &idleState{
 		noCommitTimeout: noCommitTimeout,
 		noCommitTimer:   synchronization.NewTimer(noCommitTimeout),
+		restartIdle:     make(chan struct{}),
 	}
 }
 
@@ -28,11 +30,13 @@ func (s *idleState) next() syncState {
 	select {
 	case <-s.noCommitTimer.C:
 		return &collectingAvailabilityResponsesState{}
+	case <-s.restartIdle:
+		return createIdleState(s.noCommitTimeout)
 	}
 }
 
 func (s *idleState) blockCommitted(blockHeight primitives.BlockHeight) {
-	s.noCommitTimer.Reset(s.noCommitTimeout)
+	s.restartIdle <- struct{}{}
 }
 
 func (s *idleState) gotAvailabilityResponse(message gossipmessages.BlockAvailabilityResponseMessage) {
