@@ -13,8 +13,13 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 	sf := stateFactory{}
 	idle := sf.CreateIdleState(3 * time.Millisecond)
 	var next syncState = nil
-	go func() { next = idle.processState(ctx) }()
+	latch := make(chan struct{})
+	go func() {
+		next = idle.processState(ctx)
+		latch <- struct{}{}
+	}()
 	idle.blockCommitted(primitives.BlockHeight(11))
+	<-latch
 	require.True(t, next != idle, "processState state should be a different idle state (which was restarted)")
 }
 
