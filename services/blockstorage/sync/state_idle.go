@@ -23,7 +23,7 @@ func createIdleState(noCommitTimeout time.Duration) *idleState {
 func (s *idleState) next() syncState {
 	select {
 	case <-s.noCommitTimer.C:
-		panic("implement me")
+		return &collectingAvailabilityResponsesState{}
 	}
 }
 

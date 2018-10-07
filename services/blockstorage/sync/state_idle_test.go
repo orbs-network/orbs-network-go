@@ -22,3 +22,11 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	require.Nil(t, next, "next state should not have happened yet")
 }
+
+func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
+	idle := createIdleState(3 * time.Millisecond)
+	var next syncState = nil
+	next = idle.next()
+	_, ok := next.(*collectingAvailabilityResponsesState)
+	require.True(t, ok, "next state should be collecting availability responses")
+}
