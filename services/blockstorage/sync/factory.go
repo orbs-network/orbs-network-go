@@ -40,3 +40,7 @@ func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 		logger:  f.logger,
 	}
 }
+
+func (f *stateFactory) CreateFinishedCARState() syncState {
+	return &finishedCARState{}
+}

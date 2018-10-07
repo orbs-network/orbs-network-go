@@ -77,6 +77,12 @@ func (h *blockSyncHarness) WithNoCommitTimeout(d time.Duration) *blockSyncHarnes
 	return h
 }
 
+func (h *blockSyncHarness) WithCollectResponseTimeout(d time.Duration) *blockSyncHarness {
+	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, d)
+	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
+	return h
+}
+
 func (h *blockSyncHarness) Cancel() {
 	ctx, cancel := context.WithCancel(h.ctx)
 	h.ctx = ctx

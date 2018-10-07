@@ -35,7 +35,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	waitForResponses := synchronization.NewTimer(s.config.BlockSyncCollectResponseTimeout())
 	select {
 	case <-waitForResponses.C:
-		return nil
+		return s.sf.CreateFinishedCARState()
 	}
 }
 
