@@ -25,10 +25,7 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 				SignedTransaction: builders.Transaction().Builder()}).Build(),
 		})
 
-		// contract test
-		ok, errCalled := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, errCalled, "error happened when it should not")
+		harness.verifyMocks(t) // contract test
 
 		// value test
 		require.NoError(t, err, "error happened when it should not")
@@ -53,10 +50,7 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 			}).Build(),
 		})
 
-		// contract test
-		ok, errCalled := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, errCalled, "error happened when it should not")
+		harness.verifyMocks(t) // contract test
 
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
@@ -83,10 +77,7 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 			}).Build(),
 		})
 
-		// contract test
-		ok, errCalled := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, errCalled, "error happened when it should not")
+		harness.verifyMocks(t) // contract test
 
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
@@ -111,6 +102,9 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 			}).Build(),
 		})
 
+		harness.verifyMocks(t) // contract test
+
+		// value test
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		require.EqualError(t, err, fmt.Sprintf("timed out waiting for transaction result %s", txHash.String()))

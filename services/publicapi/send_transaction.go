@@ -26,6 +26,9 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	txHash := digest.CalcTxHash(tx.Transaction())
 	s.logger.Info("send transaction request received", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
+	meter := s.logger.Meter("tx-processing-time", log.Stringable("txHash", txHash))
+	defer meter.Done()
+
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
 	addResp, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{SignedTransaction: tx})

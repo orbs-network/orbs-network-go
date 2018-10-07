@@ -2,6 +2,7 @@ package publicapi
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -16,27 +17,36 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 	}
 
 	s.logger.Info("get transaction status request received", log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
-	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
-		Txhash:               input.ClientRequest.Txhash(),
-		TransactionTimestamp: input.ClientRequest.TransactionTimestamp(),
-	})
-	if err != nil {
-		s.logger.Info("get transaction status failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
-		return toGetTxOutput(txStatusToTxResponse(txReceipt)), err
-	}
-	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
-		return toGetTxOutput(txStatusToTxResponse(txReceipt)), nil
+	txHash :=  input.ClientRequest.Txhash()
+	timestamp := input.ClientRequest.TransactionTimestamp()
+
+	meter := s.logger.Meter("tx-get-status-time", log.Stringable("txHash", txHash))
+	defer meter.Done()
+
+	if txReceipt, err, ok := s.getFromTxPool(txHash, timestamp); ok {
+		return toGetTxOutput(txReceipt), err
 	}
 
-	blockReceipt, err := s.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
-		Txhash:               input.ClientRequest.Txhash(),
-		TransactionTimestamp: input.ClientRequest.TransactionTimestamp(),
+	blockReceipt, err := s.getFromBlockStorage(txHash, timestamp);
+	if  err != nil {
+		return nil, err
+	}
+	return toGetTxOutput(blockReceipt), err
+}
+
+func (s *service) getFromTxPool(txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error, bool) {
+	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
+		Txhash:               txHash,
+		TransactionTimestamp: timestamp,
 	})
 	if err != nil {
-		s.logger.Info("get transaction status failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
-		return toGetTxOutput(blockToTxResponse(blockReceipt)), err
+		s.logger.Info("get transaction status failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		return txStatusToTxResponse(txReceipt), err, true
 	}
-	return toGetTxOutput(blockToTxResponse(blockReceipt)), nil
+	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
+		return txStatusToTxResponse(txReceipt), nil, true
+	}
+	return nil, nil, false
 }
 
 func txStatusToTxResponse(txStatus *services.GetCommittedTransactionReceiptOutput) *txResponse {
@@ -46,6 +56,19 @@ func txStatusToTxResponse(txStatus *services.GetCommittedTransactionReceiptOutpu
 		blockHeight:        txStatus.BlockHeight,
 		blockTimestamp:     txStatus.BlockTimestamp,
 	}
+}
+
+func (s *service) getFromBlockStorage(txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error) {
+	txReceipt, err := s.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+		Txhash:               txHash,
+		TransactionTimestamp: timestamp,
+	})
+	if err != nil {
+		s.logger.Info("get transaction status failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		return nil, err
+	}
+	return blockToTxResponse(txReceipt), nil
+
 }
 
 func blockToTxResponse(bReceipt *services.GetTransactionReceiptOutput) *txResponse {

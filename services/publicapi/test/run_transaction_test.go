@@ -24,10 +24,7 @@ func TestRunTransaction_CallsVm(t *testing.T) {
 			}).Build(),
 		})
 
-		// contract test
-		ok, callError := harness.vmMock.Verify()
-		require.True(t, ok, "should have called the vm func")
-		require.NoError(t, callError, "error happened when it should not")
+		harness.verifyMocks(t) // contract test
 
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result.ClientResponse.CallMethodResult(), "got wrong status")
 		require.NoError(t, err, "error happened when it should not")

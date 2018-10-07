@@ -27,13 +27,7 @@ func TestGetTransactionStatus_GetCommitStatusFromTxPool(t *testing.T) {
 			}).Build(),
 		})
 
-		// contract test
-		ok, errCalled := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, errCalled, "error happened when it should not")
-		ok, errCalled = harness.bksMock.Verify()
-		require.True(t, ok, "should NOT have called the bks func")
-		require.NoError(t, errCalled, "error happened when it should not")
+		harness.verifyMocks(t) // contract test
 
 		// value test
 		require.NoError(t, err, "error happened when it should not")
@@ -57,13 +51,7 @@ func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
 			}).Build(),
 		})
 
-		// contract test
-		ok, errCalled := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, errCalled, "error happened when it should not")
-		ok, errCalled = harness.bksMock.Verify()
-		require.True(t, ok, "should NOT have called the bks func")
-		require.NoError(t, errCalled, "error happened when it should not")
+		harness.verifyMocks(t) // contract test
 
 		// value test
 		require.NoError(t, err, "error happened when it should not")
@@ -87,13 +75,7 @@ func TestGetTransactionStatus_GetTxFromBlockStorage(t *testing.T) {
 			}).Build(),
 		})
 
-		// contract test
-		ok, errCalled := harness.txpMock.Verify()
-		require.True(t, ok, "should have called the txp func")
-		require.NoError(t, errCalled, "error happened when it should not")
-		ok, errCalled = harness.bksMock.Verify()
-		require.True(t, ok, "should have called the bks func")
-		require.NoError(t, errCalled, "error happened when it should not")
+		harness.verifyMocks(t) // contract test
 
 		// value test
 		require.NoError(t, err, "error happened when it should not")

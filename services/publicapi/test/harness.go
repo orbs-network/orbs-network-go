@@ -9,7 +9,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/stretchr/testify/require"
 	"os"
+	"testing"
 	"time"
 )
 
@@ -98,4 +100,17 @@ func (h *harness) runTransactionSuccess() {
 			CallResult:              protocol.EXECUTION_RESULT_SUCCESS,
 			OutputArgumentArray:     nil,
 		})
+}
+
+func (h *harness) verifyMocks(t *testing.T) {
+	// contract test
+	ok, errCalled := h.txpMock.Verify()
+	require.True(t, ok, "txPool mock called incorrectly")
+	require.NoError(t, errCalled, "error happened when it should not")
+	ok, errCalled = h.bksMock.Verify()
+	require.True(t, ok, "block storage mock called incorrectly")
+	require.NoError(t, errCalled, "error happened when it should not")
+	ok, errCalled = h.vmMock.Verify()
+	require.True(t, ok, "virtual machine mock called incorrectly")
+	require.NoError(t, errCalled, "error happened when it should not")
 }

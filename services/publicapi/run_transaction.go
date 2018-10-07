@@ -25,6 +25,9 @@ func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMet
 	}
 	s.logger.Info("call method request received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
+	meter := s.logger.Meter("tx-call-method-time", log.Stringable("txHash", txHash))
+	defer meter.Done()
+
 	result, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
 		Transaction: tx,
 	})
