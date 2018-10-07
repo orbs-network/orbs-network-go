@@ -4,15 +4,14 @@ import json
 import re
 
 TOKEN = os.environ['GITHUB_COMMENTS_TOKEN']
-BRANCH = os.environ['CIRCLE_BRANCH']
 
 def get_pull_requests():
     url = 'https://api.github.com/repos/orbs-network/orbs-network-go/pulls'
     data = json.load(urllib2.urlopen(url))
-    return map(lambda node: {'number': node['number'], 'branch': node['head']['ref']}, data)
+    return map(lambda node: {'number': node['number'], 'branch': node['head']['ref'], 'repo': node['head']['repo']['full_name']}, data)
 
-def find_pull_request_by_branch(branch):
-    return lambda pr: pr['branch'] == branch
+def orbs_network_only(pr):
+    return pr['repo'] == 'orbs-network/orbs-network-go'
 
 def get_pull_request_comments(pr):
     url = 'https://api.github.com/repos/orbs-network/orbs-network-go/issues/' + str(pr['number']) + '/comments'
@@ -34,17 +33,16 @@ def post_dashboard_link(pr):
     f.close()
     return response
 
+def update_pull_request(pr):
+    print 'Found pull request', pr['number']
+    comments = get_pull_request_comments(pr)
+
+    if any(map(has_dashboard_comment, comments)):
+        print 'Comment already exists, skipping'
+    else:
+        print 'Posting dashboard link'
+        post_dashboard_link(pr)
+
 if __name__ == '__main__':
-    pull_requests = filter(find_pull_request_by_branch(BRANCH), get_pull_requests())
-
-    if len(pull_requests) > 0:
-        pr = pull_requests[0]
-        print 'Found pull request', pr
-
-        comments = get_pull_request_comments(pr)
-
-        if any(map(has_dashboard_comment, comments)):
-            print 'Comment already exists, skipping'
-        else:
-            print 'Posting dashboard link'
-            post_dashboard_link(pr)
+    pull_requests = filter(orbs_network_only, get_pull_requests())
+    map(update_pull_request, pull_requests)
