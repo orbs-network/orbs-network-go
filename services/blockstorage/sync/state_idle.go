@@ -9,11 +9,15 @@ import (
 	"time"
 )
 
+type idleConfig interface {
+	BlockSyncNoCommitInterval() time.Duration
+}
+
 type idleState struct {
-	noCommitTimeout time.Duration
-	noCommitTimer   *synchronization.Timer
-	restartIdle     chan struct{}
-	sf              *stateFactory
+	config        idleConfig
+	noCommitTimer *synchronization.Timer
+	restartIdle   chan struct{}
+	sf            *stateFactory
 }
 
 func (s *idleState) name() string {
@@ -25,7 +29,7 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	case <-s.noCommitTimer.C:
 		return &collectingAvailabilityResponsesState{}
 	case <-s.restartIdle:
-		return s.sf.CreateIdleState(s.noCommitTimeout)
+		return s.sf.CreateIdleState()
 	case <-ctx.Done():
 		return nil
 	}

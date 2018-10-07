@@ -1,21 +1,42 @@
 package sync
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"time"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-type stateFactory struct{}
-
-func NewStateFactory() *stateFactory {
-	return &stateFactory{}
+type stateFactory struct {
+	config  blockSyncConfig
+	gossip  gossiptopics.BlockSync
+	storage BlockSyncStorage
+	logger  log.BasicLogger
 }
 
-func (f *stateFactory) CreateIdleState(d time.Duration) syncState {
+func NewStateFactory(config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *stateFactory {
+	return &stateFactory{
+		config:  config,
+		gossip:  gossip,
+		storage: storage,
+		logger:  logger,
+	}
+}
+
+func (f *stateFactory) CreateIdleState() syncState {
 	return &idleState{
-		sf:              f,
-		noCommitTimeout: d,
-		noCommitTimer:   synchronization.NewTimer(d),
-		restartIdle:     make(chan struct{}),
+		sf:            f,
+		config:        f.config,
+		noCommitTimer: synchronization.NewTimer(f.config.BlockSyncNoCommitInterval()),
+		restartIdle:   make(chan struct{}),
+	}
+}
+
+func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
+	return &collectingAvailabilityResponsesState{
+		sf:      f,
+		gossip:  f.gossip,
+		storage: f.storage,
+		config:  f.config,
+		logger:  f.logger,
 	}
 }

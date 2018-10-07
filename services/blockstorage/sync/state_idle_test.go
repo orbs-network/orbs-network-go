@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -9,13 +8,12 @@ import (
 )
 
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
-	ctx := context.Background()
-	sf := stateFactory{}
-	idle := sf.CreateIdleState(3 * time.Millisecond)
+	h := newBlockSyncHarness().WithNoCommitTimeout(3 * time.Millisecond)
+	idle := h.sf.CreateIdleState()
 	var next syncState = nil
 	latch := make(chan struct{})
 	go func() {
-		next = idle.processState(ctx)
+		next = idle.processState(h.ctx)
 		latch <- struct{}{}
 	}()
 	idle.blockCommitted(primitives.BlockHeight(11))
@@ -24,20 +22,18 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 }
 
 func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
-	ctx := context.Background()
-	sf := stateFactory{}
-	idle := sf.CreateIdleState(3 * time.Millisecond)
-	next := idle.processState(ctx)
+	h := newBlockSyncHarness().WithNoCommitTimeout(3 * time.Millisecond)
+	idle := h.sf.CreateIdleState()
+	next := idle.processState(h.ctx)
 	_, ok := next.(*collectingAvailabilityResponsesState)
 	require.True(t, ok, "processState state should be collecting availability responses")
 }
 
 func TestIdleStateTerminatesOnContextTermination(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	sf := stateFactory{}
-	idle := sf.CreateIdleState(3 * time.Millisecond)
-	next := idle.processState(ctx)
+	h := newBlockSyncHarness().WithNoCommitTimeout(3 * time.Millisecond)
+	h.Cancel()
+	idle := h.sf.CreateIdleState()
+	next := idle.processState(h.ctx)
 
 	require.Nil(t, next, "context termination should return a nil new state")
 }
