@@ -6,15 +6,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"time"
 )
 
-type idleConfig interface {
-	BlockSyncNoCommitInterval() time.Duration
-}
-
 type idleState struct {
-	config        idleConfig
+	config        blockSyncConfig
 	noCommitTimer *synchronization.Timer
 	restartIdle   chan struct{}
 	sf            *stateFactory

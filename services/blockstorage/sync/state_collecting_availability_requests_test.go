@@ -11,7 +11,6 @@ import (
 func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T) {
 	h := newBlockSyncHarness()
 
-	//harness.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock").Return().Times(1)
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 

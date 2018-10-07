@@ -8,20 +8,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"time"
 )
-
-type collAvailRespConfig interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	BlockSyncBatchSize() uint32
-	BlockSyncCollectResponseTimeout() time.Duration
-}
 
 type collectingAvailabilityResponsesState struct {
 	sf        *stateFactory
 	gossip    gossiptopics.BlockSync
 	storage   BlockSyncStorage
-	config    collAvailRespConfig
+	config    blockSyncConfig
 	responses []*gossipmessages.BlockAvailabilityResponseMessage
 	logger    log.BasicLogger
 }
