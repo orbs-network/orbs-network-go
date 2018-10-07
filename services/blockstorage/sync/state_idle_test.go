@@ -8,7 +8,7 @@ import (
 )
 
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
-	idle := createIdleState(3 * time.Millisecond)
+	idle := createIdleState(30 * time.Millisecond)
 	var next syncState = nil
 	// in parallel, we will request to advance to the next state and commit blocks,
 	// while blocks are committed we should never advance

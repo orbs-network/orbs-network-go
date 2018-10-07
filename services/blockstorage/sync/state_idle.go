@@ -20,6 +20,10 @@ func createIdleState(noCommitTimeout time.Duration) *idleState {
 	}
 }
 
+func (s *idleState) name() string {
+	return "idle-state"
+}
+
 func (s *idleState) next() syncState {
 	select {
 	case <-s.noCommitTimer.C:

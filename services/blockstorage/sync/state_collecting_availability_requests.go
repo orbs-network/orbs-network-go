@@ -8,6 +8,10 @@ import (
 
 type collectingAvailabilityResponsesState struct{}
 
+func (s *collectingAvailabilityResponsesState) name() string {
+	return "collecting-availability-responses"
+}
+
 func (s *collectingAvailabilityResponsesState) next() syncState {
 	panic("implement me")
 }
