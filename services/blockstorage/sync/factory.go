@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
@@ -41,6 +42,9 @@ func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	}
 }
 
-func (f *stateFactory) CreateFinishedCARState() syncState {
-	return &finishedCARState{}
+func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockAvailabilityResponseMessage) syncState {
+	return &finishedCARState{
+		responses: responses,
+		sf:        f,
+	}
 }

@@ -7,24 +7,31 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-type finishedCARState struct{}
+type finishedCARState struct {
+	responses []*gossipmessages.BlockAvailabilityResponseMessage
+	sf        *stateFactory
+}
 
-func (finishedCARState) name() string {
+func (s *finishedCARState) name() string {
 	return "finished-collecting-availability-requests-state"
 }
 
-func (finishedCARState) processState(ctx context.Context) syncState {
+func (s *finishedCARState) processState(ctx context.Context) syncState {
+	if len(s.responses) == 0 {
+		return s.sf.CreateIdleState()
+	}
+
+	return nil
+}
+
+func (s *finishedCARState) blockCommitted(blockHeight primitives.BlockHeight) {
 	panic("implement me")
 }
 
-func (finishedCARState) blockCommitted(blockHeight primitives.BlockHeight) {
+func (s *finishedCARState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
 	panic("implement me")
 }
 
-func (finishedCARState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
-	panic("implement me")
-}
-
-func (finishedCARState) gotBlocks(source primitives.Ed25519PublicKey, blocks []*protocol.BlockPairContainer) {
+func (s *finishedCARState) gotBlocks(source primitives.Ed25519PublicKey, blocks []*protocol.BlockPairContainer) {
 	panic("implement me")
 }
