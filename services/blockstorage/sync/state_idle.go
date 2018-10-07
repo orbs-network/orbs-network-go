@@ -12,14 +12,7 @@ type idleState struct {
 	noCommitTimeout time.Duration
 	noCommitTimer   *synchronization.Timer
 	restartIdle     chan struct{}
-}
-
-func createIdleState(noCommitTimeout time.Duration) syncState {
-	return &idleState{
-		noCommitTimeout: noCommitTimeout,
-		noCommitTimer:   synchronization.NewTimer(noCommitTimeout),
-		restartIdle:     make(chan struct{}),
-	}
+	sf              *stateFactory
 }
 
 func (s *idleState) name() string {
@@ -31,7 +24,7 @@ func (s *idleState) next() syncState {
 	case <-s.noCommitTimer.C:
 		return &collectingAvailabilityResponsesState{}
 	case <-s.restartIdle:
-		return createIdleState(s.noCommitTimeout)
+		return s.sf.CreateIdleState(s.noCommitTimeout)
 	}
 }
 

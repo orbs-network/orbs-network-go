@@ -8,7 +8,8 @@ import (
 )
 
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
-	idle := createIdleState(3 * time.Millisecond)
+	sf := stateFactory{}
+	idle := sf.CreateIdleState(3 * time.Millisecond)
 	var next syncState = nil
 	go func() { next = idle.next() }()
 	idle.blockCommitted(primitives.BlockHeight(11))
@@ -16,7 +17,8 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 }
 
 func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
-	idle := createIdleState(3 * time.Millisecond)
+	sf := stateFactory{}
+	idle := sf.CreateIdleState(3 * time.Millisecond)
 	var next syncState = nil
 	next = idle.next()
 	_, ok := next.(*collectingAvailabilityResponsesState)
