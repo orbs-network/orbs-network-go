@@ -8,7 +8,7 @@ import (
 )
 
 func ForProduction(processorArtifactPath string) MutableNodeConfig {
-	cfg := DefaultConfig()
+	cfg := defaultConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2*time.Second)
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
@@ -35,7 +35,7 @@ func ForAcceptanceTests(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := DefaultConfig()
+	cfg := defaultConfig()
 	cfg.OverrideNodeSpecificValues(federationNodes,
 		gossipPeers,
 		0,
@@ -62,7 +62,7 @@ func ForDevelopment(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) MutableNodeConfig {
-	cfg := DefaultConfig()
+	cfg := defaultConfig()
 	cfg.OverrideNodeSpecificValues(federationNodes,
 		gossipPeers,
 		0,
@@ -87,7 +87,7 @@ func EmptyConfig() MutableNodeConfig {
 	}
 }
 
-func DefaultConfig() MutableNodeConfig {
+func defaultConfig() MutableNodeConfig {
 	cfg := EmptyConfig()
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
