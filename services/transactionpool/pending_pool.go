@@ -41,7 +41,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	size := sizeOf(transaction)
 
 	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
-		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_CONGESTION}
+		return nil, &ErrTransactionRejected{TransactionStatus: protocol.TRANSACTION_STATUS_REJECTED_CONGESTION}
 	}
 
 	key := digest.CalcTxHash(transaction.Transaction())
@@ -49,7 +49,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	if _, exists := p.transactionsByHash[key.KeyForMap()]; exists {
-		return nil, &ErrTransactionRejected{protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
+		return nil, &ErrTransactionRejected{TransactionStatus: protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 	}
 
 	p.currentSizeInBytes += size

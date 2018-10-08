@@ -49,8 +49,7 @@ func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	config Config,
-	logger log.BasicLogger,
-	initialTimestamp primitives.TimestampNano) services.TransactionPool {
+	logger log.BasicLogger) services.TransactionPool {
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes)
 
 	s := &service{
@@ -59,7 +58,7 @@ func NewTransactionPool(ctx context.Context,
 		config:         config,
 		logger:         logger.WithTags(LogTag),
 
-		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
+		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()), // this is so that we do not reject transactions on startup, before any block has been committed
 		pendingPool:                 pendingPool,
 		committedPool:               NewCommittedPool(),
 		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
@@ -153,6 +152,9 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 }
 
 func (s *service) createValidationContext() *validationContext {
+	if s.lastCommittedBlockTimestamp == 0 {
+		panic("last committed block timestamp should never be zero!")
+	}
 	return &validationContext{
 		expiryWindow:                s.config.TransactionPoolTransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,

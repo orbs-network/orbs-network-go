@@ -17,7 +17,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	s.logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 
 	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
-		s.logger.Info("transaction is invalid", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
+		s.logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 

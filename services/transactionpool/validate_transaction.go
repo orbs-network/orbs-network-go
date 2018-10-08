@@ -2,6 +2,7 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"time"
@@ -41,7 +42,7 @@ func (c *validationContext) validateTransaction(transaction *protocol.SignedTran
 
 func validateProtocolVersion(tx *protocol.SignedTransaction) *ErrTransactionRejected {
 	if tx.Transaction().ProtocolVersion() != ProtocolVersion {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("protocol-version", ProtocolVersion), log.Stringable("protocol-version", tx.Transaction().ProtocolVersion())}
 	}
 	return nil
 }
@@ -49,11 +50,11 @@ func validateProtocolVersion(tx *protocol.SignedTransaction) *ErrTransactionReje
 func validateSignature(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	tx := transaction.Transaction()
 	if !tx.Signer().IsSchemeEddsa() {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME, log.String("signer-scheme", "Eddsa"), log.Stringable("signer", tx.Signer())}
 	}
 
 	if len(tx.Signer().Eddsa().SignerPublicKey()) != signature.ED25519_PUBLIC_KEY_SIZE_BYTES {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, log.Int("signature-length", signature.ED25519_PUBLIC_KEY_SIZE_BYTES), log.Int("signature-length", len(tx.Signer().Eddsa().SignerPublicKey()))}
 	}
 
 	//TODO actually verify the signature
@@ -65,7 +66,7 @@ func validateContractName(transaction *protocol.SignedTransaction) *ErrTransacti
 	tx := transaction.Transaction()
 	if tx.ContractName() == "" {
 		//TODO what is the expected status?
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED, log.String("contract-name", "non-empty"), log.String("contract-name", "")}
 	}
 
 	return nil
@@ -73,8 +74,9 @@ func validateContractName(transaction *protocol.SignedTransaction) *ErrTransacti
 
 func validateTransactionNotExpired(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-		if transaction.Transaction().Timestamp() < primitives.TimestampNano(time.Now().Add(vctx.expiryWindow*-1).UnixNano()) {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
+		threshold := primitives.TimestampNano(time.Now().Add(vctx.expiryWindow * -1).UnixNano())
+		if transaction.Transaction().Timestamp() < threshold {
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
 		}
 
 		return nil
@@ -85,7 +87,7 @@ func validateTransactionNotInFuture(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 		tsWithGrace := vctx.lastCommittedBlockTimestamp + primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds())
 		if transaction.Transaction().Timestamp() > tsWithGrace {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME}
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, log.TimestampNano("max-timestamp", tsWithGrace), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
 		}
 
 		return nil
@@ -95,7 +97,7 @@ func validateTransactionNotInFuture(vctx *validationContext) validator {
 func validateTransactionVirtualChainId(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 		if !transaction.Transaction().VirtualChainId().Equal(vctx.virtualChainId) {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH}
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, log.VirtualChainId(vctx.virtualChainId), log.VirtualChainId(transaction.Transaction().VirtualChainId())}
 
 		}
 		return nil

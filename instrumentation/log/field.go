@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"reflect"
+	"time"
 )
 
 type Field struct {
@@ -105,6 +106,14 @@ func Float64(key string, value float64) *Field {
 	return &Field{Key: key, Float: value, Type: FloatType}
 }
 
+func TimestampNano(key string, value primitives.TimestampNano) *Field {
+	return &Field{Key: key, Int: int64(value), Type: TimeType}
+}
+
+func Timestamp(key string, value time.Time) *Field {
+	return &Field{Key: key, Int: value.UnixNano(), Type: TimeType}
+}
+
 func Error(value error) *Field {
 	return &Field{Key: "error", Error: value, Type: ErrorType}
 }
@@ -113,7 +122,14 @@ func BlockHeight(value primitives.BlockHeight) *Field {
 	return &Field{Key: "block-height", String: value.String(), Type: StringType}
 }
 
+func VirtualChainId(value primitives.VirtualChainId) *Field {
+	return &Field{Key: "vcid", String: value.String(), Type: StringType}
+}
+
 func (f *Field) Value() interface{} {
+	if f == nil {
+		return "<nil>"
+	}
 	switch f.Type {
 	case NodeType:
 		return f.String
@@ -127,6 +143,8 @@ func (f *Field) Value() interface{} {
 		return f.String
 	case IntType:
 		return f.Int
+	case TimeType:
+		return time.Unix(0, f.Int)
 	case UintType:
 		return f.Uint
 	case BytesType:
