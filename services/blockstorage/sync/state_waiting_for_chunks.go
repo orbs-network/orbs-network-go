@@ -39,9 +39,9 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	case <-s.process:
 		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateProcessingBlocksState(s.blocks)
+	case <-ctx.Done():
+		return nil
 	}
-
-	return nil
 }
 
 func (s *waitingForChunksState) blockCommitted(blockHeight primitives.BlockHeight) {
