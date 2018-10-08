@@ -2,6 +2,7 @@ package sync
 
 import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -25,4 +26,14 @@ func TestFinishedWithResponsesMoveToWaitingForChunk(t *testing.T) {
 	_, isWaiting := shouldBeWaitingState.(*waitingForChunksState)
 	require.True(t, isWaiting, "next state should be waiting for chunk")
 
+}
+
+func TestFinishedNOP(t *testing.T) {
+	h := newBlockSyncHarness()
+	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
+
+	// sanity test, these should do nothing
+	finishedState.gotBlocks(h.config.NodePublicKey(), nil)
+	finishedState.blockCommitted(primitives.BlockHeight(0))
+	finishedState.gotAvailabilityResponse(nil)
 }

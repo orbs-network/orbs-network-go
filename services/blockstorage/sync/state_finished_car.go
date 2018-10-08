@@ -32,13 +32,13 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 }
 
 func (s *finishedCARState) blockCommitted(blockHeight primitives.BlockHeight) {
-	panic("implement me")
+	return
 }
 
 func (s *finishedCARState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
-	panic("implement me")
+	return
 }
 
 func (s *finishedCARState) gotBlocks(source primitives.Ed25519PublicKey, blocks []*protocol.BlockPairContainer) {
-	panic("implement me")
+	return
 }
