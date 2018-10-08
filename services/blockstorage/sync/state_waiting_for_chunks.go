@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -26,6 +27,13 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	err := s.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
 		s.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))
+		return s.sf.CreateIdleState()
+	}
+
+	timeout := synchronization.NewTimer(s.config.BlockSyncCollectChunksTimeout())
+	select {
+	case <-timeout.C:
+		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateIdleState()
 	}
 
