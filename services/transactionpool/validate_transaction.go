@@ -22,7 +22,8 @@ func (c *validationContext) validateTransaction(transaction *protocol.SignedTran
 	//TODO can we create the list of validators once on system startup; this will save on performance in the critical path
 	validators := []validator{
 		validateProtocolVersion,
-		validateSignerAndContractName,
+		validateContractName,
+		validateSignature,
 		validateTransactionNotExpired(c),
 		validateTransactionNotInFuture(c),
 		validateTransactionVirtualChainId(c),
@@ -45,14 +46,28 @@ func validateProtocolVersion(tx *protocol.SignedTransaction) *ErrTransactionReje
 	return nil
 }
 
-func validateSignerAndContractName(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+func validateSignature(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	tx := transaction.Transaction()
-	if tx.ContractName() == "" ||
-		!tx.Signer().IsSchemeEddsa() ||
-		len(tx.Signer().Eddsa().SignerPublicKey()) != signature.ED25519_PUBLIC_KEY_SIZE_BYTES {
-		//TODO is this the correct status?
+	if !tx.Signer().IsSchemeEddsa() {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME}
+	}
+
+	if len(tx.Signer().Eddsa().SignerPublicKey()) != signature.ED25519_PUBLIC_KEY_SIZE_BYTES {
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}
 	}
+
+	//TODO actually verify the signature
+
+	return nil
+}
+
+func validateContractName(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+	tx := transaction.Transaction()
+	if tx.ContractName() == ""{
+		//TODO what is the expected status?
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED}
+	}
+
 	return nil
 }
 
@@ -70,7 +85,7 @@ func validateTransactionNotInFuture(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 		tsWithGrace := primitives.TimestampNano(time.Now().UnixNano() + vctx.futureTimestampGrace.Nanoseconds())
 		if transaction.Transaction().Timestamp() > tsWithGrace {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED}
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME}
 		}
 
 		return nil
