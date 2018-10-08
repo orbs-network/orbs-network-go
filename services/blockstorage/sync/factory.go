@@ -53,7 +53,11 @@ func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockA
 
 func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519PublicKey) syncState {
 	return &waitingForChunksState{
-		sf:        f,
 		sourceKey: sourceKey,
+		sf:        f,
+		gossip:    f.gossip,
+		storage:   f.storage,
+		config:    f.config,
+		logger:    f.logger,
 	}
 }
