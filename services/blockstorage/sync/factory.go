@@ -59,5 +59,13 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519P
 		storage:   f.storage,
 		config:    f.config,
 		logger:    f.logger,
+		process:   make(chan struct{}),
+	}
+}
+
+func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.BlockSyncResponseMessage) syncState {
+	return &processingBlocksState{
+		blocks: message,
+		sf:     f,
 	}
 }

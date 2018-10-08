@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
@@ -17,6 +16,8 @@ type waitingForChunksState struct {
 	config    blockSyncConfig
 	gossip    gossiptopics.BlockSync
 	logger    log.BasicLogger
+	process   chan struct{}
+	blocks    *gossipmessages.BlockSyncResponseMessage
 }
 
 func (s *waitingForChunksState) name() string {
@@ -35,6 +36,9 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateIdleState()
+	case <-s.process:
+		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
+		return s.sf.CreateProcessingBlocksState(s.blocks)
 	}
 
 	return nil
@@ -48,8 +52,9 @@ func (s *waitingForChunksState) gotAvailabilityResponse(message *gossipmessages.
 	panic("implement me")
 }
 
-func (s *waitingForChunksState) gotBlocks(source primitives.Ed25519PublicKey, blocks []*protocol.BlockPairContainer) {
-	panic("implement me")
+func (s *waitingForChunksState) gotBlocks(source primitives.Ed25519PublicKey, message *gossipmessages.BlockSyncResponseMessage) {
+	s.blocks = message
+	s.process <- struct{}{}
 }
 
 func (s *waitingForChunksState) petitionerSendBlockSyncRequest(blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {

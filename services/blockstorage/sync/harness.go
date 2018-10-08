@@ -71,6 +71,12 @@ func newBlockSyncHarness() *blockSyncHarness {
 	}
 }
 
+func (h *blockSyncHarness) WithNodeKey(key primitives.Ed25519PublicKey) *blockSyncHarness {
+	h.config.SetNodePublicKey(key)
+	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
+	return h
+}
+
 func (h *blockSyncHarness) WithNoCommitTimeout(d time.Duration) *blockSyncHarness {
 	h.config.SetDuration(config.BLOCK_SYNC_INTERVAL, d)
 	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
@@ -79,6 +85,12 @@ func (h *blockSyncHarness) WithNoCommitTimeout(d time.Duration) *blockSyncHarnes
 
 func (h *blockSyncHarness) WithCollectResponseTimeout(d time.Duration) *blockSyncHarness {
 	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, d)
+	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
+	return h
+}
+
+func (h *blockSyncHarness) WithWaitForChunksTimeout(d time.Duration) *blockSyncHarness {
+	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, d)
 	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
 	return h
 }
