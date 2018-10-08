@@ -113,7 +113,7 @@ func (t *TransactionBuilder) WithInvalidPublicKey() *TransactionBuilder {
 	return t
 }
 
-func (t *TransactionBuilder) WithInvalidTimestamp() *TransactionBuilder {
+func (t *TransactionBuilder) WithTimestampInFarFuture() *TransactionBuilder {
 	t.builder.Transaction.Timestamp = primitives.TimestampNano(time.Now().Add(300 * time.Minute).UnixNano())
 	return t
 }
@@ -206,6 +206,3 @@ func (t *NonSignedTransactionBuilder) Build() *protocol.Transaction {
 func (t *NonSignedTransactionBuilder) Builder() *protocol.TransactionBuilder {
 	return t.builder
 }
-
-
-

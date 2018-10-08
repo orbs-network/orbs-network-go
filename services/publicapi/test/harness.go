@@ -97,8 +97,8 @@ func (h *harness) transactionIsNotInPoolIsInBlockStorage() {
 func (h *harness) runTransactionSuccess() {
 	h.vmMock.When("RunLocalMethod", mock.Any).Times(1).
 		Return(&services.RunLocalMethodOutput{
-			CallResult:              protocol.EXECUTION_RESULT_SUCCESS,
-			OutputArgumentArray:     nil,
+			CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
+			OutputArgumentArray: nil,
 		})
 }
 

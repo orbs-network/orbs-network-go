@@ -27,9 +27,12 @@ type harness struct {
 	lastBlockTimestamp primitives.TimestampNano
 }
 
-var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
-var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
-var transactionExpirationWindow = 30 * time.Minute
+var (
+	thisNodeKeyPair             = keys.Ed25519KeyPairForTests(8)
+	otherNodeKeyPair            = keys.Ed25519KeyPairForTests(9)
+	transactionExpirationWindow = 30 * time.Minute
+	futureTimestampGrace        = 3 * time.Minute
+)
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
 
@@ -209,7 +212,7 @@ func newTransactionPoolConfig(sizeLimit uint32, transactionExpirationInSeconds t
 
 	cfg.SetUint32(config.TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
 	cfg.SetDuration(config.TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, transactionExpirationInSeconds)
-	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
+	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, futureTimestampGrace)
 	cfg.SetDuration(config.TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)
 	cfg.SetDuration(config.TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
 
@@ -219,15 +222,13 @@ func newTransactionPoolConfig(sizeLimit uint32, transactionExpirationInSeconds t
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	ctx := context.Background()
 
-	ts := primitives.TimestampNano(time.Now().UnixNano())
-
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 
 	cfg := newTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger(), ts)
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger())
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
@@ -237,7 +238,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 		gossip:             gossip,
 		vm:                 virtualMachine,
 		trh:                transactionResultHandler,
-		lastBlockTimestamp: ts,
+		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 	}
 
 	h.passAllPreOrderChecks()

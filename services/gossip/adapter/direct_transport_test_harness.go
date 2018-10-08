@@ -32,12 +32,12 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 
 	// order matters here
 	gossipPeers, peersListeners := makePeers(t) // step 1: create the peer server listeners to reserve random TCP ports
-	cfg := makeTransportConfig(gossipPeers) // step 2: create the config given the peer pk/port pairs
-	transport := makeTransport(ctx, cfg) // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
+	cfg := makeTransportConfig(gossipPeers)     // step 2: create the config given the peer pk/port pairs
+	transport := makeTransport(ctx, cfg)        // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
 	// end of section where order matters
 
-	peerTalkerConnection := establishPeerClient(t, transport.serverPort) // establish connection from test to server port ( test harness ==> SUT )
-	peersListenersConnections := establishPeerServerConnections(t, peersListeners)  // establish connection from transport clients to peer servers ( SUT ==> test harness)
+	peerTalkerConnection := establishPeerClient(t, transport.serverPort)           // establish connection from test to server port ( test harness ==> SUT )
+	peersListenersConnections := establishPeerServerConnections(t, peersListeners) // establish connection from transport clients to peer servers ( SUT ==> test harness)
 
 	h := &directHarness{
 		config:                    cfg,

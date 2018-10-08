@@ -137,13 +137,13 @@ func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing
 	t.Parallel()
 	h := newHarness()
 
-	expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(transactionExpirationWindow+60) * time.Second)).Build()
+	expiredTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 	validTx := builders.TransferTransaction().Build()
 
 	// we use forward rather than add to simulate a scenario where a byzantine node submitted invalid transactions
 	h.handleForwardFrom(otherNodeKeyPair, expiredTx, validTx)
 
-	h.expectTransactionErrorCallbackFor(expiredTx, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
+	h.expectTransactionErrorCallbackFor(expiredTx, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME)
 
 	txSet, _ := h.getTransactionsForOrdering(1)
 	require.Empty(t, txSet.SignedTransactions, "got an invalid transaction")

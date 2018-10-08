@@ -108,7 +108,6 @@ func TestHttpServerCallMethod_Error(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 }
 
-
 func TestHttpServerGetTx_Basic(t *testing.T) {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	papiMock := &services.MockPublicApi{}

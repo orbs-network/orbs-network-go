@@ -49,8 +49,7 @@ func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	config Config,
-	logger log.BasicLogger,
-	initialTimestamp primitives.TimestampNano) services.TransactionPool {
+	logger log.BasicLogger) services.TransactionPool {
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes)
 
 	s := &service{
@@ -59,7 +58,7 @@ func NewTransactionPool(ctx context.Context,
 		config:         config,
 		logger:         logger.WithTags(LogTag),
 
-		lastCommittedBlockTimestamp: initialTimestamp, // this is so that we do not reject transactions on startup, before any block has been committed
+		lastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()), // this is so that we do not reject transactions on startup, before any block has been committed
 		pendingPool:                 pendingPool,
 		committedPool:               NewCommittedPool(),
 		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
@@ -76,6 +75,12 @@ func NewTransactionPool(ctx context.Context,
 }
 
 func (s *service) GetCommittedTransactionReceipt(input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
+
+	tsWithGrace := s.lastCommittedBlockTimestamp + primitives.TimestampNano(s.config.TransactionPoolFutureTimestampGraceTimeout().Nanoseconds())
+	if input.TransactionTimestamp > tsWithGrace {
+		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME), nil
+	}
+
 	if tx := s.pendingPool.get(input.Txhash); tx != nil {
 		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 	}
@@ -147,6 +152,9 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 }
 
 func (s *service) createValidationContext() *validationContext {
+	if s.lastCommittedBlockTimestamp == 0 {
+		panic("last committed block timestamp should never be zero!")
+	}
 	return &validationContext{
 		expiryWindow:                s.config.TransactionPoolTransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp,
@@ -168,10 +176,10 @@ func (s *service) onTransactionError(txHash primitives.Sha256, removalReason pro
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		for _, trh := range s.transactionResultsHandlers {
 			trh.HandleTransactionError(&handlers.HandleTransactionErrorInput{
-				Txhash:txHash,
+				Txhash:            txHash,
 				TransactionStatus: removalReason,
-				BlockTimestamp: s.lastCommittedBlockTimestamp,
-				BlockHeight: s.lastCommittedBlockHeight,
+				BlockTimestamp:    s.lastCommittedBlockTimestamp,
+				BlockHeight:       s.lastCommittedBlockHeight,
 			})
 		}
 	}

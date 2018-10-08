@@ -78,5 +78,3 @@ func TestPublicApiBasic_IsRequestValidChainNonValid(t *testing.T) {
 
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, status, "virtual chain should be wrong")
 }
-
-

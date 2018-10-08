@@ -54,7 +54,7 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	listenerLock                *sync.RWMutex
+	listenerLock                 *sync.RWMutex
 	transportListenersUnderMutex map[string]adapter.TransportListener
 
 	tampererLock                *sync.RWMutex

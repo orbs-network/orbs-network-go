@@ -28,10 +28,15 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 		s.committedPool.add(receipt, timestampOrNow(removedTx))
 
 		s.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Stringable("txHash", receipt.Txhash()))
+
 	}
 
 	s.lastCommittedBlockHeight = input.ResultsBlockHeader.BlockHeight()
 	s.lastCommittedBlockTimestamp = input.ResultsBlockHeader.Timestamp()
+	if s.lastCommittedBlockTimestamp == 0 {
+		s.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
+		s.logger.Error("got 0 timestamp from results block header")
+	}
 
 	s.blockTracker.IncrementHeight()
 

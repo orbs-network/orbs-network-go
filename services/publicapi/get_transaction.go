@@ -17,7 +17,7 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 	}
 
 	s.logger.Info("get transaction status request received", log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
-	txHash :=  input.ClientRequest.Txhash()
+	txHash := input.ClientRequest.Txhash()
 	timestamp := input.ClientRequest.TransactionTimestamp()
 
 	meter := s.logger.Meter("tx-get-status-time", log.Stringable("txHash", txHash))
@@ -27,8 +27,8 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 		return toGetTxOutput(txReceipt), err
 	}
 
-	blockReceipt, err := s.getFromBlockStorage(txHash, timestamp);
-	if  err != nil {
+	blockReceipt, err := s.getFromBlockStorage(txHash, timestamp)
+	if err != nil {
 		return nil, err
 	}
 	return toGetTxOutput(blockReceipt), err

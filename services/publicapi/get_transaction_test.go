@@ -43,5 +43,3 @@ func TestPublicApiGetTx_PrepareResponseNilReceipt(t *testing.T) {
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, response.ClientResponse.TransactionStatus(), "status response is wrong")
 }
-
-

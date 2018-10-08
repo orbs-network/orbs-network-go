@@ -16,6 +16,7 @@ import (
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
 const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
+
 var LogTag = log.String("adapter", "gossip")
 
 type Config interface {
