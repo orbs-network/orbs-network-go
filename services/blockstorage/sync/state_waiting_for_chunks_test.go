@@ -76,3 +76,12 @@ func TestWaitingTerminatesOnContextTermination(t *testing.T) {
 
 	require.Nil(t, nextState, "context terminated, expected nil state")
 }
+
+func TestWaitingNOP(t *testing.T) {
+	h := newBlockSyncHarness().WithWaitForChunksTimeout(3 * time.Millisecond)
+	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+
+	// this is sanity, these calls should do nothing
+	waitingState.gotAvailabilityResponse(nil)
+	waitingState.blockCommitted(primitives.BlockHeight(0))
+}

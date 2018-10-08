@@ -45,11 +45,11 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 }
 
 func (s *waitingForChunksState) blockCommitted(blockHeight primitives.BlockHeight) {
-	panic("implement me")
+	return
 }
 
 func (s *waitingForChunksState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
-	panic("implement me")
+	return
 }
 
 func (s *waitingForChunksState) gotBlocks(source primitives.Ed25519PublicKey, message *gossipmessages.BlockSyncResponseMessage) {
