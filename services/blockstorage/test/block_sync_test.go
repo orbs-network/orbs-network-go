@@ -62,7 +62,7 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 		harness.commitBlock(blocks[2])
 		harness.commitBlock(blocks[3])
 
-		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2], blocks[3]}
+		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
 
 		senderKeyPair := keys.Ed25519KeyPairForTests(9)
 		input := builders.BlockSyncRequestInput().
@@ -80,7 +80,7 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 				SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 					BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
 					FirstBlockHeight:         primitives.BlockHeight(2),
-					LastBlockHeight:          primitives.BlockHeight(4),
+					LastBlockHeight:          primitives.BlockHeight(3),
 					LastCommittedBlockHeight: primitives.BlockHeight(4),
 				}).Build(),
 				BlockPairs: expectedBlocks,
@@ -100,7 +100,6 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-		harness.setBatchSize(2)
 
 		harness.expectCommitStateDiffTimes(4)
 

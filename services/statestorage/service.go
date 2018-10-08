@@ -1,6 +1,7 @@
 package statestorage
 
 import (
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
@@ -10,19 +11,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"sync"
-	"time"
 )
 
 var LogTag = log.Service("state-storage")
 
-type Config interface {
-	StateStorageHistoryRetentionDistance() uint32
-	BlockTrackerGraceDistance() uint32
-	BlockTrackerGraceTimeout() time.Duration
-}
-
 type service struct {
-	config       Config
+	config       config.StateStorageConfig
 	merkle       *merkle.Forest
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
@@ -32,7 +26,7 @@ type service struct {
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 }
 
-func NewStateStorage(config Config, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
+func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	merkle, rootHash := merkle.NewForest()
 	// TODO this is equivalent of genesis block deploy in persistence -> move to correct deploy
 	persistence.WriteMerkleRoot(0, rootHash)

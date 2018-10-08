@@ -3,6 +3,7 @@ package blockstorage
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -36,13 +37,13 @@ type BlockSyncStorage interface {
 type BlockSync struct {
 	logger log.BasicLogger
 
-	config  Config
+	config  config.BlockStorageConfig
 	storage BlockSyncStorage
 	gossip  gossiptopics.BlockSync
 	events  chan interface{}
 }
 
-func NewBlockSync(ctx context.Context, config Config, storage BlockSyncStorage, gossip gossiptopics.BlockSync, logger log.BasicLogger) *BlockSync {
+func NewBlockSync(ctx context.Context, config config.BlockStorageConfig, storage BlockSyncStorage, gossip gossiptopics.BlockSync, logger log.BasicLogger) *BlockSync {
 	blockSync := &BlockSync{
 		logger:  logger.WithTags(BlockSyncFlowLogTag),
 		config:  config,

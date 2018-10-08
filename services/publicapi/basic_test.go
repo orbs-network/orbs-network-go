@@ -64,16 +64,14 @@ func TestPublicApi_TranslateExecutionStatusToHttpCode(t *testing.T) {
 }
 
 func TestPublicApiBasic_IsRequestValidChain(t *testing.T) {
-	cfg := config.EmptyConfig()
-	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 6)
+	cfg := config.ForPublicApiTests(6, 0)
 	status := isTransactionRequestValid(cfg, builders.Transaction().WithVirtualChainId(6).Build().Transaction())
 
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_RESERVED, status, "virtual chain should be ok")
 }
 
 func TestPublicApiBasic_IsRequestValidChainNonValid(t *testing.T) {
-	cfg := config.EmptyConfig()
-	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 44)
+	cfg := config.ForPublicApiTests(44, 0)
 	status := isTransactionRequestValid(cfg, builders.Transaction().WithVirtualChainId(6).Build().Transaction())
 
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, status, "virtual chain should be wrong")

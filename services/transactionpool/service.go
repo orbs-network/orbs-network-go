@@ -3,6 +3,7 @@ package transactionpool
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -18,25 +19,12 @@ import (
 
 var LogTag = log.Service("transaction-pool")
 
-type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	NodePrivateKey() primitives.Ed25519PrivateKey
-	VirtualChainId() primitives.VirtualChainId
-	BlockTrackerGraceDistance() uint32
-	BlockTrackerGraceTimeout() time.Duration
-	TransactionPoolPendingPoolSizeInBytes() uint32
-	TransactionPoolTransactionExpirationWindow() time.Duration
-	TransactionPoolFutureTimestampGraceTimeout() time.Duration
-	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
-	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
-}
-
 type service struct {
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
 	transactionResultsHandlers []handlers.TransactionResultsHandler
 	logger                     log.BasicLogger
-	config                     Config
+	config                     config.TransactionPoolConfig
 
 	lastCommittedBlockHeight    primitives.BlockHeight
 	lastCommittedBlockTimestamp primitives.TimestampNano
@@ -48,7 +36,7 @@ type service struct {
 func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
-	config Config,
+	config config.TransactionPoolConfig,
 	logger log.BasicLogger) services.TransactionPool {
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes)
 

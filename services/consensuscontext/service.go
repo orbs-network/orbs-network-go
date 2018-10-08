@@ -1,25 +1,19 @@
 package consensuscontext
 
 import (
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 var LogTag = log.Service("consensus-context")
-
-type Config interface {
-	ConsensusContextMaximumTransactionsInBlock() uint32
-	ConsensusContextMinimumTransactionsInBlock() uint32
-	ConsensusContextMinimalBlockDelay() time.Duration
-}
 
 type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
-	config          Config
+	config          config.ConsensusContextConfig
 	logger          log.BasicLogger
 }
 
@@ -27,7 +21,7 @@ func NewConsensusContext(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
-	config Config,
+	config config.ConsensusContextConfig,
 	logger log.BasicLogger,
 ) services.ConsensusContext {
 
