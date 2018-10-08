@@ -27,6 +27,6 @@ func (s *processingBlocksState) gotAvailabilityResponse(message *gossipmessages.
 	panic("implement me")
 }
 
-func (s *processingBlocksState) gotBlocks(source primitives.Ed25519PublicKey, message *gossipmessages.BlockSyncResponseMessage) {
+func (s *processingBlocksState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
 	panic("implement me")
 }

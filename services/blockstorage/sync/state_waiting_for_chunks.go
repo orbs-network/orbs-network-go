@@ -52,7 +52,7 @@ func (s *waitingForChunksState) gotAvailabilityResponse(message *gossipmessages.
 	return
 }
 
-func (s *waitingForChunksState) gotBlocks(source primitives.Ed25519PublicKey, message *gossipmessages.BlockSyncResponseMessage) {
+func (s *waitingForChunksState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
 	s.blocks = message
 	s.process <- struct{}{}
 }

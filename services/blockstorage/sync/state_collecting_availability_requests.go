@@ -48,7 +48,7 @@ func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message *
 	s.responses = append(s.responses, message)
 }
 
-func (s *collectingAvailabilityResponsesState) gotBlocks(source primitives.Ed25519PublicKey, message *gossipmessages.BlockSyncResponseMessage) {
+func (s *collectingAvailabilityResponsesState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
 	return
 }
 

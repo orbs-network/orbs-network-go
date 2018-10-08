@@ -43,5 +43,5 @@ func TestIdleNOP(t *testing.T) {
 	idle := h.sf.CreateIdleState()
 	// these calls should do nothing, this is just a sanity that they do not panic and return nothing
 	idle.gotAvailabilityResponse(nil)
-	idle.gotBlocks(h.config.NodePublicKey(), nil)
+	idle.gotBlocks(nil)
 }

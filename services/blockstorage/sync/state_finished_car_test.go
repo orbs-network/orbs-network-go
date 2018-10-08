@@ -33,7 +33,7 @@ func TestFinishedNOP(t *testing.T) {
 	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
 
 	// sanity test, these should do nothing
-	finishedState.gotBlocks(h.config.NodePublicKey(), nil)
+	finishedState.gotBlocks(nil)
 	finishedState.blockCommitted(primitives.BlockHeight(0))
 	finishedState.gotAvailabilityResponse(nil)
 }

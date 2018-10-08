@@ -56,7 +56,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 		nextState = waitingState.processState(h.ctx)
 		latch <- struct{}{}
 	}()
-	waitingState.gotBlocks(blocksMessage.Sender.SenderPublicKey(), blocksMessage)
+	waitingState.gotBlocks(blocksMessage)
 	<-latch
 
 	require.IsType(t, &processingBlocksState{}, nextState, "expecting to be at processing state after blocks arrived")

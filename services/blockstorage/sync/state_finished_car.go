@@ -38,6 +38,6 @@ func (s *finishedCARState) gotAvailabilityResponse(message *gossipmessages.Block
 	return
 }
 
-func (s *finishedCARState) gotBlocks(source primitives.Ed25519PublicKey, message *gossipmessages.BlockSyncResponseMessage) {
+func (s *finishedCARState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
 	return
 }

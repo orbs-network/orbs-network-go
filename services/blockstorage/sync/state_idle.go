@@ -37,6 +37,6 @@ func (s *idleState) gotAvailabilityResponse(message *gossipmessages.BlockAvailab
 	return
 }
 
-func (s *idleState) gotBlocks(source primitives.Ed25519PublicKey, message *gossipmessages.BlockSyncResponseMessage) {
+func (s *idleState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
 	return
 }
