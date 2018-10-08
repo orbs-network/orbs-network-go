@@ -46,7 +46,7 @@ type callMethodCliResponse struct {
 	BlockTimestamp  int
 }
 
-const gammaServerPort uint64 = 7080
+const gammaServerPort uint16 = 7080
 
 func cliBinaryPath() []string {
 	ciCliBinaryPath := "/opt/orbs/gamma-cli"
@@ -129,11 +129,11 @@ func generateAddCounterJSON(amount uint64) []byte {
 	return addJSONBytes
 }
 
-func getNodeUrl(port uint64) string {
-	return "http://localhost:" + strconv.FormatUint(port, 10)
+func getNodeUrl(port uint16) string {
+	return "http://localhost:" + strconv.FormatUint(uint64(port), 10)
 }
 
-func transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519KeyPair, targetAddress primitives.Ripmd160Sha256, amount uint64, port uint64) {
+func transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519KeyPair, targetAddress primitives.Ripmd160Sha256, amount uint64, port uint16) {
 	transferJSONBytes := generateTransferJSON(amount, targetAddress)
 
 	err := ioutil.WriteFile("../json/transfer.json", transferJSONBytes, 0644)
@@ -155,7 +155,7 @@ func transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519KeyPair, targetA
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 }
 
-func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, expectedAmount uint64, port uint64) {
+func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, expectedAmount uint64, port uint16) {
 	getBalanceJSONBytes := generateGetBalanceJSON(targetAddress)
 	err := ioutil.WriteFile("../json/getBalance.json", getBalanceJSONBytes, 0644)
 	if err != nil {
@@ -174,7 +174,7 @@ func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, 
 	require.EqualValues(t, expectedAmount, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
 }
 
-func deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair, port uint64) {
+func deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair, port uint16) {
 	deployCommandOutput := runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(port))
@@ -188,7 +188,7 @@ func deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair, port uint
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 }
 
-func getCounterValue(t *testing.T, expectedReturnValue uint64, port uint64) {
+func getCounterValue(t *testing.T, expectedReturnValue uint64, port uint16) {
 	getCounterJSONBytes := generateGetCounterJSON()
 	err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
 	if err != nil {
@@ -208,7 +208,7 @@ func getCounterValue(t *testing.T, expectedReturnValue uint64, port uint64) {
 	require.EqualValues(t, expectedReturnValue, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected counter value to equal 0")
 }
 
-func addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64, port uint64) {
+func addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64, port uint16) {
 	addCounterJSONBytes := generateAddCounterJSON(amount)
 	err := ioutil.WriteFile("../json/add.json", addCounterJSONBytes, 0644)
 	if err != nil {
@@ -233,7 +233,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(gammaServerPort, 10), false)
+	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(uint64(gammaServerPort), 10), false)
 	defer gamma.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
@@ -251,7 +251,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(gammaServerPort, 10), false)
+	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(uint64(gammaServerPort), 10), false)
 	defer gamma.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
