@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -13,4 +14,15 @@ func TestFinishedWithNoResponsesGoBackToIdle(t *testing.T) {
 
 	_, isIdle := shouldBeIdleState.(*idleState)
 	require.True(t, isIdle, "next state should be idle")
+}
+
+func TestFinishedWithResponsesMoveToWaitingForChunk(t *testing.T) {
+	response := builders.BlockAvailabilityResponseInput().Build().Message
+	h := newBlockSyncHarness()
+	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
+	shouldBeWaitingState := finishedState.processState(h.ctx)
+
+	_, isWaiting := shouldBeWaitingState.(*waitingForChunksState)
+	require.True(t, isWaiting, "next state should be waiting for chunk")
+
 }

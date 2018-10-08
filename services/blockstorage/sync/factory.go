@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
@@ -45,6 +46,14 @@ func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockAvailabilityResponseMessage) syncState {
 	return &finishedCARState{
 		responses: responses,
+		logger:    f.logger,
 		sf:        f,
+	}
+}
+
+func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519PublicKey) syncState {
+	return &waitingForChunksState{
+		sf:        f,
+		sourceKey: sourceKey,
 	}
 }
