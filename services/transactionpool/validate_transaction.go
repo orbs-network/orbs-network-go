@@ -63,7 +63,7 @@ func validateSignature(transaction *protocol.SignedTransaction) *ErrTransactionR
 
 func validateContractName(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	tx := transaction.Transaction()
-	if tx.ContractName() == ""{
+	if tx.ContractName() == "" {
 		//TODO what is the expected status?
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED}
 	}
@@ -83,7 +83,7 @@ func validateTransactionNotExpired(vctx *validationContext) validator {
 
 func validateTransactionNotInFuture(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-		tsWithGrace := primitives.TimestampNano(time.Now().UnixNano() + vctx.futureTimestampGrace.Nanoseconds())
+		tsWithGrace := vctx.lastCommittedBlockTimestamp + primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds())
 		if transaction.Transaction().Timestamp() > tsWithGrace {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME}
 		}

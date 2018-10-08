@@ -13,7 +13,7 @@ import (
 const expirationWindowInterval = 30 * time.Minute
 const futureTimestampGrace = 3 * time.Minute
 
-var lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().Add(-5 * time.Second).UnixNano())
+var lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().Add(-15 * time.Minute).UnixNano())
 
 func aValidationContext() *validationContext {
 	return &validationContext{
@@ -31,7 +31,7 @@ func futureTimeAfterGracePeriod() time.Time {
 func TestValidateTransaction_ValidTransaction(t *testing.T) {
 	t.Parallel()
 
-	err := aValidationContext().validateTransaction(builders.TransferTransaction().Build())
+	err := aValidationContext().validateTransaction(aTransactionAtNodeTimestamp().Build())
 	require.Nil(t, err, "a valid transaction was rejected")
 }
 
@@ -42,13 +42,13 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 		txBuilder      *builders.TransactionBuilder
 		expectedStatus protocol.TransactionStatus
 	}{
-		{"protocol version", builders.TransferTransaction().WithProtocolVersion(ProtocolVersion + 1), protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION},
-		{"signer scheme", builders.TransferTransaction().WithInvalidSignerScheme(), protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME},
-		{"signer public key (wrong length)", builders.TransferTransaction().WithInvalidPublicKey(), protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH},
-		{"contract name", builders.TransferTransaction().WithContract(""), protocol.TRANSACTION_STATUS_RESERVED},
+		{"protocol version", aTransactionAtNodeTimestamp().WithProtocolVersion(ProtocolVersion + 1), protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION},
+		{"signer scheme", aTransactionAtNodeTimestamp().WithInvalidSignerScheme(), protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME},
+		{"signer public key (wrong length)", aTransactionAtNodeTimestamp().WithInvalidPublicKey(), protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH},
+		{"contract name", aTransactionAtNodeTimestamp().WithContract(""), protocol.TRANSACTION_STATUS_RESERVED},
 		{"timestamp (created prior to the expiry window)", builders.TransferTransaction().WithTimestamp(time.Now().Add(expirationWindowInterval * -2)), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED},
 		{"timestamp (ahead of timestamp for last committed block)", builders.TransferTransaction().WithTimestamp(futureTimeAfterGracePeriod()), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME},
-		{"virtual chain id", builders.TransferTransaction().WithVirtualChainId(primitives.VirtualChainId(1)), protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH},
+		{"virtual chain id", aTransactionAtNodeTimestamp().WithVirtualChainId(primitives.VirtualChainId(1)), protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH},
 	}
 	for i := range tests {
 		test := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
@@ -60,4 +60,8 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 			require.Equal(t, test.expectedStatus, err.TransactionStatus, "error status differed from expected")
 		})
 	}
+}
+
+func aTransactionAtNodeTimestamp() *builders.TransactionBuilder {
+	return builders.TransferTransaction().WithTimestamp(time.Unix(0, int64(lastCommittedBlockTimestamp+1000)))
 }

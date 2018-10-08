@@ -12,5 +12,4 @@ func TestLeanHelixNoOp(t *testing.T) {
 
 	leanhelix.NewLeanHelix()
 
-
 }

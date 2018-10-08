@@ -96,7 +96,7 @@ func TestPublicApiWaiter_WaitFor(t *testing.T) {
 
 		_, err := waiter.wait(wc, 10*time.Millisecond)
 		require.Error(t, err, "expected waiting to be aborted")
-		require.Contains(t, err.Error(), "timed out waiting for transaction" , "expected waiting to be aborted with timeout")
+		require.Contains(t, err.Error(), "timed out waiting for transaction", "expected waiting to be aborted with timeout")
 	})
 }
 

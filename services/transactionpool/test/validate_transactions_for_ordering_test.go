@@ -42,11 +42,11 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 	t.Parallel()
 	h := newHarness()
 
-	invalidTx := builders.TransferTransaction().WithInvalidTimestamp().Build()
+	invalidTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 
 	require.EqualErrorf(t,
 		h.validateTransactionsForOrdering(0, builders.Transaction().Build(), invalidTx),
-		fmt.Sprintf("transaction with hash %s is invalid: transaction rejected: TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED", digest.CalcTxHash(invalidTx.Transaction())),
+		fmt.Sprintf("transaction with hash %s is invalid: transaction rejected: %s", digest.CalcTxHash(invalidTx.Transaction()), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME),
 		"did not reject an invalid transaction")
 }
 

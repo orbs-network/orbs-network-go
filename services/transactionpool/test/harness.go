@@ -27,9 +27,12 @@ type harness struct {
 	lastBlockTimestamp primitives.TimestampNano
 }
 
-var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
-var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
-var transactionExpirationWindow = 30 * time.Minute
+var (
+	thisNodeKeyPair             = keys.Ed25519KeyPairForTests(8)
+	otherNodeKeyPair            = keys.Ed25519KeyPairForTests(9)
+	transactionExpirationWindow = 30 * time.Minute
+	futureTimestampGrace        = 3 * time.Minute
+)
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
 
@@ -209,7 +212,7 @@ func newTransactionPoolConfig(sizeLimit uint32, transactionExpirationInSeconds t
 
 	cfg.SetUint32(config.TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
 	cfg.SetDuration(config.TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, transactionExpirationInSeconds)
-	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
+	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, futureTimestampGrace)
 	cfg.SetDuration(config.TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)
 	cfg.SetDuration(config.TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
 

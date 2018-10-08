@@ -113,7 +113,6 @@ func BlockHeight(value primitives.BlockHeight) *Field {
 	return &Field{Key: "block-height", String: value.String(), Type: StringType}
 }
 
-
 func (f *Field) Value() interface{} {
 	switch f.Type {
 	case NodeType:

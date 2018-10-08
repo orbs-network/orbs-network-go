@@ -50,4 +50,3 @@ func toCallMethodOutput(output *services.RunLocalMethodOutput) *services.CallMet
 
 	return &services.CallMethodOutput{ClientResponse: response.Build()}
 }
-
