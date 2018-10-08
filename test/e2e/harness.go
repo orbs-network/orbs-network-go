@@ -30,10 +30,11 @@ type E2EConfig struct {
 }
 
 const LOCAL_NETWORK_SIZE = 3
+const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	ApiEndpoint := "http://localhost:8082/api/v1/" // 8080 is leader, 8082 is node-3
+	ApiEndpoint := fmt.Sprintf("http://localhost:%d/api/v1/", START_HTTP_PORT + 2) // 8080 is leader, 8082 is node-3
 
 	if !Bootstrap {
 		ApiEndpoint = os.Getenv("API_ENDPOINT")
@@ -97,7 +98,7 @@ func newHarness() *harness {
 				leaderKeyPair.PublicKey(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
-			node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", 8080+i))
+			node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
 
 			nodes = append(nodes, node)
 		}
@@ -111,7 +112,7 @@ func newHarness() *harness {
 func (h *harness) gracefulShutdown() {
 	if getConfig().Bootstrap {
 		for _, node := range h.nodes {
-			node.GracefulShutdown(1 * time.Second)
+			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 		}
 	}
 	_, dirToCleanup := getProcessorArtifactPath()
