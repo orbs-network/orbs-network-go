@@ -46,6 +46,8 @@ type callMethodCliResponse struct {
 	BlockTimestamp  int
 }
 
+const gammaServerPort uint64 = 7080
+
 func cliBinaryPath() []string {
 	ciCliBinaryPath := "/opt/orbs/gamma-cli"
 	if _, err := os.Stat(ciCliBinaryPath); err == nil {
@@ -227,13 +229,11 @@ func addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint6
 }
 
 func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
-	var gammaServerPort uint64 = 8089
-
 	if testing.Short() {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(uint64(gammaServerPort), 10), false)
+	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(gammaServerPort, 10), false)
 	defer gamma.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
@@ -251,9 +251,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	var gammaServerPort uint64 = 8090
-
-	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(uint64(gammaServerPort), 10), false)
+	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(gammaServerPort, 10), false)
 	defer gamma.GracefulShutdown(1 * time.Second)
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
