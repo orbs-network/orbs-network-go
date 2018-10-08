@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -75,6 +76,30 @@ func TestWaitingTerminatesOnContextTermination(t *testing.T) {
 	nextState := waitingState.processState(h.ctx)
 
 	require.Nil(t, nextState, "context terminated, expected nil state")
+}
+
+func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
+	messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
+	blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
+	stateSourceKey := keys.Ed25519KeyPairForTests(8).PublicKey()
+	h := newBlockSyncHarness().WithNodeKey(stateSourceKey).WithWaitForChunksTimeout(10 * time.Millisecond)
+
+	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+
+	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	var nextState syncState
+	latch := make(chan struct{})
+	go func() {
+		nextState = waitingState.processState(h.ctx)
+		latch <- struct{}{}
+	}()
+	waitingState.gotBlocks(blocksMessage)
+	<-latch
+
+	require.IsType(t, &idleState{}, nextState, "expecting to abort sync and go back to idle (ignore blocks)")
+
+	h.verifyMocks(t)
 }
 
 func TestWaitingNOP(t *testing.T) {

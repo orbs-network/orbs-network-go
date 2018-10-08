@@ -60,6 +60,7 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519P
 		config:    f.config,
 		logger:    f.logger,
 		process:   make(chan struct{}),
+		abort:     make(chan struct{}),
 	}
 }
 

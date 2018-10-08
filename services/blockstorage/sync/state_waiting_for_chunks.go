@@ -17,6 +17,7 @@ type waitingForChunksState struct {
 	gossip    gossiptopics.BlockSync
 	logger    log.BasicLogger
 	process   chan struct{}
+	abort     chan struct{}
 	blocks    *gossipmessages.BlockSyncResponseMessage
 }
 
@@ -39,6 +40,8 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	case <-s.process:
 		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateProcessingBlocksState(s.blocks)
+	case <-s.abort:
+		return s.sf.CreateIdleState()
 	case <-ctx.Done():
 		return nil
 	}
@@ -53,8 +56,15 @@ func (s *waitingForChunksState) gotAvailabilityResponse(message *gossipmessages.
 }
 
 func (s *waitingForChunksState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
-	s.blocks = message
-	s.process <- struct{}{}
+	if !message.Sender.SenderPublicKey().Equal(s.sourceKey) {
+		s.logger.Info("state source key does not match incoming",
+			log.Stringable("source-key", s.sourceKey),
+			log.Stringable("message-key", message.Sender.SenderPublicKey()))
+		s.abort <- struct{}{}
+	} else {
+		s.blocks = message
+		s.process <- struct{}{}
+	}
 }
 
 func (s *waitingForChunksState) petitionerSendBlockSyncRequest(blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
