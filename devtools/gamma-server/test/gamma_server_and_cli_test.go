@@ -227,7 +227,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	}
 
 	gamma := gammacli.StartGammaServer(":8080", false)
-	defer gamma.GracefulShutdown(1 * time.Second)
+	defer gamma.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
@@ -245,7 +245,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	}
 
 	gamma := gammacli.StartGammaServer(":8080", false)
-	defer gamma.GracefulShutdown(1 * time.Second)
+	defer gamma.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
