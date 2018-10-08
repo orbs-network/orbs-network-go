@@ -35,6 +35,8 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	select {
 	case <-waitForResponses.C:
 		return s.sf.CreateFinishedCARState(s.responses)
+	case <-ctx.Done():
+		return nil
 	}
 }
 

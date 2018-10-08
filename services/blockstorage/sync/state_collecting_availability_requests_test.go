@@ -51,6 +51,21 @@ func TestCollectingAvailabilityResponsesAddsAResponse(t *testing.T) {
 	require.True(t, len(collectingState.(*collectingAvailabilityResponsesState).responses) == 1, "should have 1 response after adding it")
 }
 
+func TestCollectingAvailabilityContextTermination(t *testing.T) {
+	h := newBlockSyncHarness().WithCollectResponseTimeout(1 * time.Millisecond)
+	h.Cancel()
+
+	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+
+	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	nextState := collectingState.processState(h.ctx)
+
+	require.Nil(t, nextState, "context terminated, next state should be nil")
+
+	h.verifyMocks(t)
+}
+
 func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	car := h.sf.CreateCollectingAvailabilityResponseState()
