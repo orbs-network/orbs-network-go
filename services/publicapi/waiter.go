@@ -85,7 +85,7 @@ func (w *waiter) wait(wc *waiterChannel, duration time.Duration) (*waiterObject,
 		return nil, errors.Errorf("shutting down")
 	case <-timer.C:
 		w.deleteByChannel(wc)
-		return nil, errors.Errorf("timed out waiting for transaction result %s", hex.EncodeToString([]byte(wc.k)))
+		return nil, errors.Errorf("timed out waiting for result %s", hex.EncodeToString([]byte(wc.k)))
 	case response, open := <-wc.c: // intentional not close channel here
 		if !open {
 			return nil, errors.Errorf("waiting aborted")
