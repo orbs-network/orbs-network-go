@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -31,7 +32,7 @@ type blockSyncHarness struct {
 }
 
 func newBlockSyncHarness() *blockSyncHarness {
-	cfg := config.EmptyConfig()
+	cfg := config.ForBlockStorageTests(keys.Ed25519KeyPairForTests(0).PublicKey())
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	collectAvailabilityTrigger := &synchronization.PeriodicalTriggerMock{}

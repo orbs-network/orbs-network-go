@@ -3,6 +3,7 @@ package blockstorage
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -13,19 +14,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"sync"
-	"time"
 )
-
-type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	BlockSyncBatchSize() uint32
-	BlockSyncInterval() time.Duration
-	BlockSyncCollectResponseTimeout() time.Duration
-	BlockSyncCollectChunksTimeout() time.Duration
-	BlockTransactionReceiptQueryGraceStart() time.Duration
-	BlockTransactionReceiptQueryGraceEnd() time.Duration
-	BlockTransactionReceiptQueryExpirationWindow() time.Duration
-}
 
 const (
 	// TODO extract it to the spec
@@ -40,7 +29,7 @@ type service struct {
 	gossip       gossiptopics.BlockSync
 	txPool       services.TransactionPool
 
-	config Config
+	config config.BlockStorageConfig
 
 	logger                  log.BasicLogger
 	consensusBlocksHandlers []handlers.ConsensusBlocksHandler
@@ -51,7 +40,7 @@ type service struct {
 	blockSync *BlockSync
 }
 
-func NewBlockStorage(ctx context.Context, config Config, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
+func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
 	txPool services.TransactionPool, logger log.BasicLogger) services.BlockStorage {
 	storage := &service{
 		persistence:   persistence,

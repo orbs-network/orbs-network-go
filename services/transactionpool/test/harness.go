@@ -25,13 +25,12 @@ type harness struct {
 	trh                *handlers.MockTransactionResultsHandler
 	lastBlockHeight    primitives.BlockHeight
 	lastBlockTimestamp primitives.TimestampNano
+	config             config.TransactionPoolConfig
 }
 
 var (
-	thisNodeKeyPair             = keys.Ed25519KeyPairForTests(8)
-	otherNodeKeyPair            = keys.Ed25519KeyPairForTests(9)
-	transactionExpirationWindow = 30 * time.Minute
-	futureTimestampGrace        = 3 * time.Minute
+	thisNodeKeyPair  = keys.Ed25519KeyPairForTests(8)
+	otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
 )
 
 func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
@@ -200,25 +199,6 @@ func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
-func newTransactionPoolConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, keyPair *keys.Ed25519KeyPair) transactionpool.Config {
-	cfg := config.EmptyConfig()
-
-	cfg.SetNodePublicKey(keyPair.PublicKey())
-	cfg.SetNodePrivateKey(keyPair.PrivateKey())
-
-	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
-	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, 5)
-
-	cfg.SetUint32(config.TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
-	cfg.SetDuration(config.TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, transactionExpirationInSeconds)
-	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, futureTimestampGrace)
-	cfg.SetDuration(config.TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)
-	cfg.SetDuration(config.TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
-
-	return cfg
-}
-
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	ctx := context.Background()
 
@@ -227,7 +207,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	cfg := newTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
+	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
 	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger())
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
@@ -239,6 +219,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 		vm:                 virtualMachine,
 		trh:                transactionResultHandler,
 		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		config:             cfg,
 	}
 
 	h.passAllPreOrderChecks()

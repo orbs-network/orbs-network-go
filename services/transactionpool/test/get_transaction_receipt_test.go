@@ -62,7 +62,7 @@ func TestGetTransactionReceiptWhenTimestampAheadOfNodeTime(t *testing.T) {
 	h := newHarness()
 
 	out, err := h.txpool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
-		TransactionTimestamp: primitives.TimestampNano(time.Now().Add(futureTimestampGrace + 1*time.Minute).UnixNano()),
+		TransactionTimestamp: primitives.TimestampNano(time.Now().Add(h.config.TransactionPoolFutureTimestampGraceTimeout() + 1*time.Minute).UnixNano()),
 	})
 
 	require.NoError(t, err)
