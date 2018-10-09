@@ -27,7 +27,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T)
 }
 
 func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) {
-	h := newBlockSyncHarness().WithCollectResponseTimeout(1 * time.Millisecond)
+	h := newBlockSyncHarness().withCollectResponseTimeout(1 * time.Millisecond)
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
@@ -43,7 +43,7 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 }
 
 func TestCollectingAvailabilityResponsesAddsAResponse(t *testing.T) {
-	h := newBlockSyncHarness().WithCollectResponseTimeout(1 * time.Millisecond)
+	h := newBlockSyncHarness().withCollectResponseTimeout(1 * time.Millisecond)
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
 	message := builders.BlockAvailabilityResponseInput().Build().Message
@@ -55,8 +55,8 @@ func TestCollectingAvailabilityResponsesAddsAResponse(t *testing.T) {
 }
 
 func TestCollectingAvailabilityContextTermination(t *testing.T) {
-	h := newBlockSyncHarness().WithCollectResponseTimeout(1 * time.Millisecond)
-	h.Cancel()
+	h := newBlockSyncHarness().withCollectResponseTimeout(1 * time.Millisecond)
+	h.cancel()
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)

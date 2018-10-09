@@ -8,7 +8,7 @@ import (
 )
 
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
-	h := newBlockSyncHarness().WithNoCommitTimeout(3 * time.Millisecond)
+	h := newBlockSyncHarness().withNoCommitTimeout(3 * time.Millisecond)
 	idle := h.sf.CreateIdleState()
 	var next syncState = nil
 	latch := make(chan struct{})
@@ -22,7 +22,7 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 }
 
 func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
-	h := newBlockSyncHarness().WithNoCommitTimeout(3 * time.Millisecond)
+	h := newBlockSyncHarness().withNoCommitTimeout(3 * time.Millisecond)
 	idle := h.sf.CreateIdleState()
 	next := idle.processState(h.ctx)
 	_, ok := next.(*collectingAvailabilityResponsesState)
@@ -30,8 +30,8 @@ func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
 }
 
 func TestIdleStateTerminatesOnContextTermination(t *testing.T) {
-	h := newBlockSyncHarness().WithNoCommitTimeout(3 * time.Millisecond)
-	h.Cancel()
+	h := newBlockSyncHarness().withNoCommitTimeout(3 * time.Millisecond)
+	h.cancel()
 	idle := h.sf.CreateIdleState()
 	next := idle.processState(h.ctx)
 
