@@ -24,7 +24,7 @@ type harness struct {
 
 func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	cfg := newPublicApiConfig(txTimeout)
+	cfg := config.ForPublicApiTests(uint32(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID), txTimeout)
 	txpMock := makeTxMock()
 	vmMock := &services.MockVirtualMachine{}
 	bksMock := &services.MockBlockStorage{}
@@ -35,14 +35,6 @@ func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness 
 		bksMock: bksMock,
 		vmMock:  vmMock,
 	}
-}
-
-func newPublicApiConfig(txTimeout time.Duration) publicapi.Config {
-	cfg := config.EmptyConfig()
-	cfg.SetDuration(config.PUBLIC_API_SEND_TRANSACTION_TIMEOUT, txTimeout)
-	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, uint32(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID))
-
-	return cfg
 }
 
 func makeTxMock() *services.MockTransactionPool {

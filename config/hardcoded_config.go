@@ -81,52 +81,52 @@ func NewHardCodedGossipPeer(gossipPort uint16, gossipEndpoint string) GossipPeer
 	}
 }
 
-func (c *config) Set(key string, value NodeConfigValue) MutableNodeConfig {
+func (c *config) Set(key string, value NodeConfigValue) mutableNodeConfig {
 	c.kv[key] = value
 	return c
 }
 
-func (c *config) SetDuration(key string, value time.Duration) MutableNodeConfig {
+func (c *config) SetDuration(key string, value time.Duration) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{DurationValue: value}
 	return c
 }
 
-func (c *config) SetUint32(key string, value uint32) MutableNodeConfig {
+func (c *config) SetUint32(key string, value uint32) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{Uint32Value: value}
 	return c
 }
 
-func (c *config) SetString(key string, value string) MutableNodeConfig {
+func (c *config) SetString(key string, value string) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{StringValue: value}
 	return c
 }
 
-func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) MutableNodeConfig {
+func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) mutableNodeConfig {
 	c.nodePublicKey = key
 	return c
 }
 
-func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) MutableNodeConfig {
+func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) mutableNodeConfig {
 	c.nodePrivateKey = key
 	return c
 }
 
-func (c *config) SetConstantConsensusLeader(key primitives.Ed25519PublicKey) MutableNodeConfig {
+func (c *config) SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig {
 	c.constantConsensusLeader = key
 	return c
 }
 
-func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig {
+func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig {
 	c.activeConsensusAlgo = algoType
 	return c
 }
 
-func (c *config) SetFederationNodes(nodes map[string]FederationNode) MutableNodeConfig {
+func (c *config) SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig {
 	c.federationNodes = nodes
 	return c
 }
 
-func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) MutableNodeConfig {
+func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) mutableNodeConfig {
 	c.gossipPeers = gossipPeers
 	return c
 }

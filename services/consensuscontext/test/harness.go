@@ -12,14 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
-	"time"
 )
 
 type harness struct {
 	transactionPool *services.MockTransactionPool
 	reporting       log.BasicLogger
 	service         services.ConsensusContext
-	config          consensuscontext.Config
+	config          config.ConsensusContextConfig
 }
 
 func (h *harness) requestTransactionsBlock() (*protocol.TransactionsBlockContainer, error) {
@@ -60,19 +59,11 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	require.True(t, ok)
 }
 
-func newConsensusContextConfig() consensuscontext.Config {
-	cfg := config.EmptyConfig()
-	cfg.SetDuration(config.CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
-	cfg.SetUint32(config.CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 2)
-
-	return cfg
-}
-
 func newHarness() *harness {
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	transactionPool := &services.MockTransactionPool{}
-	cfg := newConsensusContextConfig()
+	cfg := config.ForConsensusContextTests()
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
 		cfg, log)

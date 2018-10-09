@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -27,7 +26,7 @@ type harness struct {
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
-	config         blockstorage.Config
+	config         config.BlockStorageConfig
 	logger         log.BasicLogger
 }
 
@@ -77,30 +76,10 @@ func (d *harness) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }
 
-func (d *harness) setBatchSize(batchSize uint32) {
-	d.config.(config.MutableNodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
-}
-
-func newBlockStorageConfig(nodePublicKey primitives.Ed25519PublicKey) blockstorage.Config {
-	cfg := config.EmptyConfig()
-	cfg.SetNodePublicKey(nodePublicKey)
-	cfg.SetUint32(config.BLOCK_SYNC_BATCH_SIZE, 10000)
-
-	cfg.SetDuration(config.BLOCK_SYNC_INTERVAL, 3*time.Millisecond)
-	cfg.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 1*time.Millisecond)
-	cfg.SetDuration(config.BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
-
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
-
-	return cfg
-}
-
 func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.InMemoryBlockPersistence, consensus *handlers.MockConsensusBlocksHandler)) *harness {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
-	cfg := newBlockStorageConfig(keyPair.PublicKey())
+	cfg := config.ForBlockStorageTests(keyPair.PublicKey())
 
 	d := &harness{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}

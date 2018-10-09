@@ -19,16 +19,8 @@ const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
 
-type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	GossipPeers(asOfBlock uint64) map[string]config.GossipPeer
-	GossipListenPort() uint16
-	GossipConnectionKeepAliveInterval() time.Duration
-	GossipNetworkTimeout() time.Duration
-}
-
 type directTransport struct {
-	config Config
+	config config.GossipTransportConfig
 	logger log.BasicLogger
 
 	peerQueues map[string]chan *TransportData // does not require mutex to read
@@ -39,7 +31,7 @@ type directTransport struct {
 	serverPort                  int
 }
 
-func NewDirectTransport(ctx context.Context, config Config, logger log.BasicLogger) Transport {
+func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.BasicLogger) Transport {
 	t := &directTransport{
 		config: config,
 		logger: logger.WithTags(LogTag),

@@ -2,20 +2,15 @@ package publicapi
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
 )
 
 var LogTag = log.Service("public-api")
-
-type Config interface {
-	SendTransactionTimeout() time.Duration
-	VirtualChainId() primitives.VirtualChainId
-}
 
 type txResponse struct {
 	transactionStatus  protocol.TransactionStatus
@@ -26,7 +21,7 @@ type txResponse struct {
 
 type service struct {
 	ctx             context.Context
-	config          Config
+	config          config.PublicApiConfig
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	blockStorage    services.BlockStorage
@@ -37,7 +32,7 @@ type service struct {
 
 func NewPublicApi(
 	ctx context.Context,
-	config Config,
+	config config.PublicApiConfig,
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	blockStorage services.BlockStorage,
@@ -85,7 +80,7 @@ func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorI
 	return &handlers.HandleTransactionErrorOutput{}, nil
 }
 
-func isTransactionRequestValid(config Config, tx *protocol.Transaction) protocol.TransactionStatus {
+func isTransactionRequestValid(config config.PublicApiConfig, tx *protocol.Transaction) protocol.TransactionStatus {
 	if config.VirtualChainId() != tx.VirtualChainId() {
 		return protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH
 	}
