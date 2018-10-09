@@ -46,12 +46,13 @@ func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock() {
 // end of storage mock
 
 type blockSyncHarness struct {
-	sf      *stateFactory
-	ctx     context.Context
-	config  config.MutableNodeConfig
-	gossip  *gossiptopics.MockBlockSync
-	storage *blockSyncStorageMock
-	logger  log.BasicLogger
+	sf        *stateFactory
+	ctx       context.Context
+	config    config.MutableNodeConfig
+	gossip    *gossiptopics.MockBlockSync
+	storage   *blockSyncStorageMock
+	logger    log.BasicLogger
+	ctxCancel context.CancelFunc
 }
 
 func newBlockSyncHarness() *blockSyncHarness {
@@ -60,14 +61,16 @@ func newBlockSyncHarness() *blockSyncHarness {
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	return &blockSyncHarness{
-		logger:  logger,
-		sf:      NewStateFactory(cfg, gossip, storage, logger),
-		ctx:     context.Background(),
-		config:  cfg,
-		gossip:  gossip,
-		storage: storage,
+		logger:    logger,
+		sf:        NewStateFactory(cfg, gossip, storage, logger),
+		ctx:       ctx,
+		ctxCancel: cancel,
+		config:    cfg,
+		gossip:    gossip,
+		storage:   storage,
 	}
 }
 
@@ -96,9 +99,7 @@ func (h *blockSyncHarness) WithWaitForChunksTimeout(d time.Duration) *blockSyncH
 }
 
 func (h *blockSyncHarness) Cancel() {
-	ctx, cancel := context.WithCancel(h.ctx)
-	h.ctx = ctx
-	cancel()
+	h.ctxCancel()
 }
 
 func (h *blockSyncHarness) verifyMocks(t *testing.T) {

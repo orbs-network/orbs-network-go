@@ -36,19 +36,20 @@ type BlockSyncStorage interface {
 }
 
 type blockSync struct {
-	logger     log.BasicLogger
-	shouldStop bool
-	sf         *stateFactory
-	gossip     gossiptopics.BlockSync
-	storage    BlockSyncStorage
-	config     blockSyncConfig
+	logger       log.BasicLogger
+	terminated   bool
+	sf           *stateFactory
+	gossip       gossiptopics.BlockSync
+	storage      BlockSyncStorage
+	config       blockSyncConfig
+	currentState syncState
 }
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage) *blockSync {
 	logger := log.GetLogger(log.Source("block-sync"))
 	bs := &blockSync{
 		logger:     logger,
-		shouldStop: false,
+		terminated: false,
 		sf:         NewStateFactory(config, gossip, storage, logger),
 		gossip:     gossip,
 		storage:    storage,
@@ -59,16 +60,35 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	return bs
 }
 
-func (bs *blockSync) Shutdown() {
-	bs.shouldStop = true
-}
-
 func (bs *blockSync) syncLoop(ctx context.Context) {
 	bs.logger.Info("starting block sync main loop")
-	for state := bs.sf.CreateIdleState(); state != nil && !bs.shouldStop; {
-		bs.logger.Info("state transitioning", log.String("current-state", state.name()))
-		state = state.processState(ctx)
+	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
+		bs.logger.Info("state transitioning", log.String("current-state", bs.currentState.name()))
+		bs.currentState = bs.currentState.processState(ctx)
 	}
 
+	bs.terminated = true
 	bs.logger.Info("block sync main loop ended")
+}
+
+func (bs *blockSync) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+	return nil, nil
+}
+
+func (bs *blockSync) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+	if bs.currentState != nil {
+		bs.currentState.gotAvailabilityResponse(input.Message)
+	}
+	return nil, nil
+}
+
+func (bs *blockSync) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+	return nil, nil
+}
+
+func (bs *blockSync) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+	if bs.currentState != nil {
+		bs.currentState.gotBlocks(input.Message)
+	}
+	return nil, nil
 }

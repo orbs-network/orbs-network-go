@@ -24,7 +24,7 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	select {
 	case <-noCommitTimer.C:
 		s.logger.Info("starting sync after no-commit timer expired")
-		return &collectingAvailabilityResponsesState{}
+		return s.sf.CreateCollectingAvailabilityResponseState()
 	case <-s.restartIdle:
 		return s.sf.CreateIdleState()
 	case <-ctx.Done():
