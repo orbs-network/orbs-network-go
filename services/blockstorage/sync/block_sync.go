@@ -66,14 +66,14 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 }
 
 func (bs *BlockSync) syncLoop(ctx context.Context) {
-	bs.logger.Info("starting block sync main loop")
+	meter := bs.logger.Meter("inter-sync-main-loop")
 	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
 		bs.logger.Info("state transitioning", log.String("current-state", bs.currentState.name()))
 		bs.currentState = bs.currentState.processState(ctx)
 	}
 
 	bs.terminated = true
-	bs.logger.Info("block sync main loop ended")
+	meter.Done()
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
