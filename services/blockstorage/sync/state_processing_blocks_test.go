@@ -42,3 +42,12 @@ func TestProcessingBlocksMovesToCARAfterCommit(t *testing.T) {
 
 	require.IsType(t, &collectingAvailabilityResponsesState{}, next, "next state after commit should be collecting availability responses")
 }
+
+func TestProcessingWithNoBlocksReturnsToIdle(t *testing.T) {
+	h := newBlockSyncHarness()
+
+	processingState := h.sf.CreateProcessingBlocksState(nil)
+	next := processingState.processState(h.ctx)
+
+	require.IsType(t, &idleState{}, next, "commit initialized invalid should move to idle")
+}
