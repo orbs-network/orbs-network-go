@@ -65,7 +65,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 }
 
 func TestWaitingTerminatesOnContextTermination(t *testing.T) {
-	h := newBlockSyncHarness() //.withWaitForChunksTimeout(3 * time.Millisecond)
+	h := newBlockSyncHarness()
 	h.cancel()
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
@@ -81,7 +81,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
 	blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
 	stateSourceKey := keys.Ed25519KeyPairForTests(8).PublicKey()
-	h := newBlockSyncHarness().withNodeKey(stateSourceKey) //.withWaitForChunksTimeout(10 * time.Millisecond)
+	h := newBlockSyncHarness().withNodeKey(stateSourceKey)
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
@@ -102,7 +102,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 }
 
 func TestWaitingNOP(t *testing.T) {
-	h := newBlockSyncHarness() //.withWaitForChunksTimeout(3 * time.Millisecond)
+	h := newBlockSyncHarness()
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 
 	// this is sanity, these calls should do nothing

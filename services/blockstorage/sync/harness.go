@@ -80,24 +80,6 @@ func (h *blockSyncHarness) withNodeKey(key primitives.Ed25519PublicKey) *blockSy
 	return h
 }
 
-//func (h *blockSyncHarness) withNoCommitTimeout(d time.Duration) *blockSyncHarness {
-//	h.config.SetDuration(config.BLOCK_SYNC_INTERVAL, d)
-//	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
-//	return h
-//}
-//
-//func (h *blockSyncHarness) withCollectResponseTimeout(d time.Duration) *blockSyncHarness {
-//	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, d)
-//	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
-//	return h
-//}
-//
-//func (h *blockSyncHarness) withWaitForChunksTimeout(d time.Duration) *blockSyncHarness {
-//	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, d)
-//	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
-//	return h
-//}
-
 func (h *blockSyncHarness) cancel() {
 	h.ctxCancel()
 }
