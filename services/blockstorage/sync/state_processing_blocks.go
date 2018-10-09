@@ -53,13 +53,13 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 }
 
 func (s *processingBlocksState) blockCommitted(blockHeight primitives.BlockHeight) {
-	panic("implement me")
+	return
 }
 
 func (s *processingBlocksState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
-	panic("implement me")
+	return
 }
 
 func (s *processingBlocksState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
-	panic("implement me")
+	return
 }

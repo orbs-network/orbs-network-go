@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -102,4 +103,14 @@ func TestProcessingCommitFailure(t *testing.T) {
 	require.IsType(t, &collectingAvailabilityResponsesState{}, next, "next state after commit error should be collecting availability responses")
 
 	h.verifyMocks(t)
+}
+
+func TestProcessingNOP(t *testing.T) {
+	h := newBlockSyncHarness()
+	processing := h.sf.CreateProcessingBlocksState(nil)
+
+	// these tests are for sanity, they should not do anything
+	processing.blockCommitted(primitives.BlockHeight(0))
+	processing.gotBlocks(nil)
+	processing.gotAvailabilityResponse(nil)
 }
