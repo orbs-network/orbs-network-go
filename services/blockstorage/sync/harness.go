@@ -5,13 +5,13 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 // the storage mock should be moved to its own file, but i have a weird goland bug where it will not identify it and its driving me mad, putting this here for now
@@ -48,7 +48,7 @@ func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock() {
 type blockSyncHarness struct {
 	sf        *stateFactory
 	ctx       context.Context
-	config    config.MutableNodeConfig
+	config    config.BlockStorageConfig
 	gossip    *gossiptopics.MockBlockSync
 	storage   *blockSyncStorageMock
 	logger    log.BasicLogger
@@ -57,7 +57,7 @@ type blockSyncHarness struct {
 
 func newBlockSyncHarness() *blockSyncHarness {
 
-	cfg := config.EmptyConfig()
+	cfg := config.ForBlockStorageTests(keys.Ed25519KeyPairForTests(1).PublicKey())
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
@@ -75,28 +75,28 @@ func newBlockSyncHarness() *blockSyncHarness {
 }
 
 func (h *blockSyncHarness) withNodeKey(key primitives.Ed25519PublicKey) *blockSyncHarness {
-	h.config.SetNodePublicKey(key)
+	h.config = config.ForBlockStorageTests(key)
 	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
 	return h
 }
 
-func (h *blockSyncHarness) withNoCommitTimeout(d time.Duration) *blockSyncHarness {
-	h.config.SetDuration(config.BLOCK_SYNC_INTERVAL, d)
-	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
-	return h
-}
-
-func (h *blockSyncHarness) withCollectResponseTimeout(d time.Duration) *blockSyncHarness {
-	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, d)
-	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
-	return h
-}
-
-func (h *blockSyncHarness) withWaitForChunksTimeout(d time.Duration) *blockSyncHarness {
-	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, d)
-	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
-	return h
-}
+//func (h *blockSyncHarness) withNoCommitTimeout(d time.Duration) *blockSyncHarness {
+//	h.config.SetDuration(config.BLOCK_SYNC_INTERVAL, d)
+//	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
+//	return h
+//}
+//
+//func (h *blockSyncHarness) withCollectResponseTimeout(d time.Duration) *blockSyncHarness {
+//	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, d)
+//	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
+//	return h
+//}
+//
+//func (h *blockSyncHarness) withWaitForChunksTimeout(d time.Duration) *blockSyncHarness {
+//	h.config.SetDuration(config.BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, d)
+//	h.sf = NewStateFactory(h.config, h.gossip, h.storage, h.logger)
+//	return h
+//}
 
 func (h *blockSyncHarness) cancel() {
 	h.ctxCancel()

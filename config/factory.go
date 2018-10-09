@@ -88,8 +88,8 @@ func ForBlockStorageTests(nodePublicKey primitives.Ed25519PublicKey) BlockStorag
 	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 2)
 
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 3*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 1*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 5*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 20*time.Millisecond)
 
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
 	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)

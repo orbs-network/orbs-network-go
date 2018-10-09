@@ -92,7 +92,7 @@ type mutableNodeConfig interface {
 type BlockStorageConfig interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	BlockSyncBatchSize() uint32
-	BlockSyncInterval() time.Duration
+	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration

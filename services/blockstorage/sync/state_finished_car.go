@@ -21,6 +21,7 @@ func (s *finishedCARState) name() string {
 func (s *finishedCARState) processState(ctx context.Context) syncState {
 	c := len(s.responses)
 	if c == 0 {
+		s.logger.Info("no responses received")
 		return s.sf.CreateIdleState()
 	}
 	s.logger.Info("selecting from received sources", log.Int("sources-count", c))

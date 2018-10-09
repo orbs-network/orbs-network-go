@@ -12,9 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
-	"math/rand"
-	"reflect"
-	"time"
 )
 
 type blockSyncState int
@@ -92,23 +89,7 @@ type startSyncEvent struct{}
 type collectingAvailabilityFinishedEvent struct{}
 
 func (b *BlockSync) transitionState(currentState blockSyncState, event interface{}, availabilityResponses []*gossipmessages.BlockAvailabilityResponseMessage, startSyncTimer synchronization.Trigger) (blockSyncState, []*gossipmessages.BlockAvailabilityResponseMessage) {
-	b.reporting.Info("block sync transitioning state", log.Int("state", int(currentState)), log.String("event", reflect.TypeOf(event).String()))
-	// Ignore start sync because collecting availability responses has its own timer
-	if _, ok := event.(startSyncEvent); ok && currentState != BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES {
-		b.storage.UpdateConsensusAlgosAboutLatestCommittedBlock()
-		err := b.petitionerBroadcastBlockAvailabilityRequest()
-
-		if err != nil {
-			b.logger.Info("failed to broadcast block availability request", log.Error(err))
-		} else {
-			availabilityResponses = []*gossipmessages.BlockAvailabilityResponseMessage{}
-			currentState = BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES
-
-			time.AfterFunc(b.config.BlockSyncCollectResponseTimeout(), func() {
-				b.events <- collectingAvailabilityFinishedEvent{}
-			})
-		}
-	}
+	// this is in actual the sync server code, needs to move to the new sync engine
 
 	if msg, ok := event.(*gossipmessages.BlockAvailabilityRequestMessage); ok {
 		if err := b.sourceHandleBlockAvailabilityRequest(msg); err != nil {
@@ -122,140 +103,7 @@ func (b *BlockSync) transitionState(currentState blockSyncState, event interface
 		}
 	}
 
-	switch currentState {
-	case BLOCK_SYNC_PETITIONER_COLLECTING_AVAILABILITY_RESPONSES:
-		if msg, ok := event.(*gossipmessages.BlockAvailabilityResponseMessage); ok {
-			availabilityResponses = append(availabilityResponses, msg)
-			break
-		}
-
-		if _, ok := event.(collectingAvailabilityFinishedEvent); ok {
-			count := len(availabilityResponses)
-
-			if count == 0 {
-
-				currentState = BLOCK_SYNC_STATE_IDLE
-				startSyncTimer.FireNow()
-				break
-			}
-
-			b.logger.Info("collected block availability responses", log.Int("num-responses", count))
-
-			// TODO in the future we might want to have a more sophisticated select function than that
-			syncSource := availabilityResponses[rand.Intn(count)]
-			syncSourceKey := syncSource.Sender.SenderPublicKey()
-
-			err := b.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, syncSourceKey)
-			if err != nil {
-				b.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", syncSource.Sender))
-				currentState = BLOCK_SYNC_STATE_IDLE
-				startSyncTimer.FireNow()
-			} else {
-				b.logger.Info("requested block chunk from source", log.Stringable("source", syncSource.Sender))
-				currentState = BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK
-
-				startSyncTimer.Reset(b.config.BlockSyncCollectChunksTimeout())
-			}
-		}
-	case BLOCK_SYNC_PETITIONER_WAITING_FOR_CHUNK:
-		if msg, ok := event.(*gossipmessages.BlockSyncResponseMessage); ok {
-			b.petitionerHandleBlockSyncResponse(msg)
-			currentState = BLOCK_SYNC_STATE_IDLE
-			startSyncTimer.FireNow()
-		}
-	}
-
 	return currentState, availabilityResponses
-}
-
-func (b *BlockSync) petitionerBroadcastBlockAvailabilityRequest() error {
-	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
-	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize())
-
-	b.logger.Info("broadcast block availability request",
-		log.Stringable("first-block-height", firstBlockHeight),
-		log.Stringable("last-block-height", lastBlockHeight))
-
-	input := &gossiptopics.BlockAvailabilityRequestInput{
-		Message: &gossipmessages.BlockAvailabilityRequestMessage{
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: b.config.NodePublicKey(),
-			}).Build(),
-			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				LastBlockHeight:          lastBlockHeight,
-				FirstBlockHeight:         firstBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
-			}).Build(),
-		},
-	}
-
-	_, err := b.gossip.BroadcastBlockAvailabilityRequest(input)
-	return err
-}
-
-func (b *BlockSync) petitionerHandleBlockSyncResponse(message *gossipmessages.BlockSyncResponseMessage) {
-	firstBlockHeight := message.SignedChunkRange.FirstBlockHeight()
-	lastBlockHeight := message.SignedChunkRange.LastBlockHeight()
-
-	b.logger.Info("received block sync response",
-		log.Stringable("sender", message.Sender),
-		log.Stringable("first-block-height", firstBlockHeight),
-		log.Stringable("last-block-height", lastBlockHeight))
-
-	for _, blockPair := range message.BlockPairs {
-		_, err := b.storage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{BlockPair: blockPair})
-
-		if err != nil {
-			b.logger.Error("failed to commit block received via sync", log.Error(err))
-			break
-		}
-
-		_, err = b.storage.CommitBlock(&services.CommitBlockInput{BlockPair: blockPair})
-
-		if err != nil {
-			b.logger.Error("failed to commit block received via sync", log.Error(err))
-			break
-		}
-	}
-}
-
-func (b *BlockSync) petitionerHandleBlockAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) error {
-	b.logger.Info("received block availability response", log.Stringable("sender", message.Sender))
-
-	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
-
-	if lastCommittedBlockHeight >= message.SignedBatchRange.LastCommittedBlockHeight() {
-		return errors.New("source is behind petitioner") // stay in the same state
-	}
-
-	return nil
-}
-
-func (b *BlockSync) petitionerSendBlockSyncRequest(blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
-	lastCommittedBlockHeight := b.storage.LastCommittedBlockHeight()
-
-	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(b.config.BlockSyncBatchSize())
-
-	request := &gossiptopics.BlockSyncRequestInput{
-		RecipientPublicKey: senderPublicKey,
-		Message: &gossipmessages.BlockSyncRequestMessage{
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: b.config.NodePublicKey(),
-			}).Build(),
-			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                blockType,
-				LastBlockHeight:          lastBlockHeight,
-				FirstBlockHeight:         firstBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
-			}).Build(),
-		},
-	}
-
-	_, err := b.gossip.SendBlockSyncRequest(request)
-	return err
 }
 
 func (b *BlockSync) sourceHandleBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) error {

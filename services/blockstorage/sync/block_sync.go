@@ -35,7 +35,7 @@ type BlockSyncStorage interface {
 	UpdateConsensusAlgosAboutLatestCommittedBlock()
 }
 
-type blockSync struct {
+type BlockSync struct {
 	logger       log.BasicLogger
 	terminated   bool
 	sf           *stateFactory
@@ -45,10 +45,9 @@ type blockSync struct {
 	currentState syncState
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage) *blockSync {
-	logger := log.GetLogger(log.Source("block-sync"))
-	bs := &blockSync{
-		logger:     logger,
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
+	bs := &BlockSync{
+		logger:     logger.WithTags(log.String("flow", "block-sync")),
 		terminated: false,
 		sf:         NewStateFactory(config, gossip, storage, logger),
 		gossip:     gossip,
@@ -56,11 +55,17 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 		config:     config,
 	}
 
+	bs.logger.Info("block sync init",
+		log.Stringable("no-commit-timeout", bs.config.BlockSyncNoCommitInterval()),
+		log.Stringable("collect-responses-timeout", bs.config.BlockSyncCollectResponseTimeout()),
+		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
+		log.Uint32("batch-size", bs.config.BlockSyncBatchSize()))
+
 	go bs.syncLoop(ctx)
 	return bs
 }
 
-func (bs *blockSync) syncLoop(ctx context.Context) {
+func (bs *BlockSync) syncLoop(ctx context.Context) {
 	bs.logger.Info("starting block sync main loop")
 	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
 		bs.logger.Info("state transitioning", log.String("current-state", bs.currentState.name()))
@@ -71,22 +76,23 @@ func (bs *blockSync) syncLoop(ctx context.Context) {
 	bs.logger.Info("block sync main loop ended")
 }
 
-func (bs *blockSync) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (bs *BlockSync) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	return nil, nil
 }
 
-func (bs *blockSync) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (bs *BlockSync) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+	bs.logger.Info("received availability response", log.Stringable("node-source", input.Message.Sender))
 	if bs.currentState != nil {
 		bs.currentState.gotAvailabilityResponse(input.Message)
 	}
 	return nil, nil
 }
 
-func (bs *blockSync) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (bs *BlockSync) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	return nil, nil
 }
 
-func (bs *blockSync) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (bs *BlockSync) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if bs.currentState != nil {
 		bs.currentState.gotBlocks(input.Message)
 	}
