@@ -2,7 +2,6 @@ package sync
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -26,10 +25,10 @@ func NewStateFactory(config blockSyncConfig, gossip gossiptopics.BlockSync, stor
 
 func (f *stateFactory) CreateIdleState() syncState {
 	return &idleState{
-		sf:            f,
-		config:        f.config,
-		noCommitTimer: synchronization.NewTimer(f.config.BlockSyncNoCommitInterval()),
-		restartIdle:   make(chan struct{}),
+		sf:          f,
+		config:      f.config,
+		logger:      f.logger,
+		restartIdle: make(chan struct{}),
 	}
 }
 

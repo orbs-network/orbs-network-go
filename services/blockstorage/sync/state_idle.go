@@ -2,16 +2,17 @@ package sync
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
 type idleState struct {
-	config        blockSyncConfig
-	noCommitTimer *synchronization.Timer
-	restartIdle   chan struct{}
-	sf            *stateFactory
+	config      blockSyncConfig
+	logger      log.BasicLogger
+	restartIdle chan struct{}
+	sf          *stateFactory
 }
 
 func (s *idleState) name() string {
@@ -19,8 +20,10 @@ func (s *idleState) name() string {
 }
 
 func (s *idleState) processState(ctx context.Context) syncState {
+	noCommitTimer := synchronization.NewTimer(s.config.BlockSyncNoCommitInterval())
 	select {
-	case <-s.noCommitTimer.C:
+	case <-noCommitTimer.C:
+		s.logger.Info("starting sync after no-commit timer expired")
 		return &collectingAvailabilityResponsesState{}
 	case <-s.restartIdle:
 		return s.sf.CreateIdleState()
