@@ -13,8 +13,7 @@ func TestFinishedWithNoResponsesGoBackToIdle(t *testing.T) {
 	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
 	shouldBeIdleState := finishedState.processState(h.ctx)
 
-	_, isIdle := shouldBeIdleState.(*idleState)
-	require.True(t, isIdle, "next state should be idle")
+	require.IsType(t, &idleState{}, shouldBeIdleState, "next state should be idle")
 }
 
 func TestFinishedWithResponsesMoveToWaitingForChunk(t *testing.T) {
@@ -23,9 +22,15 @@ func TestFinishedWithResponsesMoveToWaitingForChunk(t *testing.T) {
 	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
 	shouldBeWaitingState := finishedState.processState(h.ctx)
 
-	_, isWaiting := shouldBeWaitingState.(*waitingForChunksState)
-	require.True(t, isWaiting, "next state should be waiting for chunk")
+	require.IsType(t, &waitingForChunksState{}, shouldBeWaitingState, "next state should be waiting for chunk")
+}
 
+func TestFinishedWithInvalidResponsesMovesToIdle(t *testing.T) {
+	h := newBlockSyncHarness()
+	finishedState := h.sf.CreateFinishedCARState(nil)
+	shouldBeIdleState := finishedState.processState(h.ctx)
+
+	require.IsType(t, &idleState{}, shouldBeIdleState, "next state should be idle when invalid input")
 }
 
 func TestFinishedNOP(t *testing.T) {
