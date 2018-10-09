@@ -3,8 +3,8 @@ package sync
 import (
 	"errors"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -46,9 +46,12 @@ func TestCollectingAvailabilityResponsesAddsAResponse(t *testing.T) {
 	h := newBlockSyncHarness().WithCollectResponseTimeout(1 * time.Millisecond)
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
-	require.True(t, len(collectingState.(*collectingAvailabilityResponsesState).responses) == 0, "should have 0 responses on init")
-	collectingState.gotAvailabilityResponse(&gossipmessages.BlockAvailabilityResponseMessage{nil, nil})
-	require.True(t, len(collectingState.(*collectingAvailabilityResponsesState).responses) == 1, "should have 1 response after adding it")
+	message := builders.BlockAvailabilityResponseInput().Build().Message
+	collectingState.gotAvailabilityResponse(message)
+	cs := collectingState.(*collectingAvailabilityResponsesState)
+	require.True(t, len(cs.responses) == 1, "should have 1 response after adding it")
+	require.Equal(t, message.Sender, cs.responses[0].Sender, "state sender should match message sender")
+	require.Equal(t, message.SignedBatchRange, cs.responses[0].SignedBatchRange, "state payload should match message")
 }
 
 func TestCollectingAvailabilityContextTermination(t *testing.T) {
