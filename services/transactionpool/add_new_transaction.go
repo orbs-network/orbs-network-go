@@ -35,7 +35,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	}
 
-	s.transactionForwarder.enqueueTransactionToBeForwarded(input.SignedTransaction)
+	s.transactionForwarder.submit(input.SignedTransaction)
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }

@@ -20,6 +20,8 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 30*time.Second)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 10)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 100)
+	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 100)
+	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 100*time.Millisecond)
 
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
@@ -159,6 +161,8 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *keys.Ed25519KeyPair) Tra
 	cfg.SetDuration(TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 3*time.Minute)
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
+	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 10)
+	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 5*time.Millisecond)
 
 	return cfg
 }
@@ -194,6 +198,8 @@ func defaultConfig() mutableNodeConfig {
 	cfg.SetDuration(TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 5*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
+	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 10*time.Millisecond)
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 

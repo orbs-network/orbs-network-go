@@ -2,7 +2,6 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -16,6 +15,27 @@ import (
 	"testing"
 	"time"
 )
+
+type forwarderConfig struct {
+	queueSize uint16
+	keyPair   *keys.Ed25519KeyPair
+}
+
+func (c *forwarderConfig) NodePublicKey() primitives.Ed25519PublicKey {
+	return c.keyPair.PublicKey()
+}
+
+func (c *forwarderConfig) NodePrivateKey() primitives.Ed25519PrivateKey {
+	return c.keyPair.PrivateKey()
+}
+
+func (c *forwarderConfig) TransactionPoolPropagationBatchSize() uint16 {
+	return c.queueSize
+}
+
+func (c *forwarderConfig) TransactionPoolPropagationBatchingTimeout() time.Duration {
+	return 5 * time.Millisecond
+}
 
 func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, publicKey primitives.Ed25519PublicKey, sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {
 	gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
@@ -34,9 +54,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		gossip := &gossiptopics.MockTransactionRelay{}
-
-		// FIXME factory method for specific config
-		cfg := config.ForTransactionPoolTests(0, keys.Ed25519KeyPairForTests(0))
+		cfg := &forwarderConfig{3, keys.Ed25519KeyPairForTests(0)}
 
 		txForwarder := NewTransactionForwarder(ctx, log.GetLogger(), cfg, gossip)
 
@@ -48,9 +66,33 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodePublicKey(), sig, tx, anotherTx)
 
-		txForwarder.enqueueTransactionToBeForwarded(tx)
-		txForwarder.enqueueTransactionToBeForwarded(anotherTx)
+		txForwarder.submit(tx)
+		txForwarder.submit(anotherTx)
 
-		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, gossip), "mocks were not called as expected")
+		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
+	})
+}
+
+func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
+	t.Parallel()
+
+	test.WithContext(func(ctx context.Context) {
+		gossip := &gossiptopics.MockTransactionRelay{}
+		cfg := &forwarderConfig{2, keys.Ed25519KeyPairForTests(0)}
+
+		txForwarder := NewTransactionForwarder(ctx, log.GetLogger(), cfg, gossip)
+
+		tx := builders.TransferTransaction().Build()
+		anotherTx := builders.TransferTransaction().Build()
+
+		oneBigHash, _ := HashTransactions(tx, anotherTx)
+		sig, _ := signature.SignEd25519(cfg.NodePrivateKey(), oneBigHash)
+
+		expectTransactionsToBeForwarded(gossip, cfg.NodePublicKey(), sig, tx, anotherTx)
+
+		txForwarder.submit(tx)
+		txForwarder.submit(anotherTx)
+
+		require.NoError(t, test.EventuallyVerify(1*time.Millisecond, gossip), "mocks were not called as expected")
 	})
 }

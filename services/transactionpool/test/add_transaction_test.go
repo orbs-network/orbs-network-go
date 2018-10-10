@@ -18,22 +18,15 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
-	anotherTx := builders.TransferTransaction().Build()
 
-	txHash := []byte(digest.CalcTxHash(tx.Transaction()))
-	anotherTxHash := []byte(digest.CalcTxHash(anotherTx.Transaction()))
-	txHashes := append(txHash, anotherTxHash...)
+	txHash := digest.CalcTxHash(tx.Transaction())
+	sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), txHash)
 
-	sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), txHashes)
-
-	h.expectTransactionsToBeForwarded(sig, tx, anotherTx)
+	h.expectTransactionsToBeForwarded(sig, tx)
 
 	_, err := h.addNewTransaction(tx)
 	require.NoError(t, err, "a valid transaction was not added to pool")
-
-	_, err = h.addNewTransaction(anotherTx)
-	require.NoError(t, err, "a valid transaction was not added to pool")
-	require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "mocks were not called as expected")
+	require.NoError(t, test.EventuallyVerify(h.config.TransactionPoolPropagationBatchingTimeout()*10, h.gossip), "mocks were not called as expected")
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {

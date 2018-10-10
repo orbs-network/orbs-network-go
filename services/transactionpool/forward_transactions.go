@@ -2,10 +2,10 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -15,6 +15,13 @@ import (
 	"sync"
 	"time"
 )
+
+type TransactionForwarderConfig interface {
+	NodePublicKey() primitives.Ed25519PublicKey
+	NodePrivateKey() primitives.Ed25519PrivateKey
+	TransactionPoolPropagationBatchSize() uint16
+	TransactionPoolPropagationBatchingTimeout() time.Duration
+}
 
 func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
 	s.transactionResultsHandlers = append(s.transactionResultsHandlers, handler)
@@ -40,47 +47,58 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 
 type transactionForwarder struct {
 	logger log.BasicLogger
-	config config.TransactionForwarderConfig
+	config TransactionForwarderConfig
 	gossip gossiptopics.TransactionRelay
 
 	forwardQueueMutex *sync.Mutex
 	forwardQueue      []*protocol.SignedTransaction
+	transactionAdded  chan uint16
 }
 
-func NewTransactionForwarder(ctx context.Context, logger log.BasicLogger, config config.TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
+func NewTransactionForwarder(ctx context.Context, logger log.BasicLogger, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
 	f := &transactionForwarder{
 		logger:            logger.WithTags(log.String("component", "transaction-forwarder")),
 		config:            config,
 		gossip:            gossip,
 		forwardQueueMutex: &sync.Mutex{},
+		transactionAdded:  make(chan uint16),
 	}
 
-	f.startForwardingProcess(ctx)
+	f.start(ctx)
 
 	return f
 }
 
-func (f *transactionForwarder) enqueueTransactionToBeForwarded(transaction *protocol.SignedTransaction) {
+func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
 	f.forwardQueueMutex.Lock()
-	defer f.forwardQueueMutex.Unlock()
 	f.forwardQueue = append(f.forwardQueue, transaction)
+	count := uint16(len(f.forwardQueue))
+	f.forwardQueueMutex.Unlock()
+	f.transactionAdded <- count
 }
 
-func (f *transactionForwarder) startForwardingProcess(ctx context.Context) {
+func (f *transactionForwarder) start(ctx context.Context) {
 	go func() {
 		for {
+			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
+
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(5 * time.Millisecond):
-				f.drainQueueAndForwardTransactions()
+			case txCount := <-f.transactionAdded:
+				if txCount >= f.config.TransactionPoolPropagationBatchSize() {
+					timer.Stop()
+					f.drainQueueAndForward()
+				}
+			case <-timer.C:
+				f.drainQueueAndForward()
 			}
 		}
 
 	}()
 }
 
-func (f *transactionForwarder) drainQueueAndForwardTransactions() {
+func (f *transactionForwarder) drainQueueAndForward() {
 	txs := f.drainQueue()
 	if len(txs) == 0 {
 		return
