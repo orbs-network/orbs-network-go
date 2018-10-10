@@ -33,6 +33,17 @@ func TestFinishedWithInvalidResponsesMovesToIdle(t *testing.T) {
 	require.IsType(t, &idleState{}, shouldBeIdleState, "next state should be idle when invalid input")
 }
 
+func TestFinishedContextTerminationFlow(t *testing.T) {
+	h := newBlockSyncHarness()
+	response := builders.BlockAvailabilityResponseInput().Build().Message
+	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
+
+	h.cancel()
+	shouldBeNil := finishedState.processState(h.ctx)
+
+	require.Nil(t, shouldBeNil, "context terminated, state should be nil")
+}
+
 func TestFinishedNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})

@@ -20,6 +20,10 @@ func (s *processingBlocksState) name() string {
 }
 
 func (s *processingBlocksState) processState(ctx context.Context) syncState {
+	if ctx.Err() == context.Canceled {
+		return nil
+	}
+
 	if s.blocks == nil {
 		s.logger.Error("fatal error in block sync, received no blocks to processing blocks state")
 		return s.sf.CreateIdleState()

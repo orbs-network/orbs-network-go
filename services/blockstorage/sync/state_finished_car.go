@@ -19,6 +19,10 @@ func (s *finishedCARState) name() string {
 }
 
 func (s *finishedCARState) processState(ctx context.Context) syncState {
+	if ctx.Err() == context.Canceled {
+		return nil
+	}
+
 	c := len(s.responses)
 	if c == 0 {
 		s.logger.Info("no responses received")

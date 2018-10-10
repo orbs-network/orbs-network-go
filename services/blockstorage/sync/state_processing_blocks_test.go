@@ -105,6 +105,22 @@ func TestProcessingCommitFailureReturnsToCAR(t *testing.T) {
 	h.verifyMocks(t)
 }
 
+func TestProcessingContextTerminationFlow(t *testing.T) {
+	h := newBlockSyncHarness()
+	h.cancel()
+
+	message := builders.BlockSyncResponseInput().
+		WithFirstBlockHeight(10).
+		WithLastBlockHeight(20).
+		WithLastCommittedBlockHeight(20).
+		Build().Message
+
+	processingState := h.sf.CreateProcessingBlocksState(message)
+	next := processingState.processState(h.ctx)
+
+	require.Nil(t, next, "next state should be nil on context termination")
+}
+
 func TestProcessingNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	processing := h.sf.CreateProcessingBlocksState(nil)
