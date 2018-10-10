@@ -20,9 +20,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T)
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
 	nextShouldBeIdle := collectingState.processState(h.ctx)
 
-	_, isIdle := nextShouldBeIdle.(*idleState)
-
-	require.True(t, isIdle, "should be idle on gossip error")
+	require.IsType(t, &idleState{}, nextShouldBeIdle, "should be idle on gossip error")
 
 	h.verifyMocks(t)
 }

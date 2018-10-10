@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
@@ -14,8 +15,11 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 		next = idle.processState(h.ctx)
 		latch <- struct{}{}
 	}()
+	// letting the goroutine start above
+	time.Sleep(time.Millisecond)
 	idle.blockCommitted()
 	<-latch
+	require.IsType(t, &idleState{}, next, "next should still be idle")
 	require.True(t, next != idle, "processState state should be a different idle state (which was restarted)")
 }
 
@@ -23,8 +27,7 @@ func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
 	h := newBlockSyncHarness()
 	idle := h.sf.CreateIdleState()
 	next := idle.processState(h.ctx)
-	_, ok := next.(*collectingAvailabilityResponsesState)
-	require.True(t, ok, "processState state should be collecting availability responses")
+	require.IsType(t, &collectingAvailabilityResponsesState{}, next, "processState state should be collecting availability responses")
 }
 
 func TestIdleStateTerminatesOnContextTermination(t *testing.T) {

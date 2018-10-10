@@ -19,9 +19,7 @@ func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
 
-	_, isIdle := nextState.(*idleState)
-
-	require.True(t, isIdle, "expecting back to idle on transport error")
+	require.IsType(t, &idleState{}, nextState, "expecting back to idle on transport error")
 
 	h.verifyMocks(t)
 }
@@ -35,9 +33,7 @@ func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
 
-	_, isIdle := nextState.(*idleState)
-
-	require.True(t, isIdle, "expecting back to idle on transport error")
+	require.IsType(t, &idleState{}, nextState, "expecting back to idle on timeout")
 
 	h.verifyMocks(t)
 }
