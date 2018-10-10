@@ -45,7 +45,6 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 
 	require.IsType(t, &finishedCARState{}, nextShouldBeFinished, "state should transition to finished CAR")
 	fcar := nextShouldBeFinished.(*finishedCARState)
-	require.NotNil(t, fcar.responses, "finished should have the responses initialized")
 	require.Equal(t, 1, len(fcar.responses), "there should be one response")
 	require.Equal(t, message.Sender, fcar.responses[0].Sender, "state sender should match message sender")
 	require.Equal(t, message.SignedBatchRange, fcar.responses[0].SignedBatchRange, "state payload should match message")
