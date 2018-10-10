@@ -94,14 +94,9 @@ func (h *harness) verifyMocks() error {
 }
 
 func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+	oneBigHash, _ := transactionpool.HashTransactions(transactions)
 
-	//TODO this is copying and needs to go away pending issue #119
-	var allTransactions []byte
-	for _, tx := range transactions {
-		allTransactions = append(allTransactions, tx.Raw()...)
-	}
-
-	sig, err := signature.SignEd25519(sender.PrivateKey(), allTransactions)
+	sig, err := signature.SignEd25519(sender.PrivateKey(), oneBigHash)
 	if err != nil {
 		panic(err)
 	}

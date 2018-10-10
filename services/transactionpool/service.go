@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -118,33 +117,6 @@ func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransa
 		}
 	}
 	return &services.ValidateTransactionsForOrderingOutput{}, nil
-}
-
-func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
-	s.transactionResultsHandlers = append(s.transactionResultsHandlers, handler)
-}
-
-func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
-
-	//TODO this is copying and needs to go away pending issue #119
-	sender := input.Message.Sender
-	var allTransactions []byte
-	for _, tx := range input.Message.SignedTransactions {
-		allTransactions = append(allTransactions, tx.Raw()...)
-	}
-
-	if !signature.VerifyEd25519(sender.SenderPublicKey(), allTransactions, sender.Signature()) {
-		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderPublicKey())
-	}
-
-	for _, tx := range input.Message.SignedTransactions {
-		txHash := digest.CalcTxHash(tx.Transaction())
-		s.logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", tx), log.Stringable("txHash", txHash))
-		if _, err := s.pendingPool.add(tx, sender.SenderPublicKey()); err != nil {
-			s.logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), log.Stringable("txHash", txHash))
-		}
-	}
-	return nil, nil
 }
 
 func (s *service) createValidationContext() *validationContext {
