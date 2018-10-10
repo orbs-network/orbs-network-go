@@ -23,6 +23,9 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		return nil
 	}
 
+	m := s.logger.Meter("block-sync-processing-blocks-state")
+	defer m.Done()
+
 	if s.blocks == nil {
 		s.logger.Info("possible byzantine state in block sync, received no blocks to processing blocks state")
 		return s.sf.CreateIdleState()

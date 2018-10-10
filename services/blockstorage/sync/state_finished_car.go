@@ -22,6 +22,9 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 		return nil
 	}
 
+	m := s.logger.Meter("block-sync-finished-car-state")
+	defer m.Done()
+
 	c := len(s.responses)
 	if c == 0 {
 		s.logger.Info("no responses received")
