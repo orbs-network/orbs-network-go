@@ -32,11 +32,23 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
-	nextShouldBeFinished := collectingState.processState(h.ctx)
+	var nextShouldBeFinished syncState = nil
+	latch := make(chan struct{})
+	go func() {
+		nextShouldBeFinished = collectingState.processState(h.ctx)
+		latch <- struct{}{}
+	}()
+	message := builders.BlockAvailabilityResponseInput().Build().Message
+	collectingState.gotAvailabilityResponse(message)
+	<-latch
 
-	_, isIdle := nextShouldBeFinished.(*finishedCARState)
-
-	require.True(t, isIdle, "state transition incorrect")
+	require.IsType(t, &finishedCARState{}, nextShouldBeFinished, "state should transition to finished CAR")
+	fcar := nextShouldBeFinished.(*finishedCARState)
+	require.NotNil(t, fcar.responses, "finished should have the responses initialized")
+	t.Logf("%v", collectingState.(*collectingAvailabilityResponsesState))
+	t.Logf("%v", collectingState.(*collectingAvailabilityResponsesState).responses)
+	require.Equal(t, message.Sender, fcar.responses[0].Sender, "state sender should match message sender")
+	require.Equal(t, message.SignedBatchRange, fcar.responses[0].SignedBatchRange, "state payload should match message")
 
 	h.verifyMocks(t)
 }

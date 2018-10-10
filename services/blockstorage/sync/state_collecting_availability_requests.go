@@ -23,13 +23,13 @@ func (s *collectingAvailabilityResponsesState) name() string {
 }
 
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
+	s.responses = []*gossipmessages.BlockAvailabilityResponseMessage{}
+
 	err := s.petitionerBroadcastBlockAvailabilityRequest()
 	if err != nil {
 		s.logger.Info("failed to broadcast block availability request", log.Error(err))
 		return s.sf.CreateIdleState()
 	}
-
-	s.responses = []*gossipmessages.BlockAvailabilityResponseMessage{}
 
 	waitForResponses := synchronization.NewTimer(s.config.BlockSyncCollectResponseTimeout())
 	select {
