@@ -60,6 +60,11 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	<-latch
 
 	require.IsType(t, &processingBlocksState{}, nextState, "expecting to be at processing state after blocks arrived")
+	pbs := nextState.(*processingBlocksState)
+	require.NotNil(t, pbs.blocks, "blocks payload initialized in processing stage")
+	require.Equal(t, blocksMessage.Sender, pbs.blocks.Sender, "expected sender in source message to be the same in the state")
+	require.Equal(t, len(blocksMessage.BlockPairs), len(pbs.blocks.BlockPairs), "expected same number of blocks in message->state")
+	require.Equal(t, blocksMessage.SignedChunkRange, pbs.blocks.SignedChunkRange, "expected signed range to be the same in message -> state")
 
 	h.verifyMocks(t)
 }
