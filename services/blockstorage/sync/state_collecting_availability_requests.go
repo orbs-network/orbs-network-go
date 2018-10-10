@@ -34,17 +34,19 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	waitForResponses := synchronization.NewTimer(s.config.BlockSyncCollectResponseTimeout())
 	select {
 	case <-waitForResponses.C:
+		s.logger.Info("finished waiting for responses", log.Int("responses-received", len(s.responses)))
 		return s.sf.CreateFinishedCARState(s.responses)
 	case <-ctx.Done():
 		return nil
 	}
 }
 
-func (s *collectingAvailabilityResponsesState) blockCommitted(blockHeight primitives.BlockHeight) {
+func (s *collectingAvailabilityResponsesState) blockCommitted() {
 	return
 }
 
 func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+	s.logger.Info("got a new availability response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
 	s.responses = append(s.responses, message)
 }
 

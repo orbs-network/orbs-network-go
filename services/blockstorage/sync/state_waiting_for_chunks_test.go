@@ -112,5 +112,5 @@ func TestWaitingNOP(t *testing.T) {
 
 	// this is sanity, these calls should do nothing
 	waitingState.gotAvailabilityResponse(nil)
-	waitingState.blockCommitted(primitives.BlockHeight(0))
+	waitingState.blockCommitted()
 }

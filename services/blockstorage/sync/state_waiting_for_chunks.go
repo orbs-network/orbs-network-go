@@ -47,7 +47,7 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	}
 }
 
-func (s *waitingForChunksState) blockCommitted(blockHeight primitives.BlockHeight) {
+func (s *waitingForChunksState) blockCommitted() {
 	return
 }
 

@@ -97,7 +97,6 @@ func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.I
 
 	d.gossip = &gossiptopics.MockBlockSync{}
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
-	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 	d.txPool = &services.MockTransactionPool{}
 	d.txPool.When("CommitTransactionReceipts", mock.Any).Return(nil, nil).AtLeast(0)

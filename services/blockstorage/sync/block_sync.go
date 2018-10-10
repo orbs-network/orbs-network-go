@@ -15,7 +15,7 @@ import (
 type syncState interface {
 	name() string
 	processState(ctx context.Context) syncState
-	blockCommitted(blockHeight primitives.BlockHeight)
+	blockCommitted()
 	gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage)
 	gotBlocks(message *gossipmessages.BlockSyncResponseMessage)
 }
@@ -77,6 +77,14 @@ func (bs *BlockSync) syncLoop(ctx context.Context) {
 
 	bs.terminated = true
 	meter.Done()
+}
+
+func (bs *BlockSync) HandleBlockCommitted() {
+	bs.eventLock.Lock()
+	defer bs.eventLock.Unlock()
+	if bs.currentState != nil {
+		bs.currentState.blockCommitted()
+	}
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {

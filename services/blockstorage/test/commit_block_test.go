@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -14,6 +15,8 @@ import (
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectCommitStateDiff()
 
@@ -39,6 +42,8 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectCommitStateDiff()
 
@@ -66,6 +71,8 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		_, err := harness.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -76,6 +83,8 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		blockPair := builders.BlockPair().Build()
 
@@ -94,6 +103,8 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectCommitStateDiff()
 
@@ -112,6 +123,8 @@ func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 		harness.expectCommitStateDiff()
 
 		harness.commitBlock(builders.BlockPair().Build())
@@ -126,6 +139,8 @@ func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 		harness.expectCommitStateDiffTimes(2)
 
 		tx := builders.Transaction().Build()
@@ -144,6 +159,9 @@ func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
 
 		blockHeight := harness.storageAdapter.WaitForTransaction(txHash)
 		require.EqualValues(t, 1, blockHeight)
+
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.verifyMocks(t, 1)
 	})

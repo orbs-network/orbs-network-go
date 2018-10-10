@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
@@ -32,8 +31,13 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	}
 }
 
-func (s *idleState) blockCommitted(blockHeight primitives.BlockHeight) {
-	s.restartIdle <- struct{}{}
+func (s *idleState) blockCommitted() {
+	select {
+	case s.restartIdle <- struct{}{}:
+		s.logger.Info("sync got new block commit")
+	default:
+		s.logger.Info("channel was not ready, skipping notification")
+	}
 }
 
 func (s *idleState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {

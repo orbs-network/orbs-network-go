@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -110,7 +109,7 @@ func TestProcessingNOP(t *testing.T) {
 	processing := h.sf.CreateProcessingBlocksState(nil)
 
 	// these tests are for sanity, they should not do anything
-	processing.blockCommitted(primitives.BlockHeight(0))
+	processing.blockCommitted()
 	processing.gotBlocks(nil)
 	processing.gotAvailabilityResponse(nil)
 }

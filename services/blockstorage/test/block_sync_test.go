@@ -18,6 +18,8 @@ import (
 func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectCommitStateDiffTimes(2)
 
@@ -47,7 +49,8 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 		harness.expectCommitStateDiffTimes(4)
 
 		blocks := []*protocol.BlockPairContainer{
@@ -100,6 +103,8 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectCommitStateDiffTimes(4)
 
@@ -173,7 +178,8 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 		blockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(4)).Build()
+			WithLastBlockHeight(primitives.BlockHeight(4)).
+			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
 		// TODO: the source key here is the same for both because the sync process will pick them at random, refactor when we change the random
 		anotherSenderKeyPair := keys.Ed25519KeyPairForTests(7)
@@ -207,5 +213,38 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 		// verify that we committed the blocks
 		harness.verifyMocks(t, 4)
+	})
+}
+
+func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		// let the sync time to start
+		time.Sleep(1 * time.Millisecond)
+
+		harness := newHarness(ctx)
+
+		harness.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any)
+
+		harness.expectCommitStateDiffTimes(10)
+
+		// we do not assume anything about the implementation, commit a block/ms and see if the sync tries to broadcast
+		latch := make(chan struct{})
+		go func() {
+			for i := 1; i < 11; i++ {
+				blockCreated := time.Now()
+				blockHeight := primitives.BlockHeight(i)
+
+				_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+
+				require.NoError(t, err)
+
+				time.Sleep(1 * time.Millisecond)
+			}
+			latch <- struct{}{}
+		}()
+
+		<-latch
+		require.EqualValues(t, 10, harness.numOfWrittenBlocks())
+		harness.verifyMocks(t, 1)
 	})
 }

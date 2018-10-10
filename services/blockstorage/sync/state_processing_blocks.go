@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -57,7 +56,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	return s.sf.CreateCollectingAvailabilityResponseState()
 }
 
-func (s *processingBlocksState) blockCommitted(blockHeight primitives.BlockHeight) {
+func (s *processingBlocksState) blockCommitted() {
 	return
 }
 

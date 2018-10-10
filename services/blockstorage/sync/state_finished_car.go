@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"math/rand"
 )
@@ -35,7 +34,7 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	return s.sf.CreateWaitingForChunksState(syncSourceKey)
 }
 
-func (s *finishedCARState) blockCommitted(blockHeight primitives.BlockHeight) {
+func (s *finishedCARState) blockCommitted() {
 	return
 }
 

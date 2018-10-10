@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -15,7 +14,7 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 		next = idle.processState(h.ctx)
 		latch <- struct{}{}
 	}()
-	idle.blockCommitted(primitives.BlockHeight(11))
+	idle.blockCommitted()
 	<-latch
 	require.True(t, next != idle, "processState state should be a different idle state (which was restarted)")
 }

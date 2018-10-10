@@ -96,6 +96,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	}
 
 	s.updateLastCommittedBlock(input.BlockPair)
+	s.newBlockSync.HandleBlockCommitted()
 
 	s.logger.Info("Committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 

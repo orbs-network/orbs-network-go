@@ -2,7 +2,6 @@ package sync
 
 import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -50,6 +49,6 @@ func TestFinishedNOP(t *testing.T) {
 
 	// sanity test, these should do nothing
 	finishedState.gotBlocks(nil)
-	finishedState.blockCommitted(primitives.BlockHeight(0))
+	finishedState.blockCommitted()
 	finishedState.gotAvailabilityResponse(nil)
 }
