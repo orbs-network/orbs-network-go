@@ -24,7 +24,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	}
 
 	if s.blocks == nil {
-		s.logger.Error("fatal error in block sync, received no blocks to processing blocks state")
+		s.logger.Info("possible byzantine state in block sync, received no blocks to processing blocks state")
 		return s.sf.CreateIdleState()
 	}
 

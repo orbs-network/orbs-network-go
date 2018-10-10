@@ -32,6 +32,9 @@ func (s *idleState) processState(ctx context.Context) syncState {
 }
 
 func (s *idleState) blockCommitted() {
+	// the default below is important as its possible to get a block committed event before the processState got to the select
+	// in a highly concurrent scenario where the state is recreated rapidly, this will deadlock the commit flow
+	// its better to skip notification to avoid that deadlock
 	select {
 	case s.restartIdle <- struct{}{}:
 		s.logger.Info("sync got new block commit")
