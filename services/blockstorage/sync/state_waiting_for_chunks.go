@@ -21,7 +21,7 @@ type waitingForChunksState struct {
 	blocks    *gossipmessages.BlockSyncResponseMessage
 }
 
-func (s *waitingForChunksState) name() string {
+func (s *waitingForChunksState) String() string {
 	return "waiting-for-chunks-state"
 }
 

@@ -14,7 +14,7 @@ type processingBlocksState struct {
 	sf      *stateFactory
 }
 
-func (s *processingBlocksState) name() string {
+func (s *processingBlocksState) String() string {
 	return "processing-blocks-state"
 }
 

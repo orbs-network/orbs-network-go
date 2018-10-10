@@ -12,7 +12,7 @@ import (
 )
 
 type syncState interface {
-	name() string
+	String() string
 	processState(ctx context.Context) syncState
 	blockCommitted()
 	gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage)
@@ -68,7 +68,7 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 func (bs *BlockSync) syncLoop(ctx context.Context) {
 	meter := bs.logger.Meter("inter-sync-main-loop")
 	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
-		bs.logger.Info("state transitioning", log.String("current-state", bs.currentState.name()))
+		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
 		bs.currentState = bs.currentState.processState(ctx)
 	}
 

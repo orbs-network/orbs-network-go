@@ -13,7 +13,7 @@ type finishedCARState struct {
 	sf        *stateFactory
 }
 
-func (s *finishedCARState) name() string {
+func (s *finishedCARState) String() string {
 	return "finished-collecting-availability-requests-state"
 }
 

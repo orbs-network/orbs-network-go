@@ -18,7 +18,7 @@ type collectingAvailabilityResponsesState struct {
 	logger    log.BasicLogger
 }
 
-func (s *collectingAvailabilityResponsesState) name() string {
+func (s *collectingAvailabilityResponsesState) String() string {
 	return "collecting-availability-responses"
 }
 

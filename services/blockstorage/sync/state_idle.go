@@ -14,7 +14,7 @@ type idleState struct {
 	sf          *stateFactory
 }
 
-func (s *idleState) name() string {
+func (s *idleState) String() string {
 	return "idle-state"
 }
 
