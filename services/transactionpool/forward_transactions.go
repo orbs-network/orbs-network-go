@@ -22,7 +22,7 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 
 func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 	sender := input.Message.Sender
-	oneBigHash, _ := HashTransactions(input.Message.SignedTransactions)
+	oneBigHash, _ := HashTransactions(input.Message.SignedTransactions...)
 
 	if !signature.VerifyEd25519(sender.SenderPublicKey(), oneBigHash, sender.Signature()) {
 		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderPublicKey())
@@ -86,7 +86,7 @@ func (f *transactionForwarder) drainQueueAndForwardTransactions() {
 		return
 	}
 
-	oneBigHash, hashes := HashTransactions(txs)
+	oneBigHash, hashes := HashTransactions(txs...)
 
 	sig, err := signature.SignEd25519(f.config.NodePrivateKey(), oneBigHash)
 	if err != nil {
@@ -121,7 +121,7 @@ func (f *transactionForwarder) drainQueue() []*protocol.SignedTransaction {
 	return txs
 }
 
-func HashTransactions(txs []*protocol.SignedTransaction) (oneBigHash []byte, hashes []primitives.Sha256) {
+func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, hashes []primitives.Sha256) {
 	for _, tx := range txs {
 		hash := digest.CalcTxHash(tx.Transaction())
 
