@@ -33,7 +33,7 @@ var (
 	otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
 )
 
-func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
+func (h *harness) expectTransactionsToBeForwarded(sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {
 
 	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
@@ -41,7 +41,7 @@ func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction,
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
 				Signature:       sig,
 			}).Build(),
-			SignedTransactions: transactionpool.Transactions{tx},
+			SignedTransactions: transactions,
 		},
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
 }
