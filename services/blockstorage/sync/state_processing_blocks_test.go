@@ -55,7 +55,7 @@ func TestProcessingWithNoBlocksReturnsToIdle(t *testing.T) {
 	require.IsType(t, &idleState{}, next, "commit initialized invalid should move to idle")
 }
 
-func TestProcessingValidationFailure(t *testing.T) {
+func TestProcessingValidationFailureReturnsToCAR(t *testing.T) {
 	h := newBlockSyncHarness()
 
 	message := builders.BlockSyncResponseInput().
@@ -80,7 +80,7 @@ func TestProcessingValidationFailure(t *testing.T) {
 	h.verifyMocks(t)
 }
 
-func TestProcessingCommitFailure(t *testing.T) {
+func TestProcessingCommitFailureReturnsToCAR(t *testing.T) {
 	h := newBlockSyncHarness()
 
 	message := builders.BlockSyncResponseInput().
