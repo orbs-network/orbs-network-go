@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -29,11 +28,9 @@ type blockSyncConfig interface {
 }
 
 type BlockSyncStorage interface {
-	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight)
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
-	UpdateConsensusAlgosAboutLatestCommittedBlock()
 }
 
 type BlockSync struct {
