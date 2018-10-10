@@ -2,6 +2,7 @@ package transactionpool
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -11,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
+	"sync"
 	"time"
 )
 
@@ -36,39 +38,67 @@ func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTrans
 	return nil, nil
 }
 
-func (s *service) startForwardingProcess(ctx context.Context) {
+type transactionForwarder struct {
+	logger log.BasicLogger
+	config config.TransactionForwarderConfig
+	gossip gossiptopics.TransactionRelay
+
+	forwardQueueMutex *sync.Mutex
+	forwardQueue      []*protocol.SignedTransaction
+}
+
+func NewTransactionForwarder(ctx context.Context, logger log.BasicLogger, config config.TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
+	f := &transactionForwarder{
+		logger:            logger.WithTags(log.String("component", "transaction-forwarder")),
+		config:            config,
+		gossip:            gossip,
+		forwardQueueMutex: &sync.Mutex{},
+	}
+
+	f.startForwardingProcess(ctx)
+
+	return f
+}
+
+func (f *transactionForwarder) enqueueTransactionToBeForwarded(transaction *protocol.SignedTransaction) {
+	f.forwardQueueMutex.Lock()
+	defer f.forwardQueueMutex.Unlock()
+	f.forwardQueue = append(f.forwardQueue, transaction)
+}
+
+func (f *transactionForwarder) startForwardingProcess(ctx context.Context) {
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-time.After(5 * time.Millisecond):
-				s.drainQueueAndForwardTransactions()
+				f.drainQueueAndForwardTransactions()
 			}
 		}
 
 	}()
 }
 
-func (s *service) drainQueueAndForwardTransactions() {
-	txs := s.drainQueue()
+func (f *transactionForwarder) drainQueueAndForwardTransactions() {
+	txs := f.drainQueue()
 	if len(txs) == 0 {
 		return
 	}
 
 	oneBigHash, hashes := HashTransactions(txs)
 
-	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), oneBigHash)
+	sig, err := signature.SignEd25519(f.config.NodePrivateKey(), oneBigHash)
 	if err != nil {
-		s.logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		f.logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
 		return
 	}
 
-	_, err = s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+	_, err = f.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			SignedTransactions: txs,
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
+				SenderPublicKey: f.config.NodePublicKey(),
 				Signature:       sig,
 			}).Build(),
 		},
@@ -76,18 +106,18 @@ func (s *service) drainQueueAndForwardTransactions() {
 
 	for _, hash := range hashes {
 		if err != nil {
-			s.logger.Info("failed forwarding transaction via gossip", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", hash))
+			f.logger.Info("failed forwarding transaction via gossip", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", hash))
 		} else {
-			s.logger.Info("forwarded transaction via gossip", log.String("flow", "checkpoint"), log.Stringable("txHash", hash))
+			f.logger.Info("forwarded transaction via gossip", log.String("flow", "checkpoint"), log.Stringable("txHash", hash))
 		}
 	}
 }
 
-func (s *service) drainQueue() []*protocol.SignedTransaction {
-	s.forwardQueueMutex.Lock()
-	txs := s.forwardQueue
-	s.forwardQueue = nil
-	s.forwardQueueMutex.Unlock()
+func (f *transactionForwarder) drainQueue() []*protocol.SignedTransaction {
+	f.forwardQueueMutex.Lock()
+	txs := f.forwardQueue
+	f.forwardQueue = nil
+	f.forwardQueueMutex.Unlock()
 	return txs
 }
 

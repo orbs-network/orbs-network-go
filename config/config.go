@@ -138,6 +138,11 @@ type TransactionPoolConfig interface {
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 }
 
+type TransactionForwarderConfig interface {
+	NodePublicKey() primitives.Ed25519PublicKey
+	NodePrivateKey() primitives.Ed25519PrivateKey
+}
+
 type FederationNode interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 }

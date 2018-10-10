@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
-	"sync"
 	"time"
 )
 
@@ -31,9 +30,7 @@ type service struct {
 	pendingPool                 *pendingTxPool
 	committedPool               *committedTxPool
 	blockTracker                *synchronization.BlockTracker
-
-	forwardQueueMutex *sync.Mutex
-	forwardQueue      []*protocol.SignedTransaction
+	transactionForwarder        *transactionForwarder
 }
 
 func NewTransactionPool(ctx context.Context,
@@ -42,6 +39,8 @@ func NewTransactionPool(ctx context.Context,
 	config config.TransactionPoolConfig,
 	logger log.BasicLogger) services.TransactionPool {
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes)
+
+	txForwarder := NewTransactionForwarder(ctx, logger, config, gossip)
 
 	s := &service{
 		gossip:         gossip,
@@ -53,8 +52,7 @@ func NewTransactionPool(ctx context.Context,
 		pendingPool:                 pendingPool,
 		committedPool:               NewCommittedPool(),
 		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
-
-		forwardQueueMutex: &sync.Mutex{},
+		transactionForwarder:        txForwarder,
 	}
 
 	gossip.RegisterTransactionRelayHandler(s)
@@ -63,8 +61,6 @@ func NewTransactionPool(ctx context.Context,
 	//TODO supervise
 	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool, logger)
 	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool, logger)
-
-	s.startForwardingProcess(ctx)
 
 	return s
 }

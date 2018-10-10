@@ -35,9 +35,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 
 	}
 
-	s.forwardQueueMutex.Lock()
-	defer s.forwardQueueMutex.Unlock()
-	s.forwardQueue = append(s.forwardQueue, input.SignedTransaction)
+	s.transactionForwarder.enqueueTransactionToBeForwarded(input.SignedTransaction)
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
