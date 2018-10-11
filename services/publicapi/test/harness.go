@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -28,7 +29,7 @@ func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness 
 	txpMock := makeTxMock()
 	vmMock := &services.MockVirtualMachine{}
 	bksMock := &services.MockBlockStorage{}
-	papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, bksMock, logger)
+	papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, bksMock, logger, metric.NewRegistry())
 	return &harness{
 		papi:    papi,
 		txpMock: txpMock,

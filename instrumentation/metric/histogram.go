@@ -36,7 +36,7 @@ func (h *Histogram) String() string {
 	}
 
 	return fmt.Sprintf(
-		"metric %s: [min=%d, p50=%d, p95=%d, p99=%d, max=%d, avg=%s, samples=%d, error rate=%f]\n",
+		"metric %s: [min=%d, p50=%d, p95=%d, p99=%d, max=%d, avg=%f, samples=%d, error rate=%f]\n",
 		h.name,
 		h.histo.Min(),
 		h.histo.ValueAtQuantile(50),

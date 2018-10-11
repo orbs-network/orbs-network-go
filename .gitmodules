@@ -26,3 +26,6 @@
 [submodule "vendor/github.com/orbs-network/orbs-contract-sdk"]
 	path = vendor/github.com/orbs-network/orbs-contract-sdk
 	url = https://github.com/orbs-network/orbs-contract-sdk
+[submodule "vendor/github.com/codahale/hdrhistogram"]
+	path = vendor/github.com/codahale/hdrhistogram
+	url = https://github.com/codahale/hdrhistogram
