@@ -21,6 +21,10 @@ func TestBlockSyncShutdown(t *testing.T) {
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
+	// although we test this use case at the service level, this test is testing the same logic on the sync unit level
+	// its to cover that specific line of code in blockSync engine, rather then the service handler code
+	// (or the idle state code)
+
 	h := newBlockSyncHarness()
 	h.gossip.Never("BroadcastBlockAvailabilityRequest")
 
