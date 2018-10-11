@@ -88,12 +88,6 @@ func (bs *BlockSync) HandleBlockCommitted() {
 	}
 }
 
-func (bs *BlockSync) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
-	return nil, nil
-}
-
 func (bs *BlockSync) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	bs.eventLock.Lock()
 	defer bs.eventLock.Unlock()
@@ -102,12 +96,6 @@ func (bs *BlockSync) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAv
 	if bs.currentState != nil {
 		bs.currentState.gotAvailabilityResponse(input.Message)
 	}
-	return nil, nil
-}
-
-func (bs *BlockSync) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
 	return nil, nil
 }
 

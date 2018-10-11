@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -138,6 +139,14 @@ func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorage
 	cfg.queryExpirationWindow = 30 * time.Minute
 
 	return cfg
+}
+
+func (d *harness) setupSomeBlocks(count int) {
+	d.expectCommitStateDiffTimes(count)
+
+	for i := 1; i <= count; i++ {
+		d.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+	}
 }
 
 func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.InMemoryBlockPersistence, consensus *handlers.MockConsensusBlocksHandler)) *harness {
