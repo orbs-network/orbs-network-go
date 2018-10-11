@@ -49,6 +49,8 @@ type NodeConfig interface {
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPropagationBatchSize() uint16
+	TransactionPoolPropagationBatchingTimeout() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -136,6 +138,8 @@ type TransactionPoolConfig interface {
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPropagationBatchSize() uint16
+	TransactionPoolPropagationBatchingTimeout() time.Duration
 }
 
 type FederationNode interface {

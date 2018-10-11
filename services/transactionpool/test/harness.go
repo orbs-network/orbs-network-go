@@ -33,7 +33,7 @@ var (
 	otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
 )
 
-func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
+func (h *harness) expectTransactionsToBeForwarded(sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {
 
 	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
@@ -41,7 +41,7 @@ func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction,
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
 				Signature:       sig,
 			}).Build(),
-			SignedTransactions: transactionpool.Transactions{tx},
+			SignedTransactions: transactions,
 		},
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
 }
@@ -94,14 +94,9 @@ func (h *harness) verifyMocks() error {
 }
 
 func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+	oneBigHash, _ := transactionpool.HashTransactions(transactions...)
 
-	//TODO this is copying and needs to go away pending issue #119
-	var allTransactions []byte
-	for _, tx := range transactions {
-		allTransactions = append(allTransactions, tx.Raw()...)
-	}
-
-	sig, err := signature.SignEd25519(sender.PrivateKey(), allTransactions)
+	sig, err := signature.SignEd25519(sender.PrivateKey(), oneBigHash)
 	if err != nil {
 		panic(err)
 	}

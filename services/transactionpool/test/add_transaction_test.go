@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -17,12 +18,15 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	h := newHarness()
 
 	tx := builders.TransferTransaction().Build()
-	sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), tx.Raw())
-	h.expectTransactionToBeForwarded(tx, sig)
+
+	txHash := digest.CalcTxHash(tx.Transaction())
+	sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), txHash)
+
+	h.expectTransactionsToBeForwarded(sig, tx)
 
 	_, err := h.addNewTransaction(tx)
 	require.NoError(t, err, "a valid transaction was not added to pool")
-	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
+	require.NoError(t, test.EventuallyVerify(h.config.TransactionPoolPropagationBatchingTimeout()*10, h.gossip), "mocks were not called as expected")
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
@@ -35,7 +39,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	_, err := h.addNewTransaction(tx)
 
 	require.Error(t, err, "an invalid transaction was added to the pool")
-	require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
+	require.NoError(t, test.ConsistentlyVerify(10*time.Millisecond, h.gossip), "mocks were not called as expected")
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
