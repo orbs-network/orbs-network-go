@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
@@ -17,11 +16,6 @@ import (
 // the storage mock should be moved to its own file, but i have a weird goland bug where it will not identify it and its driving me mad, putting this here for now
 type blockSyncStorageMock struct {
 	mock.Mock
-}
-
-func (s *blockSyncStorageMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
-	ret := s.Called()
-	return ret.Get(0).([]*protocol.BlockPairContainer), ret.Get(1).(primitives.BlockHeight), ret.Get(2).(primitives.BlockHeight)
 }
 
 func (s *blockSyncStorageMock) LastCommittedBlockHeight() primitives.BlockHeight {
@@ -37,10 +31,6 @@ func (s *blockSyncStorageMock) CommitBlock(input *services.CommitBlockInput) (*s
 func (s *blockSyncStorageMock) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	ret := s.Called(input)
 	return nil, ret.Error(0)
-}
-
-func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock() {
-	s.Called()
 }
 
 // end of storage mock
@@ -88,4 +78,16 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	ok, err := mock.VerifyMocks(h.storage, h.gossip)
 	require.NoError(t, err)
 	require.True(t, ok)
+}
+
+func (h *blockSyncHarness) nextState(state syncState, trigger func()) syncState {
+	var nextState syncState
+	latch := make(chan struct{})
+	go func() {
+		nextState = state.processState(h.ctx)
+		latch <- struct{}{}
+	}()
+	trigger()
+	<-latch
+	return nextState
 }

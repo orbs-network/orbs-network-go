@@ -15,7 +15,7 @@ func TestBlockSyncShutdown(t *testing.T) {
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
 	h.cancel()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond) // waiting for the sync to start
 	// TODO: refactor this once more logic is added, this is not really checking the the goroutine stopped
 	require.True(t, sync.terminated, "expecting the stop flag up")
 }
@@ -29,8 +29,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	h.gossip.Never("BroadcastBlockAvailabilityRequest")
 
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
-	// give the sync time to start
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond) // give the sync time to start
 
 	// "commit" blocks at a rate of 1/ms, do not assume anything about the implementation
 	latch := make(chan struct{})

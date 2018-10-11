@@ -9,18 +9,14 @@ import (
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 	h := newBlockSyncHarness()
 	idle := h.sf.CreateIdleState()
-	var next syncState = nil
-	latch := make(chan struct{})
-	go func() {
-		next = idle.processState(h.ctx)
-		latch <- struct{}{}
-	}()
-	// letting the goroutine start above
-	time.Sleep(time.Millisecond)
-	idle.blockCommitted()
-	<-latch
+	next := h.nextState(idle, func() {
+		// letting the goroutine start above
+		time.Sleep(time.Millisecond)
+		idle.blockCommitted()
+	})
+
 	require.IsType(t, &idleState{}, next, "next should still be idle")
-	require.True(t, next != idle, "processState state should be a different idle state (which was restarted)")
+	require.True(t, next != idle, "processState state should be a different idle state (which was recreated so the timer starts from be beginning)")
 }
 
 func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {

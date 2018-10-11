@@ -18,7 +18,7 @@ func (s *finishedCARState) String() string {
 }
 
 func (s *finishedCARState) processState(ctx context.Context) syncState {
-	if ctx.Err() == context.Canceled {
+	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
 		return nil
 	}
 

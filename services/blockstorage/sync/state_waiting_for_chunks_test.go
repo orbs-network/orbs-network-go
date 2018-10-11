@@ -46,14 +46,9 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
-	var nextState syncState
-	latch := make(chan struct{})
-	go func() {
-		nextState = waitingState.processState(h.ctx)
-		latch <- struct{}{}
-	}()
-	waitingState.gotBlocks(blocksMessage)
-	<-latch
+	nextState := h.nextState(waitingState, func() {
+		waitingState.gotBlocks(blocksMessage)
+	})
 
 	require.IsType(t, &processingBlocksState{}, nextState, "expecting to be at processing state after blocks arrived")
 	pbs := nextState.(*processingBlocksState)
@@ -88,14 +83,9 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
-	var nextState syncState
-	latch := make(chan struct{})
-	go func() {
-		nextState = waitingState.processState(h.ctx)
-		latch <- struct{}{}
-	}()
-	waitingState.gotBlocks(blocksMessage)
-	<-latch
+	nextState := h.nextState(waitingState, func() {
+		waitingState.gotBlocks(blocksMessage)
+	})
 
 	require.IsType(t, &idleState{}, nextState, "expecting to abort sync and go back to idle (ignore blocks)")
 

@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+// this is coupled to gossip because the entire service is (block storage)
+// nothing to gain right now in decoupling just the sync
 type syncState interface {
 	String() string
 	processState(ctx context.Context) syncState

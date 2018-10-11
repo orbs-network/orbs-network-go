@@ -19,7 +19,7 @@ func (s *processingBlocksState) String() string {
 }
 
 func (s *processingBlocksState) processState(ctx context.Context) syncState {
-	if ctx.Err() == context.Canceled {
+	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
 		return nil
 	}
 

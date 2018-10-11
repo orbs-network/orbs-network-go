@@ -9,7 +9,7 @@ import (
 
 func TestFinishedWithNoResponsesGoBackToIdle(t *testing.T) {
 	h := newBlockSyncHarness()
-	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
+	finishedState := h.sf.CreateFinishedCARState(nil)
 	shouldBeIdleState := finishedState.processState(h.ctx)
 
 	require.IsType(t, &idleState{}, shouldBeIdleState, "next state should be idle")
@@ -22,14 +22,6 @@ func TestFinishedWithResponsesMoveToWaitingForChunk(t *testing.T) {
 	shouldBeWaitingState := finishedState.processState(h.ctx)
 
 	require.IsType(t, &waitingForChunksState{}, shouldBeWaitingState, "next state should be waiting for chunk")
-}
-
-func TestFinishedWithInvalidResponsesMovesToIdle(t *testing.T) {
-	h := newBlockSyncHarness()
-	finishedState := h.sf.CreateFinishedCARState(nil)
-	shouldBeIdleState := finishedState.processState(h.ctx)
-
-	require.IsType(t, &idleState{}, shouldBeIdleState, "next state should be idle when invalid input")
 }
 
 func TestFinishedContextTerminationFlow(t *testing.T) {

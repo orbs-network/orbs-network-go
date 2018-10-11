@@ -33,15 +33,10 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 
 	message := builders.BlockAvailabilityResponseInput().Build().Message
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
-	var nextShouldBeFinished syncState = nil
-	latch := make(chan struct{})
-	go func() {
-		nextShouldBeFinished = collectingState.processState(h.ctx)
-		latch <- struct{}{}
-	}()
-	require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast was not sent out")
-	collectingState.gotAvailabilityResponse(message)
-	<-latch
+	nextShouldBeFinished := h.nextState(collectingState, func() {
+		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast was not sent out")
+		collectingState.gotAvailabilityResponse(message)
+	})
 
 	require.IsType(t, &finishedCARState{}, nextShouldBeFinished, "state should transition to finished CAR")
 	fcar := nextShouldBeFinished.(*finishedCARState)
@@ -50,18 +45,6 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 	require.Equal(t, message.SignedBatchRange, fcar.responses[0].SignedBatchRange, "state payload should match message")
 
 	h.verifyMocks(t)
-}
-
-func TestCollectingAvailabilityResponsesAddsAResponse(t *testing.T) {
-	h := newBlockSyncHarness()
-
-	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
-	message := builders.BlockAvailabilityResponseInput().Build().Message
-	collectingState.gotAvailabilityResponse(message)
-	cs := collectingState.(*collectingAvailabilityResponsesState)
-	require.True(t, len(cs.responses) == 1, "should have 1 response after adding it")
-	require.Equal(t, message.Sender, cs.responses[0].Sender, "state sender should match message sender")
-	require.Equal(t, message.SignedBatchRange, cs.responses[0].SignedBatchRange, "state payload should match message")
 }
 
 func TestCollectingAvailabilityContextTermination(t *testing.T) {
