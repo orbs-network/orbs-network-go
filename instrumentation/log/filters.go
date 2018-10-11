@@ -39,6 +39,10 @@ func IgnoreErrorsMatching(pattern string) Filter {
 	return &errorRegexp{pattern: pattern}
 }
 
+func Nothing() Filter {
+	return &noLogging{}
+}
+
 type errorRegexp struct {
 	pattern string
 }
@@ -137,3 +141,14 @@ func (f *or) Allows(level string, message string, fields []*Field) bool {
 
 	return result
 }
+
+
+type noLogging struct {
+
+}
+
+func (noLogging) Allows(level string, message string, fields []*Field) bool {
+	return false
+}
+
+

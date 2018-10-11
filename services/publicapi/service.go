@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -27,7 +28,13 @@ type service struct {
 	blockStorage    services.BlockStorage
 	logger          log.BasicLogger
 
-	waiter *waiter
+	waiter         *waiter
+
+	metrics metrics
+}
+
+type metrics struct {
+	sendTransaction *metric.Histogram
 }
 
 func NewPublicApi(
@@ -37,6 +44,7 @@ func NewPublicApi(
 	virtualMachine services.VirtualMachine,
 	blockStorage services.BlockStorage,
 	logger log.BasicLogger,
+	metricRegistry metric.Registry,
 ) services.PublicApi {
 	s := &service{
 		ctx:             ctx,
@@ -47,6 +55,10 @@ func NewPublicApi(
 		logger:          logger.WithTags(LogTag),
 
 		waiter: newWaiter(ctx),
+		metrics: metrics {
+			sendTransaction: metricRegistry.NewLatency("publicapi.SendTransaction", config.SendTransactionTimeout()),
+		},
+
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(s)

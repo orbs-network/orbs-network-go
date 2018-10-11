@@ -18,7 +18,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 		WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Duplicate(AnyNthMessage(7))
 
-		sendTransactions(network, t, 100)
+		sendTransfersAndAssertTotalBalance(network, t, 100)
 	})
 }
 
@@ -28,7 +28,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 		WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
-		sendTransactions(network, t, 100)
+		sendTransfersAndAssertTotalBalance(network, t, 100)
 	})
 }
 
@@ -41,7 +41,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 			return (time.Duration(rand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
 		}, AnyNthMessage(2))
 
-		sendTransactions(network, t, 100)
+		sendTransfersAndAssertTotalBalance(network, t, 100)
 	})
 }
 
@@ -50,29 +50,8 @@ func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *
 	harness.Network(t).WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
 		network.GossipTransport().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
-		sendTransactions(network, t, 100)
+		sendTransfersAndAssertTotalBalance(network, t, 100)
 	})
-}
-
-func sendTransactions(network harness.InProcessNetwork, t *testing.T, numTransactions int) {
-	var expectedSum uint64 = 0
-	var txHashes []primitives.Sha256
-	for i := 0; i < numTransactions; i++ {
-		amount := uint64(rand.Int63n(100))
-		expectedSum += amount
-
-		txHash := network.SendTransferInBackground(rand.Intn(network.Size()), amount, 5, 6)
-		txHashes = append(txHashes, txHash)
-	}
-	for _, txHash := range txHashes {
-		for i := 0; i < network.Size(); i++ {
-			network.WaitForTransactionInState(i, txHash)
-		}
-	}
-
-	for i := 0; i < network.Size(); i++ {
-		require.EqualValuesf(t, expectedSum, <-network.CallGetBalance(i, 6), "balance did not equal expected balance in node %d", i)
-	}
 }
 
 func AnyNthMessage(n int) MessagePredicate {
@@ -91,5 +70,31 @@ func AnyNthMessage(n int) MessagePredicate {
 		count++
 		m := count % n
 		return m == 0
+	}
+}
+
+func sendTransfersAndAssertTotalBalance(network harness.InProcessNetwork, t *testing.T, numTransactions int) {
+	fromAddress := 5
+	toAddress := 6
+
+	var expectedSum uint64 = 0
+	var txHashes []primitives.Sha256
+	for i := 0; i < numTransactions; i++ {
+		amount := uint64(rand.Int63n(100))
+		expectedSum += amount
+
+		txHash := network.SendTransferInBackground(rand.Intn(network.Size()), amount, fromAddress, toAddress)
+		txHashes = append(txHashes, txHash)
+	}
+	for _, txHash := range txHashes {
+		for i := 0; i < network.Size(); i++ {
+			network.WaitForTransactionInState(i, txHash)
+		}
+	}
+
+	for i := 0; i < network.Size(); i++ {
+		actualSum := <-network.CallGetBalance(i, toAddress)
+
+		require.EqualValuesf(t, expectedSum, actualSum, "balance did not equal expected balance in node %d", i)
 	}
 }

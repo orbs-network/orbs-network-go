@@ -1,12 +1,14 @@
 package publicapi
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
@@ -29,13 +31,15 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	meter := s.logger.Meter("tx-processing-time", log.Stringable("txHash", txHash))
 	defer meter.Done()
 
+	defer s.metrics.sendTransaction.RecordMillisSince(time.Now())
+
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
 	addResp, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{SignedTransaction: tx})
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
 		s.logger.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
-		return toSendTxOutput(toTxResponse(addResp)), errors.Errorf("error '%s' for transaction result", addResp)
+		return toSendTxOutput(toTxResponse(addResp)), errors.Wrap(err, fmt.Sprintf("error '%s' for transaction result", addResp))
 	}
 
 	if addResp.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED {
