@@ -5,8 +5,8 @@
 appended by a hash of the variable name 
 (contract programming model will determine the logical name of each variable): 
 `hash(contract)+hash(variable_unique_id)`
-1. As a side effect of #1 we assume every key has a know length and this is assumed in the merkle trie implementation
-1. A value key must be a byte array: when represented in base64 no odd number of digits is allowed (because of merkle parity requirements.)
+1. As a side effect of #1 we assume every key has a known length. This limitation manifests in the way we serialize nodes in that we do not permit storing values on branch nodes. This is made possible only due to the stipulation that all keys are of the same height. Should we ever want to relax this requirement and allow paths of different lengths we would have to change the serialization scheme as it would require allowing two different paths where one is a prefix of the other, which is not possible to represent in the current serialization.
+1. A value key must be a byte array: when represented in base64 no odd number of digits is allowed (because of merkle parity requirements).
 
 #### TBD
 1. Should we include virtual chain ID in the contract name before or after hashing? compare with V0 addressing... 
