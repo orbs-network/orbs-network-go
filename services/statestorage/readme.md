@@ -40,7 +40,7 @@ can be used to track the state of a few (5) consecutive block heights:
  
 A single full state snapshot is maintained at all times, of the least recent block height supported for queries. The block height of the full-state snapshot is constantly maintained and updated (“full-state snapshot block height”). 
 
-1. As new blocks are committed perform under write block:
+1. As new blocks are committed perform under write lock:
     1. Record the state diff of incoming new block and associate it with the corresponding block height
     1. If the full-state snapshot block height becomes less than the most recent known block height minus 5 (block height - 5) - advance the full-state snapshot block height and apply it’s successive block height’s state diff to the image. 
 1. As state queries are received for specific block heights perform under read lock:
@@ -58,8 +58,7 @@ A single full state snapshot is maintained at all times, of the least recent blo
 * If persistence is implemented we: 
     1. persist the full-state snapshot in a key/value store 
     1. Cache must be applied at the DB level
-    1. Full-state snapshot block height and state diff updates must be written together atomically. 
-
+    1. Full-state snapshot block height and state diffs updates must be written together atomically - when applied incrementally to a previous height state snapshot database.
 
 ### Possible DB Choices:
 
