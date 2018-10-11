@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -14,8 +15,16 @@ type processingBlocksState struct {
 	sf      *stateFactory
 }
 
-func (s *processingBlocksState) String() string {
+func (s *processingBlocksState) name() string {
 	return "processing-blocks-state"
+}
+
+func (s *processingBlocksState) String() string {
+	if s.blocks != nil {
+		return fmt.Sprintf("%s-with-%d-blocks", s.name(), len(s.blocks.BlockPairs))
+	}
+
+	return s.name()
 }
 
 func (s *processingBlocksState) processState(ctx context.Context) syncState {

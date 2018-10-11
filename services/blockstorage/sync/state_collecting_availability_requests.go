@@ -18,8 +18,12 @@ type collectingAvailabilityResponsesState struct {
 	logger    log.BasicLogger
 }
 
-func (s *collectingAvailabilityResponsesState) String() string {
+func (s *collectingAvailabilityResponsesState) name() string {
 	return "collecting-availability-responses"
+}
+
+func (s *collectingAvailabilityResponsesState) String() string {
+	return s.name()
 }
 
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {

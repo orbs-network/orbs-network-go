@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"math/rand"
@@ -13,8 +14,12 @@ type finishedCARState struct {
 	sf        *stateFactory
 }
 
-func (s *finishedCARState) String() string {
+func (s *finishedCARState) name() string {
 	return "finished-collecting-availability-requests-state"
+}
+
+func (s *finishedCARState) String() string {
+	return fmt.Sprintf("%s-with-%d-responses", s.name(), len(s.responses))
 }
 
 func (s *finishedCARState) processState(ctx context.Context) syncState {

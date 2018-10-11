@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -21,8 +22,12 @@ type waitingForChunksState struct {
 	blocks    *gossipmessages.BlockSyncResponseMessage
 }
 
-func (s *waitingForChunksState) String() string {
+func (s *waitingForChunksState) name() string {
 	return "waiting-for-chunks-state"
+}
+
+func (s *waitingForChunksState) String() string {
+	return fmt.Sprintf("%s-from-source-%s", s.name(), s.sourceKey)
 }
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {

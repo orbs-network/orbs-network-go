@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -14,6 +15,7 @@ import (
 // this is coupled to gossip because the entire service is (block storage)
 // nothing to gain right now in decoupling just the sync
 type syncState interface {
+	name() string
 	String() string
 	processState(ctx context.Context) syncState
 	blockCommitted()
@@ -68,14 +70,14 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 }
 
 func (bs *BlockSync) syncLoop(ctx context.Context) {
-	meter := bs.logger.Meter("inter-sync-main-loop")
 	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
 		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
+		meter := bs.logger.Meter(fmt.Sprintf("inter-sync-%s", bs.currentState.name()))
 		bs.currentState = bs.currentState.processState(ctx)
+		meter.Done()
 	}
 
 	bs.terminated = true
-	meter.Done()
 }
 
 func (bs *BlockSync) HandleBlockCommitted() {

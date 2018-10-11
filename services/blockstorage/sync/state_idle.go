@@ -14,8 +14,12 @@ type idleState struct {
 	sf          *stateFactory
 }
 
-func (s *idleState) String() string {
+func (s *idleState) name() string {
 	return "idle-state"
+}
+
+func (s *idleState) String() string {
+	return s.name()
 }
 
 func (s *idleState) processState(ctx context.Context) syncState {
