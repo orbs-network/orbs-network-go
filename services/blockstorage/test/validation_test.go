@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -14,8 +13,6 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
 		block := builders.BlockPair().Build()
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
@@ -27,8 +24,6 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 		block := builders.BlockPair().Build()
 
 		block.TransactionsBlock.Header.MutateProtocolVersion(998)
@@ -58,8 +53,6 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.commitBlock(builders.BlockPair().Build())
 
@@ -75,8 +68,6 @@ func TestValidateBlockWithInvalidHeight(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.commitBlock(builders.BlockPair().Build())
 

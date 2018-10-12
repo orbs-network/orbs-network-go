@@ -17,8 +17,6 @@ import (
 func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		val, err := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
 		require.NoError(t, err)
@@ -45,8 +43,6 @@ func TestInitSetsLastCommittedBlockHeightFromPersistence(t *testing.T) {
 
 			consensus.When("HandleBlockConsensus", mock.Any).Return(out, nil).Times(1)
 		})
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		val, err := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
 		require.NoError(t, err)

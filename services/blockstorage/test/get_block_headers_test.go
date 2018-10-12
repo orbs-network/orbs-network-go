@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -17,8 +16,6 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(block)
@@ -38,8 +35,6 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(block)
@@ -68,8 +63,6 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(block)
@@ -96,8 +89,6 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(block)
@@ -116,8 +107,6 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(block)
@@ -147,8 +136,6 @@ func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(block)

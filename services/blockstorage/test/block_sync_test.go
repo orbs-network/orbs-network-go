@@ -18,8 +18,6 @@ import (
 func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectCommitStateDiffTimes(2)
 
@@ -49,8 +47,6 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 		harness.expectCommitStateDiffTimes(4)
 
 		blocks := []*protocol.BlockPairContainer{
@@ -103,8 +99,6 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-		// adding the broadcast as it might hit because of timeout, its not required for the test specifically
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 		harness.expectCommitStateDiffTimes(4)
 
@@ -156,7 +150,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
+		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
@@ -166,7 +160,7 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
+		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(1)
 
@@ -218,10 +212,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 
 func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		// let the sync time to start
-		time.Sleep(1 * time.Millisecond)
-
-		harness := newHarness(ctx)
+		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
 
 		harness.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any)
 
