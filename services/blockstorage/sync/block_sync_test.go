@@ -25,24 +25,18 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	// its to cover that specific line of code in blockSync engine, rather then the service handler code
 	// (or the idle state code)
 
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness().withNoCommitTimeout(3 * time.Millisecond)
 	h.gossip.Never("BroadcastBlockAvailabilityRequest")
 
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
 	time.Sleep(time.Millisecond) // give the sync time to start
 
 	// "commit" blocks at a rate of 1/ms, do not assume anything about the implementation
-	latch := make(chan struct{})
-	go func() {
-		for i := 1; i < 10; i++ {
-			sync.HandleBlockCommitted()
-			time.Sleep(time.Millisecond)
-		}
-		latch <- struct{}{}
-	}()
-	<-latch
+	for i := 1; i < 10; i++ {
+		sync.HandleBlockCommitted()
+		time.Sleep(time.Millisecond)
+		require.IsType(t, &idleState{}, sync.currentState, "state should remain idle")
+	}
 
-	require.IsType(t, &idleState{}, sync.currentState, "start state should be idle")
-	// kill the sync
-	h.cancel()
+	h.cancel() // kill the sync (goroutine)
 }
