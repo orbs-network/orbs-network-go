@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	blockSync "github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -37,7 +38,8 @@ type service struct {
 	lastCommittedBlock *protocol.BlockPairContainer
 	lastBlockLock      *sync.RWMutex
 
-	blockSync *BlockSync
+	blockSync    *BlockSync
+	newBlockSync *blockSync.BlockSync
 }
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
@@ -65,6 +67,10 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	gossip.RegisterBlockSyncHandler(storage)
 	storage.blockSync = NewBlockSync(ctx, config, storage, gossip, logger)
 
+	storage.newBlockSync = blockSync.NewBlockSync(ctx, config, gossip, storage, logger)
+	// uncomment this after removing the old block sync, right now gossip will talk to old bs, which will notify new bs (trust the writer here, it makes sense because of the testing framework)
+	// gossip.RegisterBlockSyncHandler(storage.newBlockSync)
+
 	return storage
 }
 
@@ -90,6 +96,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	}
 
 	s.updateLastCommittedBlock(input.BlockPair)
+	s.newBlockSync.HandleBlockCommitted()
 
 	s.logger.Info("Committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
@@ -280,8 +287,8 @@ func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvaila
 }
 
 func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.blockSync != nil {
-		s.blockSync.events <- input.Message
+	if s.newBlockSync != nil {
+		s.newBlockSync.HandleBlockAvailabilityResponse(input)
 	}
 	return nil, nil
 }
@@ -294,8 +301,8 @@ func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInp
 }
 
 func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.blockSync != nil {
-		s.blockSync.events <- input.Message
+	if s.newBlockSync != nil {
+		s.newBlockSync.HandleBlockSyncResponse(input)
 	}
 	return nil, nil
 }

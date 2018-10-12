@@ -47,7 +47,6 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-
 		harness.expectCommitStateDiffTimes(4)
 
 		blocks := []*protocol.BlockPairContainer{
@@ -151,7 +150,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
+		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
 
@@ -161,33 +160,40 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
+		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(1)
+
+		// latch until we sent the broadcast (meaning the state machine is now at collecting car state
+		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
 
 		senderKeyPair := keys.Ed25519KeyPairForTests(7)
 
 		blockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(4)).Build()
+			WithLastBlockHeight(primitives.BlockHeight(4)).
+			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
-		anotherSenderKeyPair := keys.Ed25519KeyPairForTests(8)
+		// TODO: the source key here is the same for both because the sync process will pick them at random, refactor when we change the random
+		anotherSenderKeyPair := keys.Ed25519KeyPairForTests(7)
 		anotherBlockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(3)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
 			WithLastBlockHeight(primitives.BlockHeight(3)).
 			WithSenderPublicKey(anotherSenderKeyPair.PublicKey()).Build()
 
-		harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+		// fake the collecting car response
 		harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
 		harness.blockStorage.HandleBlockAvailabilityResponse(anotherBlockAvailabilityResponse)
 
-		// we use this to verify that the SendBlockSyncRequest was sent out, meaning that the AvailabilityResponse stage is done
-		// we saw it can take up to 15ms in some cases (although it is suppose to take just 1ms this is the docker timing delay we see in CI)
-		test.EventuallyVerify(50*time.Millisecond, harness.gossip)
+		harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+
+		// latch until we pick a source and request blocks from it
+		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
 
 		blockSyncResponse := builders.BlockSyncResponseInput().
+			WithSenderPublicKey(senderKeyPair.PublicKey()).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
 			WithLastBlockHeight(primitives.BlockHeight(4)).
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
@@ -196,8 +202,40 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 		harness.expectCommitStateDiffTimes(4)
 		harness.expectValidateWithConsensusAlgosTimes(4)
 
+		// fake the response
 		harness.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
 
+		// verify that we committed the blocks
 		harness.verifyMocks(t, 4)
+	})
+}
+
+func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
+
+		harness.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any)
+
+		harness.expectCommitStateDiffTimes(10)
+
+		// we do not assume anything about the implementation, commit a block/ms and see if the sync tries to broadcast
+		latch := make(chan struct{})
+		go func() {
+			for i := 1; i < 11; i++ {
+				blockCreated := time.Now()
+				blockHeight := primitives.BlockHeight(i)
+
+				_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+
+				require.NoError(t, err)
+
+				time.Sleep(1 * time.Millisecond)
+			}
+			latch <- struct{}{}
+		}()
+
+		<-latch
+		require.EqualValues(t, 10, harness.numOfWrittenBlocks())
+		harness.verifyMocks(t, 1)
 	})
 }
