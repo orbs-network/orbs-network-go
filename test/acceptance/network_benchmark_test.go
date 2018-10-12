@@ -18,7 +18,7 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 
 	harness.Network(b).
 		WithLogFilters(log.Nothing()).
-		WithNumNodes(3).Start(func(network harness.InProcessNetwork) {
+		WithNumNodes( 3).Start(func(network harness.InProcessNetwork) {
 
 		network.DeployBenchmarkToken(5)
 

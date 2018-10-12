@@ -41,10 +41,11 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 }
 
 func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
+	bh, _ := s.currentBlockHeightAndTime()
 	//TODO handle error from vm call
 	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
 		SignedTransactions: Transactions{transaction},
-		BlockHeight:        s.lastCommittedBlockHeight,
+		BlockHeight:        bh,
 	})
 
 	if len(preOrderCheckResults.PreOrderResults) != 1 {
@@ -59,10 +60,11 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 }
 
 func (s *service) addTransactionOutputFor(maybeReceipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.AddNewTransactionOutput {
+	bh, ts := s.currentBlockHeightAndTime()
 	return &services.AddNewTransactionOutput{
 		TransactionReceipt: maybeReceipt,
 		TransactionStatus:  status,
-		BlockHeight:        s.lastCommittedBlockHeight,
-		BlockTimestamp:     s.lastCommittedBlockTimestamp,
+		BlockHeight:        bh,
+		BlockTimestamp:     ts,
 	}
 }

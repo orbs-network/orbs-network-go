@@ -22,6 +22,7 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
 			ProtocolVersion:       blockstorage.ProtocolVersion,
 			BlockHeight:           blockHeight,
+			//Timestamp: 			   primitives.TimestampNano(time.Now().UnixNano()),
 			PrevBlockHashPtr:      prevBlockHash,
 			NumSignedTransactions: uint32(txCount),
 		}).Build(),
