@@ -17,9 +17,8 @@ type waitingForChunksState struct {
 	config    blockSyncConfig
 	gossip    gossiptopics.BlockSync
 	logger    log.BasicLogger
-	process   chan struct{}
 	abort     chan struct{}
-	blocks    *gossipmessages.BlockSyncResponseMessage
+	blocksC   chan *gossipmessages.BlockSyncResponseMessage
 }
 
 func (s *waitingForChunksState) name() string {
@@ -45,9 +44,9 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateIdleState()
-	case <-s.process:
+	case blocks := <-s.blocksC:
 		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
-		return s.sf.CreateProcessingBlocksState(s.blocks)
+		return s.sf.CreateProcessingBlocksState(blocks)
 	case <-s.abort:
 		return s.sf.CreateIdleState()
 	case <-ctx.Done():
@@ -70,8 +69,7 @@ func (s *waitingForChunksState) gotBlocks(message *gossipmessages.BlockSyncRespo
 			log.Stringable("message-key", message.Sender.SenderPublicKey()))
 		s.abort <- struct{}{}
 	} else {
-		s.blocks = message
-		s.process <- struct{}{}
+		s.blocksC <- message
 	}
 }
 
