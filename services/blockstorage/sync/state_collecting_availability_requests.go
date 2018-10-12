@@ -10,12 +10,12 @@ import (
 )
 
 type collectingAvailabilityResponsesState struct {
-	sf        *stateFactory
-	gossip    gossiptopics.BlockSync
-	storage   BlockSyncStorage
-	config    blockSyncConfig
-	responses []*gossipmessages.BlockAvailabilityResponseMessage
-	logger    log.BasicLogger
+	sf         *stateFactory
+	gossip     gossiptopics.BlockSync
+	storage    BlockSyncStorage
+	config     blockSyncConfig
+	logger     log.BasicLogger
+	responsesC chan *gossipmessages.BlockAvailabilityResponseMessage
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -29,7 +29,7 @@ func (s *collectingAvailabilityResponsesState) String() string {
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
 	m := s.logger.Meter("block-sync-car-state")
 	defer m.Done()
-	s.responses = []*gossipmessages.BlockAvailabilityResponseMessage{}
+	responses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
 	err := s.petitionerBroadcastBlockAvailabilityRequest()
 	if err != nil {
@@ -38,12 +38,16 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	}
 
 	waitForResponses := synchronization.NewTimer(s.config.BlockSyncCollectResponseTimeout())
-	select {
-	case <-waitForResponses.C:
-		s.logger.Info("finished waiting for responses", log.Int("responses-received", len(s.responses)))
-		return s.sf.CreateFinishedCARState(s.responses)
-	case <-ctx.Done():
-		return nil
+	for { // the forever is because of responses handling loop
+		select {
+		case <-waitForResponses.C:
+			s.logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
+			return s.sf.CreateFinishedCARState(responses)
+		case r := <-s.responsesC:
+			responses = append(responses, r)
+		case <-ctx.Done():
+			return nil
+		}
 	}
 }
 
@@ -53,7 +57,7 @@ func (s *collectingAvailabilityResponsesState) blockCommitted() {
 
 func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
 	s.logger.Info("got a new availability response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
-	s.responses = append(s.responses, message)
+	s.responsesC <- message
 }
 
 func (s *collectingAvailabilityResponsesState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {

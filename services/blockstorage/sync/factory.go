@@ -34,11 +34,12 @@ func (f *stateFactory) CreateIdleState() syncState {
 
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
-		sf:      f,
-		gossip:  f.gossip,
-		storage: f.storage,
-		config:  f.config,
-		logger:  f.logger,
+		sf:         f,
+		gossip:     f.gossip,
+		storage:    f.storage,
+		config:     f.config,
+		logger:     f.logger,
+		responsesC: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 	}
 }
 
