@@ -44,7 +44,7 @@ func NewPublicApi(
 	virtualMachine services.VirtualMachine,
 	blockStorage services.BlockStorage,
 	logger log.BasicLogger,
-	metricRegistry metric.Registry,
+	metricFactory metric.Factory,
 ) services.PublicApi {
 	s := &service{
 		ctx:             ctx,
@@ -56,7 +56,7 @@ func NewPublicApi(
 
 		waiter: newWaiter(ctx),
 		metrics: metrics {
-			sendTransaction: metricRegistry.NewLatency("publicapi.SendTransaction", config.SendTransactionTimeout()),
+			sendTransaction: metricFactory.NewLatency("PublicApi.SendTransaction", config.SendTransactionTimeout()),
 		},
 
 	}

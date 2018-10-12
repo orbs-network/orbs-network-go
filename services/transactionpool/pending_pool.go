@@ -3,6 +3,7 @@ package transactionpool
 import (
 	"container/list"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
@@ -11,12 +12,18 @@ import (
 
 type transactionRemovedListener func(txHash primitives.Sha256, reason protocol.TransactionStatus)
 
-func NewPendingPool(pendingPoolSizeInBytes func() uint32) *pendingTxPool {
+func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.Factory) *pendingTxPool {
 	return &pendingTxPool{
 		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
 		transactionsByHash:     make(map[string]*pendingTransaction),
 		transactionList:        list.New(),
 		lock:                   &sync.RWMutex{},
+
+		metrics: metrics{
+			transactionCountGauge: metricFactory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
+			poolSizeInBytesGauge:  metricFactory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
+			transactionRatePerSecond: metricFactory.NewRate("TransactionPool.RatePerSecond"),
+		},
 	}
 }
 
@@ -24,6 +31,12 @@ type pendingTransaction struct {
 	gatewayPublicKey primitives.Ed25519PublicKey
 	transaction      *protocol.SignedTransaction
 	listElement      *list.Element
+}
+
+type metrics struct {
+	transactionCountGauge *metric.Gauge
+	poolSizeInBytesGauge  *metric.Gauge
+	transactionRatePerSecond *metric.Rate
 }
 
 type pendingTxPool struct {
@@ -35,6 +48,8 @@ type pendingTxPool struct {
 	//FIXME get rid of it
 	pendingPoolSizeInBytes func() uint32
 	onTransactionRemoved   transactionRemovedListener
+
+	metrics metrics
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
@@ -58,6 +73,10 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 		gatewayPublicKey: gatewayPublicKey,
 		listElement:      p.transactionList.PushFront(transaction),
 	}
+
+	p.metrics.transactionCountGauge.Inc()
+	p.metrics.poolSizeInBytesGauge.AddUint32(size)
+	p.metrics.transactionRatePerSecond.Measure(1)
 
 	return key, nil
 }
@@ -83,6 +102,9 @@ func (p *pendingTxPool) remove(txhash primitives.Sha256, removalReason protocol.
 		if p.onTransactionRemoved != nil {
 			p.onTransactionRemoved(txhash, removalReason)
 		}
+
+		p.metrics.transactionCountGauge.Dec()
+		p.metrics.poolSizeInBytesGauge.SubUint32(sizeOf(pendingTx.transaction))
 
 		return pendingTx
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -37,8 +38,10 @@ func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	config config.TransactionPoolConfig,
-	logger log.BasicLogger) services.TransactionPool {
-	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes)
+	logger log.BasicLogger,
+	metricFactory metric.Factory) services.TransactionPool {
+
+	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory)
 
 	txForwarder := NewTransactionForwarder(ctx, logger, config, gossip)
 
