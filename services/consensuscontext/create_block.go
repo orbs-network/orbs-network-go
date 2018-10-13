@@ -6,11 +6,15 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
 	meter := s.logger.Meter("tx-block-creation")
 	defer meter.Done()
+	start := time.Now()
+	defer s.metrics.createTxBlock.RecordNanosSince(start)
+
 
 	proposedTransactions, err := s.fetchTransactions(s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
 	if err != nil {
@@ -36,6 +40,7 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
 	meter := s.logger.Meter("rs-block-creation")
 	defer meter.Done()
+	defer s.metrics.createResultsBlock.RecordNanosSince(time.Now())
 
 	output, err := s.virtualMachine.ProcessTransactionSet(&services.ProcessTransactionSetInput{
 		BlockHeight:        blockHeight,

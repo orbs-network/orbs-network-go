@@ -14,19 +14,18 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
-	"testing"
 	"time"
 )
 
 type E2EConfig struct {
 	Bootstrap   bool
 	ApiEndpoint string
+	baseUrl     string
 }
 
 const LOCAL_NETWORK_SIZE = 3
@@ -34,7 +33,8 @@ const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	ApiEndpoint := fmt.Sprintf("http://localhost:%d/api/v1/", START_HTTP_PORT + 2) // 8080 is leader, 8082 is node-3
+	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT + 2) // 8080 is leader, 8082 is node-3
+	ApiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
 	if !Bootstrap {
 		ApiEndpoint = os.Getenv("API_ENDPOINT")
@@ -43,6 +43,7 @@ func getConfig() E2EConfig {
 	return E2EConfig{
 		Bootstrap,
 		ApiEndpoint,
+		baseUrl,
 	}
 }
 
@@ -119,11 +120,15 @@ func (h *harness) gracefulShutdown() {
 	os.RemoveAll(dirToCleanup)
 }
 
-func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
+func (h *harness) sendTransaction(txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: txBuilder,
 	}).Build()
-	responseBytes := h.httpPost(t, request, "send-transaction")
+	responseBytes, err := h.httpPost(request, "send-transaction")
+	if err != nil {
+		return nil, err
+	}
+
 	response := client.SendTransactionResponseReader(responseBytes)
 	if !response.IsValid() {
 		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
@@ -132,11 +137,15 @@ func (h *harness) sendTransaction(t *testing.T, txBuilder *protocol.SignedTransa
 	return response, nil
 }
 
-func (h *harness) callMethod(t *testing.T, txBuilder *protocol.TransactionBuilder) (*client.CallMethodResponse, error) {
+func (h *harness) callMethod(txBuilder *protocol.TransactionBuilder) (*client.CallMethodResponse, error) {
 	request := (&client.CallMethodRequestBuilder{
 		Transaction: txBuilder,
 	}).Build()
-	responseBytes := h.httpPost(t, request, "call-method")
+	responseBytes, err := h.httpPost(request, "call-method")
+	if err != nil {
+		return nil, err
+	}
+
 	response := client.CallMethodResponseReader(responseBytes)
 	if !response.IsValid() {
 		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
@@ -145,16 +154,31 @@ func (h *harness) callMethod(t *testing.T, txBuilder *protocol.TransactionBuilde
 	return response, nil
 }
 
-func (h *harness) httpPost(t *testing.T, input membuffers.Message, method string) []byte {
-	res, err := http.Post(getConfig().ApiEndpoint+method, "application/octet-stream", bytes.NewReader(input.Raw()))
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, res.StatusCode)
+func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, error) {
+	res, err := http.Post(h.apiUrlFor(endpoint), "application/octet-stream", bytes.NewReader(input.Raw()))
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got http status code %s calling %s", res.StatusCode, endpoint)
+	}
 
 	bytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 
-	return bytes
+	return bytes, nil
+}
+
+func (h *harness) absoluteUrlFor(endpoint string) string {
+	return getConfig().baseUrl + "/" + endpoint
+}
+
+func (h *harness) apiUrlFor(endpoint string) string {
+	return getConfig().ApiEndpoint + endpoint
 }
 
 func getProcessorArtifactPath() (string, string) {

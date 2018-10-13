@@ -7,7 +7,7 @@ import (
 )
 
 type Factory interface {
-	NewLatency(name string, maxDuration time.Duration) *Histogram
+	NewLatency(name string, maxDuration time.Duration, timeUnits time.Duration) *Histogram
 	NewGauge(name string) *Gauge
 	NewRate(name string) *Rate
 }
@@ -15,10 +15,21 @@ type Factory interface {
 type Registry interface {
 	Factory
 	String() string
+	ExportAll() interface{}
 }
 
 type metric interface {
 	fmt.Stringer
+	Name() string
+	Export() interface{}
+}
+
+type namedMetric struct {
+	name string
+}
+
+func (m *namedMetric) Name() string {
+	return m.name
 }
 
 func NewRegistry() Registry {
@@ -32,27 +43,27 @@ type inMemoryRegistry struct {
 	}
 }
 
-func (r *inMemoryRegistry) NewRate(name string) *Rate {
+func (r *inMemoryRegistry) register(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	m := newRate(name)
 	r.mu.metrics = append(r.mu.metrics, m)
+}
+
+func (r *inMemoryRegistry) NewRate(name string) *Rate {
+	m := newRate(name)
+	r.register(m)
 	return m
 }
 
 func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	g := &Gauge{name: name}
-	r.mu.metrics = append(r.mu.metrics, g)
+	g := &Gauge{namedMetric: namedMetric{name: name}}
+	r.register(g)
 	return g
 }
 
-func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	h := newHistogram(name, maxDuration.Nanoseconds() / 1000 / 1000)
-	r.mu.metrics = append(r.mu.metrics, h)
+func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration, timeUnits time.Duration) *Histogram {
+	h := newHistogram(name, maxDuration.Nanoseconds() / timeUnits.Nanoseconds())
+	r.register(h)
 	return h
 }
 
@@ -67,6 +78,21 @@ func (r *inMemoryRegistry) String() string {
 
 	return s
 }
+
+func (r *inMemoryRegistry) ExportAll() interface{} {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	all := make(map[string]interface{})
+	for _, m := range r.mu.metrics {
+		all[m.Name()] = m.Export()
+	}
+
+	return all
+}
+
+
+
 
 
 

@@ -20,9 +20,10 @@ func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.F
 		lock:                   &sync.RWMutex{},
 
 		metrics: metrics{
-			transactionCountGauge: metricFactory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
-			poolSizeInBytesGauge:  metricFactory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
-			transactionRatePerSecond: metricFactory.NewRate("TransactionPool.RatePerSecond"),
+			transactionCountGauge:        metricFactory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
+			poolSizeInBytesGauge:         metricFactory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
+			transactionRatePerSecond:     metricFactory.NewRate("TransactionPool.RatePerSecond"),
+			transactionNanosSpentInQueue: metricFactory.NewLatency("TransactionPool.PendingPool.NanosecondsSpentInQueue", 30 * time.Minute, time.Nanosecond),
 		},
 	}
 }
@@ -31,12 +32,14 @@ type pendingTransaction struct {
 	gatewayPublicKey primitives.Ed25519PublicKey
 	transaction      *protocol.SignedTransaction
 	listElement      *list.Element
+	timeAdded        time.Time
 }
 
 type metrics struct {
-	transactionCountGauge *metric.Gauge
-	poolSizeInBytesGauge  *metric.Gauge
-	transactionRatePerSecond *metric.Rate
+	transactionCountGauge        *metric.Gauge
+	poolSizeInBytesGauge         *metric.Gauge
+	transactionRatePerSecond     *metric.Rate
+	transactionNanosSpentInQueue *metric.Histogram
 }
 
 type pendingTxPool struct {
@@ -72,6 +75,7 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 		transaction:      transaction,
 		gatewayPublicKey: gatewayPublicKey,
 		listElement:      p.transactionList.PushFront(transaction),
+		timeAdded:        time.Now(),
 	}
 
 	p.metrics.transactionCountGauge.Inc()
@@ -139,6 +143,8 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 		txs = append(txs, tx)
 
 		e = e.Prev()
+
+		p.transactionPickedFromQueueUnderMutex(tx)
 	}
 
 	return txs
@@ -174,6 +180,15 @@ func (p *pendingTxPool) clearTransactionsOlderThan(time time.Time) {
 		}
 	}
 }
+
+func (p *pendingTxPool) transactionPickedFromQueueUnderMutex(tx *protocol.SignedTransaction) {
+	txHash := digest.CalcTxHash(tx.Transaction())
+	ptx, found := p.transactionsByHash[txHash.KeyForMap()]
+	if found {
+		p.metrics.transactionNanosSpentInQueue.RecordNanosSince(ptx.timeAdded)
+	}
+}
+
 
 func sizeOf(transaction *protocol.SignedTransaction) uint32 {
 	return uint32(len(transaction.Raw()))

@@ -30,7 +30,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 			uint32(protocol.PROCESSOR_TYPE_NATIVE),
 			[]byte(contracts.NativeSourceCodeForCounter(counterStart)),
 		).Builder()
-	response, err := h.sendTransaction(t, deploy)
+	response, err := h.sendTransaction(deploy)
 	require.NoError(t, err, "deploy transaction should not return error")
 	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "deploy transaction should be successfully committed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "deploy transaction should execute successfully")
@@ -40,7 +40,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		getCounter := builders.NonSignedTransaction().
 			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get")
 
-		response, err := h.callMethod(t, getCounter.Builder())
+		response, err := h.callMethod(getCounter.Builder())
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
@@ -57,7 +57,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "add").
 		WithArgs(amount).
 		Builder()
-	response, err = h.sendTransaction(t, add)
+	response, err = h.sendTransaction(add)
 	require.NoError(t, err, "add transaction should not return error")
 	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "add transaction should be successfully committed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "add transaction should execute successfully")
@@ -67,7 +67,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		getCounter := builders.NonSignedTransaction().
 			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get")
 
-		response, err := h.callMethod(t, getCounter.Builder())
+		response, err := h.callMethod(getCounter.Builder())
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {

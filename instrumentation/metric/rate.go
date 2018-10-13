@@ -10,19 +10,31 @@ import (
 var tickInterval = 1 * time.Second
 
 type Rate struct {
-	name          string
+	namedMetric
 	movingAverage ewma.MovingAverage
 
-	m sync.Mutex
+	m          sync.Mutex
 	runningSum int64
-	nextTick time.Time
+	nextTick   time.Time
 }
 
 func newRate(name string) *Rate {
 	return &Rate{
-		name: name,
+		namedMetric:   namedMetric{name: name},
 		movingAverage: ewma.NewMovingAverage(),
-		nextTick: time.Now().Add(tickInterval),
+		nextTick:      time.Now().Add(tickInterval),
+	}
+}
+
+func (r *Rate) Export() interface{} {
+	return struct {
+		Name     string
+		Rate     float64
+		Interval time.Duration
+	}{
+		r.name,
+		r.movingAverage.Value(),
+		tickInterval,
 	}
 }
 
@@ -41,6 +53,3 @@ func (r *Rate) Measure(eventCount int64) {
 
 	r.runningSum += eventCount
 }
-
-
-

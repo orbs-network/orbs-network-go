@@ -23,7 +23,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		signerKeyPair := keys.Ed25519KeyPairForTests(5)
 		targetAddress := builders.AddressForEd25519SignerForTests(6)
 		transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
-		response, err := h.sendTransaction(t, transfer)
+		response, err := h.sendTransaction(transfer)
 		require.NoError(t, err, "transaction for amount %d should not return error", amount)
 		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction for amount %d should be successfully committed", amount)
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "transaction for amount %d should execute successfully", amount)
@@ -34,7 +34,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		signerKeyPair := keys.Ed25519KeyPairForTests(6)
 		targetAddress := builders.AddressForEd25519SignerForTests(6)
 		getBalance := builders.GetBalanceTransaction().WithEd25519Signer(signerKeyPair).WithTargetAddress(targetAddress).Builder().Transaction
-		response, err := h.callMethod(t, getBalance)
+		response, err := h.callMethod(getBalance)
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {

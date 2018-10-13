@@ -4,10 +4,17 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 var LogTag = log.Service("consensus-context")
+
+type metrics struct {
+	createTxBlock *metric.Histogram
+	createResultsBlock *metric.Histogram
+}
 
 type service struct {
 	transactionPool services.TransactionPool
@@ -15,6 +22,8 @@ type service struct {
 	stateStorage    services.StateStorage
 	config          config.ConsensusContextConfig
 	logger          log.BasicLogger
+
+	metrics metrics
 }
 
 func NewConsensusContext(
@@ -23,6 +32,7 @@ func NewConsensusContext(
 	stateStorage services.StateStorage,
 	config config.ConsensusContextConfig,
 	logger log.BasicLogger,
+	metricFactory metric.Factory,
 ) services.ConsensusContext {
 
 	return &service{
@@ -31,6 +41,10 @@ func NewConsensusContext(
 		stateStorage:    stateStorage,
 		config:          config,
 		logger:          logger.WithTags(LogTag),
+		metrics: metrics{
+			createTxBlock: metricFactory.NewLatency("ConsensusContext.createTransactionsBlockTimeInNanos", 10 * time.Second, time.Nanosecond),
+			createResultsBlock: metricFactory.NewLatency("ConsensusContext.createResultsBlockTimeInNanos", 10 * time.Second,  time.Nanosecond),
+		},
 	}
 }
 

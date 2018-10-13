@@ -6,8 +6,18 @@ import (
 )
 
 type Gauge struct {
+	namedMetric
 	value int64
-	name  string
+}
+
+func (g *Gauge) Export() interface{} {
+	return struct {
+		Name string
+		Value int64
+	}{
+		g.name,
+		g.value,
+	}
 }
 
 func (g *Gauge) String() string {
@@ -37,4 +47,7 @@ func (g *Gauge) SubUint32(size uint32) {
 func (g *Gauge) Value() int64 {
 	return g.value
 }
+
+
+
 

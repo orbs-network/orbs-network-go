@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"time"
 )
 
 var LogTag = log.Service("public-api")
@@ -56,7 +57,7 @@ func NewPublicApi(
 
 		waiter: newWaiter(ctx),
 		metrics: metrics {
-			sendTransaction: metricFactory.NewLatency("PublicApi.SendTransaction", config.SendTransactionTimeout()),
+			sendTransaction: metricFactory.NewLatency("PublicApi.SendTransactionProcessingTimeInMillis", config.SendTransactionTimeout(), time.Millisecond),
 		},
 
 	}
