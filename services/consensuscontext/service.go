@@ -12,8 +12,15 @@ import (
 var LogTag = log.Service("consensus-context")
 
 type metrics struct {
-	createTxBlock *metric.Histogram
+	createTxBlock      *metric.Histogram
 	createResultsBlock *metric.Histogram
+}
+
+func newMetrics(factory metric.Factory) *metrics {
+	return &metrics{
+		createTxBlock:      factory.NewLatency("ConsensusContext.createTransactionsBlockTimeInNanos", 10*time.Second, time.Nanosecond),
+		createResultsBlock: factory.NewLatency("ConsensusContext.createResultsBlockTimeInNanos", 10*time.Second, time.Nanosecond),
+	}
 }
 
 type service struct {
@@ -23,7 +30,7 @@ type service struct {
 	config          config.ConsensusContextConfig
 	logger          log.BasicLogger
 
-	metrics metrics
+	metrics *metrics
 }
 
 func NewConsensusContext(
@@ -41,10 +48,7 @@ func NewConsensusContext(
 		stateStorage:    stateStorage,
 		config:          config,
 		logger:          logger.WithTags(LogTag),
-		metrics: metrics{
-			createTxBlock: metricFactory.NewLatency("ConsensusContext.createTransactionsBlockTimeInNanos", 10 * time.Second, time.Nanosecond),
-			createResultsBlock: metricFactory.NewLatency("ConsensusContext.createResultsBlockTimeInNanos", 10 * time.Second,  time.Nanosecond),
-		},
+		metrics:         newMetrics(metricFactory),
 	}
 }
 

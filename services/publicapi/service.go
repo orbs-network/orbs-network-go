@@ -29,13 +29,19 @@ type service struct {
 	blockStorage    services.BlockStorage
 	logger          log.BasicLogger
 
-	waiter         *waiter
+	waiter *waiter
 
-	metrics metrics
+	metrics *metrics
 }
 
 type metrics struct {
 	sendTransaction *metric.Histogram
+}
+
+func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration) *metrics {
+	return &metrics{
+		sendTransaction: factory.NewLatency("PublicApi.SendTransactionProcessingTimeInMillis", sendTransactionTimeout, time.Millisecond),
+	}
 }
 
 func NewPublicApi(
@@ -55,11 +61,8 @@ func NewPublicApi(
 		blockStorage:    blockStorage,
 		logger:          logger.WithTags(LogTag),
 
-		waiter: newWaiter(ctx),
-		metrics: metrics {
-			sendTransaction: metricFactory.NewLatency("PublicApi.SendTransactionProcessingTimeInMillis", config.SendTransactionTimeout(), time.Millisecond),
-		},
-
+		waiter:  newWaiter(ctx),
+		metrics: newMetrics(metricFactory, config.SendTransactionTimeout()),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(s)

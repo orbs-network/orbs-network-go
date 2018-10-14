@@ -19,12 +19,7 @@ func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.F
 		transactionList:        list.New(),
 		lock:                   &sync.RWMutex{},
 
-		metrics: metrics{
-			transactionCountGauge:        metricFactory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
-			poolSizeInBytesGauge:         metricFactory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
-			transactionRatePerSecond:     metricFactory.NewRate("TransactionPool.RatePerSecond"),
-			transactionNanosSpentInQueue: metricFactory.NewLatency("TransactionPool.PendingPool.NanosecondsSpentInQueue", 30*time.Minute, time.Nanosecond),
-		},
+		metrics: newMetrics(metricFactory),
 	}
 }
 
@@ -42,6 +37,15 @@ type metrics struct {
 	transactionNanosSpentInQueue *metric.Histogram
 }
 
+func newMetrics(factory metric.Factory) *metrics {
+	return &metrics{
+		transactionCountGauge:        factory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
+		poolSizeInBytesGauge:         factory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
+		transactionRatePerSecond:     factory.NewRate("TransactionPool.RatePerSecond"),
+		transactionNanosSpentInQueue: factory.NewLatency("TransactionPool.PendingPool.NanosecondsSpentInQueue", 30*time.Minute, time.Nanosecond),
+	}
+}
+
 type pendingTxPool struct {
 	currentSizeInBytes uint32
 	transactionsByHash map[string]*pendingTransaction
@@ -52,7 +56,7 @@ type pendingTxPool struct {
 	pendingPoolSizeInBytes func() uint32
 	onTransactionRemoved   transactionRemovedListener
 
-	metrics metrics
+	metrics *metrics
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
