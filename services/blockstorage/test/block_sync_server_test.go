@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,8 +17,6 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.setupSomeBlocks(3)
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(1)
-		x := harness.getLastBlockHeight(t)
-		harness.logger.Info("c", log.Stringable("bh", x.LastCommittedBlockHeight))
 		msg := builders.BlockAvailabilityRequestInput().
 			WithFirstBlockHeight(1).
 			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
@@ -27,7 +24,6 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 			Build()
 		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(msg)
 
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 		require.NoError(t, err, "expecting a happy flow")
 
 		harness.verifyMocks(t, 1)
