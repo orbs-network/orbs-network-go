@@ -7,7 +7,7 @@ import (
 )
 
 type Factory interface {
-	NewLatency(name string, maxDuration time.Duration, timeUnits time.Duration) *Histogram
+	NewLatency(name string, maxDuration time.Duration) *Histogram
 	NewGauge(name string) *Gauge
 	NewRate(name string) *Rate
 }
@@ -61,8 +61,8 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 	return g
 }
 
-func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration, timeUnits time.Duration) *Histogram {
-	h := newHistogram(name, maxDuration.Nanoseconds() / timeUnits.Nanoseconds())
+func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
+	h := newHistogram(name, maxDuration.Nanoseconds())
 	r.register(h)
 	return h
 }
@@ -90,9 +90,3 @@ func (r *inMemoryRegistry) ExportAll() interface{} {
 
 	return all
 }
-
-
-
-
-
-

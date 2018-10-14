@@ -18,8 +18,8 @@ type metrics struct {
 
 func newMetrics(factory metric.Factory) *metrics {
 	return &metrics{
-		createTxBlock:      factory.NewLatency("ConsensusContext.createTransactionsBlockTimeInNanos", 10*time.Second, time.Nanosecond),
-		createResultsBlock: factory.NewLatency("ConsensusContext.createResultsBlockTimeInNanos", 10*time.Second, time.Nanosecond),
+		createTxBlock:      factory.NewLatency("ConsensusContext.createTransactionsBlockTime", 10*time.Second),
+		createResultsBlock: factory.NewLatency("ConsensusContext.createResultsBlockTime", 10*time.Second),
 	}
 }
 

@@ -42,7 +42,7 @@ func newMetrics(factory metric.Factory) *metrics {
 		transactionCountGauge:        factory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
 		poolSizeInBytesGauge:         factory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
 		transactionRatePerSecond:     factory.NewRate("TransactionPool.RatePerSecond"),
-		transactionNanosSpentInQueue: factory.NewLatency("TransactionPool.PendingPool.NanosecondsSpentInQueue", 30*time.Minute, time.Nanosecond),
+		transactionNanosSpentInQueue: factory.NewLatency("TransactionPool.PendingPool.NanosecondsSpentInQueue", 30*time.Minute),
 	}
 }
 
