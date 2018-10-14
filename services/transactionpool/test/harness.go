@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -203,7 +204,9 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	virtualMachine := &services.MockVirtualMachine{}
 
 	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger())
+	metricFactory := metric.NewRegistry()
+
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger(), metricFactory)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)

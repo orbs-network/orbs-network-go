@@ -31,7 +31,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 	meter := s.logger.Meter("tx-processing-time", log.Stringable("txHash", txHash))
 	defer meter.Done()
 
-	defer s.metrics.sendTransaction.RecordMillisSince(time.Now())
+	defer s.metrics.sendTransaction.RecordSince(time.Now())
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 

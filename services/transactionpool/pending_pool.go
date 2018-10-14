@@ -23,7 +23,7 @@ func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.F
 			transactionCountGauge:        metricFactory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
 			poolSizeInBytesGauge:         metricFactory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
 			transactionRatePerSecond:     metricFactory.NewRate("TransactionPool.RatePerSecond"),
-			transactionNanosSpentInQueue: metricFactory.NewLatency("TransactionPool.PendingPool.NanosecondsSpentInQueue", 30 * time.Minute, time.Nanosecond),
+			transactionNanosSpentInQueue: metricFactory.NewLatency("TransactionPool.PendingPool.NanosecondsSpentInQueue", 30*time.Minute, time.Nanosecond),
 		},
 	}
 }
@@ -185,10 +185,9 @@ func (p *pendingTxPool) transactionPickedFromQueueUnderMutex(tx *protocol.Signed
 	txHash := digest.CalcTxHash(tx.Transaction())
 	ptx, found := p.transactionsByHash[txHash.KeyForMap()]
 	if found {
-		p.metrics.transactionNanosSpentInQueue.RecordNanosSince(ptx.timeAdded)
+		p.metrics.transactionNanosSpentInQueue.RecordSince(ptx.timeAdded)
 	}
 }
-
 
 func sizeOf(transaction *protocol.SignedTransaction) uint32 {
 	return uint32(len(transaction.Raw()))

@@ -13,8 +13,7 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 	meter := s.logger.Meter("tx-block-creation")
 	defer meter.Done()
 	start := time.Now()
-	defer s.metrics.createTxBlock.RecordNanosSince(start)
-
+	defer s.metrics.createTxBlock.RecordSince(start)
 
 	proposedTransactions, err := s.fetchTransactions(s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
 	if err != nil {
@@ -24,8 +23,8 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:       blockstorage.ProtocolVersion,
-			BlockHeight:           blockHeight,
+			ProtocolVersion: blockstorage.ProtocolVersion,
+			BlockHeight:     blockHeight,
 			//Timestamp: 			   primitives.TimestampNano(time.Now().UnixNano()),
 			PrevBlockHashPtr:      prevBlockHash,
 			NumSignedTransactions: uint32(txCount),
@@ -40,7 +39,7 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
 	meter := s.logger.Meter("rs-block-creation")
 	defer meter.Done()
-	defer s.metrics.createResultsBlock.RecordNanosSince(time.Now())
+	defer s.metrics.createResultsBlock.RecordSince(time.Now())
 
 	output, err := s.virtualMachine.ProcessTransactionSet(&services.ProcessTransactionSetInput{
 		BlockHeight:        blockHeight,

@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -65,8 +66,10 @@ func newHarness() *harness {
 	transactionPool := &services.MockTransactionPool{}
 	cfg := config.ForConsensusContextTests()
 
+	metricFactory := metric.NewRegistry()
+
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
-		cfg, log)
+		cfg, log, metricFactory)
 
 	return &harness{
 		transactionPool: transactionPool,

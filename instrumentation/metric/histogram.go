@@ -20,14 +20,7 @@ func newHistogram(name string, max int64) *Histogram {
 	}
 }
 
-func (h *Histogram) RecordMillisSince(t time.Time) {
-	d := time.Since(t)
-	if err := h.histo.RecordValue(int64(d) / 1000 / 1000); err != nil {
-		atomic.AddInt64(&h.overflowCount, 1)
-	}
-}
-
-func (h *Histogram) RecordNanosSince(t time.Time) {
+func (h *Histogram) RecordSince(t time.Time) {
 	d := time.Since(t)
 	if err := h.histo.RecordValue(int64(d)); err != nil {
 		atomic.AddInt64(&h.overflowCount, 1)
