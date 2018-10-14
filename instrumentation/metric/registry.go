@@ -79,7 +79,7 @@ func (r *inMemoryRegistry) String() string {
 	return s
 }
 
-func (r *inMemoryRegistry) ExportAll() interface{} {
+func (r *inMemoryRegistry) ExportAll() map[string]interface{} {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
