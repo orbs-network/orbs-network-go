@@ -43,6 +43,10 @@ func DiscardAll() Filter {
 	return &discardAll{}
 }
 
+func OnlyMetrics() Filter {
+	return &onlyMetrics{}
+}
+
 type errorRegexp struct {
 	pattern string
 }
@@ -147,4 +151,11 @@ type discardAll struct {
 
 func (discardAll) Allows(level string, message string, fields []*Field) bool {
 	return false
+}
+
+type onlyMetrics struct {
+}
+
+func (f onlyMetrics) Allows(level string, message string, fields []*Field) bool {
+	return level == "metric"
 }
