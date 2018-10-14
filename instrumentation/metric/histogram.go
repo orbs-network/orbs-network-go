@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 	"github.com/codahale/hdrhistogram"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"sync/atomic"
 	"time"
 )
@@ -11,6 +12,17 @@ type Histogram struct {
 	namedMetric
 	histo         *hdrhistogram.Histogram
 	overflowCount int64
+}
+
+type histogramExport struct {
+	Name    string
+	Min     int64
+	P50     int64
+	P95     int64
+	P99     int64
+	Max     int64
+	Avg     float64
+	Samples int64
 }
 
 func newHistogram(name string, max int64) *Histogram {
@@ -48,17 +60,8 @@ func (h *Histogram) String() string {
 		errorRate)
 }
 
-func (h *Histogram) Export() interface{} {
-	return struct {
-		Name    string
-		Min     int64
-		P50     int64
-		P95     int64
-		P99     int64
-		Max     int64
-		Avg     float64
-		Samples int64
-	}{
+func (h *Histogram) Export() exportedMetric {
+	return histogramExport{
 		h.name,
 		h.histo.Min(),
 		h.histo.ValueAtQuantile(50),
@@ -72,4 +75,18 @@ func (h *Histogram) Export() interface{} {
 
 func (h *Histogram) Reset() {
 	h.histo.Reset()
+}
+
+func (h histogramExport) LogRow() []*log.Field {
+	return []*log.Field{
+		log.String("metric", h.Name),
+		log.String("metric-type", "histogram"),
+		log.Int64("min", h.Min),
+		log.Int64("p50", h.P50),
+		log.Int64("p95", h.P95),
+		log.Int64("p99", h.P99),
+		log.Int64("max", h.Max),
+		log.Float64("avg", h.Avg),
+		log.Int64("samples", h.Samples),
+	}
 }

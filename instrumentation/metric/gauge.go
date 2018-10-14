@@ -2,6 +2,7 @@ package metric
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"sync/atomic"
 )
 
@@ -15,7 +16,7 @@ type gaugeExport struct {
 	Value int64
 }
 
-func (g *Gauge) Export() interface{} {
+func (g *Gauge) Export() exportedMetric {
 	return gaugeExport{
 		g.name,
 		g.value,
@@ -52,4 +53,12 @@ func (g *Gauge) Value() int64 {
 
 func (g *Gauge) Reset() {
 	atomic.StoreInt64(&g.value, 0)
+}
+
+func (g gaugeExport) LogRow() []*log.Field {
+	return []*log.Field{
+		log.String("metric", g.Name),
+		log.String("metric-type", "gauge"),
+		log.Int64("gauge", g.Value),
+	}
 }
