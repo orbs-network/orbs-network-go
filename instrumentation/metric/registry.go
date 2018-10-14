@@ -15,7 +15,7 @@ type Factory interface {
 type Registry interface {
 	Factory
 	String() string
-	ExportAll() interface{}
+	ExportAll() map[string]interface{}
 }
 
 type metric interface {
