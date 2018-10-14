@@ -21,7 +21,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 type NodeLogic interface {
@@ -64,7 +63,7 @@ func NewNodeLogic(
 	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig))
 
-	metricFactory.ReportEvery(ctx, time.Second, logger)
+	metricFactory.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 
 	return &nodeLogic{
 		publicApi:      publicApiService,
