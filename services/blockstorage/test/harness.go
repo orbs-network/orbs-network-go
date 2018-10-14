@@ -122,6 +122,16 @@ func (d *harness) withSyncNoCommitTimeout(duration time.Duration) *harness {
 	return d
 }
 
+func (d *harness) withBatchSize(size uint32) *harness {
+	d.config.(*configForBlockStorageTests).syncBatchSize = size
+	return d
+}
+
+func (d *harness) withNodeKey(key primitives.Ed25519PublicKey) *harness {
+	d.config.(*configForBlockStorageTests).pk = key
+	return d
+}
+
 func (d *harness) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }

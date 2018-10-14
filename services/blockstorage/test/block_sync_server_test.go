@@ -6,8 +6,9 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -69,24 +70,36 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 
 func TestSourceRespondsWithChunks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.setupSomeBlocks(12)
-
-		msg := builders.BlockSyncRequestInput().
-			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			Build()
+		batchSize := uint32(10)
+		harness := newHarness(ctx).withBatchSize(batchSize).withNodeKey(keys.Ed25519KeyPairForTests(4).PublicKey())
+		lastBlock := 12
+		harness.setupSomeBlocks(lastBlock)
 
 		firstHeight := primitives.BlockHeight(1)
-		lastHeight := primitives.BlockHeight(10)
+		lastHeight := primitives.BlockHeight(10) // hardcoding this, but it is a function of the batchSize
 
-		var blocks []*protocol.BlockPairContainer
+		msg := builders.BlockSyncRequestInput().
+			WithSenderPublicKey(keys.Ed25519KeyPairForTests(1).PublicKey()).
+			WithFirstBlockHeight(firstHeight).
+			Build()
 
-		for i := firstHeight; i <= lastHeight; i++ {
-			blocks = append(blocks, builders.BlockPair().WithHeight(i).Build())
+		chunksResponseVerifier := func(i interface{}) bool {
+			response, ok := i.(*gossiptopics.BlockSyncResponseInput)
+			if !ok {
+				require.Failf(t, "response type does not match", "", i)
+			}
+			require.EqualValues(t, batchSize, len(response.Message.BlockPairs), "batch size does not match config")
+			require.Equal(t, keys.Ed25519KeyPairForTests(1).PublicKey(), response.RecipientPublicKey, "recipient pk is incorrect")
+			require.Equal(t, firstHeight, response.Message.SignedChunkRange.FirstBlockHeight(), "first block height mismatch")
+			require.Equal(t, lastHeight, response.Message.SignedChunkRange.LastBlockHeight(), "last block height mismatch")
+			require.Equal(t, primitives.BlockHeight(lastBlock), response.Message.SignedChunkRange.LastCommittedBlockHeight(), "last committed block height mismatch")
+			require.Equal(t, keys.Ed25519KeyPairForTests(4).PublicKey(), response.Message.Sender.SenderPublicKey(), "sender does not match config")
+			require.Equal(t, msg.Message.SignedChunkRange.BlockType(), response.Message.SignedChunkRange.BlockType(), "block type does not match the request")
+
+			return true
 		}
 
-		// TODO: how do i get the arguments sent to the mock?
-		harness.gossip.When("SendBlockSyncResponse", mock.Any).Return(nil, nil).Times(1)
+		harness.gossip.When("SendBlockSyncResponse", mock.AnyIf("reponse should hold correct blocks", chunksResponseVerifier)).Return(nil, nil).Times(1)
 		harness.blockStorage.HandleBlockSyncRequest(msg)
 		harness.verifyMocks(t, 1)
 	})
