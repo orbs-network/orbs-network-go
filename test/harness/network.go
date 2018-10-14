@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -19,6 +20,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type InProcessNetwork interface {
@@ -36,7 +38,9 @@ type InProcessNetwork interface {
 	CallCounterGet(nodeIndex int) chan uint64
 	DumpState()
 	WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256)
+	WaitForTransactionInStateForAtMost(nodeIndex int, txhash primitives.Sha256, atMost time.Duration)
 	Size() int
+	MetricsString() string
 }
 
 type inProcessNetwork struct {
@@ -44,6 +48,7 @@ type inProcessNetwork struct {
 	gossipTransport gossipAdapter.TamperingTransport
 	description     string
 	testLogger      log.BasicLogger
+	metricRegistry  metric.Registry
 }
 
 func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
@@ -55,6 +60,7 @@ func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
 			node.statePersistence,
 			node.nativeCompiler,
 			n.testLogger.WithTags(log.Node(node.name)),
+			n.metricRegistry,
 			node.config,
 		)
 	}
@@ -72,11 +78,19 @@ type networkNode struct {
 }
 
 func (n *inProcessNetwork) WaitForTransactionInState(nodeIndex int, txhash primitives.Sha256) {
-	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(txhash)
+	n.WaitForTransactionInStateForAtMost(nodeIndex, txhash, 1 * time.Second)
+}
+
+func (n *inProcessNetwork) WaitForTransactionInStateForAtMost(nodeIndex int, txhash primitives.Sha256, atMost time.Duration) {
+	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(txhash, atMost)
 	err := n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(blockHeight)
 	if err != nil {
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
+}
+
+func (n *inProcessNetwork) MetricsString() string {
+	return n.metricRegistry.String()
 }
 
 func (n *inProcessNetwork) Description() string {

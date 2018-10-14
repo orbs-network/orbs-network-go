@@ -2,6 +2,8 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -27,9 +29,10 @@ type HttpServer interface {
 }
 
 type server struct {
-	httpServer *http.Server
-	logger     log.BasicLogger
-	publicApi  services.PublicApi
+	httpServer     *http.Server
+	logger         log.BasicLogger
+	publicApi      services.PublicApi
+	metricRegistry metric.Registry
 }
 
 type tcpKeepAliveListener struct {
@@ -46,10 +49,11 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi) HttpServer {
+func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
 	server := &server{
 		logger:    logger.WithTags(LogTag),
 		publicApi: publicApi,
+		metricRegistry: metricRegistry,
 	}
 
 	if listener, err := server.listen(address); err != nil {
@@ -89,6 +93,7 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/send-transaction", report(s.logger, http.HandlerFunc(s.sendTransactionHandler)))
 	router.Handle("/api/v1/call-method", report(s.logger, http.HandlerFunc(s.callMethodHandler)))
 	router.Handle("/api/v1/get-transaction-status", report(s.logger, http.HandlerFunc(s.getTransactionStatusHandler)))
+	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
 	return router
 }
 
@@ -98,6 +103,12 @@ func report(reporting log.BasicLogger, h http.Handler) http.Handler {
 		defer meter.Done()
 		h.ServeHTTP(w, r)
 	})
+}
+
+func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
+	w.Write(bytes)
 }
 
 func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {

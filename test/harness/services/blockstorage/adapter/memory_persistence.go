@@ -15,7 +15,7 @@ import (
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight
+	WaitForTransaction(txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight
 }
 
 type blockHeightChan chan primitives.BlockHeight
@@ -43,7 +43,7 @@ func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTrac
 	return bp.tracker
 }
 
-func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight {
+func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight {
 	bp.lock.Lock()
 	ch := bp.getChanFor(txhash)
 	bp.lock.Unlock()
@@ -51,7 +51,7 @@ func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256)
 	select {
 	case h := <-ch:
 		return h
-	case <-time.After(10 * time.Second):
+	case <-time.After(atMost):
 		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txhash))
 	}
 }

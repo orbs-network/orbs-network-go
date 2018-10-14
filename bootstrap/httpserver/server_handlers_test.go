@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -18,8 +19,13 @@ import (
 	"time"
 )
 
-func TestHttpServerSendTxHandler_Basic(t *testing.T) {
+func makeServer(papiMock *services.MockPublicApi) HttpServer {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+
+	return NewHttpServer("", logger, papiMock, metric.NewRegistry())
+}
+
+func TestHttpServerSendTxHandler_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.SendTransactionResponseBuilder{
 		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
@@ -31,7 +37,7 @@ func TestHttpServerSendTxHandler_Basic(t *testing.T) {
 
 	papiMock.When("SendTransaction", mock.Any).Times(1).Return(&services.SendTransactionOutput{ClientResponse: response.Build()})
 
-	s := NewHttpServer("", logger, papiMock)
+	s := makeServer(papiMock)
 
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: builders.TransferTransaction().Builder(),
@@ -45,12 +51,11 @@ func TestHttpServerSendTxHandler_Basic(t *testing.T) {
 }
 
 func TestHttpServerSendTxHandler_Error(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("SendTransaction", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := NewHttpServer("", logger, papiMock)
+	s := makeServer(papiMock)
 
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: builders.TransferTransaction().Builder(),
@@ -64,7 +69,6 @@ func TestHttpServerSendTxHandler_Error(t *testing.T) {
 }
 
 func TestHttpServerCallMethod_Basic(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	papiMock := &services.MockPublicApi{}
 	response := &client.CallMethodResponseBuilder{
 		RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
@@ -76,7 +80,7 @@ func TestHttpServerCallMethod_Basic(t *testing.T) {
 
 	papiMock.When("CallMethod", mock.Any).Times(1).Return(&services.CallMethodOutput{ClientResponse: response.Build()})
 
-	s := NewHttpServer("", logger, papiMock)
+	s := makeServer(papiMock)
 
 	request := (&client.CallMethodRequestBuilder{
 		Transaction: &protocol.TransactionBuilder{},
@@ -90,12 +94,11 @@ func TestHttpServerCallMethod_Basic(t *testing.T) {
 }
 
 func TestHttpServerCallMethod_Error(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("CallMethod", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := NewHttpServer("", logger, papiMock)
+	s := makeServer(papiMock)
 
 	request := (&client.CallMethodRequestBuilder{
 		Transaction: &protocol.TransactionBuilder{},
@@ -109,7 +112,6 @@ func TestHttpServerCallMethod_Error(t *testing.T) {
 }
 
 func TestHttpServerGetTx_Basic(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	papiMock := &services.MockPublicApi{}
 	response := &client.GetTransactionStatusResponseBuilder{
 		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
@@ -121,7 +123,7 @@ func TestHttpServerGetTx_Basic(t *testing.T) {
 
 	papiMock.When("GetTransactionStatus", mock.Any).Times(1).Return(&services.GetTransactionStatusOutput{ClientResponse: response.Build()})
 
-	s := NewHttpServer("", logger, papiMock)
+	s := makeServer(papiMock)
 
 	request := (&client.GetTransactionStatusRequestBuilder{}).Build()
 
@@ -133,12 +135,11 @@ func TestHttpServerGetTx_Basic(t *testing.T) {
 }
 
 func TestHttpServerGetTx_Error(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("GetTransactionStatus", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := NewHttpServer("", logger, papiMock)
+	s := makeServer(papiMock)
 
 	request := (&client.GetTransactionStatusRequestBuilder{}).Build()
 

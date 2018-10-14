@@ -5,13 +5,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"os"
 	"sync"
 	"time"
 )
-
-var testLogger = log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 type GammaServer struct {
 	httpServer   httpserver.HttpServer
@@ -24,8 +23,10 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	network := harness.NewDevelopmentNetwork().StartNodes(ctx)
+	testLogger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	metricRegistry := metric.NewRegistry()
 
-	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0))
+	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0), metricRegistry)
 
 	s := &GammaServer{
 		ctxCancel:    cancel,

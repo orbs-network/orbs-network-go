@@ -2,6 +2,7 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -166,5 +167,6 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 }
 
 func makePendingPool() *pendingTxPool {
-	return NewPendingPool(func() uint32 { return 100000 })
+	metricFactory := metric.NewRegistry()
+	return NewPendingPool(func() uint32 { return 100000 }, metricFactory)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -40,6 +41,8 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
+
+	metricRegistry := metric.NewRegistry()
 
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
@@ -80,6 +83,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 		gossipTransport: sharedTamperingTransport,
 		description:     description,
 		testLogger:      testLogger,
+		metricRegistry:  metricRegistry,
 	}
 
 	// must call network.StartNodes(ctx) to actually start the nodes in the network

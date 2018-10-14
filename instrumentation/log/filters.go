@@ -39,6 +39,10 @@ func IgnoreErrorsMatching(pattern string) Filter {
 	return &errorRegexp{pattern: pattern}
 }
 
+func DiscardAll() Filter {
+	return &discardAll{}
+}
+
 type errorRegexp struct {
 	pattern string
 }
@@ -136,4 +140,11 @@ func (f *or) Allows(level string, message string, fields []*Field) bool {
 	}
 
 	return result
+}
+
+type discardAll struct {
+}
+
+func (discardAll) Allows(level string, message string, fields []*Field) bool {
+	return false
 }

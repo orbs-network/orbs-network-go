@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
@@ -59,6 +60,7 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 		gossipTransport: sharedTamperingTransport,
 		description:     description,
 		testLogger:      testLogger,
+		metricRegistry:  metric.NewRegistry(),
 	}
 
 	// must call network.StartNodes(ctx) to actually start the nodes in the network

@@ -10,10 +10,11 @@ import (
 )
 
 func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
-	if input.LastCommittedBlockHeight != s.lastCommittedBlockHeight+1 {
+	bh, _ := s.currentBlockHeightAndTime()
+	if input.LastCommittedBlockHeight != bh+1 {
 		return &services.CommitTransactionReceiptsOutput{
-			NextDesiredBlockHeight:   s.lastCommittedBlockHeight + 1,
-			LastCommittedBlockHeight: s.lastCommittedBlockHeight,
+			NextDesiredBlockHeight:   bh + 1,
+			LastCommittedBlockHeight: bh,
 		}, nil
 	}
 
@@ -31,30 +32,34 @@ func (s *service) CommitTransactionReceipts(input *services.CommitTransactionRec
 
 	}
 
-	s.lastCommittedBlockHeight = input.ResultsBlockHeader.BlockHeight()
-	s.lastCommittedBlockTimestamp = input.ResultsBlockHeader.Timestamp()
-	if s.lastCommittedBlockTimestamp == 0 {
-		s.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
+	s.mu.Lock()
+	bh = input.ResultsBlockHeader.BlockHeight()
+	bts := input.ResultsBlockHeader.Timestamp()
+	s.mu.lastCommittedBlockHeight = bh
+	s.mu.lastCommittedBlockTimestamp = bts
+	if s.mu.lastCommittedBlockTimestamp == 0 {
+		s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
 		s.logger.Error("got 0 timestamp from results block header")
 	}
+	s.mu.Unlock()
 
 	s.blockTracker.IncrementHeight()
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {
 			handler.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
-				BlockHeight:         s.lastCommittedBlockHeight,
+				BlockHeight:         bh,
 				Timestamp:           input.ResultsBlockHeader.Timestamp(),
 				TransactionReceipts: myReceipts,
 			})
 		}
 	}
 
-	s.logger.Info("committed transaction receipts for block height", log.BlockHeight(s.lastCommittedBlockHeight))
+	s.logger.Info("committed transaction receipts for block height", log.BlockHeight(bh))
 
 	return &services.CommitTransactionReceiptsOutput{
-		NextDesiredBlockHeight:   s.lastCommittedBlockHeight + 1,
-		LastCommittedBlockHeight: s.lastCommittedBlockHeight,
+		NextDesiredBlockHeight:   bh + 1,
+		LastCommittedBlockHeight: bh,
 	}, nil
 }
 func timestampOrNow(tx *pendingTransaction) primitives.TimestampNano {

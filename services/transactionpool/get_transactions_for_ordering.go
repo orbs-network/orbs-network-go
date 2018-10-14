@@ -33,9 +33,10 @@ func (s *service) GetTransactionsForOrdering(input *services.GetTransactionsForO
 	}
 
 	//TODO handle error from vm
+	bh, _ := s.currentBlockHeightAndTime()
 	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
 		SignedTransactions: transactionsForPreOrder,
-		BlockHeight:        s.lastCommittedBlockHeight,
+		BlockHeight:        bh,
 	})
 
 	for i := range transactionsForPreOrder {
