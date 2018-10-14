@@ -16,12 +16,14 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]interface{}
+	ExportAndRotate() map[string]interface{}
 }
 
 type metric interface {
 	fmt.Stringer
 	Name() string
 	Export() interface{}
+	Reset()
 }
 
 type namedMetric struct {
@@ -89,4 +91,14 @@ func (r *inMemoryRegistry) ExportAll() map[string]interface{} {
 	}
 
 	return all
+}
+
+func (r *inMemoryRegistry) ExportAndRotate() map[string]interface{} {
+	results := r.ExportAll()
+
+	for _, m := range r.mu.metrics {
+		m.Reset()
+	}
+
+	return results
 }

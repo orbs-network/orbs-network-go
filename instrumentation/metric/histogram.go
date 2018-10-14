@@ -69,3 +69,7 @@ func (h *Histogram) Export() interface{} {
 		h.histo.TotalCount(),
 	}
 }
+
+func (h *Histogram) Reset() {
+	h.histo.Reset()
+}

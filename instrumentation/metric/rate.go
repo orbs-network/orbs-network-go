@@ -53,3 +53,10 @@ func (r *Rate) Measure(eventCount int64) {
 
 	r.runningSum += eventCount
 }
+
+func (r *Rate) Reset() {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	r.movingAverage = ewma.NewMovingAverage()
+}

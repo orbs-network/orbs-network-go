@@ -10,11 +10,13 @@ type Gauge struct {
 	value int64
 }
 
+type gaugeExport struct {
+	Name  string
+	Value int64
+}
+
 func (g *Gauge) Export() interface{} {
-	return struct {
-		Name string
-		Value int64
-	}{
+	return gaugeExport{
 		g.name,
 		g.value,
 	}
@@ -48,6 +50,6 @@ func (g *Gauge) Value() int64 {
 	return g.value
 }
 
-
-
-
+func (g *Gauge) Reset() {
+	atomic.StoreInt64(&g.value, 0)
+}
