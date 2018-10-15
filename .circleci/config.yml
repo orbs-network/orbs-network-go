@@ -39,6 +39,16 @@ jobs:
     steps:
       - run: echo 'Success'
 
+  deploy_testnet:
+    machine: true
+    steps:
+      - checkout
+      - run: $(aws ecr get-login --no-include-email --region us-west-2)
+      - run: docker pull $DOCKER_IMAGE:$(./docker-tag.sh) && docker tag $DOCKER_IMAGE:$(./docker-tag.sh) orbs:export
+#      - run: docker pull $DOCKER_IMAGE:master && docker tag $DOCKER_IMAGE:master orbs:export
+      - run: git clone https://github.com/orbs-network/orbs-network-deploy-script && cd orbs-network-deploy-script && git checkout feature/support-v1
+      - run: cd orbs-network-deploy-script && npm install -g typescript && npm install && DOCKER_TAG=export ./deploy-staging.sh
+
 workflows:
   version: 2
   build:
@@ -50,3 +60,10 @@ workflows:
           requires:
             - build
             - acceptance
+      - deploy_testnet:
+          requires:
+            - success
+          filters:
+            branches:
+              only:
+                - feature/basic-testnet-configuration
