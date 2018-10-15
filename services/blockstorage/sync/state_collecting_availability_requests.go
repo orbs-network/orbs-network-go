@@ -5,14 +5,15 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"time"
 )
 
 type collectingAvailabilityResponsesState struct {
-	sf           *stateFactory
-	gossipClient *blockSyncGossipClient
-	config       blockSyncConfig
-	logger       log.BasicLogger
-	responsesC   chan *gossipmessages.BlockAvailabilityResponseMessage
+	sf             *stateFactory
+	gossipClient   *blockSyncGossipClient
+	collectTimeout time.Duration
+	logger         log.BasicLogger
+	responsesC     chan *gossipmessages.BlockAvailabilityResponseMessage
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -32,7 +33,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 		return s.sf.CreateIdleState()
 	}
 
-	waitForResponses := synchronization.NewTimer(s.config.BlockSyncCollectResponseTimeout())
+	waitForResponses := synchronization.NewTimer(s.collectTimeout)
 	for { // the forever is because of responses handling loop
 		select {
 		case <-waitForResponses.C:

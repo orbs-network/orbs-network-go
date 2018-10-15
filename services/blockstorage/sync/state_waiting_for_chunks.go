@@ -7,16 +7,17 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"time"
 )
 
 type waitingForChunksState struct {
-	sf           *stateFactory
-	sourceKey    primitives.Ed25519PublicKey
-	gossipClient *blockSyncGossipClient
-	config       blockSyncConfig
-	logger       log.BasicLogger
-	abort        chan struct{}
-	blocksC      chan *gossipmessages.BlockSyncResponseMessage
+	sf             *stateFactory
+	sourceKey      primitives.Ed25519PublicKey
+	gossipClient   *blockSyncGossipClient
+	collectTimeout time.Duration
+	logger         log.BasicLogger
+	abort          chan struct{}
+	blocksC        chan *gossipmessages.BlockSyncResponseMessage
 }
 
 func (s *waitingForChunksState) name() string {
@@ -34,7 +35,7 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 		return s.sf.CreateIdleState()
 	}
 
-	timeout := synchronization.NewTimer(s.config.BlockSyncCollectChunksTimeout())
+	timeout := synchronization.NewTimer(s.collectTimeout)
 	select {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))

@@ -26,7 +26,7 @@ func NewStateFactory(config blockSyncConfig, gossip gossiptopics.BlockSync, stor
 func (f *stateFactory) CreateIdleState() syncState {
 	return &idleState{
 		sf:          f,
-		config:      f.config,
+		idleTimeout: f.config.BlockSyncNoCommitInterval(),
 		logger:      f.logger,
 		restartIdle: make(chan struct{}),
 	}
@@ -34,11 +34,11 @@ func (f *stateFactory) CreateIdleState() syncState {
 
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
-		sf:           f,
-		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize(), f.config.NodePublicKey()),
-		config:       f.config,
-		logger:       f.logger,
-		responsesC:   make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		sf:             f,
+		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize(), f.config.NodePublicKey()),
+		collectTimeout: f.config.BlockSyncCollectResponseTimeout(),
+		logger:         f.logger,
+		responsesC:     make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 	}
 }
 
@@ -52,13 +52,13 @@ func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockA
 
 func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519PublicKey) syncState {
 	return &waitingForChunksState{
-		sourceKey:    sourceKey,
-		sf:           f,
-		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize(), f.config.NodePublicKey()),
-		config:       f.config,
-		logger:       f.logger,
-		blocksC:      make(chan *gossipmessages.BlockSyncResponseMessage),
-		abort:        make(chan struct{}),
+		sourceKey:      sourceKey,
+		sf:             f,
+		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize(), f.config.NodePublicKey()),
+		collectTimeout: f.config.BlockSyncCollectChunksTimeout(),
+		logger:         f.logger,
+		blocksC:        make(chan *gossipmessages.BlockSyncResponseMessage),
+		abort:          make(chan struct{}),
 	}
 }
 
