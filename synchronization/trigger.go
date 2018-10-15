@@ -1,6 +1,7 @@
 package synchronization
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,9 +30,10 @@ type periodicalTrigger struct {
 	running bool
 	stop    chan struct{}
 	wgSync  sync.WaitGroup
+	ctx     context.Context
 }
 
-func NewPeriodicalTrigger(interval time.Duration, trigger func()) Trigger {
+func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, trigger func()) Trigger {
 	t := &periodicalTrigger{
 		ticker:  nil,
 		d:       interval,
@@ -39,6 +41,7 @@ func NewPeriodicalTrigger(interval time.Duration, trigger func()) Trigger {
 		metrics: &Telemetry{},
 		stop:    make(chan struct{}),
 		running: false,
+		ctx:     ctx,
 	}
 	return t
 }
@@ -73,6 +76,11 @@ func (t *periodicalTrigger) Start() {
 				t.f()
 				atomic.AddUint64(&t.metrics.timesTriggered, 1)
 			case <-t.stop:
+				t.ticker.Stop()
+				t.running = false
+				t.wgSync.Done()
+				return
+			case <-t.ctx.Done():
 				t.ticker.Stop()
 				t.running = false
 				t.wgSync.Done()
