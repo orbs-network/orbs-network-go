@@ -51,10 +51,6 @@ func (g *Gauge) Value() int64 {
 	return g.value
 }
 
-func (g *Gauge) Reset() {
-	atomic.StoreInt64(&g.value, 0)
-}
-
 func (g gaugeExport) LogRow() []*log.Field {
 	return []*log.Field{
 		log.String("metric", g.Name),

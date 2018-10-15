@@ -19,7 +19,6 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]exportedMetric
-	ExportAndRotate() map[string]exportedMetric
 	ReportEvery(ctx context.Context, interval time.Duration, logger log.BasicLogger)
 }
 
@@ -31,7 +30,6 @@ type metric interface {
 	fmt.Stringer
 	Name() string
 	Export() exportedMetric
-	Reset()
 }
 
 type namedMetric struct {
@@ -101,18 +99,8 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 	return all
 }
 
-func (r *inMemoryRegistry) ExportAndRotate() map[string]exportedMetric {
-	results := r.ExportAll()
-
-	for _, m := range r.mu.metrics {
-		m.Reset()
-	}
-
-	return results
-}
-
 func (r *inMemoryRegistry) report(logger log.BasicLogger) {
-	for _, value := range r.ExportAndRotate() {
+	for _, value := range r.ExportAll() {
 		logger.Metric("metric recorded", value.LogRow()...)
 	}
 }

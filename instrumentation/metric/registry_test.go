@@ -13,15 +13,3 @@ func TestInMemoryRegistry_ExportAll(t *testing.T) {
 	gaugeValue := registry.ExportAll()["hello"].(gaugeExport)
 	require.EqualValues(t, gaugeValue.Value, 1)
 }
-
-func TestInMemoryRegistry_ExportAndRotate(t *testing.T) {
-	registry := NewRegistry()
-	gauge := registry.NewGauge("hello")
-	gauge.Add(1)
-
-	gaugeValue := registry.ExportAndRotate()["hello"].(gaugeExport)
-	require.EqualValues(t, gaugeValue.Value, 1)
-
-	gaugeValue = registry.ExportAll()["hello"].(gaugeExport)
-	require.EqualValues(t, gaugeValue.Value, 0)
-}
