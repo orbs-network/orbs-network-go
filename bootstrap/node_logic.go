@@ -39,7 +39,7 @@ func NewNodeLogic(
 	statePersistence stateStorageAdapter.StatePersistence,
 	nativeCompiler nativeProcessorAdapter.Compiler,
 	logger log.BasicLogger,
-	metricFactory metric.Factory,
+	metricRegistry metric.Registry,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
@@ -52,16 +52,18 @@ func NewNodeLogic(
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
-	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, metricFactory)
+	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, metricRegistry)
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorageService, gossipService, transactionPoolService, logger)
-	publicApiService := publicapi.NewPublicApi(ctx, nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricFactory)
-	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, logger, metricFactory)
+	publicApiService := publicapi.NewPublicApi(ctx, nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
+	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, logger, metricRegistry)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 
 	// TODO: Restore this when lean-helix-go submodule is integrated
 	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig))
+
+	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 
 	return &nodeLogic{
 		publicApi:      publicApiService,

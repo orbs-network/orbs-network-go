@@ -68,6 +68,8 @@ const (
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
 
 	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
+
+	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -279,4 +281,8 @@ func (c *config) GossipConnectionKeepAliveInterval() time.Duration {
 
 func (c *config) GossipNetworkTimeout() time.Duration {
 	return c.kv[GOSSIP_NETWORK_TIMEOUT].DurationValue
+}
+
+func (c *config) MetricsReportInterval() time.Duration {
+	return c.kv[METRICS_REPORT_INTERVAL].DurationValue
 }

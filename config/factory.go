@@ -55,6 +55,8 @@ func ForAcceptanceTests(
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 
+	cfg.SetDuration(METRICS_REPORT_INTERVAL, 1*time.Second)
+
 	return cfg
 }
 
@@ -205,6 +207,8 @@ func defaultConfig() mutableNodeConfig {
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+
+	cfg.SetDuration(METRICS_REPORT_INTERVAL, 30*time.Second)
 
 	return cfg
 }
