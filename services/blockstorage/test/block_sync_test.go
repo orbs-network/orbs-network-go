@@ -211,8 +211,11 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 }
 
 func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
+	// this test may still be flaky, it runs commits in a busy wait loop that should take longer than the timeout,
+	// to make sure we stay at the same state logically.
+	// system timing may cause it to flake, but at a very low probability now
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
+		harness := newHarness(ctx).withSyncNoCommitTimeout(5 * time.Millisecond)
 
 		harness.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any)
 
@@ -229,7 +232,7 @@ func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
 
 				require.NoError(t, err)
 
-				time.Sleep(1 * time.Millisecond)
+				time.Sleep(500 * time.Microsecond)
 			}
 			latch <- struct{}{}
 		}()
