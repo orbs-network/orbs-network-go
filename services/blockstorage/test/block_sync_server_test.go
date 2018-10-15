@@ -105,29 +105,25 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 	})
 }
 
-//
-//func TestSourceAnyStateIgnoresBlockSyncRequestIfSourceIsBehindOrInSync(t *testing.T) {
-//	firstHeight := primitives.BlockHeight(11)
-//	lastHeight := primitives.BlockHeight(10)
-//
-//	event := builders.BlockSyncRequestInput().WithFirstBlockHeight(firstHeight).WithLastCommittedBlockHeight(lastHeight).Build().Message
-//
-//	for _, state := range allStates(true) {
-//		t.Run("state="+blockSyncStateNameLookup[state], func(t *testing.T) {
-//			harness := newBlockSyncHarness()
-//
-//			harness.storage.When("LastCommittedBlockHeight").Return(lastHeight).Times(1)
-//			harness.storage.Never("GetBlocks")
-//			harness.gossip.Never("SendBlockSyncResponse", mock.Any)
-//
-//			availabilityResponses := []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}
-//
-//			newState, availabilityResponses := harness.blockSync.transitionState(state, event, availabilityResponses, harness.startSyncTimer)
-//
-//			require.Equal(t, state, newState, "state change was not expected")
-//			require.Equal(t, availabilityResponses, []*gossipmessages.BlockAvailabilityResponseMessage{nil, nil}, "availabilityResponses should remain the same")
-//
-//			harness.verifyMocks(t)
-//		})
-//	}
-//}
+func TestSourceIgnoresBlockSyncRequestIfSourceIsBehindOrInSync(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		lastBlock := 10
+		firstHeight := primitives.BlockHeight(lastBlock + 1)
+		lastHeight := primitives.BlockHeight(lastBlock)
+
+		msg := builders.BlockSyncRequestInput().
+			WithFirstBlockHeight(firstHeight).
+			WithLastCommittedBlockHeight(lastHeight).
+			Build()
+
+		harness := newHarness(ctx)
+		harness.setupSomeBlocks(lastBlock)
+
+		harness.gossip.Never("SendBlockSyncResponse", mock.Any)
+
+		_, err := harness.blockStorage.HandleBlockSyncRequest(msg)
+
+		require.Error(t, err, "expected source to return an error")
+		harness.verifyMocks(t, 1)
+	})
+}
