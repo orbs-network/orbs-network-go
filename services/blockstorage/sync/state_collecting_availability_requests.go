@@ -27,8 +27,6 @@ func (s *collectingAvailabilityResponsesState) String() string {
 }
 
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
-	m := s.logger.Meter("block-sync-car-state")
-	defer m.Done()
 	responses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
 	err := s.petitionerBroadcastBlockAvailabilityRequest()

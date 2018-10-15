@@ -23,8 +23,6 @@ func (s *idleState) String() string {
 }
 
 func (s *idleState) processState(ctx context.Context) syncState {
-	m := s.logger.Meter("block-sync-idle-state")
-	defer m.Done()
 	noCommitTimer := synchronization.NewTimer(s.config.BlockSyncNoCommitInterval())
 	select {
 	case <-noCommitTimer.C:

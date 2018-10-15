@@ -30,9 +30,6 @@ func (s *waitingForChunksState) String() string {
 }
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
-	m := s.logger.Meter("block-sync-waiting-for-chunks-state")
-	defer m.Done()
-
 	err := s.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
 		s.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))
