@@ -109,6 +109,14 @@ func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Durati
 	go func() {
 		periodicalTrigger := synchronization.NewPeriodicalTrigger(interval, func() {
 			r.report(logger)
+
+			// We only rotate histograms because there it is the only type of metric that we're currently rotating
+			for _, m := range r.mu.metrics {
+				switch m.(type) {
+				case *Histogram:
+					m.(*Histogram).Rotate()
+				}
+			}
 		})
 
 		periodicalTrigger.Start()

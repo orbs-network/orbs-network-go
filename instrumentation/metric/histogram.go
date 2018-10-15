@@ -77,6 +77,10 @@ func (h *Histogram) Export() exportedMetric {
 	}
 }
 
+func (h *Histogram) Rotate() {
+	h.histo.Rotate()
+}
+
 func (h histogramExport) LogRow() []*log.Field {
 	return []*log.Field{
 		log.String("metric", h.Name),
