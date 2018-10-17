@@ -9,7 +9,11 @@ import (
 )
 
 func (s *service) sourceHandleBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) error {
-	s.logger.Info("received block availability request", log.Stringable("sender", message.Sender))
+	s.logger.Info("received block availability request",
+		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
+		log.Stringable("requested-first-block", message.SignedBatchRange.FirstBlockHeight()),
+		log.Stringable("requested-last-block", message.SignedBatchRange.LastBlockHeight()),
+		log.Stringable("requested-last-committed-block", message.SignedBatchRange.LastCommittedBlockHeight()))
 
 	lastCommittedBlockHeight := s.LastCommittedBlockHeight()
 
@@ -34,6 +38,15 @@ func (s *service) sourceHandleBlockAvailabilityRequest(message *gossipmessages.B
 			}).Build(),
 		},
 	}
+
+	s.logger.Info("sending the response for availability request",
+		log.Stringable("petitioner", response.RecipientPublicKey),
+		log.Stringable("first-available-block-height", response.Message.SignedBatchRange.FirstBlockHeight()),
+		log.Stringable("last-available-block-height", response.Message.SignedBatchRange.LastBlockHeight()),
+		log.Stringable("last-committed-available-block-height", response.Message.SignedBatchRange.LastCommittedBlockHeight()),
+		log.Stringable("source", response.Message.Sender.SenderPublicKey()),
+	)
+
 	_, err := s.gossip.SendBlockAvailabilityResponse(response)
 	return err
 }
@@ -46,7 +59,7 @@ func (s *service) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSync
 	lastCommittedBlockHeight := s.LastCommittedBlockHeight()
 
 	s.logger.Info("received block sync request",
-		log.Stringable("sender", message.Sender),
+		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
 		log.Stringable("first-requested-block-height", firstRequestedBlockHeight),
 		log.Stringable("last-requested-block-height", lastRequestedBlockHeight),
 		log.Stringable("last-committed-block-height", lastCommittedBlockHeight))
@@ -62,7 +75,7 @@ func (s *service) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSync
 	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := s.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
 
 	s.logger.Info("sending blocks to another node via block sync",
-		log.Stringable("recipient", senderPublicKey),
+		log.Stringable("petitioner", senderPublicKey),
 		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
 		log.Stringable("last-available-block-height", lastAvailableBlockHeight))
 
