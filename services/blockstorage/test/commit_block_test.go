@@ -69,7 +69,7 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 
 		_, err := harness.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
 
-		require.EqualError(t, err, "protocol version mismatch")
+		require.EqualError(t, err, "protocol version mismatch in transactions block header")
 	})
 }
 
@@ -142,7 +142,7 @@ func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
 		_, err = harness.commitBlock(block1)
 		require.NoError(t, err)
 
-		blockHeight := harness.storageAdapter.WaitForTransaction(txHash, 10 * time.Millisecond)
+		blockHeight := harness.storageAdapter.WaitForTransaction(txHash, 10*time.Millisecond)
 		require.EqualValues(t, 1, blockHeight)
 
 		harness.verifyMocks(t, 1)
