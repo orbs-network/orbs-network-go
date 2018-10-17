@@ -7,18 +7,17 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"time"
 )
 
 type waitingForChunksState struct {
-	sf        *stateFactory
-	sourceKey primitives.Ed25519PublicKey
-	storage   BlockSyncStorage
-	config    blockSyncConfig
-	gossip    gossiptopics.BlockSync
-	logger    log.BasicLogger
-	abort     chan struct{}
-	blocksC   chan *gossipmessages.BlockSyncResponseMessage
+	sf             *stateFactory
+	sourceKey      primitives.Ed25519PublicKey
+	gossipClient   *blockSyncGossipClient
+	collectTimeout time.Duration
+	logger         log.BasicLogger
+	abort          chan struct{}
+	blocksC        chan *gossipmessages.BlockSyncResponseMessage
 }
 
 func (s *waitingForChunksState) name() string {
@@ -30,16 +29,13 @@ func (s *waitingForChunksState) String() string {
 }
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
-	m := s.logger.Meter("block-sync-waiting-for-chunks-state")
-	defer m.Done()
-
-	err := s.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
+	err := s.gossipClient.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
 		s.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))
 		return s.sf.CreateIdleState()
 	}
 
-	timeout := synchronization.NewTimer(s.config.BlockSyncCollectChunksTimeout())
+	timeout := synchronization.NewTimer(s.collectTimeout)
 	select {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
@@ -71,29 +67,4 @@ func (s *waitingForChunksState) gotBlocks(message *gossipmessages.BlockSyncRespo
 	} else {
 		s.blocksC <- message
 	}
-}
-
-func (s *waitingForChunksState) petitionerSendBlockSyncRequest(blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
-	lastCommittedBlockHeight := s.storage.LastCommittedBlockHeight()
-
-	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize())
-
-	request := &gossiptopics.BlockSyncRequestInput{
-		RecipientPublicKey: senderPublicKey,
-		Message: &gossipmessages.BlockSyncRequestMessage{
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
-			}).Build(),
-			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                blockType,
-				LastBlockHeight:          lastBlockHeight,
-				FirstBlockHeight:         firstBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
-			}).Build(),
-		},
-	}
-
-	_, err := s.gossip.SendBlockSyncRequest(request)
-	return err
 }

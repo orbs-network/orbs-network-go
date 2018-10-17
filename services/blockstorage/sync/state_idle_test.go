@@ -7,7 +7,7 @@ import (
 )
 
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness().withNoCommitTimeout(time.Second) // we are checking for a newly created state, the timeout here is irrelevant
 	idle := h.sf.CreateIdleState()
 	next := h.nextState(idle, func() {
 		// letting the goroutine start above
