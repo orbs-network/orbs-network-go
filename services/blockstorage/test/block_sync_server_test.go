@@ -31,7 +31,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	})
 }
 
-func TestSourceRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
+func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		harness := newHarness(ctx)
@@ -43,7 +43,7 @@ func TestSourceRespondsNothingToAvailabilityRequestIfSourceIsBehindPetitioner(t 
 		msg := builders.BlockAvailabilityRequestInput().WithLastCommittedBlockHeight(primitives.BlockHeight(20)).Build()
 		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(msg)
 
-		require.NoError(t, err, "expecting a happy flow")
+		require.NoError(t, err, "expecting a happy flow (without sending the response)")
 		harness.verifyMocks(t, 1)
 	})
 }
@@ -88,7 +88,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 			if !ok {
 				require.Failf(t, "response type does not match", "", i)
 			}
-			require.EqualValues(t, batchSize, len(response.Message.BlockPairs), "batch size does not match config")
+			require.Len(t, response.Message.BlockPairs, int(batchSize), "actual batch size does not match config")
 			require.Equal(t, keys.Ed25519KeyPairForTests(1).PublicKey(), response.RecipientPublicKey, "recipient pk is incorrect")
 			require.Equal(t, firstHeight, response.Message.SignedChunkRange.FirstBlockHeight(), "first block height mismatch")
 			require.Equal(t, lastHeight, response.Message.SignedChunkRange.LastBlockHeight(), "last block height mismatch")
@@ -105,7 +105,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 	})
 }
 
-func TestSourceIgnoresBlockSyncRequestIfSourceIsBehindOrInSync(t *testing.T) {
+func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		lastBlock := 10
 		firstHeight := primitives.BlockHeight(lastBlock + 1)
