@@ -5,11 +5,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"testing"
+	"time"
 )
 
 func TestBlockSync(t *testing.T) {
-	t.Skip("hmm")
-
 	harness.Network(t).WithSetup(func(network harness.InProcessNetwork) {
 		for i := 1; i <= 10; i++ {
 			blockPair := builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build()
@@ -24,7 +23,9 @@ func TestBlockSync(t *testing.T) {
 			t.Errorf("waiting for block on node 1 failed: %s", err)
 		}
 
-		// Wait until full sync
+		time.Sleep(1 * time.Second)
+
+		//// Wait until full sync
 		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(10); err != nil {
 			t.Errorf("waiting for block on node 1 failed: %s", err)
 		}

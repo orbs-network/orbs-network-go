@@ -67,9 +67,10 @@ func (s *service) receivedBlockSyncAvailabilityRequest(header *gossipmessages.He
 
 func (s *service) SendBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
-		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:           gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
+		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
 
 	if input.Message.SignedBatchRange == nil {
@@ -78,9 +79,10 @@ func (s *service) SendBlockAvailabilityResponse(input *gossiptopics.BlockAvailab
 	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
 
 	return nil, s.transport.Send(&adapter.TransportData{
-		SenderPublicKey: s.config.NodePublicKey(),
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		Payloads:        payloads,
+		SenderPublicKey:     s.config.NodePublicKey(),
+		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+		Payloads:            payloads,
 	})
 }
 
@@ -173,7 +175,7 @@ func (s *service) SendBlockSyncResponse(input *gossiptopics.BlockSyncResponseInp
 }
 
 func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 3 {
+	if len(payloads) < 2 {
 		return
 	}
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
