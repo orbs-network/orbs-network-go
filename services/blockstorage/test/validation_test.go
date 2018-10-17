@@ -29,22 +29,20 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 		block.TransactionsBlock.Header.MutateProtocolVersion(998)
 
 		_, err := harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "protocol version mismatch", "tx protocol was mutate, should fail")
+		require.EqualError(t, err, "protocol version mismatch in transactions block header", "tx protocol was mutated, should fail")
 
+		block = builders.BlockPair().Build()
 		block.ResultsBlock.Header.MutateProtocolVersion(999)
 
 		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "protocol version mismatch", "rx protocol was mutate, should fail")
+		require.EqualError(t, err, "protocol version mismatch in results block header", "rx protocol was mutated, should fail")
 
+		block = builders.BlockPair().Build()
 		block.TransactionsBlock.Header.MutateProtocolVersion(999)
+		block.ResultsBlock.Header.MutateProtocolVersion(999)
 
 		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "protocol version mismatch", "tx and rx protocol was mutate, should fail")
-
-		block.TransactionsBlock.Header.MutateProtocolVersion(1)
-
-		_, err = harness.blockStorage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "protocol version mismatch", "only rx protocol was mutate, should fail")
+		require.EqualError(t, err, "protocol version mismatch in transactions block header", "tx and rx protocol was mutated, should fail")
 	})
 }
 

@@ -19,7 +19,7 @@ import (
 
 const (
 	// TODO extract it to the spec
-	ProtocolVersion = 1
+	ProtocolVersion = primitives.ProtocolVersion(1)
 )
 
 var LogTag = log.Service("block-storage")
@@ -337,15 +337,15 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
 	// FIXME we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
-	if txBlockHeader.ProtocolVersion() != ProtocolVersion {
-		errorMessage := "protocol version mismatch"
-		s.logger.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
+	if !txBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
+		errorMessage := "protocol version mismatch in transactions block header"
+		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
 	}
 
-	if rsBlockHeader.ProtocolVersion() != ProtocolVersion {
-		errorMessage := "protocol version mismatch"
-		s.logger.Error(errorMessage, log.String("expected", "1"), log.Stringable("received", txBlockHeader.ProtocolVersion()))
+	if !rsBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
+		errorMessage := "protocol version mismatch in results block header"
+		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", rsBlockHeader.ProtocolVersion()))
 		return fmt.Errorf(errorMessage)
 	}
 
