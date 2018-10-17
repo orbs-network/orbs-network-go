@@ -98,14 +98,13 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
-	if err != nil {
-		return nil, errors.Wrap(err, "persistence layer error")
-	}
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok := contractState[key.KeyForMap()]
+		record, ok, err := s.persistence.ReadState(input.BlockHeight, input.ContractName, key.KeyForMap())
+		if err != nil {
+			return nil, errors.Wrap(err, "persistence layer error")
+		}
 		if ok {
 			records = append(records, record)
 		} else { // implicitly return the zero value if key is missing in db
