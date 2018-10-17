@@ -301,14 +301,16 @@ func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseI
 //TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
 	currentBlockHeight := s.LastCommittedBlockHeight()
-	if txBlockHeader.BlockHeight() <= currentBlockHeight {
-		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
+	attemptedBlockHeight := txBlockHeader.BlockHeight()
+
+	if attemptedBlockHeight <= currentBlockHeight {
+		if attemptedBlockHeight == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "block already in storage, timestamp mismatch"
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight))
+			s.logger.Error(errorMessage, log.BlockHeight(attemptedBlockHeight))
 			return false, errors.New(errorMessage)
 		}
 
-		s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight))
+		s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 		return false, nil
 	}
 
