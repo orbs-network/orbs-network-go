@@ -12,7 +12,7 @@ type blockSyncGossipClient struct {
 	storage   BlockSyncStorage
 	logger    log.BasicLogger
 	batchSize uint32
-	nodeKey   primitives.Ed25519PublicKey
+	nodeKey   func() primitives.Ed25519PublicKey
 }
 
 func newBlockSyncGossipClient(
@@ -20,7 +20,7 @@ func newBlockSyncGossipClient(
 	s BlockSyncStorage,
 	l log.BasicLogger,
 	batchSize uint32,
-	pk primitives.Ed25519PublicKey) *blockSyncGossipClient {
+	pk func() primitives.Ed25519PublicKey) *blockSyncGossipClient {
 
 	return &blockSyncGossipClient{
 		gossip:    g,
@@ -43,7 +43,7 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest() er
 	input := &gossiptopics.BlockAvailabilityRequestInput{
 		Message: &gossipmessages.BlockAvailabilityRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: c.nodeKey,
+				SenderPublicKey: c.nodeKey(),
 			}).Build(),
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -68,7 +68,7 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(blockType gossipm
 		RecipientPublicKey: senderPublicKey,
 		Message: &gossipmessages.BlockSyncRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: c.nodeKey,
+				SenderPublicKey: c.nodeKey(),
 			}).Build(),
 			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                blockType,

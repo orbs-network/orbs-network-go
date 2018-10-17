@@ -9,7 +9,7 @@ import (
 )
 
 type idleState struct {
-	idleTimeout time.Duration
+	idleTimeout func() time.Duration
 	logger      log.BasicLogger
 	restartIdle chan struct{}
 	sf          *stateFactory
@@ -24,7 +24,7 @@ func (s *idleState) String() string {
 }
 
 func (s *idleState) processState(ctx context.Context) syncState {
-	noCommitTimer := synchronization.NewTimer(s.idleTimeout)
+	noCommitTimer := synchronization.NewTimer(s.idleTimeout())
 	select {
 	case <-noCommitTimer.C:
 		s.logger.Info("starting sync after no-commit timer expired")
