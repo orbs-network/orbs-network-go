@@ -183,7 +183,7 @@ func defaultConfig() mutableNodeConfig {
 
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 
-	cfg.SetDuration(BLOCK_SYNC_BATCH_SIZE, 10000)
+	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 10000)
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 5*time.Second)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 3*time.Second)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
