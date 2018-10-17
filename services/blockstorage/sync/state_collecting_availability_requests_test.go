@@ -25,6 +25,20 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T)
 	h.verifyMocks(t)
 }
 
+func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *testing.T) {
+	// this can probably happen only if BatchSize config is invalid
+	h := newBlockSyncHarness().withBatchSize(0)
+
+	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1) // new server
+
+	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	nextShouldBeIdle := collectingState.processState(h.ctx)
+
+	require.IsType(t, &idleState{}, nextShouldBeIdle, "should be idle on gossip flow error")
+
+	h.verifyMocks(t)
+}
+
 func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) {
 	h := newBlockSyncHarness()
 

@@ -108,6 +108,11 @@ func (h *blockSyncHarness) withNoCommitTimeout(duration time.Duration) *blockSyn
 	return h
 }
 
+func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
+	h.config.batchSize = size
+	return h
+}
+
 func (h *blockSyncHarness) cancel() {
 	h.ctxCancel()
 }

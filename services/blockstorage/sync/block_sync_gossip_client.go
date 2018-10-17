@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 )
 
 type blockSyncGossipClient struct {
@@ -35,6 +36,10 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest() er
 	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
 	firstBlockHeight := lastCommittedBlockHeight + 1
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
+
+	if firstBlockHeight > lastBlockHeight {
+		return errors.Errorf("invalid block request: from %d to %d", firstBlockHeight, lastBlockHeight)
+	}
 
 	c.logger.Info("broadcast block availability request",
 		log.Stringable("first-block-height", firstBlockHeight),
