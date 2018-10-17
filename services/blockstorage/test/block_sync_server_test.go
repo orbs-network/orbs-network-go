@@ -15,14 +15,38 @@ import (
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
+		sourcePK := keys.Ed25519KeyPairForTests(4).PublicKey()
+		harness := newHarness(ctx).withNodeKey(sourcePK)
 		harness.setupSomeBlocks(3)
-		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, nil).Times(1)
+		senderPK := keys.Ed25519KeyPairForTests(1).PublicKey()
+
 		msg := builders.BlockAvailabilityRequestInput().
+			WithSenderPublicKey(senderPK).
 			WithFirstBlockHeight(1).
 			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
 			WithLastBlockHeight(primitives.BlockHeight(2)).
 			Build()
+
+		availabilityResponseVerifier := func(i interface{}) bool {
+			response, ok := i.(*gossiptopics.BlockAvailabilityResponseInput)
+			if !ok {
+				require.Failf(t, "response type does not match", "", i)
+			}
+
+			require.Equal(t, senderPK, response.RecipientPublicKey, "public key does not match")
+			require.Equal(t, sourcePK, response.Message.Sender.SenderPublicKey(), "source pk does not match")
+			require.Equal(t, primitives.BlockHeight(1), response.Message.SignedBatchRange.FirstBlockHeight(), "first block height is not as expected")
+			require.Equal(t, primitives.BlockHeight(3), response.Message.SignedBatchRange.LastCommittedBlockHeight(), "last committed block height is not as expected")
+			require.Equal(t, primitives.BlockHeight(3), response.Message.SignedBatchRange.LastBlockHeight(), "last block height is not as expected")
+
+			return true
+		}
+
+		harness.gossip.
+			When("SendBlockAvailabilityResponse",
+				mock.AnyIf("validating response of availability request", availabilityResponseVerifier)).
+			Return(nil, nil).Times(1)
+
 		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(msg)
 
 		require.NoError(t, err, "expecting a happy flow")
@@ -99,7 +123,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 			return true
 		}
 
-		harness.gossip.When("SendBlockSyncResponse", mock.AnyIf("reponse should hold correct blocks", chunksResponseVerifier)).Return(nil, nil).Times(1)
+		harness.gossip.When("SendBlockSyncResponse", mock.AnyIf("response should hold correct blocks", chunksResponseVerifier)).Return(nil, nil).Times(1)
 		harness.blockStorage.HandleBlockSyncRequest(msg)
 		harness.verifyMocks(t, 1)
 	})
