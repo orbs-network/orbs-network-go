@@ -25,7 +25,8 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	// its to cover that specific line of code in blockSync engine, rather then the service handler code
 	// (or the idle state code)
 
-	h := newBlockSyncHarness().withNoCommitTimeout(3 * time.Millisecond)
+	h := newBlockSyncHarness().withNoCommitTimeout(5 * time.Millisecond)
+	h.gossip.Never("LastCommittedBlockHeight")
 	h.gossip.Never("BroadcastBlockAvailabilityRequest")
 
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
@@ -34,7 +35,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	// "commit" blocks at a rate of 1/ms, do not assume anything about the implementation
 	for i := 1; i < 10; i++ {
 		sync.HandleBlockCommitted()
-		time.Sleep(time.Millisecond)
+		time.Sleep(500 * time.Microsecond)
 		require.IsType(t, &idleState{}, sync.currentState, "state should remain idle")
 	}
 

@@ -36,7 +36,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 	).
 		WithOutput(log.NewOutput(output).WithFormatter(log.NewJsonFormatter())).
 		WithFilters(logFilters...).
-		WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints()))
+		WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))

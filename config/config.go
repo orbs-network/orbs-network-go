@@ -62,6 +62,9 @@ type NodeConfig interface {
 
 	// processor
 	ProcessorArtifactPath() string
+
+	// metrics
+	MetricsReportInterval() time.Duration
 }
 
 type mutableNodeConfig interface {

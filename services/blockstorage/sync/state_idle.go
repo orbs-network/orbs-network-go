@@ -5,10 +5,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"time"
 )
 
 type idleState struct {
-	config      blockSyncConfig
+	idleTimeout func() time.Duration
 	logger      log.BasicLogger
 	restartIdle chan struct{}
 	sf          *stateFactory
@@ -23,9 +24,7 @@ func (s *idleState) String() string {
 }
 
 func (s *idleState) processState(ctx context.Context) syncState {
-	m := s.logger.Meter("block-sync-idle-state")
-	defer m.Done()
-	noCommitTimer := synchronization.NewTimer(s.config.BlockSyncNoCommitInterval())
+	noCommitTimer := synchronization.NewTimer(s.idleTimeout())
 	select {
 	case <-noCommitTimer.C:
 		s.logger.Info("starting sync after no-commit timer expired")
