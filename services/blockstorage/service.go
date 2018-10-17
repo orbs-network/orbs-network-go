@@ -339,13 +339,13 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	// FIXME we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
 	if !txBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
 		errorMessage := "protocol version mismatch in transactions block header"
-		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()))
+		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()), log.BlockHeight(txBlockHeader.BlockHeight()))
 		return fmt.Errorf(errorMessage)
 	}
 
 	if !rsBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
 		errorMessage := "protocol version mismatch in results block header"
-		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", rsBlockHeader.ProtocolVersion()))
+		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", rsBlockHeader.ProtocolVersion()), log.BlockHeight(txBlockHeader.BlockHeight()))
 		return fmt.Errorf(errorMessage)
 	}
 
