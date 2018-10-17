@@ -35,7 +35,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
 		sf:             f,
-		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize(), f.config.NodePublicKey),
+		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
 		collectTimeout: f.config.BlockSyncCollectResponseTimeout,
 		logger:         f.logger,
 		responsesC:     make(chan *gossipmessages.BlockAvailabilityResponseMessage),
@@ -54,7 +54,7 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519P
 	return &waitingForChunksState{
 		sourceKey:      sourceKey,
 		sf:             f,
-		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize(), f.config.NodePublicKey),
+		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
 		collectTimeout: f.config.BlockSyncCollectChunksTimeout(),
 		logger:         f.logger,
 		blocksC:        make(chan *gossipmessages.BlockSyncResponseMessage),

@@ -11,7 +11,7 @@ type blockSyncGossipClient struct {
 	gossip    gossiptopics.BlockSync
 	storage   BlockSyncStorage
 	logger    log.BasicLogger
-	batchSize uint32
+	batchSize func() uint32
 	nodeKey   func() primitives.Ed25519PublicKey
 }
 
@@ -19,7 +19,7 @@ func newBlockSyncGossipClient(
 	g gossiptopics.BlockSync,
 	s BlockSyncStorage,
 	l log.BasicLogger,
-	batchSize uint32,
+	batchSize func() uint32,
 	pk func() primitives.Ed25519PublicKey) *blockSyncGossipClient {
 
 	return &blockSyncGossipClient{
@@ -34,7 +34,7 @@ func newBlockSyncGossipClient(
 func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest() error {
 	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
 	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize)
+	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
 	c.logger.Info("broadcast block availability request",
 		log.Stringable("first-block-height", firstBlockHeight),
@@ -62,7 +62,7 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(blockType gossipm
 	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
 
 	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize)
+	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
 	request := &gossiptopics.BlockSyncRequestInput{
 		RecipientPublicKey: senderPublicKey,
