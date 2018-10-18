@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -11,10 +12,12 @@ import (
 func TestBlockSync(t *testing.T) {
 	harness.Network(t).WithSetup(func(network harness.InProcessNetwork) {
 		for i := 1; i <= 10; i++ {
-			blockPair := builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build()
+			blockPair := builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithTransactions(2).Build()
 			network.BlockPersistence(0).WriteBlock(blockPair)
 		}
 	}).Start(func(network harness.InProcessNetwork) {
+		require.Zero(t, len(network.BlockPersistence(1).ReadAllBlocks()))
+
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}
