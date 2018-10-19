@@ -28,7 +28,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	for {
 		meter := s.logger.Meter("consensus-round-tick")
 
-		err := s.leaderConsensusRoundTick()
+		err := s.leaderConsensusRoundTick(ctx)
 		if err != nil {
 			s.logger.Error("consensus round tick failed", log.Error(err))
 		}
@@ -55,17 +55,17 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	}
 }
 
-func (s *service) leaderConsensusRoundTick() (err error) {
+func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeightUnderMutex() {
-		proposedBlock, err := s.leaderGenerateNewProposedBlockUnderMutex()
+		proposedBlock, err := s.leaderGenerateNewProposedBlockUnderMutex(ctx)
 		if err != nil {
 			return err
 		}
-		err = s.saveToBlockStorage(proposedBlock)
+		err = s.saveToBlockStorage(ctx, proposedBlock)
 		if err != nil {
 			return err
 		}
@@ -76,7 +76,7 @@ func (s *service) leaderConsensusRoundTick() (err error) {
 	}
 
 	// broadcast the commit via gossip for last committed block
-	err = s.leaderBroadcastCommittedBlock(s.lastCommittedBlock)
+	err = s.leaderBroadcastCommittedBlock(ctx, s.lastCommittedBlock)
 	if err != nil {
 		return err
 	}
@@ -110,11 +110,11 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	return blockPair
 }
 
-func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPairContainer, error) {
+func (s *service) leaderGenerateNewProposedBlockUnderMutex(ctx context.Context) (*protocol.BlockPairContainer, error) {
 	s.logger.Info("generating new proposed block", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()+1))
 
 	// get tx
-	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:   s.lastCommittedBlockHeightUnderMutex() + 1,
 		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
 	})
@@ -123,7 +123,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex() (*protocol.BlockPai
 	}
 
 	// get rx
-	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
+	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
 		BlockHeight:       s.lastCommittedBlockHeightUnderMutex() + 1,
 		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
@@ -168,7 +168,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 	return blockPair, nil
 }
 
-func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairContainer) error {
+func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	s.logger.Info("broadcasting commit block", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
@@ -176,7 +176,7 @@ func (s *service) leaderBroadcastCommittedBlock(blockPair *protocol.BlockPairCon
 		return errors.Errorf("attempting to broadcast commit of a partial block that is missing fields like block proofs: %v", blockPair.String())
 	}
 
-	_, err := s.gossip.BroadcastBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+	_, err := s.gossip.BroadcastBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{
 		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
 			BlockPair: blockPair,
 		},

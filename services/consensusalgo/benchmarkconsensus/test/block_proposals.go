@@ -37,9 +37,9 @@ func (h *harness) expectNewBlockProposalRequestedAndSaved(expectedBlockHeight pr
 		ResultsBlock: builtBlockForReturn.ResultsBlock,
 	}
 
-	h.consensusContext.When("RequestNewTransactionsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), txRequestMatcher)).Return(txReturn, nil).Times(1)
-	h.consensusContext.When("RequestNewResultsBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), rxRequestMatcher)).Return(rxReturn, nil).Times(1)
-	h.blockStorage.When("CommitBlock", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), blockHeightMatcher)).Return(nil, nil).Times(1)
+	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any, mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), txRequestMatcher)).Return(txReturn, nil).Times(1)
+	h.consensusContext.When("RequestNewResultsBlock", mock.Any, mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), rxRequestMatcher)).Return(rxReturn, nil).Times(1)
+	h.blockStorage.When("CommitBlock", mock.Any, mock.AnyIf(fmt.Sprintf("BlockHeight equals %d", expectedBlockHeight), blockHeightMatcher)).Return(nil, nil).Times(1)
 }
 
 func (h *harness) verifyNewBlockProposalRequestedAndSaved(t *testing.T) {
@@ -50,9 +50,9 @@ func (h *harness) verifyNewBlockProposalRequestedAndSaved(t *testing.T) {
 }
 
 func (h *harness) expectNewBlockProposalRequestedToFail() {
-	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).AtLeast(1)
-	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
-	h.blockStorage.When("CommitBlock", mock.Any).Return(nil, nil).Times(0)
+	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any, mock.Any).Return(nil, errors.New("consensusContext error")).AtLeast(1)
+	h.consensusContext.When("RequestNewResultsBlock", mock.Any, mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
+	h.blockStorage.When("CommitBlock", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
 func (h *harness) verifyNewBlockProposalRequestedAndNotSaved(t *testing.T) {
@@ -67,8 +67,8 @@ func (h *harness) verifyNewBlockProposalRequestedAndNotSaved(t *testing.T) {
 }
 
 func (h *harness) expectNewBlockProposalNotRequested() {
-	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
-	h.consensusContext.When("RequestNewResultsBlock", mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
+	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any, mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
+	h.consensusContext.When("RequestNewResultsBlock", mock.Any, mock.Any).Return(nil, errors.New("consensusContext error")).Times(0)
 }
 
 func (h *harness) verifyNewBlockProposalNotRequested(t *testing.T) {

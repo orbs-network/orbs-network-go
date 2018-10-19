@@ -89,7 +89,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 func (s *service) HandleBenchmarkConsensusCommit(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
 	if !s.isLeader {
-		s.nonLeaderHandleCommit(input.Message.BlockPair)
+		s.nonLeaderHandleCommit(ctx, input.Message.BlockPair)
 	}
 	return nil, nil
 }
