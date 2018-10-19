@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -29,7 +30,7 @@ func (h *harness) expectNativeContractMethodCalled(expectedContractName primitiv
 			input.CallingPermissionScope == protocol.PERMISSION_SCOPE_SERVICE
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are service", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are service", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 		callResult, outputArgsArray, err := contractFunction(input.ContextId, input.InputArgumentArray)
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: outputArgsArray,
@@ -47,7 +48,7 @@ func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expected
 			input.CallingPermissionScope == protocol.PERMISSION_SCOPE_SYSTEM
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are system", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are system", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 		callResult, outputArgsArray, err := contractFunction(input.ContextId)
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: outputArgsArray,

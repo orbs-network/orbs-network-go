@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -26,7 +27,7 @@ func (s *service) receivedBlockSyncMessage(header *gossipmessages.Header, payloa
 	}
 }
 
-func (s *service) BroadcastBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
@@ -65,7 +66,7 @@ func (s *service) receivedBlockSyncAvailabilityRequest(header *gossipmessages.He
 	}
 }
 
-func (s *service) SendBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
@@ -104,7 +105,7 @@ func (s *service) receivedBlockSyncAvailabilityResponse(header *gossipmessages.H
 	}
 }
 
-func (s *service) SendBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:           gossipmessages.BLOCK_SYNC_REQUEST,
@@ -145,7 +146,7 @@ func (s *service) receivedBlockSyncRequest(header *gossipmessages.Header, payloa
 	}
 }
 
-func (s *service) SendBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:           gossipmessages.BLOCK_SYNC_RESPONSE,

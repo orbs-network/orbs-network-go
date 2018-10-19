@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -8,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
 	s.logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))

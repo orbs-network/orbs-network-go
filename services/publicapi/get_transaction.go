@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -9,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
+func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
 	if input.ClientRequest == nil {
 		err := errors.Errorf("error: missing input (client request is nil)")
 		s.logger.Info("get transaction status received missing input", log.Error(err))

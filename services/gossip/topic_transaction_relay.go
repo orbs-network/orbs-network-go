@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -19,7 +20,7 @@ func (s *service) receivedTransactionRelayMessage(header *gossipmessages.Header,
 	}
 }
 
-func (s *service) BroadcastForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 	s.logger.Info("broadcasting forwarded transactions", log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
 
 	header := (&gossipmessages.HeaderBuilder{

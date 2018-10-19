@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -24,7 +25,7 @@ func (s *service) receivedLeanHelixMessage(header *gossipmessages.Header, payloa
 	}
 }
 
-func (s *service) SendLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendLeanHelixPrePrepare(ctx context.Context, input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
 		LeanHelix:     consensus.LEAN_HELIX_PRE_PREPARE,
@@ -72,7 +73,7 @@ func (s *service) receivedLeanHelixPrePrepare(header *gossipmessages.Header, pay
 	}
 }
 
-func (s *service) SendLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendLeanHelixPrepare(ctx context.Context, input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
 		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
@@ -97,7 +98,7 @@ func (s *service) receivedLeanHelixPrepare(header *gossipmessages.Header, payloa
 	}
 }
 
-func (s *service) SendLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendLeanHelixCommit(ctx context.Context, input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
 		LeanHelix:     consensus.LEAN_HELIX_COMMIT,
@@ -122,10 +123,10 @@ func (s *service) receivedLeanHelixCommit(header *gossipmessages.Header, payload
 	}
 }
 
-func (s *service) SendLeanHelixViewChange(input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendLeanHelixViewChange(ctx context.Context, input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
 
-func (s *service) SendLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendLeanHelixNewView(ctx context.Context, input *gossiptopics.LeanHelixNewViewInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }

@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -23,7 +24,7 @@ func (s *service) receivedBenchmarkConsensusMessage(header *gossipmessages.Heade
 	}
 }
 
-func (s *service) BroadcastBenchmarkConsensusCommit(input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:              gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: consensus.BENCHMARK_CONSENSUS_COMMIT,
@@ -62,7 +63,7 @@ func (s *service) receivedBenchmarkConsensusCommit(header *gossipmessages.Header
 	}
 }
 
-func (s *service) SendBenchmarkConsensusCommitted(input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:               gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus:  consensus.BENCHMARK_CONSENSUS_COMMITTED,

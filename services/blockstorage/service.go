@@ -69,7 +69,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	return storage
 }
 
-func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
 	s.logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
@@ -156,7 +156,7 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 	}, nil
 }
 
-func (s *service) GetTransactionsBlockHeader(input *services.GetTransactionsBlockHeaderInput) (result *services.GetTransactionsBlockHeaderOutput, err error) {
+func (s *service) GetTransactionsBlockHeader(ctx context.Context, input *services.GetTransactionsBlockHeaderInput) (result *services.GetTransactionsBlockHeaderOutput, err error) {
 	err = s.persistence.GetBlockTracker().WaitForBlock(input.BlockHeight)
 
 	if err == nil {
@@ -179,7 +179,7 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 	}, nil
 }
 
-func (s *service) GetResultsBlockHeader(input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
+func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
 	err = s.persistence.GetBlockTracker().WaitForBlock(input.BlockHeight)
 
 	if err == nil {
@@ -197,7 +197,7 @@ func (s *service) createEmptyTransactionReceiptResult() *services.GetTransaction
 	}
 }
 
-func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
+func (s *service) GetTransactionReceipt(ctx context.Context, input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
 	searchRules := adapter.BlockSearchRules{
 		EndGraceNano:          s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds(),
 		StartGraceNano:        s.config.BlockTransactionReceiptQueryGraceStart().Nanoseconds(),
@@ -230,7 +230,7 @@ func (s *service) GetTransactionReceipt(input *services.GetTransactionReceiptInp
 	return s.createEmptyTransactionReceiptResult(), nil
 }
 
-func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	return &services.GetLastCommittedBlockHeightOutput{
 		LastCommittedBlockHeight:    s.LastCommittedBlockHeight(),
 		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
@@ -238,7 +238,7 @@ func (s *service) GetLastCommittedBlockHeight(input *services.GetLastCommittedBl
 }
 
 // FIXME implement all block checks
-func (s *service) ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
+func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
 		return nil, protocolVersionError
 	}
@@ -274,24 +274,24 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock() {
 	}
 }
 
-func (s *service) HandleBlockAvailabilityRequest(input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	err := s.sourceHandleBlockAvailabilityRequest(input.Message)
 	return nil, err
 }
 
-func (s *service) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if s.blockSync != nil {
 		s.blockSync.HandleBlockAvailabilityResponse(input)
 	}
 	return nil, nil
 }
 
-func (s *service) HandleBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	err := s.sourceHandleBlockSyncRequest(input.Message)
 	return nil, err
 }
 
-func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if s.blockSync != nil {
 		s.blockSync.HandleBlockSyncResponse(input)
 	}

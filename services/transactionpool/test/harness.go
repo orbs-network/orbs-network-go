@@ -145,7 +145,7 @@ func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*serv
 }
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
-	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 		if input.BlockHeight != h.lastBlockHeight {
 			log.GetLogger().Error("Invalid block height", log.Uint64("expected-block-height", h.lastBlockHeight.KeyForMap()), log.Uint64("actual-block-height", input.BlockHeight.KeyForMap()))
 			panic("Invalid block height")

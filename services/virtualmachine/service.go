@@ -1,6 +1,7 @@
 package virtualmachine
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -44,7 +45,7 @@ func NewVirtualMachine(
 	return s
 }
 
-func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
+func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
 	blockHeight, blockTimestamp, err := s.getRecentBlockHeight()
 	if err != nil {
 		return &services.RunLocalMethodOutput{
@@ -69,7 +70,7 @@ func (s *service) RunLocalMethod(input *services.RunLocalMethodInput) (*services
 	}, err
 }
 
-func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+func (s *service) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
 	s.logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
@@ -81,7 +82,7 @@ func (s *service) ProcessTransactionSet(input *services.ProcessTransactionSetInp
 	}, nil
 }
 
-func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 	// FIXME sometimes we get value of ffffffffffffffff
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
@@ -108,7 +109,7 @@ func (s *service) TransactionSetPreOrder(input *services.TransactionSetPreOrderI
 	}, err
 }
 
-func (s *service) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
+func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
 	var output []*protocol.MethodArgument
 	var err error
 

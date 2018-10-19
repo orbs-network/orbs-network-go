@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
@@ -46,7 +47,7 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	}
 }
 
-func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	// retrieve code
 	executionContextId := sdk.Context(input.ContextId)
 	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, string(input.ContractName), string(input.MethodName))
@@ -92,7 +93,7 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}, contractErr
 }
 
-func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
+func (s *service) GetContractInfo(ctx context.Context, input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
 	// retrieve code
 	executionContextId := sdk.Context(input.ContextId)
 	contractInfo, err := s.retrieveContractInfoFromRepository(executionContextId, string(input.ContractName))

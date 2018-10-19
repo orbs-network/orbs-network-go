@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -9,7 +10,7 @@ import (
 	"time"
 )
 
-func (s *service) CommitTransactionReceipts(input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 	bh, _ := s.currentBlockHeightAndTime()
 	if input.LastCommittedBlockHeight != bh+1 {
 		return &services.CommitTransactionReceiptsOutput{

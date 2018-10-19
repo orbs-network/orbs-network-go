@@ -70,7 +70,7 @@ func NewPublicApi(
 	return s
 }
 
-func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
+func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
 	for _, txReceipt := range input.TransactionReceipts {
 		s.logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Stringable("txHash", txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
@@ -84,7 +84,7 @@ func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResu
 	return &handlers.HandleTransactionResultsOutput{}, nil
 }
 
-func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
+func (s *service) HandleTransactionError(ctx context.Context, input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
 	s.logger.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
 	s.waiter.complete(input.Txhash.KeyForMap(),
 		&waiterObject{&txResponse{

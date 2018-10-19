@@ -1,6 +1,7 @@
 package leanhelix
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/lean-helix-go/go/leanhelix"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -73,29 +74,29 @@ func NewLeanHelixConsensusAlgo(
 	return s
 }
 
-func (s *service) HandleBlockConsensus(input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 	panic("Not implemented")
 }
 
-func (s *service) HandleLeanHelixPrePrepare(input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleLeanHelixPrePrepare(ctx context.Context, input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
 	return nil, s.validatorVoteForNewBlockProposal(input.Message.BlockPair)
 }
 
-func (s *service) HandleLeanHelixPrepare(input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleLeanHelixPrepare(ctx context.Context, input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
 	s.leaderAddVoteFromValidator()
 	return nil, nil
 }
 
-func (s *service) HandleLeanHelixCommit(input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleLeanHelixCommit(ctx context.Context, input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
 	s.validatorHandleCommit()
 	return &gossiptopics.EmptyOutput{}, nil
 }
 
-func (s *service) HandleLeanHelixViewChange(input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleLeanHelixViewChange(ctx context.Context, input *gossiptopics.LeanHelixViewChangeInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
 
-func (s *service) HandleLeanHelixNewView(input *gossiptopics.LeanHelixNewViewInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleLeanHelixNewView(ctx context.Context, input *gossiptopics.LeanHelixNewViewInput) (*gossiptopics.EmptyOutput, error) {
 	panic("Not implemented")
 }
 

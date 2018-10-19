@@ -33,10 +33,10 @@ type service struct {
 		lastCommittedBlockTimestamp primitives.TimestampNano
 	}
 
-	pendingPool                 *pendingTxPool
-	committedPool               *committedTxPool
-	blockTracker                *synchronization.BlockTracker
-	transactionForwarder        *transactionForwarder
+	pendingPool          *pendingTxPool
+	committedPool        *committedTxPool
+	blockTracker         *synchronization.BlockTracker
+	transactionForwarder *transactionForwarder
 }
 
 func NewTransactionPool(ctx context.Context,
@@ -56,10 +56,10 @@ func NewTransactionPool(ctx context.Context,
 		config:         config,
 		logger:         logger.WithTags(LogTag),
 
-		pendingPool:                 pendingPool,
-		committedPool:               NewCommittedPool(),
-		blockTracker:                synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
-		transactionForwarder:        txForwarder,
+		pendingPool:          pendingPool,
+		committedPool:        NewCommittedPool(),
+		blockTracker:         synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
+		transactionForwarder: txForwarder,
 	}
 
 	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) // this is so that we do not reject transactions on startup, before any block has been committed
@@ -74,7 +74,7 @@ func NewTransactionPool(ctx context.Context,
 	return s
 }
 
-func (s *service) GetCommittedTransactionReceipt(input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
+func (s *service) GetCommittedTransactionReceipt(ctx context.Context, input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
 
 	if input.TransactionTimestamp > s.currentNodeTimeWithGrace() {
 		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME), nil
@@ -103,7 +103,7 @@ func (s *service) currentBlockHeightAndTime() (primitives.BlockHeight, primitive
 	return s.mu.lastCommittedBlockHeight, s.mu.lastCommittedBlockTimestamp
 }
 
-func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
+func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
 	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (s *service) ValidateTransactionsForOrdering(input *services.ValidateTransa
 	bh, _ := s.currentBlockHeightAndTime()
 	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
 		SignedTransactions: input.SignedTransactions,
-		BlockHeight: bh,
+		BlockHeight:        bh,
 	})
 
 	for i, tx := range input.SignedTransactions {

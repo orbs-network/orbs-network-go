@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -9,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) CallMethod(input *services.CallMethodInput) (*services.CallMethodOutput, error) {
+func (s *service) CallMethod(ctx context.Context, input *services.CallMethodInput) (*services.CallMethodOutput, error) {
 	if input.ClientRequest == nil {
 		err := errors.Errorf("error: missing input (client request is nil)")
 		s.logger.Info("call method received via public api failed", log.Error(err))

@@ -53,7 +53,7 @@ func (h *harness) addTransactionReturnsAlreadyCommitted() {
 
 func (h *harness) onAddNewTransaction(f func()) {
 	h.txpMock.When("AddNewTransaction", mock.Any).Times(1).
-		Call(func(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+		Call(func(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 			go func() {
 				time.Sleep(1 * time.Millisecond)
 				f()
