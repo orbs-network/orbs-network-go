@@ -30,7 +30,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 		lastCommittedBlockHeight := harness.getLastBlockHeight(t)
 
 		require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight, "block height in storage should be the same")
-		require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestampe in storage should be the same")
+		require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestamp in storage should be the same")
 
 	})
 	// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
@@ -103,7 +103,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 
 		_, err := harness.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
 
-		require.EqualError(t, err, "block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
+		require.EqualError(t, err, "FORK!! block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
 		harness.verifyMocks(t, 1)
 	})

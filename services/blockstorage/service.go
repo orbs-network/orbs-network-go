@@ -93,7 +93,7 @@ func (s *service) CommitBlock(input *services.CommitBlockInput) (*services.Commi
 	s.updateLastCommittedBlock(input.BlockPair)
 	s.blockSync.HandleBlockCommitted()
 
-	s.logger.Info("Committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
@@ -298,17 +298,31 @@ func (s *service) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseI
 	return nil, nil
 }
 
-//TODO how do we check if block with same height is the same block? do we compare the block bit-by-bit? https://github.com/orbs-network/orbs-spec/issues/50
+// how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
 	currentBlockHeight := s.LastCommittedBlockHeight()
-	if txBlockHeader.BlockHeight() <= currentBlockHeight {
-		if txBlockHeader.BlockHeight() == currentBlockHeight && txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
-			errorMessage := "block already in storage, timestamp mismatch"
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight))
+	attemptedBlockHeight := txBlockHeader.BlockHeight()
+
+	if attemptedBlockHeight < currentBlockHeight {
+		// we can't check for fork because we don't have the tx header of the old block easily accessible
+		errorMessage := "block already in storage, skipping"
+		s.logger.Info(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+		return false, errors.New(errorMessage)
+	} else if attemptedBlockHeight == currentBlockHeight {
+		// we can check for fork because we do have the tx header of the old block easily accessible
+		if txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
+			errorMessage := "FORK!! block already in storage, timestamp mismatch"
+			// fork found! this is a major error we must report to logs
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+			return false, errors.New(errorMessage)
+		} else if !txBlockHeader.Equal(s.lastCommittedBlock.TransactionsBlock.Header) {
+			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
+			// fork found! this is a major error we must report to logs
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 			return false, errors.New(errorMessage)
 		}
 
-		s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight))
+		s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 		return false, nil
 	}
 
@@ -401,6 +415,7 @@ func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockH
 
 	firstAvailableBlockHeight = first
 
+	// FIXME what does it even mean
 	if firstAvailableBlockHeight > allBlocksLength {
 		return blocks, firstAvailableBlockHeight, firstAvailableBlockHeight
 	}
