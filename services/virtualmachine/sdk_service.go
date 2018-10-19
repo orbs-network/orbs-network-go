@@ -57,7 +57,6 @@ func (s *service) handleSdkServiceCallMethod(context *executionContext, args []*
 		AccessScope:            context.accessScope,
 		CallingPermissionScope: permissionScope,
 		CallingService:         callingService,
-		TransactionSigner:      nil,
 	})
 	if err != nil {
 		s.logger.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("caller", callingService), log.Stringable("callee", primitives.ContractName(serviceName)))

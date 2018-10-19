@@ -79,7 +79,6 @@ func (s *service) callGetInfoOfDeploymentSystemContract(executionContext *execut
 		AccessScope:            executionContext.accessScope,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         systemContractName,
-		TransactionSigner:      nil,
 	})
 	if err != nil {
 		return 0, err
@@ -131,7 +130,6 @@ func (s *service) callDeployServiceOfDeploymentSystemContract(executionContext *
 		AccessScope:            executionContext.accessScope,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         systemContractName,
-		TransactionSigner:      nil,
 	})
 	if err != nil {
 		return err

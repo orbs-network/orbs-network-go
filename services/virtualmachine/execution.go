@@ -41,7 +41,6 @@ func (s *service) runMethod(
 		AccessScope:            accessScope,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         transaction.ContractName(),
-		TransactionSigner:      transaction.Signer(),
 	})
 	if err != nil {
 		s.logger.Info("transaction execution failed", log.Stringable("result", output.CallResult), log.Error(err), log.Stringable("transaction", transaction))

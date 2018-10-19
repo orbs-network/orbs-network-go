@@ -28,7 +28,6 @@ func (s *service) callGlobalPreOrderSystemContract(blockHeight primitives.BlockH
 		AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		CallingService:         systemContractName,
-		TransactionSigner:      nil,
 	})
 
 	return err
