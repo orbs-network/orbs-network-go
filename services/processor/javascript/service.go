@@ -38,7 +38,7 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	// retrieve code
-	code, err := s.retrieveContractCodeFromRepository(input.ContextId, input.ContractName)
+	code, err := s.retrieveContractCodeFromRepository(ctx, input.ContextId, input.ContractName)
 	if err != nil {
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
