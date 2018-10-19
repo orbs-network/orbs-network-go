@@ -50,7 +50,7 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	// retrieve code
 	executionContextId := sdk.Context(input.ContextId)
-	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(executionContextId, string(input.ContractName), string(input.MethodName))
+	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(ctx, executionContextId, string(input.ContractName), string(input.MethodName))
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
@@ -96,7 +96,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 func (s *service) GetContractInfo(ctx context.Context, input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
 	// retrieve code
 	executionContextId := sdk.Context(input.ContextId)
-	contractInfo, err := s.retrieveContractInfoFromRepository(executionContextId, string(input.ContractName))
+	contractInfo, err := s.retrieveContractInfoFromRepository(ctx, executionContextId, string(input.ContractName))
 	if err != nil {
 		return nil, err
 	}
