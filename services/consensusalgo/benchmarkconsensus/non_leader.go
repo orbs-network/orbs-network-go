@@ -30,10 +30,10 @@ func (s *service) nonLeaderValidateBlockUnderMutex(blockPair *protocol.BlockPair
 	// block height
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 	if blockHeight != blockPair.ResultsBlock.Header.BlockHeight() {
-		return errors.Errorf("invalid block: block height of tx %d is not equal rx %d", blockHeight, blockPair.ResultsBlock.Header.BlockHeight())
+		return errors.Errorf("invalid block: block height of tx %s is not equal rx %s", blockHeight, blockPair.ResultsBlock.Header.BlockHeight())
 	}
 	if blockHeight > s.lastCommittedBlockHeightUnderMutex()+1 {
-		return errors.Errorf("invalid block: future block height %d", blockHeight)
+		return errors.Errorf("invalid block: future block height %s", blockHeight)
 	}
 
 	// block consensus
