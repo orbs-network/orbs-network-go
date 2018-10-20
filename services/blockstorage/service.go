@@ -95,12 +95,12 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
-	if err := s.syncBlockToStateStorage(input.BlockPair); err != nil {
+	if err := s.syncBlockToStateStorage(ctx, input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
 		s.logger.Error("intra-node sync to state storage failed", log.Error(err))
 	}
 
-	if err := s.syncBlockToTxPool(input.BlockPair); err != nil {
+	if err := s.syncBlockToTxPool(ctx, input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, should we fail if pool fails ?
 		s.logger.Error("intra-node sync to tx pool failed", log.Error(err))
 	}
@@ -247,7 +247,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	if err := s.validateWithConsensusAlgos(s.lastCommittedBlock, input.BlockPair); err != nil {
+	if err := s.validateWithConsensusAlgos(ctx, s.lastCommittedBlock, input.BlockPair); err != nil {
 		s.logger.Error("intra-node sync to consensus algo failed", log.Error(err))
 	}
 
@@ -259,15 +259,15 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 
 	// update the consensus algo about the latest block we have (for its initialization)
 	// TODO: should this be under mutex since it reads s.lastCommittedBlock
-	s.UpdateConsensusAlgosAboutLatestCommittedBlock()
+	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO()) // TODO: (talkol) not sure if we should create a new context here or pass to RegisterConsensusBlocksHandler in code generation
 }
 
-func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock() {
+func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
 	lastCommitted := s.getLastCommittedBlock()
 
 	if lastCommitted != nil {
 		// passing nil on purpose, see spec
-		err := s.validateWithConsensusAlgos(nil, lastCommitted)
+		err := s.validateWithConsensusAlgos(ctx, nil, lastCommitted)
 		if err != nil {
 			s.logger.Error(err.Error())
 		}
@@ -275,25 +275,25 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock() {
 }
 
 func (s *service) HandleBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	err := s.sourceHandleBlockAvailabilityRequest(input.Message)
+	err := s.sourceHandleBlockAvailabilityRequest(ctx, input.Message)
 	return nil, err
 }
 
 func (s *service) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if s.blockSync != nil {
-		s.blockSync.HandleBlockAvailabilityResponse(input)
+		s.blockSync.HandleBlockAvailabilityResponse(ctx, input)
 	}
 	return nil, nil
 }
 
 func (s *service) HandleBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-	err := s.sourceHandleBlockSyncRequest(input.Message)
+	err := s.sourceHandleBlockSyncRequest(ctx, input.Message)
 	return nil, err
 }
 
 func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if s.blockSync != nil {
-		s.blockSync.HandleBlockSyncResponse(input)
+		s.blockSync.HandleBlockSyncResponse(ctx, input)
 	}
 	return nil, nil
 }
@@ -367,8 +367,8 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 }
 
 // TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
-func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPairContainer) error {
-	_, err := s.stateStorage.CommitStateDiff(&services.CommitStateDiffInput{
+func (s *service) syncBlockToStateStorage(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) error {
+	_, err := s.stateStorage.CommitStateDiff(ctx, &services.CommitStateDiffInput{
 		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
 		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
 	})
@@ -376,8 +376,8 @@ func (s *service) syncBlockToStateStorage(committedBlockPair *protocol.BlockPair
 }
 
 // TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
-func (s *service) syncBlockToTxPool(committedBlockPair *protocol.BlockPairContainer) error {
-	_, err := s.txPool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+func (s *service) syncBlockToTxPool(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) error {
+	_, err := s.txPool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 		ResultsBlockHeader:       committedBlockPair.ResultsBlock.Header,
 		TransactionReceipts:      committedBlockPair.ResultsBlock.TransactionReceipts,
 		LastCommittedBlockHeight: committedBlockPair.ResultsBlock.Header.BlockHeight(),
@@ -385,9 +385,9 @@ func (s *service) syncBlockToTxPool(committedBlockPair *protocol.BlockPairContai
 	return err
 }
 
-func (s *service) validateWithConsensusAlgos(prevBlockPair *protocol.BlockPairContainer, lastCommittedBlockPair *protocol.BlockPairContainer) error {
+func (s *service) validateWithConsensusAlgos(ctx context.Context, prevBlockPair *protocol.BlockPairContainer, lastCommittedBlockPair *protocol.BlockPairContainer) error {
 	for _, handler := range s.consensusBlocksHandlers {
-		_, err := handler.HandleBlockConsensus(&handlers.HandleBlockConsensusInput{
+		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              lastCommittedBlockPair,

@@ -1,6 +1,7 @@
 package blockstorage
 
 import (
+	"context"
 	"errors"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -8,7 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-func (s *service) sourceHandleBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) error {
+func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, message *gossipmessages.BlockAvailabilityRequestMessage) error {
 	s.logger.Info("received block availability request",
 		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
 		log.Stringable("requested-first-block", message.SignedBatchRange.FirstBlockHeight()),
@@ -47,11 +48,11 @@ func (s *service) sourceHandleBlockAvailabilityRequest(message *gossipmessages.B
 		log.Stringable("source", response.Message.Sender.SenderPublicKey()),
 	)
 
-	_, err := s.gossip.SendBlockAvailabilityResponse(response)
+	_, err := s.gossip.SendBlockAvailabilityResponse(ctx, response)
 	return err
 }
 
-func (s *service) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSyncRequestMessage) error {
+func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gossipmessages.BlockSyncRequestMessage) error {
 	senderPublicKey := message.Sender.SenderPublicKey()
 	blockType := message.SignedChunkRange.BlockType()
 	firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
@@ -94,6 +95,6 @@ func (s *service) sourceHandleBlockSyncRequest(message *gossipmessages.BlockSync
 			BlockPairs: blocks,
 		},
 	}
-	_, err := s.gossip.SendBlockSyncResponse(response)
+	_, err := s.gossip.SendBlockSyncResponse(ctx, response)
 	return err
 }

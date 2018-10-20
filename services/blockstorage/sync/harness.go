@@ -24,12 +24,12 @@ func (s *blockSyncStorageMock) LastCommittedBlockHeight() primitives.BlockHeight
 }
 
 func (s *blockSyncStorageMock) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
-	ret := s.Called(input)
+	ret := s.Called(ctx, input)
 	return nil, ret.Error(0)
 }
 
 func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-	ret := s.Called(input)
+	ret := s.Called(ctx, input)
 	return nil, ret.Error(0)
 }
 
