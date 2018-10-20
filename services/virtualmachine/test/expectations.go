@@ -30,7 +30,7 @@ func (h *harness) expectNativeContractMethodCalled(expectedContractName primitiv
 			input.CallingPermissionScope == protocol.PERMISSION_SCOPE_SERVICE
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are service", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are service", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 		callResult, outputArgsArray, err := contractFunction(input.ContextId, input.InputArgumentArray)
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: outputArgsArray,
@@ -48,7 +48,7 @@ func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expected
 			input.CallingPermissionScope == protocol.PERMISSION_SCOPE_SYSTEM
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are system", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s and permissions are system", expectedContractName, expectedMethodName), contractMethodMatcher)).Call(func(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 		callResult, outputArgsArray, err := contractFunction(input.ContextId)
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: outputArgsArray,
@@ -65,7 +65,7 @@ func (h *harness) expectNativeContractMethodNotCalled(expectedContractName primi
 			input.MethodName == expectedMethodName
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(nil, nil).Times(0)
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(nil, nil).Times(0)
 }
 
 func (h *harness) verifyNativeContractMethodCalled(t *testing.T) {
@@ -90,7 +90,7 @@ func (h *harness) expectSystemContractCalled(expectedContractName string, expect
 		CallResult:          callResult,
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(outputToReturn, returnError).AtLeast(1)
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("ProcessCall", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s and Method %s", expectedContractName, expectedMethodName), contractMethodMatcher)).Return(outputToReturn, returnError).AtLeast(1)
 }
 
 func (h *harness) verifySystemContractCalled(t *testing.T) {
@@ -109,7 +109,7 @@ func (h *harness) expectNativeContractInfoRequested(expectedContractName primiti
 		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
 }
 
 func (h *harness) verifyNativeContractInfoRequested(t *testing.T) {
@@ -123,7 +123,7 @@ func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.
 		LastCommittedBlockTimestamp: 1234,
 	}
 
-	h.stateStorage.When("GetStateStorageBlockHeight", mock.Any).Return(outputToReturn, nil).Times(1)
+	h.stateStorage.When("GetStateStorageBlockHeight", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
 }
 
 func (h *harness) verifyStateStorageBlockHeightRequested(t *testing.T) {
@@ -148,7 +148,7 @@ func (h *harness) expectStateStorageRead(expectedHeight primitives.BlockHeight, 
 		}).Build()},
 	}
 
-	h.stateStorage.When("ReadKeys", mock.AnyIf(fmt.Sprintf("ReadKeys height equals %s and key equals %x", expectedHeight, expectedKey), stateReadMatcher)).Return(outputToReturn, nil).Times(1)
+	h.stateStorage.When("ReadKeys", mock.Any, mock.AnyIf(fmt.Sprintf("ReadKeys height equals %s and key equals %x", expectedHeight, expectedKey), stateReadMatcher)).Return(outputToReturn, nil).Times(1)
 }
 
 func (h *harness) verifyStateStorageRead(t *testing.T) {
@@ -157,5 +157,5 @@ func (h *harness) verifyStateStorageRead(t *testing.T) {
 }
 
 func (h *harness) expectStateStorageNotRead() {
-	h.stateStorage.When("ReadKeys", mock.Any).Return(&services.ReadKeysOutput{}, nil).Times(0)
+	h.stateStorage.When("ReadKeys", mock.Any, mock.Any).Return(&services.ReadKeysOutput{}, nil).Times(0)
 }

@@ -1,6 +1,7 @@
 package virtualmachine
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -8,13 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) getServiceDeployment(executionContext *executionContext, serviceName primitives.ContractName) (services.Processor, error) {
+func (s *service) getServiceDeployment(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (services.Processor, error) {
 	// call the system contract to identify the processor
-	processorType, err := s.callGetInfoOfDeploymentSystemContract(executionContext, serviceName)
+	processorType, err := s.callGetInfoOfDeploymentSystemContract(ctx, executionContext, serviceName)
 
 	// on failure (contract not deployed), attempt to auto deploy native contract
 	if err != nil {
-		processorType, err = s.attemptToAutoDeployNativeContract(executionContext, serviceName)
+		processorType, err = s.attemptToAutoDeployNativeContract(ctx, executionContext, serviceName)
 		if err != nil {
 			return nil, err
 		}
@@ -29,14 +30,14 @@ func (s *service) getServiceDeployment(executionContext *executionContext, servi
 	}
 }
 
-func (s *service) attemptToAutoDeployNativeContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
+func (s *service) attemptToAutoDeployNativeContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
 	// make sure we have a write context (needed for deployment)
 	if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
 		return 0, errors.Errorf("context accessScope is %s instead of read-write needed for auto deployment", executionContext.accessScope)
 	}
 
 	// make sure this is a native contract
-	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(&services.GetContractInfoInput{
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(ctx, &services.GetContractInfoInput{
 		ContractName: serviceName,
 	})
 	if err != nil {
@@ -44,7 +45,7 @@ func (s *service) attemptToAutoDeployNativeContract(executionContext *executionC
 	}
 
 	// auto deploy native contract
-	err = s.callDeployServiceOfDeploymentSystemContract(executionContext, serviceName)
+	err = s.callDeployServiceOfDeploymentSystemContract(ctx, executionContext, serviceName)
 	if err != nil {
 		return 0, err
 	}
@@ -53,7 +54,7 @@ func (s *service) attemptToAutoDeployNativeContract(executionContext *executionC
 	return protocol.PROCESSOR_TYPE_NATIVE, nil
 }
 
-func (s *service) callGetInfoOfDeploymentSystemContract(executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
+func (s *service) callGetInfoOfDeploymentSystemContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_INFO.Name)
 
@@ -71,7 +72,7 @@ func (s *service) callGetInfoOfDeploymentSystemContract(executionContext *execut
 			},
 		},
 	}).Build()
-	output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+	output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(ctx, &services.ProcessCallInput{
 		ContextId:              executionContext.contextId,
 		ContractName:           systemContractName,
 		MethodName:             systemMethodName,
@@ -94,7 +95,7 @@ func (s *service) callGetInfoOfDeploymentSystemContract(executionContext *execut
 	return protocol.ProcessorType(outputArg0.Uint32Value()), nil
 }
 
-func (s *service) callDeployServiceOfDeploymentSystemContract(executionContext *executionContext, serviceName primitives.ContractName) error {
+func (s *service) callDeployServiceOfDeploymentSystemContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) error {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_DEPLOY_SERVICE.Name)
 
@@ -122,7 +123,7 @@ func (s *service) callDeployServiceOfDeploymentSystemContract(executionContext *
 			},
 		},
 	}).Build()
-	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(&services.ProcessCallInput{
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(ctx, &services.ProcessCallInput{
 		ContextId:              executionContext.contextId,
 		ContractName:           systemContractName,
 		MethodName:             systemMethodName,

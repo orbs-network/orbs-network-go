@@ -1,17 +1,18 @@
 package virtualmachine
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkStateCall(context *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkStateCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
 	switch methodName {
 
 	case "read":
-		value, err := s.handleSdkStateRead(context, args)
+		value, err := s.handleSdkStateRead(ctx, executionContext, args)
 		if err != nil {
 			return nil, err
 		}
@@ -22,7 +23,7 @@ func (s *service) handleSdkStateCall(context *executionContext, methodName primi
 		}).Build()}, nil
 
 	case "write":
-		err := s.handleSdkStateWrite(context, args)
+		err := s.handleSdkStateWrite(executionContext, args)
 		if err != nil {
 			return nil, err
 		}
@@ -35,32 +36,32 @@ func (s *service) handleSdkStateCall(context *executionContext, methodName primi
 
 // inputArg0: key ([]byte)
 // outputArg0: value ([]byte)
-func (s *service) handleSdkStateRead(context *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkStateRead(ctx context.Context, executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
 	if len(args) != 1 || !args[0].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK state read args: %v", args)
 	}
 	key := args[0].BytesValue()
 
 	// get current running service
-	currentService := context.serviceStackTop()
+	currentService := executionContext.serviceStackTop()
 
 	// try from transient state first
-	value, found := context.transientState.getValue(currentService, key)
+	value, found := executionContext.transientState.getValue(currentService, key)
 	if found {
 		return value, nil
 	}
 
 	// try from batch transient state first
-	if context.batchTransientState != nil {
-		value, found = context.batchTransientState.getValue(currentService, key)
+	if executionContext.batchTransientState != nil {
+		value, found = executionContext.batchTransientState.getValue(currentService, key)
 		if found {
 			return value, nil
 		}
 	}
 
 	// cache miss to state storage
-	output, err := s.stateStorage.ReadKeys(&services.ReadKeysInput{
-		BlockHeight:  context.blockHeight,
+	output, err := s.stateStorage.ReadKeys(ctx, &services.ReadKeysInput{
+		BlockHeight:  executionContext.blockHeight,
 		ContractName: currentService,
 		Keys:         []primitives.Ripmd160Sha256{key},
 	})
@@ -73,16 +74,16 @@ func (s *service) handleSdkStateRead(context *executionContext, args []*protocol
 	value = output.StateRecords[0].Value()
 
 	// store in transient state (cache)
-	context.transientState.setValue(currentService, key, value, false)
+	executionContext.transientState.setValue(currentService, key, value, false)
 
 	return value, nil
 }
 
 // inputArg0: key ([]byte)
 // inputArg1: value ([]byte)
-func (s *service) handleSdkStateWrite(context *executionContext, args []*protocol.MethodArgument) error {
-	if context.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
-		return errors.Errorf("write attempted without write access: %s", context.accessScope)
+func (s *service) handleSdkStateWrite(executionContext *executionContext, args []*protocol.MethodArgument) error {
+	if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
+		return errors.Errorf("write attempted without write access: %s", executionContext.accessScope)
 	}
 
 	if len(args) != 2 || !args[0].IsTypeBytesValue() || !args[1].IsTypeBytesValue() {
@@ -92,11 +93,11 @@ func (s *service) handleSdkStateWrite(context *executionContext, args []*protoco
 	value := args[1].BytesValue()
 
 	// get current running service
-	currentService := context.serviceStackTop()
+	currentService := executionContext.serviceStackTop()
 
 	// write to transient state
 	// TODO: maybe compare with getValue to see the value actually changed
-	context.transientState.setValue(currentService, key, value, true)
+	executionContext.transientState.setValue(currentService, key, value, true)
 
 	return nil
 }
