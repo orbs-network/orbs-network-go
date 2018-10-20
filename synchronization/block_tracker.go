@@ -1,6 +1,7 @@
 package synchronization
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"sync"
@@ -44,7 +45,8 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 	return t.currentHeight, t.latch
 }
 
-func (t *BlockTracker) WaitForBlock(requestedHeight primitives.BlockHeight) error {
+// TODO: we should respect caller intents in ctx (ctx added in the context refactor)
+func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primitives.BlockHeight) error {
 
 	requestedHeightUint := uint64(requestedHeight)
 	currentHeight, currentLatch := t.readAtomicHeightAndLatch()

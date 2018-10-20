@@ -88,7 +88,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
@@ -133,7 +133,7 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 }
 
 func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 

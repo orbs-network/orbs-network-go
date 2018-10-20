@@ -104,7 +104,7 @@ func (s *service) currentBlockHeightAndTime() (primitives.BlockHeight, primitive
 }
 
 func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
-	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
 		return nil, err
 	}
 

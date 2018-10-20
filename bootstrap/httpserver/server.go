@@ -51,8 +51,8 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 
 func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
 	server := &server{
-		logger:    logger.WithTags(LogTag),
-		publicApi: publicApi,
+		logger:         logger.WithTags(LogTag),
+		publicApi:      publicApi,
 		metricRegistry: metricRegistry,
 	}
 
@@ -125,7 +125,8 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
+	// TODO: context.TODO() should probably be the http client context (context refactor)
+	result, err := s.publicApi.SendTransaction(context.TODO(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
@@ -147,7 +148,8 @@ func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.logger.Info("http server received call-method", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
+	// TODO: context.TODO() should probably be the http client context (context refactor)
+	result, err := s.publicApi.CallMethod(context.TODO(), &services.CallMethodInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
 	} else {
@@ -169,7 +171,8 @@ func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.GetTransactionStatus(&services.GetTransactionStatusInput{ClientRequest: clientRequest})
+	// TODO: context.TODO() should probably be the http client context (context refactor)
+	result, err := s.publicApi.GetTransactionStatus(context.TODO(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {

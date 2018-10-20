@@ -157,7 +157,7 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 }
 
 func (s *service) GetTransactionsBlockHeader(ctx context.Context, input *services.GetTransactionsBlockHeaderInput) (result *services.GetTransactionsBlockHeaderOutput, err error) {
-	err = s.persistence.GetBlockTracker().WaitForBlock(input.BlockHeight)
+	err = s.persistence.GetBlockTracker().WaitForBlock(ctx, input.BlockHeight)
 
 	if err == nil {
 		return s.loadTransactionsBlockHeader(input.BlockHeight)
@@ -180,7 +180,7 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 }
 
 func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
-	err = s.persistence.GetBlockTracker().WaitForBlock(input.BlockHeight)
+	err = s.persistence.GetBlockTracker().WaitForBlock(ctx, input.BlockHeight)
 
 	if err == nil {
 		return s.loadResultsBlockHeader(input.BlockHeight)
