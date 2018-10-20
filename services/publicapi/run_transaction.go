@@ -29,7 +29,7 @@ func (s *service) CallMethod(ctx context.Context, input *services.CallMethodInpu
 	meter := s.logger.Meter("tx-call-method-time", log.Stringable("txHash", txHash))
 	defer meter.Done()
 
-	result, err := s.virtualMachine.RunLocalMethod(&services.RunLocalMethodInput{
+	result, err := s.virtualMachine.RunLocalMethod(ctx, &services.RunLocalMethodInput{
 		Transaction: tx,
 	})
 	if err != nil {

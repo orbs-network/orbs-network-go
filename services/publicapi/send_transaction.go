@@ -36,7 +36,7 @@ func (s *service) SendTransaction(ctx context.Context, input *services.SendTrans
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
-	addResp, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{SignedTransaction: tx})
+	addResp, err := s.transactionPool.AddNewTransaction(ctx, &services.AddNewTransactionInput{SignedTransaction: tx})
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
 		s.logger.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))

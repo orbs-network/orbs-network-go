@@ -24,19 +24,19 @@ func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetT
 	meter := s.logger.Meter("tx-get-status-time", log.Stringable("txHash", txHash))
 	defer meter.Done()
 
-	if txReceipt, err, ok := s.getFromTxPool(txHash, timestamp); ok {
+	if txReceipt, err, ok := s.getFromTxPool(ctx, txHash, timestamp); ok {
 		return toGetTxOutput(txReceipt), err
 	}
 
-	blockReceipt, err := s.getFromBlockStorage(txHash, timestamp)
+	blockReceipt, err := s.getFromBlockStorage(ctx, txHash, timestamp)
 	if err != nil {
 		return nil, err
 	}
 	return toGetTxOutput(blockReceipt), err
 }
 
-func (s *service) getFromTxPool(txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error, bool) {
-	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
+func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error, bool) {
+	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
 		Txhash:               txHash,
 		TransactionTimestamp: timestamp,
 	})
@@ -59,8 +59,8 @@ func txStatusToTxResponse(txStatus *services.GetCommittedTransactionReceiptOutpu
 	}
 }
 
-func (s *service) getFromBlockStorage(txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error) {
-	txReceipt, err := s.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+func (s *service) getFromBlockStorage(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error) {
+	txReceipt, err := s.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
 		Txhash:               txHash,
 		TransactionTimestamp: timestamp,
 	})
