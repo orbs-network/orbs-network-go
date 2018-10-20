@@ -14,14 +14,14 @@ func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler
 	s.leanHelixHandlers = append(s.leanHelixHandlers, handler)
 }
 
-func (s *service) receivedLeanHelixMessage(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.LeanHelix() {
 	case consensus.LEAN_HELIX_PRE_PREPARE:
-		s.receivedLeanHelixPrePrepare(header, payloads)
+		s.receivedLeanHelixPrePrepare(ctx, header, payloads)
 	case consensus.LEAN_HELIX_PREPARE:
-		s.receivedLeanHelixPrepare(header, payloads)
+		s.receivedLeanHelixPrepare(ctx, header, payloads)
 	case consensus.LEAN_HELIX_COMMIT:
-		s.receivedLeanHelixCommit(header, payloads)
+		s.receivedLeanHelixCommit(ctx, header, payloads)
 	}
 }
 
@@ -41,14 +41,14 @@ func (s *service) SendLeanHelixPrePrepare(ctx context.Context, input *gossiptopi
 	}
 	payloads := append([][]byte{header.Raw(), input.Message.SignedHeader.Raw(), input.Message.Sender.Raw()}, blockPairPayloads...)
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST, // TODO: shouldn't be broadcast
 		Payloads:        payloads,
 	})
 }
 
-func (s *service) receivedLeanHelixPrePrepare(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedLeanHelixPrePrepare(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	if len(payloads) < 2 {
 		return
 	}
@@ -60,7 +60,7 @@ func (s *service) receivedLeanHelixPrePrepare(header *gossipmessages.Header, pay
 	}
 
 	for _, l := range s.leanHelixHandlers {
-		_, err := l.HandleLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
+		_, err := l.HandleLeanHelixPrePrepare(ctx, &gossiptopics.LeanHelixPrePrepareInput{
 			Message: &gossipmessages.LeanHelixPrePrepareMessage{
 				SignedHeader: signedHeader,
 				Sender:       senderSignature,
@@ -82,16 +82,16 @@ func (s *service) SendLeanHelixPrepare(ctx context.Context, input *gossiptopics.
 
 	payloads := [][]byte{header.Raw()}
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST, // TODO: shouldn't be broadcast
 		Payloads:        payloads,
 	})
 }
 
-func (s *service) receivedLeanHelixPrepare(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedLeanHelixPrepare(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	for _, l := range s.leanHelixHandlers {
-		_, err := l.HandleLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+		_, err := l.HandleLeanHelixPrepare(ctx, &gossiptopics.LeanHelixPrepareInput{})
 		if err != nil {
 			s.logger.Info("HandleLeanHelixPrepare failed", log.Error(err))
 		}
@@ -107,16 +107,16 @@ func (s *service) SendLeanHelixCommit(ctx context.Context, input *gossiptopics.L
 
 	payloads := [][]byte{header.Raw()}
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST, // TODO: shouldn't be broadcast
 		Payloads:        payloads,
 	})
 }
 
-func (s *service) receivedLeanHelixCommit(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedLeanHelixCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	for _, l := range s.leanHelixHandlers {
-		_, err := l.HandleLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
+		_, err := l.HandleLeanHelixCommit(ctx, &gossiptopics.LeanHelixCommitInput{})
 		if err != nil {
 			s.logger.Info("HandleLeanHelixCommit failed", log.Error(err))
 		}

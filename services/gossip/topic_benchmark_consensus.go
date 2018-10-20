@@ -15,12 +15,12 @@ func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.Benchma
 	s.benchmarkConsensusHandlers = append(s.benchmarkConsensusHandlers, handler)
 }
 
-func (s *service) receivedBenchmarkConsensusMessage(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBenchmarkConsensusMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BenchmarkConsensus() {
 	case consensus.BENCHMARK_CONSENSUS_COMMIT:
-		s.receivedBenchmarkConsensusCommit(header, payloads)
+		s.receivedBenchmarkConsensusCommit(ctx, header, payloads)
 	case consensus.BENCHMARK_CONSENSUS_COMMITTED:
-		s.receivedBenchmarkConsensusCommitted(header, payloads)
+		s.receivedBenchmarkConsensusCommitted(ctx, header, payloads)
 	}
 }
 
@@ -37,14 +37,14 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 	}
 	payloads := append([][]byte{header.Raw()}, blockPairPayloads...)
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		Payloads:        payloads,
 	})
 }
 
-func (s *service) receivedBenchmarkConsensusCommit(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	blockPair, err := decodeBlockPair(payloads)
 	if err != nil {
 		s.logger.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
@@ -52,7 +52,7 @@ func (s *service) receivedBenchmarkConsensusCommit(header *gossipmessages.Header
 	}
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		_, err := l.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+		_, err := l.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{
 			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
 				BlockPair: blockPair,
 			},
@@ -76,7 +76,7 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 	}
 	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), input.Message.Sender.Raw()}
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
@@ -84,7 +84,7 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 	})
 }
 
-func (s *service) receivedBenchmarkConsensusCommitted(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBenchmarkConsensusCommitted(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	if len(payloads) < 2 {
 		return
 	}
@@ -92,7 +92,7 @@ func (s *service) receivedBenchmarkConsensusCommitted(header *gossipmessages.Hea
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		_, err := l.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+		_, err := l.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
 			Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
 				Status: status,
 				Sender: senderSignature,

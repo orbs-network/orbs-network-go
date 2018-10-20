@@ -13,10 +13,10 @@ func (s *service) RegisterTransactionRelayHandler(handler gossiptopics.Transacti
 	s.transactionHandlers = append(s.transactionHandlers, handler)
 }
 
-func (s *service) receivedTransactionRelayMessage(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedTransactionRelayMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.TransactionRelay() {
 	case gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS:
-		s.receivedForwardedTransactions(header, payloads)
+		s.receivedForwardedTransactions(ctx, header, payloads)
 	}
 }
 
@@ -36,14 +36,14 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 		payloads = append(payloads, tx.Raw())
 	}
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		Payloads:        payloads,
 	})
 }
 
-func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedForwardedTransactions(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	txs := make([]*protocol.SignedTransaction, 0, len(payloads)-1)
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[0])
 
@@ -55,7 +55,7 @@ func (s *service) receivedForwardedTransactions(header *gossipmessages.Header, p
 	s.logger.Info("received forwarded transactions", log.Stringable("sender", senderSignature), log.StringableSlice("transactions", txs))
 
 	for _, l := range s.transactionHandlers {
-		_, err := l.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+		_, err := l.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
 			Message: &gossipmessages.ForwardedTransactionsMessage{
 				Sender:             senderSignature,
 				SignedTransactions: txs,

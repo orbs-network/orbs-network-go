@@ -14,16 +14,16 @@ func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 	s.blockSyncHandlers = append(s.blockSyncHandlers, handler)
 }
 
-func (s *service) receivedBlockSyncMessage(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BlockSync() {
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST:
-		s.receivedBlockSyncAvailabilityRequest(header, payloads)
+		s.receivedBlockSyncAvailabilityRequest(ctx, header, payloads)
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE:
-		s.receivedBlockSyncAvailabilityResponse(header, payloads)
+		s.receivedBlockSyncAvailabilityResponse(ctx, header, payloads)
 	case gossipmessages.BLOCK_SYNC_REQUEST:
-		s.receivedBlockSyncRequest(header, payloads)
+		s.receivedBlockSyncRequest(ctx, header, payloads)
 	case gossipmessages.BLOCK_SYNC_RESPONSE:
-		s.receivedBlockSyncResponse(header, payloads)
+		s.receivedBlockSyncResponse(ctx, header, payloads)
 	}
 }
 
@@ -39,14 +39,14 @@ func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		Payloads:        payloads,
 	})
 }
 
-func (s *service) receivedBlockSyncAvailabilityRequest(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	if len(payloads) < 2 {
 		return
 	}
@@ -54,7 +54,7 @@ func (s *service) receivedBlockSyncAvailabilityRequest(header *gossipmessages.He
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockAvailabilityRequest(&gossiptopics.BlockAvailabilityRequestInput{
+		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{
 			Message: &gossipmessages.BlockAvailabilityRequestMessage{
 				SignedBatchRange: batchRange,
 				Sender:           senderSignature,
@@ -78,14 +78,14 @@ func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		Payloads:        payloads,
 	})
 }
 
-func (s *service) receivedBlockSyncAvailabilityResponse(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncAvailabilityResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	if len(payloads) < 2 {
 		return
 	}
@@ -93,7 +93,7 @@ func (s *service) receivedBlockSyncAvailabilityResponse(header *gossipmessages.H
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockAvailabilityResponse(&gossiptopics.BlockAvailabilityResponseInput{
+		_, err := l.HandleBlockAvailabilityResponse(ctx, &gossiptopics.BlockAvailabilityResponseInput{
 			Message: &gossipmessages.BlockAvailabilityResponseMessage{
 				SignedBatchRange: batchRange,
 				Sender:           senderSignature,
@@ -118,7 +118,7 @@ func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
@@ -126,7 +126,7 @@ func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 	})
 }
 
-func (s *service) receivedBlockSyncRequest(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	if len(payloads) < 2 {
 		return
 	}
@@ -134,7 +134,7 @@ func (s *service) receivedBlockSyncRequest(header *gossipmessages.Header, payloa
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockSyncRequest(&gossiptopics.BlockSyncRequestInput{
+		_, err := l.HandleBlockSyncRequest(ctx, &gossiptopics.BlockSyncRequestInput{
 			Message: &gossipmessages.BlockSyncRequestMessage{
 				SignedChunkRange: chunkRange,
 				Sender:           senderSignature,
@@ -165,7 +165,7 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 	}
 	payloads = append(payloads, blockPairPayloads...)
 
-	return nil, s.transport.Send(&adapter.TransportData{
+	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
@@ -173,7 +173,7 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 	})
 }
 
-func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	if len(payloads) < 3 {
 		return
 	}
@@ -188,7 +188,7 @@ func (s *service) receivedBlockSyncResponse(header *gossipmessages.Header, paylo
 	}
 
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockSyncResponse(&gossiptopics.BlockSyncResponseInput{
+		_, err := l.HandleBlockSyncResponse(ctx, &gossiptopics.BlockSyncResponseInput{
 			Message: &gossipmessages.BlockSyncResponseMessage{
 				SignedChunkRange: chunkRange,
 				Sender:           senderSignature,

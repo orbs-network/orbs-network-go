@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -35,7 +36,7 @@ func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogge
 	return s
 }
 
-func (s *service) OnTransportMessageReceived(payloads [][]byte) {
+func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
 	if len(payloads) == 0 {
 		s.logger.Error("transport did not receive any payloads, header missing")
 		return
@@ -48,12 +49,12 @@ func (s *service) OnTransportMessageReceived(payloads [][]byte) {
 	s.logger.Info("transport message received", log.Stringable("header", header))
 	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
-		s.receivedTransactionRelayMessage(header, payloads[1:])
+		s.receivedTransactionRelayMessage(ctx, header, payloads[1:])
 	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
-		s.receivedLeanHelixMessage(header, payloads[1:])
+		s.receivedLeanHelixMessage(ctx, header, payloads[1:])
 	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
-		s.receivedBenchmarkConsensusMessage(header, payloads[1:])
+		s.receivedBenchmarkConsensusMessage(ctx, header, payloads[1:])
 	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
-		s.receivedBlockSyncMessage(header, payloads[1:])
+		s.receivedBlockSyncMessage(ctx, header, payloads[1:])
 	}
 }
