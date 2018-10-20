@@ -88,8 +88,8 @@ func (d *driver) getBlockHeightAndTimestamp() (int, int, error) {
 	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
 }
 
-func (d *driver) commitStateDiff(state *services.CommitStateDiffInput) {
-	d.service.CommitStateDiff(state)
+func (d *driver) commitStateDiff(state *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error){
+	return d.service.CommitStateDiff(state)
 }
 
 func (d *driver) commitValuePairs(contract string, keyValues ...string) {
@@ -97,7 +97,7 @@ func (d *driver) commitValuePairs(contract string, keyValues ...string) {
 	d.commitValuePairsAtHeight(h+1, contract, keyValues...)
 }
 
-func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...string) {
+func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...string) (*services.CommitStateDiffOutput, error){
 	if len(keyValues)%2 != 0 {
 		panic("expecting an array of key value pairs")
 	}
@@ -108,5 +108,5 @@ func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...s
 	}
 
 	contractStateDiff := b.Build()
-	d.commitStateDiff(CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
+	return d.commitStateDiff(CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
 }

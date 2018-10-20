@@ -89,3 +89,14 @@ func TestReadKeysOutsideSupportedBlockRetention(t *testing.T) {
 	require.Error(t, err, "expected an error to occur")
 	require.Nil(t, output, "expected no result")
 }
+
+func TestReadKeysObservesWriteOrder(t *testing.T) {
+	key := "foo"
+
+	d := newStateStorageDriver(1)
+	d.commitValuePairsAtHeight(1, "c", key, "bar", key, "baz")
+
+	output, err := d.readSingleKeyFromRevision(1, "c", key)
+	require.NoError(t, err)
+	require.EqualValues(t, "baz", output, "expected no result")
+}

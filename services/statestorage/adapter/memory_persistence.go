@@ -3,130 +3,130 @@ package adapter
 import (
 	"bytes"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"sort"
 	"strings"
+	"sync"
 )
 
 type ContractState map[string]*protocol.StateRecord
 type StateVersion map[primitives.ContractName]ContractState
 
 type InMemoryStatePersistence struct {
-	snapshots map[primitives.BlockHeight]StateVersion
-	roots     map[primitives.BlockHeight]primitives.MerkleSha256
+	mu          sync.RWMutex
+	snapshot    StateVersion
+	blockHeight primitives.BlockHeight
+	timestamp   primitives.TimestampNano
+	merkleRoot  primitives.MerkleSha256
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
+
+	// TODO - this is our hard coded Genesis block. Move this to a more dignified place or load from a file
+
+	_, root := merkle.NewForest()
 	return &InMemoryStatePersistence{
-		// TODO remove this hard coded init of genesis block state once init flow syncs state storage with block storage
-		snapshots: map[primitives.BlockHeight]StateVersion{primitives.BlockHeight(0): map[primitives.ContractName]ContractState{}},
-		roots:     map[primitives.BlockHeight]primitives.MerkleSha256{},
+		mu:          sync.RWMutex{},
+		snapshot:    StateVersion{},
+		blockHeight: 0,
+		timestamp:   0,
+		merkleRoot:  root,
 	}
 }
 
-func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, contractStateDiffs []*protocol.ContractStateDiff) error {
-	if _, ok := sp.snapshots[height]; !ok {
-		sp.snapshots[height] = sp.cloneCurrentStateDiff(height)
-	}
+func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, contractStateDiffs map[string]map[string]*protocol.StateRecord) error {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
 
-	for _, stateDiffs := range contractStateDiffs {
-		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
-			sp.writeOneContract(height, stateDiffs.ContractName(), i.NextStateDiffs())
+	sp.blockHeight = height
+	sp.merkleRoot = root
+
+	for contract, records := range contractStateDiffs {
+		for _, record := range records {
+			sp._writeOneContract(height, primitives.ContractName(contract), record)
 		}
 	}
 
 	return nil
 }
 
-func (sp *InMemoryStatePersistence) writeOneContract(height primitives.BlockHeight, contract primitives.ContractName, stateDiff *protocol.StateRecord) {
-	if _, ok := sp.snapshots[height][contract]; !ok {
-		sp.snapshots[height][contract] = map[string]*protocol.StateRecord{}
+func (sp *InMemoryStatePersistence) _writeOneContract(height primitives.BlockHeight, contract primitives.ContractName, stateDiff *protocol.StateRecord) {
+	if _, ok := sp.snapshot[contract]; !ok {
+		sp.snapshot[contract] = map[string]*protocol.StateRecord{}
 	}
 
 	if isZeroValue(stateDiff.Value()) {
-		delete(sp.snapshots[height][contract], stateDiff.Key().KeyForMap())
+		delete(sp.snapshot[contract], stateDiff.Key().KeyForMap())
 		return
 	}
 
-	sp.snapshots[height][contract][stateDiff.Key().KeyForMap()] = stateDiff
-}
-
-func (sp *InMemoryStatePersistence) cloneCurrentStateDiff(height primitives.BlockHeight) StateVersion {
-	prevHeight := height - primitives.BlockHeight(1)
-	if _, ok := sp.snapshots[prevHeight]; !ok {
-		panic("trying to commit blocks not in order")
-	}
-
-	newStore := StateVersion{}
-	for contract, contractStore := range sp.snapshots[prevHeight] {
-		newStateRecordStore := map[string]*protocol.StateRecord{}
-		for k, v := range contractStore {
-			newStateRecordStore[k] = v
-		}
-		newStore[contract] = newStateRecordStore
-	}
-	return newStore
+	sp.snapshot[contract][stateDiff.Key().KeyForMap()] = stateDiff
 }
 
 func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
-	if stateAtHeight, ok := sp.snapshots[height]; ok {
-		record, ok := stateAtHeight[contract][key]
-		return record, ok, nil
-	} else {
-		return nil, false, errors.Errorf("block %v does not exist in snapshot history", height)
+	sp.mu.RLock()
+	defer sp.mu.RUnlock()
+
+	if height != sp.blockHeight {
+		return nil, false, errors.Errorf("block height mismatch. requested height %v, found %v", height, sp.blockHeight)
 	}
+	record, ok := sp.snapshot[contract][key]
+	return record, ok, nil
 }
 
-func (sp *InMemoryStatePersistence) WriteMerkleRoot(height primitives.BlockHeight, sha256 primitives.MerkleSha256) error {
-	sp.roots[height] = sha256
-	return nil
+func (sp *InMemoryStatePersistence) ReadBlockHeight() (primitives.BlockHeight, error) {
+	sp.mu.RLock()
+	defer sp.mu.RUnlock()
+
+	return sp.blockHeight, nil
+}
+
+func (sp *InMemoryStatePersistence) ReadBlockTimestamp() (primitives.TimestampNano, error) {
+	sp.mu.RLock()
+	defer sp.mu.RUnlock()
+
+	return sp.timestamp, nil
 }
 
 func (sp *InMemoryStatePersistence) ReadMerkleRoot(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
-	root, exists := sp.roots[height]
-	if !exists {
-		return nil, errors.Errorf("Merkle root doesn't exist for %d Block Height", height)
+	sp.mu.RLock()
+	defer sp.mu.RUnlock()
+
+	if height != sp.blockHeight  {
+		return nil, errors.Errorf("block height mismatch. requested height %v, found %v", height, sp.blockHeight)
 	}
-	return root, nil
+	return sp.merkleRoot, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {
-	blockHeights := make([]primitives.BlockHeight, 0, len(sp.snapshots))
-	for bh := range sp.snapshots {
-		blockHeights = append(blockHeights, bh)
-	}
-	sort.Slice(blockHeights, func(i, j int) bool { return blockHeights[i] < blockHeights[j] })
-
 	output := strings.Builder{}
 	output.WriteString("{")
-	for _, currentBlock := range blockHeights {
-		output.WriteString(fmt.Sprintf("height_%v:{", currentBlock))
-		contracts := make([]primitives.ContractName, 0, len(sp.snapshots[currentBlock]))
-		for c := range sp.snapshots[currentBlock] {
-			contracts = append(contracts, c)
+	output.WriteString(fmt.Sprintf("height: %v, data: {", sp.blockHeight))
+	contracts := make([]primitives.ContractName, 0, len(sp.snapshot))
+	for c := range sp.snapshot {
+		contracts = append(contracts, c)
+	}
+	sort.Slice(contracts, func(i, j int) bool { return contracts[i] < contracts[j] })
+	for _, currentContract := range contracts {
+		keys := make([]string, 0, len(sp.snapshot[currentContract]))
+		for k := range sp.snapshot[currentContract] {
+			keys = append(keys, k)
 		}
-		sort.Slice(contracts, func(i, j int) bool { return contracts[i] < contracts[j] })
-		for _, currentContract := range contracts {
-			keys := make([]string, 0, len(sp.snapshots[currentBlock][currentContract]))
-			for k := range sp.snapshots[currentBlock][currentContract] {
-				keys = append(keys, k)
-			}
-			sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+		sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 
-			output.WriteString(string(currentContract) + ":{")
-			for _, k := range keys {
-				output.WriteString(sp.snapshots[currentBlock][currentContract][k].StringKey())
-				output.WriteString(":")
-				output.WriteString(sp.snapshots[currentBlock][currentContract][k].StringValue())
-				output.WriteString(",")
-			}
-			output.WriteString("},")
+		output.WriteString(string(currentContract) + ":{")
+		for _, k := range keys {
+			output.WriteString(sp.snapshot[currentContract][k].StringKey())
+			output.WriteString(":")
+			output.WriteString(sp.snapshot[currentContract][k].StringValue())
+			output.WriteString(",")
 		}
 		output.WriteString("},")
 	}
-	output.WriteString("}")
+	output.WriteString("}}")
 	return output.String()
 }
 

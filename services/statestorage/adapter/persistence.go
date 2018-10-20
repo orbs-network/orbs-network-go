@@ -6,8 +6,9 @@ import (
 )
 
 type StatePersistence interface {
-	WriteState(height primitives.BlockHeight, contractStateDiffs []*protocol.ContractStateDiff) error
+	WriteState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, contractStateDiffs map[string]map[string]*protocol.StateRecord) error
 	ReadState(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error)
-	WriteMerkleRoot(height primitives.BlockHeight, sha256 primitives.MerkleSha256) error
+	ReadBlockHeight() (primitives.BlockHeight, error)
+	ReadBlockTimestamp() (primitives.TimestampNano, error)
 	ReadMerkleRoot(height primitives.BlockHeight) (primitives.MerkleSha256, error)
 }

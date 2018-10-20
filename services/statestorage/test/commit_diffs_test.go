@@ -46,22 +46,17 @@ func TestCommitPastBlockHeights(t *testing.T) {
 	v1 := "v1"
 	v2 := "v2"
 
-	contractDiff := builders.ContractStateDiff().WithContractName("contract1")
-	diffAtHeight1 := CommitStateDiff().WithBlockHeight(1).WithDiff(contractDiff.WithStringRecord("key1", v1).Build()).Build()
-	diffAtHeight2 := CommitStateDiff().WithBlockHeight(2).WithDiff(contractDiff.WithStringRecord("key1", v2).Build()).Build()
+	d.commitValuePairsAtHeight(1, "c1", "key1", v1)
+	d.commitValuePairsAtHeight(2, "c1", "key1", v2)
 
-	d.service.CommitStateDiff(diffAtHeight1)
-	d.service.CommitStateDiff(diffAtHeight2)
-
-	diffWrongOldHeight := CommitStateDiff().WithBlockHeight(1).WithDiff(contractDiff.WithStringRecord("key1", "v3").WithStringRecord("key3", "v3").Build()).Build()
-	result, err := d.service.CommitStateDiff(diffWrongOldHeight)
+	result, err := d.commitValuePairsAtHeight(1, "c1", "key1", "v3", "key3", "v3")
 	require.NoError(t, err)
 	require.EqualValues(t, 3, result.NextDesiredBlockHeight, "unexpected NextDesiredBlockHeight")
 
-	output, err := d.readSingleKeyFromRevision(2, "contract1", "key1")
+	output, err := d.readSingleKeyFromRevision(2, "c1", "key1")
 	require.NoError(t, err)
 	require.EqualValues(t, v2, output, "unexpected value read")
-	output2, err := d.readSingleKeyFromRevision(2, "contract1", "key3")
+	output2, err := d.readSingleKeyFromRevision(2, "c1", "key3")
 	require.NoError(t, err)
 	require.EqualValues(t, []byte{}, output2, "unexpected value read")
 }
