@@ -54,7 +54,7 @@ func NewConsensusContext(
 }
 
 func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
-	txBlock, err := s.createTransactionsBlock(input.BlockHeight, input.PrevBlockHash)
+	txBlock, err := s.createTransactionsBlock(ctx, input.BlockHeight, input.PrevBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 }
 
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
-	rxBlock, err := s.createResultsBlock(input.BlockHeight, input.PrevBlockHash, input.TransactionsBlock)
+	rxBlock, err := s.createResultsBlock(ctx, input.BlockHeight, input.PrevBlockHash, input.TransactionsBlock)
 	if err != nil {
 		return nil, err
 	}
