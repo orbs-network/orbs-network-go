@@ -45,6 +45,7 @@ type service struct {
 }
 
 func NewLeanHelixConsensusAlgo(
+	ctx context.Context,
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	transactionPool services.TransactionPool,
@@ -69,7 +70,7 @@ func NewLeanHelixConsensusAlgo(
 
 	gossip.RegisterLeanHelixHandler(s)
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX && config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
-		go s.consensusRoundRunLoop()
+		go s.consensusRoundRunLoop(ctx)
 	}
 	return s
 }
@@ -79,7 +80,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 }
 
 func (s *service) HandleLeanHelixPrePrepare(ctx context.Context, input *gossiptopics.LeanHelixPrePrepareInput) (*gossiptopics.EmptyOutput, error) {
-	return nil, s.validatorVoteForNewBlockProposal(input.Message.BlockPair)
+	return nil, s.validatorVoteForNewBlockProposal(ctx, input.Message.BlockPair)
 }
 
 func (s *service) HandleLeanHelixPrepare(ctx context.Context, input *gossiptopics.LeanHelixPrepareInput) (*gossiptopics.EmptyOutput, error) {
@@ -88,7 +89,7 @@ func (s *service) HandleLeanHelixPrepare(ctx context.Context, input *gossiptopic
 }
 
 func (s *service) HandleLeanHelixCommit(ctx context.Context, input *gossiptopics.LeanHelixCommitInput) (*gossiptopics.EmptyOutput, error) {
-	s.validatorHandleCommit()
+	s.validatorHandleCommit(ctx)
 	return &gossiptopics.EmptyOutput{}, nil
 }
 
@@ -101,13 +102,13 @@ func (s *service) HandleLeanHelixNewView(ctx context.Context, input *gossiptopic
 }
 
 // TODO: make this select on a cancelable context
-func (s *service) consensusRoundRunLoop() {
+func (s *service) consensusRoundRunLoop(ctx context.Context) {
 
 	for {
 		s.logger.Info("entered consensus round with last committed block height", log.BlockHeight(s.lastCommittedBlockHeight))
 
 		// see if we need to propose a new block
-		err := s.leaderProposeNextBlockIfNeeded()
+		err := s.leaderProposeNextBlockIfNeeded(ctx)
 		if err != nil {
 			s.logger.Error("leader failed to propose next block", log.Error(err))
 			continue
@@ -118,7 +119,7 @@ func (s *service) consensusRoundRunLoop() {
 		activeBlock := s.blocksForRounds[s.lastCommittedBlockHeight+1]
 		s.blocksForRoundsMutex.RUnlock()
 		if activeBlock != nil {
-			err := s.leaderCollectVotesForBlock(activeBlock)
+			err := s.leaderCollectVotesForBlock(ctx, activeBlock)
 			if err != nil {
 				s.logger.Error("leader failed to collect votes for block", log.Error(err))
 				time.Sleep(10 * time.Millisecond) // TODO: handle network failures with some time of exponential backoff
@@ -126,8 +127,8 @@ func (s *service) consensusRoundRunLoop() {
 			}
 
 			// commit the block since it's validated
-			s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
-			s.gossip.SendLeanHelixCommit(&gossiptopics.LeanHelixCommitInput{})
+			s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound(ctx)
+			s.gossip.SendLeanHelixCommit(ctx, &gossiptopics.LeanHelixCommitInput{})
 		}
 
 	}
