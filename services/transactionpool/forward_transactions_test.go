@@ -2,6 +2,7 @@ package transactionpool
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -38,7 +39,7 @@ func (c *forwarderConfig) TransactionPoolPropagationBatchingTimeout() time.Durat
 }
 
 func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, publicKey primitives.Ed25519PublicKey, sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {
-	gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
+	gossip.When("BroadcastForwardedTransactions", mock.Any, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: publicKey,

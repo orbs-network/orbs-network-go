@@ -49,7 +49,7 @@ type mockCleaner struct {
 	cleaned chan time.Time
 }
 
-func (c *mockCleaner) clearTransactionsOlderThan(time time.Time) {
+func (c *mockCleaner) clearTransactionsOlderThan(ctx context.Context, time time.Time) {
 	c.cleaned <- time
 }
 

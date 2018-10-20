@@ -22,7 +22,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	var myReceipts []*protocol.TransactionReceipt
 
 	for _, receipt := range input.TransactionReceipts {
-		removedTx := s.pendingPool.remove(receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
+		removedTx := s.pendingPool.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
 		if s.originatedFromMyPublicApi(removedTx) {
 			myReceipts = append(myReceipts, receipt)
 		}
@@ -48,7 +48,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {
-			handler.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
+			handler.HandleTransactionResults(ctx, &handlers.HandleTransactionResultsInput{
 				BlockHeight:         bh,
 				Timestamp:           input.ResultsBlockHeader.Timestamp(),
 				TransactionReceipts: myReceipts,

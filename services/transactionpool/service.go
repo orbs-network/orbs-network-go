@@ -123,7 +123,7 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 
 	//TODO handle error from vm
 	bh, _ := s.currentBlockHeightAndTime()
-	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		SignedTransactions: input.SignedTransactions,
 		BlockHeight:        bh,
 	})
@@ -161,11 +161,11 @@ func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status proto
 	}
 }
 
-func (s *service) onTransactionError(txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
+func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
 	bh, ts := s.currentBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		for _, trh := range s.transactionResultsHandlers {
-			trh.HandleTransactionError(&handlers.HandleTransactionErrorInput{
+			trh.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{
 				Txhash:            txHash,
 				TransactionStatus: removalReason,
 				BlockTimestamp:    ts,
@@ -176,7 +176,7 @@ func (s *service) onTransactionError(txHash primitives.Sha256, removalReason pro
 }
 
 type cleaner interface {
-	clearTransactionsOlderThan(time time.Time)
+	clearTransactionsOlderThan(ctx context.Context, time time.Time)
 }
 
 // TODO supervise
@@ -197,7 +197,7 @@ func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration
 				close(stopped)
 				return
 			case <-ticker.C:
-				c.clearTransactionsOlderThan(time.Now().Add(-1 * expiration()))
+				c.clearTransactionsOlderThan(ctx, time.Now().Add(-1*expiration()))
 			}
 		}
 

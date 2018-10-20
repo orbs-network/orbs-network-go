@@ -1,8 +1,10 @@
 package transactionpool
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -17,40 +19,44 @@ var transactionExpirationWindow = 30 * time.Minute
 
 func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
 	t.Parallel()
-	p := makePendingPool()
-	require.Zero(t, p.currentSizeInBytes, "New pending pool created with non-zero size")
+	test.WithContext(func(ctx context.Context) {
+		p := makePendingPool()
+		require.Zero(t, p.currentSizeInBytes, "New pending pool created with non-zero size")
 
-	tx1 := builders.TransferTransaction().Build()
-	k1, _ := p.add(tx1, pk)
-	require.Equal(t, uint32(len(tx1.Raw())), p.currentSizeInBytes, "pending pool size did not reflect tx1 size")
+		tx1 := builders.TransferTransaction().Build()
+		k1, _ := p.add(tx1, pk)
+		require.Equal(t, uint32(len(tx1.Raw())), p.currentSizeInBytes, "pending pool size did not reflect tx1 size")
 
-	tx2 := builders.TransferTransaction().WithContract("a contract with a long name so that tx has a different size").Build()
-	k2, _ := p.add(tx2, pk)
-	require.Equal(t, uint32(len(tx1.Raw())+len(tx2.Raw())), p.currentSizeInBytes, "pending pool size did not reflect combined sizes of tx1 + tx2")
+		tx2 := builders.TransferTransaction().WithContract("a contract with a long name so that tx has a different size").Build()
+		k2, _ := p.add(tx2, pk)
+		require.Equal(t, uint32(len(tx1.Raw())+len(tx2.Raw())), p.currentSizeInBytes, "pending pool size did not reflect combined sizes of tx1 + tx2")
 
-	p.remove(k1, 0)
-	require.Equal(t, uint32(len(tx2.Raw())), p.currentSizeInBytes, "pending pool size did not reflect removal of tx1")
+		p.remove(ctx, k1, 0)
+		require.Equal(t, uint32(len(tx2.Raw())), p.currentSizeInBytes, "pending pool size did not reflect removal of tx1")
 
-	p.remove(k2, 0)
-	require.Zero(t, p.currentSizeInBytes, "pending pool size did not reflect removal of tx2")
+		p.remove(ctx, k2, 0)
+		require.Zero(t, p.currentSizeInBytes, "pending pool size did not reflect removal of tx2")
+	})
 }
 
 func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing.T) {
 	t.Parallel()
-	p := makePendingPool()
-	tx1 := builders.TransferTransaction().Build()
+	test.WithContext(func(ctx context.Context) {
+		p := makePendingPool()
+		tx1 := builders.TransferTransaction().Build()
 
-	k, _ := p.add(tx1, pk)
-	require.True(t, p.has(tx1), "has() returned false for an added item")
-	require.Len(t, p.getBatch(1, 0), 1, "getBatch() did not return an added item")
+		k, _ := p.add(tx1, pk)
+		require.True(t, p.has(tx1), "has() returned false for an added item")
+		require.Len(t, p.getBatch(1, 0), 1, "getBatch() did not return an added item")
 
-	p.remove(k, 0)
-	require.False(t, p.has(tx1), "has() returned true for removed item")
-	require.Empty(t, p.getBatch(1, 0), "getBatch() returned a removed item")
+		p.remove(ctx, k, 0)
+		require.False(t, p.has(tx1), "has() returned true for removed item")
+		require.Empty(t, p.getBatch(1, 0), "getBatch() returned a removed item")
 
-	require.NotPanics(t, func() {
-		p.remove(k, 0)
-	}, "removing a key that does not exist resulted in a panic")
+		require.NotPanics(t, func() {
+			p.remove(ctx, k, 0)
+		}, "removing a key that does not exist resulted in a panic")
+	})
 }
 
 func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransaction(t *testing.T) {
@@ -110,18 +116,20 @@ func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
 
 func TestPendingTransactionPoolClearsExpiredTransactions(t *testing.T) {
 	t.Parallel()
-	p := makePendingPool()
+	test.WithContext(func(ctx context.Context) {
+		p := makePendingPool()
 
-	tx1 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-5 * time.Minute)).Build()
-	tx2 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-29 * time.Minute)).Build()
-	tx3 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-31 * time.Minute)).Build()
-	add(p, tx1, tx2, tx3)
+		tx1 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-5 * time.Minute)).Build()
+		tx2 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-29 * time.Minute)).Build()
+		tx3 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-31 * time.Minute)).Build()
+		add(p, tx1, tx2, tx3)
 
-	p.clearTransactionsOlderThan(time.Now().Add(-30 * time.Minute))
+		p.clearTransactionsOlderThan(ctx, time.Now().Add(-30*time.Minute))
 
-	require.True(t, p.has(tx1), "cleared non-expired transaction")
-	require.True(t, p.has(tx2), "cleared non-expired transaction")
-	require.False(t, p.has(tx3), "did not clear expired transaction")
+		require.True(t, p.has(tx1), "cleared non-expired transaction")
+		require.True(t, p.has(tx2), "cleared non-expired transaction")
+		require.False(t, p.has(tx3), "did not clear expired transaction")
+	})
 }
 
 func TestPendingTransactionPoolDoesNotAddTheSameTransactionTwiceRegardlessOfPublicKey(t *testing.T) {
@@ -142,22 +150,24 @@ func TestPendingTransactionPoolDoesNotAddTheSameTransactionTwiceRegardlessOfPubl
 }
 
 func TestPendingTransactionPoolCallsRemovalListenerWhenRemovingTransaction(t *testing.T) {
-	var removedTxHash primitives.Sha256
-	var removalReason protocol.TransactionStatus
+	test.WithContext(func(ctx context.Context) {
+		var removedTxHash primitives.Sha256
+		var removalReason protocol.TransactionStatus
 
-	p := makePendingPool()
-	p.onTransactionRemoved = func(txHash primitives.Sha256, reason protocol.TransactionStatus) {
-		removedTxHash = txHash
-		removalReason = reason
-	}
+		p := makePendingPool()
+		p.onTransactionRemoved = func(ctx context.Context, txHash primitives.Sha256, reason protocol.TransactionStatus) {
+			removedTxHash = txHash
+			removalReason = reason
+		}
 
-	tx := builders.Transaction().Build()
-	p.add(tx, pk)
-	txHash := digest.CalcTxHash(tx.Transaction())
-	p.remove(txHash, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
+		tx := builders.Transaction().Build()
+		p.add(tx, pk)
+		txHash := digest.CalcTxHash(tx.Transaction())
+		p.remove(ctx, txHash, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
 
-	require.Equal(t, txHash, removedTxHash, "removed txhash didn't equal expected txhash")
-	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, removalReason, "removal reason didn't equal expected reason")
+		require.Equal(t, txHash, removedTxHash, "removed txhash didn't equal expected txhash")
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, removalReason, "removal reason didn't equal expected reason")
+	})
 }
 
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {

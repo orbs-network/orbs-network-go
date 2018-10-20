@@ -36,7 +36,7 @@ var (
 
 func (h *harness) expectTransactionsToBeForwarded(sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {
 
-	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
+	h.gossip.When("BroadcastForwardedTransactions", mock.Any, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
@@ -52,25 +52,25 @@ func (h *harness) expectNoTransactionsToBeForwarded() {
 }
 
 func (h *harness) ignoringForwardMessages() {
-	h.gossip.When("BroadcastForwardedTransactions", mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).AtLeast(0)
+	h.gossip.When("BroadcastForwardedTransactions", mock.Any, mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).AtLeast(0)
 }
 
-func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) (*services.AddNewTransactionOutput, error) {
-	out, err := h.txpool.AddNewTransaction(&services.AddNewTransactionInput{
+func (h *harness) addNewTransaction(ctx context.Context, tx *protocol.SignedTransaction) (*services.AddNewTransactionOutput, error) {
+	out, err := h.txpool.AddNewTransaction(ctx, &services.AddNewTransactionInput{
 		SignedTransaction: tx,
 	})
 
 	return out, err
 }
 
-func (h *harness) addTransactions(txs ...*protocol.SignedTransaction) {
+func (h *harness) addTransactions(ctx context.Context, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
-		h.addNewTransaction(tx)
+		h.addNewTransaction(ctx, tx)
 	}
 }
 
-func (h *harness) reportTransactionsAsCommitted(transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
-	return h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+func (h *harness) reportTransactionsAsCommitted(ctx context.Context, transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
+	return h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 		LastCommittedBlockHeight: h.lastBlockHeight,
 		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto, see issue #121
 		TransactionReceipts:      asReceipts(transactions),
@@ -94,7 +94,7 @@ func (h *harness) verifyMocks() error {
 	return nil
 }
 
-func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+func (h *harness) handleForwardFrom(ctx context.Context, sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
 	oneBigHash, _ := transactionpool.HashTransactions(transactions...)
 
 	sig, err := signature.SignEd25519(sender.PrivateKey(), oneBigHash)
@@ -102,7 +102,7 @@ func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ..
 		panic(err)
 	}
 
-	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+	h.txpool.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: sender.PublicKey(),
@@ -113,7 +113,7 @@ func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ..
 	})
 }
 func (h *harness) expectTransactionResultsCallbackFor(transactions ...*protocol.SignedTransaction) {
-	h.trh.When("HandleTransactionResults", &handlers.HandleTransactionResultsInput{
+	h.trh.When("HandleTransactionResults", mock.Any, &handlers.HandleTransactionResultsInput{
 		BlockHeight:         h.lastBlockHeight,
 		Timestamp:           h.lastBlockTimestamp,
 		TransactionReceipts: asReceipts(transactions),
@@ -122,15 +122,15 @@ func (h *harness) expectTransactionResultsCallbackFor(transactions ...*protocol.
 
 func (h *harness) expectTransactionErrorCallbackFor(tx *protocol.SignedTransaction, status protocol.TransactionStatus) {
 	txHash := digest.CalcTxHash(tx.Transaction())
-	h.trh.When("HandleTransactionError", mock.AnyIf("transaction error matching the given transaction", func(i interface{}) bool {
+	h.trh.When("HandleTransactionError", mock.Any, mock.AnyIf("transaction error matching the given transaction", func(i interface{}) bool {
 		tri := i.(*handlers.HandleTransactionErrorInput)
 		return tri.Txhash.Equal(txHash) && tri.TransactionStatus == status
 	})).Return(&handlers.HandleTransactionErrorOutput{}).Times(1)
 }
 
 func (h *harness) ignoringTransactionResults() {
-	h.trh.When("HandleTransactionResults", mock.Any)
-	h.trh.When("HandleTransactionError", mock.Any)
+	h.trh.When("HandleTransactionResults", mock.Any, mock.Any)
+	h.trh.When("HandleTransactionError", mock.Any, mock.Any)
 }
 
 func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
@@ -138,14 +138,14 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
 }
 
-func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
-	return h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+func (h *harness) getTransactionsForOrdering(ctx context.Context, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
-	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 		if input.BlockHeight != h.lastBlockHeight {
 			log.GetLogger().Error("Invalid block height", log.Uint64("expected-block-height", h.lastBlockHeight.KeyForMap()), log.Uint64("actual-block-height", input.BlockHeight.KeyForMap()))
 			panic("Invalid block height")
@@ -169,11 +169,11 @@ func (h *harness) passAllPreOrderChecks() {
 		return false
 	})
 }
-func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.TimestampNano) {
+func (h *harness) goToBlock(ctx context.Context, height primitives.BlockHeight, timestamp primitives.TimestampNano) {
 	h.ignoringTransactionResults()
 	currentBlock := primitives.BlockHeight(0)
 	for currentBlock <= height {
-		out, _ := h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+		out, _ := h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 			LastCommittedBlockHeight: currentBlock,
 			ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{BlockHeight: currentBlock, Timestamp: timestamp}).Build(),
 		})
@@ -182,8 +182,8 @@ func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.
 	h.lastBlockHeight = height
 }
 
-func (h *harness) validateTransactionsForOrdering(blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
-	_, err := h.txpool.ValidateTransactionsForOrdering(&services.ValidateTransactionsForOrderingInput{
+func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
+	_, err := h.txpool.ValidateTransactionsForOrdering(ctx, &services.ValidateTransactionsForOrderingInput{
 		BlockHeight:        blockHeight,
 		SignedTransactions: txs,
 	})

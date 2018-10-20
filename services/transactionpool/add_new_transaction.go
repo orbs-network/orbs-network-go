@@ -24,7 +24,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
-	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
+	if err := s.validateSingleTransactionForPreOrder(ctx, input.SignedTransaction); err != nil {
 		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
 		s.logger.Error("error validating transaction for preorder", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(nil, status), err
@@ -41,10 +41,10 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
-func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
+func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
 	bh, _ := s.currentBlockHeightAndTime()
 	//TODO handle error from vm call
-	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		SignedTransactions: Transactions{transaction},
 		BlockHeight:        bh,
 	})
