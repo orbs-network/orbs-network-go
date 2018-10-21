@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
@@ -52,7 +53,7 @@ func (p *committedTxPool) has(txHash primitives.Sha256) bool {
 	return ok
 }
 
-func (p *committedTxPool) clearTransactionsOlderThan(time time.Time) {
+func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, time time.Time) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 

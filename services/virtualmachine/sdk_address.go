@@ -1,16 +1,17 @@
 package virtualmachine
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkAddressCall(context *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
 	switch methodName {
 
 	case "getSignerAddress":
-		value, err := s.handleSdkAddressGetSignerAddress(context, args)
+		value, err := s.handleSdkAddressGetSignerAddress(executionContext, args)
 		if err != nil {
 			return nil, err
 		}
@@ -21,7 +22,7 @@ func (s *service) handleSdkAddressCall(context *executionContext, methodName pri
 		}).Build()}, nil
 
 	case "getCallerAddress":
-		value, err := s.handleSdkAddressGetCallerAddress(context, args)
+		value, err := s.handleSdkAddressGetCallerAddress(executionContext, args)
 		if err != nil {
 			return nil, err
 		}
@@ -37,29 +38,29 @@ func (s *service) handleSdkAddressCall(context *executionContext, methodName pri
 }
 
 // outputArg0: value ([]byte)
-func (s *service) handleSdkAddressGetSignerAddress(context *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
 	if len(args) != 0 {
 		return nil, errors.Errorf("invalid SDK address getSignerAddress args: %v", args)
 	}
 
-	if context.transaction == nil {
+	if executionContext.transaction == nil {
 		return nil, errors.New("operation does not contain a transaction")
 	}
 
-	return s.getSignerAddress(context.transaction.Signer())
+	return s.getSignerAddress(executionContext.transaction.Signer())
 }
 
 // outputArg0: value ([]byte)
-func (s *service) handleSdkAddressGetCallerAddress(context *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
 	if len(args) != 0 {
 		return nil, errors.Errorf("invalid SDK address getCallerAddress args: %v", args)
 	}
 
-	if context.serviceStackDepth() == 1 {
+	if executionContext.serviceStackDepth() == 1 {
 		// on the first caller, fallback to GetSignerAddress
-		return s.handleSdkAddressGetSignerAddress(context, args)
+		return s.handleSdkAddressGetSignerAddress(executionContext, args)
 	} else {
 		// after a contract call, get the caller address
-		return addressContractCall(context.serviceStackPeekCaller())
+		return addressContractCall(executionContext.serviceStackPeekCaller())
 	}
 }

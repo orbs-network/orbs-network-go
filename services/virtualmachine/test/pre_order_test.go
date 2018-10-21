@@ -1,7 +1,9 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_GlobalPreOrder"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -32,34 +34,38 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 			status: protocol.TRANSACTION_STATUS_PRE_ORDER_VALID,
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			h := newHarness()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			test.WithContext(func(ctx context.Context) {
+				h := newHarness()
 
-			h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, nil)
+				h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, nil)
 
-			results, err := h.transactionSetPreOrder([]*protocol.SignedTransaction{test.tx})
-			if test.status == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
-				require.NoError(t, err, "transaction set pre order should not fail")
-			} else {
-				require.Error(t, err, "transaction set pre order should fail")
-			}
-			require.Equal(t, []protocol.TransactionStatus{test.status}, results, "transactionSetPreOrder returned statuses should match")
+				results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tt.tx})
+				if tt.status == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
+					require.NoError(t, err, "transaction set pre order should not fail")
+				} else {
+					require.Error(t, err, "transaction set pre order should fail")
+				}
+				require.Equal(t, []protocol.TransactionStatus{tt.status}, results, "transactionSetPreOrder returned statuses should match")
 
-			h.verifySystemContractCalled(t)
+				h.verifySystemContractCalled(t)
+			})
 		})
 	}
 }
 
 func TestPreOrder_GlobalSubscriptionContractNotApproved(t *testing.T) {
-	h := newHarness()
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness()
 
-	h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, errors.New("contract not approved"))
+		h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, errors.New("contract not approved"))
 
-	tx := builders.Transaction().Build()
-	results, err := h.transactionSetPreOrder([]*protocol.SignedTransaction{tx})
-	require.Error(t, err, "transaction set pre order should fail")
-	require.Equal(t, []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER}, results, "transactionSetPreOrder returned statuses should match")
+		tx := builders.Transaction().Build()
+		results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tx})
+		require.Error(t, err, "transaction set pre order should fail")
+		require.Equal(t, []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER}, results, "transactionSetPreOrder returned statuses should match")
 
-	h.verifySystemContractCalled(t)
+		h.verifySystemContractCalled(t)
+	})
 }

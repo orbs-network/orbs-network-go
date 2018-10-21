@@ -1,6 +1,7 @@
 package leanhelix
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -10,7 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-func (s *service) leaderProposeNextBlockIfNeeded() error {
+func (s *service) leaderProposeNextBlockIfNeeded(ctx context.Context) error {
 	nextBlockHeight := s.lastCommittedBlockHeight + 1
 
 	s.blocksForRoundsMutex.RLock()
@@ -20,7 +21,7 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 		return nil
 	}
 
-	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:   s.lastCommittedBlockHeight + 1,
 		PrevBlockHash: nil,
 	})
@@ -31,7 +32,7 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	txBlock := txOutput.TransactionsBlock
 	txBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
 
-	rxOutput, err := s.consensusContext.RequestNewResultsBlock(&services.RequestNewResultsBlockInput{
+	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
 		BlockHeight:       s.lastCommittedBlockHeight + 1,
 		PrevBlockHash:     nil,
 		TransactionsBlock: txBlock,
@@ -57,14 +58,14 @@ func (s *service) leaderProposeNextBlockIfNeeded() error {
 	return nil
 }
 
-func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContainer) error {
+func (s *service) leaderCollectVotesForBlock(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	s.votesForActiveRound = make(chan bool)
 	defer func() {
 		close(s.votesForActiveRound)
 		s.votesForActiveRound = nil
 	}()
 
-	_, err := s.gossip.SendLeanHelixPrePrepare(&gossiptopics.LeanHelixPrePrepareInput{
+	_, err := s.gossip.SendLeanHelixPrePrepare(ctx, &gossiptopics.LeanHelixPrePrepareInput{
 		Message: &gossipmessages.LeanHelixPrePrepareMessage{
 			SignedHeader: (&consensus.LeanHelixBlockRefBuilder{}).Build(),
 			Sender:       (&consensus.LeanHelixSenderSignatureBuilder{}).Build(),
@@ -86,7 +87,7 @@ func (s *service) leaderCollectVotesForBlock(blockPair *protocol.BlockPairContai
 	return nil
 }
 
-func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPairContainer) error {
+func (s *service) validatorVoteForNewBlockProposal(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 
 	s.blocksForRoundsMutex.Lock()
@@ -94,7 +95,7 @@ func (s *service) validatorVoteForNewBlockProposal(blockPair *protocol.BlockPair
 	s.blocksForRoundsMutex.Unlock()
 
 	s.logger.Info("voting as validator for block", log.BlockHeight(blockHeight))
-	_, err := s.gossip.SendLeanHelixPrepare(&gossiptopics.LeanHelixPrepareInput{})
+	_, err := s.gossip.SendLeanHelixPrepare(ctx, &gossiptopics.LeanHelixPrepareInput{})
 	return err
 }
 
@@ -104,11 +105,11 @@ func (s *service) leaderAddVoteFromValidator() {
 	s.votesForActiveRound <- true
 }
 
-func (s *service) validatorHandleCommit() {
-	s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound()
+func (s *service) validatorHandleCommit(ctx context.Context) {
+	s.lastCommittedBlockHeight = s.commitBlockAndMoveToNextRound(ctx)
 }
 
-func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
+func (s *service) commitBlockAndMoveToNextRound(ctx context.Context) primitives.BlockHeight {
 	blockHeight := s.lastCommittedBlockHeight + 1
 
 	s.blocksForRoundsMutex.RLock()
@@ -120,7 +121,7 @@ func (s *service) commitBlockAndMoveToNextRound() primitives.BlockHeight {
 		return s.lastCommittedBlockHeight
 	}
 
-	s.blockStorage.CommitBlock(&services.CommitBlockInput{
+	s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
 
