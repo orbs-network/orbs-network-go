@@ -1,8 +1,10 @@
 package adapter
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"sync"
@@ -29,12 +31,12 @@ func newTamperingHarness() *tamperingHarness {
 	}
 }
 
-func (c *tamperingHarness) send(payloads [][]byte) {
-	c.broadcast(c.senderKey, payloads)
+func (c *tamperingHarness) send(ctx context.Context, payloads [][]byte) {
+	c.broadcast(ctx, c.senderKey, payloads)
 }
 
-func (c *tamperingHarness) broadcast(sender string, payloads [][]byte) error {
-	return c.transport.Send(&adapter.TransportData{
+func (c *tamperingHarness) broadcast(ctx context.Context, sender string, payloads [][]byte) error {
+	return c.transport.Send(ctx, &adapter.TransportData{
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		SenderPublicKey: primitives.Ed25519PublicKey(sender),
 		Payloads:        payloads,
@@ -42,88 +44,94 @@ func (c *tamperingHarness) broadcast(sender string, payloads [][]byte) error {
 }
 
 func TestFailingTamperer(t *testing.T) {
-	c := newTamperingHarness()
+	test.WithContext(func(ctx context.Context) {
+		c := newTamperingHarness()
 
-	c.transport.Fail(anyMessage())
+		c.transport.Fail(anyMessage())
 
-	c.send(nil)
+		c.send(ctx, nil)
 
-	c.listener.expectNotReceive()
+		c.listener.expectNotReceive()
 
-	ok, err := c.listener.Verify()
-	if !ok {
-		t.Fatal(err)
-	}
+		ok, err := c.listener.Verify()
+		if !ok {
+			t.Fatal(err)
+		}
+	})
 }
 
 func TestPausingTamperer(t *testing.T) {
-	c := newTamperingHarness()
+	test.WithContext(func(ctx context.Context) {
+		c := newTamperingHarness()
 
-	digits := make(chan byte, 10)
+		digits := make(chan byte, 10)
 
-	odds := c.transport.Pause(oddNumbers())
+		odds := c.transport.Pause(oddNumbers())
 
-	c.listener.WhenOnTransportMessageReceived(mock.Any).Call(func(payloads [][]byte) {
-		digits <- payloads[0][0]
-	}).Times(10)
+		c.listener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+			digits <- payloads[0][0]
+		}).Times(10)
 
-	for b := 0; b < 10; b++ {
-		c.send([][]byte{{byte(b)}})
-	}
-
-	for b := 0; b < 5; b++ {
-		if <-digits%2 != 0 {
-			t.Errorf("got odd number while odds should be paused")
+		for b := 0; b < 10; b++ {
+			c.send(ctx, [][]byte{{byte(b)}})
 		}
-	}
 
-	odds.Release()
-
-	for b := 0; b < 5; b++ {
-		if <-digits%2 != 1 {
-			t.Errorf("got even number while odds should be released")
+		for b := 0; b < 5; b++ {
+			if <-digits%2 != 0 {
+				t.Errorf("got odd number while odds should be paused")
+			}
 		}
-	}
+
+		odds.Release(ctx)
+
+		for b := 0; b < 5; b++ {
+			if <-digits%2 != 1 {
+				t.Errorf("got even number while odds should be released")
+			}
+		}
+	})
 }
 
 func TestLatchingTamperer(t *testing.T) {
-	c := newTamperingHarness()
+	test.WithContext(func(ctx context.Context) {
+		c := newTamperingHarness()
 
-	called := make(chan bool)
+		called := make(chan bool)
 
-	latch := c.transport.LatchOn(anyMessage())
+		latch := c.transport.LatchOn(anyMessage())
 
-	c.listener.WhenOnTransportMessageReceived(mock.Any)
+		c.listener.WhenOnTransportMessageReceived(mock.Any)
 
-	afterMessageArrived := sync.WaitGroup{}
-	afterMessageArrived.Add(1)
+		afterMessageArrived := sync.WaitGroup{}
+		afterMessageArrived.Add(1)
 
-	afterLatched := sync.WaitGroup{}
-	afterLatched.Add(1)
+		afterLatched := sync.WaitGroup{}
+		afterLatched.Add(1)
 
-	go func() {
-		afterLatched.Done()
+		go func() {
+			afterLatched.Done()
 
-		defer func() {
-			latch.Wait()
-			afterMessageArrived.Wait()
-			called <- true
+			defer func() {
+				latch.Wait()
+				afterMessageArrived.Wait()
+				called <- true
+			}()
+
 		}()
 
-	}()
+		afterLatched.Wait()
+		c.send(ctx, nil)
 
-	afterLatched.Wait()
-	c.send(nil)
+		select {
+		case <-called:
+			t.Error("called too early")
+		default:
+		}
 
-	select {
-	case <-called:
-		t.Error("called too early")
-	default:
-	}
+		afterMessageArrived.Done()
 
-	afterMessageArrived.Done()
-
-	<-called
+		<-called
+	})
 }
 
 func oddNumbers() MessagePredicate {

@@ -1,6 +1,8 @@
 package test
 
 import (
+	"context"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -50,19 +52,21 @@ func TestProcessCall_Permissions(t *testing.T) {
 			expectedError: true,
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			h := newHarness()
-			if test.expectedSdkWrite {
-				h.expectSdkCallMadeWithStateWrite(nil, nil)
-			}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			test.WithContext(func(ctx context.Context) {
+				h := newHarness()
+				if tt.expectedSdkWrite {
+					h.expectSdkCallMadeWithStateWrite(nil, nil)
+				}
 
-			_, err := h.service.ProcessCall(test.input)
-			if test.expectedError {
-				require.Error(t, err, "call should fail")
-			} else {
-				require.NoError(t, err, "call should succeed")
-			}
+				_, err := h.service.ProcessCall(ctx, tt.input)
+				if tt.expectedError {
+					require.Error(t, err, "call should fail")
+				} else {
+					require.NoError(t, err, "call should succeed")
+				}
+			})
 		})
 	}
 }

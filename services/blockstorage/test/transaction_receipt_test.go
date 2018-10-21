@@ -19,9 +19,9 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
 		block := builders.BlockPair().WithTimestampBloomFilter().Build()
-		harness.commitBlock(block)
+		harness.commitBlock(ctx, block)
 
-		out, err := harness.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+		out, err := harness.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
 			Txhash:               []byte("will-not-be-found"),
 			TransactionTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		})
@@ -42,18 +42,18 @@ func TestReturnTransactionReceipt(t *testing.T) {
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
 		block := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampBloomFilter().WithTimestampNow().Build()
-		harness.commitBlock(block)
+		harness.commitBlock(ctx, block)
 
 		// it will be similar data transactions, but with different time stamps (and hashes..)
 		block2 := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampBloomFilter().WithTimestampNow().Build()
-		harness.commitBlock(block2)
+		harness.commitBlock(ctx, block2)
 
 		// taking a transaction at 'random' (they were created at random)
 		tx := block.TransactionsBlock.SignedTransactions[3].Transaction()
 		txHash := digest.CalcTxHash(tx)
 
 		// the block timestamp is just a couple of nanos ahead of the transactions, which is inside the grace
-		out, err := harness.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+		out, err := harness.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
 			Txhash:               txHash,
 			TransactionTimestamp: tx.Timestamp(),
 		})

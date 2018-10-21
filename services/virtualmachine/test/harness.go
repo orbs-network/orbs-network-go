@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -62,9 +63,9 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
-	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:       contextId,
+func (h *harness) handleSdkCall(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+	output, err := h.service.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
+		ContextId:       executionContextId,
 		OperationName:   contractName,
 		MethodName:      methodName,
 		InputArguments:  builders.MethodArguments(args...),
@@ -76,9 +77,9 @@ func (h *harness) handleSdkCall(contextId primitives.ExecutionContextId, contrac
 	return output.OutputArguments, nil
 }
 
-func (h *harness) handleSdkCallWithSystemPermissions(contextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
-	output, err := h.service.HandleSdkCall(&handlers.HandleSdkCallInput{
-		ContextId:       contextId,
+func (h *harness) handleSdkCallWithSystemPermissions(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+	output, err := h.service.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
+		ContextId:       executionContextId,
 		OperationName:   contractName,
 		MethodName:      methodName,
 		InputArguments:  builders.MethodArguments(args...),
@@ -90,8 +91,8 @@ func (h *harness) handleSdkCallWithSystemPermissions(contextId primitives.Execut
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod(contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, error) {
-	output, err := h.service.RunLocalMethod(&services.RunLocalMethodInput{
+func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, error) {
+	output, err := h.service.RunLocalMethod(ctx, &services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
 			Signer:             nil,
@@ -113,7 +114,7 @@ type contractAndMethod struct {
 	methodName   primitives.MethodName
 }
 
-func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair) {
+func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
@@ -123,7 +124,7 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 		transactions = append(transactions, tx)
 	}
 
-	output, _ := h.service.ProcessTransactionSet(&services.ProcessTransactionSetInput{
+	output, _ := h.service.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
 		BlockHeight:        12,
 		SignedTransactions: transactions,
 	})
@@ -151,8 +152,8 @@ func (h *harness) processTransactionSet(contractAndMethods []*contractAndMethod)
 	return results, outputArgsOfAllTransactions, resultKeyValuePairsPerContract
 }
 
-func (h *harness) transactionSetPreOrder(signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {
-	output, err := h.service.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+func (h *harness) transactionSetPreOrder(ctx context.Context, signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {
+	output, err := h.service.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		BlockHeight:        12,
 		SignedTransactions: signedTransactions,
 	})

@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	//"math"
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
@@ -26,12 +27,12 @@ func (s *service) requiredQuorumSize() int {
 	return int(s.config.NetworkSize(0))
 }
 
-func (s *service) saveToBlockStorage(blockPair *protocol.BlockPairContainer) error {
+func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return nil
 	}
 	s.logger.Info("saving block to storage", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-	_, err := s.blockStorage.CommitBlock(&services.CommitBlockInput{
+	_, err := s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
 	return err

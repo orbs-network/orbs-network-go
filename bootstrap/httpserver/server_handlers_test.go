@@ -35,7 +35,7 @@ func TestHttpServerSendTxHandler_Basic(t *testing.T) {
 		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
 	}
 
-	papiMock.When("SendTransaction", mock.Any).Times(1).Return(&services.SendTransactionOutput{ClientResponse: response.Build()})
+	papiMock.When("SendTransaction", mock.Any, mock.Any).Times(1).Return(&services.SendTransactionOutput{ClientResponse: response.Build()})
 
 	s := makeServer(papiMock)
 
@@ -53,7 +53,7 @@ func TestHttpServerSendTxHandler_Basic(t *testing.T) {
 func TestHttpServerSendTxHandler_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
-	papiMock.When("SendTransaction", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
+	papiMock.When("SendTransaction", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
 	s := makeServer(papiMock)
 
@@ -78,7 +78,7 @@ func TestHttpServerCallMethod_Basic(t *testing.T) {
 		BlockTimestamp:      primitives.TimestampNano(time.Now().Nanosecond()),
 	}
 
-	papiMock.When("CallMethod", mock.Any).Times(1).Return(&services.CallMethodOutput{ClientResponse: response.Build()})
+	papiMock.When("CallMethod", mock.Any, mock.Any).Times(1).Return(&services.CallMethodOutput{ClientResponse: response.Build()})
 
 	s := makeServer(papiMock)
 
@@ -96,7 +96,7 @@ func TestHttpServerCallMethod_Basic(t *testing.T) {
 func TestHttpServerCallMethod_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
-	papiMock.When("CallMethod", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
+	papiMock.When("CallMethod", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
 	s := makeServer(papiMock)
 
@@ -121,7 +121,7 @@ func TestHttpServerGetTx_Basic(t *testing.T) {
 		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
 	}
 
-	papiMock.When("GetTransactionStatus", mock.Any).Times(1).Return(&services.GetTransactionStatusOutput{ClientResponse: response.Build()})
+	papiMock.When("GetTransactionStatus", mock.Any, mock.Any).Times(1).Return(&services.GetTransactionStatusOutput{ClientResponse: response.Build()})
 
 	s := makeServer(papiMock)
 
@@ -137,7 +137,7 @@ func TestHttpServerGetTx_Basic(t *testing.T) {
 func TestHttpServerGetTx_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
-	papiMock.When("GetTransactionStatus", mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
+	papiMock.When("GetTransactionStatus", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
 	s := makeServer(papiMock)
 

@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -16,7 +17,7 @@ type serviceSdk struct {
 const SDK_OPERATION_NAME_SERVICE = "Sdk.Service"
 
 func (s *serviceSdk) CallMethod(executionContextId sdk.Context, serviceName string, methodName string, args ...interface{}) ([]interface{}, error) {
-	output, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	output, err := s.handler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",

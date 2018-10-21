@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -52,7 +53,7 @@ func createAddressSdk() *addressSdk {
 type contractSdkAddressCallHandlerStub struct {
 }
 
-func (c *contractSdkAddressCallHandlerStub) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
+func (c *contractSdkAddressCallHandlerStub) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
 	if input.PermissionScope != protocol.PERMISSION_SCOPE_SERVICE {
 		panic("permissions passed to SDK are incorrect")
 	}

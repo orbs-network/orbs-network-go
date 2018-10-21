@@ -36,7 +36,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c0)
+		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitBroadcastViaGossip(t)
 
@@ -46,7 +46,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 		h.expectNewBlockProposalRequestedAndSaved(2)
 		h.expectCommitBroadcastViaGossip(2, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c1)
+		h.receivedCommittedMessagesViaGossip(ctx, c1)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitBroadcastViaGossip(t)
 	})
@@ -63,7 +63,7 @@ func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 		h.expectNewBlockProposalRequestedToFail()
 		h.expectCommitNotSent()
 
-		h.receivedCommittedMessagesViaGossip(c0)
+		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalRequestedAndNotSaved(t)
 		h.verifyCommitNotSent(t)
 
@@ -88,7 +88,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c0)
+		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitBroadcastViaGossip(t)
 
@@ -98,7 +98,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c1)
+		h.receivedCommittedMessagesViaGossip(ctx, c1)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitBroadcastViaGossip(t)
 	})
@@ -115,7 +115,7 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c0)
+		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitBroadcastViaGossip(t)
 	})
@@ -132,7 +132,7 @@ func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c0)
+		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitBroadcastViaGossip(t)
 	})
@@ -149,7 +149,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 		h.expectNewBlockProposalRequestedAndSaved(1)
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c0)
+		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitBroadcastViaGossip(t)
 
@@ -158,7 +158,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c0)
+		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitBroadcastViaGossip(t)
 	})
@@ -175,7 +175,7 @@ func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
 
-		h.receivedCommittedMessagesViaGossip(c1000)
+		h.receivedCommittedMessagesViaGossip(ctx, c1000)
 		h.verifyNewBlockProposalNotRequested(t)
 		h.verifyCommitBroadcastViaGossip(t)
 	})

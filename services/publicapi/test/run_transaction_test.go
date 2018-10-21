@@ -18,7 +18,7 @@ func TestRunTransaction_CallsVm(t *testing.T) {
 
 		harness.runTransactionSuccess()
 
-		result, err := harness.papi.CallMethod(&services.CallMethodInput{
+		result, err := harness.papi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: (&client.CallMethodRequestBuilder{
 				Transaction: builders.NonSignedTransaction().Builder(),
 			}).Build(),

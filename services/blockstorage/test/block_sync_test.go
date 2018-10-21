@@ -21,8 +21,8 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 
 		harness.expectCommitStateDiffTimes(2)
 
-		harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-		harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
+		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
+		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
 
 		senderKeyPair := keys.Ed25519KeyPairForTests(9)
 
@@ -35,9 +35,9 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 			WithSenderPublicKey(harness.config.NodePublicKey()).
 			WithRecipientPublicKey(senderKeyPair.PublicKey()).Build()
 
-		harness.gossip.When("SendBlockAvailabilityResponse", response).Return(nil, nil).Times(1)
+		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, response).Return(nil, nil).Times(1)
 
-		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(input)
+		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, input)
 		require.NoError(t, err)
 
 		harness.verifyMocks(t, 2)
@@ -56,10 +56,10 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 			builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
 		}
 
-		harness.commitBlock(blocks[0])
-		harness.commitBlock(blocks[1])
-		harness.commitBlock(blocks[2])
-		harness.commitBlock(blocks[3])
+		harness.commitBlock(ctx, blocks[0])
+		harness.commitBlock(ctx, blocks[1])
+		harness.commitBlock(ctx, blocks[2])
+		harness.commitBlock(ctx, blocks[3])
 
 		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
 
@@ -86,9 +86,9 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 			},
 		}
 
-		harness.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+		harness.gossip.When("SendBlockSyncResponse", mock.Any, response).Return(nil, nil).Times(1)
 
-		_, err := harness.blockStorage.HandleBlockSyncRequest(input)
+		_, err := harness.blockStorage.HandleBlockSyncRequest(ctx, input)
 		require.NoError(t, err)
 
 		harness.verifyMocks(t, 4)
@@ -109,10 +109,10 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 			builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
 		}
 
-		harness.commitBlock(blocks[0])
-		harness.commitBlock(blocks[1])
-		harness.commitBlock(blocks[2])
-		harness.commitBlock(blocks[3])
+		harness.commitBlock(ctx, blocks[0])
+		harness.commitBlock(ctx, blocks[1])
+		harness.commitBlock(ctx, blocks[2])
+		harness.commitBlock(ctx, blocks[3])
 
 		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
 
@@ -139,9 +139,9 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 			},
 		}
 
-		harness.gossip.When("SendBlockSyncResponse", response).Return(nil, nil).Times(1)
+		harness.gossip.When("SendBlockSyncResponse", mock.Any, response).Return(nil, nil).Times(1)
 
-		_, err := harness.blockStorage.HandleBlockSyncRequest(input)
+		_, err := harness.blockStorage.HandleBlockSyncRequest(ctx, input)
 		require.NoError(t, err)
 
 		harness.verifyMocks(t, 4)
@@ -152,7 +152,7 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
 
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(2)
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(2)
 
 		harness.verifyMocks(t, 2)
 	})
@@ -162,7 +162,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
 
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(1)
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(1)
 
 		// latch until we sent the broadcast (meaning the state machine is now at collecting car state
 		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
@@ -184,10 +184,10 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 			WithSenderPublicKey(anotherSenderKeyPair.PublicKey()).Build()
 
 		// fake the collecting car response
-		harness.blockStorage.HandleBlockAvailabilityResponse(blockAvailabilityResponse)
-		harness.blockStorage.HandleBlockAvailabilityResponse(anotherBlockAvailabilityResponse)
+		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
+		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
 
-		harness.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		// latch until we pick a source and request blocks from it
 		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
@@ -203,7 +203,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 		harness.expectValidateWithConsensusAlgosTimes(4)
 
 		// fake the response
-		harness.blockStorage.HandleBlockSyncResponse(blockSyncResponse)
+		harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse)
 
 		// verify that we committed the blocks
 		harness.verifyMocks(t, 4)
@@ -217,7 +217,7 @@ func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx).withSyncNoCommitTimeout(5 * time.Millisecond)
 
-		harness.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any)
+		harness.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any)
 
 		harness.expectCommitStateDiffTimes(10)
 
@@ -228,7 +228,7 @@ func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
 				blockCreated := time.Now()
 				blockHeight := primitives.BlockHeight(i)
 
-				_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+				_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
 
 				require.NoError(t, err)
 
