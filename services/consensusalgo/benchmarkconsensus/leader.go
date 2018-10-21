@@ -26,11 +26,10 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 
 	s.lastCommittedBlock = s.leaderGenerateGenesisBlock()
 	for {
-		// TODO add metrics
-
 		err := s.leaderConsensusRoundTick(ctx)
 		if err != nil {
 			s.logger.Error("consensus round tick failed", log.Error(err))
+			s.metrics.failedConsensusTicks.Measure(1)
 		}
 		select {
 		case <-ctx.Done():
@@ -47,6 +46,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
 			s.logger.Info("consensus round waking up after retry timeout")
+			s.metrics.timedOutConsensusTicks.Measure(1)
 			continue
 		}
 	}
@@ -55,6 +55,9 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	start := time.Now()
+	defer s.metrics.consensusRoundTick.RecordSince(start)
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeightUnderMutex() {
