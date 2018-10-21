@@ -45,7 +45,6 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 	return t.currentHeight, t.latch
 }
 
-// TODO: we should respect caller intents in ctx (ctx added in the context refactor)
 func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primitives.BlockHeight) error {
 
 	requestedHeightUint := uint64(requestedHeight)
@@ -59,16 +58,13 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
-	// TODO deal with edge cases of Stop and Reset
-	timer := time.NewTimer(t.timeout)
-	defer timer.Stop()
-
+	ctx, _ = context.WithDeadline(ctx, time.Now().Add(t.timeout))
 	for currentHeight < requestedHeightUint {
 		if t.fireOnWait != nil {
 			t.fireOnWait()
 		}
 		select {
-		case <-timer.C:
+		case <-ctx.Done():
 			return errors.Errorf("timed out waiting for block at height %v", requestedHeight)
 		case <-currentLatch:
 			currentHeight, currentLatch = t.readAtomicHeightAndLatch()
