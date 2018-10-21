@@ -24,7 +24,7 @@ type NodeConfig interface {
 
 	// block storage
 	BlockSyncBatchSize() uint32
-	BlockSyncInterval() time.Duration
+	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
@@ -49,6 +49,8 @@ type NodeConfig interface {
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPropagationBatchSize() uint16
+	TransactionPoolPropagationBatchingTimeout() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -60,24 +62,27 @@ type NodeConfig interface {
 
 	// processor
 	ProcessorArtifactPath() string
+
+	// metrics
+	MetricsReportInterval() time.Duration
 }
 
-type MutableNodeConfig interface {
+type mutableNodeConfig interface {
 	NodeConfig
 
-	Set(key string, value NodeConfigValue) MutableNodeConfig
-	SetDuration(key string, value time.Duration) MutableNodeConfig
-	SetUint32(key string, value uint32) MutableNodeConfig
-	SetString(key string, value string) MutableNodeConfig
-	SetFederationNodes(nodes map[string]FederationNode) MutableNodeConfig
-	SetGossipPeers(peers map[string]GossipPeer) MutableNodeConfig
-	SetNodePublicKey(key primitives.Ed25519PublicKey) MutableNodeConfig
-	SetNodePrivateKey(key primitives.Ed25519PrivateKey) MutableNodeConfig
+	Set(key string, value NodeConfigValue) mutableNodeConfig
+	SetDuration(key string, value time.Duration) mutableNodeConfig
+	SetUint32(key string, value uint32) mutableNodeConfig
+	SetString(key string, value string) mutableNodeConfig
+	SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig
+	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
+	SetNodePublicKey(key primitives.Ed25519PublicKey) mutableNodeConfig
+	SetNodePrivateKey(key primitives.Ed25519PrivateKey) mutableNodeConfig
 
-	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) MutableNodeConfig
-	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig
+	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig
+	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
 
-	MergeWithFileConfig(source string) (MutableNodeConfig, error)
+	MergeWithFileConfig(source string) (mutableNodeConfig, error)
 
 	OverrideNodeSpecificValues(
 		federationNodes map[string]FederationNode,
@@ -87,6 +92,57 @@ type MutableNodeConfig interface {
 		nodePrivateKey primitives.Ed25519PrivateKey,
 		constantConsensusLeader primitives.Ed25519PublicKey,
 		activeConsensusAlgo consensus.ConsensusAlgoType)
+}
+
+type BlockStorageConfig interface {
+	NodePublicKey() primitives.Ed25519PublicKey
+	BlockSyncBatchSize() uint32
+	BlockSyncNoCommitInterval() time.Duration
+	BlockSyncCollectResponseTimeout() time.Duration
+	BlockSyncCollectChunksTimeout() time.Duration
+	BlockTransactionReceiptQueryGraceStart() time.Duration
+	BlockTransactionReceiptQueryGraceEnd() time.Duration
+	BlockTransactionReceiptQueryExpirationWindow() time.Duration
+}
+
+type GossipTransportConfig interface {
+	NodePublicKey() primitives.Ed25519PublicKey
+	GossipPeers(asOfBlock uint64) map[string]GossipPeer
+	GossipListenPort() uint16
+	GossipConnectionKeepAliveInterval() time.Duration
+	GossipNetworkTimeout() time.Duration
+}
+
+type ConsensusContextConfig interface {
+	ConsensusContextMaximumTransactionsInBlock() uint32
+	ConsensusContextMinimumTransactionsInBlock() uint32
+	ConsensusContextMinimalBlockDelay() time.Duration
+}
+
+type PublicApiConfig interface {
+	SendTransactionTimeout() time.Duration
+	VirtualChainId() primitives.VirtualChainId
+}
+
+type StateStorageConfig interface {
+	StateStorageHistoryRetentionDistance() uint32
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
+}
+
+type TransactionPoolConfig interface {
+	NodePublicKey() primitives.Ed25519PublicKey
+	NodePrivateKey() primitives.Ed25519PrivateKey
+	VirtualChainId() primitives.VirtualChainId
+	BlockTrackerGraceDistance() uint32
+	BlockTrackerGraceTimeout() time.Duration
+	TransactionPoolPendingPoolSizeInBytes() uint32
+	TransactionPoolTransactionExpirationWindow() time.Duration
+	TransactionPoolFutureTimestampGraceTimeout() time.Duration
+	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
+	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPropagationBatchSize() uint16
+	TransactionPoolPropagationBatchingTimeout() time.Duration
 }
 
 type FederationNode interface {

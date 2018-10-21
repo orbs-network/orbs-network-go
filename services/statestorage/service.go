@@ -1,6 +1,8 @@
 package statestorage
 
 import (
+	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
@@ -10,19 +12,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"sync"
-	"time"
 )
 
 var LogTag = log.Service("state-storage")
 
-type Config interface {
-	StateStorageHistoryRetentionDistance() uint32
-	BlockTrackerGraceDistance() uint32
-	BlockTrackerGraceTimeout() time.Duration
-}
-
 type service struct {
-	config       Config
+	config       config.StateStorageConfig
 	merkle       *merkle.Forest
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
@@ -32,7 +27,7 @@ type service struct {
 	lastCommittedBlockHeader *protocol.ResultsBlockHeader
 }
 
-func NewStateStorage(config Config, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
+func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	merkle, rootHash := merkle.NewForest()
 	// TODO this is equivalent of genesis block deploy in persistence -> move to correct deploy
 	persistence.WriteMerkleRoot(0, rootHash)
@@ -49,7 +44,7 @@ func NewStateStorage(config Config, persistence adapter.StatePersistence, logger
 	}
 }
 
-func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
 	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
 		panic("CommitStateDiff received corrupt args")
 	}
@@ -84,7 +79,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
 
-func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
+func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
 	if input.ContractName == "" {
 		return nil, errors.Errorf("missing contract name")
 	}
@@ -93,7 +88,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
@@ -126,7 +121,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	return output, nil
 }
 
-func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
+func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -137,8 +132,8 @@ func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBloc
 	return result, nil
 }
 
-func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 

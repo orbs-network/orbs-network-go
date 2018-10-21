@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
@@ -18,10 +19,8 @@ import (
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 type NodeLogic interface {
@@ -40,6 +39,7 @@ func NewNodeLogic(
 	statePersistence stateStorageAdapter.StatePersistence,
 	nativeCompiler nativeProcessorAdapter.Compiler,
 	logger log.BasicLogger,
+	metricRegistry metric.Registry,
 	nodeConfig config.NodeConfig,
 ) NodeLogic {
 
@@ -52,16 +52,18 @@ func NewNodeLogic(
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
-	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, primitives.TimestampNano(time.Now().UnixNano()))
+	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, metricRegistry)
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorageService, gossipService, transactionPoolService, logger)
-	publicApiService := publicapi.NewPublicApi(ctx, nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger)
-	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, logger)
+	publicApiService := publicapi.NewPublicApi(ctx, nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
+	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, logger, metricRegistry)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 
 	// TODO: Restore this when lean-helix-go submodule is integrated
-	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
+	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig))
+
+	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 
 	return &nodeLogic{
 		publicApi:      publicApiService,

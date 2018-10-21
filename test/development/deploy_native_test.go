@@ -25,13 +25,13 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 
 		t.Log("deploying contract")
 
-		<-network.SendDeployCounterContract(1) // leader is nodeIndex 0, validator is nodeIndex 1
-		require.EqualValues(t, counterStart, <-network.CallCounterGet(0), "get counter after deploy")
+		<-network.SendDeployCounterContract(ctx, 1) // leader is nodeIndex 0, validator is nodeIndex 1
+		require.EqualValues(t, counterStart, <-network.CallCounterGet(ctx, 0), "get counter after deploy")
 
 		t.Log("transacting with contract")
 
-		<-network.SendCounterAdd(1, 17)
-		require.EqualValues(t, counterStart+17, <-network.CallCounterGet(0), "get counter after transaction")
+		<-network.SendCounterAdd(ctx, 1, 17)
+		require.EqualValues(t, counterStart+17, <-network.CallCounterGet(ctx, 0), "get counter after transaction")
 
 	})
 	time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully

@@ -20,17 +20,17 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
 
-		_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+		_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
 
 		require.NoError(t, err)
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks())
 
 		harness.verifyMocks(t, 1)
 
-		lastCommittedBlockHeight := harness.getLastBlockHeight(t)
+		lastCommittedBlockHeight := harness.getLastBlockHeight(ctx, t)
 
 		require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight, "block height in storage should be the same")
-		require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestampe in storage should be the same")
+		require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestamp in storage should be the same")
 
 	})
 	// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
@@ -45,17 +45,17 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
 
-		harness.commitBlock(builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
+		harness.commitBlock(ctx, builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).Build())
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks())
 
 		harness.failNextBlocks()
 
-		_, err := harness.commitBlock(builders.BlockPair().WithHeight(blockHeight + 1).Build())
+		_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(blockHeight+1).Build())
 		require.EqualError(t, err, "could not write a block", "error should be returned if storage fails")
 
 		harness.verifyMocks(t, 1)
 
-		lastCommittedBlockHeight := harness.getLastBlockHeight(t)
+		lastCommittedBlockHeight := harness.getLastBlockHeight(ctx, t)
 
 		require.EqualValues(t, blockHeight, lastCommittedBlockHeight.LastCommittedBlockHeight, "block height should not update as storage was unavailable")
 		require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestamp should not update as storage was unavailable")
@@ -67,9 +67,9 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
 
-		_, err := harness.commitBlock(builders.BlockPair().WithProtocolVersion(99999).Build())
+		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(99999).Build())
 
-		require.EqualError(t, err, "protocol version mismatch")
+		require.EqualError(t, err, "protocol version mismatch in transactions block header")
 	})
 }
 
@@ -81,8 +81,8 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 
 		harness.expectCommitStateDiff()
 
-		harness.commitBlock(blockPair)
-		_, err := harness.commitBlock(blockPair)
+		harness.commitBlock(ctx, blockPair)
+		_, err := harness.commitBlock(ctx, blockPair)
 
 		require.NoError(t, err)
 
@@ -99,11 +99,11 @@ func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
 
 		blockPair := builders.BlockPair()
 
-		harness.commitBlock(blockPair.Build())
+		harness.commitBlock(ctx, blockPair.Build())
 
-		_, err := harness.commitBlock(blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build())
+		_, err := harness.commitBlock(ctx, blockPair.WithBlockCreated(time.Now().Add(1*time.Hour)).Build())
 
-		require.EqualError(t, err, "block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
+		require.EqualError(t, err, "FORK!! block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
 		harness.verifyMocks(t, 1)
 	})
@@ -114,9 +114,9 @@ func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
 
-		harness.commitBlock(builders.BlockPair().Build())
+		harness.commitBlock(ctx, builders.BlockPair().Build())
 
-		_, err := harness.commitBlock(builders.BlockPair().WithHeight(1000).Build())
+		_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(1000).Build())
 		require.EqualError(t, err, "block height is 1000, expected 2", "block height was mutate to be invalid, should return an error")
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
 		harness.verifyMocks(t, 1)
@@ -136,13 +136,13 @@ func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
 
 		txHash := digest.CalcTxHash(tx.Transaction())
 
-		_, err := harness.commitBlock(block0)
+		_, err := harness.commitBlock(ctx, block0)
 		require.NoError(t, err)
 
-		_, err = harness.commitBlock(block1)
+		_, err = harness.commitBlock(ctx, block1)
 		require.NoError(t, err)
 
-		blockHeight := harness.storageAdapter.WaitForTransaction(txHash)
+		blockHeight := harness.storageAdapter.WaitForTransaction(ctx, txHash, 10*time.Millisecond)
 		require.EqualValues(t, 1, blockHeight)
 
 		harness.verifyMocks(t, 1)

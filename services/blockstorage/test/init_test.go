@@ -18,7 +18,7 @@ func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
 
-		val, err := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+		val, err := harness.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 		require.NoError(t, err)
 
 		require.EqualValues(t, 0, val.LastCommittedBlockHeight)
@@ -41,10 +41,10 @@ func TestInitSetsLastCommittedBlockHeightFromPersistence(t *testing.T) {
 
 			out := &handlers.HandleBlockConsensusOutput{}
 
-			consensus.When("HandleBlockConsensus", mock.Any).Return(out, nil).Times(1)
+			consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(1)
 		})
 
-		val, err := harness.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+		val, err := harness.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 		require.NoError(t, err)
 
 		require.EqualValues(t, 10, val.LastCommittedBlockHeight)

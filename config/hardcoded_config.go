@@ -58,6 +58,8 @@ const (
 	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT        = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
 	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
+	TRANSACTION_POOL_PROPAGATION_BATCH_SIZE                = "TRANSACTION_POOL_PROPAGATION_BATCH_SIZE"
+	TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT          = "TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT"
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
@@ -66,6 +68,8 @@ const (
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
 
 	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
+
+	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -81,52 +85,52 @@ func NewHardCodedGossipPeer(gossipPort uint16, gossipEndpoint string) GossipPeer
 	}
 }
 
-func (c *config) Set(key string, value NodeConfigValue) MutableNodeConfig {
+func (c *config) Set(key string, value NodeConfigValue) mutableNodeConfig {
 	c.kv[key] = value
 	return c
 }
 
-func (c *config) SetDuration(key string, value time.Duration) MutableNodeConfig {
+func (c *config) SetDuration(key string, value time.Duration) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{DurationValue: value}
 	return c
 }
 
-func (c *config) SetUint32(key string, value uint32) MutableNodeConfig {
+func (c *config) SetUint32(key string, value uint32) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{Uint32Value: value}
 	return c
 }
 
-func (c *config) SetString(key string, value string) MutableNodeConfig {
+func (c *config) SetString(key string, value string) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{StringValue: value}
 	return c
 }
 
-func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) MutableNodeConfig {
+func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) mutableNodeConfig {
 	c.nodePublicKey = key
 	return c
 }
 
-func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) MutableNodeConfig {
+func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) mutableNodeConfig {
 	c.nodePrivateKey = key
 	return c
 }
 
-func (c *config) SetConstantConsensusLeader(key primitives.Ed25519PublicKey) MutableNodeConfig {
+func (c *config) SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig {
 	c.constantConsensusLeader = key
 	return c
 }
 
-func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) MutableNodeConfig {
+func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig {
 	c.activeConsensusAlgo = algoType
 	return c
 }
 
-func (c *config) SetFederationNodes(nodes map[string]FederationNode) MutableNodeConfig {
+func (c *config) SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig {
 	c.federationNodes = nodes
 	return c
 }
 
-func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) MutableNodeConfig {
+func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) mutableNodeConfig {
 	c.gossipPeers = gossipPeers
 	return c
 }
@@ -183,7 +187,7 @@ func (c *config) BlockSyncBatchSize() uint32 {
 	return c.kv[BLOCK_SYNC_BATCH_SIZE].Uint32Value
 }
 
-func (c *config) BlockSyncInterval() time.Duration {
+func (c *config) BlockSyncNoCommitInterval() time.Duration {
 	return c.kv[BLOCK_SYNC_INTERVAL].DurationValue
 }
 
@@ -247,6 +251,14 @@ func (c *config) TransactionPoolCommittedPoolClearExpiredInterval() time.Duratio
 	return c.kv[TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
 
+func (c *config) TransactionPoolPropagationBatchSize() uint16 {
+	return uint16(c.kv[TRANSACTION_POOL_PROPAGATION_BATCH_SIZE].Uint32Value)
+}
+
+func (c *config) TransactionPoolPropagationBatchingTimeout() time.Duration {
+	return c.kv[TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT].DurationValue
+}
+
 func (c *config) SendTransactionTimeout() time.Duration {
 	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
 }
@@ -269,4 +281,8 @@ func (c *config) GossipConnectionKeepAliveInterval() time.Duration {
 
 func (c *config) GossipNetworkTimeout() time.Duration {
 	return c.kv[GOSSIP_NETWORK_TIMEOUT].DurationValue
+}
+
+func (c *config) MetricsReportInterval() time.Duration {
+	return c.kv[METRICS_REPORT_INTERVAL].DurationValue
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -25,21 +26,23 @@ type harness struct {
 	trh                *handlers.MockTransactionResultsHandler
 	lastBlockHeight    primitives.BlockHeight
 	lastBlockTimestamp primitives.TimestampNano
+	config             config.TransactionPoolConfig
 }
 
-var thisNodeKeyPair = keys.Ed25519KeyPairForTests(8)
-var otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
-var transactionExpirationWindow = 30 * time.Minute
+var (
+	thisNodeKeyPair  = keys.Ed25519KeyPairForTests(8)
+	otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
+)
 
-func (h *harness) expectTransactionToBeForwarded(tx *protocol.SignedTransaction, sig primitives.Ed25519Sig) {
+func (h *harness) expectTransactionsToBeForwarded(sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {
 
-	h.gossip.When("BroadcastForwardedTransactions", &gossiptopics.ForwardedTransactionsInput{
+	h.gossip.When("BroadcastForwardedTransactions", mock.Any, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: thisNodeKeyPair.PublicKey(),
 				Signature:       sig,
 			}).Build(),
-			SignedTransactions: transactionpool.Transactions{tx},
+			SignedTransactions: transactions,
 		},
 	}).Return(&gossiptopics.EmptyOutput{}, nil).Times(1)
 }
@@ -49,25 +52,25 @@ func (h *harness) expectNoTransactionsToBeForwarded() {
 }
 
 func (h *harness) ignoringForwardMessages() {
-	h.gossip.When("BroadcastForwardedTransactions", mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).AtLeast(0)
+	h.gossip.When("BroadcastForwardedTransactions", mock.Any, mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).AtLeast(0)
 }
 
-func (h *harness) addNewTransaction(tx *protocol.SignedTransaction) (*services.AddNewTransactionOutput, error) {
-	out, err := h.txpool.AddNewTransaction(&services.AddNewTransactionInput{
+func (h *harness) addNewTransaction(ctx context.Context, tx *protocol.SignedTransaction) (*services.AddNewTransactionOutput, error) {
+	out, err := h.txpool.AddNewTransaction(ctx, &services.AddNewTransactionInput{
 		SignedTransaction: tx,
 	})
 
 	return out, err
 }
 
-func (h *harness) addTransactions(txs ...*protocol.SignedTransaction) {
+func (h *harness) addTransactions(ctx context.Context, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
-		h.addNewTransaction(tx)
+		h.addNewTransaction(ctx, tx)
 	}
 }
 
-func (h *harness) reportTransactionsAsCommitted(transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
-	return h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+func (h *harness) reportTransactionsAsCommitted(ctx context.Context, transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
+	return h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 		LastCommittedBlockHeight: h.lastBlockHeight,
 		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto, see issue #121
 		TransactionReceipts:      asReceipts(transactions),
@@ -91,20 +94,15 @@ func (h *harness) verifyMocks() error {
 	return nil
 }
 
-func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+func (h *harness) handleForwardFrom(ctx context.Context, sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+	oneBigHash, _ := transactionpool.HashTransactions(transactions...)
 
-	//TODO this is copying and needs to go away pending issue #119
-	var allTransactions []byte
-	for _, tx := range transactions {
-		allTransactions = append(allTransactions, tx.Raw()...)
-	}
-
-	sig, err := signature.SignEd25519(sender.PrivateKey(), allTransactions)
+	sig, err := signature.SignEd25519(sender.PrivateKey(), oneBigHash)
 	if err != nil {
 		panic(err)
 	}
 
-	h.txpool.HandleForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+	h.txpool.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderPublicKey: sender.PublicKey(),
@@ -115,7 +113,7 @@ func (h *harness) handleForwardFrom(sender *keys.Ed25519KeyPair, transactions ..
 	})
 }
 func (h *harness) expectTransactionResultsCallbackFor(transactions ...*protocol.SignedTransaction) {
-	h.trh.When("HandleTransactionResults", &handlers.HandleTransactionResultsInput{
+	h.trh.When("HandleTransactionResults", mock.Any, &handlers.HandleTransactionResultsInput{
 		BlockHeight:         h.lastBlockHeight,
 		Timestamp:           h.lastBlockTimestamp,
 		TransactionReceipts: asReceipts(transactions),
@@ -124,15 +122,15 @@ func (h *harness) expectTransactionResultsCallbackFor(transactions ...*protocol.
 
 func (h *harness) expectTransactionErrorCallbackFor(tx *protocol.SignedTransaction, status protocol.TransactionStatus) {
 	txHash := digest.CalcTxHash(tx.Transaction())
-	h.trh.When("HandleTransactionError", mock.AnyIf("transaction error matching the given transaction", func(i interface{}) bool {
+	h.trh.When("HandleTransactionError", mock.Any, mock.AnyIf("transaction error matching the given transaction", func(i interface{}) bool {
 		tri := i.(*handlers.HandleTransactionErrorInput)
 		return tri.Txhash.Equal(txHash) && tri.TransactionStatus == status
 	})).Return(&handlers.HandleTransactionErrorOutput{}).Times(1)
 }
 
 func (h *harness) ignoringTransactionResults() {
-	h.trh.When("HandleTransactionResults", mock.Any)
-	h.trh.When("HandleTransactionError", mock.Any)
+	h.trh.When("HandleTransactionResults", mock.Any, mock.Any)
+	h.trh.When("HandleTransactionError", mock.Any, mock.Any)
 }
 
 func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
@@ -140,14 +138,14 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
 }
 
-func (h *harness) getTransactionsForOrdering(maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
-	return h.txpool.GetTransactionsForOrdering(&services.GetTransactionsForOrderingInput{
+func (h *harness) getTransactionsForOrdering(ctx context.Context, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
-	h.vm.Reset().When("TransactionSetPreOrder", mock.Any).Call(func(input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 		if input.BlockHeight != h.lastBlockHeight {
 			log.GetLogger().Error("Invalid block height", log.Uint64("expected-block-height", h.lastBlockHeight.KeyForMap()), log.Uint64("actual-block-height", input.BlockHeight.KeyForMap()))
 			panic("Invalid block height")
@@ -171,11 +169,11 @@ func (h *harness) passAllPreOrderChecks() {
 		return false
 	})
 }
-func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.TimestampNano) {
+func (h *harness) goToBlock(ctx context.Context, height primitives.BlockHeight, timestamp primitives.TimestampNano) {
 	h.ignoringTransactionResults()
 	currentBlock := primitives.BlockHeight(0)
 	for currentBlock <= height {
-		out, _ := h.txpool.CommitTransactionReceipts(&services.CommitTransactionReceiptsInput{
+		out, _ := h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 			LastCommittedBlockHeight: currentBlock,
 			ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{BlockHeight: currentBlock, Timestamp: timestamp}).Build(),
 		})
@@ -184,8 +182,8 @@ func (h *harness) goToBlock(height primitives.BlockHeight, timestamp primitives.
 	h.lastBlockHeight = height
 }
 
-func (h *harness) validateTransactionsForOrdering(blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
-	_, err := h.txpool.ValidateTransactionsForOrdering(&services.ValidateTransactionsForOrderingInput{
+func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
+	_, err := h.txpool.ValidateTransactionsForOrdering(ctx, &services.ValidateTransactionsForOrderingInput{
 		BlockHeight:        blockHeight,
 		SignedTransactions: txs,
 	})
@@ -197,37 +195,18 @@ func newHarness() *harness {
 	return newHarnessWithSizeLimit(20 * 1024 * 1024)
 }
 
-func newTransactionPoolConfig(sizeLimit uint32, transactionExpirationInSeconds time.Duration, keyPair *keys.Ed25519KeyPair) transactionpool.Config {
-	cfg := config.EmptyConfig()
-
-	cfg.SetNodePublicKey(keyPair.PublicKey())
-	cfg.SetNodePrivateKey(keyPair.PrivateKey())
-
-	cfg.SetUint32(config.VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(config.BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
-	cfg.SetUint32(config.BLOCK_TRACKER_GRACE_DISTANCE, 5)
-
-	cfg.SetUint32(config.TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
-	cfg.SetDuration(config.TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW, transactionExpirationInSeconds)
-	cfg.SetDuration(config.TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 180*time.Second)
-	cfg.SetDuration(config.TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)
-	cfg.SetDuration(config.TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
-
-	return cfg
-}
-
 func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	ctx := context.Background()
-
-	ts := primitives.TimestampNano(time.Now().UnixNano())
 
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	cfg := newTransactionPoolConfig(sizeLimit, transactionExpirationWindow, thisNodeKeyPair)
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger(), ts)
+	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
+	metricFactory := metric.NewRegistry()
+
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger(), metricFactory)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
@@ -237,7 +216,8 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 		gossip:             gossip,
 		vm:                 virtualMachine,
 		trh:                transactionResultHandler,
-		lastBlockTimestamp: ts,
+		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		config:             cfg,
 	}
 
 	h.passAllPreOrderChecks()

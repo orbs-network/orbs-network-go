@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -44,8 +45,8 @@ type TamperingTransport interface {
 type MessagePredicate func(data *adapter.TransportData) bool
 
 type OngoingTamper interface {
-	Release()
-	maybeTamper(data *adapter.TransportData) (error, bool)
+	Release(ctx context.Context)
+	maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool)
 }
 
 type LatchingTamper interface {
@@ -54,7 +55,7 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	listenerLock                *sync.RWMutex
+	listenerLock                 *sync.RWMutex
 	transportListenersUnderMutex map[string]adapter.TransportListener
 
 	tampererLock                *sync.RWMutex
@@ -76,22 +77,22 @@ func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener
 	t.transportListenersUnderMutex[string(listenerPublicKey)] = listener
 }
 
-func (t *tamperingTransport) Send(data *adapter.TransportData) error {
+func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
 	t.releaseLatches(data)
 
-	if err, shouldReturn := t.maybeTamper(data); shouldReturn {
+	if err, shouldReturn := t.maybeTamper(ctx, data); shouldReturn {
 		return err
 	}
 
-	go t.receive(data)
+	go t.receive(ctx, data)
 	return nil
 }
 
-func (t *tamperingTransport) maybeTamper(data *adapter.TransportData) (error, bool) {
+func (t *tamperingTransport) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	t.tampererLock.RLock()
 	defer t.tampererLock.RUnlock()
 	for _, o := range t.ongoingTamperersUnderMutex {
-		if err, shouldReturn := o.maybeTamper(data); shouldReturn {
+		if err, shouldReturn := o.maybeTamper(ctx, data); shouldReturn {
 			return err, shouldReturn
 		}
 	}
@@ -166,17 +167,17 @@ func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 	panic("Tamperer not found in ongoing tamperer list")
 }
 
-func (t *tamperingTransport) receive(data *adapter.TransportData) {
+func (t *tamperingTransport) receive(ctx context.Context, data *adapter.TransportData) {
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, l := range t.getTransportListenersExceptPublicKeys(data.SenderPublicKey) {
-			l.OnTransportMessageReceived(data.Payloads)
+			l.OnTransportMessageReceived(ctx, data.Payloads)
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, l := range t.getTransportListenersByPublicKeys(data.RecipientPublicKeys) {
-			l.OnTransportMessageReceived(data.Payloads)
+			l.OnTransportMessageReceived(ctx, data.Payloads)
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
@@ -235,7 +236,7 @@ type failingTamperer struct {
 	transport *tamperingTransport
 }
 
-func (o *failingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
 		return &adapter.ErrTransportFailed{data}, true
 	}
@@ -243,7 +244,7 @@ func (o *failingTamperer) maybeTamper(data *adapter.TransportData) (error, bool)
 	return nil, false
 }
 
-func (o *failingTamperer) Release() {
+func (o *failingTamperer) Release(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -252,17 +253,17 @@ type duplicatingTamperer struct {
 	transport *tamperingTransport
 }
 
-func (o *duplicatingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
 		go func() {
 			time.Sleep(10 * time.Millisecond)
-			o.transport.receive(data)
+			o.transport.receive(ctx, data)
 		}()
 	}
 	return nil, false
 }
 
-func (o *duplicatingTamperer) Release() {
+func (o *duplicatingTamperer) Release(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -272,11 +273,11 @@ type delayingTamperer struct {
 	duration  func() time.Duration
 }
 
-func (o *delayingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
 		go func() {
 			time.Sleep(o.duration())
-			o.transport.receive(data)
+			o.transport.receive(ctx, data)
 		}()
 		return nil, true
 	}
@@ -284,7 +285,7 @@ func (o *delayingTamperer) maybeTamper(data *adapter.TransportData) (error, bool
 	return nil, false
 }
 
-func (o *delayingTamperer) Release() {
+func (o *delayingTamperer) Release(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -293,7 +294,7 @@ type corruptingTamperer struct {
 	transport *tamperingTransport
 }
 
-func (o *corruptingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
 		for i := 0; i < 10; i++ {
 			x := rand.Intn(len(data.Payloads))
@@ -304,7 +305,7 @@ func (o *corruptingTamperer) maybeTamper(data *adapter.TransportData) (error, bo
 	return nil, false
 }
 
-func (o *corruptingTamperer) Release() {
+func (o *corruptingTamperer) Release(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -315,7 +316,7 @@ type pausingTamperer struct {
 	lock      *sync.Mutex
 }
 
-func (o *pausingTamperer) maybeTamper(data *adapter.TransportData) (error, bool) {
+func (o *pausingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
 		o.lock.Lock()
 		defer o.lock.Unlock()
@@ -326,10 +327,10 @@ func (o *pausingTamperer) maybeTamper(data *adapter.TransportData) (error, bool)
 	return nil, false
 }
 
-func (o *pausingTamperer) Release() {
+func (o *pausingTamperer) Release(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 	for _, message := range o.messages {
-		o.transport.Send(message)
+		o.transport.Send(ctx, message)
 		runtime.Gosched() // TODO: this is required or else messages arrive in the opposite order after resume
 	}
 }

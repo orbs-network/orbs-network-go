@@ -1,10 +1,12 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -12,18 +14,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
-	"time"
 )
 
 type harness struct {
 	transactionPool *services.MockTransactionPool
 	reporting       log.BasicLogger
 	service         services.ConsensusContext
-	config          consensuscontext.Config
+	config          config.ConsensusContextConfig
 }
 
-func (h *harness) requestTransactionsBlock() (*protocol.TransactionsBlockContainer, error) {
-	output, err := h.service.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.TransactionsBlockContainer, error) {
+	output, err := h.service.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:             1,
 		MaxBlockSizeKb:          0,
 		MaxNumberOfTransactions: 0,
@@ -46,11 +47,11 @@ func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactions
 		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, targetAddress).Build())
 	}
 
-	h.transactionPool.When("GetTransactionsForOrdering", mock.Any).Return(output, nil).Times(1)
+	h.transactionPool.When("GetTransactionsForOrdering", mock.Any, mock.Any).Return(output, nil).Times(1)
 }
 
 func (h *harness) expectTransactionsNoLongerRequestedFromTransactionPool() {
-	h.transactionPool.When("GetTransactionsForOrdering", mock.Any).Return(nil, nil).Times(0)
+	h.transactionPool.When("GetTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
 func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
@@ -60,22 +61,16 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	require.True(t, ok)
 }
 
-func newConsensusContextConfig() consensuscontext.Config {
-	cfg := config.EmptyConfig()
-	cfg.SetDuration(config.CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
-	cfg.SetUint32(config.CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 2)
-
-	return cfg
-}
-
 func newHarness() *harness {
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 
 	transactionPool := &services.MockTransactionPool{}
-	cfg := newConsensusContextConfig()
+	cfg := config.ForConsensusContextTests()
+
+	metricFactory := metric.NewRegistry()
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
-		cfg, log)
+		cfg, log, metricFactory)
 
 	return &harness{
 		transactionPool: transactionPool,

@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -15,7 +16,8 @@ import (
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight
+	// TODO: atMost time.Duration can probably be combined into ctx and removed (context refactor)
+	WaitForTransaction(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight
 }
 
 type blockHeightChan chan primitives.BlockHeight
@@ -43,7 +45,7 @@ func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTrac
 	return bp.tracker
 }
 
-func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256) primitives.BlockHeight {
+func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight {
 	bp.lock.Lock()
 	ch := bp.getChanFor(txhash)
 	bp.lock.Unlock()
@@ -51,7 +53,7 @@ func (bp *inMemoryBlockPersistence) WaitForTransaction(txhash primitives.Sha256)
 	select {
 	case h := <-ch:
 		return h
-	case <-time.After(10 * time.Second):
+	case <-time.After(atMost):
 		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txhash))
 	}
 }

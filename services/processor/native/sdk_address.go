@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -24,7 +25,7 @@ func (s *addressSdk) ValidateAddress(executionContextId sdk.Context, address sdk
 }
 
 func (s *addressSdk) GetSignerAddress(executionContextId sdk.Context) (sdk.Ripmd160Sha256, error) {
-	output, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	output, err := s.handler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:       primitives.ExecutionContextId(executionContextId),
 		OperationName:   SDK_OPERATION_NAME_ADDRESS,
 		MethodName:      "getSignerAddress",
@@ -41,7 +42,7 @@ func (s *addressSdk) GetSignerAddress(executionContextId sdk.Context) (sdk.Ripmd
 }
 
 func (s *addressSdk) GetCallerAddress(executionContextId sdk.Context) (sdk.Ripmd160Sha256, error) {
-	output, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	output, err := s.handler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:       primitives.ExecutionContextId(executionContextId),
 		OperationName:   SDK_OPERATION_NAME_ADDRESS,
 		MethodName:      "getCallerAddress",

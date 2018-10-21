@@ -9,21 +9,24 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"testing"
 	"time"
 )
 
+type canFail interface {
+	Failed() bool
+}
+
 type acceptanceTestNetworkBuilder struct {
-	t              *testing.T
+	f              canFail
 	numNodes       uint32
 	consensusAlgos []consensus.ConsensusAlgoType
 	testId         string
-	setupFunc      func(network InProcessNetwork)
+	setupFunc      func(ctx context.Context, network InProcessNetwork)
 	logFilters     []log.Filter
 }
 
-func Network(t *testing.T) *acceptanceTestNetworkBuilder {
-	n := &acceptanceTestNetworkBuilder{t: t}
+func Network(f canFail) *acceptanceTestNetworkBuilder {
+	n := &acceptanceTestNetworkBuilder{f: f}
 
 	return n.
 		WithTestId(getCallerFuncName()).
@@ -52,12 +55,12 @@ func (b *acceptanceTestNetworkBuilder) WithConsensusAlgos(algos ...consensus.Con
 }
 
 // setup runs when all adapters have been created but before the nodes are started
-func (b *acceptanceTestNetworkBuilder) WithSetup(f func(network InProcessNetwork)) *acceptanceTestNetworkBuilder {
+func (b *acceptanceTestNetworkBuilder) WithSetup(f func(ctx context.Context, network InProcessNetwork)) *acceptanceTestNetworkBuilder {
 	b.setupFunc = f
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) Start(f func(network InProcessNetwork)) {
+func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network InProcessNetwork)) {
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
@@ -65,16 +68,16 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(network InProcessNetwork)) {
 			testId := b.testId + "-" + consensusAlgo.String()
 			network := NewAcceptanceTestNetwork(b.numNodes, b.logFilters, consensusAlgo, testId)
 
-			defer printTestIdOnFailure(b.t, testId)
-			defer dumpStateOnFailure(b.t, network)
+			defer printTestIdOnFailure(b.f, testId)
+			defer dumpStateOnFailure(b.f, network)
 
 			if b.setupFunc != nil {
-				b.setupFunc(network)
+				b.setupFunc(ctx, network)
 			}
 
 			network.StartNodes(ctx)
 
-			f(network)
+			f(ctx, network)
 		})
 		// end test
 
@@ -82,14 +85,14 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(network InProcessNetwork)) {
 	}
 }
 
-func printTestIdOnFailure(t *testing.T, testId string) {
-	if t.Failed() {
+func printTestIdOnFailure(f canFail, testId string) {
+	if f.Failed() {
 		fmt.Println("FAIL search snippet: grep _test-id="+testId, "test.out")
 	}
 }
 
-func dumpStateOnFailure(t *testing.T, network InProcessNetwork) {
-	if t.Failed() {
+func dumpStateOnFailure(f canFail, network InProcessNetwork) {
+	if f.Failed() {
 		network.DumpState()
 	}
 }

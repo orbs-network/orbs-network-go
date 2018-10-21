@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
@@ -29,13 +30,14 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress s
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodePublicKey().String()))
+	metricRegistry := metric.NewRegistry()
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
 	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence()
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
-	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nativeCompiler, nodeLogger, nodeConfig)
-	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi())
+	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nativeCompiler, nodeLogger, metricRegistry, nodeConfig)
+	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
 	return &node{
 		logic:        nodeLogic,

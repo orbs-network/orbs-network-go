@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -9,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
+func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
 	if input.ClientRequest == nil {
 		err := errors.Errorf("error: missing input (client request is nil)")
 		s.logger.Info("get transaction status received missing input", log.Error(err))
@@ -17,25 +18,25 @@ func (s *service) GetTransactionStatus(input *services.GetTransactionStatusInput
 	}
 
 	s.logger.Info("get transaction status request received", log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
-	txHash :=  input.ClientRequest.Txhash()
+	txHash := input.ClientRequest.Txhash()
 	timestamp := input.ClientRequest.TransactionTimestamp()
 
 	meter := s.logger.Meter("tx-get-status-time", log.Stringable("txHash", txHash))
 	defer meter.Done()
 
-	if txReceipt, err, ok := s.getFromTxPool(txHash, timestamp); ok {
+	if txReceipt, err, ok := s.getFromTxPool(ctx, txHash, timestamp); ok {
 		return toGetTxOutput(txReceipt), err
 	}
 
-	blockReceipt, err := s.getFromBlockStorage(txHash, timestamp);
-	if  err != nil {
+	blockReceipt, err := s.getFromBlockStorage(ctx, txHash, timestamp)
+	if err != nil {
 		return nil, err
 	}
 	return toGetTxOutput(blockReceipt), err
 }
 
-func (s *service) getFromTxPool(txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error, bool) {
-	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
+func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error, bool) {
+	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
 		Txhash:               txHash,
 		TransactionTimestamp: timestamp,
 	})
@@ -58,8 +59,8 @@ func txStatusToTxResponse(txStatus *services.GetCommittedTransactionReceiptOutpu
 	}
 }
 
-func (s *service) getFromBlockStorage(txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error) {
-	txReceipt, err := s.blockStorage.GetTransactionReceipt(&services.GetTransactionReceiptInput{
+func (s *service) getFromBlockStorage(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error) {
+	txReceipt, err := s.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
 		Txhash:               txHash,
 		TransactionTimestamp: timestamp,
 	})

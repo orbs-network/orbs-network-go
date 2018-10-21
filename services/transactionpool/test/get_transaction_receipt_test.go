@@ -1,56 +1,77 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 	t.Parallel()
-	h := newHarness()
-	h.ignoringForwardMessages()
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness()
+		h.ignoringForwardMessages()
 
-	tx1 := builders.Transaction().Build()
-	tx2 := builders.Transaction().Build()
-	h.addNewTransaction(tx1)
-	h.addNewTransaction(tx2)
+		tx1 := builders.Transaction().Build()
+		tx2 := builders.Transaction().Build()
+		h.addNewTransaction(ctx, tx1)
+		h.addNewTransaction(ctx, tx2)
 
-	h.assumeBlockStorageAtHeight(1)
-	h.ignoringTransactionResults()
-	h.reportTransactionsAsCommitted(tx2)
+		h.assumeBlockStorageAtHeight(1)
+		h.ignoringTransactionResults()
+		h.reportTransactionsAsCommitted(ctx, tx2)
 
-	out, err := h.txpool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
-		Txhash: digest.CalcTxHash(tx1.Transaction()),
+		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
+			Txhash: digest.CalcTxHash(tx1.Transaction()),
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, out.TransactionStatus, "did not return expected status")
+		require.Equal(t, h.lastBlockTimestamp, out.BlockTimestamp, "did not return expected timestamp")
+		require.Equal(t, h.lastBlockHeight, out.BlockHeight, "did not return expected block height")
+
+		tx2hash := digest.CalcTxHash(tx2.Transaction())
+		out, err = h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
+			Txhash: tx2hash,
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, out.TransactionStatus, "did not return expected status")
+		require.Equal(t, tx2hash, out.TransactionReceipt.Txhash(), "did not return expected receipt")
 	})
-
-	require.NoError(t, err)
-	require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, out.TransactionStatus, "did not return expected status")
-	require.Equal(t, h.lastBlockTimestamp, out.BlockTimestamp, "did not return expected timestamp")
-	require.Equal(t, h.lastBlockHeight, out.BlockHeight, "did not return expected block height")
-
-	tx2hash := digest.CalcTxHash(tx2.Transaction())
-	out, err = h.txpool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
-		Txhash: tx2hash,
-	})
-
-	require.NoError(t, err)
-	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, out.TransactionStatus, "did not return expected status")
-	require.Equal(t, tx2hash, out.TransactionReceipt.Txhash(), "did not return expected receipt")
 }
 
 func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 	t.Parallel()
-	h := newHarness()
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness()
 
-	out, err := h.txpool.GetCommittedTransactionReceipt(&services.GetCommittedTransactionReceiptInput{
-		Txhash: digest.CalcTxHash(builders.Transaction().Build().Transaction()),
+		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
+			Txhash: digest.CalcTxHash(builders.Transaction().Build().Transaction()),
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, out.TransactionStatus, "did not return expected status")
 	})
+}
 
-	require.NoError(t, err)
-	require.Equal(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, out.TransactionStatus, "did not return expected status")
+func TestGetTransactionReceiptWhenTimestampAheadOfNodeTime(t *testing.T) {
+	t.Parallel()
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness()
 
+		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
+			TransactionTimestamp: primitives.TimestampNano(time.Now().Add(h.config.TransactionPoolFutureTimestampGraceTimeout() + 1*time.Minute).UnixNano()),
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, out.TransactionStatus, "did not return expected status")
+	})
 }

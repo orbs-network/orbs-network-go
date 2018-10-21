@@ -13,13 +13,12 @@ import (
 	"net"
 	"os"
 	"testing"
-	"time"
 )
 
 const NETWORK_SIZE = 3
 
 type directHarness struct {
-	config    Config
+	config    config.GossipTransportConfig
 	transport *directTransport
 
 	peersListeners            []net.Listener
@@ -31,13 +30,13 @@ type directHarness struct {
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
 
 	// order matters here
-	gossipPeers, peersListeners := makePeers(t) // step 1: create the peer server listeners to reserve random TCP ports
-	cfg := makeTransportConfig(gossipPeers) // step 2: create the config given the peer pk/port pairs
-	transport := makeTransport(ctx, cfg) // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
+	gossipPeers, peersListeners := makePeers(t)        // step 1: create the peer server listeners to reserve random TCP ports
+	cfg := config.ForDirectTransportTests(gossipPeers) // step 2: create the config given the peer pk/port pairs
+	transport := makeTransport(ctx, cfg)               // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
 	// end of section where order matters
 
-	peerTalkerConnection := establishPeerClient(t, transport.serverPort) // establish connection from test to server port ( test harness ==> SUT )
-	peersListenersConnections := establishPeerServerConnections(t, peersListeners)  // establish connection from transport clients to peer servers ( SUT ==> test harness)
+	peerTalkerConnection := establishPeerClient(t, transport.serverPort)           // establish connection from test to server port ( test harness ==> SUT )
+	peersListenersConnections := establishPeerServerConnections(t, peersListeners) // establish connection from transport clients to peer servers ( SUT ==> test harness)
 
 	h := &directHarness{
 		config:                    cfg,
@@ -51,7 +50,7 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	return h
 }
 
-func makeTransport(ctx context.Context, cfg Config) *directTransport {
+func makeTransport(ctx context.Context, cfg config.GossipTransportConfig) *directTransport {
 	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	transport := NewDirectTransport(ctx, cfg, log).(*directTransport)
 	// to synchronize tests, wait until server is ready
@@ -91,16 +90,6 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(conn.Addr().(*net.TCPAddr).Port), "127.0.0.1")
 	}
 	return gossipPeers, peersListeners
-}
-
-func makeTransportConfig(gossipPeers map[string]config.GossipPeer) Config {
-	cfg := config.EmptyConfig()
-	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
-	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetUint32(config.GOSSIP_LISTEN_PORT, 0)
-	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
-	return cfg
 }
 
 func (h *directHarness) peerListenerReadTotal(peerIndex int, totalSize int) ([]byte, error) {
@@ -145,7 +134,7 @@ func (h *directHarness) portForPeer(index int) uint16 {
 }
 
 func (h *directHarness) expectTransportListenerCalled(payloads [][]byte) {
-	h.listenerMock.When("OnTransportMessageReceived", payloads).Return().Times(1)
+	h.listenerMock.When("OnTransportMessageReceived", mock.Any, payloads).Return().Times(1)
 }
 
 func (h *directHarness) verifyTransportListenerCalled(t *testing.T) {
@@ -154,7 +143,7 @@ func (h *directHarness) verifyTransportListenerCalled(t *testing.T) {
 }
 
 func (h *directHarness) expectTransportListenerNotCalled() {
-	h.listenerMock.When("OnTransportMessageReceived", mock.Any).Return().Times(0)
+	h.listenerMock.When("OnTransportMessageReceived", mock.Any, mock.Any).Return().Times(0)
 }
 
 func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {

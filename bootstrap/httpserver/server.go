@@ -2,6 +2,8 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -27,9 +29,10 @@ type HttpServer interface {
 }
 
 type server struct {
-	httpServer *http.Server
-	logger     log.BasicLogger
-	publicApi  services.PublicApi
+	httpServer     *http.Server
+	logger         log.BasicLogger
+	publicApi      services.PublicApi
+	metricRegistry metric.Registry
 }
 
 type tcpKeepAliveListener struct {
@@ -46,10 +49,11 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi) HttpServer {
+func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
 	server := &server{
-		logger:    logger.WithTags(LogTag),
-		publicApi: publicApi,
+		logger:         logger.WithTags(LogTag),
+		publicApi:      publicApi,
+		metricRegistry: metricRegistry,
 	}
 
 	if listener, err := server.listen(address); err != nil {
@@ -75,7 +79,10 @@ func (s *server) listen(addr string) (net.Listener, error) {
 }
 
 func (s *server) GracefulShutdown(timeout time.Duration) {
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx := context.Background()
+	if timeout > 0 {
+		ctx, _ = context.WithTimeout(context.Background(), timeout)
+	}
 	if err := s.httpServer.Shutdown(ctx); err != nil {
 		s.logger.Error("failed to stop http server gracefully", log.Error(err))
 	}
@@ -86,6 +93,7 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/send-transaction", report(s.logger, http.HandlerFunc(s.sendTransactionHandler)))
 	router.Handle("/api/v1/call-method", report(s.logger, http.HandlerFunc(s.callMethodHandler)))
 	router.Handle("/api/v1/get-transaction-status", report(s.logger, http.HandlerFunc(s.getTransactionStatusHandler)))
+	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
 	return router
 }
 
@@ -95,6 +103,12 @@ func report(reporting log.BasicLogger, h http.Handler) http.Handler {
 		defer meter.Done()
 		h.ServeHTTP(w, r)
 	})
+}
+
+func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
+	w.Write(bytes)
 }
 
 func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +125,8 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.SendTransaction(&services.SendTransactionInput{ClientRequest: clientRequest})
+	// TODO: context.TODO() should probably be the http client context (context refactor)
+	result, err := s.publicApi.SendTransaction(context.TODO(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
@@ -133,7 +148,8 @@ func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.logger.Info("http server received call-method", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.CallMethod(&services.CallMethodInput{ClientRequest: clientRequest})
+	// TODO: context.TODO() should probably be the http client context (context refactor)
+	result, err := s.publicApi.CallMethod(context.TODO(), &services.CallMethodInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
 	} else {
@@ -155,7 +171,8 @@ func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.GetTransactionStatus(&services.GetTransactionStatusInput{ClientRequest: clientRequest})
+	// TODO: context.TODO() should probably be the http client context (context refactor)
+	result, err := s.publicApi.GetTransactionStatus(context.TODO(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {

@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -20,6 +21,49 @@ import (
 	"time"
 )
 
+type configForBlockStorageTests struct {
+	pk                    primitives.Ed25519PublicKey
+	syncBatchSize         uint32
+	syncNoCommit          time.Duration
+	syncCollectResponses  time.Duration
+	syncCollectChunks     time.Duration
+	queryGraceStart       time.Duration
+	queryGraceEnd         time.Duration
+	queryExpirationWindow time.Duration
+}
+
+func (c *configForBlockStorageTests) NodePublicKey() primitives.Ed25519PublicKey {
+	return c.pk
+}
+
+func (c *configForBlockStorageTests) BlockSyncBatchSize() uint32 {
+	return c.syncBatchSize
+}
+
+func (c *configForBlockStorageTests) BlockSyncNoCommitInterval() time.Duration {
+	return c.syncNoCommit
+}
+
+func (c *configForBlockStorageTests) BlockSyncCollectResponseTimeout() time.Duration {
+	return c.syncCollectResponses
+}
+
+func (c *configForBlockStorageTests) BlockSyncCollectChunksTimeout() time.Duration {
+	return c.syncCollectChunks
+}
+
+func (c *configForBlockStorageTests) BlockTransactionReceiptQueryGraceStart() time.Duration {
+	return c.queryGraceStart
+}
+
+func (c *configForBlockStorageTests) BlockTransactionReceiptQueryGraceEnd() time.Duration {
+	return c.queryGraceEnd
+}
+
+func (c *configForBlockStorageTests) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
+	return c.queryExpirationWindow
+}
+
 type harness struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter adapter.InMemoryBlockPersistence
@@ -27,7 +71,7 @@ type harness struct {
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
-	config         blockstorage.Config
+	config         config.BlockStorageConfig
 	logger         log.BasicLogger
 }
 
@@ -38,13 +82,13 @@ func (d *harness) expectCommitStateDiff() {
 func (d *harness) expectCommitStateDiffTimes(times int) {
 	csdOut := &services.CommitStateDiffOutput{}
 
-	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(times)
+	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Return(csdOut, nil).Times(times)
 }
 
 func (d *harness) expectValidateWithConsensusAlgosTimes(times int) {
 	out := &handlers.HandleBlockConsensusOutput{}
 
-	d.consensus.When("HandleBlockConsensus", mock.Any).Return(out, nil).Times(times)
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(times)
 }
 
 func (d *harness) verifyMocks(t *testing.T, times int) {
@@ -52,8 +96,8 @@ func (d *harness) verifyMocks(t *testing.T, times int) {
 	require.NoError(t, err)
 }
 
-func (d *harness) commitBlock(blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
-	return d.blockStorage.CommitBlock(&services.CommitBlockInput{
+func (d *harness) commitBlock(ctx context.Context, blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
+	return d.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPairContainer,
 	})
 }
@@ -62,8 +106,8 @@ func (d *harness) numOfWrittenBlocks() int {
 	return len(d.storageAdapter.ReadAllBlocks())
 }
 
-func (d *harness) getLastBlockHeight(t *testing.T) *services.GetLastCommittedBlockHeightOutput {
-	out, err := d.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+func (d *harness) getLastBlockHeight(ctx context.Context, t *testing.T) *services.GetLastCommittedBlockHeightOutput {
+	out, err := d.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 
 	require.NoError(t, err)
 	return out
@@ -73,34 +117,52 @@ func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
 	return d.storageAdapter.ReadAllBlocks()[height-1]
 }
 
+func (d *harness) withSyncNoCommitTimeout(duration time.Duration) *harness {
+	d.config.(*configForBlockStorageTests).syncNoCommit = duration
+	return d
+}
+
+func (d *harness) withBatchSize(size uint32) *harness {
+	d.config.(*configForBlockStorageTests).syncBatchSize = size
+	return d
+}
+
+func (d *harness) withNodeKey(key primitives.Ed25519PublicKey) *harness {
+	d.config.(*configForBlockStorageTests).pk = key
+	return d
+}
+
 func (d *harness) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }
 
-func (d *harness) setBatchSize(batchSize uint32) {
-	d.config.(config.MutableNodeConfig).SetUint32(config.BLOCK_SYNC_BATCH_SIZE, batchSize)
-}
+func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorageConfig {
+	cfg := &configForBlockStorageTests{}
+	cfg.pk = nodePublicKey
+	cfg.syncBatchSize = 2
+	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
+	cfg.syncCollectResponses = 5 * time.Millisecond
+	cfg.syncCollectChunks = 20 * time.Millisecond
 
-func newBlockStorageConfig(nodePublicKey primitives.Ed25519PublicKey) blockstorage.Config {
-	cfg := config.EmptyConfig()
-	cfg.SetNodePublicKey(nodePublicKey)
-	cfg.SetUint32(config.BLOCK_SYNC_BATCH_SIZE, 10000)
-
-	cfg.SetDuration(config.BLOCK_SYNC_INTERVAL, 3*time.Millisecond)
-	cfg.SetDuration(config.BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 1*time.Millisecond)
-	cfg.SetDuration(config.BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
-
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
-	cfg.SetDuration(config.BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
+	cfg.queryGraceStart = 5 * time.Second
+	cfg.queryGraceEnd = 5 * time.Second
+	cfg.queryExpirationWindow = 30 * time.Minute
 
 	return cfg
+}
+
+func (d *harness) setupSomeBlocks(ctx context.Context, count int) {
+	d.expectCommitStateDiffTimes(count)
+
+	for i := 1; i <= count; i++ {
+		d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+	}
 }
 
 func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.InMemoryBlockPersistence, consensus *handlers.MockConsensusBlocksHandler)) *harness {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
-	cfg := newBlockStorageConfig(keyPair.PublicKey())
+	cfg := createConfig(keyPair.PublicKey())
 
 	d := &harness{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}
@@ -110,7 +172,7 @@ func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.I
 
 	// Always expect at least 0 because sometimes it gets triggered because of the timings
 	// HandleBlockConsensus always gets called when we try to start the sync which happens automatically
-	d.consensus.When("HandleBlockConsensus", mock.Any).Return(nil, nil).AtLeast(0)
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 
 	if setup != nil {
 		setup(d.storageAdapter, d.consensus)
@@ -118,10 +180,9 @@ func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.I
 
 	d.gossip = &gossiptopics.MockBlockSync{}
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
-	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).AtLeast(0)
 
 	d.txPool = &services.MockTransactionPool{}
-	d.txPool.When("CommitTransactionReceipts", mock.Any).Return(nil, nil).AtLeast(0)
+	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 
 	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, logger)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)

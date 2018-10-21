@@ -1,18 +1,21 @@
 package consensuscontext
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
-func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
+func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
 	meter := s.logger.Meter("tx-block-creation")
 	defer meter.Done()
+	start := time.Now()
+	defer s.metrics.createTxBlock.RecordSince(start)
 
-	proposedTransactions, err := s.fetchTransactions(s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
+	proposedTransactions, err := s.fetchTransactions(ctx, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
 	if err != nil {
 		return nil, err
 	}
@@ -20,8 +23,9 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:       blockstorage.ProtocolVersion,
-			BlockHeight:           blockHeight,
+			ProtocolVersion: primitives.ProtocolVersion(1), // TODO: fix
+			BlockHeight:     blockHeight,
+			//Timestamp: 			   primitives.TimestampNano(time.Now().UnixNano()),
 			PrevBlockHashPtr:      prevBlockHash,
 			NumSignedTransactions: uint32(txCount),
 		}).Build(),
@@ -32,11 +36,12 @@ func (s *service) createTransactionsBlock(blockHeight primitives.BlockHeight, pr
 	return txBlock, nil
 }
 
-func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
+func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
 	meter := s.logger.Meter("rs-block-creation")
 	defer meter.Done()
+	defer s.metrics.createResultsBlock.RecordSince(time.Now())
 
-	output, err := s.virtualMachine.ProcessTransactionSet(&services.ProcessTransactionSetInput{
+	output, err := s.virtualMachine.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
 		BlockHeight:        blockHeight,
 		SignedTransactions: transactionsBlock.SignedTransactions,
 	})
@@ -46,7 +51,7 @@ func (s *service) createResultsBlock(blockHeight primitives.BlockHeight, prevBlo
 
 	rxBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:          blockstorage.ProtocolVersion,
+			ProtocolVersion:          primitives.ProtocolVersion(1), // TODO: fix
 			BlockHeight:              blockHeight,
 			PrevBlockHashPtr:         prevBlockHash,
 			TransactionsBlockHashPtr: digest.CalcTransactionsBlockHash(transactionsBlock),

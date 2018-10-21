@@ -2,7 +2,9 @@ package publicapi
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -11,11 +13,6 @@ import (
 )
 
 var LogTag = log.Service("public-api")
-
-type Config interface {
-	SendTransactionTimeout() time.Duration
-	VirtualChainId() primitives.VirtualChainId
-}
 
 type txResponse struct {
 	transactionStatus  protocol.TransactionStatus
@@ -26,22 +23,35 @@ type txResponse struct {
 
 type service struct {
 	ctx             context.Context
-	config          Config
+	config          config.PublicApiConfig
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	blockStorage    services.BlockStorage
 	logger          log.BasicLogger
 
 	waiter *waiter
+
+	metrics *metrics
+}
+
+type metrics struct {
+	sendTransaction *metric.Histogram
+}
+
+func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration) *metrics {
+	return &metrics{
+		sendTransaction: factory.NewLatency("PublicApi.SendTransactionProcessingTime", sendTransactionTimeout),
+	}
 }
 
 func NewPublicApi(
 	ctx context.Context,
-	config Config,
+	config config.PublicApiConfig,
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	blockStorage services.BlockStorage,
 	logger log.BasicLogger,
+	metricFactory metric.Factory,
 ) services.PublicApi {
 	s := &service{
 		ctx:             ctx,
@@ -51,7 +61,8 @@ func NewPublicApi(
 		blockStorage:    blockStorage,
 		logger:          logger.WithTags(LogTag),
 
-		waiter: newWaiter(ctx),
+		waiter:  newWaiter(ctx),
+		metrics: newMetrics(metricFactory, config.SendTransactionTimeout()),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(s)
@@ -59,7 +70,7 @@ func NewPublicApi(
 	return s
 }
 
-func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
+func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
 	for _, txReceipt := range input.TransactionReceipts {
 		s.logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Stringable("txHash", txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
@@ -73,7 +84,7 @@ func (s *service) HandleTransactionResults(input *handlers.HandleTransactionResu
 	return &handlers.HandleTransactionResultsOutput{}, nil
 }
 
-func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
+func (s *service) HandleTransactionError(ctx context.Context, input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
 	s.logger.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
 	s.waiter.complete(input.Txhash.KeyForMap(),
 		&waiterObject{&txResponse{
@@ -85,7 +96,7 @@ func (s *service) HandleTransactionError(input *handlers.HandleTransactionErrorI
 	return &handlers.HandleTransactionErrorOutput{}, nil
 }
 
-func isTransactionRequestValid(config Config, tx *protocol.Transaction) protocol.TransactionStatus {
+func isTransactionRequestValid(config config.PublicApiConfig, tx *protocol.Transaction) protocol.TransactionStatus {
 	if config.VirtualChainId() != tx.VirtualChainId() {
 		return protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH
 	}

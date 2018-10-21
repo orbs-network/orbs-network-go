@@ -46,7 +46,7 @@ func broadcastTest(makeContext func(ctx context.Context) *transportContractConte
 			c.listeners[2].expectReceive(data.Payloads)
 			c.listeners[3].expectNotReceive()
 
-			c.transports[3].Send(data)
+			c.transports[3].Send(ctx, data)
 			c.verify(t)
 		})
 	}
@@ -56,16 +56,6 @@ type transportContractContext struct {
 	publicKeys []primitives.Ed25519PublicKey
 	transports []adapter.Transport
 	listeners  []*mockListener
-}
-
-func createContractTestConfig(publicKey primitives.Ed25519PublicKey, gossipListenPort uint16, gossipPeers map[string]config.GossipPeer) adapter.Config {
-	cfg := config.EmptyConfig()
-	cfg.SetNodePublicKey(publicKey)
-	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetUint32(config.GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
-	cfg.SetDuration(config.GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(config.GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
-	return cfg
 }
 
 func aTamperingTransport(ctx context.Context) *transportContractContext {
@@ -96,11 +86,11 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 		res.publicKeys = append(res.publicKeys, publicKey)
 	}
 
-	configs := []adapter.Config{
-		createContractTestConfig(res.publicKeys[0], uint16(firstRandomPort+0), gossipPeers),
-		createContractTestConfig(res.publicKeys[1], uint16(firstRandomPort+1), gossipPeers),
-		createContractTestConfig(res.publicKeys[2], uint16(firstRandomPort+2), gossipPeers),
-		createContractTestConfig(res.publicKeys[3], uint16(firstRandomPort+3), gossipPeers),
+	configs := []config.GossipTransportConfig{
+		config.ForGossipAdapterTests(res.publicKeys[0], uint16(firstRandomPort+0), gossipPeers),
+		config.ForGossipAdapterTests(res.publicKeys[1], uint16(firstRandomPort+1), gossipPeers),
+		config.ForGossipAdapterTests(res.publicKeys[2], uint16(firstRandomPort+2), gossipPeers),
+		config.ForGossipAdapterTests(res.publicKeys[3], uint16(firstRandomPort+3), gossipPeers),
 	}
 
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))

@@ -42,6 +42,7 @@ const (
 	FunctionType
 	SourceType
 	StringArrayType
+	TimeType
 )
 
 func GetLogger(params ...*Field) BasicLogger {

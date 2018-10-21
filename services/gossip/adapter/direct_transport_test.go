@@ -74,7 +74,7 @@ func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(&TransportData{
+		err := h.transport.Send(ctx, &TransportData{
 			SenderPublicKey:     h.config.NodePublicKey(),
 			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 			RecipientPublicKeys: nil,
@@ -96,7 +96,7 @@ func TestDirectOutgoing_AdapterSendsUnicast(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(&TransportData{
+		err := h.transport.Send(ctx, &TransportData{
 			SenderPublicKey:     h.config.NodePublicKey(),
 			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 			RecipientPublicKeys: []primitives.Ed25519PublicKey{h.publicKeyForPeer(1)},
@@ -238,7 +238,7 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(&TransportData{
+		err := h.transport.Send(ctx, &TransportData{
 			SenderPublicKey:     h.config.NodePublicKey(),
 			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 			RecipientPublicKeys: []primitives.Ed25519PublicKey{h.publicKeyForPeer(1)},

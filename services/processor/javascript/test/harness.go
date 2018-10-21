@@ -49,7 +49,7 @@ func (h *harness) expectSdkCallMadeWithStateRead(expectedKey []byte, returnValue
 		OutputArguments: builders.MethodArguments(returnValue),
 	}
 
-	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State, method equals read and 1 arg matches", stateReadCallMatcher)).Return(readReturn, nil).Times(1)
+	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.State, method equals read and 1 arg matches", stateReadCallMatcher)).Return(readReturn, nil).Times(1)
 }
 
 func (h *harness) expectSdkCallMadeWithStateWrite(expectedKey []byte, expectedValue []byte) {
@@ -63,7 +63,7 @@ func (h *harness) expectSdkCallMadeWithStateWrite(expectedKey []byte, expectedVa
 			(expectedValue == nil || bytes.Equal(input.InputArguments[1].BytesValue(), expectedValue))
 	}
 
-	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.State, method equals write and 2 args match", stateWriteCallMatcher)).Return(nil, nil).Times(1)
+	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.State, method equals write and 2 args match", stateWriteCallMatcher)).Return(nil, nil).Times(1)
 }
 
 func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName string, expectedMethodName string, expectedArgArray *protocol.MethodArgumentArray, returnArgArray *protocol.MethodArgumentArray, returnError error) {
@@ -85,7 +85,7 @@ func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName st
 		}
 	}
 
-	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.Service, method equals callMethod and 3 args match", serviceCallMethodCallMatcher)).Return(returnOutput, returnError).Times(1)
+	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.Service, method equals callMethod and 3 args match", serviceCallMethodCallMatcher)).Return(returnOutput, returnError).Times(1)
 }
 
 func (h *harness) expectSdkCallMadeWithAddressGetCaller(returnAddress []byte) {
@@ -100,7 +100,7 @@ func (h *harness) expectSdkCallMadeWithAddressGetCaller(returnAddress []byte) {
 		OutputArguments: builders.MethodArguments(returnAddress),
 	}
 
-	h.sdkCallHandler.When("HandleSdkCall", mock.AnyIf("Contract equals Sdk.Address, method equals getCallerAddress and 1 arg match", addressGetCallerCallMatcher)).Return(returnOutput, nil).Times(1)
+	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.Address, method equals getCallerAddress and 1 arg match", addressGetCallerCallMatcher)).Return(returnOutput, nil).Times(1)
 }
 
 func (h *harness) verifySdkCallMade(t *testing.T) {

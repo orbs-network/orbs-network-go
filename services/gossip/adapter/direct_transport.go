@@ -16,18 +16,11 @@ import (
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
 const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
+
 var LogTag = log.String("adapter", "gossip")
 
-type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	GossipPeers(asOfBlock uint64) map[string]config.GossipPeer
-	GossipListenPort() uint16
-	GossipConnectionKeepAliveInterval() time.Duration
-	GossipNetworkTimeout() time.Duration
-}
-
 type directTransport struct {
-	config Config
+	config config.GossipTransportConfig
 	logger log.BasicLogger
 
 	peerQueues map[string]chan *TransportData // does not require mutex to read
@@ -38,7 +31,7 @@ type directTransport struct {
 	serverPort                  int
 }
 
-func NewDirectTransport(ctx context.Context, config Config, logger log.BasicLogger) Transport {
+func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.BasicLogger) Transport {
 	t := &directTransport{
 		config: config,
 		logger: logger.WithTags(LogTag),
@@ -76,7 +69,8 @@ func (t *directTransport) RegisterListener(listener TransportListener, listenerP
 	t.transportListenerUnderMutex = listener
 }
 
-func (t *directTransport) Send(data *TransportData) error {
+// TODO: we are not currently respecting any intents given in ctx (added in context refactor)
+func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, peerQueue := range t.peerQueues {
@@ -170,7 +164,7 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 
 		// notify if not keepalive
 		if len(payloads) > 0 {
-			t.notifyListener(payloads)
+			t.notifyListener(ctx, payloads)
 		}
 	}
 }
@@ -223,14 +217,14 @@ func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Con
 	return res, nil
 }
 
-func (t *directTransport) notifyListener(payloads [][]byte) {
+func (t *directTransport) notifyListener(ctx context.Context, payloads [][]byte) {
 	listener := t.getListener()
 
 	if listener == nil {
 		return
 	}
 
-	listener.OnTransportMessageReceived(payloads)
+	listener.OnTransportMessageReceived(ctx, payloads)
 }
 
 func (t *directTransport) getListener() TransportListener {
