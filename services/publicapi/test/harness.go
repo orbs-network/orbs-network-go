@@ -29,7 +29,7 @@ func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness 
 	txpMock := makeTxMock()
 	vmMock := &services.MockVirtualMachine{}
 	bksMock := &services.MockBlockStorage{}
-	papi := publicapi.NewPublicApi(ctx, cfg, txpMock, vmMock, bksMock, logger, metric.NewRegistry())
+	papi := publicapi.NewPublicApi(cfg, txpMock, vmMock, bksMock, logger, metric.NewRegistry())
 	return &harness{
 		papi:    papi,
 		txpMock: txpMock,
