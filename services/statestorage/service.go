@@ -39,15 +39,14 @@ type service struct {
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	// TODO - tie/sync merkle forest to persistent state
-	merkle, _ := merkle.NewForest()
+	merkle, root := merkle.NewForest()
 
-	height, err := persistence.ReadBlockHeight()
+	height, ts, pRoot, err := persistence.ReadMetadata()
 	if err != nil {
 		panic(err)
 	}
-	ts, err := persistence.ReadBlockTimestamp()
-	if err != nil {
-		panic(err)
+	if !pRoot.Equal(root) {
+		panic("Merkle forest out of sync with persisted state")
 	}
 
 	return &service{
@@ -71,47 +70,57 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
 	commitTimestamp := input.ResultsBlockHeader.Timestamp()
-	persistedBlockHeight, err := s.persistence.ReadBlockHeight()
 
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read persisted block height")
-	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	s.logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
-	if lastCommittedBlock := s.height; lastCommittedBlock+1 != commitBlockHeight {
-		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
+	if s.height + 1 != commitBlockHeight {
+		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: s.height + 1}, nil
 	}
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
 	// TODO use input.resultheader.preexecutuion
 	root, err := s._readStateHash(commitBlockHeight - 1)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
+		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", s.height)
 	}
 	newRoot, err := s.merkle.Update(root, input.ContractStateDiffs)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
+		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", s.height)
 	}
 
-	if commitBlockHeight > persistedBlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) {
+	err = s._writeState(commitBlockHeight, commitTimestamp, newRoot, input)
+	if err !=  nil {
+		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
+	}
+
+	s.height = commitBlockHeight
+	s.ts = commitTimestamp
+	s.blockTracker.IncrementHeight()
+	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
+}
+
+func (s *service) _writeState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, input *services.CommitStateDiffInput) error {
+	persistedBlockHeight := s.height - primitives.BlockHeight(len(s.incCache))
+	distance := s.config.StateStorageHistoryRetentionDistance()
+
+	if height > persistedBlockHeight+primitives.BlockHeight(distance) {
 		d := s.incCache[0]
-		s.persistence.WriteState(d.height, d.ts, d.merkleRoot, d.diff)
+		err := s.persistence.Write(d.height, d.ts, d.merkleRoot, d.diff)
+		if err != nil {
+			return err
+		}
 		s.incCache = s.incCache[1:]
 	}
 	s.incCache = append(s.incCache, stateIncrement{
 		diff:       _newChainDiff(input.ContractStateDiffs),
-		merkleRoot: newRoot,
-		height:     commitBlockHeight,
-		ts:         commitTimestamp,
+		merkleRoot: root,
+		height:     height,
+		ts:         ts,
 	})
-	s.height = commitBlockHeight
-	s.ts = commitTimestamp
-	s.blockTracker.IncrementHeight()
-
-	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
+	return nil
 }
 
 func _newChainDiff(csd []*protocol.ContractStateDiff) adapter.ChainDiff {
@@ -147,10 +156,6 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.height {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
-	}
-
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
 		record, ok, err := s._readStateKey(input.BlockHeight, input.ContractName, key.KeyForMap())
@@ -172,41 +177,27 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 }
 
 func (s *service) _readStateKey(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
-	persistedHeight, err := s.persistence.ReadBlockHeight()
-
-	if err != nil {
-		return nil, false, errors.Wrap(err, "could not find base block height")
-	}
-
-	cacheIdx := int(height - persistedHeight - 1)
-	if cacheIdx >= len(s.incCache) {
-		return nil, false, errors.Errorf("accessing block state diff that has not been received yet")
-	}
-
-	for i := cacheIdx; i >= 0; i-- {
+	for i := len(s.incCache) - 1; i >= 0; i-- {
+		if s.incCache[i].height > height {
+			continue
+		}
 		if record, exists := s.incCache[i].diff[contract][key]; exists {
 			return record, !isZeroValue(record.Value()), nil // cached state increments must include zero values
 		}
 	}
-	return s.persistence.ReadState(persistedHeight, contract, key)
+	return s.persistence.Read(contract, key)
 }
 
 func (s *service) _readStateHash(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
-	persistedHeight, err := s.persistence.ReadBlockHeight()
-
+	persistedHeight, _, persistedHash, err := s.persistence.ReadMetadata()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not find base block height")
+		return nil, err
 	}
-
 	if height == persistedHeight {
-		return s.persistence.ReadMerkleRoot(persistedHeight)
+		return persistedHash, nil
 	}
 
 	cacheIdx := height - persistedHeight - 1
-	if cacheIdx >= primitives.BlockHeight(len(s.incCache)) {
-		return nil, errors.Errorf("accessing block state diff that has not been received yet")
-	}
-
 	return s.incCache[cacheIdx].merkleRoot, nil
 }
 
@@ -228,6 +219,11 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+
+	persistedHeight := s.height - primitives.BlockHeight(len(s.incCache))
+	if input.BlockHeight < persistedHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	}
 
 	value, err := s._readStateHash(input.BlockHeight)
 	if err != nil {

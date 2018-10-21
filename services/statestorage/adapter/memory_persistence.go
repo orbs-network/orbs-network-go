@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/pkg/errors"
 	"sort"
 	"strings"
 	"sync"
@@ -34,7 +33,7 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 	}
 }
 
-func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff ChainDiff) error {
+func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff ChainDiff) error {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 
@@ -43,13 +42,13 @@ func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, ts
 
 	for contract, records := range diff {
 		for _, record := range records {
-			sp._writeOneRecord(height, primitives.ContractName(contract), record)
+			sp._writeOneRecord(primitives.ContractName(contract), record)
 		}
 	}
 	return nil
 }
 
-func (sp *InMemoryStatePersistence) _writeOneRecord(h primitives.BlockHeight, c primitives.ContractName, r *protocol.StateRecord) {
+func (sp *InMemoryStatePersistence) _writeOneRecord(c primitives.ContractName, r *protocol.StateRecord) {
 	if _, ok := sp.snapshot[c]; !ok {
 		sp.snapshot[c] = map[string]*protocol.StateRecord{}
 	}
@@ -62,39 +61,19 @@ func (sp *InMemoryStatePersistence) _writeOneRecord(h primitives.BlockHeight, c 
 	sp.snapshot[c][r.Key().KeyForMap()] = r
 }
 
-func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
+func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
 	sp.mu.RLock()
 	defer sp.mu.RUnlock()
 
-	if height != sp.blockHeight {
-		return nil, false, errors.Errorf("block height mismatch. requested height %v, found %v", height, sp.blockHeight)
-	}
 	record, ok := sp.snapshot[contract][key]
 	return record, ok, nil
 }
 
-func (sp *InMemoryStatePersistence) ReadBlockHeight() (primitives.BlockHeight, error) {
+func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.MerkleSha256, error) {
 	sp.mu.RLock()
 	defer sp.mu.RUnlock()
 
-	return sp.blockHeight, nil
-}
-
-func (sp *InMemoryStatePersistence) ReadBlockTimestamp() (primitives.TimestampNano, error) {
-	sp.mu.RLock()
-	defer sp.mu.RUnlock()
-
-	return sp.timestamp, nil
-}
-
-func (sp *InMemoryStatePersistence) ReadMerkleRoot(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
-	sp.mu.RLock()
-	defer sp.mu.RUnlock()
-
-	if height != sp.blockHeight {
-		return nil, errors.Errorf("block height mismatch. requested height %v, found %v", height, sp.blockHeight)
-	}
-	return sp.merkleRoot, nil
+	return sp.blockHeight, sp.timestamp, sp.merkleRoot, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {

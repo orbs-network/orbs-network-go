@@ -7,15 +7,9 @@ import (
 	"testing"
 )
 
-func TestReadStateWithNonExistingBlockHeight(t *testing.T) {
-	d := NewInMemoryStatePersistence()
-	_, _, err := d.ReadState(1, "foo", "")
-	require.EqualError(t, err, "block height mismatch. requested height 1, found 0", "did not fail with error")
-}
-
 func TestReadStateWithNonExistingContractName(t *testing.T) {
 	d := NewInMemoryStatePersistence()
-	_, _, err := d.ReadState(0, "foo", "")
+	_, _, err := d.Read("foo", "")
 	require.NoError(t, err, "unexpected error")
 }
 
@@ -24,7 +18,7 @@ func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
 
 	d.writeSingleValueBlock(1, "foo", "foo", "bar")
 
-	record, ok, err := d.ReadState(1, "foo", "foo")
+	record, ok, err := d.Read("foo", "foo")
 	require.NoError(t, err, "unexpected error")
 	require.EqualValues(t, true, ok, "after writing a key it should exist")
 	require.EqualValues(t, "foo", record.Key(), "after writing a key/value it should be returned")
@@ -32,21 +26,9 @@ func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
 
 	d.writeSingleValueBlock(1, "foo", "foo", "")
 
-	_, ok, err = d.ReadState(1, "foo", "foo")
+	_, ok, err = d.Read("foo", "foo")
 	require.NoError(t, err, "unexpected error")
 	require.EqualValues(t, false, ok, "writing zero value to state did not remove key")
-}
-
-func TestKeepLatestBlockOnly(t *testing.T) {
-	d := newDriver()
-
-	d.writeSingleValueBlock(1, "foo", "foo", "bar")
-	d.writeSingleValueBlock(2, "foo", "baz", "qux")
-
-	_, _, err := d.ReadState(1, "foo", "foo")
-	require.Error(t, err, "reading from outdated block height expected to fail")
-	_, _, err = d.ReadState(3, "foo", "foo")
-	require.Error(t, err, "reading from future block height expected to fail")
 }
 
 type driver struct {
@@ -62,5 +44,5 @@ func newDriver() *driver {
 func (d *driver) writeSingleValueBlock(h primitives.BlockHeight, c, k, v string) error {
 	record := (&protocol.StateRecordBuilder{Key: []byte(k), Value: []byte(v)}).Build()
 	diff := ChainDiff{primitives.ContractName(c): {k: record}}
-	return d.InMemoryStatePersistence.WriteState(h, 0, []byte{}, diff)
+	return d.InMemoryStatePersistence.Write(h, 0, []byte{}, diff)
 }
