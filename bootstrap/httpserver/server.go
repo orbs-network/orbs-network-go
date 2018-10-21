@@ -90,18 +90,11 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
-	router.Handle("/api/v1/send-transaction", report(s.logger, http.HandlerFunc(s.sendTransactionHandler)))
-	router.Handle("/api/v1/call-method", report(s.logger, http.HandlerFunc(s.callMethodHandler)))
-	router.Handle("/api/v1/get-transaction-status", report(s.logger, http.HandlerFunc(s.getTransactionStatusHandler)))
+	router.Handle("/api/v1/send-transaction", http.HandlerFunc(s.sendTransactionHandler))
+	router.Handle("/api/v1/call-method", http.HandlerFunc(s.callMethodHandler))
+	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(s.getTransactionStatusHandler))
 	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
 	return router
-}
-
-func report(reporting log.BasicLogger, h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO add metrics
-		h.ServeHTTP(w, r)
-	})
 }
 
 func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {
