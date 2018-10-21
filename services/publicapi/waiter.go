@@ -7,12 +7,8 @@ import (
 	"sync"
 )
 
-type waiterObject struct {
-	payload interface{}
-}
-
 type waiterChannel struct {
-	c chan *waiterObject
+	c chan interface{}
 	k string
 }
 
@@ -39,7 +35,7 @@ func (w *waiter) add(k string) *waiterChannel {
 		wcs = make(waiterChannels)
 		w.m[k] = wcs
 	}
-	wc := &waiterChannel{make(chan *waiterObject, 1), k} // channel is buffered for quick release
+	wc := &waiterChannel{make(chan interface{}, 1), k} // channel is buffered for quick release
 	wcs[wc] = wc
 
 	return wc
@@ -70,7 +66,7 @@ func (w *waiter) deleteByChannel(wc *waiterChannel) {
 	}
 }
 
-func (w *waiter) wait(ctx context.Context, wc *waiterChannel) (*waiterObject, error) {
+func (w *waiter) wait(ctx context.Context, wc *waiterChannel) (interface{}, error) {
 	select {
 	case <-ctx.Done():
 		w.deleteByChannel(wc)
@@ -83,7 +79,7 @@ func (w *waiter) wait(ctx context.Context, wc *waiterChannel) (*waiterObject, er
 	}
 }
 
-func (w *waiter) complete(k string, wo *waiterObject) {
+func (w *waiter) complete(k string, wo interface{}) {
 	for wc := range w._deleteByKey(k) {
 		wc.c <- wo
 		close(wc.c)

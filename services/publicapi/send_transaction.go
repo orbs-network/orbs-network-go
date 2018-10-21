@@ -56,7 +56,7 @@ func (s *service) SendTransaction(ctx context.Context, input *services.SendTrans
 		s.logger.Info("waiting for transaction to be processed failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 		return toSendTxOutput(toTxResponse(addResp)), err
 	}
-	return toSendTxOutput(obj.payload.(*txResponse)), nil
+	return toSendTxOutput(obj.(*txResponse)), nil
 }
 
 func toTxResponse(t *services.AddNewTransactionOutput) *txResponse {
