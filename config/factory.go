@@ -92,22 +92,6 @@ func ForDevelopment(
 	return cfg
 }
 
-func ForBlockStorageTests(nodePublicKey primitives.Ed25519PublicKey) BlockStorageConfig {
-	cfg := emptyConfig()
-	cfg.SetNodePublicKey(nodePublicKey)
-	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 2)
-
-	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 3*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 5*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 20*time.Millisecond)
-
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
-
-	return cfg
-}
-
 func ForDirectTransportTests(gossipPeers map[string]GossipPeer) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
