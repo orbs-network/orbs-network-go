@@ -56,7 +56,7 @@ func TestCommitPastBlockHeights(t *testing.T) {
 		d.commitValuePairsAtHeight(ctx, 1, "c1", "key1", v1)
 		d.commitValuePairsAtHeight(ctx, 2, "c1", "key1", v2)
 
-		result, err := d.commitValuePairsAtHeight(ctx,1, "c1", "key1", "v3", "key3", "v3")
+		result, err := d.commitValuePairsAtHeight(ctx, 1, "c1", "key1", "v3", "key3", "v3")
 		require.NoError(t, err)
 		require.EqualValues(t, 3, result.NextDesiredBlockHeight, "unexpected NextDesiredBlockHeight")
 

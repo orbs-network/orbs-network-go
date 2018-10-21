@@ -76,7 +76,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
-	if s.height + 1 != commitBlockHeight {
+	if s.height+1 != commitBlockHeight {
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: s.height + 1}, nil
 	}
 
@@ -92,7 +92,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	}
 
 	err = s._writeState(commitBlockHeight, commitTimestamp, newRoot, input)
-	if err !=  nil {
+	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}
 
