@@ -49,6 +49,14 @@ jobs:
       - run: git clone https://github.com/orbs-network/orbs-network-deploy-script && cd orbs-network-deploy-script && git checkout feature/support-v1
       - run: cd orbs-network-deploy-script && npm install -g typescript && npm install && DOCKER_TAG=export ./deploy-staging.sh
 
+  e2e_testnet:
+    machine: true
+    steps:
+      - checkout
+      - run: ./git-submodules-checkout.sh
+      - run: ./docker-build.sh
+      - run: ./.circleci/e2e-testnet.sh
+
 workflows:
   version: 2
   build:
@@ -63,6 +71,13 @@ workflows:
       - deploy_testnet:
           requires:
             - success
+          filters:
+            branches:
+              only:
+                - feature/basic-testnet-configuration
+      - e2e_testnet:
+          requires:
+            - deploy_testnet
           filters:
             branches:
               only:
