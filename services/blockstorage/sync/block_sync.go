@@ -70,7 +70,7 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 }
 
 func (bs *BlockSync) syncLoop(ctx context.Context) {
-	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
+	for bs.currentState = bs.sf.CreateCollectingAvailabilityResponseState(); bs.currentState != nil; {
 		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
 		meter := bs.logger.Meter(fmt.Sprintf("inter-sync-%s", bs.currentState.name()))
 		bs.currentState = bs.currentState.processState(ctx)

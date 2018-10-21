@@ -20,6 +20,20 @@ func TestBlockSyncShutdown(t *testing.T) {
 	require.True(t, sync.terminated, "expecting the stop flag up")
 }
 
+func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
+	h := newBlockSyncHarness().withNoCommitTimeout(time.Hour) // we want to see that the sync immediately starts, and not in an hour
+
+	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+
+	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
+
+	h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
+	h.cancel()
+	time.Sleep(time.Millisecond)
+	require.True(t, sync.terminated, "expecting the stop flag up")
+}
+
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	// although we test this use case at the service level, this test is testing the same logic on the sync unit level
 	// its to cover that specific line of code in blockSync engine, rather then the service handler code

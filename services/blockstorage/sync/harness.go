@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -115,6 +116,11 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 
 func (h *blockSyncHarness) cancel() {
 	h.ctxCancel()
+}
+
+func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
+	require.NoError(t, err)
 }
 
 func (h *blockSyncHarness) verifyMocks(t *testing.T) {
