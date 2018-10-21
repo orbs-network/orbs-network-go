@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func initializePreBuiltRepositoryContractInstances(sdkHandler handlers.ContractSdkCallHandler) map[string]sdk.ContractInstance {
@@ -59,7 +60,8 @@ func (s *service) retrieveContractInfoFromRepository(ctx context.Context, execut
 }
 
 func (s *service) retrieveDeployableContractInfoFromState(ctx context.Context, executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
-	// TODO add metrics
+	start := time.Now()
+
 	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
@@ -91,7 +93,9 @@ func (s *service) retrieveDeployableContractInfoFromState(ctx context.Context, e
 	s.addContractInstanceToRepository(contractName, contractInstance)
 	s.addDeployableContractInfoToRepository(contractName, newContractInfo) // must add after instance to avoid race (when somebody RunsMethod at same time)
 	s.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
-	// TODO add metrics
+
+	s.metrics.deployedContracts.Inc()
+	s.metrics.compileNativeContract.RecordSince(start)
 	// only want to log meter on success (so this line is not under defer)
 
 	return newContractInfo, nil
