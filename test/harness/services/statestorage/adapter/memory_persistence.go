@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -11,7 +12,7 @@ import (
 type TamperingStatePersistence interface {
 	adapter.StatePersistence
 	Dump() string
-	WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) error
+	WaitUntilCommittedBlockOfHeight(ctx context.Context, height primitives.BlockHeight) error
 }
 
 type TestStatePersistence struct {
@@ -36,6 +37,6 @@ func (t *TestStatePersistence) WriteState(height primitives.BlockHeight, contrac
 	return nil
 }
 
-func (t *TestStatePersistence) WaitUntilCommittedBlockOfHeight(height primitives.BlockHeight) error {
-	return t.blockTrackerForTests.WaitForBlock(height)
+func (t *TestStatePersistence) WaitUntilCommittedBlockOfHeight(ctx context.Context, height primitives.BlockHeight) error {
+	return t.blockTrackerForTests.WaitForBlock(ctx, height)
 }

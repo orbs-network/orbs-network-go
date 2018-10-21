@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -8,16 +9,16 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-func (h *harness) receivedCommittedViaGossip(message *gossipmessages.BenchmarkConsensusCommittedMessage) {
-	h.service.HandleBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+func (h *harness) receivedCommittedViaGossip(ctx context.Context, message *gossipmessages.BenchmarkConsensusCommittedMessage) {
+	h.service.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: nil,
 		Message:            message,
 	})
 }
 
-func (h *harness) receivedCommittedMessagesViaGossip(msgs []*gossipmessages.BenchmarkConsensusCommittedMessage) {
+func (h *harness) receivedCommittedMessagesViaGossip(ctx context.Context, msgs []*gossipmessages.BenchmarkConsensusCommittedMessage) {
 	for _, msg := range msgs {
-		h.receivedCommittedViaGossip(msg)
+		h.receivedCommittedViaGossip(ctx, msg)
 	}
 }
 

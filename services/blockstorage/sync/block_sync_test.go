@@ -12,7 +12,7 @@ func TestBlockSyncShutdown(t *testing.T) {
 	h := newBlockSyncHarness()
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any).Return(nil, nil).Times(1)
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
 	h.cancel()
 	time.Sleep(time.Millisecond) // waiting for the sync to start
@@ -27,7 +27,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 	h := newBlockSyncHarness().withNoCommitTimeout(5 * time.Millisecond)
 	h.gossip.Never("LastCommittedBlockHeight")
-	h.gossip.Never("BroadcastBlockAvailabilityRequest")
+	h.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any)
 
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
 	time.Sleep(time.Millisecond) // give the sync time to start

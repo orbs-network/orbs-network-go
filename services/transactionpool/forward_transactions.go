@@ -27,7 +27,7 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 	s.transactionResultsHandlers = append(s.transactionResultsHandlers, handler)
 }
 
-func (s *service) HandleForwardedTransactions(input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 	sender := input.Message.Sender
 	oneBigHash, _ := HashTransactions(input.Message.SignedTransactions...)
 
@@ -88,17 +88,17 @@ func (f *transactionForwarder) start(ctx context.Context) {
 			case txCount := <-f.transactionAdded:
 				if txCount >= f.config.TransactionPoolPropagationBatchSize() {
 					timer.Stop()
-					f.drainQueueAndForward()
+					f.drainQueueAndForward(ctx)
 				}
 			case <-timer.C:
-				f.drainQueueAndForward()
+				f.drainQueueAndForward(ctx)
 			}
 		}
 
 	}()
 }
 
-func (f *transactionForwarder) drainQueueAndForward() {
+func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 	txs := f.drainQueue()
 	if len(txs) == 0 {
 		return
@@ -112,7 +112,7 @@ func (f *transactionForwarder) drainQueueAndForward() {
 		return
 	}
 
-	_, err = f.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
+	_, err = f.gossip.BroadcastForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			SignedTransactions: txs,
 			Sender: (&gossipmessages.SenderSignatureBuilder{

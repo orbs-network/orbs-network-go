@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
@@ -22,8 +23,8 @@ type harness struct {
 	config          config.ConsensusContextConfig
 }
 
-func (h *harness) requestTransactionsBlock() (*protocol.TransactionsBlockContainer, error) {
-	output, err := h.service.RequestNewTransactionsBlock(&services.RequestNewTransactionsBlockInput{
+func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.TransactionsBlockContainer, error) {
+	output, err := h.service.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:             1,
 		MaxBlockSizeKb:          0,
 		MaxNumberOfTransactions: 0,
@@ -46,11 +47,11 @@ func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactions
 		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, targetAddress).Build())
 	}
 
-	h.transactionPool.When("GetTransactionsForOrdering", mock.Any).Return(output, nil).Times(1)
+	h.transactionPool.When("GetTransactionsForOrdering", mock.Any, mock.Any).Return(output, nil).Times(1)
 }
 
 func (h *harness) expectTransactionsNoLongerRequestedFromTransactionPool() {
-	h.transactionPool.When("GetTransactionsForOrdering", mock.Any).Return(nil, nil).Times(0)
+	h.transactionPool.When("GetTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
 func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {

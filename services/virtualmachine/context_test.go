@@ -26,8 +26,8 @@ func TestContext_Load(t *testing.T) {
 
 func TestContext_ServiceStack(t *testing.T) {
 	cp := newExecutionContextProvider()
-	contextId, c := cp.allocateExecutionContext(1, protocol.ACCESS_SCOPE_READ_ONLY, nil)
-	defer cp.destroyExecutionContext(contextId)
+	executionContextId, c := cp.allocateExecutionContext(1, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	defer cp.destroyExecutionContext(executionContextId)
 
 	c.serviceStackPush("Service1")
 	service := c.serviceStackTop()

@@ -1,6 +1,7 @@
 package javascript
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
@@ -10,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) retrieveContractCodeFromRepository(executionContextId primitives.ExecutionContextId, contractName primitives.ContractName) (string, error) {
+func (s *service) retrieveContractCodeFromRepository(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName) (string, error) {
 	// 1. try artifact cache
 	code := s.getContractFromRepository(contractName)
 	if code != "" {
@@ -18,7 +19,7 @@ func (s *service) retrieveContractCodeFromRepository(executionContextId primitiv
 	}
 
 	// 2. try deployable code from state
-	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(executionContextId, contractName)
+	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
 	if err != nil {
 		return "", err
 	}
@@ -30,7 +31,7 @@ func (s *service) retrieveContractCodeFromRepository(executionContextId primitiv
 	return code, nil
 }
 
-func (s *service) callGetCodeOfDeploymentSystemContract(executionContextId primitives.ExecutionContextId, contractName primitives.ContractName) ([]byte, error) {
+func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName) ([]byte, error) {
 	handler := s.getContractSdkHandler()
 	if handler == nil {
 		return nil, errors.New("ContractSdkCallHandler has not registered yet")
@@ -39,7 +40,7 @@ func (s *service) callGetCodeOfDeploymentSystemContract(executionContextId primi
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE.Name)
 
-	output, err := handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	output, err := handler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: native.SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",

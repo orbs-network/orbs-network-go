@@ -29,7 +29,7 @@ func (s *waitingForChunksState) String() string {
 }
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
-	err := s.gossipClient.petitionerSendBlockSyncRequest(gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
+	err := s.gossipClient.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
 		s.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))
 		return s.sf.CreateIdleState()

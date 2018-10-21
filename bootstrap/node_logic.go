@@ -60,7 +60,7 @@ func NewNodeLogic(
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 
 	// TODO: Restore this when lean-helix-go submodule is integrated
-	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
+	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig))
 
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)

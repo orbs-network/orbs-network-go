@@ -47,14 +47,14 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Stringable("last-block-height", lastBlockHeight))
 
 	for _, blockPair := range s.blocks.BlockPairs {
-		_, err := s.storage.ValidateBlockForCommit(&services.ValidateBlockForCommitInput{BlockPair: blockPair})
+		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
 		if err != nil {
 			s.logger.Error("failed to validate block received via sync", log.Error(err))
 			break
 		}
 
-		_, err = s.storage.CommitBlock(&services.CommitBlockInput{BlockPair: blockPair})
+		_, err = s.storage.CommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
 
 		if err != nil {
 			s.logger.Error("failed to commit block received via sync", log.Error(err))

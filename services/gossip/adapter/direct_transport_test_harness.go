@@ -134,7 +134,7 @@ func (h *directHarness) portForPeer(index int) uint16 {
 }
 
 func (h *directHarness) expectTransportListenerCalled(payloads [][]byte) {
-	h.listenerMock.When("OnTransportMessageReceived", payloads).Return().Times(1)
+	h.listenerMock.When("OnTransportMessageReceived", mock.Any, payloads).Return().Times(1)
 }
 
 func (h *directHarness) verifyTransportListenerCalled(t *testing.T) {
@@ -143,7 +143,7 @@ func (h *directHarness) verifyTransportListenerCalled(t *testing.T) {
 }
 
 func (h *directHarness) expectTransportListenerNotCalled() {
-	h.listenerMock.When("OnTransportMessageReceived", mock.Any).Return().Times(0)
+	h.listenerMock.When("OnTransportMessageReceived", mock.Any, mock.Any).Return().Times(0)
 }
 
 func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {

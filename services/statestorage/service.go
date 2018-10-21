@@ -1,6 +1,7 @@
 package statestorage
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
@@ -43,7 +44,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 	}
 }
 
-func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
 	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
 		panic("CommitStateDiff received corrupt args")
 	}
@@ -78,7 +79,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
 
-func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
+func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
 	if input.ContractName == "" {
 		return nil, errors.Errorf("missing contract name")
 	}
@@ -87,7 +88,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
@@ -120,7 +121,7 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	return output, nil
 }
 
-func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
+func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -131,8 +132,8 @@ func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBloc
 	return result, nil
 }
 
-func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	if err := s.blockTracker.WaitForBlock(input.BlockHeight); err != nil {
+func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 

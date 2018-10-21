@@ -14,7 +14,7 @@ func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
 	h := newBlockSyncHarness()
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
-	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
@@ -28,7 +28,7 @@ func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 	h := newBlockSyncHarness()
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
-	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
@@ -43,7 +43,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	h := newBlockSyncHarness().withNodeKey(blocksMessage.Sender.SenderPublicKey()) //.withWaitForChunksTimeout(10 * time.Millisecond)
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := h.nextState(waitingState, func() {
@@ -65,7 +65,7 @@ func TestWaitingTerminatesOnContextTermination(t *testing.T) {
 	h.cancel()
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
@@ -80,7 +80,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	h := newBlockSyncHarness().withNodeKey(stateSourceKey)
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	h.gossip.When("SendBlockSyncRequest", mock.Any).Return(nil, nil).Times(1)
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := h.nextState(waitingState, func() {

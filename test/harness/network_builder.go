@@ -21,7 +21,7 @@ type acceptanceTestNetworkBuilder struct {
 	numNodes       uint32
 	consensusAlgos []consensus.ConsensusAlgoType
 	testId         string
-	setupFunc      func(network InProcessNetwork)
+	setupFunc      func(ctx context.Context, network InProcessNetwork)
 	logFilters     []log.Filter
 }
 
@@ -55,12 +55,12 @@ func (b *acceptanceTestNetworkBuilder) WithConsensusAlgos(algos ...consensus.Con
 }
 
 // setup runs when all adapters have been created but before the nodes are started
-func (b *acceptanceTestNetworkBuilder) WithSetup(f func(network InProcessNetwork)) *acceptanceTestNetworkBuilder {
+func (b *acceptanceTestNetworkBuilder) WithSetup(f func(ctx context.Context, network InProcessNetwork)) *acceptanceTestNetworkBuilder {
 	b.setupFunc = f
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) Start(f func(network InProcessNetwork)) {
+func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network InProcessNetwork)) {
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
@@ -72,12 +72,12 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(network InProcessNetwork)) {
 			defer dumpStateOnFailure(b.f, network)
 
 			if b.setupFunc != nil {
-				b.setupFunc(network)
+				b.setupFunc(ctx, network)
 			}
 
 			network.StartNodes(ctx)
 
-			f(network)
+			f(ctx, network)
 		})
 		// end test
 

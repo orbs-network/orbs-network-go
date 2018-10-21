@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -8,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
 	s.logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
@@ -23,7 +24,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
-	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
+	if err := s.validateSingleTransactionForPreOrder(ctx, input.SignedTransaction); err != nil {
 		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
 		s.logger.Error("error validating transaction for preorder", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(nil, status), err
@@ -40,10 +41,10 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
-func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
+func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
 	bh, _ := s.currentBlockHeightAndTime()
 	//TODO handle error from vm call
-	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		SignedTransactions: Transactions{transaction},
 		BlockHeight:        bh,
 	})

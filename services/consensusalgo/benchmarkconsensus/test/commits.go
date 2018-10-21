@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -12,8 +13,8 @@ import (
 	"testing"
 )
 
-func (h *harness) receivedCommitViaGossip(blockPair *protocol.BlockPairContainer) {
-	h.service.HandleBenchmarkConsensusCommit(&gossiptopics.BenchmarkConsensusCommitInput{
+func (h *harness) receivedCommitViaGossip(ctx context.Context, blockPair *protocol.BlockPairContainer) {
+	h.service.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{
 		Message: &gossipmessages.BenchmarkConsensusCommitMessage{
 			BlockPair: blockPair,
 		},
@@ -23,8 +24,8 @@ func (h *harness) receivedCommitViaGossip(blockPair *protocol.BlockPairContainer
 // expectations
 
 func (h *harness) expectCommitIgnored() {
-	h.blockStorage.When("CommitBlock", mock.Any).Return(nil, nil).Times(0)
-	h.gossip.When("SendBenchmarkConsensusCommitted", mock.Any).Return(nil, nil).Times(0)
+	h.blockStorage.When("CommitBlock", mock.Any, mock.Any).Return(nil, nil).Times(0)
+	h.gossip.When("SendBenchmarkConsensusCommitted", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
 func (h *harness) verifyCommitIgnored(t *testing.T) {
@@ -43,8 +44,8 @@ func (h *harness) expectCommitSaveAndReply(expectedBlockPair *protocol.BlockPair
 			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.blockStorage.When("CommitBlock", &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(1)
-	h.gossip.When("SendBenchmarkConsensusCommitted", mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
+	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(1)
+	h.gossip.When("SendBenchmarkConsensusCommitted", mock.Any, mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
 }
 
 func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
@@ -63,8 +64,8 @@ func (h *harness) expectCommitReplyWithoutSave(expectedBlockPair *protocol.Block
 			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.blockStorage.When("CommitBlock", &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(0)
-	h.gossip.When("SendBenchmarkConsensusCommitted", mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
+	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(0)
+	h.gossip.When("SendBenchmarkConsensusCommitted", mock.Any, mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
 }
 
 func (h *harness) verifyCommitReplyWithoutSave(t *testing.T) {
@@ -88,7 +89,7 @@ func (h *harness) expectCommitBroadcastViaGossip(expectedBlockHeight primitives.
 			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
+	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any, mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
 }
 
 func (h *harness) verifyCommitBroadcastViaGossip(t *testing.T) {
@@ -99,7 +100,7 @@ func (h *harness) verifyCommitBroadcastViaGossip(t *testing.T) {
 }
 
 func (h *harness) expectCommitNotSent() {
-	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any).Times(0)
+	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any, mock.Any).Times(0)
 }
 
 func (h *harness) verifyCommitNotSent(t *testing.T) {
