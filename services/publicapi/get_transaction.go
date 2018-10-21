@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
@@ -21,7 +22,8 @@ func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetT
 	txHash := input.ClientRequest.Txhash()
 	timestamp := input.ClientRequest.TransactionTimestamp()
 
-	// TODO add metrics
+	start := time.Now()
+	defer s.metrics.getTransactionStatus.RecordSince(start)
 
 	if txReceipt, err, ok := s.getFromTxPool(ctx, txHash, timestamp); ok {
 		return toGetTxOutput(txReceipt), err

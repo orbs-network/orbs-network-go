@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) CallMethod(ctx context.Context, input *services.CallMethodInput) (*services.CallMethodOutput, error) {
@@ -26,7 +27,9 @@ func (s *service) CallMethod(ctx context.Context, input *services.CallMethodInpu
 	}
 	s.logger.Info("call method request received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
-	// TODO add metrics
+	start := time.Now()
+	defer s.metrics.callMethod.RecordSince(start)
+
 	result, err := s.virtualMachine.RunLocalMethod(ctx, &services.RunLocalMethodInput{
 		Transaction: tx,
 	})

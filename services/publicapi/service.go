@@ -34,12 +34,16 @@ type service struct {
 }
 
 type metrics struct {
-	sendTransaction *metric.Histogram
+	sendTransaction      *metric.Histogram
+	getTransactionStatus *metric.Histogram
+	callMethod           *metric.Histogram
 }
 
-func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration) *metrics {
+func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration, getTransactionStatusTimeout time.Duration, callMethodTimeout time.Duration) *metrics {
 	return &metrics{
-		sendTransaction: factory.NewLatency("PublicApi.SendTransactionProcessingTime", sendTransactionTimeout),
+		sendTransaction:      factory.NewLatency("PublicApi.SendTransactionProcessingTime", sendTransactionTimeout),
+		getTransactionStatus: factory.NewLatency("PublicApi.GetTransactionStatusProcessingTime", getTransactionStatusTimeout),
+		callMethod:           factory.NewLatency("PublicApi.CallMethodProcessingTime", callMethodTimeout),
 	}
 }
 
@@ -59,7 +63,7 @@ func NewPublicApi(
 		logger:          logger.WithTags(LogTag),
 
 		waiter:  newWaiter(),
-		metrics: newMetrics(metricFactory, config.SendTransactionTimeout()),
+		metrics: newMetrics(metricFactory, config.SendTransactionTimeout(), 2*time.Second, 1*time.Second),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(s)
