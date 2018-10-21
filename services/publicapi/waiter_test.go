@@ -111,14 +111,14 @@ func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 
-		c := make(chan struct{}, 2)
+		done := make(chan struct{}, 2)
 
-		go runAndWait(ctx, t , "1", waiter, wc1, 100*time.Millisecond, false, c)
-		go runAndWait(ctx, t , "2", waiter, wc2, 100*time.Millisecond, false, c)
+		go waitHarness(ctx, t , "1", waiter, wc1, 100*time.Millisecond, false, done)
+		go waitHarness(ctx, t , "2", waiter, wc2, 100*time.Millisecond, false, done)
 
 		waiter.complete(key, &waiterObject{"hello"})
-		<-c
-		<-c
+		<-done
+		<-done
 		_, open := <-wc1.c
 		require.False(t, open, "channel 1 should be closed")
 		_, open = <-wc2.c
@@ -134,15 +134,15 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) 
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 
-		c := make(chan struct{}, 2)
+		done := make(chan struct{}, 2)
 
-		go runAndWait(ctx, t , "1", waiter, wc1, 10*time.Millisecond, true, c)
-		go runAndWait(ctx, t , "2", waiter, wc2, 10*time.Millisecond, false, c)
+		go waitHarness(ctx, t , "1", waiter, wc1, 10*time.Millisecond, true, done)
+		go waitHarness(ctx, t , "2", waiter, wc2, 10*time.Millisecond, false, done)
 
 		waiter.deleteByChannel(wc1) // as if it was returned error quickly
 		waiter.complete(key, &waiterObject{"hello"})
-		<-c
-		<-c
+		<-done
+		<-done
 
 		_, open := <-wc1.c
 		require.False(t, open, "channel 1 should be closed")
@@ -159,15 +159,15 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 
-		c := make(chan struct{}, 2)
+		done := make(chan struct{}, 2)
 
-		go runAndWait(ctx, t , "1", waiter, wc1, 5*time.Millisecond, true, c)
-		go runAndWait(ctx, t , "2", waiter, wc2, 1*time.Second, false, c)
+		go waitHarness(ctx, t , "1", waiter, wc1, 5*time.Millisecond, true, done)
+		go waitHarness(ctx, t , "2", waiter, wc2, 1*time.Second, false, done)
 
 		time.Sleep(15 * time.Millisecond)
 		waiter.complete(key, &waiterObject{"hello"})
-		<-c
-		<-c
+		<-done
+		<-done
 
 		_, open := <-wc1.c
 		require.False(t, open, "channel 1 should be closed")
@@ -179,7 +179,7 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
 func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 	t.Parallel()
 	var waiter *waiter
-	c := make(chan struct{})
+	done := make(chan struct{})
 
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
@@ -196,17 +196,17 @@ func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 			assert.Error(t, err, "expected waiting to be aborted")
 			assert.WithinDuration(t, time.Now(), startTime, 100*time.Millisecond, "expected not to reach timeout")
 			require.Nil(t, wo, "wait object (1) should be nil")
-			c <- struct{}{}
+			done <- struct{}{}
 		}
 
 		go waitTillCancelled(wc1)
 		go waitTillCancelled(wc2)
 	})
-	<-c
-	<-c
+	<-done
+	<-done
 }
 
-func runAndWait(ctx context.Context, t *testing.T, name string, waiter *waiter, waitResult *waiterChannel, duration time.Duration, shouldErr bool, clearChannel chan struct{}) {
+func waitHarness(ctx context.Context, t *testing.T, name string, waiter *waiter, waitResult *waiterChannel, duration time.Duration, shouldErr bool, done chan struct{}) {
 	ctx, cancel := context.WithTimeout(ctx, duration)
 	defer cancel()
 
@@ -218,6 +218,5 @@ func runAndWait(ctx context.Context, t *testing.T, name string, waiter *waiter, 
 		assert.NoError(t, err, "expected error to not occur for (%s)", name)
 		require.NotNil(t, wo, "wait object (%s) is nil when it should", name)
 	}
-	clearChannel <- struct{}{}
-
+	done <- struct{}{}
 }
