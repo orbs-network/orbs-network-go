@@ -58,7 +58,7 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
-	ctx, cancel = context.WithDeadline(ctx, time.Now().Add(t.timeout))
+	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(t.timeout))
 	defer cancel()
 	
 	for currentHeight < requestedHeightUint {
