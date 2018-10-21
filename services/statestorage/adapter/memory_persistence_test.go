@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -19,9 +20,9 @@ func TestReadStateWithNonExistingContractName(t *testing.T) {
 }
 
 func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
-	d := NewInMemoryStatePersistence()
+	d := newDriver()
 
-	d.WriteState(1, 0, []byte{}, buildDelta("foo","foo", "bar"))
+	d.writeSingleValueBlock(1, "foo", "foo", "bar")
 
 	record, ok, err := d.ReadState(1, "foo", "foo")
 	require.NoError(t, err, "unexpected error")
@@ -29,7 +30,7 @@ func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
 	require.EqualValues(t, "foo", record.Key(), "after writing a key/value it should be returned")
 	require.EqualValues(t, "bar", record.Value(), "after writing a key/value it should be returned")
 
-	d.WriteState(1, 0, []byte{}, buildDelta("foo","foo", ""))
+	d.writeSingleValueBlock(1, "foo", "foo", "")
 
 	_, ok, err = d.ReadState(1, "foo", "foo")
 	require.NoError(t, err, "unexpected error")
@@ -37,10 +38,10 @@ func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
 }
 
 func TestKeepLatestBlockOnly(t *testing.T) {
-	d := NewInMemoryStatePersistence()
+	d := newDriver()
 
-	d.WriteState(1, 0, []byte{}, buildDelta("foo","foo", "bar"))
-	d.WriteState(2, 0, []byte{}, buildDelta("foo","baz", "qux"))
+	d.writeSingleValueBlock(1, "foo", "foo", "bar")
+	d.writeSingleValueBlock(2, "foo", "baz", "qux")
 
 	_, _, err := d.ReadState(1, "foo", "foo")
 	require.Error(t, err, "reading from outdated block height expected to fail")
@@ -48,8 +49,18 @@ func TestKeepLatestBlockOnly(t *testing.T) {
 	require.Error(t, err, "reading from future block height expected to fail")
 }
 
+type driver struct {
+	*InMemoryStatePersistence
+}
 
-func buildDelta(contract, key, value string) (map[string]map[string]*protocol.StateRecord){
-	record := (&protocol.StateRecordBuilder{Key: []byte(key), Value: []byte(value)}).Build()
-	return map[string]map[string]*protocol.StateRecord{contract: {key: record}}
+func newDriver() *driver {
+	return &driver{
+		NewInMemoryStatePersistence(),
+	}
+}
+
+func (d *driver) writeSingleValueBlock(h primitives.BlockHeight, c, k, v string) error {
+	record := (&protocol.StateRecordBuilder{Key: []byte(k), Value: []byte(v)}).Build()
+	diff := ChainDiff{primitives.ContractName(c): {k: record}}
+	return d.InMemoryStatePersistence.WriteState(h, 0, []byte{}, diff)
 }

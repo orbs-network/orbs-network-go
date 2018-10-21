@@ -12,12 +12,9 @@ import (
 	"sync"
 )
 
-type ContractState map[string]*protocol.StateRecord
-type StateVersion map[primitives.ContractName]ContractState
-
 type InMemoryStatePersistence struct {
 	mu          sync.RWMutex
-	snapshot    StateVersion
+	snapshot    ChainDiff
 	blockHeight primitives.BlockHeight
 	timestamp   primitives.TimestampNano
 	merkleRoot  primitives.MerkleSha256
@@ -30,40 +27,39 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 	_, root := merkle.NewForest()
 	return &InMemoryStatePersistence{
 		mu:          sync.RWMutex{},
-		snapshot:    StateVersion{},
+		snapshot:    ChainDiff{},
 		blockHeight: 0,
 		timestamp:   0,
 		merkleRoot:  root,
 	}
 }
 
-func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, contractStateDiffs map[string]map[string]*protocol.StateRecord) error {
+func (sp *InMemoryStatePersistence) WriteState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff ChainDiff) error {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 
 	sp.blockHeight = height
 	sp.merkleRoot = root
 
-	for contract, records := range contractStateDiffs {
+	for contract, records := range diff {
 		for _, record := range records {
-			sp._writeOneContract(height, primitives.ContractName(contract), record)
+			sp._writeOneRecord(height, primitives.ContractName(contract), record)
 		}
 	}
-
 	return nil
 }
 
-func (sp *InMemoryStatePersistence) _writeOneContract(height primitives.BlockHeight, contract primitives.ContractName, stateDiff *protocol.StateRecord) {
-	if _, ok := sp.snapshot[contract]; !ok {
-		sp.snapshot[contract] = map[string]*protocol.StateRecord{}
+func (sp *InMemoryStatePersistence) _writeOneRecord(h primitives.BlockHeight, c primitives.ContractName, r *protocol.StateRecord) {
+	if _, ok := sp.snapshot[c]; !ok {
+		sp.snapshot[c] = map[string]*protocol.StateRecord{}
 	}
 
-	if isZeroValue(stateDiff.Value()) {
-		delete(sp.snapshot[contract], stateDiff.Key().KeyForMap())
+	if isZeroValue(r.Value()) {
+		delete(sp.snapshot[c], r.Key().KeyForMap())
 		return
 	}
 
-	sp.snapshot[contract][stateDiff.Key().KeyForMap()] = stateDiff
+	sp.snapshot[c][r.Key().KeyForMap()] = r
 }
 
 func (sp *InMemoryStatePersistence) ReadState(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
@@ -95,7 +91,7 @@ func (sp *InMemoryStatePersistence) ReadMerkleRoot(height primitives.BlockHeight
 	sp.mu.RLock()
 	defer sp.mu.RUnlock()
 
-	if height != sp.blockHeight  {
+	if height != sp.blockHeight {
 		return nil, errors.Errorf("block height mismatch. requested height %v, found %v", height, sp.blockHeight)
 	}
 	return sp.merkleRoot, nil
@@ -130,6 +126,7 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	return output.String()
 }
 
+// TODO - there is an identical method in statestorage. extract and reuse?
 func isZeroValue(value []byte) bool {
 	return bytes.Equal(value, []byte{})
 }

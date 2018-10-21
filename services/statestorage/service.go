@@ -1,6 +1,7 @@
 package statestorage
 
 import (
+	"bytes"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
@@ -15,8 +16,8 @@ import (
 
 var LogTag = log.Service("state-storage")
 
-type blockDiff struct {
-	stateDiff  map[string]map[string]*protocol.StateRecord
+type stateIncrement struct {
+	diff       adapter.ChainDiff
 	merkleRoot primitives.MerkleSha256
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
@@ -27,12 +28,12 @@ type service struct {
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
 
-	mutex sync.RWMutex
-	merkle *merkle.Forest
+	mutex       sync.RWMutex
+	incCache    []stateIncrement
 	persistence adapter.StatePersistence
-	height primitives.BlockHeight
-	ts primitives.TimestampNano
-	stateDiffs []blockDiff
+	merkle      *merkle.Forest
+	height      primitives.BlockHeight
+	ts          primitives.TimestampNano
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
@@ -53,12 +54,12 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 		logger:       logger.WithTags(LogTag),
 
-		mutex: sync.RWMutex{},
-		merkle: merkle,
-		stateDiffs: []blockDiff{},
+		mutex:       sync.RWMutex{},
+		merkle:      merkle,
+		incCache:    []stateIncrement{},
 		persistence: persistence,
-		height: height,
-		ts: ts,
+		height:      height,
+		ts:          ts,
 	}
 }
 
@@ -85,7 +86,7 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
 	// TODO use input.resultheader.preexecutuion
-	root, err := s._getHashThroughLayers(commitBlockHeight - 1)
+	root, err := s._readStateHash(commitBlockHeight - 1)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
 	}
@@ -94,14 +95,13 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
 	}
 
-
-	if commitBlockHeight > persistedBlockHeight + primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) {
-		d := s.stateDiffs[0]
-		s.persistence.WriteState(d.height, d.ts, d.merkleRoot, d.stateDiff)
-		s.stateDiffs = s.stateDiffs[1:]
+	if commitBlockHeight > persistedBlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) {
+		d := s.incCache[0]
+		s.persistence.WriteState(d.height, d.ts, d.merkleRoot, d.diff)
+		s.incCache = s.incCache[1:]
 	}
-	s.stateDiffs = append(s.stateDiffs, blockDiff{
-		stateDiff:  _inflateState(input.ContractStateDiffs),
+	s.incCache = append(s.incCache, stateIncrement{
+		diff:       _newChainDiff(input.ContractStateDiffs),
 		merkleRoot: newRoot,
 		height:     commitBlockHeight,
 		ts:         commitTimestamp,
@@ -112,10 +112,11 @@ func (s *service) CommitStateDiff(input *services.CommitStateDiffInput) (*servic
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
-func _inflateState(diffs []*protocol.ContractStateDiff) map[string]map[string]*protocol.StateRecord {
-	result := make(map[string]map[string]*protocol.StateRecord)
-	for _, stateDiffs := range diffs {
-		contract := stateDiffs.ContractName().KeyForMap()
+
+func _newChainDiff(csd []*protocol.ContractStateDiff) adapter.ChainDiff {
+	result := make(adapter.ChainDiff)
+	for _, stateDiffs := range csd {
+		contract := stateDiffs.ContractName()
 		contractMap, ok := result[contract]
 		if !ok {
 			contractMap = make(map[string]*protocol.StateRecord)
@@ -145,15 +146,13 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
-
 	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.height {
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok, err := s._readThroughLayers(input.BlockHeight, input.ContractName, key.KeyForMap())
+		record, ok, err := s._readStateKey(input.BlockHeight, input.ContractName, key.KeyForMap())
 		if err != nil {
 			return nil, errors.Wrap(err, "persistence layer error")
 		}
@@ -171,42 +170,43 @@ func (s *service) ReadKeys(input *services.ReadKeysInput) (*services.ReadKeysOut
 	return output, nil
 }
 
-func (s *service) _readThroughLayers(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
+func (s *service) _readStateKey(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
 	persistedHeight, err := s.persistence.ReadBlockHeight()
 
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not find base block height")
 	}
 
-	topDiffIdx := height - persistedHeight
-	if topDiffIdx > primitives.BlockHeight(len(s.stateDiffs)) {
+	cacheIdx := int(height - persistedHeight - 1)
+	if cacheIdx >= len(s.incCache) {
 		return nil, false, errors.Errorf("accessing block state diff that has not been received yet")
 	}
 
-	for i := topDiffIdx; i > 0; i-- { // iterate over block deltas
-		record, exists := s.stateDiffs[i-1].stateDiff[contract.KeyForMap()][key]
-		if exists {
-			return record, len(record.Value()) != 0, nil
+	for i := cacheIdx; i >= 0; i-- {
+		if record, exists := s.incCache[i].diff[contract][key]; exists {
+			return record, !isZeroValue(record.Value()), nil // cached state increments must include zero values
 		}
 	}
 	return s.persistence.ReadState(persistedHeight, contract, key)
 }
 
-func (s *service) _getHashThroughLayers(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
+func (s *service) _readStateHash(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
 	persistedHeight, err := s.persistence.ReadBlockHeight()
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not find base block height")
 	}
 
-	diffIdx := height - persistedHeight
-	if diffIdx > primitives.BlockHeight(len(s.stateDiffs)) {
-		return nil, errors.Errorf("accessing block state diff that has not been received yet")
-	}
-	if diffIdx == 0 {
+	if height == persistedHeight {
 		return s.persistence.ReadMerkleRoot(persistedHeight)
 	}
-	return s.stateDiffs[diffIdx - 1].merkleRoot, nil
+
+	cacheIdx := height - persistedHeight - 1
+	if cacheIdx >= primitives.BlockHeight(len(s.incCache)) {
+		return nil, errors.Errorf("accessing block state diff that has not been received yet")
+	}
+
+	return s.incCache[cacheIdx].merkleRoot, nil
 }
 
 func (s *service) GetStateStorageBlockHeight(input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
@@ -228,9 +228,9 @@ func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.Get
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	value, err := s._getHashThroughLayers(input.BlockHeight)
+	value, err := s._readStateHash(input.BlockHeight)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not merkle root for block height %d", input.BlockHeight)
+		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
 	output := &services.GetStateHashOutput{StateRootHash: value}
 
@@ -239,4 +239,8 @@ func (s *service) GetStateHash(input *services.GetStateHashInput) (*services.Get
 
 func newZeroValue() []byte {
 	return []byte{}
+}
+
+func isZeroValue(value []byte) bool {
+	return bytes.Equal(value, []byte{})
 }
