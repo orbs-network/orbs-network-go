@@ -17,6 +17,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		sourcePK := keys.Ed25519KeyPairForTests(4).PublicKey()
 		harness := newHarness(ctx).withNodeKey(sourcePK)
+		harness.expectSyncToBroadcastInBackground()
 		harness.setupSomeBlocks(ctx, 3)
 		senderPK := keys.Ed25519KeyPairForTests(1).PublicKey()
 
@@ -58,6 +59,7 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *
 	test.WithContext(func(ctx context.Context) {
 
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
@@ -75,6 +77,7 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.setupSomeBlocks(ctx, 3)
 
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
@@ -95,6 +98,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		batchSize := uint32(10)
 		harness := newHarness(ctx).withBatchSize(batchSize).withNodeKey(keys.Ed25519KeyPairForTests(4).PublicKey())
+		harness.expectSyncToBroadcastInBackground()
 		lastBlock := 12
 		harness.setupSomeBlocks(ctx, lastBlock)
 
@@ -140,6 +144,7 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 			Build()
 
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.setupSomeBlocks(ctx, lastBlock)
 
 		harness.gossip.Never("SendBlockSyncResponse", mock.Any, mock.Any)
