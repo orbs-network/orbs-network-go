@@ -21,8 +21,7 @@ func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetT
 	txHash := input.ClientRequest.Txhash()
 	timestamp := input.ClientRequest.TransactionTimestamp()
 
-	meter := s.logger.Meter("tx-get-status-time", log.Stringable("txHash", txHash))
-	defer meter.Done()
+	// TODO add metrics
 
 	if txReceipt, err, ok := s.getFromTxPool(ctx, txHash, timestamp); ok {
 		return toGetTxOutput(txReceipt), err

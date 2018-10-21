@@ -99,8 +99,7 @@ func (s *server) createRouter() http.Handler {
 
 func report(reporting log.BasicLogger, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		meter := reporting.Meter("request-process-time", log.String("url", r.URL.String()))
-		defer meter.Done()
+		// TODO add metrics
 		h.ServeHTTP(w, r)
 	})
 }
