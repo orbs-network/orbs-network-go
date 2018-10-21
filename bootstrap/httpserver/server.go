@@ -125,8 +125,7 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
-	// TODO: context.TODO() should probably be the http client context (context refactor)
-	result, err := s.publicApi.SendTransaction(context.TODO(), &services.SendTransactionInput{ClientRequest: clientRequest})
+	result, err := s.publicApi.SendTransaction(r.Context(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
@@ -148,8 +147,7 @@ func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.logger.Info("http server received call-method", log.Stringable("request", clientRequest))
-	// TODO: context.TODO() should probably be the http client context (context refactor)
-	result, err := s.publicApi.CallMethod(context.TODO(), &services.CallMethodInput{ClientRequest: clientRequest})
+	result, err := s.publicApi.CallMethod(r.Context(), &services.CallMethodInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
 	} else {
@@ -171,8 +169,7 @@ func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
-	// TODO: context.TODO() should probably be the http client context (context refactor)
-	result, err := s.publicApi.GetTransactionStatus(context.TODO(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
+	result, err := s.publicApi.GetTransactionStatus(r.Context(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {

@@ -22,7 +22,6 @@ type txResponse struct {
 }
 
 type service struct {
-	ctx             context.Context
 	config          config.PublicApiConfig
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
@@ -45,7 +44,6 @@ func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration) *m
 }
 
 func NewPublicApi(
-	ctx context.Context,
 	config config.PublicApiConfig,
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
@@ -54,14 +52,13 @@ func NewPublicApi(
 	metricFactory metric.Factory,
 ) services.PublicApi {
 	s := &service{
-		ctx:             ctx,
 		config:          config,
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
 		blockStorage:    blockStorage,
 		logger:          logger.WithTags(LogTag),
 
-		waiter:  newWaiter(ctx),
+		waiter:  newWaiter(),
 		metrics: newMetrics(metricFactory, config.SendTransactionTimeout()),
 	}
 

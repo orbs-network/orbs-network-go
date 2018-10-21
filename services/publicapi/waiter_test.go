@@ -12,7 +12,7 @@ import (
 func TestPublicApiWaiter_Add(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc := waiter.add("key")
 
 		require.NotNil(t, wc, "wait object is nil when it should exist")
@@ -22,7 +22,7 @@ func TestPublicApiWaiter_Add(t *testing.T) {
 func TestPublicApiWaiter_AddTwice(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc1 := waiter.add("key")
 		wc2 := waiter.add("key")
 
@@ -36,7 +36,7 @@ func TestPublicApiWaiter_AddTwice(t *testing.T) {
 func TestPublicApiWaiter_AddTwoKeys(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		waiter.add("key1")
 		waiter.add("key2")
 
@@ -47,7 +47,7 @@ func TestPublicApiWaiter_AddTwoKeys(t *testing.T) {
 func TestPublicApiWaiter_DeleteKey(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc1 := waiter.add("key1")
 		waiter.add("key2")
 		wcs1 := waiter._deleteByKey("key1")
@@ -63,7 +63,7 @@ func TestPublicApiWaiter_DeleteChan(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 		waiter.deleteByChannel(wc1)
@@ -78,7 +78,7 @@ func TestPublicApiWaiter_DeleteChan(t *testing.T) {
 
 func TestPublicApiWaiter_DeleteAllChan(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc1 := waiter.add("key")
 		wc2 := waiter.add("key")
 		waiter.deleteByChannel(wc1)
@@ -91,12 +91,15 @@ func TestPublicApiWaiter_DeleteAllChan(t *testing.T) {
 func TestPublicApiWaiter_WaitFor(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc := waiter.add("key")
 
-		_, err := waiter.wait(wc, 10*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+		defer cancel()
+
+		_, err := waiter.wait(ctx, wc)
 		require.Error(t, err, "expected waiting to be aborted")
-		require.Contains(t, err.Error(), "timed out waiting for result", "expected waiting to be aborted with timeout")
+		require.Contains(t, err.Error(), "waiting aborted due to context termination for key", "expected waiting to be aborted with timeout")
 	})
 }
 
@@ -104,25 +107,14 @@ func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 
 		c := make(chan struct{}, 2)
 
-		go func() {
-			wo, err := waiter.wait(wc1, 100*time.Millisecond)
-			assert.NoError(t, err)
-			require.NotNil(t, wo, "wait object (1) is nil when it should")
-			c <- struct{}{}
-		}()
-
-		go func() {
-			wo, err := waiter.wait(wc2, 100*time.Millisecond)
-			assert.NoError(t, err)
-			require.NotNil(t, wo, "wait object (2) is nil when it should")
-			c <- struct{}{}
-		}()
+		go runAndWait(ctx, t , "1", waiter, wc1, 100*time.Millisecond, false, c)
+		go runAndWait(ctx, t , "2", waiter, wc2, 100*time.Millisecond, false, c)
 
 		waiter.complete(key, &waiterObject{"hello"})
 		<-c
@@ -138,24 +130,14 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) 
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 
 		c := make(chan struct{}, 2)
-		go func() {
-			wo, err := waiter.wait(wc1, 100*time.Millisecond)
-			assert.Error(t, err)
-			require.Nil(t, wo, "wait object (1) should be nil")
-			c <- struct{}{}
-		}()
 
-		go func() {
-			wo, err := waiter.wait(wc2, 100*time.Millisecond)
-			assert.NoError(t, err)
-			require.NotNil(t, wo, "wait object (2) is not nil when it should")
-			c <- struct{}{}
-		}()
+		go runAndWait(ctx, t , "1", waiter, wc1, 10*time.Millisecond, true, c)
+		go runAndWait(ctx, t , "2", waiter, wc2, 10*time.Millisecond, false, c)
 
 		waiter.deleteByChannel(wc1) // as if it was returned error quickly
 		waiter.complete(key, &waiterObject{"hello"})
@@ -173,24 +155,14 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
-		waiter := newWaiter(ctx)
+		waiter := newWaiter()
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 
 		c := make(chan struct{}, 2)
-		go func() {
-			wo, err := waiter.wait(wc1, 5*time.Millisecond)
-			assert.Error(t, err)
-			require.Nil(t, wo, "wait object (1) should be nil")
-			c <- struct{}{}
-		}()
 
-		go func() {
-			wo, err := waiter.wait(wc2, 1*time.Second)
-			assert.NoError(t, err)
-			require.NotNil(t, wo, "wait object (2) is not nil when it should")
-			c <- struct{}{}
-		}()
+		go runAndWait(ctx, t , "1", waiter, wc1, 5*time.Millisecond, true, c)
+		go runAndWait(ctx, t , "2", waiter, wc2, 1*time.Second, false, c)
 
 		time.Sleep(15 * time.Millisecond)
 		waiter.complete(key, &waiterObject{"hello"})
@@ -211,13 +183,16 @@ func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
-		waiter = newWaiter(ctx)
+		waiter = newWaiter()
 		wc1 := waiter.add(key)
 		wc2 := waiter.add(key)
 
 		var waitTillCancelled = func(wc *waiterChannel) {
+			ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+			defer cancel()
+
 			startTime := time.Now()
-			wo, err := waiter.wait(wc, 1*time.Second)
+			wo, err := waiter.wait(ctx, wc)
 			assert.Error(t, err, "expected waiting to be aborted")
 			assert.WithinDuration(t, time.Now(), startTime, 100*time.Millisecond, "expected not to reach timeout")
 			require.Nil(t, wo, "wait object (1) should be nil")
@@ -229,4 +204,20 @@ func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 	})
 	<-c
 	<-c
+}
+
+func runAndWait(ctx context.Context, t *testing.T, name string, waiter *waiter, waitResult *waiterChannel, duration time.Duration, shouldErr bool, clearChannel chan struct{}) {
+	ctx, cancel := context.WithTimeout(ctx, duration)
+	defer cancel()
+
+	wo, err := waiter.wait(ctx, waitResult)
+	if shouldErr {
+		assert.Error(t, err, "expected error to happen for (%s)", name)
+		require.Nil(t, wo, "wait object (%s) is not nil when it should", name)
+	} else {
+		assert.NoError(t, err, "expected error to not occur for (%s)", name)
+		require.NotNil(t, wo, "wait object (%s) is nil when it should", name)
+	}
+	clearChannel <- struct{}{}
+
 }

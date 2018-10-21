@@ -3,10 +3,8 @@ package publicapi
 import (
 	"context"
 	"encoding/hex"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/pkg/errors"
 	"sync"
-	"time"
 )
 
 type waiterObject struct {
@@ -21,15 +19,12 @@ type waiterChannel struct {
 type waiterChannels map[*waiterChannel]*waiterChannel
 
 type waiter struct {
-	ctx   context.Context
 	mutex sync.Mutex
 	m     map[string]waiterChannels
 }
 
-func newWaiter(ctx context.Context) *waiter {
-	// TODO supervise
+func newWaiter() *waiter {
 	return &waiter{
-		ctx:   ctx,
 		mutex: sync.Mutex{},
 		m:     make(map[string]waiterChannels),
 	}
@@ -75,17 +70,11 @@ func (w *waiter) deleteByChannel(wc *waiterChannel) {
 	}
 }
 
-func (w *waiter) wait(wc *waiterChannel, duration time.Duration) (*waiterObject, error) {
-	timer := synchronization.NewTimer(duration)
-	defer timer.Stop()
-
+func (w *waiter) wait(ctx context.Context, wc *waiterChannel) (*waiterObject, error) {
 	select {
-	case <-w.ctx.Done(): // currently ctx is global so only shutdown and no need to kill the map.
-		//	w.deleteByChannel(wc)
-		return nil, errors.Errorf("shutting down")
-	case <-timer.C:
+	case <-ctx.Done():
 		w.deleteByChannel(wc)
-		return nil, errors.Errorf("timed out waiting for result %s", hex.EncodeToString([]byte(wc.k)))
+		return nil, errors.Errorf("waiting aborted due to context termination for key %s", hex.EncodeToString([]byte(wc.k)))
 	case response, open := <-wc.c: // intentional not close channel here
 		if !open {
 			return nil, errors.Errorf("waiting aborted")

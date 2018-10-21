@@ -48,7 +48,10 @@ func (s *service) SendTransaction(ctx context.Context, input *services.SendTrans
 		return toSendTxOutput(toTxResponse(addResp)), nil
 	}
 
-	obj, err := s.waiter.wait(waitResult, s.config.SendTransactionTimeout())
+	ctx, cancel := context.WithTimeout(ctx, s.config.SendTransactionTimeout())
+	defer cancel()
+
+	obj, err := s.waiter.wait(ctx, waitResult)
 	if err != nil {
 		s.logger.Info("waiting for transaction to be processed failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 		return toSendTxOutput(toTxResponse(addResp)), err
