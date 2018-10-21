@@ -30,7 +30,7 @@ type service struct {
 	logger       log.BasicLogger
 
 	mutex       sync.RWMutex
-	incCache    []stateIncrement
+	incCache    []*stateIncrement
 	persistence adapter.StatePersistence
 	merkle      *merkle.Forest
 	height      primitives.BlockHeight
@@ -56,7 +56,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 
 		mutex:       sync.RWMutex{},
 		merkle:      merkle,
-		incCache:    []stateIncrement{},
+		incCache:    []*stateIncrement{},
 		persistence: persistence,
 		height:      height,
 		ts:          ts,
@@ -103,18 +103,17 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 }
 
 func (s *service) _writeState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, input *services.CommitStateDiffInput) error {
-	persistedBlockHeight := s.height - primitives.BlockHeight(len(s.incCache))
-	distance := s.config.StateStorageHistoryRetentionDistance()
-
-	if height > persistedBlockHeight+primitives.BlockHeight(distance) {
+	// TODO - move this loop for merging and persisting snapshots to a separate goroutine. merely append here with a safety array size limit
+	for uint32(len(s.incCache)) >= s.config.StateStorageHistoryRetentionDistance() {
 		d := s.incCache[0]
 		err := s.persistence.Write(d.height, d.ts, d.merkleRoot, d.diff)
 		if err != nil {
-			return err
+			log.Error(err)
+			break
 		}
 		s.incCache = s.incCache[1:]
 	}
-	s.incCache = append(s.incCache, stateIncrement{
+	s.incCache = append(s.incCache, &stateIncrement{
 		diff:       _newChainDiff(input.ContractStateDiffs),
 		merkleRoot: root,
 		height:     height,
@@ -145,15 +144,15 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		return nil, errors.Errorf("missing contract name")
 	}
 
+	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
+		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
+	}
+
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
 	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.height {
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
-	}
-
-	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
-		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
