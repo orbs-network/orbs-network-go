@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -15,11 +16,11 @@ type TransportData struct {
 
 type Transport interface {
 	RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519PublicKey)
-	Send(data *TransportData) error
+	Send(ctx context.Context, data *TransportData) error
 }
 
 type TransportListener interface {
-	OnTransportMessageReceived(payloads [][]byte)
+	OnTransportMessageReceived(ctx context.Context, payloads [][]byte)
 }
 
 type ErrCorruptData struct {

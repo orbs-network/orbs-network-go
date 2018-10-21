@@ -17,7 +17,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		sourcePK := keys.Ed25519KeyPairForTests(4).PublicKey()
 		harness := newHarness(ctx).withNodeKey(sourcePK)
-		harness.setupSomeBlocks(3)
+		harness.setupSomeBlocks(ctx, 3)
 		senderPK := keys.Ed25519KeyPairForTests(1).PublicKey()
 
 		msg := builders.BlockAvailabilityRequestInput().
@@ -43,11 +43,10 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 		}
 
 		harness.gossip.
-			When("SendBlockAvailabilityResponse",
-				mock.AnyIf("validating response of availability request", availabilityResponseVerifier)).
+			When("SendBlockAvailabilityResponse", mock.Any, mock.AnyIf("validating response of availability request", availabilityResponseVerifier)).
 			Return(nil, nil).Times(1)
 
-		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(msg)
+		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, msg)
 
 		require.NoError(t, err, "expecting a happy flow")
 
@@ -60,12 +59,12 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *
 
 		harness := newHarness(ctx)
 		harness.expectCommitStateDiff()
-		harness.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
+		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
-		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any)
+		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
 
 		msg := builders.BlockAvailabilityRequestInput().WithLastCommittedBlockHeight(primitives.BlockHeight(20)).Build()
-		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(msg)
+		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, msg)
 
 		require.NoError(t, err, "expecting a happy flow (without sending the response)")
 		harness.verifyMocks(t, 1)
@@ -76,15 +75,15 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
-		harness.setupSomeBlocks(3)
+		harness.setupSomeBlocks(ctx, 3)
 
-		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 		msg := builders.BlockAvailabilityRequestInput().
 			WithFirstBlockHeight(1).
 			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
 			WithLastBlockHeight(primitives.BlockHeight(2)).
 			Build()
-		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(msg)
+		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, msg)
 
 		require.Error(t, err, "expecting an error from the server event flow")
 
@@ -97,7 +96,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 		batchSize := uint32(10)
 		harness := newHarness(ctx).withBatchSize(batchSize).withNodeKey(keys.Ed25519KeyPairForTests(4).PublicKey())
 		lastBlock := 12
-		harness.setupSomeBlocks(lastBlock)
+		harness.setupSomeBlocks(ctx, lastBlock)
 
 		firstHeight := primitives.BlockHeight(1)
 		lastHeight := primitives.BlockHeight(10) // hardcoding this, but it is a function of the batchSize
@@ -123,8 +122,8 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 			return true
 		}
 
-		harness.gossip.When("SendBlockSyncResponse", mock.AnyIf("response should hold correct blocks", chunksResponseVerifier)).Return(nil, nil).Times(1)
-		harness.blockStorage.HandleBlockSyncRequest(msg)
+		harness.gossip.When("SendBlockSyncResponse", mock.Any, mock.AnyIf("response should hold correct blocks", chunksResponseVerifier)).Return(nil, nil).Times(1)
+		harness.blockStorage.HandleBlockSyncRequest(ctx, msg)
 		harness.verifyMocks(t, 1)
 	})
 }
@@ -141,11 +140,11 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 			Build()
 
 		harness := newHarness(ctx)
-		harness.setupSomeBlocks(lastBlock)
+		harness.setupSomeBlocks(ctx, lastBlock)
 
-		harness.gossip.Never("SendBlockSyncResponse", mock.Any)
+		harness.gossip.Never("SendBlockSyncResponse", mock.Any, mock.Any)
 
-		_, err := harness.blockStorage.HandleBlockSyncRequest(msg)
+		_, err := harness.blockStorage.HandleBlockSyncRequest(ctx, msg)
 
 		require.Error(t, err, "expected source to return an error")
 		harness.verifyMocks(t, 1)

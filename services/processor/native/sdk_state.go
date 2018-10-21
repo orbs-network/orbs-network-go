@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
@@ -18,7 +19,7 @@ type stateSdk struct {
 const SDK_OPERATION_NAME_STATE = "Sdk.State"
 
 func (s *stateSdk) ReadBytesByAddress(executionContextId sdk.Context, address sdk.Ripmd160Sha256) ([]byte, error) {
-	output, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	output, err := s.handler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
 		MethodName:    "read",
@@ -41,7 +42,7 @@ func (s *stateSdk) ReadBytesByAddress(executionContextId sdk.Context, address sd
 }
 
 func (s *stateSdk) WriteBytesByAddress(executionContextId sdk.Context, address sdk.Ripmd160Sha256, value []byte) error {
-	_, err := s.handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	_, err := s.handler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
 		MethodName:    "write",

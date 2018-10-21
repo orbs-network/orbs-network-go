@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -191,7 +192,7 @@ type contractSdkStateCallHandlerStub struct {
 	store map[string]*protocol.MethodArgument
 }
 
-func (c *contractSdkStateCallHandlerStub) HandleSdkCall(input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
+func (c *contractSdkStateCallHandlerStub) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
 	if input.PermissionScope != protocol.PERMISSION_SCOPE_SERVICE {
 		panic("permissions passed to SDK are incorrect")
 	}

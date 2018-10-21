@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -11,7 +12,7 @@ import (
 	"time"
 )
 
-func (s *service) SendTransaction(input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
+func (s *service) SendTransaction(ctx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
 	if input.ClientRequest == nil {
 		err := errors.Errorf("error missing input (client request is nil)")
 		s.logger.Info("send transaction received missing input", log.Error(err))
@@ -35,7 +36,7 @@ func (s *service) SendTransaction(input *services.SendTransactionInput) (*servic
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
-	addResp, err := s.transactionPool.AddNewTransaction(&services.AddNewTransactionInput{SignedTransaction: tx})
+	addResp, err := s.transactionPool.AddNewTransaction(ctx, &services.AddNewTransactionInput{SignedTransaction: tx})
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
 		s.logger.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))

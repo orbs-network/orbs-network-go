@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"strconv"
 	"testing"
 	"time"
 
@@ -44,6 +45,8 @@ type callMethodCliResponse struct {
 	BlockHeight     int
 	BlockTimestamp  int
 }
+
+const gammaServerPort uint16 = 7080
 
 func cliBinaryPath() []string {
 	ciCliBinaryPath := "/opt/orbs/gamma-cli"
@@ -126,7 +129,11 @@ func generateAddCounterJSON(amount uint64) []byte {
 	return addJSONBytes
 }
 
-func transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519KeyPair, targetAddress primitives.Ripmd160Sha256, amount uint64) {
+func getNodeUrl(port uint16) string {
+	return "http://localhost:" + strconv.FormatUint(uint64(port), 10)
+}
+
+func transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519KeyPair, targetAddress primitives.Ripmd160Sha256, amount uint64, port uint16) {
 	transferJSONBytes := generateTransferJSON(amount, targetAddress)
 
 	err := ioutil.WriteFile("../json/transfer.json", transferJSONBytes, 0644)
@@ -137,7 +144,7 @@ func transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519KeyPair, targetA
 
 	sendCommandOutput := runCliCommand(t, "run", "send", "../json/transfer.json",
 		"-public-key", keyPair.PublicKey().String(),
-		"-private-key", keyPair.PrivateKey().String())
+		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(port))
 
 	response := &sendTransactionCliResponse{}
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
@@ -148,7 +155,7 @@ func transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519KeyPair, targetA
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 }
 
-func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, expectedAmount uint64) {
+func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, expectedAmount uint64, port uint16) {
 	getBalanceJSONBytes := generateGetBalanceJSON(targetAddress)
 	err := ioutil.WriteFile("../json/getBalance.json", getBalanceJSONBytes, 0644)
 	if err != nil {
@@ -156,7 +163,7 @@ func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, 
 	}
 	require.NoError(t, err, "Couldn't write getBalance JSON file")
 
-	callOutputAsString := runCliCommand(t, "run", "call", "../json/getBalance.json")
+	callOutputAsString := runCliCommand(t, "run", "call", "../json/getBalance.json", "-host", getNodeUrl(port))
 
 	callResponse := &callMethodCliResponse{}
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
@@ -167,10 +174,10 @@ func getBalanceOfAddress(t *testing.T, targetAddress primitives.Ripmd160Sha256, 
 	require.EqualValues(t, expectedAmount, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
 }
 
-func deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair) {
+func deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair, port uint16) {
 	deployCommandOutput := runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
 		"-public-key", keyPair.PublicKey().String(),
-		"-private-key", keyPair.PrivateKey().String())
+		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(port))
 
 	response := &sendTransactionCliResponse{}
 	unmarshalErr := json.Unmarshal([]byte(deployCommandOutput), &response)
@@ -181,7 +188,7 @@ func deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair) {
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 }
 
-func getCounterValue(t *testing.T, expectedReturnValue uint64) {
+func getCounterValue(t *testing.T, expectedReturnValue uint64, port uint16) {
 	getCounterJSONBytes := generateGetCounterJSON()
 	err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
 	if err != nil {
@@ -190,7 +197,7 @@ func getCounterValue(t *testing.T, expectedReturnValue uint64) {
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
 	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
-	callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json")
+	callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json", "-host", getNodeUrl(port))
 
 	callResponse := &callMethodCliResponse{}
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
@@ -201,7 +208,7 @@ func getCounterValue(t *testing.T, expectedReturnValue uint64) {
 	require.EqualValues(t, expectedReturnValue, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected counter value to equal 0")
 }
 
-func addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64) {
+func addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64, port uint16) {
 	addCounterJSONBytes := generateAddCounterJSON(amount)
 	err := ioutil.WriteFile("../json/add.json", addCounterJSONBytes, 0644)
 	if err != nil {
@@ -211,7 +218,7 @@ func addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint6
 
 	addOutputAsString := runCliCommand(t, "run", "send", "../json/add.json",
 		"-public-key", keyPair.PublicKey().String(),
-		"-private-key", keyPair.PrivateKey().String())
+		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(port))
 
 	addResponse := &sendTransactionCliResponse{}
 	addResponseUnmarshalErr := json.Unmarshal([]byte(addOutputAsString), &addResponse)
@@ -226,7 +233,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	gamma := gammacli.StartGammaServer(":8080", false)
+	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(uint64(gammaServerPort), 10), false)
 	defer gamma.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
@@ -235,8 +242,8 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	targetAddress := builders.AddressForEd25519SignerForTests(2)
 	var amount uint64 = 42
 
-	transferAmountToAddress(t, keyPair, targetAddress, amount)
-	getBalanceOfAddress(t, targetAddress, amount)
+	transferAmountToAddress(t, keyPair, targetAddress, amount, gammaServerPort)
+	getBalanceOfAddress(t, targetAddress, amount, gammaServerPort)
 }
 
 func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
@@ -244,21 +251,21 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 		t.Skip("skipping e2e tests in short mode")
 	}
 
-	gamma := gammacli.StartGammaServer(":8080", false)
+	gamma := gammacli.StartGammaServer(":"+strconv.FormatUint(uint64(gammaServerPort), 10), false)
 	defer gamma.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
-	deployCounterContract(t, keyPair)
-	getCounterValue(t, 0)
+	deployCounterContract(t, keyPair, gammaServerPort)
+	getCounterValue(t, 0, gammaServerPort)
 
 	// Add a random amount to the counter using Counter.add()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddAmount := uint64(r.Intn(4000)) + 1000 // Random int between 1000 and 5000
 
-	addAmountToCounter(t, keyPair, randomAddAmount)
+	addAmountToCounter(t, keyPair, randomAddAmount, gammaServerPort)
 
-	getCounterValue(t, randomAddAmount)
+	getCounterValue(t, randomAddAmount, gammaServerPort)
 }

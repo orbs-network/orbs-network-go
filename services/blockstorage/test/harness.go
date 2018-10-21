@@ -82,13 +82,13 @@ func (d *harness) expectCommitStateDiff() {
 func (d *harness) expectCommitStateDiffTimes(times int) {
 	csdOut := &services.CommitStateDiffOutput{}
 
-	d.stateStorage.When("CommitStateDiff", mock.Any).Return(csdOut, nil).Times(times)
+	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Return(csdOut, nil).Times(times)
 }
 
 func (d *harness) expectValidateWithConsensusAlgosTimes(times int) {
 	out := &handlers.HandleBlockConsensusOutput{}
 
-	d.consensus.When("HandleBlockConsensus", mock.Any).Return(out, nil).Times(times)
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(times)
 }
 
 func (d *harness) verifyMocks(t *testing.T, times int) {
@@ -96,8 +96,8 @@ func (d *harness) verifyMocks(t *testing.T, times int) {
 	require.NoError(t, err)
 }
 
-func (d *harness) commitBlock(blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
-	return d.blockStorage.CommitBlock(&services.CommitBlockInput{
+func (d *harness) commitBlock(ctx context.Context, blockPairContainer *protocol.BlockPairContainer) (*services.CommitBlockOutput, error) {
+	return d.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPairContainer,
 	})
 }
@@ -106,8 +106,8 @@ func (d *harness) numOfWrittenBlocks() int {
 	return len(d.storageAdapter.ReadAllBlocks())
 }
 
-func (d *harness) getLastBlockHeight(t *testing.T) *services.GetLastCommittedBlockHeightOutput {
-	out, err := d.blockStorage.GetLastCommittedBlockHeight(&services.GetLastCommittedBlockHeightInput{})
+func (d *harness) getLastBlockHeight(ctx context.Context, t *testing.T) *services.GetLastCommittedBlockHeightOutput {
+	out, err := d.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 
 	require.NoError(t, err)
 	return out
@@ -151,11 +151,11 @@ func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorage
 	return cfg
 }
 
-func (d *harness) setupSomeBlocks(count int) {
+func (d *harness) setupSomeBlocks(ctx context.Context, count int) {
 	d.expectCommitStateDiffTimes(count)
 
 	for i := 1; i <= count; i++ {
-		d.commitBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+		d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 	}
 }
 
@@ -172,7 +172,7 @@ func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.I
 
 	// Always expect at least 0 because sometimes it gets triggered because of the timings
 	// HandleBlockConsensus always gets called when we try to start the sync which happens automatically
-	d.consensus.When("HandleBlockConsensus", mock.Any).Return(nil, nil).AtLeast(0)
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 
 	if setup != nil {
 		setup(d.storageAdapter, d.consensus)
@@ -182,7 +182,7 @@ func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.I
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 
 	d.txPool = &services.MockTransactionPool{}
-	d.txPool.When("CommitTransactionReceipts", mock.Any).Return(nil, nil).AtLeast(0)
+	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 
 	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, logger)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)

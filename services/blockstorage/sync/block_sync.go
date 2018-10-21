@@ -33,8 +33,8 @@ type blockSyncConfig interface {
 
 type BlockSyncStorage interface {
 	LastCommittedBlockHeight() primitives.BlockHeight
-	CommitBlock(input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
-	ValidateBlockForCommit(input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
+	CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
+	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
 }
 
 type BlockSync struct {
@@ -88,7 +88,7 @@ func (bs *BlockSync) HandleBlockCommitted() {
 	}
 }
 
-func (bs *BlockSync) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	bs.eventLock.Lock()
 	defer bs.eventLock.Unlock()
 
@@ -99,7 +99,7 @@ func (bs *BlockSync) HandleBlockAvailabilityResponse(input *gossiptopics.BlockAv
 	return nil, nil
 }
 
-func (bs *BlockSync) HandleBlockSyncResponse(input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	bs.eventLock.Lock()
 	defer bs.eventLock.Unlock()
 

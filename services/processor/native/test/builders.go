@@ -24,7 +24,6 @@ func processCallInput() *processCall {
 			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 			CallingService:         "",
-			TransactionSigner:      nil,
 		},
 	}
 	return p

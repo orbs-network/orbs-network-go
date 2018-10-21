@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -32,7 +33,7 @@ func newBlockSyncGossipClient(
 	}
 }
 
-func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest() error {
+func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
 	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
 	firstBlockHeight := lastCommittedBlockHeight + 1
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
@@ -59,11 +60,11 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest() er
 		},
 	}
 
-	_, err := c.gossip.BroadcastBlockAvailabilityRequest(input)
+	_, err := c.gossip.BroadcastBlockAvailabilityRequest(ctx, input)
 	return err
 }
 
-func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
+func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
 	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
 
 	firstBlockHeight := lastCommittedBlockHeight + 1
@@ -84,6 +85,6 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(blockType gossipm
 		},
 	}
 
-	_, err := c.gossip.SendBlockSyncRequest(request)
+	_, err := c.gossip.SendBlockSyncRequest(ctx, request)
 	return err
 }
