@@ -116,7 +116,7 @@ func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
 		go waitHarness(ctx, t , "1", waiter, wc1, 100*time.Millisecond, false, done)
 		go waitHarness(ctx, t , "2", waiter, wc2, 100*time.Millisecond, false, done)
 
-		waiter.complete(key, &waiterObject{"hello"})
+		waiter.complete(key, "hello")
 		<-done
 		<-done
 		_, open := <-wc1.c
@@ -140,7 +140,7 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) 
 		go waitHarness(ctx, t , "2", waiter, wc2, 10*time.Millisecond, false, done)
 
 		waiter.deleteByChannel(wc1) // as if it was returned error quickly
-		waiter.complete(key, &waiterObject{"hello"})
+		waiter.complete(key, "hello")
 		<-done
 		<-done
 
@@ -165,7 +165,7 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
 		go waitHarness(ctx, t , "2", waiter, wc2, 1*time.Second, false, done)
 
 		time.Sleep(15 * time.Millisecond)
-		waiter.complete(key, &waiterObject{"hello"})
+		waiter.complete(key,"hello")
 		<-done
 		<-done
 

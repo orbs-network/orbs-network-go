@@ -71,12 +71,12 @@ func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.
 	for _, txReceipt := range input.TransactionReceipts {
 		s.logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Stringable("txHash", txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
-			&waiterObject{&txResponse{
+			&txResponse{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 				transactionReceipt: txReceipt,
 				blockHeight:        input.BlockHeight,
 				blockTimestamp:     input.Timestamp,
-			}})
+			})
 	}
 	return &handlers.HandleTransactionResultsOutput{}, nil
 }
@@ -84,12 +84,12 @@ func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.
 func (s *service) HandleTransactionError(ctx context.Context, input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
 	s.logger.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
 	s.waiter.complete(input.Txhash.KeyForMap(),
-		&waiterObject{&txResponse{
+		&txResponse{
 			transactionStatus:  input.TransactionStatus,
 			transactionReceipt: nil,
 			blockHeight:        input.BlockHeight,
 			blockTimestamp:     input.BlockTimestamp,
-		}})
+		})
 	return &handlers.HandleTransactionErrorOutput{}, nil
 }
 
