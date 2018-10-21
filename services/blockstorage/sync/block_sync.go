@@ -39,7 +39,6 @@ type BlockSyncStorage interface {
 
 type BlockSync struct {
 	logger       log.BasicLogger
-	terminated   bool
 	sf           *stateFactory
 	gossip       gossiptopics.BlockSync
 	storage      BlockSyncStorage
@@ -50,13 +49,12 @@ type BlockSync struct {
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
 	bs := &BlockSync{
-		logger:     logger.WithTags(log.String("flow", "block-sync")),
-		terminated: false,
-		sf:         NewStateFactory(config, gossip, storage, logger),
-		gossip:     gossip,
-		storage:    storage,
-		config:     config,
-		eventLock:  &sync.Mutex{},
+		logger:    logger.WithTags(log.String("flow", "block-sync")),
+		sf:        NewStateFactory(config, gossip, storage, logger),
+		gossip:    gossip,
+		storage:   storage,
+		config:    config,
+		eventLock: &sync.Mutex{},
 	}
 
 	bs.logger.Info("block sync init",
@@ -77,7 +75,6 @@ func (bs *BlockSync) syncLoop(ctx context.Context) {
 		meter.Done()
 	}
 
-	bs.terminated = true
 }
 
 func (bs *BlockSync) HandleBlockCommitted() {

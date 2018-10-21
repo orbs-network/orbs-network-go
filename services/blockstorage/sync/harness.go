@@ -99,6 +99,18 @@ func newBlockSyncHarness() *blockSyncHarness {
 	}
 }
 
+func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
+	return test.Eventually(test.EVENTUALLY_LOCAL_E2E_TIMEOUT, func() bool {
+		return bs.currentState == nil
+	})
+}
+
+func (h *blockSyncHarness) waitForState(bs *BlockSync, desiredState syncState) bool {
+	return test.Eventually(test.EVENTUALLY_LOCAL_E2E_TIMEOUT, func() bool {
+		return bs.currentState != nil && bs.currentState.name() == desiredState.name()
+	})
+}
+
 func (h *blockSyncHarness) withNodeKey(key primitives.Ed25519PublicKey) *blockSyncHarness {
 	h.config.pk = key
 	return h

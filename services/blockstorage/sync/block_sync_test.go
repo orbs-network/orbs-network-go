@@ -8,18 +8,6 @@ import (
 	"time"
 )
 
-func TestBlockSyncShutdown(t *testing.T) {
-	h := newBlockSyncHarness()
-
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
-	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
-	h.cancel()
-	time.Sleep(time.Millisecond) // waiting for the sync to start
-	// TODO: refactor this once more logic is added, this is not really checking the the goroutine stopped
-	require.True(t, sync.terminated, "expecting the stop flag up")
-}
-
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 	h := newBlockSyncHarness().withNoCommitTimeout(time.Hour) // we want to see that the sync immediately starts, and not in an hour
 
@@ -30,8 +18,8 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 
 	h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	h.cancel()
-	time.Sleep(time.Millisecond)
-	require.True(t, sync.terminated, "expecting the stop flag up")
+	shutdown := h.waitForShutdown(sync)
+	require.True(t, shutdown, "expecting state to be set to nil (=shutdown)")
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
@@ -40,11 +28,12 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	// (or the idle state code)
 
 	h := newBlockSyncHarness().withNoCommitTimeout(5 * time.Millisecond)
-	h.gossip.Never("LastCommittedBlockHeight")
-	h.gossip.Never("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any)
+	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1) // only one allowed
 
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
-	time.Sleep(time.Millisecond) // give the sync time to start
+	idleReached := h.waitForState(sync, h.sf.CreateIdleState())
+	require.True(t, idleReached, "idle state was not reached when expected, most likely something else is broken")
 
 	// "commit" blocks at a rate of 1/ms, do not assume anything about the implementation
 	for i := 1; i < 10; i++ {
