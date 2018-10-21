@@ -12,11 +12,11 @@ import (
 )
 
 type InMemoryStatePersistence struct {
-	mu          sync.RWMutex
-	snapshot    ChainDiff
-	blockHeight primitives.BlockHeight
-	timestamp   primitives.TimestampNano
-	merkleRoot  primitives.MerkleSha256
+	mutex       sync.RWMutex
+	bState      ChainState
+	bHeight     primitives.BlockHeight
+	bTimestamp  primitives.TimestampNano
+	bMerkleRoot primitives.MerkleSha256
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
@@ -25,20 +25,20 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 
 	_, root := merkle.NewForest()
 	return &InMemoryStatePersistence{
-		mu:          sync.RWMutex{},
-		snapshot:    ChainDiff{},
-		blockHeight: 0,
-		timestamp:   0,
-		merkleRoot:  root,
+		mutex:       sync.RWMutex{},
+		bState:      ChainState{},
+		bHeight:     0,
+		bTimestamp:  0,
+		bMerkleRoot: root,
 	}
 }
 
-func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff ChainDiff) error {
-	sp.mu.Lock()
-	defer sp.mu.Unlock()
+func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff ChainState) error {
+	sp.mutex.Lock()
+	defer sp.mutex.Unlock()
 
-	sp.blockHeight = height
-	sp.merkleRoot = root
+	sp.bHeight = height
+	sp.bMerkleRoot = root
 
 	for contract, records := range diff {
 		for _, record := range records {
@@ -49,54 +49,54 @@ func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts prim
 }
 
 func (sp *InMemoryStatePersistence) _writeOneRecord(c primitives.ContractName, r *protocol.StateRecord) {
-	if _, ok := sp.snapshot[c]; !ok {
-		sp.snapshot[c] = map[string]*protocol.StateRecord{}
+	if _, ok := sp.bState[c]; !ok {
+		sp.bState[c] = map[string]*protocol.StateRecord{}
 	}
 
 	if isZeroValue(r.Value()) {
-		delete(sp.snapshot[c], r.Key().KeyForMap())
+		delete(sp.bState[c], r.Key().KeyForMap())
 		return
 	}
 
-	sp.snapshot[c][r.Key().KeyForMap()] = r
+	sp.bState[c][r.Key().KeyForMap()] = r
 }
 
 func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
-	sp.mu.RLock()
-	defer sp.mu.RUnlock()
+	sp.mutex.RLock()
+	defer sp.mutex.RUnlock()
 
-	record, ok := sp.snapshot[contract][key]
+	record, ok := sp.bState[contract][key]
 	return record, ok, nil
 }
 
 func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.MerkleSha256, error) {
-	sp.mu.RLock()
-	defer sp.mu.RUnlock()
+	sp.mutex.RLock()
+	defer sp.mutex.RUnlock()
 
-	return sp.blockHeight, sp.timestamp, sp.merkleRoot, nil
+	return sp.bHeight, sp.bTimestamp, sp.bMerkleRoot, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {
 	output := strings.Builder{}
 	output.WriteString("{")
-	output.WriteString(fmt.Sprintf("height: %v, data: {", sp.blockHeight))
-	contracts := make([]primitives.ContractName, 0, len(sp.snapshot))
-	for c := range sp.snapshot {
+	output.WriteString(fmt.Sprintf("height: %v, data: {", sp.bHeight))
+	contracts := make([]primitives.ContractName, 0, len(sp.bState))
+	for c := range sp.bState {
 		contracts = append(contracts, c)
 	}
 	sort.Slice(contracts, func(i, j int) bool { return contracts[i] < contracts[j] })
 	for _, currentContract := range contracts {
-		keys := make([]string, 0, len(sp.snapshot[currentContract]))
-		for k := range sp.snapshot[currentContract] {
+		keys := make([]string, 0, len(sp.bState[currentContract]))
+		for k := range sp.bState[currentContract] {
 			keys = append(keys, k)
 		}
 		sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 
 		output.WriteString(string(currentContract) + ":{")
 		for _, k := range keys {
-			output.WriteString(sp.snapshot[currentContract][k].StringKey())
+			output.WriteString(sp.bState[currentContract][k].StringKey())
 			output.WriteString(":")
-			output.WriteString(sp.snapshot[currentContract][k].StringValue())
+			output.WriteString(sp.bState[currentContract][k].StringValue())
 			output.WriteString(",")
 		}
 		output.WriteString("},")

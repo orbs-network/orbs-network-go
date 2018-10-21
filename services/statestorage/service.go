@@ -18,7 +18,7 @@ import (
 var LogTag = log.Service("state-storage")
 
 type stateIncrement struct {
-	diff       adapter.ChainDiff
+	diff       adapter.ChainState
 	merkleRoot primitives.MerkleSha256
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
@@ -122,8 +122,8 @@ func (s *service) _writeState(height primitives.BlockHeight, ts primitives.Times
 	return nil
 }
 
-func _newChainDiff(csd []*protocol.ContractStateDiff) adapter.ChainDiff {
-	result := make(adapter.ChainDiff)
+func _newChainDiff(csd []*protocol.ContractStateDiff) adapter.ChainState {
+	result := make(adapter.ChainState)
 	for _, stateDiffs := range csd {
 		contract := stateDiffs.ContractName()
 		contractMap, ok := result[contract]

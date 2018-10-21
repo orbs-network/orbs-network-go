@@ -26,7 +26,7 @@ func NewTamperingStatePersistence() TamperingStatePersistence {
 	}
 }
 
-func (t *TestStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainDiff) error {
+func (t *TestStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
 	err := t.InMemoryStatePersistence.Write(height, ts, root, diff)
 	if err != nil {
 		return err
