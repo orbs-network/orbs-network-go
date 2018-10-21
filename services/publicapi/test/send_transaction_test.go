@@ -20,7 +20,7 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 		harness := newPublicApiHarness(ctx, 1*time.Millisecond)
 		harness.addTransactionReturnsAlreadyCommitted()
 
-		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: builders.Transaction().Builder()}).Build(),
 		})
@@ -39,12 +39,12 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {
-			harness.papi.HandleTransactionResults(&handlers.HandleTransactionResultsInput{
+			harness.papi.HandleTransactionResults(ctx, &handlers.HandleTransactionResultsInput{
 				TransactionReceipts: []*protocol.TransactionReceipt{builders.TransactionReceipt().WithTransaction(txb.Build().Transaction()).Build()},
 			})
 		})
 
-		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: txb,
 			}).Build(),
@@ -65,13 +65,13 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		harness.onAddNewTransaction(func() {
-			harness.papi.HandleTransactionError(&handlers.HandleTransactionErrorInput{
+			harness.papi.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{
 				Txhash:            txHash,
 				TransactionStatus: protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED,
 			})
 		})
 
-		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: txb,
 			}).Build(),
@@ -96,7 +96,7 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 		})
 
 		start := time.Now()
-		result, err := harness.papi.SendTransaction(&services.SendTransactionInput{
+		result, err := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: txb,
 			}).Build(),

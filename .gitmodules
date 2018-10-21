@@ -16,6 +16,9 @@
 [submodule "vendor/golang.org/x/crypto"]
 	path = vendor/golang.org/x/crypto
 	url = https://go.googlesource.com/crypto
+[submodule "vendor/golang.org/x/time"]
+	path = vendor/golang.org/x/time
+	url = https://go.googlesource.com/time
 [submodule "vendor/github.com/stretchr/testify"]
 	path = vendor/github.com/stretchr/testify
 	url = https://github.com/stretchr/testify.git
@@ -26,3 +29,9 @@
 [submodule "vendor/github.com/orbs-network/orbs-contract-sdk"]
 	path = vendor/github.com/orbs-network/orbs-contract-sdk
 	url = https://github.com/orbs-network/orbs-contract-sdk
+[submodule "vendor/github.com/codahale/hdrhistogram"]
+	path = vendor/github.com/codahale/hdrhistogram
+	url = https://github.com/codahale/hdrhistogram
+[submodule "vendor/github.com/VividCortex/ewma"]
+	path = vendor/github.com/VividCortex/ewma
+	url = https://github.com/VividCortex/ewma

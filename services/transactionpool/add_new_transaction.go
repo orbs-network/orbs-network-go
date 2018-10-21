@@ -1,17 +1,15 @@
 package transactionpool
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 )
 
-func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
 	s.logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
@@ -26,7 +24,7 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
-	if err := s.validateSingleTransactionForPreOrder(input.SignedTransaction); err != nil {
+	if err := s.validateSingleTransactionForPreOrder(ctx, input.SignedTransaction); err != nil {
 		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
 		s.logger.Error("error validating transaction for preorder", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
 		return s.addTransactionOutputFor(nil, status), err
@@ -37,40 +35,18 @@ func (s *service) AddNewTransaction(input *services.AddNewTransactionInput) (*se
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 
 	}
-	//TODO batch
-	if err := s.forwardTransaction(input.SignedTransaction); err != nil {
-		s.logger.Error("error forwarding transaction via gossip", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash))
-	}
+
+	s.transactionForwarder.submit(input.SignedTransaction)
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
-func (s *service) forwardTransaction(tx *protocol.SignedTransaction) error {
-	s.logger.Info("forwarding transaction to peers", log.Stringable("transaction", tx))
-
-	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), tx.Raw())
-	if err != nil {
-		return err
-	}
-
-	_, err = s.gossip.BroadcastForwardedTransactions(&gossiptopics.ForwardedTransactionsInput{
-		Message: &gossipmessages.ForwardedTransactionsMessage{
-			SignedTransactions: Transactions{tx},
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
-				Signature:       sig,
-			}).Build(),
-		},
-	})
-
-	return err
-}
-
-func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.SignedTransaction) error {
+func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
+	bh, _ := s.currentBlockHeightAndTime()
 	//TODO handle error from vm call
-	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(&services.TransactionSetPreOrderInput{
+	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		SignedTransactions: Transactions{transaction},
-		BlockHeight:        s.lastCommittedBlockHeight,
+		BlockHeight:        bh,
 	})
 
 	if len(preOrderCheckResults.PreOrderResults) != 1 {
@@ -85,10 +61,11 @@ func (s *service) validateSingleTransactionForPreOrder(transaction *protocol.Sig
 }
 
 func (s *service) addTransactionOutputFor(maybeReceipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.AddNewTransactionOutput {
+	bh, ts := s.currentBlockHeightAndTime()
 	return &services.AddNewTransactionOutput{
 		TransactionReceipt: maybeReceipt,
 		TransactionStatus:  status,
-		BlockHeight:        s.lastCommittedBlockHeight,
-		BlockTimestamp:     s.lastCommittedBlockTimestamp,
+		BlockHeight:        bh,
+		BlockTimestamp:     ts,
 	}
 }

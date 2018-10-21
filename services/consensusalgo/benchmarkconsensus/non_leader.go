@@ -1,6 +1,7 @@
 package benchmarkconsensus
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -10,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) {
+func (s *service) nonLeaderHandleCommit(ctx context.Context, blockPair *protocol.BlockPairContainer) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -19,7 +20,7 @@ func (s *service) nonLeaderHandleCommit(blockPair *protocol.BlockPairContainer) 
 		s.logger.Error("non leader failed to validate block", log.Error(err))
 		return
 	}
-	err = s.nonLeaderCommitAndReplyUnderMutex(blockPair)
+	err = s.nonLeaderCommitAndReplyUnderMutex(ctx, blockPair)
 	if err != nil {
 		s.logger.Error("non leader failed to commit and reply vote", log.Error(err))
 		return
@@ -30,10 +31,10 @@ func (s *service) nonLeaderValidateBlockUnderMutex(blockPair *protocol.BlockPair
 	// block height
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 	if blockHeight != blockPair.ResultsBlock.Header.BlockHeight() {
-		return errors.Errorf("invalid block: block height of tx %d is not equal rx %d", blockHeight, blockPair.ResultsBlock.Header.BlockHeight())
+		return errors.Errorf("invalid block: block height of tx %s is not equal rx %s", blockHeight, blockPair.ResultsBlock.Header.BlockHeight())
 	}
 	if blockHeight > s.lastCommittedBlockHeightUnderMutex()+1 {
-		return errors.Errorf("invalid block: future block height %d", blockHeight)
+		return errors.Errorf("invalid block: future block height %s", blockHeight)
 	}
 
 	// block consensus
@@ -50,9 +51,9 @@ func (s *service) nonLeaderValidateBlockUnderMutex(blockPair *protocol.BlockPair
 	return nil
 }
 
-func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPairContainer) error {
+func (s *service) nonLeaderCommitAndReplyUnderMutex(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	// save the block to block storage
-	err := s.saveToBlockStorage(blockPair)
+	err := s.saveToBlockStorage(ctx, blockPair)
 	if err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(blockPair *protocol.BlockPai
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
 	s.logger.Info("replying committed with last committed height", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()), log.Stringable("signed-data", signedData))
-	_, err = s.gossip.SendBenchmarkConsensusCommitted(&gossiptopics.BenchmarkConsensusCommittedInput{
+	_, err = s.gossip.SendBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: recipient,
 		Message:            message,
 	})

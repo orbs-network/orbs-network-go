@@ -24,7 +24,7 @@ type NodeConfig interface {
 
 	// block storage
 	BlockSyncBatchSize() uint32
-	BlockSyncInterval() time.Duration
+	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
@@ -49,6 +49,8 @@ type NodeConfig interface {
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPropagationBatchSize() uint16
+	TransactionPoolPropagationBatchingTimeout() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -60,6 +62,9 @@ type NodeConfig interface {
 
 	// processor
 	ProcessorArtifactPath() string
+
+	// metrics
+	MetricsReportInterval() time.Duration
 }
 
 type mutableNodeConfig interface {
@@ -92,7 +97,7 @@ type mutableNodeConfig interface {
 type BlockStorageConfig interface {
 	NodePublicKey() primitives.Ed25519PublicKey
 	BlockSyncBatchSize() uint32
-	BlockSyncInterval() time.Duration
+	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
@@ -136,6 +141,8 @@ type TransactionPoolConfig interface {
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
+	TransactionPoolPropagationBatchSize() uint16
+	TransactionPoolPropagationBatchingTimeout() time.Duration
 }
 
 type FederationNode interface {

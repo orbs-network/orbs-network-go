@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -39,30 +40,30 @@ func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlo
 	return &driver{service: statestorage.NewStateStorage(cfg, p, logger)}
 }
 
-func (d *driver) readSingleKey(contract string, key string) ([]byte, error) {
-	h, _, _ := d.getBlockHeightAndTimestamp()
-	return d.readSingleKeyFromRevision(h, contract, key)
+func (d *driver) readSingleKey(ctx context.Context, contract string, key string) ([]byte, error) {
+	h, _, _ := d.getBlockHeightAndTimestamp(ctx)
+	return d.readSingleKeyFromRevision(ctx, h, contract, key)
 }
 
-func (d *driver) readSingleKeyFromRevision(revision int, contract string, key string) ([]byte, error) {
-	out, err := d.readKeysFromRevision(revision, contract, key)
+func (d *driver) readSingleKeyFromRevision(ctx context.Context, revision int, contract string, key string) ([]byte, error) {
+	out, err := d.readKeysFromRevision(ctx, revision, contract, key)
 	if err != nil {
 		return nil, err
 	}
 	return out[0].value, nil
 }
 
-func (d *driver) readKeys(contract string, keys ...string) ([]*keyValue, error) {
-	h, _, _ := d.getBlockHeightAndTimestamp()
-	return d.readKeysFromRevision(h, contract, keys...)
+func (d *driver) readKeys(ctx context.Context, contract string, keys ...string) ([]*keyValue, error) {
+	h, _, _ := d.getBlockHeightAndTimestamp(ctx)
+	return d.readKeysFromRevision(ctx, h, contract, keys...)
 }
 
-func (d *driver) readKeysFromRevision(revision int, contract string, keys ...string) ([]*keyValue, error) {
+func (d *driver) readKeysFromRevision(ctx context.Context, revision int, contract string, keys ...string) ([]*keyValue, error) {
 	ripmdKeys := make([]primitives.Ripmd160Sha256, 0, len(keys))
 	for _, key := range keys {
 		ripmdKeys = append(ripmdKeys, primitives.Ripmd160Sha256(key))
 	}
-	out, err := d.service.ReadKeys(&services.ReadKeysInput{BlockHeight: primitives.BlockHeight(revision), ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
+	out, err := d.service.ReadKeys(ctx, &services.ReadKeysInput{BlockHeight: primitives.BlockHeight(revision), ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
 
 	if err != nil {
 		return nil, err
@@ -83,21 +84,21 @@ func (d *driver) readKeysFromRevision(revision int, contract string, keys ...str
 	return result, nil
 }
 
-func (d *driver) getBlockHeightAndTimestamp() (int, int, error) {
-	output, err := d.service.GetStateStorageBlockHeight(&services.GetStateStorageBlockHeightInput{})
+func (d *driver) getBlockHeightAndTimestamp(ctx context.Context) (int, int, error) {
+	output, err := d.service.GetStateStorageBlockHeight(ctx, &services.GetStateStorageBlockHeightInput{})
 	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
 }
 
-func (d *driver) commitStateDiff(state *services.CommitStateDiffInput) {
-	d.service.CommitStateDiff(state)
+func (d *driver) commitStateDiff(ctx context.Context, state *services.CommitStateDiffInput) {
+	d.service.CommitStateDiff(ctx, state)
 }
 
-func (d *driver) commitValuePairs(contract string, keyValues ...string) {
-	h, _, _ := d.getBlockHeightAndTimestamp()
-	d.commitValuePairsAtHeight(h+1, contract, keyValues...)
+func (d *driver) commitValuePairs(ctx context.Context, contract string, keyValues ...string) {
+	h, _, _ := d.getBlockHeightAndTimestamp(ctx)
+	d.commitValuePairsAtHeight(ctx, h+1, contract, keyValues...)
 }
 
-func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...string) {
+func (d *driver) commitValuePairsAtHeight(ctx context.Context, h int, contract string, keyValues ...string) {
 	if len(keyValues)%2 != 0 {
 		panic("expecting an array of key value pairs")
 	}
@@ -108,5 +109,5 @@ func (d *driver) commitValuePairsAtHeight(h int, contract string, keyValues ...s
 	}
 
 	contractStateDiff := b.Build()
-	d.commitStateDiff(CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
+	d.commitStateDiff(ctx, CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
 }

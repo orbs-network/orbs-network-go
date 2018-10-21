@@ -44,7 +44,7 @@ func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 		b0 := aBlockFromLeader.WithHeight(0).Build()
 		h.expectCommitReplyWithoutSave(b0, 0, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
-		h.receivedCommitViaGossip(b0)
+		h.receivedCommitViaGossip(ctx, b0)
 		h.verifyCommitReplyWithoutSave(t)
 	})
 }
@@ -60,7 +60,7 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
-		h.receivedCommitViaGossip(b1)
+		h.receivedCommitViaGossip(ctx, b1)
 		h.verifyCommitSaveAndReply(t)
 
 		t.Log("Leader commits height 2, confirm height 2")
@@ -68,7 +68,7 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
 		h.expectCommitSaveAndReply(b2, 2, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
-		h.receivedCommitViaGossip(b2)
+		h.receivedCommitViaGossip(ctx, b2)
 		h.verifyCommitSaveAndReply(t)
 	})
 }
@@ -84,7 +84,7 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
-		h.receivedCommitViaGossip(b1)
+		h.receivedCommitViaGossip(ctx, b1)
 		h.verifyCommitSaveAndReply(t)
 
 		t.Log("Leader commits height 2, confirm height 2")
@@ -92,14 +92,14 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
 		h.expectCommitSaveAndReply(b2, 2, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
-		h.receivedCommitViaGossip(b2)
+		h.receivedCommitViaGossip(ctx, b2)
 		h.verifyCommitSaveAndReply(t)
 
 		t.Log("Leader commits height 1 again, confirm height 2 again")
 
 		h.expectCommitSaveAndReply(b1, 2, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
-		h.receivedCommitViaGossip(b1)
+		h.receivedCommitViaGossip(ctx, b1)
 		h.verifyCommitSaveAndReply(t)
 	})
 }
@@ -115,7 +115,7 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 		b1000 := aBlockFromLeader.WithHeight(1000).Build()
 		h.expectCommitIgnored()
 
-		h.receivedCommitViaGossip(b1000)
+		h.receivedCommitViaGossip(ctx, b1000)
 		h.verifyCommitIgnored(t)
 	})
 }
@@ -131,7 +131,7 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		h.expectCommitSaveAndReply(b1, 1, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
-		h.receivedCommitViaGossip(b1)
+		h.receivedCommitViaGossip(ctx, b1)
 		h.verifyCommitSaveAndReply(t)
 
 		t.Log("Leader commits height 2 without hash pointer, don't confirm")
@@ -139,7 +139,7 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(nil).Build()
 		h.expectCommitIgnored()
 
-		h.receivedCommitViaGossip(b2)
+		h.receivedCommitViaGossip(ctx, b2)
 		h.verifyCommitIgnored(t)
 	})
 }
@@ -157,7 +157,7 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 			Build()
 		h.expectCommitIgnored()
 
-		h.receivedCommitViaGossip(b1)
+		h.receivedCommitViaGossip(ctx, b1)
 		h.verifyCommitIgnored(t)
 	})
 }
@@ -174,7 +174,7 @@ func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
 		b1 := aBlockFromNonLeader.WithHeight(1).Build()
 		h.expectCommitIgnored()
 
-		h.receivedCommitViaGossip(b1)
+		h.receivedCommitViaGossip(ctx, b1)
 		h.verifyCommitIgnored(t)
 	})
 }

@@ -1,6 +1,7 @@
 package javascript
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -35,9 +36,9 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	s.contractSdkHandlerUnderMutex = handler
 }
 
-func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	// retrieve code
-	code, err := s.retrieveContractCodeFromRepository(input.ContextId, input.ContractName)
+	code, err := s.retrieveContractCodeFromRepository(ctx, input.ContextId, input.ContractName)
 	if err != nil {
 		return &services.ProcessCallOutput{
 			OutputArgumentArray: (&protocol.MethodArgumentArrayBuilder{}).Build(),
@@ -68,7 +69,7 @@ func (s *service) ProcessCall(input *services.ProcessCallInput) (*services.Proce
 	}, contractErr
 }
 
-func (s *service) GetContractInfo(input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
+func (s *service) GetContractInfo(ctx context.Context, input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
 	panic("Not implemented")
 }
 

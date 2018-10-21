@@ -29,8 +29,8 @@ func initializeContractInstance(contractInfo *sdk.ContractInfo, sdkHandler handl
 	))
 }
 
-func (s *service) retrieveContractAndMethodInfoFromRepository(executionContextId sdk.Context, contractName string, methodName string) (*sdk.ContractInfo, *sdk.MethodInfo, error) {
-	contract, err := s.retrieveContractInfoFromRepository(executionContextId, contractName)
+func (s *service) retrieveContractAndMethodInfoFromRepository(ctx context.Context, executionContextId sdk.Context, contractName string, methodName string) (*sdk.ContractInfo, *sdk.MethodInfo, error) {
+	contract, err := s.retrieveContractInfoFromRepository(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -41,7 +41,7 @@ func (s *service) retrieveContractAndMethodInfoFromRepository(executionContextId
 	return contract, &method, nil
 }
 
-func (s *service) retrieveContractInfoFromRepository(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
+func (s *service) retrieveContractInfoFromRepository(ctx context.Context, executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
 	// 1. try pre-built repository
 	contractInfo, found := repository.PreBuiltContracts[contractName]
 	if found {
@@ -55,12 +55,12 @@ func (s *service) retrieveContractInfoFromRepository(executionContextId sdk.Cont
 	}
 
 	// 3. try deployable code from state (if not yet compiled)
-	return s.retrieveDeployableContractInfoFromState(executionContextId, contractName)
+	return s.retrieveDeployableContractInfoFromState(ctx, executionContextId, contractName)
 }
 
-func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
+func (s *service) retrieveDeployableContractInfoFromState(ctx context.Context, executionContextId sdk.Context, contractName string) (*sdk.ContractInfo, error) {
 	meter := s.logger.Meter("native-contract-deploy-time")
-	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(executionContextId, contractName)
+	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (s *service) retrieveDeployableContractInfoFromState(executionContextId sdk
 	return newContractInfo, nil
 }
 
-func (s *service) callGetCodeOfDeploymentSystemContract(executionContextId sdk.Context, contractName string) ([]byte, error) {
+func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId sdk.Context, contractName string) ([]byte, error) {
 	handler := s.getContractSdkHandler()
 	if handler == nil {
 		return nil, errors.New("ContractSdkCallHandler has not registered yet")
@@ -105,7 +105,7 @@ func (s *service) callGetCodeOfDeploymentSystemContract(executionContextId sdk.C
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE.Name)
 
-	output, err := handler.HandleSdkCall(&handlers.HandleSdkCallInput{
+	output, err := handler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",

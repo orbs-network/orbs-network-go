@@ -39,6 +39,14 @@ func IgnoreErrorsMatching(pattern string) Filter {
 	return &errorRegexp{pattern: pattern}
 }
 
+func DiscardAll() Filter {
+	return &discardAll{}
+}
+
+func OnlyMetrics() Filter {
+	return &onlyMetrics{}
+}
+
 type errorRegexp struct {
 	pattern string
 }
@@ -136,4 +144,18 @@ func (f *or) Allows(level string, message string, fields []*Field) bool {
 	}
 
 	return result
+}
+
+type discardAll struct {
+}
+
+func (discardAll) Allows(level string, message string, fields []*Field) bool {
+	return false
+}
+
+type onlyMetrics struct {
+}
+
+func (f onlyMetrics) Allows(level string, message string, fields []*Field) bool {
+	return level == "metric"
 }
