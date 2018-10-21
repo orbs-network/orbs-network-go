@@ -18,6 +18,7 @@ type NodeConfig interface {
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+	ConsensusContextPercentageOfNodesRequiredForConsensus() uint32
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration

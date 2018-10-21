@@ -27,6 +27,7 @@ type Config interface {
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
+	ConsensusContextPercentageOfNodesRequiredForConsensus() uint32
 }
 
 type service struct {

@@ -61,16 +61,16 @@ workflows:
   version: 2
   build:
     jobs:
-#      - build
-#      - acceptance
-#      - notify_github_about_dashboard
-#      - success:
-#          requires:
-#            - build
-#            - acceptance
+      - build
+      - acceptance
+      - notify_github_about_dashboard
+      - success:
+          requires:
+            - build
+            - acceptance
       - deploy_testnet:
-#          requires:
-#            - success
+          requires:
+            - success
           filters:
             branches:
               only:
