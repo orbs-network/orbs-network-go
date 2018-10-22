@@ -50,14 +50,14 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
 		if err != nil {
-			s.logger.Error("failed to validate block received via sync", log.Error(err))
+			s.logger.Error("failed to validate block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock))
 			break
 		}
 
 		_, err = s.storage.CommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
 
 		if err != nil {
-			s.logger.Error("failed to commit block received via sync", log.Error(err))
+			s.logger.Error("failed to commit block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			break
 		} else {
 			s.logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
