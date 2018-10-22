@@ -247,7 +247,11 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	if err := s.validateWithConsensusAlgos(ctx, s.lastCommittedBlock, input.BlockPair); err != nil {
+	if err := s.validateWithConsensusAlgosWithMode(
+		ctx, s.lastCommittedBlock,
+		input.BlockPair,
+		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
+
 		s.logger.Error("intra-node sync to consensus algo failed", log.Error(err))
 	}
 
@@ -385,10 +389,23 @@ func (s *service) syncBlockToTxPool(ctx context.Context, committedBlockPair *pro
 	return err
 }
 
-func (s *service) validateWithConsensusAlgos(ctx context.Context, prevBlockPair *protocol.BlockPairContainer, lastCommittedBlockPair *protocol.BlockPairContainer) error {
+func (s *service) validateWithConsensusAlgos(
+	ctx context.Context,
+	prevBlockPair *protocol.BlockPairContainer,
+	lastCommittedBlockPair *protocol.BlockPairContainer) error {
+
+	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
+}
+
+func (s *service) validateWithConsensusAlgosWithMode(
+	ctx context.Context,
+	prevBlockPair *protocol.BlockPairContainer,
+	lastCommittedBlockPair *protocol.BlockPairContainer,
+	mode handlers.HandleBlockConsensusMode) error {
+
 	for _, handler := range s.consensusBlocksHandlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+			Mode:                   mode,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              lastCommittedBlockPair,
 			PrevCommittedBlockPair: prevBlockPair,
