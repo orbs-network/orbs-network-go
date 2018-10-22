@@ -182,7 +182,7 @@ func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipm
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
-	blocks, err := decodeBlockPairs(payloads)
+	blocks, err := decodeBlockPairs(payloads[2:])
 
 	if err != nil {
 		s.logger.Error("could not decode block pair from block sync", log.Error(err))

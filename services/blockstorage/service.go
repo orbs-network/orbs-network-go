@@ -248,7 +248,8 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 	}
 
 	if err := s.validateWithConsensusAlgosWithMode(
-		ctx, s.lastCommittedBlock,
+		ctx,
+		s.lastCommittedBlock,
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 

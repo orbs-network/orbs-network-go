@@ -3,17 +3,21 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestBlockSync(t *testing.T) {
 	harness.Network(t).WithSetup(func(ctx context.Context, network harness.InProcessNetwork) {
 		for i := 1; i <= 10; i++ {
-			blockPair := builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithTransactions(2).Build()
+			blockPair := builders.BlockPair().
+				WithHeight(primitives.BlockHeight(i)).
+				WithTransactions(2).
+				WithBenchmarkConsensusBlockProof(keys.Ed25519KeyPairForTests(0)).
+				Build()
 			network.BlockPersistence(0).WriteBlock(blockPair)
 		}
 	}).Start(func(ctx context.Context, network harness.InProcessNetwork) {
@@ -27,9 +31,7 @@ func TestBlockSync(t *testing.T) {
 			t.Errorf("waiting for block on node 1 failed: %s", err)
 		}
 
-		time.Sleep(1 * time.Second)
-
-		//// Wait until full sync
+		// Wait until full sync
 		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 1 failed: %s", err)
 		}
