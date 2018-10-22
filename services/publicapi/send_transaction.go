@@ -30,7 +30,7 @@ func (s *service) SendTransaction(ctx context.Context, input *services.SendTrans
 	s.logger.Info("send transaction request received", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
 	start := time.Now()
-	defer s.metrics.sendTransaction.RecordSince(start)
+	defer s.metrics.sendTransactionTime.RecordSince(start)
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 

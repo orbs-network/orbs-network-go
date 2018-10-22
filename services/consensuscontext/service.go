@@ -13,16 +13,16 @@ import (
 var LogTag = log.Service("consensus-context")
 
 type metrics struct {
-	createTxBlock        *metric.Histogram
-	createResultsBlock   *metric.Histogram
-	numberOfTransactions *metric.Rate
+	createTxBlockTime      *metric.Histogram
+	createResultsBlockTime *metric.Histogram
+	transactionsRate       *metric.Rate
 }
 
 func newMetrics(factory metric.Factory) *metrics {
 	return &metrics{
-		createTxBlock:        factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime", 10*time.Second),
-		createResultsBlock:   factory.NewLatency("ConsensusContext.CreateResultsBlockTime", 10*time.Second),
-		numberOfTransactions: factory.NewRate("ConsensusContext.NumberOfTransactions"),
+		createTxBlockTime:      factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime", 10*time.Second),
+		createResultsBlockTime: factory.NewLatency("ConsensusContext.CreateResultsBlockTime", 10*time.Second),
+		transactionsRate:       factory.NewRate("ConsensusContext.TransactionsPerSecond"),
 	}
 }
 
@@ -63,7 +63,7 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 
 	s.logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
 
-	s.metrics.numberOfTransactions.Measure(int64(len(txBlock.SignedTransactions)))
+	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
 
 	for _, tx := range txBlock.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())

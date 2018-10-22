@@ -95,7 +95,7 @@ func (s *service) retrieveDeployableContractInfoFromState(ctx context.Context, e
 	s.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
 
 	s.metrics.deployedContracts.Inc()
-	s.metrics.compileNativeContract.RecordSince(start)
+	s.metrics.contractCompilationTime.RecordSince(start)
 	// only want to log meter on success (so this line is not under defer)
 
 	return newContractInfo, nil

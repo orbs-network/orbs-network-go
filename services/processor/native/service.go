@@ -28,16 +28,16 @@ type service struct {
 }
 
 type metrics struct {
-	deployedContracts     *metric.Gauge
-	processCall           *metric.Histogram
-	compileNativeContract *metric.Histogram
+	deployedContracts       *metric.Gauge
+	processCallTime         *metric.Histogram
+	contractCompilationTime *metric.Histogram
 }
 
 func getMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		deployedContracts:     m.NewGauge("Processor.Native.DeployedContracts"),
-		processCall:           m.NewLatency("Processor.Native.DeployedContracts", 10*time.Second),
-		compileNativeContract: m.NewLatency("Processor.Native.CompileNativeContract", 10*time.Second),
+		deployedContracts:       m.NewGauge("Processor.Native.DeployedContractsNumber"),
+		processCallTime:         m.NewLatency("Processor.Native.ProcessCallTime", 10*time.Second),
+		contractCompilationTime: m.NewLatency("Processor.Native.ContractCompilationTime", 10*time.Second),
 	}
 }
 
@@ -90,7 +90,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	}
 
 	start := time.Now()
-	defer s.metrics.processCall.RecordSince(start)
+	defer s.metrics.processCallTime.RecordSince(start)
 
 	// execute
 	outputArgs, contractErr, err := s.processMethodCall(executionContextId, contractInfo, methodInfo, input.InputArgumentArray)

@@ -23,7 +23,7 @@ func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetT
 	timestamp := input.ClientRequest.TransactionTimestamp()
 
 	start := time.Now()
-	defer s.metrics.getTransactionStatus.RecordSince(start)
+	defer s.metrics.getTransactionStatusTime.RecordSince(start)
 
 	if txReceipt, err, ok := s.getFromTxPool(ctx, txHash, timestamp); ok {
 		return toGetTxOutput(txReceipt), err

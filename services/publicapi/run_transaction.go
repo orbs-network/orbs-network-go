@@ -28,7 +28,7 @@ func (s *service) CallMethod(ctx context.Context, input *services.CallMethodInpu
 	s.logger.Info("call method request received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
 
 	start := time.Now()
-	defer s.metrics.callMethod.RecordSince(start)
+	defer s.metrics.callMethodTime.RecordSince(start)
 
 	result, err := s.virtualMachine.RunLocalMethod(ctx, &services.RunLocalMethodInput{
 		Transaction: tx,

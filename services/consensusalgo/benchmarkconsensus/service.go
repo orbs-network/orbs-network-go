@@ -51,18 +51,18 @@ type service struct {
 }
 
 type metrics struct {
-	consensusRoundTick     *metric.Histogram
-	failedConsensusTicks   *metric.Rate
-	timedOutConsensusTicks *metric.Rate
-	votingLatency          *metric.Histogram
+	consensusRoundTickTime     *metric.Histogram
+	failedConsensusTicksRate   *metric.Rate
+	timedOutConsensusTicksRate *metric.Rate
+	votingTime                 *metric.Histogram
 }
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration, collectVotesTimeout time.Duration) *metrics {
 	return &metrics{
-		consensusRoundTick:     m.NewLatency("ConsensusAlgo.Benchmark.RoundTick", consensusTimeout),
-		failedConsensusTicks:   m.NewRate("ConsensusAlgo.Benchmark.FailedTicks"),
-		timedOutConsensusTicks: m.NewRate("ConsensusAlgo.Benchmark.TimedOutTicks"),
-		votingLatency:          m.NewLatency("ConsensusAlgo.Benchmark.VotingLatency", collectVotesTimeout),
+		consensusRoundTickTime:     m.NewLatency("ConsensusAlgo.Benchmark.RoundTickTime", consensusTimeout),
+		votingTime:                 m.NewLatency("ConsensusAlgo.Benchmark.VotingTime", collectVotesTimeout),
+		failedConsensusTicksRate:   m.NewRate("ConsensusAlgo.Benchmark.FailedTicksPerSecond"),
+		timedOutConsensusTicksRate: m.NewRate("ConsensusAlgo.Benchmark.TimedOutTicksPerSecond"),
 	}
 }
 
