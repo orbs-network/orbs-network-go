@@ -34,6 +34,10 @@ func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input
 	return nil, ret.Error(0)
 }
 
+func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
+	s.Called(ctx)
+}
+
 // end of storage mock
 
 type blockSyncConfigForTests struct {
@@ -128,6 +132,12 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 
 func (h *blockSyncHarness) cancel() {
 	h.ctxCancel()
+}
+
+func (h *blockSyncHarness) expectingSyncOnStart() {
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
+	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
 func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {

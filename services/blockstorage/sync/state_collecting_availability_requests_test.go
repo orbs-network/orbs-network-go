@@ -14,6 +14,7 @@ import (
 func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T) {
 	h := newBlockSyncHarness()
 
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
@@ -29,6 +30,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *tes
 	// this can probably happen only if BatchSize config is invalid
 	h := newBlockSyncHarness().withBatchSize(0)
 
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1) // new server
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
@@ -42,6 +44,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *tes
 func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) {
 	h := newBlockSyncHarness()
 
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
@@ -65,6 +68,7 @@ func TestCollectingAvailabilityContextTermination(t *testing.T) {
 	h := newBlockSyncHarness()
 	h.cancel()
 
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 

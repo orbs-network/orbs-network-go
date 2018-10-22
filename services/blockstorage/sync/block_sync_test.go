@@ -1,8 +1,6 @@
 package sync
 
 import (
-	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -11,8 +9,7 @@ import (
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 	h := newBlockSyncHarness().withNoCommitTimeout(time.Hour) // we want to see that the sync immediately starts, and not in an hour
 
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+	h.expectingSyncOnStart()
 
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
 
@@ -28,8 +25,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	// (or the idle state code)
 
 	h := newBlockSyncHarness().withNoCommitTimeout(8 * time.Millisecond)
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
-	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1) // only one allowed
+	h.expectingSyncOnStart()
 
 	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
 	idleReached := h.waitForState(sync, h.sf.CreateIdleState())
@@ -42,5 +38,6 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 		require.IsType(t, &idleState{}, sync.currentState, "state should remain idle")
 	}
 
+	h.verifyMocks(t)
 	h.cancel() // kill the sync (goroutine)
 }

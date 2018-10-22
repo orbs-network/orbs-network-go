@@ -35,6 +35,7 @@ type BlockSyncStorage interface {
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
+	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
 }
 
 type BlockSync struct {

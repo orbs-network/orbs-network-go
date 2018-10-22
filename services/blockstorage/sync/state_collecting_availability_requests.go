@@ -27,6 +27,7 @@ func (s *collectingAvailabilityResponsesState) String() string {
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
 	responses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
+	s.gossipClient.petitionerUpdateConsensusAlgos(ctx)
 	err := s.gossipClient.petitionerBroadcastBlockAvailabilityRequest(ctx)
 	if err != nil {
 		s.logger.Info("failed to broadcast block availability request", log.Error(err))
