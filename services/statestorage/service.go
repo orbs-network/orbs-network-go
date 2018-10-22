@@ -1,7 +1,6 @@
 package statestorage
 
 import (
-	"bytes"
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -17,24 +16,16 @@ import (
 
 var LogTag = log.Service("state-storage")
 
-type stateIncrement struct {
-	diff       adapter.ChainState
-	merkleRoot primitives.MerkleSha256
-	height     primitives.BlockHeight
-	ts         primitives.TimestampNano
-}
-
 type service struct {
 	config       config.StateStorageConfig
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
 
-	mutex       sync.RWMutex
-	incCache    []*stateIncrement
-	persistence adapter.StatePersistence
-	merkle      *merkle.Forest
-	height      primitives.BlockHeight
-	ts          primitives.TimestampNano
+	mutex        sync.RWMutex
+	layeredState *layeredState
+	merkle       *merkle.Forest
+	height       primitives.BlockHeight
+	ts           primitives.TimestampNano
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
@@ -54,12 +45,11 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 		logger:       logger.WithTags(LogTag),
 
-		mutex:       sync.RWMutex{},
-		merkle:      merkle,
-		incCache:    []*stateIncrement{},
-		persistence: persistence,
-		height:      height,
-		ts:          ts,
+		mutex:        sync.RWMutex{},
+		merkle:       merkle,
+		layeredState: newLayeredState(persistence, int(config.StateStorageHistoryRetentionDistance())),
+		height:       height,
+		ts:           ts,
 	}
 }
 
@@ -82,7 +72,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
 	// TODO use input.resultheader.preexecutuion
-	root, err := s._readStateHash(commitBlockHeight - 1)
+	root, err := s.layeredState.ReadStateHash(commitBlockHeight - 1)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", s.height)
 	}
@@ -91,7 +81,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", s.height)
 	}
 
-	err = s._writeState(commitBlockHeight, commitTimestamp, newRoot, input)
+	err = s.layeredState.Write(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}
@@ -100,43 +90,6 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	s.ts = commitTimestamp
 	s.blockTracker.IncrementHeight()
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
-}
-
-func (s *service) _writeState(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, input *services.CommitStateDiffInput) error {
-	// TODO - move this loop for merging and persisting snapshots to a separate goroutine. merely append here with a safety array size limit
-	for uint32(len(s.incCache)) >= s.config.StateStorageHistoryRetentionDistance() {
-		d := s.incCache[0]
-		err := s.persistence.Write(d.height, d.ts, d.merkleRoot, d.diff)
-		if err != nil {
-			log.Error(err)
-			break
-		}
-		s.incCache = s.incCache[1:]
-	}
-	s.incCache = append(s.incCache, &stateIncrement{
-		diff:       _newChainDiff(input.ContractStateDiffs),
-		merkleRoot: root,
-		height:     height,
-		ts:         ts,
-	})
-	return nil
-}
-
-func _newChainDiff(csd []*protocol.ContractStateDiff) adapter.ChainState {
-	result := make(adapter.ChainState)
-	for _, stateDiffs := range csd {
-		contract := stateDiffs.ContractName()
-		contractMap, ok := result[contract]
-		if !ok {
-			contractMap = make(map[string]*protocol.StateRecord)
-			result[contract] = contractMap
-		}
-		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
-			r := i.NextStateDiffs()
-			contractMap[r.Key().KeyForMap()] = r
-		}
-	}
-	return result
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
@@ -157,7 +110,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok, err := s._readStateKey(input.BlockHeight, input.ContractName, key.KeyForMap())
+		record, ok, err := s.layeredState.Read(input.BlockHeight, input.ContractName, key.KeyForMap())
 		if err != nil {
 			return nil, errors.Wrap(err, "persistence layer error")
 		}
@@ -173,31 +126,6 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		return output, errors.Errorf("no value found for input key(s)")
 	}
 	return output, nil
-}
-
-func (s *service) _readStateKey(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
-	for i := len(s.incCache) - 1; i >= 0; i-- {
-		if s.incCache[i].height > height {
-			continue
-		}
-		if record, exists := s.incCache[i].diff[contract][key]; exists {
-			return record, !isZeroValue(record.Value()), nil // cached state increments must include zero values
-		}
-	}
-	return s.persistence.Read(contract, key)
-}
-
-func (s *service) _readStateHash(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
-	persistedHeight, _, persistedHash, err := s.persistence.ReadMetadata()
-	if err != nil {
-		return nil, err
-	}
-	if height == persistedHeight {
-		return persistedHash, nil
-	}
-
-	cacheIdx := height - persistedHeight - 1
-	return s.incCache[cacheIdx].merkleRoot, nil
 }
 
 func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *services.GetStateStorageBlockHeightInput) (*services.GetStateStorageBlockHeightOutput, error) {
@@ -219,12 +147,11 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	persistedHeight := s.height - primitives.BlockHeight(len(s.incCache))
-	if input.BlockHeight < persistedHeight {
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.height {
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-	value, err := s._readStateHash(input.BlockHeight)
+	value, err := s.layeredState.ReadStateHash(input.BlockHeight)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
@@ -233,10 +160,23 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	return output, nil
 }
 
-func newZeroValue() []byte {
-	return []byte{}
+func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
+	result := make(adapter.ChainState)
+	for _, stateDiffs := range csd {
+		contract := stateDiffs.ContractName()
+		contractMap, ok := result[contract]
+		if !ok {
+			contractMap = make(map[string]*protocol.StateRecord)
+			result[contract] = contractMap
+		}
+		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
+			r := i.NextStateDiffs()
+			contractMap[r.Key().KeyForMap()] = r
+		}
+	}
+	return result
 }
 
-func isZeroValue(value []byte) bool {
-	return bytes.Equal(value, []byte{})
+func newZeroValue() []byte {
+	return []byte{}
 }
