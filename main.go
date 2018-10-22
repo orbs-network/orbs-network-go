@@ -39,20 +39,26 @@ func getLogger(path string, silent bool) log.BasicLogger {
 	).WithOutput(stdoutOutput, fileOutput)
 }
 
-func getConfig(pathToConfig string) (config.NodeConfig, error) {
+func getConfig(configFiles config.ArrayFlags) (config.NodeConfig, error) {
 	cfg := config.ForProduction("")
 
-	if pathToConfig != "" {
-		if _, err := os.Stat(pathToConfig); os.IsNotExist(err) {
-			return nil, errors.Errorf("could not open config file: %v", err)
-		}
+	if len(configFiles) != 0 {
+		for _, configFile := range configFiles {
+			if _, err := os.Stat(configFile); os.IsNotExist(err) {
+				return nil, errors.Errorf("could not open config file: %v", err)
+			}
 
-		contents, err := ioutil.ReadFile(pathToConfig)
-		if err != nil {
-			return nil, err
-		}
+			contents, err := ioutil.ReadFile(configFile)
+			if err != nil {
+				return nil, err
+			}
 
-		return cfg.MergeWithFileConfig(string(contents))
+			cfg, err = cfg.MergeWithFileConfig(string(contents))
+
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return cfg, nil
@@ -62,11 +68,13 @@ func main() {
 	httpAddress := flag.String("listen", ":8080", "ip address and port for http server")
 	silentLog := flag.Bool("silent", false, "disable output to stdout")
 	pathToLog := flag.String("log", "", "path/to/node.log")
-	pathToConfig := flag.String("config", "", "path/to/config.json")
+
+	var configFiles config.ArrayFlags
+	flag.Var(&configFiles, "config", "path/to/config.json")
 
 	flag.Parse()
 
-	cfg, err := getConfig(*pathToConfig)
+	cfg, err := getConfig(configFiles)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
