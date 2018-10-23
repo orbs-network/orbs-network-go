@@ -18,25 +18,25 @@ type revisionDiff struct {
 }
 
 type rollingRevisions struct {
-	prst      adapter.StatePersistence
-	maxLayers int
-	revisions []*revisionDiff
-	prstHight primitives.BlockHeight
-	prstRoot  primitives.MerkleSha256
-	prstTs    primitives.TimestampNano
+	prst               adapter.StatePersistence
+	transientRevisions int
+	revisions          []*revisionDiff
+	prstHight          primitives.BlockHeight
+	prstRoot           primitives.MerkleSha256
+	prstTs             primitives.TimestampNano
 }
 
-func newRollingRevisions(prst adapter.StatePersistence, maxLayers int) *rollingRevisions {
+func newRollingRevisions(prst adapter.StatePersistence, transientRevisions int) *rollingRevisions {
 	h, ts, r, err := prst.ReadMetadata()
 	if err != nil {
 		panic("could not load state metadata")
 	}
 	result := &rollingRevisions{
-		prst:      prst,
-		maxLayers: maxLayers,
-		prstHight: h,
-		prstTs:    ts,
-		prstRoot:  r,
+		prst:               prst,
+		transientRevisions: transientRevisions,
+		prstHight:          h,
+		prstTs:             ts,
+		prstRoot:           r,
 	}
 
 	return result
@@ -50,7 +50,7 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 		ts:         ts,
 	})
 	// TODO - move this loop for merging and persisting snapshots to a separate goroutine. merely append here with a safety array size limit
-	for len(ls.revisions) > ls.maxLayers {
+	for len(ls.revisions) > ls.transientRevisions {
 		d := ls.revisions[0]
 		err := ls.prst.Write(d.height, d.ts, d.merkleRoot, d.diff)
 		if err != nil {
