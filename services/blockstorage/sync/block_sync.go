@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"sync"
 	"time"
 )
 
@@ -45,17 +44,15 @@ type BlockSync struct {
 	storage      BlockSyncStorage
 	config       blockSyncConfig
 	currentState syncState
-	eventLock    *sync.Mutex
 }
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
 	bs := &BlockSync{
-		logger:    logger.WithTags(log.String("flow", "block-sync")),
-		sf:        NewStateFactory(config, gossip, storage, logger),
-		gossip:    gossip,
-		storage:   storage,
-		config:    config,
-		eventLock: &sync.Mutex{},
+		logger:  logger.WithTags(log.String("flow", "block-sync")),
+		sf:      NewStateFactory(config, gossip, storage, logger),
+		gossip:  gossip,
+		storage: storage,
+		config:  config,
 	}
 
 	bs.logger.Info("block sync init",
@@ -79,18 +76,12 @@ func (bs *BlockSync) syncLoop(ctx context.Context) {
 }
 
 func (bs *BlockSync) HandleBlockCommitted() {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
 	if bs.currentState != nil {
 		bs.currentState.blockCommitted()
 	}
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
-
-	bs.logger.Info("received availability response", log.Stringable("node-source", input.Message.Sender))
 	if bs.currentState != nil {
 		bs.currentState.gotAvailabilityResponse(input.Message)
 	}
@@ -98,9 +89,6 @@ func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input 
 }
 
 func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
-
 	if bs.currentState != nil {
 		bs.currentState.gotBlocks(input.Message)
 	}
