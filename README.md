@@ -186,6 +186,18 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
    -Xmx1536m
    ```
 
+## Development principles
+This may turn into a separate Contributor's guide.
+
+### Error handling
+The Orbs platform is a self-healing eco-system. This means that returning Go `Error`s is only meaningful as a logging tool.
+Human intervention should not be required to fix a condition that caused an `Error`.
+#### Unrecoverable errors
+In the event of an unrecoverable error, the app panics and crashes.
+This includes assertions on conditions that cannot happen unless there is a software bug, system errors such as **Out of memory** etc.
+
+
+
 ## License
 
 MIT
