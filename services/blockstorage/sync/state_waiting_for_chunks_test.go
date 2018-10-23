@@ -92,6 +92,15 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	h.verifyMocks(t)
 }
 
+func TestWaitingDoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
+	h := newBlockSyncHarness()
+	h.cancel()
+	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
+	blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
+	waitingState.gotBlocks(blocksMessage) // we did not call process, so channel is not ready, test fails if this blocks
+}
+
 func TestWaitingNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
