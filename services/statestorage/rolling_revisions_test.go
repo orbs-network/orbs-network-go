@@ -11,12 +11,13 @@ import (
 )
 
 func TestWriteAtHeight(t *testing.T) {
-	persistenceMock := &StatePersistenceMock{}
+	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(0)
+	d := newDriver(persistenceMock, 5)
 	persistenceMock.
 		When("Read", primitives.ContractName("c"), "k1").
 		Return((*protocol.StateRecord)(nil), false, nil).
 		Times(1)
-	d := newDriver(persistenceMock, 5)
+
 	d.write(1, "c", "k1", "v1")
 
 	v, exists, err := d.read(0, "c", "k1")
@@ -28,8 +29,11 @@ func TestWriteAtHeight(t *testing.T) {
 	require.EqualValues(t, true, exists)
 	require.EqualValues(t, "v1", v)
 
+	// checking a future height is still legal.
 	v, exists, err = d.read(200, "c", "k1")
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.EqualValues(t, true, exists)
+	require.EqualValues(t, "v1", v)
 
 	ok, errCalled := persistenceMock.Verify()
 	require.True(t, ok, "persistence mock called incorrectly")
@@ -57,7 +61,7 @@ func TestNoLayers(t *testing.T) {
 }
 
 func TestWriteAtHeightAndDeleteAtLaterHeight(t *testing.T) {
-	d := newDriver(&StatePersistenceMock{}, 5)
+	d := newDriver(statePersistenceMockWithWriteAnyNoErrors(0), 5)
 	d.write(1, "", "k1", "v1")
 	d.write(2, "", "k1", "")
 
@@ -73,18 +77,18 @@ func TestWriteAtHeightAndDeleteAtLaterHeight(t *testing.T) {
 }
 
 func TestMergeToPersistence(t *testing.T) {
+	var writeCallCount byte = 1
 	persistenceMock := &StatePersistenceMock{}
-	var callCounter byte = 1
 	persistenceMock.
 		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
 		Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
-			expectedValue := fmt.Sprintf("v%v", callCounter)
+			expectedValue := fmt.Sprintf("v%v", writeCallCount)
 			v := string(diff["c"]["k"].Value())
 			require.EqualValues(t, expectedValue, v)
-			require.EqualValues(t, callCounter, height)
-			require.EqualValues(t, callCounter, ts)
-			require.EqualValues(t, primitives.MerkleSha256{callCounter}, root)
-			callCounter++
+			require.EqualValues(t, writeCallCount, height)
+			require.EqualValues(t, writeCallCount, ts)
+			require.EqualValues(t, primitives.MerkleSha256{writeCallCount}, root)
+			writeCallCount++
 			return nil
 		}).
 		Times(2)
@@ -100,11 +104,7 @@ func TestMergeToPersistence(t *testing.T) {
 }
 
 func TestReadOutOfRange(t *testing.T) {
-	persistenceMock := &StatePersistenceMock{}
-	persistenceMock.
-		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
-		Return(nil).
-		Times(2)
+	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(2)
 	d := newDriver(persistenceMock, 2)
 	d.writeFull(1, 1, primitives.MerkleSha256{1}, "c", "k", "v1")
 	d.writeFull(2, 2, primitives.MerkleSha256{2}, "c", "k", "v2")
@@ -123,11 +123,7 @@ func TestReadOutOfRange(t *testing.T) {
 }
 
 func TestReadHash(t *testing.T) {
-	persistenceMock := &StatePersistenceMock{}
-	persistenceMock.
-		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
-		Return(nil).
-		Times(1)
+	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
 	d := newDriver(persistenceMock, 1)
 	d.writeFull(1, 1, primitives.MerkleSha256{1}, "c", "k", "v1")
 	d.writeFull(2, 2, primitives.MerkleSha256{2}, "c", "k", "v2")
@@ -149,12 +145,12 @@ func TestReadHash(t *testing.T) {
 }
 
 type driver struct {
-	inner *layeredState
+	inner *rollingRevisions
 }
 
 func newDriver(persistence adapter.StatePersistence, layers int) *driver {
 	return &driver{
-		newLayeredState(persistence, layers),
+		newRollingRevisions(persistence, layers),
 	}
 }
 
@@ -163,7 +159,7 @@ func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractNam
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
 	}
-	return d.inner.Write(h, 0, primitives.MerkleSha256{}, diff)
+	return d.inner.addRevision(h, 0, primitives.MerkleSha256{}, diff)
 }
 
 func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, contract primitives.ContractName, kv ...string) error {
@@ -171,11 +167,11 @@ func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
 	}
-	return d.inner.Write(h, ts, root, diff)
+	return d.inner.addRevision(h, ts, root, diff)
 }
 
 func (d *driver) read(h primitives.BlockHeight, contract primitives.ContractName, key string) (string, bool, error) {
-	r, exists, err := d.inner.Read(h, contract, key)
+	r, exists, err := d.inner.getRevisionRecord(h, contract, key)
 	value := ""
 	if r != nil {
 		value = string(r.Value())
@@ -184,11 +180,20 @@ func (d *driver) read(h primitives.BlockHeight, contract primitives.ContractName
 }
 
 func (d *driver) readHash(h primitives.BlockHeight) (primitives.MerkleSha256, error) {
-	return d.inner.ReadStateHash(h)
+	return d.inner.getRevisionHash(h)
 }
 
 type StatePersistenceMock struct {
 	mock.Mock
+}
+
+func statePersistenceMockWithWriteAnyNoErrors(writeTimes int) *StatePersistenceMock {
+	persistenceMock := &StatePersistenceMock{}
+	persistenceMock.
+		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
+		Return(nil).
+		Times(writeTimes)
+	return persistenceMock
 }
 
 func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {

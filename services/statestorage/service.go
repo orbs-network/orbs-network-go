@@ -22,7 +22,7 @@ type service struct {
 	logger       log.BasicLogger
 
 	mutex        sync.RWMutex
-	layeredState *layeredState
+	layeredState *rollingRevisions
 	merkle       *merkle.Forest
 	height       primitives.BlockHeight
 	ts           primitives.TimestampNano
@@ -47,7 +47,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 
 		mutex:        sync.RWMutex{},
 		merkle:       merkle,
-		layeredState: newLayeredState(persistence, int(config.StateStorageHistoryRetentionDistance())),
+		layeredState: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
 		height:       height,
 		ts:           ts,
 	}
@@ -72,7 +72,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
 	// TODO use input.resultheader.preexecutuion
-	root, err := s.layeredState.ReadStateHash(commitBlockHeight - 1)
+	root, err := s.layeredState.getRevisionHash(commitBlockHeight - 1)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", s.height)
 	}
@@ -81,7 +81,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", s.height)
 	}
 
-	err = s.layeredState.Write(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
+	err = s.layeredState.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}
@@ -110,7 +110,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok, err := s.layeredState.Read(input.BlockHeight, input.ContractName, key.KeyForMap())
+		record, ok, err := s.layeredState.getRevisionRecord(input.BlockHeight, input.ContractName, key.KeyForMap())
 		if err != nil {
 			return nil, errors.Wrap(err, "persistence layer error")
 		}
@@ -151,7 +151,7 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-	value, err := s.layeredState.ReadStateHash(input.BlockHeight)
+	value, err := s.layeredState.getRevisionHash(input.BlockHeight)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
