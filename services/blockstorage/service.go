@@ -126,7 +126,8 @@ func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
 	s.lastBlockLock.Lock()
 	defer s.lastBlockLock.Unlock()
 
-	s.metrics.blockHeight.Inc()
+	blockHeight := int64(block.TransactionsBlock.Header.BlockHeight())
+	s.metrics.blockHeight.Update(blockHeight)
 	s.lastCommittedBlock = block
 }
 

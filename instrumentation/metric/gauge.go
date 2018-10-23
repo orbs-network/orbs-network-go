@@ -47,6 +47,14 @@ func (g *Gauge) SubUint32(size uint32) {
 	g.Add(-int64(size))
 }
 
+func (g *Gauge) Update(i int64) {
+	atomic.StoreInt64(&g.value, i)
+}
+
+func (g *Gauge) UpdateUInt32(i int32) {
+	atomic.StoreInt64(&g.value, int64(i))
+}
+
 func (g *Gauge) Value() int64 {
 	return g.value
 }
