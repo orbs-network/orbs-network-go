@@ -9,6 +9,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"math"
+
 	//"math"
 	"context"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -22,9 +24,7 @@ func (s *service) lastCommittedBlockHeightUnderMutex() primitives.BlockHeight {
 }
 
 func (s *service) requiredQuorumSize() int {
-	//TODO: Bring back once we have block sync
-	//return int(math.Ceil(float64(s.config.NetworkSize(0)) * 2 / 3))
-	return int(s.config.NetworkSize(0))
+	return int(math.Ceil(float64(s.config.NetworkSize(0)) * float64(s.config.ConsensusContextPercentageOfNodesRequiredForConsensus()/100)))
 }
 
 func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {

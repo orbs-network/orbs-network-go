@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -72,9 +71,8 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 func (bs *BlockSync) syncLoop(ctx context.Context) {
 	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
 		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
-		meter := bs.logger.Meter(fmt.Sprintf("inter-sync-%s", bs.currentState.name()))
+		// TODO add metrics
 		bs.currentState = bs.currentState.processState(ctx)
-		meter.Done()
 	}
 
 	bs.terminated = true

@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"time"
 )
 
 type BasicLogger interface {
@@ -15,7 +14,6 @@ type BasicLogger interface {
 	Error(message string, params ...*Field)
 	Metric(name string, params ...*Field)
 	WithTags(params ...*Field) BasicLogger
-	Meter(name string, params ...*Field) BasicMeter
 	Tags() []*Field
 	WithOutput(writer ...Output) BasicLogger
 	WithFilters(filter ...Filter) BasicLogger
@@ -146,11 +144,6 @@ func (b *basicLogger) LogFailedExpectation(message string, expected *Field, actu
 	expected.Key = "expected-" + expected.Key
 	newParams := append(params, expected, actual)
 	b.Log("expectation", message, newParams...)
-}
-
-func (b *basicLogger) Meter(name string, params ...*Field) BasicMeter {
-	meterLogger := &basicLogger{nestingLevel: 5, tags: b.tags, outputs: b.outputs}
-	return &basicMeter{name: name, start: time.Now().UnixNano(), logger: meterLogger, params: params}
 }
 
 func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {

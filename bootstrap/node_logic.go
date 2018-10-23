@@ -44,7 +44,7 @@ func NewNodeLogic(
 ) NodeLogic {
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
-	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, logger)
+	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, logger, metricRegistry)
 
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
@@ -61,7 +61,7 @@ func NewNodeLogic(
 
 	// TODO: Restore this when lean-helix-go submodule is integrated
 	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
-	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig))
+	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry))
 
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 

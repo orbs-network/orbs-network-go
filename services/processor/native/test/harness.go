@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -30,7 +31,9 @@ func newHarness() *harness {
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 
-	service := native.NewNativeProcessor(compiler, log)
+	registry := metric.NewRegistry()
+
+	service := native.NewNativeProcessor(compiler, log, registry)
 	service.RegisterContractSdkCallHandler(sdkCallHandler)
 
 	return &harness{

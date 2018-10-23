@@ -10,10 +10,8 @@ import (
 )
 
 func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
-	meter := s.logger.Meter("tx-block-creation")
-	defer meter.Done()
 	start := time.Now()
-	defer s.metrics.createTxBlock.RecordSince(start)
+	defer s.metrics.createTxBlockTime.RecordSince(start)
 
 	proposedTransactions, err := s.fetchTransactions(ctx, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
 	if err != nil {
@@ -37,9 +35,8 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 }
 
 func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
-	meter := s.logger.Meter("rs-block-creation")
-	defer meter.Done()
-	defer s.metrics.createResultsBlock.RecordSince(time.Now())
+	start := time.Now()
+	defer s.metrics.createResultsBlockTime.RecordSince(start)
 
 	output, err := s.virtualMachine.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
 		BlockHeight:        blockHeight,
