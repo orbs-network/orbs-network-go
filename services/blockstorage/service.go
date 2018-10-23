@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	blockSync "github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -39,10 +40,22 @@ type service struct {
 	lastBlockLock      *sync.RWMutex
 
 	blockSync *blockSync.BlockSync
+
+	metrics *metrics
+}
+
+type metrics struct {
+	blockHeight *metric.Gauge
+}
+
+func newMetrics(m metric.Factory) *metrics {
+	return &metrics{
+		blockHeight: m.NewGauge("BlockStorage.BlockHeight"),
+	}
 }
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
-	txPool services.TransactionPool, logger log.BasicLogger) services.BlockStorage {
+	txPool services.TransactionPool, logger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
 	storage := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
@@ -51,6 +64,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 		logger:        logger.WithTags(LogTag),
 		config:        config,
 		lastBlockLock: &sync.RWMutex{},
+		metrics:       newMetrics(metricFactory),
 	}
 
 	lastBlock, err := persistence.GetLastBlock()
@@ -112,6 +126,7 @@ func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
 	s.lastBlockLock.Lock()
 	defer s.lastBlockLock.Unlock()
 
+	s.metrics.blockHeight.Inc()
 	s.lastCommittedBlock = block
 }
 
