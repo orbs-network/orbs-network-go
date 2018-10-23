@@ -38,15 +38,14 @@ type service struct {
 	logger           log.BasicLogger
 	config           Config
 
-	isLeader           bool
-	mutex              *sync.Mutex
-	lastCommittedBlock *protocol.BlockPairContainer
+	isLeader                bool
+	successfullyVotedBlocks chan primitives.BlockHeight // leader only
 
-	// leader only
-	lastSuccessfullyVotedBlock            primitives.BlockHeight
-	successfullyVotedBlocks               chan primitives.BlockHeight
-	lastCommittedBlockVoters              map[string]bool
-	lastCommittedBlockVotersReachedQuorum bool
+	mutex                                           *sync.RWMutex
+	lastCommittedBlockUnderMutex                    *protocol.BlockPairContainer
+	lastSuccessfullyVotedBlockUnderMutex            primitives.BlockHeight // leader only
+	lastCommittedBlockVotersUnderMutex              map[string]bool        // leader only
+	lastCommittedBlockVotersReachedQuorumUnderMutex bool                   // leader only
 
 	metrics *metrics
 }
@@ -87,11 +86,11 @@ func NewBenchmarkConsensusAlgo(
 		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
 
 		// leader only
-		mutex: &sync.Mutex{},
-		lastSuccessfullyVotedBlock:            blockHeightNone,
-		successfullyVotedBlocks:               make(chan primitives.BlockHeight),
-		lastCommittedBlockVoters:              make(map[string]bool),
-		lastCommittedBlockVotersReachedQuorum: false,
+		mutex: &sync.RWMutex{},
+		lastSuccessfullyVotedBlockUnderMutex:            blockHeightNone,
+		successfullyVotedBlocks:                         make(chan primitives.BlockHeight),
+		lastCommittedBlockVotersUnderMutex:              make(map[string]bool),
+		lastCommittedBlockVotersReachedQuorumUnderMutex: false,
 
 		metrics: newMetrics(metricFactory, config.BenchmarkConsensusRetryInterval(), config.BenchmarkConsensusRetryInterval()),
 	}

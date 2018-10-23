@@ -24,7 +24,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 		}
 	}()
 
-	s.lastCommittedBlock = s.leaderGenerateGenesisBlock()
+	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock()
 	for {
 		err := s.leaderConsensusRoundTick(ctx)
 		if err != nil {
@@ -41,8 +41,8 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 			// we can only implement this once ctx can be sent to the writers
 			close(s.successfullyVotedBlocks)
 			return
-		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			s.logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
+		case s.lastSuccessfullyVotedBlockUnderMutex = <-s.successfullyVotedBlocks:
+			s.logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlockUnderMutex))
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
 			s.logger.Info("consensus round waking up after retry timeout")
@@ -60,7 +60,7 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	defer s.metrics.consensusRoundTickTime.RecordSince(start)
 
 	// check if we need to move to next block
-	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeightUnderMutex() {
+	if s.lastSuccessfullyVotedBlockUnderMutex == s.lastCommittedBlockHeightUnderMutex() {
 		proposedBlock, err := s.leaderGenerateNewProposedBlockUnderMutex(ctx)
 		if err != nil {
 			return err
@@ -70,13 +70,13 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 			return err
 		}
 
-		s.lastCommittedBlock = proposedBlock
-		s.lastCommittedBlockVoters = make(map[string]bool)
-		s.lastCommittedBlockVotersReachedQuorum = false
+		s.lastCommittedBlockUnderMutex = proposedBlock
+		s.lastCommittedBlockVotersUnderMutex = make(map[string]bool)
+		s.lastCommittedBlockVotersReachedQuorumUnderMutex = false
 	}
 
 	// broadcast the commit via gossip for last committed block
-	err = s.leaderBroadcastCommittedBlock(ctx, s.lastCommittedBlock)
+	err = s.leaderBroadcastCommittedBlock(ctx, s.lastCommittedBlockUnderMutex)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex(ctx context.Context) 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:   s.lastCommittedBlockHeightUnderMutex() + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
+		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlockUnderMutex.TransactionsBlock),
 	})
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex(ctx context.Context) 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
 		BlockHeight:       s.lastCommittedBlockHeightUnderMutex() + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
+		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlockUnderMutex.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
@@ -221,13 +221,13 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	}
 
 	// add the vote
-	s.lastCommittedBlockVoters[sender.SenderPublicKey().KeyForMap()] = true
+	s.lastCommittedBlockVotersUnderMutex[sender.SenderPublicKey().KeyForMap()] = true
 
 	// count if we have enough votes to move forward
-	existingVotes := len(s.lastCommittedBlockVoters) + 1
+	existingVotes := len(s.lastCommittedBlockVotersUnderMutex) + 1
 	s.logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
-	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorum {
-		s.lastCommittedBlockVotersReachedQuorum = true
+	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorumUnderMutex {
+		s.lastCommittedBlockVotersReachedQuorumUnderMutex = true
 		successfullyVotedBlock = s.lastCommittedBlockHeightUnderMutex()
 	}
 }

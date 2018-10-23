@@ -17,10 +17,10 @@ import (
 )
 
 func (s *service) lastCommittedBlockHeightUnderMutex() primitives.BlockHeight {
-	if s.lastCommittedBlock == nil {
+	if s.lastCommittedBlockUnderMutex == nil {
 		return 0
 	}
-	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+	return s.lastCommittedBlockUnderMutex.TransactionsBlock.Header.BlockHeight()
 }
 
 func (s *service) requiredQuorumSize() int {
@@ -98,9 +98,9 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 	// update lastCommitted to reflect this if newer
 	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
 		if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeightUnderMutex() {
-			s.lastCommittedBlock = blockPair
-			s.lastCommittedBlockVoters = make(map[string]bool) // leader only
-			s.lastCommittedBlockVotersReachedQuorum = false
+			s.lastCommittedBlockUnderMutex = blockPair
+			s.lastCommittedBlockVotersUnderMutex = make(map[string]bool) // leader only
+			s.lastCommittedBlockVotersReachedQuorumUnderMutex = false
 		}
 	}
 

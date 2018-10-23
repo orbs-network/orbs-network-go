@@ -39,9 +39,9 @@ func (s *service) nonLeaderValidateBlockUnderMutex(blockPair *protocol.BlockPair
 
 	// block consensus
 	var prevCommittedBlockPair *protocol.BlockPairContainer = nil
-	if s.lastCommittedBlock != nil && blockHeight == s.lastCommittedBlockHeightUnderMutex()+1 {
+	if s.lastCommittedBlockUnderMutex != nil && blockHeight == s.lastCommittedBlockHeightUnderMutex()+1 {
 		// in this case we also want to validate match to the prev (prev hashes)
-		prevCommittedBlockPair = s.lastCommittedBlock
+		prevCommittedBlockPair = s.lastCommittedBlockUnderMutex
 	}
 	err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
 	if err != nil {
@@ -60,7 +60,7 @@ func (s *service) nonLeaderCommitAndReplyUnderMutex(ctx context.Context, blockPa
 
 	// remember the block in our last committed state variable
 	if blockPair.TransactionsBlock.Header.BlockHeight() == s.lastCommittedBlockHeightUnderMutex()+1 {
-		s.lastCommittedBlock = blockPair
+		s.lastCommittedBlockUnderMutex = blockPair
 	}
 
 	// sign the committed message we're about to send
