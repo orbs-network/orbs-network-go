@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -45,6 +46,24 @@ type service struct {
 	successfullyVotedBlocks               chan primitives.BlockHeight
 	lastCommittedBlockVoters              map[string]bool
 	lastCommittedBlockVotersReachedQuorum bool
+
+	metrics *metrics
+}
+
+type metrics struct {
+	consensusRoundTickTime     *metric.Histogram
+	failedConsensusTicksRate   *metric.Rate
+	timedOutConsensusTicksRate *metric.Rate
+	votingTime                 *metric.Histogram
+}
+
+func newMetrics(m metric.Factory, consensusTimeout time.Duration, collectVotesTimeout time.Duration) *metrics {
+	return &metrics{
+		consensusRoundTickTime:     m.NewLatency("ConsensusAlgo.Benchmark.RoundTickTime", consensusTimeout),
+		votingTime:                 m.NewLatency("ConsensusAlgo.Benchmark.VotingTime", collectVotesTimeout),
+		failedConsensusTicksRate:   m.NewRate("ConsensusAlgo.Benchmark.FailedTicksPerSecond"),
+		timedOutConsensusTicksRate: m.NewRate("ConsensusAlgo.Benchmark.TimedOutTicksPerSecond"),
+	}
 }
 
 func NewBenchmarkConsensusAlgo(
@@ -54,6 +73,7 @@ func NewBenchmarkConsensusAlgo(
 	consensusContext services.ConsensusContext,
 	logger log.BasicLogger,
 	config Config,
+	metricFactory metric.Factory,
 ) services.ConsensusAlgoBenchmark {
 
 	s := &service{
@@ -71,6 +91,8 @@ func NewBenchmarkConsensusAlgo(
 		successfullyVotedBlocks:               make(chan primitives.BlockHeight),
 		lastCommittedBlockVoters:              make(map[string]bool),
 		lastCommittedBlockVotersReachedQuorum: false,
+
+		metrics: newMetrics(metricFactory, config.BenchmarkConsensusRetryInterval(), config.BenchmarkConsensusRetryInterval()),
 	}
 
 	gossip.RegisterBenchmarkConsensusHandler(s)

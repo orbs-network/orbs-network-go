@@ -26,11 +26,10 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 
 	s.lastCommittedBlock = s.leaderGenerateGenesisBlock()
 	for {
-		meter := s.logger.Meter("consensus-round-tick")
-
 		err := s.leaderConsensusRoundTick(ctx)
 		if err != nil {
 			s.logger.Error("consensus round tick failed", log.Error(err))
+			s.metrics.failedConsensusTicksRate.Measure(1)
 		}
 		select {
 		case <-ctx.Done():
@@ -41,15 +40,13 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 			// the better fix is to send ctx to all writers and when they block write, select on the ctx.Done as well
 			// we can only implement this once ctx can be sent to the writers
 			close(s.successfullyVotedBlocks)
-			meter.Done()
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			s.logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
-			meter.Done()
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
 			s.logger.Info("consensus round waking up after retry timeout")
-			meter.Done()
+			s.metrics.timedOutConsensusTicksRate.Measure(1)
 			continue
 		}
 	}
@@ -58,6 +55,9 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	start := time.Now()
+	defer s.metrics.consensusRoundTickTime.RecordSince(start)
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeightUnderMutex() {

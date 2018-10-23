@@ -132,25 +132,6 @@ func TestHumanReadableFormatterFormatWithStringableSlice(t *testing.T) {
 	require.Regexp(t, "{Transaction:{ProtocolVersion:1,", out)
 }
 
-func TestMeter(t *testing.T) {
-	b := new(bytes.Buffer)
-
-	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api"), log.String("_test", "some-test")).WithOutput(log.NewOutput(b))
-	txId := log.String("txId", "1234567")
-	txFlowLogger := serviceLogger.WithTags(log.String("flow", TransactionFlow))
-	meter := txFlowLogger.Meter("tx-process-time", txId)
-	meter.Done()
-
-	jsonMap := parseOutput(b.String())
-
-	require.Equal(t, "metric", jsonMap["level"])
-	require.Equal(t, "Metric recorded", jsonMap["message"])
-	require.Equal(t, "public-api-TransactionFlow-tx-process-time", jsonMap["metric"])
-	require.Equal(t, "1234567", jsonMap["txId"])
-	require.Equal(t, TransactionFlow, jsonMap["flow"])
-	require.NotNil(t, jsonMap["process-time"])
-}
-
 func TestMultipleOutputs(t *testing.T) {
 	tempFile, err := ioutil.TempFile("", "logger_test_multiple_outputs")
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -26,6 +27,7 @@ type harness struct {
 	reporting        log.BasicLogger
 	config           benchmarkconsensus.Config
 	service          services.ConsensusAlgoBenchmark
+	registry         metric.Registry
 }
 
 func leaderKeyPair() *keys.Ed25519KeyPair {
@@ -83,6 +85,7 @@ func newHarness(
 		reporting:        log,
 		config:           cfg,
 		service:          nil,
+		registry:         metric.NewRegistry(),
 	}
 }
 
@@ -94,6 +97,7 @@ func (h *harness) createService(ctx context.Context) {
 		h.consensusContext,
 		h.reporting,
 		h.config,
+		h.registry,
 	)
 }
 

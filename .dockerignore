@@ -2,3 +2,4 @@ Dockerfile*
 docker-*
 logs
 *.log
+_tmp
