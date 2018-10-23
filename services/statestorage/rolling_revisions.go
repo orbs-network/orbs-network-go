@@ -21,6 +21,8 @@ type rollingRevisions struct {
 	prst               adapter.StatePersistence
 	transientRevisions int
 	revisions          []*revisionDiff
+	currentHeight      primitives.BlockHeight
+	currentTs          primitives.TimestampNano
 	prstHight          primitives.BlockHeight
 	prstRoot           primitives.MerkleSha256
 	prstTs             primitives.TimestampNano
@@ -34,12 +36,22 @@ func newRollingRevisions(prst adapter.StatePersistence, transientRevisions int) 
 	result := &rollingRevisions{
 		prst:               prst,
 		transientRevisions: transientRevisions,
+		currentHeight:      h,
+		currentTs:          ts,
 		prstHight:          h,
 		prstTs:             ts,
 		prstRoot:           r,
 	}
 
 	return result
+}
+
+func (ls *rollingRevisions) getCurrentHeight() primitives.BlockHeight {
+	return ls.currentHeight
+}
+
+func (ls *rollingRevisions) getCurrentTimestamp() primitives.TimestampNano {
+	return ls.currentTs
 }
 
 func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
@@ -49,7 +61,16 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 		height:     height,
 		ts:         ts,
 	})
-	// TODO - move this loop for merging and persisting snapshots to a separate goroutine. merely append here with a safety array size limit
+	ls.currentHeight = height
+	ls.currentTs = ts
+
+	// TODO - move this a separate goroutine to prevent addRevision from blocking on IO
+	// TODO - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
+	ls.flushRevisions()
+	return nil
+}
+
+func (ls *rollingRevisions) flushRevisions() {
 	for len(ls.revisions) > ls.transientRevisions {
 		d := ls.revisions[0]
 		err := ls.prst.Write(d.height, d.ts, d.merkleRoot, d.diff)
@@ -62,10 +83,13 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 		ls.prstRoot = d.merkleRoot
 		ls.revisions = ls.revisions[1:]
 	}
-	return nil
 }
 
 func (ls *rollingRevisions) getRevisionRecord(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
+	if ls.currentHeight < height {
+		return nil, false, errors.Errorf("requested height %d is too new. most recent available block height is %d", height, ls.currentHeight)
+	}
+
 	for i := len(ls.revisions) - 1; i >= 0; i-- {
 		if ls.revisions[i].height > height {
 			continue

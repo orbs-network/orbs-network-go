@@ -21,18 +21,16 @@ type service struct {
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
 
-	mutex        sync.RWMutex
-	layeredState *rollingRevisions
-	merkle       *merkle.Forest
-	height       primitives.BlockHeight
-	ts           primitives.TimestampNano
+	mutex     sync.RWMutex
+	revisions *rollingRevisions
+	merkle    *merkle.Forest
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	// TODO - tie/sync merkle forest to persistent state
 	merkle, root := merkle.NewForest()
 
-	height, ts, pRoot, err := persistence.ReadMetadata()
+	_, _, pRoot, err := persistence.ReadMetadata()
 	if err != nil {
 		panic(err)
 	}
@@ -45,11 +43,9 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 		logger:       logger.WithTags(LogTag),
 
-		mutex:        sync.RWMutex{},
-		merkle:       merkle,
-		layeredState: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
-		height:       height,
-		ts:           ts,
+		mutex:     sync.RWMutex{},
+		merkle:    merkle,
+		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
 	}
 }
 
@@ -66,28 +62,27 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
-	if s.height+1 != commitBlockHeight {
-		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: s.height + 1}, nil
+	currentHeight := s.revisions.getCurrentHeight()
+	if currentHeight+1 != commitBlockHeight {
+		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: currentHeight + 1}, nil
 	}
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
 	// TODO use input.resultheader.preexecutuion
-	root, err := s.layeredState.getRevisionHash(commitBlockHeight - 1)
+	root, err := s.revisions.getRevisionHash(commitBlockHeight - 1)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", s.height)
+		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", currentHeight)
 	}
 	newRoot, err := s.merkle.Update(root, input.ContractStateDiffs)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", s.height)
+		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", currentHeight)
 	}
 
-	err = s.layeredState.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
+	err = s.revisions.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}
 
-	s.height = commitBlockHeight
-	s.ts = commitTimestamp
 	s.blockTracker.IncrementHeight()
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
@@ -104,13 +99,14 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.height {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	currentHeight := s.revisions.getCurrentHeight()
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok, err := s.layeredState.getRevisionRecord(input.BlockHeight, input.ContractName, key.KeyForMap())
+		record, ok, err := s.revisions.getRevisionRecord(input.BlockHeight, input.ContractName, key.KeyForMap())
 		if err != nil {
 			return nil, errors.Wrap(err, "persistence layer error")
 		}
@@ -133,8 +129,8 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 	defer s.mutex.RUnlock()
 
 	result := &services.GetStateStorageBlockHeightOutput{
-		LastCommittedBlockHeight:    s.height,
-		LastCommittedBlockTimestamp: s.ts,
+		LastCommittedBlockHeight:    s.revisions.getCurrentHeight(),
+		LastCommittedBlockTimestamp: s.revisions.getCurrentTimestamp(),
 	}
 	return result, nil
 }
@@ -147,11 +143,12 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.height {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.height, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	currentHeight := s.revisions.getCurrentHeight()
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
-	value, err := s.layeredState.getRevisionHash(input.BlockHeight)
+	value, err := s.revisions.getRevisionHash(input.BlockHeight)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}

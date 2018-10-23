@@ -20,23 +20,20 @@ func TestWriteAtHeight(t *testing.T) {
 
 	d.write(1, "c", "k1", "v1")
 
-	v, exists, err := d.read(0, "c", "k1")
+	_, exists, err := d.read(0, "c", "k1")
 	require.NoError(t, err)
 	require.EqualValues(t, false, exists)
 
-	v, exists, err = d.read(1, "c", "k1")
+	valueAtHeight1, exists, err := d.read(1, "c", "k1")
 	require.NoError(t, err)
 	require.EqualValues(t, true, exists)
-	require.EqualValues(t, "v1", v)
+	require.EqualValues(t, "v1", valueAtHeight1)
 
-	// checking a future height is still legal.
-	v, exists, err = d.read(200, "c", "k1")
-	require.NoError(t, err)
-	require.EqualValues(t, true, exists)
-	require.EqualValues(t, "v1", v)
+	_, _, err = d.read(200, "c", "k1")
+	require.Error(t, err)
+	require.EqualError(t, err, "requested height 200 is too new. most recent available block height is 1")
 
-	ok, errCalled := persistenceMock.Verify()
-	require.True(t, ok, "persistence mock called incorrectly")
+	_, errCalled := persistenceMock.Verify()
 	require.NoError(t, errCalled, "error happened when it should not")
 
 }
@@ -54,8 +51,7 @@ func TestNoLayers(t *testing.T) {
 	_, _, err := d.read(1, "c", "k")
 	require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
 
-	ok, errCalled := persistenceMock.Verify()
-	require.True(t, ok, "persistence mock called incorrectly")
+	_, errCalled := persistenceMock.Verify()
 	require.NoError(t, errCalled, "error happened when it should not")
 
 }
@@ -65,15 +61,15 @@ func TestWriteAtHeightAndDeleteAtLaterHeight(t *testing.T) {
 	d.write(1, "", "k1", "v1")
 	d.write(2, "", "k1", "")
 
-	v, exists, err := d.read(1, "", "k1")
+	valueAtHeight1, exists, err := d.read(1, "", "k1")
 	require.NoError(t, err)
 	require.EqualValues(t, true, exists)
-	require.EqualValues(t, "v1", v)
+	require.EqualValues(t, "v1", valueAtHeight1)
 
-	v, exists, err = d.read(2, "", "k1")
+	valueAtHeight2, exists, err := d.read(2, "", "k1")
 	require.NoError(t, err)
 	require.EqualValues(t, false, exists)
-	require.EqualValues(t, "", v)
+	require.EqualValues(t, "", valueAtHeight2)
 }
 
 func TestMergeToPersistence(t *testing.T) {
@@ -98,8 +94,7 @@ func TestMergeToPersistence(t *testing.T) {
 	d.writeFull(3, 3, primitives.MerkleSha256{3}, "c", "k", "v3")
 	d.writeFull(4, 4, primitives.MerkleSha256{4}, "c", "k", "v4")
 
-	ok, errCalled := persistenceMock.Verify()
-	require.True(t, ok, "persistence mock called incorrectly")
+	_, errCalled := persistenceMock.Verify()
 	require.NoError(t, errCalled, "error happened when it should not")
 }
 
@@ -117,8 +112,7 @@ func TestReadOutOfRange(t *testing.T) {
 	_, err = d.readHash(1)
 	require.EqualError(t, err, "could not locate merkle hash for height 1. oldest available block height is 2")
 
-	ok, errCalled := persistenceMock.Verify()
-	require.True(t, ok, "persistence mock called incorrectly")
+	_, errCalled := persistenceMock.Verify()
 	require.NoError(t, errCalled, "error happened when it should not")
 }
 
@@ -139,8 +133,7 @@ func TestReadHash(t *testing.T) {
 	_, err = d.readHash(3)
 	require.Error(t, err)
 
-	ok, errCalled := persistenceMock.Verify()
-	require.True(t, ok, "persistence mock called incorrectly")
+	_, errCalled := persistenceMock.Verify()
 	require.NoError(t, errCalled, "error happened when it should not")
 }
 

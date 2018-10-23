@@ -12,11 +12,11 @@ import (
 )
 
 type InMemoryStatePersistence struct {
-	mutex       sync.RWMutex
-	bState      ChainState
-	bHeight     primitives.BlockHeight
-	bTimestamp  primitives.TimestampNano
-	bMerkleRoot primitives.MerkleSha256
+	mutex      sync.RWMutex
+	fullState  ChainState
+	height     primitives.BlockHeight
+	ts         primitives.TimestampNano
+	merkleRoot primitives.MerkleSha256
 }
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
@@ -25,11 +25,11 @@ func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 
 	_, root := merkle.NewForest()
 	return &InMemoryStatePersistence{
-		mutex:       sync.RWMutex{},
-		bState:      ChainState{},
-		bHeight:     0,
-		bTimestamp:  0,
-		bMerkleRoot: root,
+		mutex:      sync.RWMutex{},
+		fullState:  ChainState{},
+		height:     0,
+		ts:         0,
+		merkleRoot: root,
 	}
 }
 
@@ -37,8 +37,8 @@ func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts prim
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
-	sp.bHeight = height
-	sp.bMerkleRoot = root
+	sp.height = height
+	sp.merkleRoot = root
 
 	for contract, records := range diff {
 		for _, record := range records {
@@ -49,23 +49,23 @@ func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts prim
 }
 
 func (sp *InMemoryStatePersistence) _writeOneRecord(c primitives.ContractName, r *protocol.StateRecord) {
-	if _, ok := sp.bState[c]; !ok {
-		sp.bState[c] = map[string]*protocol.StateRecord{}
+	if _, ok := sp.fullState[c]; !ok {
+		sp.fullState[c] = map[string]*protocol.StateRecord{}
 	}
 
 	if isZeroValue(r.Value()) {
-		delete(sp.bState[c], r.Key().KeyForMap())
+		delete(sp.fullState[c], r.Key().KeyForMap())
 		return
 	}
 
-	sp.bState[c][r.Key().KeyForMap()] = r
+	sp.fullState[c][r.Key().KeyForMap()] = r
 }
 
 func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 
-	record, ok := sp.bState[contract][key]
+	record, ok := sp.fullState[contract][key]
 	return record, ok, nil
 }
 
@@ -73,30 +73,30 @@ func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, prim
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 
-	return sp.bHeight, sp.bTimestamp, sp.bMerkleRoot, nil
+	return sp.height, sp.ts, sp.merkleRoot, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {
 	output := strings.Builder{}
 	output.WriteString("{")
-	output.WriteString(fmt.Sprintf("height: %v, data: {", sp.bHeight))
-	contracts := make([]primitives.ContractName, 0, len(sp.bState))
-	for c := range sp.bState {
+	output.WriteString(fmt.Sprintf("height: %v, data: {", sp.height))
+	contracts := make([]primitives.ContractName, 0, len(sp.fullState))
+	for c := range sp.fullState {
 		contracts = append(contracts, c)
 	}
 	sort.Slice(contracts, func(i, j int) bool { return contracts[i] < contracts[j] })
 	for _, currentContract := range contracts {
-		keys := make([]string, 0, len(sp.bState[currentContract]))
-		for k := range sp.bState[currentContract] {
+		keys := make([]string, 0, len(sp.fullState[currentContract]))
+		for k := range sp.fullState[currentContract] {
 			keys = append(keys, k)
 		}
 		sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 
 		output.WriteString(string(currentContract) + ":{")
 		for _, k := range keys {
-			output.WriteString(sp.bState[currentContract][k].StringKey())
+			output.WriteString(sp.fullState[currentContract][k].StringKey())
 			output.WriteString(":")
-			output.WriteString(sp.bState[currentContract][k].StringValue())
+			output.WriteString(sp.fullState[currentContract][k].StringValue())
 			output.WriteString(",")
 		}
 		output.WriteString("},")
