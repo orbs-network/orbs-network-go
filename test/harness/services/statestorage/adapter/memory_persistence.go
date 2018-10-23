@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"time"
 )
 
@@ -27,8 +26,8 @@ func NewTamperingStatePersistence() TamperingStatePersistence {
 	}
 }
 
-func (t *TestStatePersistence) WriteState(height primitives.BlockHeight, contractStateDiffs []*protocol.ContractStateDiff) error {
-	err := t.InMemoryStatePersistence.WriteState(height, contractStateDiffs)
+func (t *TestStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
+	err := t.InMemoryStatePersistence.Write(height, ts, root, diff)
 	if err != nil {
 		return err
 	}

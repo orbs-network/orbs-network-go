@@ -18,29 +18,34 @@ var LogTag = log.Service("state-storage")
 
 type service struct {
 	config       config.StateStorageConfig
-	merkle       *merkle.Forest
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
 
-	mutex                    *sync.RWMutex
-	persistence              adapter.StatePersistence
-	lastCommittedBlockHeader *protocol.ResultsBlockHeader
+	mutex     sync.RWMutex
+	revisions *rollingRevisions
+	merkle    *merkle.Forest
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
-	merkle, rootHash := merkle.NewForest()
-	// TODO this is equivalent of genesis block deploy in persistence -> move to correct deploy
-	persistence.WriteMerkleRoot(0, rootHash)
+	// TODO - tie/sync merkle forest to persistent state
+	merkle, root := merkle.NewForest()
+
+	_, _, pRoot, err := persistence.ReadMetadata()
+	if err != nil {
+		panic(err)
+	}
+	if !pRoot.Equal(root) {
+		panic("Merkle forest out of sync with persisted state")
+	}
 
 	return &service{
 		config:       config,
-		merkle:       merkle,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 		logger:       logger.WithTags(LogTag),
 
-		mutex:                    &sync.RWMutex{},
-		persistence:              persistence,
-		lastCommittedBlockHeader: (&protocol.ResultsBlockHeaderBuilder{}).Build(), // TODO change when system inits genesis block and saves it will need to be read from db
+		mutex:     sync.RWMutex{},
+		merkle:    merkle,
+		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
 	}
 }
 
@@ -49,43 +54,42 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		panic("CommitStateDiff received corrupt args")
 	}
 
+	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
+	commitTimestamp := input.ResultsBlockHeader.Timestamp()
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
-
 	s.logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
-	if lastCommittedBlock := s.lastCommittedBlockHeader.BlockHeight(); lastCommittedBlock+1 != commitBlockHeight {
-		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: lastCommittedBlock + 1}, nil
+	currentHeight := s.revisions.getCurrentHeight()
+	if currentHeight+1 != commitBlockHeight {
+		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: currentHeight + 1}, nil
 	}
 
 	// if updating state records fails downstream the merkle tree entries will not bother us
 	// TODO use input.resultheader.preexecutuion
-	root, err := s.persistence.ReadMerkleRoot(commitBlockHeight - 1)
+	root, err := s.revisions.getRevisionHash(commitBlockHeight - 1)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
+		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", currentHeight)
 	}
 	newRoot, err := s.merkle.Update(root, input.ContractStateDiffs)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", commitBlockHeight)
+		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", currentHeight)
 	}
-	s.persistence.WriteMerkleRoot(commitBlockHeight, newRoot)
-	s.persistence.WriteState(commitBlockHeight, input.ContractStateDiffs)
 
-	s.lastCommittedBlockHeader = input.ResultsBlockHeader
+	err = s.revisions.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
+	}
+
 	s.blockTracker.IncrementHeight()
-
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
 	if input.ContractName == "" {
 		return nil, errors.Errorf("missing contract name")
-	}
-
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
 	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
@@ -95,18 +99,17 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= s.lastCommittedBlockHeader.BlockHeight() {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, s.lastCommittedBlockHeader.BlockHeight(), primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
-	}
-
-	contractState, err := s.persistence.ReadState(input.BlockHeight, input.ContractName)
-	if err != nil {
-		return nil, errors.Wrap(err, "persistence layer error")
+	currentHeight := s.revisions.getCurrentHeight()
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
 	}
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok := contractState[key.KeyForMap()]
+		record, ok, err := s.revisions.getRevisionRecord(input.BlockHeight, input.ContractName, key.KeyForMap())
+		if err != nil {
+			return nil, errors.Wrap(err, "persistence layer error")
+		}
 		if ok {
 			records = append(records, record)
 		} else { // implicitly return the zero value if key is missing in db
@@ -126,8 +129,8 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 	defer s.mutex.RUnlock()
 
 	result := &services.GetStateStorageBlockHeightOutput{
-		LastCommittedBlockHeight:    s.lastCommittedBlockHeader.BlockHeight(),
-		LastCommittedBlockTimestamp: s.lastCommittedBlockHeader.Timestamp(),
+		LastCommittedBlockHeight:    s.revisions.getCurrentHeight(),
+		LastCommittedBlockTimestamp: s.revisions.getCurrentTimestamp(),
 	}
 	return result, nil
 }
@@ -137,13 +140,38 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
-	value, err := s.persistence.ReadMerkleRoot(input.BlockHeight)
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	currentHeight := s.revisions.getCurrentHeight()
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	}
+
+	value, err := s.revisions.getRevisionHash(input.BlockHeight)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not merkle root for block height %d", input.BlockHeight)
+		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
 	output := &services.GetStateHashOutput{StateRootHash: value}
 
 	return output, nil
+}
+
+func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
+	result := make(adapter.ChainState)
+	for _, stateDiffs := range csd {
+		contract := stateDiffs.ContractName()
+		contractMap, ok := result[contract]
+		if !ok {
+			contractMap = make(map[string]*protocol.StateRecord)
+			result[contract] = contractMap
+		}
+		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
+			r := i.NextStateDiffs()
+			contractMap[r.Key().KeyForMap()] = r
+		}
+	}
+	return result
 }
 
 func newZeroValue() []byte {

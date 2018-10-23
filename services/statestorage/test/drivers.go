@@ -89,8 +89,8 @@ func (d *driver) getBlockHeightAndTimestamp(ctx context.Context) (int, int, erro
 	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
 }
 
-func (d *driver) commitStateDiff(ctx context.Context, state *services.CommitStateDiffInput) {
-	d.service.CommitStateDiff(ctx, state)
+func (d *driver) commitStateDiff(ctx context.Context, state *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+	return d.service.CommitStateDiff(ctx, state)
 }
 
 func (d *driver) commitValuePairs(ctx context.Context, contract string, keyValues ...string) {
@@ -98,7 +98,7 @@ func (d *driver) commitValuePairs(ctx context.Context, contract string, keyValue
 	d.commitValuePairsAtHeight(ctx, h+1, contract, keyValues...)
 }
 
-func (d *driver) commitValuePairsAtHeight(ctx context.Context, h int, contract string, keyValues ...string) {
+func (d *driver) commitValuePairsAtHeight(ctx context.Context, h int, contract string, keyValues ...string) (*services.CommitStateDiffOutput, error) {
 	if len(keyValues)%2 != 0 {
 		panic("expecting an array of key value pairs")
 	}
@@ -109,5 +109,5 @@ func (d *driver) commitValuePairsAtHeight(ctx context.Context, h int, contract s
 	}
 
 	contractStateDiff := b.Build()
-	d.commitStateDiff(ctx, CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
+	return d.commitStateDiff(ctx, CommitStateDiff().WithBlockHeight(int(h)).WithDiff(contractStateDiff).Build())
 }
