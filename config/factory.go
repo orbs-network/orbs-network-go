@@ -58,8 +58,8 @@ func ForAcceptanceTests(
 	cfg.SetDuration(METRICS_REPORT_INTERVAL, 1*time.Second)
 
 	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 5)
-	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 30*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 5*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 100*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
 
 	return cfg

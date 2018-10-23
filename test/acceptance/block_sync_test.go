@@ -3,7 +3,6 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
@@ -13,10 +12,9 @@ import (
 func TestBlockSync(t *testing.T) {
 	harness.Network(t).WithSetup(func(ctx context.Context, network harness.InProcessNetwork) {
 		for i := 1; i <= 10; i++ {
-			blockPair := builders.BlockPair().
+			blockPair := builders.BenchmarkConsensusBlockPair().
 				WithHeight(primitives.BlockHeight(i)).
 				WithTransactions(2).
-				WithBenchmarkConsensusBlockProof(keys.Ed25519KeyPairForTests(0)).
 				Build()
 			network.BlockPersistence(0).WriteBlock(blockPair)
 		}

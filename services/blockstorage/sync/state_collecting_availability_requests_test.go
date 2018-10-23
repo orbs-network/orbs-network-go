@@ -80,6 +80,16 @@ func TestCollectingAvailabilityContextTermination(t *testing.T) {
 	h.verifyMocks(t)
 }
 
+func TestCollectingReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
+	h := newBlockSyncHarness()
+	h.cancel()
+
+	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	// not calling the process state will not activate the reader part
+	message := builders.BlockAvailabilityResponseInput().Build().Message
+	collectingState.gotAvailabilityResponse(message) // this will block if the test fails
+}
+
 func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	car := h.sf.CreateCollectingAvailabilityResponseState()

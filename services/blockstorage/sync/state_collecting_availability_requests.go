@@ -54,7 +54,11 @@ func (s *collectingAvailabilityResponsesState) blockCommitted() {
 
 func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
 	s.logger.Info("got a new availability response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
-	s.responsesC <- message
+	select {
+	case s.responsesC <- message:
+	default:
+		s.logger.Info("response channel was not ready, dropping response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
+	}
 }
 
 func (s *collectingAvailabilityResponsesState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
