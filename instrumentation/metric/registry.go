@@ -111,6 +111,8 @@ func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Durati
 			r.report(logger)
 
 			// We only rotate histograms because there it is the only type of metric that we're currently rotating
+			r.mu.Lock()
+			defer r.mu.Unlock()
 			for _, m := range r.mu.metrics {
 				switch m.(type) {
 				case *Histogram:
