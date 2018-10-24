@@ -62,9 +62,14 @@ func (s *waitingForChunksState) gotBlocks(message *gossipmessages.BlockSyncRespo
 	if !message.Sender.SenderPublicKey().Equal(s.sourceKey) {
 		s.logger.Info("byzantine message detected, expected source key does not match incoming",
 			log.Stringable("source-key", s.sourceKey),
-			log.Stringable("message-key", message.Sender.SenderPublicKey()))
+			log.Stringable("message-sender-key", message.Sender.SenderPublicKey()))
 		s.abort <- struct{}{}
 	} else {
-		s.blocksC <- message
+		select {
+		case s.blocksC <- message:
+		default:
+			s.logger.Info("received new blocks but channel was not ready",
+				log.Stringable("message-sender", message.Sender.SenderPublicKey()))
+		}
 	}
 }

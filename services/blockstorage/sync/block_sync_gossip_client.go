@@ -33,6 +33,10 @@ func newBlockSyncGossipClient(
 	}
 }
 
+func (c *blockSyncGossipClient) petitionerUpdateConsensusAlgos(ctx context.Context) {
+	c.storage.UpdateConsensusAlgosAboutLatestCommittedBlock(ctx)
+}
+
 func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
 	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
 	firstBlockHeight := lastCommittedBlockHeight + 1

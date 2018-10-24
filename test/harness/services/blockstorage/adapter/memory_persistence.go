@@ -34,7 +34,7 @@ type inMemoryBlockPersistence struct {
 func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
 	return &inMemoryBlockPersistence{
 		failNextBlocks: false,
-		tracker:        synchronization.NewBlockTracker(0, 5, time.Millisecond*100),
+		tracker:        synchronization.NewBlockTracker(0, 5, time.Millisecond*1000),
 
 		lock: &sync.RWMutex{},
 		blockHeightsPerTxHash: make(map[string]blockHeightChan),
