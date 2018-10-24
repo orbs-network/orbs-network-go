@@ -40,7 +40,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	harness.Network(t).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+	harness.Network(t).WithMaxTxPerBlock(1).Start(func(ctx context.Context, network harness.InProcessNetwork) {
 
 		network.DeployBenchmarkToken(ctx, 5)
 

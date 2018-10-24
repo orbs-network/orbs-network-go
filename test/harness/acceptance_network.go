@@ -15,7 +15,7 @@ import (
 	"os"
 )
 
-func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensusAlgo consensus.ConsensusAlgoType, testId string) *inProcessNetwork {
+func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensusAlgo consensus.ConsensusAlgoType, testId string, maxTxPerBlock uint32) *inProcessNetwork {
 	var output io.Writer
 	output = os.Stdout
 
@@ -69,6 +69,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 			nodeKeyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
+			maxTxPerBlock,
 		)
 
 		node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()

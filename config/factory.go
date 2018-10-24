@@ -38,6 +38,7 @@ func ForAcceptanceTests(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	maxTxPerBlock uint32,
 ) mutableNodeConfig {
 	cfg := defaultConfig()
 	cfg.OverrideNodeSpecificValues(federationNodes,
@@ -53,7 +54,7 @@ func ForAcceptanceTests(
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 5*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 300*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
-	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 30)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, maxTxPerBlock)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 
