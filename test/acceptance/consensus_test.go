@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -45,6 +46,7 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 		network.DeployBenchmarkToken(ctx, 5)
 
 		committedTamper := network.GossipTransport().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+		blockSyncTamper := network.GossipTransport().Fail(adapter.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
 		committedLatch := network.GossipTransport().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 
 		network.SendTransferInBackground(ctx, 0, 0, 5, 6) // send a transaction so that network advances to block 1. the tamper prevents COMMITTED messages from reaching leader, so it doesn't move to block 2
@@ -67,5 +69,6 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 		network.WaitForTransactionInState(ctx, 1, txHash)
 		require.EqualValues(t, 17, <-network.CallGetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 
+		blockSyncTamper.Release(ctx)
 	})
 }
