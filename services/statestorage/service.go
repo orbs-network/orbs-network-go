@@ -2,12 +2,11 @@ package statestorage
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle2"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -25,12 +24,12 @@ type service struct {
 
 	mutex     sync.RWMutex
 	revisions *rollingRevisions
-	merkle    *merkle2.Forest
+	merkle    *merkle.Forest
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	// TODO - tie/sync merkle forest to persistent state
-	merkle, root := merkle2.NewForest()
+	forest, root := merkle.NewForest()
 
 	_, _, pRoot, err := persistence.ReadMetadata()
 	if err != nil {
@@ -46,7 +45,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 		logger:       logger.WithTags(LogTag),
 
 		mutex:     sync.RWMutex{},
-		merkle:    merkle,
+		merkle:    forest,
 		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
 	}
 }
@@ -89,15 +88,13 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
 
-
-func filterToMerkleInput(csd []*protocol.ContractStateDiff) merkle2.MerkleDiffs {
-	result := make(merkle2.MerkleDiffs)
+func filterToMerkleInput(csd []*protocol.ContractStateDiff) merkle.MerkleDiffs {
+	result := make(merkle.MerkleDiffs)
 	for _, stateDiffs := range csd {
 		contract := stateDiffs.ContractName()
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
 			r := i.NextStateDiffs()
-			k := fmt.Sprintf("%s", hash.CalcRipmd160Sha256(append([]byte(contract), r.Key()...))) // TODO
-			// TODO fmt.Printf("key %s\n", k)
+			k := string(hash.CalcSha256(append([]byte(contract), r.Key()...)))
 			result[k] = hash.CalcSha256(r.Value())
 		}
 	}
