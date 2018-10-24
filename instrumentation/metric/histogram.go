@@ -65,7 +65,7 @@ func (h *Histogram) String() string {
 func (h *Histogram) Export() exportedMetric {
 	histo := h.histo.Current
 
-	return histogramExport{
+	return &histogramExport{
 		h.name,
 		float64(histo.Min()) / 1e+6,
 		float64(histo.ValueAtQuantile(50)) / 1e+6,
@@ -81,7 +81,11 @@ func (h *Histogram) Rotate() {
 	h.histo.Rotate()
 }
 
-func (h histogramExport) LogRow() []*log.Field {
+func (h *histogramExport) LogRow() []*log.Field {
+	if h.Samples == 0 {
+		return nil
+	}
+
 	return []*log.Field{
 		log.String("metric", h.Name),
 		log.String("metric-type", "histogram"),

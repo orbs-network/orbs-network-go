@@ -52,6 +52,8 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 		node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
 		node.nativeCompiler = nativeProcessorAdapter.NewNativeCompiler(node.config, testLogger)
 
+		node.metricRegistry = metric.NewRegistry()
+
 		nodes[i] = node
 	}
 
@@ -60,7 +62,6 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 		gossipTransport: sharedTamperingTransport,
 		description:     description,
 		testLogger:      testLogger,
-		metricRegistry:  metric.NewRegistry(),
 	}
 
 	// must call network.StartNodes(ctx) to actually start the nodes in the network
