@@ -35,3 +35,16 @@ func TestGauge_SubUint32(t *testing.T) {
 	require.EqualValues(t, 0, g.Value(), "gauge value differed from expected")
 }
 
+func TestGauge_Update(t *testing.T) {
+	g := Gauge{}
+	g.Update(123)
+
+	require.EqualValues(t, 123, g.Value(), "gauge value differed from expected")
+}
+
+func TestGauge_UpdateUInt32(t *testing.T) {
+	g := Gauge{}
+	g.Update(321)
+
+	require.EqualValues(t, 321, g.Value(), "gauge value differed from expected")
+}

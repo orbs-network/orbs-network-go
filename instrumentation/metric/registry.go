@@ -101,7 +101,7 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 
 func (r *inMemoryRegistry) report(logger log.BasicLogger) {
 	for _, value := range r.ExportAll() {
-		logger.Metric("metric recorded", value.LogRow()...)
+		logger.Metric(value.LogRow()...)
 	}
 }
 

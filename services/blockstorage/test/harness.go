@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -184,7 +185,9 @@ func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.I
 	d.txPool = &services.MockTransactionPool{}
 	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, logger)
+	registry := metric.NewRegistry()
+
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, logger, registry)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	return d
