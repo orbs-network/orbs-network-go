@@ -186,6 +186,10 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
    -Xmx1536m
    ```
 
+## Development principles
+Refer to the [Contributor's Guide](CONTRIBUTING.md) (work in progress)
+
+
 ## License
 
 MIT
