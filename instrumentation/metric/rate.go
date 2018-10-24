@@ -69,6 +69,6 @@ func (r rateExport) LogRow() []*log.Field {
 		log.String("metric", r.Name),
 		log.String("metric-type", "rate"),
 		log.Float64("rate", r.Rate),
-		log.Int64("interval", r.Interval.Nanoseconds()),
+		log.Float64("interval", float64(r.Interval.Nanoseconds())/1e+6),
 	}
 }

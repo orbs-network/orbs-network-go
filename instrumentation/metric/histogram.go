@@ -16,11 +16,11 @@ type Histogram struct {
 
 type histogramExport struct {
 	Name    string
-	Min     int64
-	P50     int64
-	P95     int64
-	P99     int64
-	Max     int64
+	Min     float64
+	P50     float64
+	P95     float64
+	P99     float64
+	Max     float64
 	Avg     float64
 	Samples int64
 }
@@ -28,12 +28,12 @@ type histogramExport struct {
 func newHistogram(name string, max int64) *Histogram {
 	return &Histogram{
 		namedMetric: namedMetric{name: name},
-		histo:       hdrhistogram.NewWindowed(5, max, 1, 3),
+		histo:       hdrhistogram.NewWindowed(5, 0, max, 1),
 	}
 }
 
 func (h *Histogram) RecordSince(t time.Time) {
-	d := time.Since(t)
+	d := time.Since(t).Nanoseconds()
 	if err := h.histo.Current.RecordValue(int64(d)); err != nil {
 		atomic.AddInt64(&h.overflowCount, 1)
 	}
@@ -67,12 +67,12 @@ func (h *Histogram) Export() exportedMetric {
 
 	return histogramExport{
 		h.name,
-		histo.Min(),
-		histo.ValueAtQuantile(50),
-		histo.ValueAtQuantile(95),
-		histo.ValueAtQuantile(99),
-		histo.Max(),
-		histo.Mean(),
+		float64(histo.Min()) / 1e+6,
+		float64(histo.ValueAtQuantile(50)) / 1e+6,
+		float64(histo.ValueAtQuantile(95)) / 1e+6,
+		float64(histo.ValueAtQuantile(99)) / 1e+6,
+		float64(histo.Max()) / 1e+6,
+		float64(histo.Mean()) / 1e+6,
 		histo.TotalCount(),
 	}
 }
@@ -85,11 +85,11 @@ func (h histogramExport) LogRow() []*log.Field {
 	return []*log.Field{
 		log.String("metric", h.Name),
 		log.String("metric-type", "histogram"),
-		log.Int64("min", h.Min),
-		log.Int64("p50", h.P50),
-		log.Int64("p95", h.P95),
-		log.Int64("p99", h.P99),
-		log.Int64("max", h.Max),
+		log.Float64("min", h.Min),
+		log.Float64("p50", h.P50),
+		log.Float64("p95", h.P95),
+		log.Float64("p99", h.P99),
+		log.Float64("max", h.Max),
 		log.Float64("avg", h.Avg),
 		log.Int64("samples", h.Samples),
 	}
