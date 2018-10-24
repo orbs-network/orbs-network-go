@@ -3,6 +3,7 @@ package statestorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
@@ -28,7 +29,7 @@ type service struct {
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	// TODO - tie/sync merkle forest to persistent state
-	merkle, root := merkle.NewForest()
+	forest, root := merkle.NewForest()
 
 	_, _, pRoot, err := persistence.ReadMetadata()
 	if err != nil {
@@ -44,7 +45,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 		logger:       logger.WithTags(LogTag),
 
 		mutex:     sync.RWMutex{},
-		merkle:    merkle,
+		merkle:    forest,
 		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
 	}
 }
@@ -73,7 +74,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", currentHeight)
 	}
-	newRoot, err := s.merkle.Update(root, input.ContractStateDiffs)
+	newRoot, err := s.merkle.Update(root, filterToMerkleInput(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", currentHeight)
 	}
@@ -85,6 +86,19 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.blockTracker.IncrementHeight()
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
+}
+
+func filterToMerkleInput(csd []*protocol.ContractStateDiff) merkle.MerkleDiffs {
+	result := make(merkle.MerkleDiffs)
+	for _, stateDiffs := range csd {
+		contract := stateDiffs.ContractName()
+		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
+			r := i.NextStateDiffs()
+			k := string(hash.CalcSha256(append([]byte(contract), r.Key()...)))
+			result[k] = hash.CalcSha256(r.Value())
+		}
+	}
+	return result
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
