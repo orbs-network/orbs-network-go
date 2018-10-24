@@ -2,10 +2,13 @@ package statestorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle2"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -85,6 +88,21 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.blockTracker.IncrementHeight()
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
+}
+
+
+func filterToMerkleInput(csd []*protocol.ContractStateDiff) merkle2.MerkleDiffs {
+	result := make(merkle2.MerkleDiffs)
+	for _, stateDiffs := range csd {
+		contract := stateDiffs.ContractName()
+		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
+			r := i.NextStateDiffs()
+			k := fmt.Sprintf("%s", hash.CalcRipmd160Sha256(append([]byte(contract), r.Key()...))) // TODO
+			// TODO fmt.Printf("key %s\n", k)
+			result[k] = hash.CalcSha256(r.Value())
+		}
+	}
+	return result
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {

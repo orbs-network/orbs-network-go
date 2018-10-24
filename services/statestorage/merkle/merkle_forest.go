@@ -48,9 +48,9 @@ func (n *Node) clone() *Node {
 		value:    n.value, // TODO - copy?
 		branches: newBranches,
 	}
-	for k, v := range n.branches {
-		result.branches[k] = v // TODO - copy?
-	}
+	//for k, v := range n.branches {
+	//	result.branches[k] = v // TODO - copy?
+	//}
 	return result
 }
 
@@ -95,6 +95,7 @@ func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, s
 }
 
 func (f *Forest) updateSingleEntry(baseHash primitives.MerkleSha256, path string, valueHash primitives.Sha256) primitives.MerkleSha256 {
+	// TODO fmt.Printf("old path %s value %x\n", path, valueHash)
 	baseNode := f.nodes[baseHash.KeyForMap()]
 	var newRoot *Node
 	if valueHash.Equal(zeroValueHash) {
