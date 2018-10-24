@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle2"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -26,12 +25,12 @@ type service struct {
 
 	mutex     sync.RWMutex
 	revisions *rollingRevisions
-	merkle    *merkle.Forest
+	merkle    *merkle2.Forest
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 	// TODO - tie/sync merkle forest to persistent state
-	merkle, root := merkle.NewForest()
+	merkle, root := merkle2.NewForest()
 
 	_, _, pRoot, err := persistence.ReadMetadata()
 	if err != nil {
@@ -76,7 +75,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", currentHeight)
 	}
-	newRoot, err := s.merkle.Update(root, input.ContractStateDiffs)
+	newRoot, err := s.merkle.Update(root, filterToMerkleInput(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", currentHeight)
 	}
