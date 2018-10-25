@@ -8,13 +8,13 @@ import (
 )
 
 type Trigger interface {
-	Start()
-	Reset(duration time.Duration)
+	Start(ctx context.Context)
+	Reset(ctx context.Context, duration time.Duration)
 	TimesTriggered() uint64
 	TimesReset() uint64
 	TimesTriggeredManually() uint64
 	IsRunning() bool
-	FireNow()
+	FireNow(ctx context.Context)
 	Stop()
 }
 
@@ -30,10 +30,9 @@ type periodicalTrigger struct {
 	running bool
 	stop    chan struct{}
 	wgSync  sync.WaitGroup
-	ctx     context.Context
 }
 
-func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, trigger func()) Trigger {
+func NewPeriodicalTrigger(interval time.Duration, trigger func()) Trigger {
 	t := &periodicalTrigger{
 		ticker:  nil,
 		d:       interval,
@@ -41,7 +40,6 @@ func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, trigger f
 		metrics: &Telemetry{},
 		stop:    make(chan struct{}),
 		running: false,
-		ctx:     ctx,
 	}
 	return t
 }
@@ -62,7 +60,7 @@ func (t *periodicalTrigger) TimesTriggeredManually() uint64 {
 	return atomic.LoadUint64(&t.metrics.timesTriggeredManually)
 }
 
-func (t *periodicalTrigger) Start() {
+func (t *periodicalTrigger) Start(ctx context.Context) {
 	if t.running {
 		return
 	}
@@ -80,7 +78,7 @@ func (t *periodicalTrigger) Start() {
 				t.running = false
 				t.wgSync.Done()
 				return
-			case <-t.ctx.Done():
+			case <-ctx.Done():
 				t.ticker.Stop()
 				t.running = false
 				t.wgSync.Done()
@@ -90,23 +88,23 @@ func (t *periodicalTrigger) Start() {
 	}()
 }
 
-func (t *periodicalTrigger) FireNow() {
-	t.reset(t.d, true)
+func (t *periodicalTrigger) FireNow(ctx context.Context) {
+	t.reset(ctx, t.d, true)
 	go t.f()
 	atomic.AddUint64(&t.metrics.timesTriggeredManually, 1)
 }
 
-func (t *periodicalTrigger) Reset(duration time.Duration) {
-	t.reset(duration, false)
+func (t *periodicalTrigger) Reset(ctx context.Context, duration time.Duration) {
+	t.reset(ctx, duration, false)
 }
 
-func (t *periodicalTrigger) reset(duration time.Duration, internal bool) {
+func (t *periodicalTrigger) reset(ctx context.Context, duration time.Duration, internal bool) {
 	t.Stop()
 	if !internal {
 		atomic.AddUint64(&t.metrics.timesReset, 1)
 	}
 	t.d = duration
-	t.Start()
+	t.Start(ctx)
 }
 
 func (t *periodicalTrigger) Stop() {
