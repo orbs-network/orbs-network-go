@@ -20,13 +20,11 @@ func TestE2EStress(t *testing.T) {
 
 	limiter := rate.NewLimiter(1000, 50)
 
+	config := getConfig().stressTest
 	h := newHarness()
 	defer h.gracefulShutdown()
 
-	NUMBER_OF_TRANSACTIONS := 10000
-	TRANSACTIONS_PER_SECOND := float64(1000)
-
-	for i := 0; i < NUMBER_OF_TRANSACTIONS; i++ {
+	for i := int64(0); i < config.numberOfTransactions; i++ {
 		if err := limiter.Wait(context.TODO()); err == nil {
 			wg.Add(1)
 
@@ -39,6 +37,7 @@ func TestE2EStress(t *testing.T) {
 
 				transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
 				_, err := h.sendTransaction(transfer)
+
 				if err != nil {
 					t.Fatalf("error sending transaction %s\n", err)
 				}
@@ -59,12 +58,17 @@ func TestE2EStress(t *testing.T) {
 
 	require.NoError(t, err)
 
-	txCount := metrics["TransactionPool.CommittedPool.TransactionCount"]["Value"]
-	require.EqualValues(t, NUMBER_OF_TRANSACTIONS, txCount)
+	txCount := metrics["TransactionPool.CommittedPool.TransactionCount"]["Value"].(float64)
+
+	expectedNumberOfTx := float64((100 - config.acceptableFailureRate) / 100 * config.numberOfTransactions)
+
+	require.Condition(t, func() (success bool) {
+		return txCount >= expectedNumberOfTx
+	}, "transaction processed (%f) < expected transactions processed (%f) out of %i transactions sent", txCount, expectedNumberOfTx, config.numberOfTransactions)
 
 	ratePerSecond := metrics["TransactionPool.RatePerSecond"]["Rate"].(float64)
 
 	require.Condition(t, func() (success bool) {
-		return ratePerSecond >= TRANSACTIONS_PER_SECOND
-	})
+		return ratePerSecond >= config.targetTPS
+	}, "actual tps is less than target tps")
 }

@@ -32,9 +32,9 @@ type E2EConfig struct {
 }
 
 type StressTestConfig struct {
-	stressTestNumberOfTransactions int64
-	stressTestFailureRate          int64
-	stressTestTargetTPS            float64
+	numberOfTransactions  int64
+	acceptableFailureRate int64
+	targetTPS             float64
 }
 
 const LOCAL_NETWORK_SIZE = 3
