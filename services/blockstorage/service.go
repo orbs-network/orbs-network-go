@@ -247,9 +247,16 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 }
 
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+	b := s.getLastCommittedBlock()
+	if b == nil {
+		return &services.GetLastCommittedBlockHeightOutput{
+			LastCommittedBlockHeight:    0,
+			LastCommittedBlockTimestamp: 0,
+		}, nil
+	}
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    s.LastCommittedBlockHeight(),
-		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
+		LastCommittedBlockHeight:    b.TransactionsBlock.Header.BlockHeight(),
+		LastCommittedBlockTimestamp: b.TransactionsBlock.Header.Timestamp(),
 	}, nil
 }
 
