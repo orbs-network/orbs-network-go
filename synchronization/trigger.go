@@ -25,6 +25,7 @@ type Telemetry struct {
 type periodicalTrigger struct {
 	d       time.Duration
 	f       func()
+	s       func()
 	ticker  *time.Ticker
 	metrics *Telemetry
 	running bool
@@ -32,11 +33,12 @@ type periodicalTrigger struct {
 	wgSync  sync.WaitGroup
 }
 
-func NewPeriodicalTrigger(interval time.Duration, trigger func()) Trigger {
+func NewPeriodicalTrigger(interval time.Duration, trigger func(), onStop func()) Trigger {
 	t := &periodicalTrigger{
 		ticker:  nil,
 		d:       interval,
 		f:       trigger,
+		s:       onStop,
 		metrics: &Telemetry{},
 		stop:    make(chan struct{}),
 		running: false,
@@ -77,11 +79,17 @@ func (t *periodicalTrigger) Start(ctx context.Context) {
 				t.ticker.Stop()
 				t.running = false
 				t.wgSync.Done()
+				if t.s != nil {
+					go t.s()
+				}
 				return
 			case <-ctx.Done():
 				t.ticker.Stop()
 				t.running = false
 				t.wgSync.Done()
+				if t.s != nil {
+					go t.s()
+				}
 				return
 			}
 		}
