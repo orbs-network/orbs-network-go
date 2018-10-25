@@ -41,14 +41,14 @@ func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 
 func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	blocksMessage := builders.BlockSyncResponseInput().Build().Message
-	h := newBlockSyncHarness().withNodeKey(blocksMessage.Sender.SenderPublicKey())
+	h := newBlockSyncHarness().withNodeKey(blocksMessage.Sender.SenderPublicKey()).withWaitForChunksTimeout(time.Second)
 
 	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := h.nextState(waitingState, func() {
-		time.Sleep(1 * time.Millisecond) // yield to make sure the state is fully 'running', cannot latch the internal goroutine
+		time.Sleep(10 * time.Millisecond) // yield to make sure the state is fully 'running', cannot latch the internal goroutine
 		waitingState.gotBlocks(blocksMessage)
 	})
 
