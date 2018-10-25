@@ -2,6 +2,7 @@ package transactionpool
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
@@ -11,12 +12,27 @@ import (
 type committedTxPool struct {
 	transactions map[string]*committedTransaction
 	lock         *sync.RWMutex
+
+	metrics *committedPoolMetrics
 }
 
-func NewCommittedPool() *committedTxPool {
+type committedPoolMetrics struct {
+	transactionCountGauge *metric.Gauge
+	poolSizeInBytesGauge  *metric.Gauge // TODO use this metric
+}
+
+func newCommittedPoolMetrics(factory metric.Factory) *committedPoolMetrics {
+	return &committedPoolMetrics{
+		transactionCountGauge: factory.NewGauge("TransactionPool.CommittedPool.TransactionCount"),
+		poolSizeInBytesGauge:  factory.NewGauge("TransactionPool.CommittedPool.PoolSizeInBytes"),
+	}
+}
+
+func NewCommittedPool(metricFactory metric.Factory) *committedTxPool {
 	return &committedTxPool{
 		transactions: make(map[string]*committedTransaction),
 		lock:         &sync.RWMutex{},
+		metrics:      newCommittedPoolMetrics(metricFactory),
 	}
 }
 
@@ -32,6 +48,8 @@ func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, ts primitive
 		receipt:   receipt,
 		timestamp: ts,
 	}
+
+	p.metrics.transactionCountGauge.Inc()
 }
 
 func (p *committedTxPool) get(txHash primitives.Sha256) *committedTransaction {
