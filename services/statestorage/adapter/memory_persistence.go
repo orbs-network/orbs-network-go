@@ -102,7 +102,7 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	return output.String()
 }
 
-func (sp *InMemoryStatePersistence) Each(callback func (contract primitives.ContractName, record *protocol.StateRecord)) {
+func (sp *InMemoryStatePersistence) Each(callback func (contract primitives.ContractName, record *protocol.StateRecord)) error {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 
@@ -111,6 +111,7 @@ func (sp *InMemoryStatePersistence) Each(callback func (contract primitives.Cont
 			callback(contract, sp.fullState[contract][key])
 		}
 	}
+	return nil
 }
 
 // TODO - there is an identical method in statestorage. extract and reuse?

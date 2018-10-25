@@ -27,21 +27,26 @@ type service struct {
 	merkle    *merkle.Forest
 }
 
+type merkleCleaner struct {
+	f *merkle.Forest
+}
+
+func (mc *merkleCleaner) evictRevision(height primitives.BlockHeight, ts primitives.TimestampNano, merkleRoot primitives.MerkleSha256) {
+	mc.f.Forget(merkleRoot)
+}
+
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
-	forest, root := merkle.NewForest()
 
-	diff := make(merkle.MerkleDiffs)
-	persistence.Each(func(contract primitives.ContractName, record *protocol.StateRecord){
-		k, v := getMerkleEntry(contract, record.Key(), record.Value())
-		diff[k] = v
-	})
-
-	root, err := forest.Update(root, diff)
 	pHeight, pTs, pRoot, err := persistence.ReadMetadata()
 	if err != nil {
 		panic(err)
 	}
-	if !root.Equal(pRoot) {
+	forest, root, err := buildMerkle(persistence)
+	if err != nil {
+		panic(err)
+	}
+
+	if !root.Equal(pRoot) { // align persisted merkle root with state
 		persistence.Write(pHeight, pTs, root, make(adapter.ChainState))
 	}
 
@@ -52,8 +57,21 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 
 		mutex:     sync.RWMutex{},
 		merkle:    forest,
-		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
+		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance()), &merkleCleaner{forest}),
 	}
+}
+
+func buildMerkle(persistence adapter.StatePersistence) (*merkle.Forest, primitives.MerkleSha256, error) {
+	forest, root := merkle.NewForest()
+
+	merkleDiffs := make(merkle.MerkleDiffs)
+	persistence.Each(func(contract primitives.ContractName, record *protocol.StateRecord) {
+		k, v := getMerkleEntry(contract, record.Key(), record.Value())
+		merkleDiffs[k] = v
+	})
+
+	root, err := forest.Update(root, merkleDiffs)
+	return forest, root, err
 }
 
 func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
@@ -85,12 +103,9 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", currentHeight)
 	}
 
-	evicted, err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
+	err = s.revisions.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
-	}
-	for _, staleRoot := range evicted {
-		s.merkle.Forget(staleRoot)
 	}
 
 	s.blockTracker.IncrementHeight()
