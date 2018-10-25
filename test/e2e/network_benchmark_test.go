@@ -37,11 +37,11 @@ func TestE2EStress(t *testing.T) {
 				_, err := h.sendTransaction(transfer)
 
 				if err != nil {
-					t.Fatalf("error sending transaction %s\n", err)
+					t.Logf("error sending transaction %s\n", err)
 				}
 			}()
 		} else {
-			t.Fatalf("error %s\n", err)
+			t.Logf("error %s\n", err)
 		}
 	}
 

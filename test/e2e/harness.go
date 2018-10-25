@@ -48,8 +48,8 @@ func getConfig() E2EConfig {
 	apiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
 	stressTestNumberOfTransactions := int64(10000)
-	stressTestFailureRate := int64(0)
-	stressTestTargetTPS := float64(750)
+	stressTestFailureRate := int64(2)
+	stressTestTargetTPS := float64(700)
 
 	if !bootstrap {
 		apiEndpoint = os.Getenv("API_ENDPOINT")
