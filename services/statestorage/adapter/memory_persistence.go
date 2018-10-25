@@ -3,7 +3,6 @@ package adapter
 import (
 	"bytes"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sort"
@@ -21,15 +20,13 @@ type InMemoryStatePersistence struct {
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 
-	// TODO - this is our hard coded Genesis block. Move this to a more dignified place or load from a file
-
-	_, root := merkle.NewForest()
+	// TODO - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
 	return &InMemoryStatePersistence{
 		mutex:      sync.RWMutex{},
 		fullState:  ChainState{},
 		height:     0,
 		ts:         0,
-		merkleRoot: root,
+		merkleRoot: nil,
 	}
 }
 
@@ -103,6 +100,17 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	}
 	output.WriteString("}}")
 	return output.String()
+}
+
+func (sp *InMemoryStatePersistence) Each(callback func (contract primitives.ContractName, record *protocol.StateRecord)) {
+	sp.mutex.RLock()
+	defer sp.mutex.RUnlock()
+
+	for contract := range sp.fullState {
+		for key := range sp.fullState[contract] {
+			callback(contract, sp.fullState[contract][key])
+		}
+	}
 }
 
 // TODO - there is an identical method in statestorage. extract and reuse?

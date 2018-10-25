@@ -28,15 +28,21 @@ type service struct {
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
-	// TODO - tie/sync merkle forest to persistent state
 	forest, root := merkle.NewForest()
 
-	_, _, pRoot, err := persistence.ReadMetadata()
+	diff := make(merkle.MerkleDiffs)
+	persistence.Each(func(contract primitives.ContractName, record *protocol.StateRecord){
+		k, v := getMerkleEntry(contract, record.Key(), record.Value())
+		diff[k] = v
+	})
+
+	root, err := forest.Update(root, diff)
+	pHeight, pTs, pRoot, err := persistence.ReadMetadata()
 	if err != nil {
 		panic(err)
 	}
-	if !pRoot.Equal(root) {
-		panic("Merkle forest out of sync with persisted state")
+	if !root.Equal(pRoot) {
+		persistence.Write(pHeight, pTs, root, make(adapter.ChainState))
 	}
 
 	return &service{
@@ -79,9 +85,12 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", currentHeight)
 	}
 
-	err = s.revisions.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
+	evicted, err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
+	}
+	for _, staleRoot := range evicted {
+		s.merkle.Forget(staleRoot)
 	}
 
 	s.blockTracker.IncrementHeight()
@@ -94,11 +103,15 @@ func filterToMerkleInput(csd []*protocol.ContractStateDiff) merkle.MerkleDiffs {
 		contract := stateDiffs.ContractName()
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
 			r := i.NextStateDiffs()
-			k := string(hash.CalcSha256(append([]byte(contract), r.Key()...)))
-			result[k] = hash.CalcSha256(r.Value())
+			k, v := getMerkleEntry(contract, r.Key(), r.Value())
+			result[k] = v
 		}
 	}
 	return result
+}
+
+func getMerkleEntry(contract primitives.ContractName, key primitives.Ripmd160Sha256, value []byte) (string, primitives.Sha256) {
+	return string(hash.CalcSha256(append([]byte(contract), key...))), hash.CalcSha256(value)
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {

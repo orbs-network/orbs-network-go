@@ -54,7 +54,7 @@ func (ls *rollingRevisions) getCurrentTimestamp() primitives.TimestampNano {
 	return ls.currentTs
 }
 
-func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
+func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) ([]primitives.MerkleSha256, error) {
 	ls.revisions = append(ls.revisions, &revisionDiff{
 		diff:       diff,
 		merkleRoot: root,
@@ -66,23 +66,28 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 
 	// TODO - move this a separate goroutine to prevent addRevision from blocking on IO
 	// TODO - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
-	ls.flushRevisions()
-	return nil
+	evicted, err := ls.evictRevisions()
+	if err != nil {
+		log.Error(err)
+	}
+	return evicted, nil
 }
 
-func (ls *rollingRevisions) flushRevisions() {
+func (ls *rollingRevisions) evictRevisions() ([]primitives.MerkleSha256, error) {
+	var evicted []primitives.MerkleSha256
 	for len(ls.revisions) > ls.transientRevisions {
 		d := ls.revisions[0]
 		err := ls.prst.Write(d.height, d.ts, d.merkleRoot, d.diff)
 		if err != nil {
-			log.Error(err)
-			break
+			return evicted, err
 		}
+		evicted = append(evicted, ls.prstRoot)
 		ls.prstHight = d.height
 		ls.prstTs = d.ts
 		ls.prstRoot = d.merkleRoot
 		ls.revisions = ls.revisions[1:]
 	}
+	return evicted, nil
 }
 
 func (ls *rollingRevisions) getRevisionRecord(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
