@@ -25,6 +25,10 @@ type histogramExport struct {
 	Samples int64
 }
 
+func toMillis(nanoseconds float64) float64 {
+	return nanoseconds / 1e+6
+}
+
 func newHistogram(name string, max int64) *Histogram {
 	return &Histogram{
 		namedMetric: namedMetric{name: name},
@@ -67,12 +71,12 @@ func (h *Histogram) Export() exportedMetric {
 
 	return &histogramExport{
 		h.name,
-		float64(histo.Min()) / 1e+6,
-		float64(histo.ValueAtQuantile(50)) / 1e+6,
-		float64(histo.ValueAtQuantile(95)) / 1e+6,
-		float64(histo.ValueAtQuantile(99)) / 1e+6,
-		float64(histo.Max()) / 1e+6,
-		float64(histo.Mean()) / 1e+6,
+		toMillis(float64(histo.Min())),
+		toMillis(float64(histo.ValueAtQuantile(50))),
+		toMillis(float64(histo.ValueAtQuantile(95))),
+		toMillis(float64(histo.ValueAtQuantile(99))),
+		toMillis(float64(histo.Max())),
+		toMillis(histo.Mean()),
 		histo.TotalCount(),
 	}
 }
