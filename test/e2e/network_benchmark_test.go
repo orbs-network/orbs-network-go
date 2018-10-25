@@ -2,17 +2,15 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
-	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestE2EStress(t *testing.T) {
@@ -49,16 +47,14 @@ func TestE2EStress(t *testing.T) {
 
 	wg.Wait()
 
-	res, _ := http.Get(h.absoluteUrlFor("/metrics"))
-	bytes, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(string(bytes))
+	var m metrics
 
-	metrics := make(map[string]map[string]interface{})
-	err := json.Unmarshal(bytes, &metrics)
+	require.True(t, test.Eventually(1*time.Minute, func() bool {
+		m = h.getMetrics()
+		return m != nil
+	}), "could not retrieve metrics")
 
-	require.NoError(t, err)
-
-	txCount := metrics["TransactionPool.CommittedPool.TransactionCount"]["Value"].(float64)
+	txCount := m["TransactionPool.CommittedPool.TransactionCount"]["Value"].(float64)
 
 	expectedNumberOfTx := float64((100 - config.acceptableFailureRate) / 100 * config.numberOfTransactions)
 
@@ -66,9 +62,9 @@ func TestE2EStress(t *testing.T) {
 		return txCount >= expectedNumberOfTx
 	}, "transaction processed (%f) < expected transactions processed (%f) out of %i transactions sent", txCount, expectedNumberOfTx, config.numberOfTransactions)
 
-	ratePerSecond := metrics["TransactionPool.RatePerSecond"]["Rate"].(float64)
+	ratePerSecond := m["TransactionPool.RatePerSecond"]["Rate"].(float64)
 
 	require.Condition(t, func() (success bool) {
 		return ratePerSecond >= config.targetTPS
-	}, "actual tps is less than target tps")
+	}, "actual tps (%f) is less than target tps (%f)", ratePerSecond, config.targetTPS)
 }

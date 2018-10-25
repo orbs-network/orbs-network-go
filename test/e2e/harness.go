@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
@@ -17,6 +18,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -47,10 +49,12 @@ func getConfig() E2EConfig {
 
 	stressTestNumberOfTransactions := int64(10000)
 	stressTestFailureRate := int64(0)
-	stressTestTargetTPS := float64(1000)
+	stressTestTargetTPS := float64(750)
 
 	if !bootstrap {
 		apiEndpoint = os.Getenv("API_ENDPOINT")
+		url, _ := url.Parse(apiEndpoint)
+		baseUrl = url.Scheme + "://" + url.Host + ":" + url.Port()
 
 		stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
 		stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
@@ -206,4 +210,21 @@ func (h *harness) apiUrlFor(endpoint string) string {
 func getProcessorArtifactPath() (string, string) {
 	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
 	return filepath.Join(dir, "processor-artifacts"), dir
+}
+
+type metrics map[string]map[string]interface{}
+
+func (h *harness) getMetrics() metrics {
+	res, _ := http.Get(h.absoluteUrlFor("/metrics"))
+	if res == nil {
+		return nil
+	}
+
+	bytes, _ := ioutil.ReadAll(res.Body)
+	fmt.Println(string(bytes))
+
+	m := make(metrics)
+	json.Unmarshal(bytes, &m)
+
+	return m
 }
