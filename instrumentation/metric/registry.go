@@ -101,7 +101,9 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 
 func (r *inMemoryRegistry) report(logger log.BasicLogger) {
 	for _, value := range r.ExportAll() {
-		logger.Metric(value.LogRow()...)
+		if logRow := value.LogRow(); logRow != nil {
+			logger.Metric(logRow...)
+		}
 	}
 }
 
@@ -110,7 +112,7 @@ func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Durati
 		periodicalTrigger := synchronization.NewPeriodicalTrigger(interval, func() {
 			r.report(logger)
 
-			// We only rotate histograms because there it is the only type of metric that we're currently rotating
+			// We only rotate histograms because there is the only type of metric that we're currently rotating
 			r.mu.Lock()
 			defer r.mu.Unlock()
 			for _, m := range r.mu.metrics {

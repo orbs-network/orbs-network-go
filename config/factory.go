@@ -57,8 +57,6 @@ func ForAcceptanceTests(
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 
-	cfg.SetDuration(METRICS_REPORT_INTERVAL, 1*time.Second)
-
 	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 5)
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 100*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
