@@ -1,5 +1,7 @@
 #!/bin/sh -x
 
+ulimit -S -n 20000
+
 source ./test.common.sh
 
 go test -timeout 5m ./... -failfast > test.out
