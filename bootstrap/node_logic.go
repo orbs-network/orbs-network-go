@@ -28,8 +28,9 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	publicApi      services.PublicApi
-	consensusAlgos []services.ConsensusAlgo
+	publicApi       services.PublicApi
+	consensusAlgos  []services.ConsensusAlgo
+	runtimeReporter interface{} // only needed so that the runtime reporter doesn't get GCed
 }
 
 func NewNodeLogic(
@@ -63,11 +64,13 @@ func NewNodeLogic(
 	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry))
 
+	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry)
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 
 	return &nodeLogic{
 		publicApi:      publicApiService,
 		consensusAlgos: consensusAlgos,
+		runtimeReporter: runtimeReporter,
 	}
 }
 

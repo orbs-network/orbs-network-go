@@ -38,15 +38,14 @@ type service struct {
 	logger           log.BasicLogger
 	config           Config
 
-	isLeader           bool
-	mutex              *sync.Mutex
-	lastCommittedBlock *protocol.BlockPairContainer
+	isLeader                bool
+	successfullyVotedBlocks chan primitives.BlockHeight // leader only
 
-	// leader only
-	lastSuccessfullyVotedBlock            primitives.BlockHeight
-	successfullyVotedBlocks               chan primitives.BlockHeight
-	lastCommittedBlockVoters              map[string]bool
-	lastCommittedBlockVotersReachedQuorum bool
+	mutex                                           *sync.RWMutex
+	lastCommittedBlockUnderMutex                    *protocol.BlockPairContainer
+	lastSuccessfullyVotedBlock                      primitives.BlockHeight // leader only
+	lastCommittedBlockVotersUnderMutex              map[string]bool        // leader only
+	lastCommittedBlockVotersReachedQuorumUnderMutex bool                   // leader only
 
 	metrics *metrics
 }
@@ -84,14 +83,13 @@ func NewBenchmarkConsensusAlgo(
 		logger:           logger.WithTags(LogTag),
 		config:           config,
 
-		isLeader: config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
+		isLeader:                   config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
+		successfullyVotedBlocks:    make(chan primitives.BlockHeight), // leader only
+		lastSuccessfullyVotedBlock: blockHeightNone,                   // leader only
 
-		// leader only
-		mutex: &sync.Mutex{},
-		lastSuccessfullyVotedBlock:            blockHeightNone,
-		successfullyVotedBlocks:               make(chan primitives.BlockHeight),
-		lastCommittedBlockVoters:              make(map[string]bool),
-		lastCommittedBlockVotersReachedQuorum: false,
+		mutex: &sync.RWMutex{},
+		lastCommittedBlockVotersUnderMutex:              make(map[string]bool), // leader only
+		lastCommittedBlockVotersReachedQuorumUnderMutex: false,                 // leader only
 
 		metrics: newMetrics(metricFactory, config.BenchmarkConsensusRetryInterval(), config.BenchmarkConsensusRetryInterval()),
 	}
@@ -112,14 +110,14 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 func (s *service) HandleBenchmarkConsensusCommit(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
 	if !s.isLeader {
-		s.nonLeaderHandleCommit(ctx, input.Message.BlockPair)
+		return nil, s.nonLeaderHandleCommit(ctx, input.Message.BlockPair)
 	}
 	return nil, nil
 }
 
 func (s *service) HandleBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
 	if s.isLeader {
-		s.leaderHandleCommittedVote(input.Message.Sender, input.Message.Status)
+		return nil, s.leaderHandleCommittedVote(input.Message.Sender, input.Message.Status)
 	}
 	return nil, nil
 }

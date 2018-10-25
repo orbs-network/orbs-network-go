@@ -8,7 +8,7 @@ import (
 // protocol.BlockPairContainer
 
 func LeanHelixBlockPair() *blockPair {
-	return BlockPair()
+	return BlockPair().WithLeanHelixBlockProof()
 }
 
 func (b *blockPair) WithLeanHelixBlockProof() *blockPair {

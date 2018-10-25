@@ -68,9 +68,10 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 
 func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
-		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:           gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
+		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
 
 	if input.Message.SignedBatchRange == nil {
@@ -79,9 +80,10 @@ func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey: s.config.NodePublicKey(),
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		Payloads:        payloads,
+		SenderPublicKey:     s.config.NodePublicKey(),
+		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+		Payloads:            payloads,
 	})
 }
 
@@ -174,13 +176,13 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 }
 
 func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 3 {
+	if len(payloads) < 2 {
 		return
 	}
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
-	blocks, err := decodeBlockPairs(payloads)
+	blocks, err := decodeBlockPairs(payloads[2:])
 
 	if err != nil {
 		s.logger.Error("could not decode block pair from block sync", log.Error(err))

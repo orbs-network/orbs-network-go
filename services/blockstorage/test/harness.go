@@ -133,6 +133,11 @@ func (d *harness) withNodeKey(key primitives.Ed25519PublicKey) *harness {
 	return d
 }
 
+func (d *harness) expectSyncToBroadcastInBackground() {
+	// we call this when we do not care about the sync
+	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+}
+
 func (d *harness) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }

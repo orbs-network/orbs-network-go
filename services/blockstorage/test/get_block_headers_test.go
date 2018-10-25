@@ -14,6 +14,7 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
@@ -33,6 +34,7 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
@@ -61,6 +63,7 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
@@ -87,6 +90,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 func TestReturnResultsBlockHeader(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
@@ -105,6 +109,7 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
@@ -134,6 +139,7 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 

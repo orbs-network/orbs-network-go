@@ -16,11 +16,28 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
-func (s *service) lastCommittedBlockHeightUnderMutex() primitives.BlockHeight {
-	if s.lastCommittedBlock == nil {
-		return 0
+func (s *service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.BlockPairContainer) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	if s.lastCommittedBlockUnderMutex == nil {
+		return 0, nil
 	}
-	return s.lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+	return s.lastCommittedBlockUnderMutex.TransactionsBlock.Header.BlockHeight(), s.lastCommittedBlockUnderMutex
+}
+
+func (s *service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.lastCommittedBlockUnderMutex != expectedLastCommittedBlockBefore {
+		return errors.New("aborting shared state update due to inconsistency")
+	}
+	s.lastCommittedBlockUnderMutex = blockPair
+	s.lastCommittedBlockVotersUnderMutex = make(map[string]bool) // leader only
+	s.lastCommittedBlockVotersReachedQuorumUnderMutex = false    // leader only
+
+	return nil
 }
 
 func (s *service) requiredQuorumSize() int {
@@ -80,9 +97,6 @@ func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer
 }
 
 func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConsensusMode, blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
 		return errors.Errorf("handler received unsupported block type %s", blockType)
 	}
@@ -97,10 +111,16 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 
 	// update lastCommitted to reflect this if newer
 	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
-		if blockPair.TransactionsBlock.Header.BlockHeight() > s.lastCommittedBlockHeightUnderMutex() {
-			s.lastCommittedBlock = blockPair
-			s.lastCommittedBlockVoters = make(map[string]bool) // leader only
-			s.lastCommittedBlockVotersReachedQuorum = false
+		_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
+
+		if blockPair.TransactionsBlock.Header.BlockHeight() > _lastCommittedBlockHeight {
+			err := s.setLastCommittedBlock(blockPair, _lastCommittedBlock)
+			if err != nil {
+				return err
+			}
+			// don't forget to update internal vars too since they may be used later on in the function
+			_lastCommittedBlock = blockPair
+			_lastCommittedBlockHeight = _lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 		}
 	}
 

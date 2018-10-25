@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -24,7 +25,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 		}
 	}()
 
-	s.lastCommittedBlock = s.leaderGenerateGenesisBlock()
+	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock()
 	for {
 		err := s.leaderConsensusRoundTick(ctx)
 		if err != nil {
@@ -53,15 +54,14 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 }
 
 func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
 
 	start := time.Now()
 	defer s.metrics.consensusRoundTickTime.RecordSince(start)
 
 	// check if we need to move to next block
-	if s.lastSuccessfullyVotedBlock == s.lastCommittedBlockHeightUnderMutex() {
-		proposedBlock, err := s.leaderGenerateNewProposedBlockUnderMutex(ctx)
+	if s.lastSuccessfullyVotedBlock == _lastCommittedBlockHeight {
+		proposedBlock, err := s.leaderGenerateNewProposedBlock(ctx, _lastCommittedBlockHeight, _lastCommittedBlock)
 		if err != nil {
 			return err
 		}
@@ -70,19 +70,23 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 			return err
 		}
 
-		s.lastCommittedBlock = proposedBlock
-		s.lastCommittedBlockVoters = make(map[string]bool)
-		s.lastCommittedBlockVotersReachedQuorum = false
+		err = s.setLastCommittedBlock(proposedBlock, _lastCommittedBlock)
+		if err != nil {
+			return err
+		}
+		// don't forget to update internal vars too since they may be used later on in the function
+		_lastCommittedBlock = proposedBlock
+		_lastCommittedBlockHeight = _lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 	}
 
 	// broadcast the commit via gossip for last committed block
-	err = s.leaderBroadcastCommittedBlock(ctx, s.lastCommittedBlock)
+	err = s.leaderBroadcastCommittedBlock(ctx, _lastCommittedBlock)
 	if err != nil {
 		return err
 	}
 
 	if s.config.NetworkSize(0) == 1 {
-		s.successfullyVotedBlocks <- s.lastCommittedBlockHeightUnderMutex()
+		s.successfullyVotedBlocks <- _lastCommittedBlockHeight
 	}
 
 	return nil
@@ -110,13 +114,13 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	return blockPair
 }
 
-func (s *service) leaderGenerateNewProposedBlockUnderMutex(ctx context.Context) (*protocol.BlockPairContainer, error) {
-	s.logger.Info("generating new proposed block", log.BlockHeight(s.lastCommittedBlockHeightUnderMutex()+1))
+func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, _lastCommittedBlockHeight primitives.BlockHeight, _lastCommittedBlock *protocol.BlockPairContainer) (*protocol.BlockPairContainer, error) {
+	s.logger.Info("generating new proposed block", log.BlockHeight(_lastCommittedBlockHeight+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   s.lastCommittedBlockHeightUnderMutex() + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(s.lastCommittedBlock.TransactionsBlock),
+		BlockHeight:   _lastCommittedBlockHeight + 1,
+		PrevBlockHash: digest.CalcTransactionsBlockHash(_lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
 		return nil, err
@@ -124,8 +128,8 @@ func (s *service) leaderGenerateNewProposedBlockUnderMutex(ctx context.Context) 
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       s.lastCommittedBlockHeightUnderMutex() + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(s.lastCommittedBlock.ResultsBlock),
+		BlockHeight:       _lastCommittedBlockHeight + 1,
+		PrevBlockHash:     digest.CalcResultsBlockHash(_lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
@@ -185,7 +189,7 @@ func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *
 	return err
 }
 
-func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) {
+func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
 	defer func() {
 		// FIXME remove the recover once we start passing context everywhere
 		// TODO (talkol) - it's a pattern we need to decide on: many short lived writers, one long lived reader
@@ -202,41 +206,33 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 		}
 	}()
 
-	successfullyVotedBlock := blockHeightNone
-	defer func() {
-		// this needs to happen after s.mutex.Unlock() to avoid deadlock
-		if successfullyVotedBlock != blockHeightNone {
-			s.successfullyVotedBlocks <- successfullyVotedBlock
-		}
-	}()
-
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
 
 	// validate the vote
-	err := s.leaderValidateVoteUnderMutex(sender, status)
+	err := s.leaderValidateVote(sender, status, _lastCommittedBlockHeight)
 	if err != nil {
-		s.logger.Error("leader failed to validate vote", log.Error(err))
-		return
+		return err
 	}
 
 	// add the vote
-	s.lastCommittedBlockVoters[sender.SenderPublicKey().KeyForMap()] = true
-
-	// count if we have enough votes to move forward
-	existingVotes := len(s.lastCommittedBlockVoters) + 1
-	s.logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
-	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorum {
-		s.lastCommittedBlockVotersReachedQuorum = true
-		successfullyVotedBlock = s.lastCommittedBlockHeightUnderMutex()
+	enoughVotesReceived, err := s.leaderAddVote(sender, status, _lastCommittedBlock)
+	if err != nil {
+		return err
 	}
+
+	// move the consensus forward
+	if enoughVotesReceived {
+		s.successfullyVotedBlocks <- _lastCommittedBlockHeight
+	}
+
+	return nil
 }
 
-func (s *service) leaderValidateVoteUnderMutex(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
+func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, _lastCommittedBlockHeight primitives.BlockHeight) error {
 	// block height
 	blockHeight := status.LastCommittedBlockHeight()
-	if blockHeight != s.lastCommittedBlockHeightUnderMutex() {
-		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, s.lastCommittedBlockHeightUnderMutex())
+	if blockHeight != _lastCommittedBlockHeight {
+		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, _lastCommittedBlockHeight)
 	}
 
 	// approved signer
@@ -251,4 +247,25 @@ func (s *service) leaderValidateVoteUnderMutex(sender *gossipmessages.SenderSign
 	}
 
 	return nil
+}
+
+func (s *service) leaderAddVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) (bool, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.lastCommittedBlockUnderMutex != expectedLastCommittedBlockBefore {
+		return false, errors.New("aborting shared state update due to inconsistency")
+	}
+
+	// add the vote to our shared state variable
+	s.lastCommittedBlockVotersUnderMutex[sender.SenderPublicKey().KeyForMap()] = true
+
+	// count if we have enough votes to move forward
+	existingVotes := len(s.lastCommittedBlockVotersUnderMutex) + 1
+	s.logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
+	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorumUnderMutex {
+		s.lastCommittedBlockVotersReachedQuorumUnderMutex = true
+		return true, nil
+	}
+	return false, nil
 }
