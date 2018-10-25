@@ -12,6 +12,7 @@ import (
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		block := builders.BlockPair().Build()
 
 		harness.expectValidateWithConsensusAlgosTimes(1)
@@ -24,6 +25,7 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		block := builders.BlockPair().Build()
 
 		block.TransactionsBlock.Header.MutateProtocolVersion(998)
@@ -49,6 +51,7 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 func TestValidateBlockWithValidHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 
@@ -64,6 +67,7 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newHarness(ctx)
+		harness.expectSyncToBroadcastInBackground()
 		harness.expectCommitStateDiff()
 		harness.expectValidateWithConsensusAlgosTimes(1)
 

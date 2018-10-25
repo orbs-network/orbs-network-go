@@ -35,6 +35,13 @@ func TestIdleStateTerminatesOnContextTermination(t *testing.T) {
 	require.Nil(t, next, "context termination should return a nil new state")
 }
 
+func TestIdleStateDoesNotBlockOnNewBlockNotificationWhenChannelIsNotReady(t *testing.T) {
+	h := newBlockSyncHarness()
+	h.cancel()
+	idle := h.sf.CreateIdleState()
+	idle.blockCommitted() // we did not call process, so channel is not ready, test only fails on timeout, if this blocks
+}
+
 func TestIdleNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	idle := h.sf.CreateIdleState()

@@ -50,14 +50,17 @@ func ForAcceptanceTests(
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 10*time.Millisecond)
-	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 5*time.Millisecond)
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 50*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 300*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 30)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 
-	cfg.SetDuration(METRICS_REPORT_INTERVAL, 1*time.Second)
+	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 5)
+	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 100*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
 
 	return cfg
 }
@@ -85,22 +88,6 @@ func ForDevelopment(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 100)
-
-	return cfg
-}
-
-func ForBlockStorageTests(nodePublicKey primitives.Ed25519PublicKey) BlockStorageConfig {
-	cfg := emptyConfig()
-	cfg.SetNodePublicKey(nodePublicKey)
-	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 2)
-
-	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 3*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 5*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 20*time.Millisecond)
-
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END, 5*time.Second)
-	cfg.SetDuration(BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW, 30*time.Minute)
 
 	return cfg
 }

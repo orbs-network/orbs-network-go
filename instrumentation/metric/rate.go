@@ -22,7 +22,7 @@ type Rate struct {
 type rateExport struct {
 	Name     string
 	Rate     float64
-	Interval time.Duration
+	Interval float64
 }
 
 func newRate(name string) *Rate {
@@ -37,7 +37,7 @@ func (r *Rate) Export() exportedMetric {
 	return rateExport{
 		r.name,
 		r.movingAverage.Value(),
-		tickInterval,
+		toMillis(float64(tickInterval.Nanoseconds())),
 	}
 }
 
@@ -69,6 +69,6 @@ func (r rateExport) LogRow() []*log.Field {
 		log.String("metric", r.Name),
 		log.String("metric-type", "rate"),
 		log.Float64("rate", r.Rate),
-		log.Int64("interval", r.Interval.Nanoseconds()),
+		log.Float64("interval", r.Interval),
 	}
 }

@@ -40,7 +40,7 @@ type InProcessNetwork interface {
 	WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256)
 	WaitForTransactionInStateForAtMost(ctx context.Context, nodeIndex int, txhash primitives.Sha256, atMost time.Duration)
 	Size() int
-	MetricsString() string
+	MetricsString(nodeIndex int) string
 }
 
 type inProcessNetwork struct {
@@ -48,7 +48,6 @@ type inProcessNetwork struct {
 	gossipTransport gossipAdapter.TamperingTransport
 	description     string
 	testLogger      log.BasicLogger
-	metricRegistry  metric.Registry
 }
 
 func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
@@ -60,7 +59,7 @@ func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
 			node.statePersistence,
 			node.nativeCompiler,
 			n.testLogger.WithTags(log.Node(node.name)),
-			n.metricRegistry,
+			node.metricRegistry,
 			node.config,
 		)
 	}
@@ -75,6 +74,7 @@ type networkNode struct {
 	statePersistence stateStorageAdapter.TamperingStatePersistence
 	nativeCompiler   nativeProcessorAdapter.Compiler
 	nodeLogic        bootstrap.NodeLogic
+	metricRegistry   metric.Registry
 }
 
 func (n *inProcessNetwork) WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256) {
@@ -89,8 +89,8 @@ func (n *inProcessNetwork) WaitForTransactionInStateForAtMost(ctx context.Contex
 	}
 }
 
-func (n *inProcessNetwork) MetricsString() string {
-	return n.metricRegistry.String()
+func (n *inProcessNetwork) MetricsString(i int) string {
+	return n.nodes[i].metricRegistry.String()
 }
 
 func (n *inProcessNetwork) Description() string {

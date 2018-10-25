@@ -42,8 +42,6 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
-	metricRegistry := metric.NewRegistry()
-
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -75,6 +73,8 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 		node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
 		node.nativeCompiler = nativeProcessorAdapter.NewFakeCompiler()
 
+		node.metricRegistry = metric.NewRegistry()
+
 		nodes[i] = node
 	}
 
@@ -83,7 +83,6 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 		gossipTransport: sharedTamperingTransport,
 		description:     description,
 		testLogger:      testLogger,
-		metricRegistry:  metricRegistry,
 	}
 
 	// must call network.StartNodes(ctx) to actually start the nodes in the network

@@ -3,6 +3,7 @@ package builders
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"time"
@@ -51,7 +52,7 @@ func BlockPair() *blockPair {
 		},
 		rxProof: nil,
 	}
-	return b.WithLeanHelixBlockProof()
+	return b.WithBenchmarkConsensusBlockProof(keys.Ed25519KeyPairForTests(0))
 }
 
 func (b *blockPair) Build() *protocol.BlockPairContainer {

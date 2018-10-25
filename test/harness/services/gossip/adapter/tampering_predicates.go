@@ -43,6 +43,12 @@ func BenchmarkConsensusMessage(messageType consensus.BenchmarkConsensusMessageTy
 	})
 }
 
+func BlockSyncMessage(messageType gossipmessages.BlockSyncMessageType) MessagePredicate {
+	return HasHeader(func(header *gossipmessages.Header) bool {
+		return header.IsTopicBlockSync() && header.BlockSync() == messageType
+	})
+}
+
 func TransactionRelayMessage(messageType gossipmessages.TransactionsRelayMessageType) MessagePredicate {
 	return HasHeader(func(header *gossipmessages.Header) bool {
 		return header.IsTopicTransactionRelay() && header.TransactionRelay() == messageType

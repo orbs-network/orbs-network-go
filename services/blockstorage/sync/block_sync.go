@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"sync"
 	"time"
 )
 
@@ -34,28 +33,25 @@ type BlockSyncStorage interface {
 	LastCommittedBlockHeight() primitives.BlockHeight
 	CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
+	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
 }
 
 type BlockSync struct {
 	logger       log.BasicLogger
-	terminated   bool
 	sf           *stateFactory
 	gossip       gossiptopics.BlockSync
 	storage      BlockSyncStorage
 	config       blockSyncConfig
 	currentState syncState
-	eventLock    *sync.Mutex
 }
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
 	bs := &BlockSync{
-		logger:     logger.WithTags(log.String("flow", "block-sync")),
-		terminated: false,
-		sf:         NewStateFactory(config, gossip, storage, logger),
-		gossip:     gossip,
-		storage:    storage,
-		config:     config,
-		eventLock:  &sync.Mutex{},
+		logger:  logger.WithTags(log.String("flow", "block-sync")),
+		sf:      NewStateFactory(config, gossip, storage, logger),
+		gossip:  gossip,
+		storage: storage,
+		config:  config,
 	}
 
 	bs.logger.Info("block sync init",
@@ -69,28 +65,21 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 }
 
 func (bs *BlockSync) syncLoop(ctx context.Context) {
-	for bs.currentState = bs.sf.CreateIdleState(); bs.currentState != nil; {
+	for bs.currentState = bs.sf.CreateCollectingAvailabilityResponseState(); bs.currentState != nil; {
 		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
 		// TODO add metrics
 		bs.currentState = bs.currentState.processState(ctx)
 	}
 
-	bs.terminated = true
 }
 
 func (bs *BlockSync) HandleBlockCommitted() {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
 	if bs.currentState != nil {
 		bs.currentState.blockCommitted()
 	}
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
-
-	bs.logger.Info("received availability response", log.Stringable("node-source", input.Message.Sender))
 	if bs.currentState != nil {
 		bs.currentState.gotAvailabilityResponse(input.Message)
 	}
@@ -98,9 +87,6 @@ func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input 
 }
 
 func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	bs.eventLock.Lock()
-	defer bs.eventLock.Unlock()
-
 	if bs.currentState != nil {
 		bs.currentState.gotBlocks(input.Message)
 	}

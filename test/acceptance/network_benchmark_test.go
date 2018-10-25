@@ -38,7 +38,9 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 
 		wg.Wait()
 
-		println(network.MetricsString())
+		for i := 0; i < network.Size(); i++ {
+			println(network.MetricsString(i))
+		}
 	})
 
 }

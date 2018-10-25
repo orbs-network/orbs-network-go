@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -31,6 +32,10 @@ func (s *blockSyncStorageMock) CommitBlock(ctx context.Context, input *services.
 func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	ret := s.Called(ctx, input)
 	return nil, ret.Error(0)
+}
+
+func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
+	s.Called(ctx)
 }
 
 // end of storage mock
@@ -98,6 +103,18 @@ func newBlockSyncHarness() *blockSyncHarness {
 	}
 }
 
+func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
+	return test.Eventually(test.EVENTUALLY_LOCAL_E2E_TIMEOUT, func() bool {
+		return bs.currentState == nil
+	})
+}
+
+func (h *blockSyncHarness) waitForState(bs *BlockSync, desiredState syncState) bool {
+	return test.Eventually(test.EVENTUALLY_LOCAL_E2E_TIMEOUT, func() bool {
+		return bs.currentState != nil && bs.currentState.name() == desiredState.name()
+	})
+}
+
 func (h *blockSyncHarness) withNodeKey(key primitives.Ed25519PublicKey) *blockSyncHarness {
 	h.config.pk = key
 	return h
@@ -115,6 +132,17 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 
 func (h *blockSyncHarness) cancel() {
 	h.ctxCancel()
+}
+
+func (h *blockSyncHarness) expectingSyncOnStart() {
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
+	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+}
+
+func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
+	require.NoError(t, err)
 }
 
 func (h *blockSyncHarness) verifyMocks(t *testing.T) {
