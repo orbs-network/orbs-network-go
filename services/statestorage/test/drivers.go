@@ -13,7 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-type driver struct {
+type Driver struct {
 	service services.StateStorage
 }
 
@@ -22,11 +22,11 @@ type keyValue struct {
 	value []byte
 }
 
-func NewStateStorageDriver(numOfStateRevisionsToRetain uint32) *driver {
+func NewStateStorageDriver(numOfStateRevisionsToRetain uint32) *Driver {
 	return newStateStorageDriverWithGrace(numOfStateRevisionsToRetain, 0, 0)
 }
 
-func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlockDiff uint32, graceTimeoutMillis uint64) *driver {
+func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlockDiff uint32, graceTimeoutMillis uint64) *Driver {
 	if numOfStateRevisionsToRetain <= 0 {
 		numOfStateRevisionsToRetain = 1
 	}
@@ -36,15 +36,15 @@ func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlo
 	p := adapter.NewInMemoryStatePersistence()
 	logger := log.GetLogger().WithOutput() // a mute logger
 
-	return &driver{service: statestorage.NewStateStorage(cfg, p, logger)}
+	return &Driver{service: statestorage.NewStateStorage(cfg, p, logger)}
 }
 
-func (d *driver) ReadSingleKey(ctx context.Context, contract string, key string) ([]byte, error) {
+func (d *Driver) ReadSingleKey(ctx context.Context, contract string, key string) ([]byte, error) {
 	h, _, _ := d.GetBlockHeightAndTimestamp(ctx)
 	return d.ReadSingleKeyFromRevision(ctx, h, contract, key)
 }
 
-func (d *driver) ReadSingleKeyFromRevision(ctx context.Context, revision int, contract string, key string) ([]byte, error) {
+func (d *Driver) ReadSingleKeyFromRevision(ctx context.Context, revision int, contract string, key string) ([]byte, error) {
 	out, err := d.ReadKeysFromRevision(ctx, revision, contract, key)
 	if err != nil {
 		return nil, err
@@ -52,12 +52,12 @@ func (d *driver) ReadSingleKeyFromRevision(ctx context.Context, revision int, co
 	return out[0].value, nil
 }
 
-func (d *driver) ReadKeys(ctx context.Context, contract string, keys ...string) ([]*keyValue, error) {
+func (d *Driver) ReadKeys(ctx context.Context, contract string, keys ...string) ([]*keyValue, error) {
 	h, _, _ := d.GetBlockHeightAndTimestamp(ctx)
 	return d.ReadKeysFromRevision(ctx, h, contract, keys...)
 }
 
-func (d *driver) ReadKeysFromRevision(ctx context.Context, revision int, contract string, keys ...string) ([]*keyValue, error) {
+func (d *Driver) ReadKeysFromRevision(ctx context.Context, revision int, contract string, keys ...string) ([]*keyValue, error) {
 	ripmdKeys := make([]primitives.Ripmd160Sha256, 0, len(keys))
 	for _, key := range keys {
 		ripmdKeys = append(ripmdKeys, primitives.Ripmd160Sha256(key))
@@ -83,21 +83,21 @@ func (d *driver) ReadKeysFromRevision(ctx context.Context, revision int, contrac
 	return result, nil
 }
 
-func (d *driver) GetBlockHeightAndTimestamp(ctx context.Context) (int, int, error) {
+func (d *Driver) GetBlockHeightAndTimestamp(ctx context.Context) (int, int, error) {
 	output, err := d.service.GetStateStorageBlockHeight(ctx, &services.GetStateStorageBlockHeightInput{})
 	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
 }
 
-func (d *driver) CommitStateDiff(ctx context.Context, state *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+func (d *Driver) CommitStateDiff(ctx context.Context, state *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
 	return d.service.CommitStateDiff(ctx, state)
 }
 
-func (d *driver) CommitValuePairs(ctx context.Context, contract string, keyValues ...string) {
+func (d *Driver) CommitValuePairs(ctx context.Context, contract string, keyValues ...string) {
 	h, _, _ := d.GetBlockHeightAndTimestamp(ctx)
 	d.CommitValuePairsAtHeight(ctx, h+1, contract, keyValues...)
 }
 
-func (d *driver) CommitValuePairsAtHeight(ctx context.Context, h int, contract string, keyValues ...string) (*services.CommitStateDiffOutput, error) {
+func (d *Driver) CommitValuePairsAtHeight(ctx context.Context, h int, contract string, keyValues ...string) (*services.CommitStateDiffOutput, error) {
 	if len(keyValues)%2 != 0 {
 		panic("expecting an array of key value pairs")
 	}
