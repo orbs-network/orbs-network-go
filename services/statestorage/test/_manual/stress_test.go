@@ -60,7 +60,7 @@ func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
 				elapsedTick := time.Now().Sub(tickStart)
 				elapsed := time.Now().Sub(start)
 				commitDuration = elapsed - createInputDuration
-				t.Logf("tick: %v, commit: %v, elapsed: %v, progress: %d, HeapSys: %dMB, HeapAlloc: %dMB\n", elapsedTick, commitDuration, elapsed, 100*txCount/TX_COUNT_SIX_MONTHS_AT_AVG_TPX, ms.HeapSys/ (1024 * 1024), ms.HeapAlloc/ (1024 * 1024))
+				fmt.Printf("delta: %v, elapsed committing: %v, elapsed: %v, progress: %d, HeapSys: %dMB, HeapAlloc: %dMB\n", elapsedTick, commitDuration, elapsed, 100*txCount/TX_COUNT_SIX_MONTHS_AT_AVG_TPX, ms.HeapSys/ (1024 * 1024), ms.HeapAlloc/ (1024 * 1024))
 				tickStart = time.Now()
 			}
 		}
