@@ -56,7 +56,7 @@ func newMetrics(m metric.Factory) *metrics {
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
 	txPool services.TransactionPool, logger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
-	storage := &service{
+	s := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
 		gossip:        gossip,
@@ -74,13 +74,13 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	}
 
 	if lastBlock != nil {
-		storage.updateLastCommittedBlock(lastBlock)
+		s.updateLastCommittedBlock(lastBlock)
 	}
 
-	gossip.RegisterBlockSyncHandler(storage)
-	storage.blockSync = blockSync.NewBlockSync(ctx, config, gossip, storage, logger)
+	gossip.RegisterBlockSyncHandler(s)
+	s.blockSync = blockSync.NewBlockSync(ctx, config, gossip, s, logger)
 
-	return storage
+	return s
 }
 
 func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
