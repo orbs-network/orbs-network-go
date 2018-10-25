@@ -19,31 +19,53 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
 type E2EConfig struct {
-	Bootstrap   bool
-	ApiEndpoint string
+	bootstrap   bool
+	apiEndpoint string
 	baseUrl     string
+
+	stressTest StressTestConfig
+}
+
+type StressTestConfig struct {
+	stressTestNumberOfTransactions int64
+	stressTestFailureRate          int64
+	stressTestTargetTPS            float64
 }
 
 const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
-	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT + 2) // 8080 is leader, 8082 is node-3
-	ApiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
+	bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
+	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
+	apiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
-	if !Bootstrap {
-		ApiEndpoint = os.Getenv("API_ENDPOINT")
+	stressTestNumberOfTransactions := int64(10000)
+	stressTestFailureRate := int64(0)
+	stressTestTargetTPS := float64(1000)
+
+	if !bootstrap {
+		apiEndpoint = os.Getenv("API_ENDPOINT")
+
+		stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
+		stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
+		stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
 	}
 
 	return E2EConfig{
-		Bootstrap,
-		ApiEndpoint,
+		bootstrap,
+		apiEndpoint,
 		baseUrl,
+		StressTestConfig{
+			stressTestNumberOfTransactions,
+			stressTestFailureRate,
+			stressTestTargetTPS,
+		},
 	}
 }
 
@@ -55,7 +77,7 @@ func newHarness() *harness {
 	var nodes []bootstrap.Node
 
 	// TODO: kill me - why do we need this override?
-	if getConfig().Bootstrap {
+	if getConfig().bootstrap {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		firstRandomPort := 20000 + r.Intn(40000)
 
@@ -111,7 +133,7 @@ func newHarness() *harness {
 }
 
 func (h *harness) gracefulShutdown() {
-	if getConfig().Bootstrap {
+	if getConfig().bootstrap {
 		for _, node := range h.nodes {
 			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 		}
@@ -178,7 +200,7 @@ func (h *harness) absoluteUrlFor(endpoint string) string {
 }
 
 func (h *harness) apiUrlFor(endpoint string) string {
-	return getConfig().ApiEndpoint + endpoint
+	return getConfig().apiEndpoint + endpoint
 }
 
 func getProcessorArtifactPath() (string, string) {
