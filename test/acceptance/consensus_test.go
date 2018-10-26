@@ -52,6 +52,7 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 		network.SendTransferInBackground(ctx, 0, 0, 5, 6) // send a transaction so that network advances to block 1. the tamper prevents COMMITTED messages from reaching leader, so it doesn't move to block 2
 		committedLatch.Wait()                             // wait for validator to try acknowledge that it reached block 1 (and fail)
 		committedLatch.Wait()                             // wait for another consensus round (to make sure transaction(0) does not arrive after transaction(17) due to scheduling flakiness
+		committedLatch.Wait()                             // wait for another consensus round (to make sure transaction(0) does not arrive after transaction(17) due to scheduling flakiness (we had flakiness with just once when a block can hold more than one tx)
 
 		txHash := network.SendTransferInBackground(ctx, 0, 17, 5, 6) // this should be included in block 2 which will not be closed until leader knows network is at block 2
 
