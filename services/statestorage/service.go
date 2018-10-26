@@ -27,14 +27,6 @@ type service struct {
 	merkle    *merkle.Forest
 }
 
-type merkleCleaner struct {
-	f *merkle.Forest
-}
-
-func (mc *merkleCleaner) evictRevision(height primitives.BlockHeight, ts primitives.TimestampNano, merkleRoot primitives.MerkleSha256) {
-	mc.f.Forget(merkleRoot)
-}
-
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
 
 	pHeight, pTs, pRoot, err := persistence.ReadMetadata()
@@ -57,7 +49,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 
 		mutex:     sync.RWMutex{},
 		merkle:    forest,
-		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance()), &merkleCleaner{forest}),
+		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance()), forest.GcFunc()),
 	}
 }
 

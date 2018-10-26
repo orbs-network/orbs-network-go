@@ -189,7 +189,15 @@ func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path stri
 	return false, errors.Errorf("proof incomplete ")
 }
 
-func (f *Forest) Forget(rootHash primitives.MerkleSha256) {
+type GcFunc func(root primitives.MerkleSha256)
+
+func (f *Forest) GcFunc() GcFunc {
+	return func(root primitives.MerkleSha256) {
+		f.forget(root)
+	}
+}
+
+func (f *Forest) forget(rootHash primitives.MerkleSha256) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 

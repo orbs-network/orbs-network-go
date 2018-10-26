@@ -73,6 +73,18 @@ func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, prim
 	return sp.height, sp.ts, sp.merkleRoot, nil
 }
 
+func (sp *InMemoryStatePersistence) Each(callback func (contract primitives.ContractName, record *protocol.StateRecord)) error {
+	sp.mutex.RLock()
+	defer sp.mutex.RUnlock()
+
+	for contract := range sp.fullState {
+		for key := range sp.fullState[contract] {
+			callback(contract, sp.fullState[contract][key])
+		}
+	}
+	return nil
+}
+
 func (sp *InMemoryStatePersistence) Dump() string {
 	output := strings.Builder{}
 	output.WriteString("{")
@@ -100,18 +112,6 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	}
 	output.WriteString("}}")
 	return output.String()
-}
-
-func (sp *InMemoryStatePersistence) Each(callback func (contract primitives.ContractName, record *protocol.StateRecord)) error {
-	sp.mutex.RLock()
-	defer sp.mutex.RUnlock()
-
-	for contract := range sp.fullState {
-		for key := range sp.fullState[contract] {
-			callback(contract, sp.fullState[contract][key])
-		}
-	}
-	return nil
 }
 
 // TODO - there is an identical method in statestorage. extract and reuse?

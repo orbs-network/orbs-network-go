@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -140,9 +141,10 @@ func TestReadHash(t *testing.T) {
 func TestRevisionEviction(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
 	var evictedMerkleRoots []primitives.MerkleSha256
-	d := newDriverWithEvictCallback(persistenceMock, 1, func(h primitives.BlockHeight, ts primitives.TimestampNano, r primitives.MerkleSha256){
-		evictedMerkleRoots = append(evictedMerkleRoots, r)
-	})
+	d := newDriverWithMerkleGc(persistenceMock, 1,
+		func(r primitives.MerkleSha256) {
+			evictedMerkleRoots = append(evictedMerkleRoots, r)
+		})
 
 	firstHash, _ := d.readHash(0)
 	d.writeFull(1, 1, primitives.MerkleSha256{1}, "c", "k", "v1")
@@ -153,7 +155,7 @@ func TestRevisionEviction(t *testing.T) {
 }
 
 type driver struct {
-	inner *rollingRevisions
+	inner         *rollingRevisions
 	evictCallback func(h primitives.BlockHeight, ts primitives.TimestampNano, r primitives.MerkleSha256)
 }
 
@@ -163,21 +165,14 @@ func newDriver(persistence adapter.StatePersistence, layers int) *driver {
 	}
 }
 
-func newDriverWithEvictCallback(persistence adapter.StatePersistence, layers int, e func(h primitives.BlockHeight, ts primitives.TimestampNano, r primitives.MerkleSha256)) *driver {
+func newDriverWithMerkleGc(persistence adapter.StatePersistence, layers int, gc merkle.GcFunc) *driver {
 	d := &driver{
-		evictCallback: e,
+		inner: newRollingRevisions(persistence, layers, gc),
 	}
-	d.inner = newRollingRevisions(persistence, layers, d)
 	return d
 }
 
-func (d *driver) evictRevision(h primitives.BlockHeight, ts primitives.TimestampNano, r primitives.MerkleSha256) {
-	if d.evictCallback != nil {
-		d.evictCallback(h, ts, r)
-	}
-}
-
-func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractName, kv ...string)  error {
+func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractName, kv ...string) error {
 	diff := adapter.ChainState{contract: make(adapter.ContractState)}
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
@@ -229,6 +224,6 @@ func (spm *StatePersistenceMock) Read(contract primitives.ContractName, key stri
 func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.MerkleSha256, error) {
 	return 0, 0, primitives.MerkleSha256{}, nil
 }
-func (spm *StatePersistenceMock) Each(callback func (contract primitives.ContractName, record *protocol.StateRecord)) error {
+func (spm *StatePersistenceMock) Each(callback func(contract primitives.ContractName, record *protocol.StateRecord)) error {
 	return spm.Mock.Called(callback).Error(0)
 }

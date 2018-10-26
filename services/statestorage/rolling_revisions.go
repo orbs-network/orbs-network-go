@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -17,7 +18,7 @@ type revisionDiff struct {
 }
 
 type rollingRevisions struct {
-	evicter            revisionEvicter
+	gc           merkle.GcFunc
 	persist            adapter.StatePersistence
 	transientRevisions int
 	revisions          []*revisionDiff
@@ -28,17 +29,13 @@ type rollingRevisions struct {
 	persistedTs        primitives.TimestampNano
 }
 
-type revisionEvicter interface {
-	evictRevision(height primitives.BlockHeight, ts primitives.TimestampNano, merkleRoot primitives.MerkleSha256)
-}
-
-func newRollingRevisions(persist adapter.StatePersistence, transientRevisions int, evicter revisionEvicter) *rollingRevisions {
+func newRollingRevisions(persist adapter.StatePersistence, transientRevisions int, gc merkle.GcFunc) *rollingRevisions {
 	h, ts, r, err := persist.ReadMetadata()
 	if err != nil {
 		panic("could not load state metadata")
 	}
 	result := &rollingRevisions{
-		evicter:            evicter,
+		gc:                 gc,
 		persist:            persist,
 		transientRevisions: transientRevisions,
 		currentHeight:      h,
@@ -81,8 +78,8 @@ func (ls *rollingRevisions) evictRevisions() error {
 		if err != nil {
 			return err
 		}
-		if ls.evicter != nil {
-			ls.evicter.evictRevision(ls.persistedHeight, ls.persistedTs, ls.persistedRoot)
+		if ls.gc != nil {
+			ls.gc(ls.persistedRoot)
 		}
 		ls.persistedHeight = d.height
 		ls.persistedTs = d.ts
