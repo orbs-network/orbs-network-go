@@ -80,7 +80,7 @@ func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver,
 		require.NoError(t, err)
 		nextBlockHeight = output.NextDesiredBlockHeight
 
-		// print progress every 100000 blockCount
+		// print progress
 		if blockCount++; blockCount%100 == 0 {
 			ms := runtime.MemStats{}
 			runtime.ReadMemStats(&ms)
