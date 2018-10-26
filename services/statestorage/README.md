@@ -78,7 +78,6 @@ database will contain a single state image belonging to a single block height.
 
 This is possible because subsequent blocks are quick to sync from block storage and we never maintain state for far behind block heights.
 
-
 ## Persistence
 
 The 3 modes of persistence are:
