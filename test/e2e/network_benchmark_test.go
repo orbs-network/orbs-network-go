@@ -8,12 +8,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 	"math/rand"
+	"os"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestE2EStress(t *testing.T) {
+	if os.Getenv("STRESS_TEST") != "true" {
+		t.Skip("Skipping stress test")
+	}
+
 	var wg sync.WaitGroup
 
 	limiter := rate.NewLimiter(1000, 50)

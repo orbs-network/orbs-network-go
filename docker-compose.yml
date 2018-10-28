@@ -63,6 +63,7 @@ services:
       STRESS_TEST_NUMBER_OF_TRANSACTIONS: 10000
       STRESS_TEST_FAILURE_RATE: 20
       STRESS_TEST_TARGET_TPS: 100
+      STRESS_TEST: 'true'
     command: sh -c "sleep 10 && ./e2e.test -test.v"
     sysctls:
       net.core.somaxconn: 25000
