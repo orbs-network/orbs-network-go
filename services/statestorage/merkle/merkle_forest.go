@@ -1,11 +1,11 @@
 package merkle
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
-	"strings"
 	"sync"
 )
 
@@ -21,7 +21,7 @@ type Proof []*ProofNode
 
 // TODO replace proofNode with membuf/proto
 type ProofNode struct {
-	path     string // TODO replace with []byte + parity bool when moving to trieRadix = 16
+	path     []byte // TODO parity bool?
 	value    primitives.Sha256
 	branches [trieRadix]primitives.MerkleSha256
 }
@@ -32,14 +32,14 @@ func (pn *ProofNode) hash() primitives.MerkleSha256 {
 }
 
 type node struct {
-	path     string // TODO replace with []byte + parity bool when moving to trieRadix = 16
+	path     []byte // TODO  parity bool
 	value    primitives.Sha256
 	hash     primitives.MerkleSha256
 	branches [trieRadix]*node
 	isLeaf   bool
 }
 
-func createNode(path string, valueHash primitives.Sha256, isLeaf bool) *node {
+func createNode(path []byte, valueHash primitives.Sha256, isLeaf bool) *node {
 	return &node{
 		path:     path,
 		value:    valueHash,
@@ -50,7 +50,7 @@ func createNode(path string, valueHash primitives.Sha256, isLeaf bool) *node {
 }
 
 func createEmptyNode() *node {
-	tmp := createNode("", zeroValueHash, true)
+	tmp := createNode([]byte{}, zeroValueHash, true)
 	tmp.hash = tmp.serialize().hash()
 	return tmp
 }
@@ -61,7 +61,7 @@ func (n *node) hasValue() bool {
 
 func (n *node) serialize() *ProofNode {
 	sn := &ProofNode{
-		path:     n.path,
+		path:     n.path, // TODO - copy ?
 		value:    n.value,
 		branches: [trieRadix]primitives.MerkleSha256{},
 	}
@@ -81,7 +81,7 @@ func (n *node) clone() *node {
 		copy(newBranches[:], n.branches[:])
 	}
 	result := &node{
-		path:     n.path,
+		path:     n.path, // TODO - copy ?
 		value:    n.value, // TODO - copy?
 		branches: newBranches,
 		isLeaf:   n.isLeaf,
@@ -102,7 +102,12 @@ func (dn dirtyNodes) set(node *node, arc byte) {
 	dn[node][arc] = true
 }
 
-type MerkleDiffs map[string]primitives.Sha256
+type MerkleDiff struct {
+	Key []byte
+	Value primitives.Sha256
+}
+type MerkleDiffs []*MerkleDiff
+//type MerkleDiffs map[string]primitives.Sha256
 
 type Forest struct {
 	mutex sync.Mutex
@@ -134,7 +139,7 @@ func (f *Forest) appendRoot(root *node) {
 	f.roots = append(f.roots, root)
 }
 
-func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path string) (Proof, error) {
+func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path []byte) (Proof, error) {
 	path = toHex(path)
 	current := f.findRoot(rootHash)
 	if current == nil {
@@ -144,10 +149,10 @@ func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path string) (Proof,
 	proof := make(Proof, 0, 10)
 	proof = append(proof, current.serialize())
 
-	for p := path; strings.HasPrefix(p, current.path); {
+	for p := path; bytes.HasPrefix(p, current.path); {
 		p = p[len(current.path):]
 
-		if p != "" {
+		if len(p) != 0 {
 			if current = current.branches[p[0]]; current != nil {
 				proof = append(proof, current.serialize())
 				p = p[1:]
@@ -161,7 +166,7 @@ func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path string) (Proof,
 	return proof, nil
 }
 
-func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path string, value primitives.Sha256) (bool, error) {
+func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path []byte, value primitives.Sha256) (bool, error) {
 	path = toHex(path)
 	currentHash := rootHash
 	emptyMerkleHash := primitives.MerkleSha256{}
@@ -171,13 +176,13 @@ func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path stri
 		if !calcHash.Equal(currentHash) { // validate current node against expected hash
 			return false, errors.Errorf("proof hash mismatch at node %d", i)
 		}
-		if path == currentNode.path {
+		if bytes.Equal(path, currentNode.path) {
 			return value.Equal(currentNode.value), nil
 		}
 		if len(path) <= len(currentNode.path) {
 			return value.Equal(zeroValueHash), nil
 		}
-		if !strings.HasPrefix(path, currentNode.path) {
+		if !bytes.HasPrefix(path, currentNode.path) {
 			return value.Equal(zeroValueHash), nil
 		}
 		currentHash = currentNode.branches[path[len(currentNode.path)]]
@@ -195,7 +200,7 @@ func (f *Forest) Forget(rootHash primitives.MerkleSha256) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	newRoots := make([]*node, len(f.roots)-1, len(f.roots)-1)
+	newRoots := make([]*node, 0, len(f.roots)-1)
 	for _, root := range f.roots { // naive copy because its a small array and simple code is better
 		if !root.hash.Equal(rootHash) {
 			newRoots = append(newRoots, root)
@@ -212,8 +217,8 @@ func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs MerkleDiffs) (
 
 	sandbox := make(dirtyNodes)
 
-	for path, value := range diffs {
-		root = f.travelUpdateAndMark(nil, 0, root, toHex(path), value, sandbox)
+	for _, diff := range diffs {
+		root = f.travelUpdateAndMark(nil, 0, root, toHex(diff.Key), diff.Value, sandbox)
 	}
 
 	root = f.travelCollapseAndHash(root, sandbox)
@@ -225,15 +230,15 @@ func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs MerkleDiffs) (
 	return root.hash, nil
 }
 
-func (f *Forest) travelUpdateAndMark(parent *node, arc byte, current *node, path string, valueHash primitives.Sha256, sandbox dirtyNodes) *node {
+func (f *Forest) travelUpdateAndMark(parent *node, arc byte, current *node, path []byte, valueHash primitives.Sha256, sandbox dirtyNodes) *node {
 	current = f.getOrClone(current, parent, arc, sandbox)
 
-	if current.path == path { // path reached exactly
+	if bytes.Equal(current.path,path) { // path reached exactly
 		current.value = valueHash
 		return current
 	}
 
-	if strings.HasPrefix(path, current.path) { // current is next part of path
+	if bytes.HasPrefix(path, current.path) { // current is next part of path
 		if !current.hasValue() && current.isLeaf { // replace it
 			current.path = path
 			current.value = valueHash
@@ -255,7 +260,7 @@ func (f *Forest) travelUpdateAndMark(parent *node, arc byte, current *node, path
 		return current
 	}
 
-	if strings.HasPrefix(current.path, path) { // "insert" a valued node along the path
+	if bytes.HasPrefix(current.path, path) { // "insert" a valued node along the path
 		childArc := current.path[len(path)]
 
 		newParent := createNode(path, valueHash, false)
@@ -324,7 +329,12 @@ func (f *Forest) travelCollapseAndHash(current *node, sandbox dirtyNodes) *node 
 			return nil
 		} else if nChildren == 1 { // fold up only child
 			child := current.branches[aChild]
-			combinedPath := current.path + string(aChild) + child.path
+			combinedPath := make([]byte, len(current.path)+len(child.path)+1)
+			copy(combinedPath, current.path) // TODO is this efficient
+			combinedPath[len(current.path)] = byte(aChild)
+			for i := 0; i < len(child.path);i++ {
+				combinedPath[len(current.path)+1+i] = child.path[i]
+			}
 			current = child.clone()
 			current.path = combinedPath
 		}
@@ -334,13 +344,12 @@ func (f *Forest) travelCollapseAndHash(current *node, sandbox dirtyNodes) *node 
 	return current
 }
 
-func toHex(s string) string {
-	strBytes := []byte(s)
-	hexBytes := make([]byte, len(strBytes) * 2)
-	for i, b := range strBytes {
+func toHex(s []byte) []byte {
+	hexBytes := make([]byte, len(s) * 2)
+	for i, b := range s {
 		hexBytes[i*2] = 0xf & (b >> 4)
 		hexBytes[i*2+1] = 0x0f & b
 	}
-	return string(hexBytes)
+	return hexBytes
 	//return hex.EncodeToString([]byte(s))
 }

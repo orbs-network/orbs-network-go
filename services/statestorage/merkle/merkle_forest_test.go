@@ -12,31 +12,30 @@ import (
 
 
 var hextext ="0123456789abcdef"
-func bytesStringToHexString(s string) string {
-	strBytes := []byte(s)
+func bytesToHexString(s []byte) string {
 	hexText := ""
-	for _, b := range strBytes {
+	for _, b := range s {
 		hexText = hexText + string(hextext[b])
 	}
 	return hexText
 }
 
-func hexStringToBytesString(s string) string {
+func hexStringToBytes(s string) []byte {
 	if (len(s) % 2) != 0 {
 		panic("key value needs to be a hex representation of a byte array")
 	}
 	bytesKey := make([]byte, len(s)/2)
 	hex.Decode(bytesKey, []byte(s))
-	return string(bytesKey)
+	return bytesKey
 }
 
 func updateStringEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
-	diffs := make(MerkleDiffs)
+	diffs := make(MerkleDiffs, len(keyValues)/2)
 	for i := 0; i < len(keyValues); i = i + 2 {
-		diffs[hexStringToBytesString(keyValues[i])] = hash.CalcSha256([]byte(keyValues[i+1]))
+		diffs[i/2] = &MerkleDiff{Key: hexStringToBytes(keyValues[i]), Value : hash.CalcSha256([]byte(keyValues[i+1]))}
 	}
 
 	currentRoot, _ := f.Update(baseHash, diffs)
@@ -45,13 +44,13 @@ func updateStringEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues 
 }
 
 func verifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path string, value string, exists bool) {
-	verified, err := f.Verify(root, proof, hexStringToBytesString(path), hash.CalcSha256([]byte(value)))
+	verified, err := f.Verify(root, proof, hexStringToBytes(path), hash.CalcSha256([]byte(value)))
 	require.NoError(t, err, "proof verification failed")
 	require.Equal(t, exists, verified, "proof verification returned unexpected result")
 }
 
 func getProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path string, expectedHeight int) Proof {
-	proof, err := f.GetProof(root, hexStringToBytesString(path))
+	proof, err := f.GetProof(root, hexStringToBytes(path))
 	require.NoError(t, err, "failed with error: %s", err)
 	require.Equal(t, expectedHeight, len(proof), "unexpected proof length")
 	return proof
@@ -65,20 +64,20 @@ func TestRootManagement(t *testing.T) {
 	foundRoot := f.findRoot(emptyNode.hash)
 	require.Equal(t, emptyNode, foundRoot, "proof verification returned unexpected result")
 
-	node1 := createNode("abcd", hash.CalcSha256([]byte("bye")), true)
+	node1 := createNode([]byte("abcd"), hash.CalcSha256([]byte("bye")), true)
 	node1.hash = node1.serialize().hash()
-	node2 := createNode("1234", hash.CalcSha256([]byte("d")), true)
+	node2 := createNode([]byte("1234"), hash.CalcSha256([]byte("d")), true)
 	node2.hash = node2.serialize().hash()
 
 	f.appendRoot(node1)
 	f.appendRoot(node2)
 	require.Len(t, f.roots, 3, "mismatch length")
 
-	node1hash := createNode("abcd", hash.CalcSha256([]byte("bye")), true).serialize().hash()
+	node1hash := createNode([]byte("abcd"), hash.CalcSha256([]byte("bye")), true).serialize().hash()
 	foundRoot = f.findRoot(node1hash)
 	require.Equal(t, node1, foundRoot, "should be same node")
 
-	node2hash := createNode("1234", hash.CalcSha256([]byte("d")), true).serialize().hash()
+	node2hash := createNode([]byte("1234"), hash.CalcSha256([]byte("d")), true).serialize().hash()
 	f.Forget(node2hash)
 	require.Len(t, f.roots, 2, "mismatch length after forget")
 	foundRoot = f.findRoot(node1.hash)
@@ -277,7 +276,7 @@ func TestRemoveValue_ParentWithSingleChild(t *testing.T) {
 	root2 := updateStringEntries(f, root1, "abcd", "")
 
 	p := getProofRequireHeight(t, f, root2, "abcdef", 1)
-	require.EqualValues(t, "abcdef", bytesStringToHexString(p[0].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "abcdef", bytesToHexString(p[0].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_NonBranchingNonLeaf1(t *testing.T) {
@@ -292,8 +291,8 @@ func TestRemoveValue_NonBranchingNonLeaf1(t *testing.T) {
 	getProofRequireHeight(t, f, fullTree, "abcdef", 3)
 	getProofRequireHeight(t, f, afterRemove, "abcdef", 2)
 
-	require.EqualValues(t, "d", bytesStringToHexString(p1[1].path), "full tree proof for and does not end with expected node path")
-	require.EqualValues(t, "def", bytesStringToHexString(p2[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "d", bytesToHexString(p1[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "def", bytesToHexString(p2[1].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_BranchingNonLeaf_NodeStructureUnchanged(t *testing.T) {
@@ -308,8 +307,8 @@ func TestRemoveValue_BranchingNonLeaf_NodeStructureUnchanged(t *testing.T) {
 	getProofRequireHeight(t, f, fullTree, "abcdef", 2)
 	getProofRequireHeight(t, f, afterRemove, "abcdef", 2)
 
-	require.EqualValues(t, "234", bytesStringToHexString(p1[1].path), "full tree proof for and does not end with expected node path")
-	require.EqualValues(t, "def", bytesStringToHexString(p2[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "234", bytesToHexString(p1[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "def", bytesToHexString(p2[1].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_BranchingNonLeaf_CollapseRoot(t *testing.T) {
@@ -319,11 +318,11 @@ func TestRemoveValue_BranchingNonLeaf_CollapseRoot(t *testing.T) {
 	root2 := updateStringEntries(f, root1, "ab", "")
 
 	p0 := getProofRequireHeight(t, f, root1, "abcd", 3)
-	require.EqualValues(t, "ab", bytesStringToHexString(p0[0].path), "unexpected proof structure")
+	require.EqualValues(t, "ab", bytesToHexString(p0[0].path), "unexpected proof structure")
 
 	p := getProofRequireHeight(t, f, root2, "abcd", 2)
 	require.EqualValues(t, zeroValueHash, p[0].value, "unexpected proof structure")
-	require.EqualValues(t, "abc", bytesStringToHexString(p[0].path), "unexpected proof structure")
+	require.EqualValues(t, "abc", bytesToHexString(p[0].path), "unexpected proof structure")
 }
 
 func TestRemoveValue_OneOfTwoChildren(t *testing.T) {
@@ -334,7 +333,7 @@ func TestRemoveValue_OneOfTwoChildren(t *testing.T) {
 
 	p := getProofRequireHeight(t, f, root2, "abcdef", 2)
 	getProofRequireHeight(t, f, root2, "ab1234", 1)
-	require.EqualValues(t, "ab", bytesStringToHexString(p[0].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "ab", bytesToHexString(p[0].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_OneOfTwoChildrenCollapsingParent(t *testing.T) {
@@ -345,7 +344,7 @@ func TestRemoveValue_OneOfTwoChildrenCollapsingParent(t *testing.T) {
 
 	p := getProofRequireHeight(t, f, root2, "abcd", 1)
 	getProofRequireHeight(t, f, root2, "abc4", 1)
-	require.EqualValues(t, "abcd", bytesStringToHexString(p[0].path), "unexpected proof structure")
+	require.EqualValues(t, "abcd", bytesToHexString(p[0].path), "unexpected proof structure")
 }
 
 func TestRemoveValue_MissingKey(t *testing.T) {
@@ -372,12 +371,12 @@ func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 	f1, initRoot1 := NewForest()
 	root1 := updateStringEntries(f1, initRoot1, keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
 		keyValue[var1[2]], keyValue[var1[2]+1], keyValue[var1[3]], keyValue[var1[3]+1], keyValue[var1[4]], keyValue[var1[4]+1])
-	proof1, _ := f1.GetProof(root1, hexStringToBytesString("abc12345"))
+	proof1, _ := f1.GetProof(root1, hexStringToBytes("abc12345"))
 
 	f2, initRoot2 := NewForest()
 	root2 := updateStringEntries(f2, initRoot2, keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
 		keyValue[var2[2]], keyValue[var2[2]+1], keyValue[var2[3]], keyValue[var2[3]+1], keyValue[var2[4]], keyValue[var2[4]+1])
-	proof2, _ := f2.GetProof(root2, hexStringToBytesString("abc12345"))
+	proof2, _ := f2.GetProof(root2, hexStringToBytes("abc12345"))
 
 	require.Equal(t, root1, root2, "unexpected different root hash")
 	require.Equal(t, len(proof1), len(proof2), "unexpected different tree depth / proof lengths")
@@ -386,7 +385,7 @@ func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 	f3, initRoot3 := NewForest()
 	root3 := updateStringEntries(f3, initRoot3, keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
 		keyValue[var3[2]], keyValue[var3[2]+1], keyValue[var3[3]], keyValue[var3[3]+1], keyValue[var3[4]], keyValue[var3[4]+1])
-	proof3, _ := f3.GetProof(root3, hexStringToBytesString("abc12345"))
+	proof3, _ := f3.GetProof(root3, hexStringToBytes("abc12345"))
 
 	require.Equal(t, root2, root3, "unexpected different root hash")
 	require.Equal(t, len(proof2), len(proof3), "unexpected different tree depth / proof lengths")
@@ -398,10 +397,10 @@ func TestAddConvegingPathsWithExactValues(t *testing.T) {
 	root1 := updateStringEntries(f, root, "abdbda", "1", "abdcda", "1", "acdbda", "1", "acdcda", "1")
 	root2 := updateStringEntries(f, root1, "abdcda", "2")
 
-	proof1, _ := f.GetProof(root2, hexStringToBytesString("abdbda"))
-	proof2, _ := f.GetProof(root2, hexStringToBytesString("abdcda"))
-	proof3, _ := f.GetProof(root2, hexStringToBytesString("acdbda"))
-	proof4, _ := f.GetProof(root2, hexStringToBytesString("acdcda"))
+	proof1, _ := f.GetProof(root2, hexStringToBytes("abdbda"))
+	proof2, _ := f.GetProof(root2, hexStringToBytes("abdcda"))
+	proof3, _ := f.GetProof(root2, hexStringToBytes("acdbda"))
+	proof4, _ := f.GetProof(root2, hexStringToBytes("acdcda"))
 
 	verifyProof(t, f, root2, proof1, "abdbda", "1", true)
 	verifyProof(t, f, root2, proof2, "abdcda", "2", true)

@@ -89,13 +89,13 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 }
 
 func filterToMerkleInput(csd []*protocol.ContractStateDiff) merkle.MerkleDiffs {
-	result := make(merkle.MerkleDiffs)
-	for _, stateDiffs := range csd {
+	result := make(merkle.MerkleDiffs, len(csd))
+	for ind, stateDiffs := range csd {
 		contract := stateDiffs.ContractName()
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
 			r := i.NextStateDiffs()
-			k := string(hash.CalcSha256(append([]byte(contract), r.Key()...)))
-			result[k] = hash.CalcSha256(r.Value())
+			k := hash.CalcSha256(append([]byte(contract), r.Key()...))
+			result[ind] = &merkle.MerkleDiff{Key: k, Value: hash.CalcSha256(r.Value())}
 		}
 	}
 	return result
