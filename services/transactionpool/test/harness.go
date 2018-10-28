@@ -48,7 +48,7 @@ func (h *harness) expectTransactionsToBeForwarded(sig primitives.Ed25519Sig, tra
 }
 
 func (h *harness) expectNoTransactionsToBeForwarded() {
-	h.gossip.Never("BroadcastForwardedTransactions", mock.Any)
+	h.gossip.Never("BroadcastForwardedTransactions", mock.Any, mock.Any)
 }
 
 func (h *harness) ignoringForwardMessages() {

@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
+	"hash/adler32"
 	"sync"
 	"time"
 )
@@ -140,12 +141,15 @@ func (f *transactionForwarder) drainQueue() []*protocol.SignedTransaction {
 }
 
 func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, hashes []primitives.Sha256) {
+	checksum := adler32.New()
 	for _, tx := range txs {
 		hash := digest.CalcTxHash(tx.Transaction())
 
 		hashes = append(hashes, hash)
-		oneBigHash = append(oneBigHash, hash...)
+		checksum.Write(hash)
 	}
+
+	oneBigHash = checksum.Sum(oneBigHash)
 
 	return
 }
