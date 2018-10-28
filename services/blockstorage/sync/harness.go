@@ -125,6 +125,11 @@ func (h *blockSyncHarness) withNoCommitTimeout(duration time.Duration) *blockSyn
 	return h
 }
 
+func (h *blockSyncHarness) withWaitForChunksTimeout(duration time.Duration) *blockSyncHarness {
+	h.config.collectChunks = duration
+	return h
+}
+
 func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 	h.config.batchSize = size
 	return h
