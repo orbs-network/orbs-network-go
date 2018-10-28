@@ -15,14 +15,13 @@ import (
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
 		tx := builders.TransferTransaction().Build()
 
-		txHash := digest.CalcTxHash(tx.Transaction())
-		sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), txHash)
+		hash, _ := transactionpool.HashTransactions(tx)
+		sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), hash)
 
 		h.expectTransactionsToBeForwarded(sig, tx)
 
@@ -33,7 +32,6 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -48,7 +46,6 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		tx := builders.TransferTransaction().Build()
@@ -79,7 +76,6 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 }
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -98,7 +94,6 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -122,7 +117,6 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarnessWithSizeLimit(1)
 
