@@ -54,3 +54,7 @@ func (n *GammaServer) WaitUntilShutdown() {
 	n.shutdownCond.Wait()
 	n.shutdownCond.L.Unlock()
 }
+
+func (n *GammaServer) Port() int {
+	return n.httpServer.Port()
+}
