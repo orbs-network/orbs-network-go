@@ -54,7 +54,7 @@ func getConfig() E2EConfig {
 	if !bootstrap {
 		apiEndpoint = os.Getenv("API_ENDPOINT")
 		url, _ := url.Parse(apiEndpoint)
-		baseUrl = url.Scheme + "://" + url.Host + ":" + url.Port()
+		baseUrl = url.Scheme + "://" + url.Host
 
 		stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
 		stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
@@ -215,7 +215,12 @@ func getProcessorArtifactPath() (string, string) {
 type metrics map[string]map[string]interface{}
 
 func (h *harness) getMetrics() metrics {
-	res, _ := http.Get(h.absoluteUrlFor("/metrics"))
+	res, err := http.Get(h.absoluteUrlFor("/metrics"))
+
+	if err != nil {
+		fmt.Println(h.absoluteUrlFor("/metrics"), err)
+	}
+
 	if res == nil {
 		return nil
 	}
