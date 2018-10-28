@@ -33,16 +33,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 	}
 
-	s.mu.Lock()
-	bh = input.ResultsBlockHeader.BlockHeight()
-	bts := input.ResultsBlockHeader.Timestamp()
-	s.mu.lastCommittedBlockHeight = bh
-	s.mu.lastCommittedBlockTimestamp = bts
-	if s.mu.lastCommittedBlockTimestamp == 0 {
-		s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
-		s.logger.Error("got 0 timestamp from results block header")
-	}
-	s.mu.Unlock()
+	bh = s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
 
 	s.blockTracker.IncrementHeight()
 
@@ -63,6 +54,22 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 		LastCommittedBlockHeight: bh,
 	}, nil
 }
+
+func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) primitives.BlockHeight {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.mu.lastCommittedBlockHeight = header.BlockHeight()
+
+	if header.Timestamp() == 0 {
+		s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
+		s.logger.Error("got 0 timestamp from results block header")
+	} else {
+		s.mu.lastCommittedBlockTimestamp = header.Timestamp()
+	}
+
+	return header.BlockHeight()
+}
+
 func timestampOrNow(tx *pendingTransaction) primitives.TimestampNano {
 	if tx != nil {
 		return tx.transaction.Transaction().Timestamp()
