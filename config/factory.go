@@ -90,6 +90,11 @@ func ForDevelopment(
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 1)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTION_IN_BLOCK, 100)
 
+	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 5)
+	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 2500*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
+
 	return cfg
 }
 
@@ -177,7 +182,7 @@ func defaultConfig() mutableNodeConfig {
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 
 	cfg.SetUint32(BLOCK_SYNC_BATCH_SIZE, 10000)
-	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 5*time.Second)
+	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 8*time.Second)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 3*time.Second)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
 
