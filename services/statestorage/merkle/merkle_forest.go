@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-const trieRadix = 256 // base of the merkle trie. TODO change to 16
+const trieRadix = 16
 
 func GetZeroValueHash() primitives.Sha256 {
 	return hash.CalcSha256([]byte{})
@@ -135,6 +135,7 @@ func (f *Forest) appendRoot(root *node) {
 }
 
 func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path string) (Proof, error) {
+	path = toHex(path)
 	current := f.findRoot(rootHash)
 	if current == nil {
 		return nil, errors.Errorf("unknown root")
@@ -161,6 +162,7 @@ func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path string) (Proof,
 }
 
 func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path string, value primitives.Sha256) (bool, error) {
+	path = toHex(path)
 	currentHash := rootHash
 	emptyMerkleHash := primitives.MerkleSha256{}
 
@@ -193,7 +195,7 @@ func (f *Forest) Forget(rootHash primitives.MerkleSha256) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	newRoots := make([]*node, 0, len(f.roots)-1)
+	newRoots := make([]*node, len(f.roots)-1, len(f.roots)-1)
 	for _, root := range f.roots { // naive copy because its a small array and simple code is better
 		if !root.hash.Equal(rootHash) {
 			newRoots = append(newRoots, root)
@@ -211,7 +213,7 @@ func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs MerkleDiffs) (
 	sandbox := make(dirtyNodes)
 
 	for path, value := range diffs {
-		root = f.travelUpdateAndMark(nil, 0, root, path, value, sandbox)
+		root = f.travelUpdateAndMark(nil, 0, root, toHex(path), value, sandbox)
 	}
 
 	root = f.travelCollapseAndHash(root, sandbox)
@@ -237,6 +239,7 @@ func (f *Forest) travelUpdateAndMark(parent *node, arc byte, current *node, path
 			current.value = valueHash
 		} else {
 			childArc := path[len(current.path)]
+			//fmt.Printf("ch %d\n", childArc)
 			childPath := path[len(current.path)+1:]
 			if childNode := current.branches[childArc]; childNode != nil {
 				current.branches[childArc] = f.travelUpdateAndMark(current, childArc, childNode, childPath, valueHash, sandbox)
@@ -270,14 +273,16 @@ func (f *Forest) travelUpdateAndMark(parent *node, arc byte, current *node, path
 	newCommonPath := path[:i]
 
 	newParent := createNode(newCommonPath, zeroValueHash, false)
-	newParent.branches[current.path[i]] = current
-	sandbox.set(newParent, current.path[i])
+	newCurrentArc := current.path[i]
+	newParent.branches[newCurrentArc] = current
+	sandbox.set(newParent, newCurrentArc)
 
 	current.path = current.path[i+1:]
 
 	newChild := createNode(path[i+1:], valueHash, true)
-	newParent.branches[path[i]] = newChild
-	sandbox.set(newParent, path[i])
+	newChildArc := path[i]
+	newParent.branches[newChildArc] = newChild
+	sandbox.set(newParent, newChildArc)
 
 	return newParent
 }
@@ -319,7 +324,7 @@ func (f *Forest) travelCollapseAndHash(current *node, sandbox dirtyNodes) *node 
 			return nil
 		} else if nChildren == 1 { // fold up only child
 			child := current.branches[aChild]
-			combinedPath := current.path + string([]byte{byte(aChild)}) + child.path
+			combinedPath := current.path + string(aChild) + child.path
 			current = child.clone()
 			current.path = combinedPath
 		}
@@ -327,4 +332,15 @@ func (f *Forest) travelCollapseAndHash(current *node, sandbox dirtyNodes) *node 
 
 	current.hash = current.serialize().hash()
 	return current
+}
+
+func toHex(s string) string {
+	strBytes := []byte(s)
+	hexBytes := make([]byte, len(strBytes) * 2)
+	for i, b := range strBytes {
+		hexBytes[i*2] = 0xf & (b >> 4)
+		hexBytes[i*2+1] = 0x0f & b
+	}
+	return string(hexBytes)
+	//return hex.EncodeToString([]byte(s))
 }
