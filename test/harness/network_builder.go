@@ -23,10 +23,11 @@ type acceptanceTestNetworkBuilder struct {
 	testId         string
 	setupFunc      func(ctx context.Context, network InProcessNetwork)
 	logFilters     []log.Filter
+	maxTxPerBlock  uint32
 }
 
 func Network(f canFail) *acceptanceTestNetworkBuilder {
-	n := &acceptanceTestNetworkBuilder{f: f}
+	n := &acceptanceTestNetworkBuilder{f: f, maxTxPerBlock: 30}
 
 	return n.
 		WithTestId(getCallerFuncName()).
@@ -60,13 +61,18 @@ func (b *acceptanceTestNetworkBuilder) WithSetup(f func(ctx context.Context, net
 	return b
 }
 
+func (b *acceptanceTestNetworkBuilder) WithMaxTxPerBlock(maxTxPerBlock uint32) *acceptanceTestNetworkBuilder {
+	b.maxTxPerBlock = maxTxPerBlock
+	return b
+}
+
 func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network InProcessNetwork)) {
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
 		test.WithContext(func(ctx context.Context) {
 			testId := b.testId + "-" + consensusAlgo.String()
-			network := NewAcceptanceTestNetwork(b.numNodes, b.logFilters, consensusAlgo, testId)
+			network := NewAcceptanceTestNetwork(b.numNodes, b.logFilters, consensusAlgo, testId, b.maxTxPerBlock)
 
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)
