@@ -14,10 +14,11 @@ import (
 
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiff()
-		harness.expectValidateWithConsensusAlgosTimes(1)
+		harness := newBlockStorageHarness().
+			withSyncBroadcast(1).
+			withCommitStateDiff(1).
+			withValidateConsensusAlgos(1).
+			start(ctx)
 
 		block := builders.BlockPair().WithTimestampBloomFilter().Build()
 		harness.commitBlock(ctx, block)
@@ -38,10 +39,11 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 
 func TestReturnTransactionReceipt(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiff()
-		harness.expectValidateWithConsensusAlgosTimes(1)
+		harness := newBlockStorageHarness().
+			withSyncBroadcast(1).
+			withCommitStateDiff(1).
+			withValidateConsensusAlgos(1).
+			start(ctx)
 
 		block := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampBloomFilter().WithTimestampNow().Build()
 		harness.commitBlock(ctx, block)
