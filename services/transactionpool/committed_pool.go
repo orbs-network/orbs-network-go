@@ -17,14 +17,14 @@ type committedTxPool struct {
 }
 
 type committedPoolMetrics struct {
-	transactionCountGauge *metric.Gauge
-	poolSizeInBytesGauge  *metric.Gauge // TODO use this metric
+	transactionCount *metric.Gauge
+	poolSizeInBytes  *metric.Gauge
 }
 
 func newCommittedPoolMetrics(factory metric.Factory) *committedPoolMetrics {
 	return &committedPoolMetrics{
-		transactionCountGauge: factory.NewGauge("TransactionPool.CommittedPool.TransactionCount"),
-		poolSizeInBytesGauge:  factory.NewGauge("TransactionPool.CommittedPool.PoolSizeInBytes"),
+		transactionCount: factory.NewGauge("TransactionPool.CommittedPool.TransactionCount"),
+		poolSizeInBytes:  factory.NewGauge("TransactionPool.CommittedPool.PoolSizeInBytes"),
 	}
 }
 
@@ -44,12 +44,17 @@ type committedTransaction struct {
 func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, ts primitives.TimestampNano) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	p.transactions[receipt.Txhash().KeyForMap()] = &committedTransaction{
+
+	transaction := &committedTransaction{
 		receipt:   receipt,
 		timestamp: ts,
 	}
+	size := sizeOfCommittedTransaction(transaction)
 
-	p.metrics.transactionCountGauge.Inc()
+	p.transactions[receipt.Txhash().KeyForMap()] = transaction
+
+	p.metrics.transactionCount.Inc()
+	p.metrics.poolSizeInBytes.AddUint32(size)
 }
 
 func (p *committedTxPool) get(txHash primitives.Sha256) *committedTransaction {
@@ -78,6 +83,14 @@ func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, time t
 	for _, tx := range p.transactions {
 		if int64(tx.timestamp) < time.UnixNano() {
 			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
+
+			p.metrics.transactionCount.Dec()
+			p.metrics.poolSizeInBytes.SubUint32(sizeOfCommittedTransaction(tx))
 		}
 	}
+}
+
+// Excluding timestamps
+func sizeOfCommittedTransaction(transaction *committedTransaction) uint32 {
+	return uint32(len(transaction.receipt.Raw()))
 }

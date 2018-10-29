@@ -61,7 +61,7 @@ type pendingTxPool struct {
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
-	size := sizeOf(transaction)
+	size := sizeOfSignedTransaction(transaction)
 
 	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
 		return nil, &ErrTransactionRejected{TransactionStatus: protocol.TRANSACTION_STATUS_REJECTED_CONGESTION}
@@ -105,7 +105,7 @@ func (p *pendingTxPool) remove(ctx context.Context, txhash primitives.Sha256, re
 	pendingTx, ok := p.transactionsByHash[txhash.KeyForMap()]
 	if ok {
 		delete(p.transactionsByHash, txhash.KeyForMap())
-		p.currentSizeInBytes -= sizeOf(pendingTx.transaction)
+		p.currentSizeInBytes -= sizeOfSignedTransaction(pendingTx.transaction)
 		p.transactionList.Remove(pendingTx.listElement)
 
 		if p.onTransactionRemoved != nil {
@@ -113,7 +113,7 @@ func (p *pendingTxPool) remove(ctx context.Context, txhash primitives.Sha256, re
 		}
 
 		p.metrics.transactionCountGauge.Dec()
-		p.metrics.poolSizeInBytesGauge.SubUint32(sizeOf(pendingTx.transaction))
+		p.metrics.poolSizeInBytesGauge.SubUint32(sizeOfSignedTransaction(pendingTx.transaction))
 
 		return pendingTx
 	}
@@ -140,7 +140,7 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 
 		tx := e.Value.(*protocol.SignedTransaction)
 		//
-		accumulatedSize += sizeOf(tx)
+		accumulatedSize += sizeOfSignedTransaction(tx)
 		if sizeLimitInBytes > 0 && accumulatedSize > sizeLimitInBytes {
 			break
 		}
@@ -194,6 +194,6 @@ func (p *pendingTxPool) transactionPickedFromQueueUnderMutex(tx *protocol.Signed
 	}
 }
 
-func sizeOf(transaction *protocol.SignedTransaction) uint32 {
+func sizeOfSignedTransaction(transaction *protocol.SignedTransaction) uint32 {
 	return uint32(len(transaction.Raw()))
 }
