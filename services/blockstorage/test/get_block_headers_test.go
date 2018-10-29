@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestReturnTransactionBlockHeader(t *testing.T) {
@@ -30,7 +31,6 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 	})
 }
 
-// FIXME time out
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().
@@ -64,6 +64,7 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().
+			withBlockTrackerTimeout(30 * time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -108,7 +109,6 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 	})
 }
 
-// FIXME time out
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().
@@ -143,6 +143,7 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().
+			withBlockTrackerTimeout(30 * time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).

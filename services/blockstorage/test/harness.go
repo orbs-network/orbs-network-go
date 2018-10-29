@@ -146,30 +146,6 @@ func (d *harness) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
 }
 
-func (d *harness) start(ctx context.Context) *harness {
-	registry := metric.NewRegistry()
-
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, d.logger, registry)
-	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
-
-	return d
-}
-
-func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorageConfig {
-	cfg := &configForBlockStorageTests{}
-	cfg.pk = nodePublicKey
-	cfg.syncBatchSize = 2
-	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
-	cfg.syncCollectResponses = 5 * time.Millisecond
-	cfg.syncCollectChunks = 20 * time.Millisecond
-
-	cfg.queryGraceStart = 5 * time.Second
-	cfg.queryGraceEnd = 5 * time.Second
-	cfg.queryExpirationWindow = 30 * time.Minute
-
-	return cfg
-}
-
 func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
 	d.expectCommitStateDiffTimes(count)
 
@@ -190,6 +166,26 @@ func (d *harness) setupCustomBlocksForInit() time.Time {
 	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(1)
 
 	return now
+}
+
+func (d *harness) withBlockTrackerTimeout(duration time.Duration) *harness {
+	d.storageAdapter = adapter.NewInMemoryBlockPersistenceWithBlockTimeout(duration)
+	return d
+}
+
+func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorageConfig {
+	cfg := &configForBlockStorageTests{}
+	cfg.pk = nodePublicKey
+	cfg.syncBatchSize = 2
+	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
+	cfg.syncCollectResponses = 5 * time.Millisecond
+	cfg.syncCollectChunks = 20 * time.Millisecond
+
+	cfg.queryGraceStart = 5 * time.Second
+	cfg.queryGraceEnd = 5 * time.Second
+	cfg.queryExpirationWindow = 30 * time.Minute
+
+	return cfg
 }
 
 func newBlockStorageHarness() *harness {
@@ -214,6 +210,15 @@ func newBlockStorageHarness() *harness {
 	d.txPool = &services.MockTransactionPool{}
 	// TODO: this might create issues with some tests later on, should move it to behavior or some other means of setup
 	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
+
+	return d
+}
+
+func (d *harness) start(ctx context.Context) *harness {
+	registry := metric.NewRegistry()
+
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, d.logger, registry)
+	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	return d
 }
