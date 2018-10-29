@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
@@ -17,33 +18,63 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
 type E2EConfig struct {
-	Bootstrap   bool
-	ApiEndpoint string
+	bootstrap   bool
+	apiEndpoint string
 	baseUrl     string
+
+	stressTest StressTestConfig
+}
+
+type StressTestConfig struct {
+	enabled               bool
+	numberOfTransactions  int64
+	acceptableFailureRate int64
+	targetTPS             float64
 }
 
 const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
-	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
+	bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
-	ApiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
+	apiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
-	if !Bootstrap {
-		ApiEndpoint = os.Getenv("API_ENDPOINT")
+	stressTestEnabled := os.Getenv("STRESS_TEST") == "true"
+	stressTestNumberOfTransactions := int64(10000)
+	stressTestFailureRate := int64(2)
+	stressTestTargetTPS := float64(700)
+
+	if !bootstrap {
+		apiEndpoint = os.Getenv("API_ENDPOINT")
+		url, _ := url.Parse(apiEndpoint)
+		baseUrl = url.Scheme + "://" + url.Host
+
+		if stressTestEnabled {
+			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
+			stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
+			stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
+		}
 	}
 
 	return E2EConfig{
-		Bootstrap,
-		ApiEndpoint,
+		bootstrap,
+		apiEndpoint,
 		baseUrl,
+		StressTestConfig{
+			stressTestEnabled,
+			stressTestNumberOfTransactions,
+			stressTestFailureRate,
+			stressTestTargetTPS,
+		},
 	}
 }
 
@@ -55,7 +86,7 @@ func newHarness() *harness {
 	var nodes []bootstrap.Node
 
 	// TODO: kill me - why do we need this override?
-	if getConfig().Bootstrap {
+	if getConfig().bootstrap {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		firstRandomPort := 20000 + r.Intn(40000)
 
@@ -111,7 +142,7 @@ func newHarness() *harness {
 }
 
 func (h *harness) gracefulShutdown() {
-	if getConfig().Bootstrap {
+	if getConfig().bootstrap {
 		for _, node := range h.nodes {
 			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 		}
@@ -178,10 +209,32 @@ func (h *harness) absoluteUrlFor(endpoint string) string {
 }
 
 func (h *harness) apiUrlFor(endpoint string) string {
-	return getConfig().ApiEndpoint + endpoint
+	return getConfig().apiEndpoint + endpoint
 }
 
 func getProcessorArtifactPath() (string, string) {
 	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
 	return filepath.Join(dir, "processor-artifacts"), dir
+}
+
+type metrics map[string]map[string]interface{}
+
+func (h *harness) getMetrics() metrics {
+	res, err := http.Get(h.absoluteUrlFor("/metrics"))
+
+	if err != nil {
+		fmt.Println(h.absoluteUrlFor("/metrics"), err)
+	}
+
+	if res == nil {
+		return nil
+	}
+
+	bytes, _ := ioutil.ReadAll(res.Body)
+	fmt.Println(string(bytes))
+
+	m := make(metrics)
+	json.Unmarshal(bytes, &m)
+
+	return m
 }

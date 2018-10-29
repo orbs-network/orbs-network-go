@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -85,6 +86,7 @@ func (n *inProcessNetwork) WaitForTransactionInStateForAtMost(ctx context.Contex
 	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(ctx, txhash, atMost)
 	err := n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(ctx, blockHeight)
 	if err != nil {
+		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
 }

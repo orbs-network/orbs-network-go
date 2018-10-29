@@ -1,4 +1,4 @@
-version: '2'
+version: '2.1'
 
 services:
   orbs-network-node-1:
@@ -27,7 +27,7 @@ services:
     extends:
       file: docker-compose.yml
       service: orbs-e2e
-    command: sh -c "sleep 10 && /go/src/github.com/orbs-network/orbs-network-go/e2e.test"
+    command: sh -c "sleep 10 && /go/src/github.com/orbs-network/orbs-network-go/e2e.test -test.v"
 
 networks:
   orbs-network:

@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -54,6 +55,7 @@ func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txha
 	case h := <-ch:
 		return h
 	case <-time.After(atMost):
+		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txhash))
 	}
 }
