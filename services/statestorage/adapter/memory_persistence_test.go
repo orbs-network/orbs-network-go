@@ -31,27 +31,6 @@ func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
 	require.EqualValues(t, false, ok, "writing zero value to state did not remove key")
 }
 
-func TestEach(t *testing.T) {
-	d := newDriver()
-
-	d.writeSingleValueBlock(1, "foo", "foo", "bar")
-	d.writeSingleValueBlock(2, "foo", "baz", "qux")
-
-	values := map[string]string{}
-	d.Each(func(c primitives.ContractName, r *protocol.StateRecord){
-		values[string(r.Key())] = string(r.Value())
-	})
-	require.EqualValues(t, map[string]string{"foo": "bar", "baz": "qux"}, values)
-
-	d.writeSingleValueBlock(3, "foo", "baz", "")
-
-	values = map[string]string{}
-	d.Each(func(c primitives.ContractName, r *protocol.StateRecord){
-		values[string(r.Key())] = string(r.Value())
-	})
-	require.EqualValues(t, map[string]string{"foo": "bar"}, values)
-}
-
 type driver struct {
 	*InMemoryStatePersistence
 }

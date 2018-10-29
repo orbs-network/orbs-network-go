@@ -3,6 +3,7 @@ package adapter
 import (
 	"bytes"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sort"
@@ -20,13 +21,14 @@ type InMemoryStatePersistence struct {
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 
+	_, merkleRoot := merkle.NewForest()
 	// TODO - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
 	return &InMemoryStatePersistence{
 		mutex:      sync.RWMutex{},
 		fullState:  ChainState{},
 		height:     0,
 		ts:         0,
-		merkleRoot: nil,
+		merkleRoot: merkleRoot,
 	}
 }
 
@@ -71,18 +73,6 @@ func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, prim
 	defer sp.mutex.RUnlock()
 
 	return sp.height, sp.ts, sp.merkleRoot, nil
-}
-
-func (sp *InMemoryStatePersistence) Each(callback func (contract primitives.ContractName, record *protocol.StateRecord)) error {
-	sp.mutex.RLock()
-	defer sp.mutex.RUnlock()
-
-	for contract := range sp.fullState {
-		for key := range sp.fullState[contract] {
-			callback(contract, sp.fullState[contract][key])
-		}
-	}
-	return nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {
