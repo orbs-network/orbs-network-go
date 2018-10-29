@@ -1,4 +1,4 @@
-package supervized
+package supervised
 
 import (
 	"context"
