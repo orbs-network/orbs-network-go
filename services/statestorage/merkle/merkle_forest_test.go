@@ -59,7 +59,7 @@ func TestRootManagement(t *testing.T) {
 
 	node2hash := createNode("bye", hash.CalcSha256([]byte("d")), true).serialize().hash()
 	f.Forget(node2hash)
-	require.Len(t, f.roots, 2, "mismatch length after forget")
+	require.Len(t, f.roots, 2, "mismatch length after gc")
 	foundRoot = f.findRoot(node1.hash)
 	require.Equal(t, node1, foundRoot, "should be same node")
 	foundRoot = f.findRoot(node2.hash)

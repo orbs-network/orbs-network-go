@@ -193,10 +193,18 @@ func (f *Forest) Forget(rootHash primitives.MerkleSha256) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	newRoots := make([]*node, 0, len(f.roots)-1)
-	for _, root := range f.roots { // naive copy because its a small array and simple code is better
-		if !root.hash.Equal(rootHash) {
+	if f.roots[0].hash.Equal(rootHash) { // optimization for most likely use
+		f.roots = f.roots[1:]
+		return
+	}
+
+	found := false
+	newRoots := make([]*node, 0, len(f.roots))
+	for _, root := range f.roots {
+		if found || !root.hash.Equal(rootHash) {
 			newRoots = append(newRoots, root)
+		} else {
+			found = true
 		}
 	}
 	f.roots = newRoots
