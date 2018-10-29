@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
 	"sync"
 	"time"
 )
@@ -108,7 +109,7 @@ func (r *inMemoryRegistry) report(logger log.BasicLogger) {
 }
 
 func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Duration, logger log.BasicLogger) {
-	go func() {
+	supervized.LongLived(ctx, logger, func() {
 		periodicalTrigger := synchronization.NewPeriodicalTrigger(interval, func() {
 			r.report(logger)
 
@@ -130,5 +131,5 @@ func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Durati
 			periodicalTrigger.Stop()
 			r.report(logger) // always report on stop so we can collect all the metrics
 		}
-	}()
+	})
 }
