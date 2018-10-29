@@ -22,7 +22,7 @@ func newTamperingHarness() *tamperingHarness {
 	senderKey := "sender"
 	listenerKey := "listener"
 	listener := &mockListener{}
-	transport := NewTamperingTransport(log.GetLogger(log.Service("transport")))
+	transport := NewTamperingTransport(log.GetLogger(log.String("adapter", "transport")))
 	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
 
 	return &tamperingHarness{

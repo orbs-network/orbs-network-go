@@ -25,20 +25,18 @@ func LongLiving(ctx context.Context, logger Errorer, f func()) {
 	go func() {
 		for {
 			f()
-			select {
-			case <-ctx.Done():
+			if ctx.Err() != nil { // this returns non-nil when context has been closed via cancellation or timeout or whatever
 				return
-			default:
-				// repeat
-				//TODO count restarts, fail if too many restarts, etc
 			}
+			// repeat
+			//TODO count restarts, fail if too many restarts, etc
 		}
 	}()
 }
 
 func recoverPanics(logger Errorer) {
-	if err := recover(); err != nil {
-		e := errors.Errorf("goroutine panicked at [%s]: %s", identifyPanic(), err)
+	if p := recover(); p != nil {
+		e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
 		logger.Error("recovered panic", log.Error(e))
 	}
 }
