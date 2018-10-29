@@ -61,7 +61,7 @@ func (n *node) hasValue() bool {
 
 func (n *node) serialize() *ProofNode {
 	sn := &ProofNode{
-		path:     n.path, // TODO - copy ?
+		path:     n.path,
 		value:    n.value,
 		branches: [trieRadix]primitives.MerkleSha256{},
 	}
@@ -81,8 +81,8 @@ func (n *node) clone() *node {
 		copy(newBranches[:], n.branches[:])
 	}
 	result := &node{
-		path:     n.path, // TODO - copy ?
-		value:    n.value, // TODO - copy?
+		path:     n.path,
+		value:    n.value,
 		branches: newBranches,
 		isLeaf:   n.isLeaf,
 	}
@@ -103,11 +103,10 @@ func (dn dirtyNodes) set(node *node, arc byte) {
 }
 
 type MerkleDiff struct {
-	Key []byte
+	Key   []byte
 	Value primitives.Sha256
 }
 type MerkleDiffs []*MerkleDiff
-//type MerkleDiffs map[string]primitives.Sha256
 
 type Forest struct {
 	mutex sync.Mutex
@@ -233,7 +232,7 @@ func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs MerkleDiffs) (
 func (f *Forest) travelUpdateAndMark(parent *node, arc byte, current *node, path []byte, valueHash primitives.Sha256, sandbox dirtyNodes) *node {
 	current = f.getOrClone(current, parent, arc, sandbox)
 
-	if bytes.Equal(current.path,path) { // path reached exactly
+	if bytes.Equal(current.path, path) { // path reached exactly
 		current.value = valueHash
 		return current
 	}
@@ -329,12 +328,8 @@ func (f *Forest) travelCollapseAndHash(current *node, sandbox dirtyNodes) *node 
 			return nil
 		} else if nChildren == 1 { // fold up only child
 			child := current.branches[aChild]
-			combinedPath := make([]byte, len(current.path)+len(child.path)+1)
-			copy(combinedPath, current.path) // TODO is this efficient
-			combinedPath[len(current.path)] = byte(aChild)
-			for i := 0; i < len(child.path);i++ {
-				combinedPath[len(current.path)+1+i] = child.path[i]
-			}
+			combinedPath := append(current.path, byte(aChild))
+			combinedPath = append(combinedPath, child.path...)
 			current = child.clone()
 			current.path = combinedPath
 		}
@@ -345,11 +340,10 @@ func (f *Forest) travelCollapseAndHash(current *node, sandbox dirtyNodes) *node 
 }
 
 func toHex(s []byte) []byte {
-	hexBytes := make([]byte, len(s) * 2)
+	hexBytes := make([]byte, len(s)*2)
 	for i, b := range s {
 		hexBytes[i*2] = 0xf & (b >> 4)
 		hexBytes[i*2+1] = 0x0f & b
 	}
 	return hexBytes
-	//return hex.EncodeToString([]byte(s))
 }
