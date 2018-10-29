@@ -9,7 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervision"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -127,7 +127,7 @@ func (n *inProcessNetwork) SendTransfer(ctx context.Context, nodeIndex int, amou
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	supervision.OneOff(n.testLogger, func() {
+	supervized.OneOff(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -149,7 +149,7 @@ func (n *inProcessNetwork) SendTransferInBackground(ctx context.Context, nodeInd
 		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder(),
 	}).Build()
 
-	supervision.OneOff(n.testLogger, func() {
+	supervized.OneOff(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		publicApi.SendTransaction(ctx, &services.SendTransactionInput{ // we ignore timeout here.
 			ClientRequest: request,
@@ -166,7 +166,7 @@ func (n *inProcessNetwork) SendInvalidTransfer(ctx context.Context, nodeIndex in
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	supervision.OneOff(n.testLogger, func() {
+	supervized.OneOff(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -187,7 +187,7 @@ func (n *inProcessNetwork) CallGetBalance(ctx context.Context, nodeIndex int, fo
 	}).Build()
 
 	ch := make(chan uint64)
-	supervision.OneOff(n.testLogger, func() {
+	supervized.OneOff(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: request,
@@ -223,7 +223,7 @@ func (n *inProcessNetwork) SendDeployCounterContract(ctx context.Context, nodeIn
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	supervision.OneOff(n.testLogger, func() {
+	supervized.OneOff(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -247,7 +247,7 @@ func (n *inProcessNetwork) SendCounterAdd(ctx context.Context, nodeIndex int, am
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	supervision.OneOff(n.testLogger, func() {
+	supervized.OneOff(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -269,7 +269,7 @@ func (n *inProcessNetwork) CallCounterGet(ctx context.Context, nodeIndex int) ch
 	}).Build()
 
 	ch := make(chan uint64)
-	supervision.OneOff(n.testLogger, func() {
+	supervized.OneOff(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: request,

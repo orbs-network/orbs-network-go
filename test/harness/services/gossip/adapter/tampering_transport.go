@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervision"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"math/rand"
@@ -88,7 +88,7 @@ func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 		return err
 	}
 
-	supervision.OneOff(t.logger, func() {
+	supervized.OneOff(t.logger, func() {
 		t.receive(ctx, data)
 	})
 
@@ -262,7 +262,7 @@ type duplicatingTamperer struct {
 
 func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		supervision.OneOff(o.transport.logger, func() {
+		supervized.OneOff(o.transport.logger, func() {
 			time.Sleep(10 * time.Millisecond)
 			o.transport.receive(ctx, data)
 		})
@@ -282,7 +282,7 @@ type delayingTamperer struct {
 
 func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		supervision.OneOff(o.transport.logger, func() {
+		supervized.OneOff(o.transport.logger, func() {
 			time.Sleep(o.duration())
 			o.transport.receive(ctx, data)
 		})
