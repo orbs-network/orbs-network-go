@@ -3,8 +3,8 @@ package supervized
 import (
 	"context"
 	"fmt"
-	"github.com/go-errors/errors"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/pkg/errors"
 	"runtime"
 	"strings"
 )
