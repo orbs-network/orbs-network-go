@@ -76,14 +76,27 @@ func TestRootManagement(t *testing.T) {
 	node1hash := createNode([]byte("abcd"), hash.CalcSha256([]byte("bye")), true).serialize().hash()
 	foundRoot = f.findRoot(node1hash)
 	require.Equal(t, node1, foundRoot, "should be same node")
+}
 
-	node2hash := createNode([]byte("1234"), hash.CalcSha256([]byte("d")), true).serialize().hash()
-	f.Forget(node2hash)
-	require.Len(t, f.roots, 2, "mismatch length after forget")
-	foundRoot = f.findRoot(node1.hash)
-	require.Equal(t, node1, foundRoot, "should be same node")
-	foundRoot = f.findRoot(node2.hash)
-	require.Nil(t, foundRoot, "node should not exist")
+func TestRootForgetWhenMultipleSameRootsAndKeepOrder(t *testing.T) {
+	f, _ := NewForest()
+
+	node1 := createNode([]byte("abcd"), hash.CalcSha256([]byte("bye")), true)
+	node1.hash = node1.serialize().hash()
+	node2 := createNode([]byte("1234"), hash.CalcSha256([]byte("d")), true)
+	node2.hash = node2.serialize().hash()
+
+	f.appendRoot(node1)
+	f.appendRoot(node2)
+	f.appendRoot(node1)
+	f.appendRoot(node2)
+	require.Len(t, f.roots, 5, "mismatch length")
+
+	f.Forget(node2.hash)
+	require.Len(t, f.roots, 4, "mismatch length after forget")
+	require.Equal(t, node1.hash, f.roots[1].hash, "should be same node1 (1)")
+	require.Equal(t, node1.hash, f.roots[2].hash, "should be same node1 (2)")
+	require.Equal(t, node2.hash, f.roots[3].hash, "should be same node2")
 }
 
 func TestAddSingleEntryToEmptyTree(t *testing.T) {
