@@ -33,7 +33,7 @@ const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
 	Bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT + 2) // 8080 is leader, 8082 is node-3
+	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
 	ApiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
 	if !Bootstrap {

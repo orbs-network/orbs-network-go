@@ -7,8 +7,8 @@ import (
 )
 
 type runtimeMetrics struct {
-	heapAlloc *Gauge
-	heapSys *Gauge
+	heapAlloc       *Gauge
+	heapSys         *Gauge
 	gcCpuPercentage *Gauge
 }
 
@@ -18,9 +18,9 @@ type runtimeReporter struct {
 
 func NewRuntimeReporter(ctx context.Context, metricFactory Factory) interface{} {
 	r := &runtimeReporter{
-		metrics: runtimeMetrics {
-			heapAlloc: metricFactory.NewGauge("Runtime.HeapAlloc"),
-			heapSys: metricFactory.NewGauge("Runtime.HeapSys"),
+		metrics: runtimeMetrics{
+			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc"),
+			heapSys:         metricFactory.NewGauge("Runtime.HeapSys"),
 			gcCpuPercentage: metricFactory.NewGauge("Runtime.GCCPUPercentage"),
 		},
 	}
