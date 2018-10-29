@@ -26,18 +26,25 @@ func mockLogger() *collector {
 	return c
 }
 
+func localFunctionThatPanics() {
+	panic("foo")
+}
+
 func TestOneOff_ReportsOnPanic(t *testing.T) {
 	logger := mockLogger()
 
 	require.NotPanicsf(t, func() {
-		OneOff(logger, func() {
-			panic("foo")
-		})
+		OneOff(logger, localFunctionThatPanics)
 	}, "OneOff panicked unexpectedly")
 
 	report := <-logger.errors
 	require.Equal(t, report.message, "recovered panic")
-	require.Contains(t, report.fields[0].Value(), "foo")
+	require.Len(t, report.fields, 2, "expected log to contain both error and stack trace")
+
+	errorField := report.fields[0]
+	stackTraceField := report.fields[1]
+	require.Contains(t, errorField.Value(), "foo")
+	require.Contains(t, stackTraceField.Value(), "localFunctionThatPanics")
 }
 
 func TestLongLiving_ReportsOnPanicAndRestarts(t *testing.T) {
