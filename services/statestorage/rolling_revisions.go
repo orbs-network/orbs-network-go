@@ -66,7 +66,7 @@ func (ls *rollingRevisions) getCurrentTimestamp() primitives.TimestampNano {
 }
 
 func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, diff adapter.ChainState) error {
-	newRoot, err := ls.merkle.Update(ls.currentMerkleRoot, filterToMerkleInput(diff))
+	newRoot, err := ls.merkle.Update(ls.currentMerkleRoot, toMerkleInput(diff))
 	if err != nil {
 		return errors.Wrapf(err, "failed to updated merkle tree")
 	}
@@ -86,19 +86,17 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 	return ls.evictRevisions()
 }
 
-func filterToMerkleInput(diff adapter.ChainState) merkle.MerkleDiffs {
-	result := make(merkle.MerkleDiffs)
+func toMerkleInput(diff adapter.ChainState) merkle.MerkleDiffs {
+	result := make(merkle.MerkleDiffs, 0, len(diff))
 	for contractName, contractState := range diff {
 		for _, r := range contractState {
-			k, v := getMerkleEntry(contractName, r.Key(), r.Value())
-			result[k] = v
+			result = append(result, &merkle.MerkleDiff{
+				Key:   hash.CalcSha256(append([]byte(contractName), r.Key()...)),
+				Value: hash.CalcSha256(r.Value()),
+			})
 		}
 	}
 	return result
-}
-
-func getMerkleEntry(contract primitives.ContractName, key primitives.Ripmd160Sha256, value []byte) (string, primitives.Sha256) {
-	return string(hash.CalcSha256(append([]byte(contract), key...))), hash.CalcSha256(value)
 }
 
 func (ls *rollingRevisions) evictRevisions() error {

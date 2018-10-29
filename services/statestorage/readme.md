@@ -31,7 +31,7 @@ manually removed from block storage.
 optimal performance is achieved when the entire state and Merkle trie are stored in memory.
 
 Persistent storage may be used to satisfy two requirements:
-1. Scale beyond the RAM capacity of a node (see [merkle](merkle/readme.md))
+1. Scale beyond the RAM capacity of a node (see [merkle](merkle/README.md))
 1. Using regular interval snapshots we can ensure [Startup time]() requirement 
 
 ### A Single full State snapshot with subsequent diffs in memory
@@ -78,48 +78,3 @@ database will contain a single state image belonging to a single block height.
 
 This is possible because subsequent blocks are quick to sync from block storage and we never maintain state for far behind block heights.
 
-## Persistence
-
-The 3 modes of persistence are:
-
-There are two requirements that are affected most by this choice:
-1. The ability to scale state beyond RAM capacity - this property isn't only relevant for natural state accumulation but also for possible contract bugs and mistakes. it compromises robustness. although, we can take a calculated risk and say we can respond quickly to any unlikely bug or mistake if they occur and at the same time assume natural state growth will be slow enough before an next release
-1. The amount of time spent initializing state storage on system restart
-
-There 4 possibilities, and some can be implemented as a milestone to get to another:
-
-1. Purely in memory
-    1. Pros 
-        1. Fast & Simple
-        1. GoLang GC may work seamlessly for node GC (subject to tests and benchmarks)
-    1. Cons 
-        1. Contracts may overflow memory and crash node
-        1. Must implement memory limits and overflow handling policy
-        1. When a node restarts we need to scan all blocks in the chain to replay all state changes
-1. In Memory with persisted snapshots (TBD - merkle tree may either be constructed from state on startup or persisted as well)
-    1. Pros 
-        1. Fast
-        1. On restart replay blocks later than last snapshot
-        1. GoLang GC may work seamlessly for node GC (subject to tests and benchmarks)
-    1. Cons 
-        1. Contracts may overflow memory and crash node
-        1. Must implement memory limits and overflow handling policy
-        1. Introduce persistence complexity without the gains of scaling beyond RAM capacity
-1. Fully Persisted with cache
-    1. Pros 
-        1. Fast
-        1. Scales beyond RAM capacity
-    1. Cons 
-        1. Must define strategy to deal with memory overflow
-        1. Most complicated option - YAGNI?
-        1. Garbage collection more complicated (unless using a graph engine with built in GC capabilities)
-1. Fully persisted without cache
-    1. Pros
-        1. Simpler than #3
-        1. Scales beyond RAM capacity
-    1. Cons  
-        1. may be too slow to be practical
-        1. complicated
-        1. Garbage collection more complicated (unless using a graph engine with built in GC capabilities)
-        
-    
