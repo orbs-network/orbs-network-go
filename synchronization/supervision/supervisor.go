@@ -1,6 +1,7 @@
-package synchronization
+package supervision
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-errors/errors"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -12,16 +13,34 @@ type Errorer interface {
 	Error(message string, fields ...*log.Field)
 }
 
-func RunSupervised(logger Errorer, f func()) {
+func OneOff(logger Errorer, f func()) {
 	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				e := errors.Errorf("goroutine panicked at [%s]: %s", identifyPanic(), err)
-				logger.Error("recovered panic", log.Error(e))
-			}
-		}()
+		defer recoverPanics(logger)
 		f()
 	}()
+}
+
+func LongLiving(ctx context.Context, logger Errorer, f func()) {
+	defer recoverPanics(logger)
+	go func() {
+		for {
+			f()
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				// repeat
+				//TODO count restarts, fail if too many restarts, etc
+			}
+		}
+	}()
+}
+
+func recoverPanics(logger Errorer) {
+	if err := recover(); err != nil {
+		e := errors.Errorf("goroutine panicked at [%s]: %s", identifyPanic(), err)
+		logger.Error("recovered panic", log.Error(e))
+	}
 }
 
 func identifyPanic() string {
@@ -51,4 +70,3 @@ func identifyPanic() string {
 
 	return fmt.Sprintf("pc:%x", pc)
 }
-

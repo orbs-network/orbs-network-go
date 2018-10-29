@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervision"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -78,7 +79,7 @@ func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
 }
 
 func (f *transactionForwarder) start(ctx context.Context) {
-	go func() {
+	supervision.LongLiving(ctx, f.logger, func() {
 		for {
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
 
@@ -94,8 +95,7 @@ func (f *transactionForwarder) start(ctx context.Context) {
 				f.drainQueueAndForward(ctx)
 			}
 		}
-
-	}()
+	})
 }
 
 func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {

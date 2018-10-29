@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervision"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -67,7 +68,6 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
 
-	//TODO supervise
 	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.committedPool, logger)
 	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionPoolTransactionExpirationWindow, s.pendingPool, logger)
 
@@ -179,18 +179,11 @@ type cleaner interface {
 	clearTransactionsOlderThan(ctx context.Context, time time.Time)
 }
 
-// TODO supervise
 func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, logger log.BasicLogger) chan struct{} {
+	//TODO use PeriodicalTrigger?
 	stopped := make(chan struct{})
 	ticker := time.NewTicker(tickInterval())
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				// TODO: in production we need to restart our long running goroutine (decide on supervision mechanism)
-				logger.Error("panic in TransactionPool.cleaningProcess long running goroutine", log.String("panic", fmt.Sprintf("%v", r)))
-			}
-		}()
-
+	supervision.LongLiving(ctx, logger, func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -200,7 +193,7 @@ func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration
 				c.clearTransactionsOlderThan(ctx, time.Now().Add(-1*expiration()))
 			}
 		}
+	})
 
-	}()
 	return stopped
 }
