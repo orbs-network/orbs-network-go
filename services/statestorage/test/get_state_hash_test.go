@@ -12,7 +12,7 @@ import (
 
 func TestGetStateHashReturnsNonZeroValue(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		d := newStateStorageDriver(1)
+		d := NewStateStorageDriver(1)
 
 		root, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{})
 		require.NoError(t, err, "unexpected error")
@@ -42,12 +42,12 @@ func TestGetStateHashFutureHeightOutsideGrace(t *testing.T) {
 
 func TestGetStateHashMerkleRootChangesOnStateChange(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		d := newStateStorageDriver(1)
+		d := NewStateStorageDriver(1)
 
 		root1, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{})
 		require.NoError(t, err, "unexpected error")
 
-		d.commitValuePairs(ctx, "foo", "bar", "baz")
+		d.CommitValuePairs(ctx, "foo", "bar", "baz")
 
 		root2, err1 := d.service.GetStateHash(ctx, &services.GetStateHashInput{BlockHeight: primitives.BlockHeight(1)})
 		require.NoError(t, err1, "unexpected error")
