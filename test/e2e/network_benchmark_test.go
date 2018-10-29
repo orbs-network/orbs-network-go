@@ -8,24 +8,24 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 	"math/rand"
-	"os"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestE2EStress(t *testing.T) {
-	if os.Getenv("STRESS_TEST") != "true" {
+	h := newHarness()
+	defer h.gracefulShutdown()
+
+	config := getConfig().stressTest
+
+	if !config.enabled {
 		t.Skip("Skipping stress test")
 	}
 
 	var wg sync.WaitGroup
 
 	limiter := rate.NewLimiter(1000, 50)
-
-	config := getConfig().stressTest
-	h := newHarness()
-	defer h.gracefulShutdown()
 
 	for i := int64(0); i < config.numberOfTransactions; i++ {
 		if err := limiter.Wait(context.TODO()); err == nil {
