@@ -15,7 +15,7 @@ type Errorer interface {
 }
 
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
-func OneOff(logger Errorer, f func()) {
+func ShortLived(logger Errorer, f func()) {
 	go func() {
 		defer recoverPanics(logger)
 		f()
@@ -23,7 +23,7 @@ func OneOff(logger Errorer, f func()) {
 }
 
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer; if the provided Context isn't closed, re-runs f()
-func LongLiving(ctx context.Context, logger Errorer, f func()) {
+func LongLived(ctx context.Context, logger Errorer, f func()) {
 	defer recoverPanics(logger)
 	go func() {
 		for {

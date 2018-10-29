@@ -184,7 +184,7 @@ func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration
 	//TODO use PeriodicalTrigger?
 	stopped := make(chan struct{})
 	ticker := time.NewTicker(tickInterval())
-	supervized.LongLiving(ctx, logger, func() {
+	supervized.LongLived(ctx, logger, func() {
 		for {
 			select {
 			case <-ctx.Done():

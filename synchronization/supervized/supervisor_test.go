@@ -30,12 +30,12 @@ func localFunctionThatPanics() {
 	panic("foo")
 }
 
-func TestOneOff_ReportsOnPanic(t *testing.T) {
+func TestShortLived_ReportsOnPanic(t *testing.T) {
 	logger := mockLogger()
 
 	require.NotPanicsf(t, func() {
-		OneOff(logger, localFunctionThatPanics)
-	}, "OneOff panicked unexpectedly")
+		ShortLived(logger, localFunctionThatPanics)
+	}, "ShortLived panicked unexpectedly")
 
 	report := <-logger.errors
 	require.Equal(t, report.message, "recovered panic")
@@ -49,21 +49,21 @@ func TestOneOff_ReportsOnPanic(t *testing.T) {
 	require.Contains(t, stackTraceField.Value(), "localFunctionThatPanics")
 }
 
-func TestLongLiving_ReportsOnPanicAndRestarts(t *testing.T) {
+func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	count := 0
 
 	require.NotPanicsf(t, func() {
-		LongLiving(ctx, logger, func() {
+		LongLived(ctx, logger, func() {
 			count++
 			if count > 3 {
 				cancel()
 			}
 			panic("foo")
 		})
-	}, "LongLiving panicked unexpectedly")
+	}, "LongLived panicked unexpectedly")
 
 	for i := 0; i < count; i++ {
 		select {

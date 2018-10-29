@@ -80,7 +80,7 @@ func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
 }
 
 func (f *transactionForwarder) start(ctx context.Context) {
-	supervized.LongLiving(ctx, f.logger, func() {
+	supervized.LongLived(ctx, f.logger, func() {
 		for {
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
 

@@ -88,7 +88,7 @@ func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 		return err
 	}
 
-	supervized.OneOff(t.logger, func() {
+	supervized.ShortLived(t.logger, func() {
 		t.receive(ctx, data)
 	})
 
@@ -262,7 +262,7 @@ type duplicatingTamperer struct {
 
 func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		supervized.OneOff(o.transport.logger, func() {
+		supervized.ShortLived(o.transport.logger, func() {
 			time.Sleep(10 * time.Millisecond)
 			o.transport.receive(ctx, data)
 		})
@@ -282,7 +282,7 @@ type delayingTamperer struct {
 
 func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		supervized.OneOff(o.transport.logger, func() {
+		supervized.ShortLived(o.transport.logger, func() {
 			time.Sleep(o.duration())
 			o.transport.receive(ctx, data)
 		})
