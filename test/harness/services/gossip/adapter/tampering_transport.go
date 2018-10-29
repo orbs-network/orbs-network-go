@@ -2,7 +2,9 @@ package adapter
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"math/rand"
@@ -61,10 +63,12 @@ type tamperingTransport struct {
 	tampererLock                *sync.RWMutex
 	latchingTamperersUnderMutex []*latchingTamperer
 	ongoingTamperersUnderMutex  []OngoingTamper
+	logger                      log.BasicLogger
 }
 
-func NewTamperingTransport() TamperingTransport {
+func NewTamperingTransport(logger log.BasicLogger) TamperingTransport {
 	return &tamperingTransport{
+		logger: logger,
 		transportListenersUnderMutex: make(map[string]adapter.TransportListener),
 		tampererLock:                 &sync.RWMutex{},
 		listenerLock:                 &sync.RWMutex{},
@@ -84,7 +88,10 @@ func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 		return err
 	}
 
-	go t.receive(ctx, data)
+	synchronization.RunSupervised(t.logger, func() {
+		t.receive(ctx, data)
+	})
+
 	return nil
 }
 
@@ -255,10 +262,10 @@ type duplicatingTamperer struct {
 
 func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		go func() {
+		synchronization.RunSupervised(o.transport.logger, func() {
 			time.Sleep(10 * time.Millisecond)
 			o.transport.receive(ctx, data)
-		}()
+		})
 	}
 	return nil, false
 }
@@ -275,10 +282,10 @@ type delayingTamperer struct {
 
 func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		go func() {
+		synchronization.RunSupervised(o.transport.logger, func() {
 			time.Sleep(o.duration())
 			o.transport.receive(ctx, data)
-		}()
+		})
 		return nil, true
 	}
 

@@ -42,7 +42,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
+	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger)
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)

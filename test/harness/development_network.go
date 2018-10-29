@@ -17,11 +17,11 @@ import (
 func NewDevelopmentNetwork() *inProcessNetwork {
 	numNodes := 2
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
-	testLogger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-	testLogger.Info("creating development network")
+	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger.Info("creating development network")
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
+	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(logger)
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
@@ -50,7 +50,7 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 
 		node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 		node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
-		node.nativeCompiler = nativeProcessorAdapter.NewNativeCompiler(node.config, testLogger)
+		node.nativeCompiler = nativeProcessorAdapter.NewNativeCompiler(node.config, logger)
 
 		node.metricRegistry = metric.NewRegistry()
 
@@ -61,7 +61,7 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 		nodes:           nodes,
 		gossipTransport: sharedTamperingTransport,
 		description:     description,
-		testLogger:      testLogger,
+		testLogger:      logger,
 	}
 
 	// must call network.StartNodes(ctx) to actually start the nodes in the network
