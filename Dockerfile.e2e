@@ -5,4 +5,4 @@ ADD ./gamma-cli /opt/orbs/
 
 WORKDIR /opt/orbs
 
-CMD ./e2e.test
+CMD ./e2e.test -v

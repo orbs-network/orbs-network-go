@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -40,7 +41,7 @@ type InProcessNetwork interface {
 	WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256)
 	WaitForTransactionInStateForAtMost(ctx context.Context, nodeIndex int, txhash primitives.Sha256, atMost time.Duration)
 	Size() int
-	MetricsString() string
+	MetricsString(nodeIndex int) string
 }
 
 type inProcessNetwork struct {
@@ -48,7 +49,6 @@ type inProcessNetwork struct {
 	gossipTransport gossipAdapter.TamperingTransport
 	description     string
 	testLogger      log.BasicLogger
-	metricRegistry  metric.Registry
 }
 
 func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
@@ -60,7 +60,7 @@ func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
 			node.statePersistence,
 			node.nativeCompiler,
 			n.testLogger.WithTags(log.Node(node.name)),
-			n.metricRegistry,
+			node.metricRegistry,
 			node.config,
 		)
 	}
@@ -75,6 +75,7 @@ type networkNode struct {
 	statePersistence stateStorageAdapter.TamperingStatePersistence
 	nativeCompiler   nativeProcessorAdapter.Compiler
 	nodeLogic        bootstrap.NodeLogic
+	metricRegistry   metric.Registry
 }
 
 func (n *inProcessNetwork) WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256) {
@@ -85,12 +86,13 @@ func (n *inProcessNetwork) WaitForTransactionInStateForAtMost(ctx context.Contex
 	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(ctx, txhash, atMost)
 	err := n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(ctx, blockHeight)
 	if err != nil {
+		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
 }
 
-func (n *inProcessNetwork) MetricsString() string {
-	return n.metricRegistry.String()
+func (n *inProcessNetwork) MetricsString(i int) string {
+	return n.nodes[i].metricRegistry.String()
 }
 
 func (n *inProcessNetwork) Description() string {

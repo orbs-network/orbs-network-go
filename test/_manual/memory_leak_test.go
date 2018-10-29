@@ -1,6 +1,7 @@
 package _manual
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"os"
@@ -13,14 +14,14 @@ import (
 var globalBlock *protocol.BlockPairContainer
 
 func TestMemoryLeaks_AfterSomeTransactions(t *testing.T) {
-	harness.Network(t).Start(func(network harness.InProcessNetwork) {
-		network.DeployBenchmarkToken(5)
+	harness.Network(t).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+		network.DeployBenchmarkToken(ctx, 5)
 		globalBlock = nil
 
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 
 		for i := 0; i < 10; i++ {
-			sendTransactionAndWaitUntilInState(network)
+			sendTransactionAndWaitUntilInState(ctx, network)
 		}
 
 		runtime.MemProfileRate = 100
@@ -37,7 +38,7 @@ func TestMemoryLeaks_AfterSomeTransactions(t *testing.T) {
 
 		// play with these lines to find memory leaks in closed blocks
 		for i := 0; i < 500; i++ {
-			sendTransactionAndWaitUntilInState(network)
+			sendTransactionAndWaitUntilInState(ctx, network)
 		}
 
 		// play with these lines to see a leak example
@@ -66,11 +67,11 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	runtime.GC()
 	pprof.WriteHeapProfile(before)
 
-	harness.Network(t).Start(func(network harness.InProcessNetwork) {
-		network.DeployBenchmarkToken(5)
+	harness.Network(t).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+		network.DeployBenchmarkToken(ctx, 5)
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 		for i := 0; i < 20; i++ {
-			sendTransactionAndWaitUntilInState(network)
+			sendTransactionAndWaitUntilInState(ctx, network)
 		}
 	})
 
@@ -83,8 +84,8 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	pprof.WriteHeapProfile(after)
 }
 
-func sendTransactionAndWaitUntilInState(network harness.InProcessNetwork) {
-	tx := <-network.SendTransfer(0, 1, 5, 6)
-	network.WaitForTransactionInState(0, tx.TransactionReceipt().Txhash())
-	network.WaitForTransactionInState(1, tx.TransactionReceipt().Txhash())
+func sendTransactionAndWaitUntilInState(ctx context.Context, network harness.InProcessNetwork) {
+	tx := <-network.SendTransfer(ctx, 0, 1, 5, 6)
+	network.WaitForTransactionInState(ctx, 0, tx.TransactionReceipt().Txhash())
+	network.WaitForTransactionInState(ctx, 1, tx.TransactionReceipt().Txhash())
 }

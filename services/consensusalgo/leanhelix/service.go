@@ -3,7 +3,7 @@ package leanhelix
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/lean-helix-go/go/leanhelix"
+	"github.com/orbs-network/lean-helix-go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -26,7 +26,7 @@ type Config interface {
 
 // TODO Eventually remove all code except Init() which calls the external lean-helix-go submodule
 func Init() {
-	s := leanhelix.NewLeanHelix()
+	s := leanhelix.NewLeanHelix(nil, nil, nil) // TODO impl me
 	fmt.Println(s)
 }
 

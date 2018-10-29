@@ -68,8 +68,8 @@ func NewNodeLogic(
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 
 	return &nodeLogic{
-		publicApi:      publicApiService,
-		consensusAlgos: consensusAlgos,
+		publicApi:       publicApiService,
+		consensusAlgos:  consensusAlgos,
 		runtimeReporter: runtimeReporter,
 	}
 }

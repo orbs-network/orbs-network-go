@@ -12,7 +12,6 @@ import (
 )
 
 func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -23,7 +22,6 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 }
 
 func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -44,7 +42,6 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -60,7 +57,6 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -77,7 +73,6 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 }
 
 func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
