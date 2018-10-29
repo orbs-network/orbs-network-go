@@ -382,8 +382,6 @@ func TestAddConvegingPathsWithExactValues(t *testing.T) {
 	verifyProof(t, f, root2, proof4, "", "acdcda", "1", true)
 }
 
-
-
 // =================
 // Debug helpers
 // =================

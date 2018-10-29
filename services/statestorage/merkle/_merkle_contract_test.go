@@ -16,7 +16,6 @@ func newVerTraslateKeys(keyValues ...string) map[string]primitives.Sha256 {
 		panic("expected key value pairs")
 	}
 
-
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
@@ -30,7 +29,6 @@ func newVerTraslateKeys(keyValues ...string) map[string]primitives.Sha256 {
 	}
 	return diffs
 }
-
 
 func oldVerTraslateKeys(keyValues ...string) []*protocol.ContractStateDiff {
 	if len(keyValues)%2 != 0 {
@@ -49,7 +47,7 @@ func oldVerTraslateKeys(keyValues ...string) []*protocol.ContractStateDiff {
 		ContractName: "",
 		StateDiffs:   stateDiffs,
 	}
-	contractStateDiffs := []*protocol.ContractStateDiff {contractStateDiff.Build()}
+	contractStateDiffs := []*protocol.ContractStateDiff{contractStateDiff.Build()}
 	return contractStateDiffs
 }
 
@@ -73,19 +71,16 @@ func TestTwoVersionsOfMerkle(t *testing.T) {
 
 	// stress
 	start := time.Now()
-	for i := 0 ; i < nTimes; i++ {
+	for i := 0; i < nTimes; i++ {
 		forest, root := NewForest()
 		root1, _ = forest.Update(root, diffs)
 	}
 	fmt.Printf("New implementation Took: %s\n", time.Since(start))
 
 	start = time.Now()
-	for i := 0 ; i < nTimes; i++ {
+	for i := 0; i < nTimes; i++ {
 		oldForest, oldRoot := merkle.NewForest()
 		oldRoot1, _ = oldForest.Update(oldRoot, oldDiffs)
 	}
 	fmt.Printf("Old implementation Took: %s\n", time.Since(start))
 }
-
-
-

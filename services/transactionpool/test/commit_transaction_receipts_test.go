@@ -9,7 +9,6 @@ import (
 )
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -30,7 +29,6 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 }
 
 func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		myTx1 := builders.TransferTransaction().Build()
