@@ -40,6 +40,11 @@ TBD
 ### Performance testing
 TBD
 
+### Testing Strategy
+Before
+During
+After
+
 ### CI
 TBD
 

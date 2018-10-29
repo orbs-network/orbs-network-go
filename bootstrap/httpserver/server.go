@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"io/ioutil"
 	"net"
@@ -26,6 +27,7 @@ type httpErr struct {
 
 type HttpServer interface {
 	GracefulShutdown(timeout time.Duration)
+	Port() int
 }
 
 type server struct {
@@ -33,6 +35,7 @@ type server struct {
 	logger         log.BasicLogger
 	publicApi      services.PublicApi
 	metricRegistry metric.Registry
+	port           int
 }
 
 type tcpKeepAliveListener struct {
@@ -58,10 +61,10 @@ func NewHttpServer(address string, logger log.BasicLogger, publicApi services.Pu
 
 	if listener, err := server.listen(address); err != nil {
 		logger.Error("failed to start http server", log.Error(err))
-		panic("failed to start http server")
+		panic(fmt.Sprintf("failed to start http server: %s", err.Error()))
 	} else {
+		server.port = listener.Addr().(*net.TCPAddr).Port
 		server.httpServer = &http.Server{
-			Addr:    address,
 			Handler: server.createRouter(),
 		}
 
@@ -72,6 +75,10 @@ func NewHttpServer(address string, logger log.BasicLogger, publicApi services.Pu
 	logger.Info("started http server", log.String("address", address))
 
 	return server
+}
+
+func (s *server) Port() int {
+	return s.port
 }
 
 func (s *server) listen(addr string) (net.Listener, error) {
