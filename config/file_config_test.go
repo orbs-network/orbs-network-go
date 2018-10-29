@@ -134,7 +134,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 
 	cfg := ForAcceptanceTests(nodes, peers,
 		keyPair.PublicKey(), keyPair.PrivateKey(), keyPair.PublicKey(),
-		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, 30)
 
 	require.EqualValues(t, keyPair.PublicKey(), cfg.NodePublicKey())
 	require.EqualValues(t, 0, len(cfg.FederationNodes(0)))
