@@ -13,7 +13,6 @@ import (
 )
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -38,7 +37,6 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 }
 
 func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -52,7 +50,6 @@ func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 }
 
 func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarnessWithSizeLimit(1)
 

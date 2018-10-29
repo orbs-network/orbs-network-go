@@ -2,6 +2,7 @@ package transactionpool
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -13,7 +14,7 @@ import (
 func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
-		p := NewCommittedPool()
+		p := NewCommittedPool(metric.NewRegistry())
 
 		r1 := builders.TransactionReceipt().WithRandomHash().Build()
 		r2 := builders.TransactionReceipt().WithRandomHash().Build()

@@ -60,7 +60,7 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 
 	ctx, cancel := context.WithTimeout(ctx, t.timeout)
 	defer cancel()
-	
+
 	for currentHeight < requestedHeightUint {
 		if t.fireOnWait != nil {
 			t.fireOnWait()

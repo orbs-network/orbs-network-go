@@ -14,7 +14,6 @@ import (
 )
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.ignoringForwardMessages()
@@ -49,7 +48,6 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 }
 
 func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -63,7 +61,6 @@ func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 }
 
 func TestGetTransactionReceiptWhenTimestampAheadOfNodeTime(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 

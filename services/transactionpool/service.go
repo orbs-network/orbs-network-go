@@ -48,6 +48,7 @@ func NewTransactionPool(ctx context.Context,
 	metricFactory metric.Factory) services.TransactionPool {
 
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory)
+	committedPool := NewCommittedPool(metricFactory)
 
 	txForwarder := NewTransactionForwarder(ctx, logger, config, gossip)
 
@@ -58,7 +59,7 @@ func NewTransactionPool(ctx context.Context,
 		logger:         logger.WithTags(LogTag),
 
 		pendingPool:          pendingPool,
-		committedPool:        NewCommittedPool(),
+		committedPool:        committedPool,
 		blockTracker:         synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
 		transactionForwarder: txForwarder,
 	}

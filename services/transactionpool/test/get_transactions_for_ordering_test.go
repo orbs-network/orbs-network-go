@@ -13,7 +13,6 @@ import (
 )
 
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -32,7 +31,6 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 }
 
 func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.ignoringForwardMessages()
@@ -58,7 +56,6 @@ func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t 
 }
 
 func TestGetTransactionsForOrderingDropsTransactionsThatAreAlreadyCommitted(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -83,7 +80,6 @@ func TestGetTransactionsForOrderingDropsTransactionsThatAreAlreadyCommitted(t *t
 }
 
 func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -115,7 +111,6 @@ func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testi
 }
 
 func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFromPool(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -145,7 +140,6 @@ func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFr
 }
 
 func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -168,7 +162,6 @@ func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing
 }
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -182,7 +175,6 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 }
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 

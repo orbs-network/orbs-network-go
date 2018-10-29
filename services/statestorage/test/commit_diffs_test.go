@@ -10,20 +10,20 @@ import (
 
 func TestPersistStateToStorage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		d := newStateStorageDriver(1)
+		d := NewStateStorageDriver(1)
 
 		contract1 := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "v1").WithStringRecord("key2", "v2").Build()
 		contract2 := builders.ContractStateDiff().WithContractName("contract2").WithStringRecord("key1", "v3").Build()
 
-		d.commitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).WithDiff(contract2).Build())
+		d.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithDiff(contract1).WithDiff(contract2).Build())
 
-		output, err := d.readSingleKey(ctx, "contract1", "key1")
+		output, err := d.ReadSingleKey(ctx, "contract1", "key1")
 		require.NoError(t, err)
 		require.EqualValues(t, "v1", output, "unexpected value read from storage")
-		output2, err := d.readSingleKey(ctx, "contract1", "key2")
+		output2, err := d.ReadSingleKey(ctx, "contract1", "key2")
 		require.NoError(t, err)
 		require.EqualValues(t, "v2", output2, "unexpected value read from storage")
-		output3, err := d.readSingleKey(ctx, "contract2", "key1")
+		output3, err := d.ReadSingleKey(ctx, "contract2", "key1")
 		require.NoError(t, err)
 		require.EqualValues(t, "v3", output3, "unexpected value read from storage")
 	})
@@ -31,7 +31,7 @@ func TestPersistStateToStorage(t *testing.T) {
 
 func TestNonConsecutiveBlockHeights(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		d := newStateStorageDriver(1)
+		d := NewStateStorageDriver(1)
 
 		registerContractDiff := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "whatever").Build()
 		d.service.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithDiff(registerContractDiff).Build())
@@ -42,28 +42,28 @@ func TestNonConsecutiveBlockHeights(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 2, result.NextDesiredBlockHeight, "unexpected NextDesiredBlockHeight")
 
-		_, err = d.readSingleKey(ctx, "contract1", "key1")
+		_, err = d.ReadSingleKey(ctx, "contract1", "key1")
 		require.NoError(t, err)
 	})
 }
 
 func TestCommitPastBlockHeights(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		d := newStateStorageDriver(1)
+		d := NewStateStorageDriver(1)
 		v1 := "v1"
 		v2 := "v2"
 
-		d.commitValuePairsAtHeight(ctx, 1, "c1", "key1", v1)
-		d.commitValuePairsAtHeight(ctx, 2, "c1", "key1", v2)
+		d.CommitValuePairsAtHeight(ctx, 1, "c1", "key1", v1)
+		d.CommitValuePairsAtHeight(ctx, 2, "c1", "key1", v2)
 
-		result, err := d.commitValuePairsAtHeight(ctx, 1, "c1", "key1", "v3", "key3", "v3")
+		result, err := d.CommitValuePairsAtHeight(ctx, 1, "c1", "key1", "v3", "key3", "v3")
 		require.NoError(t, err)
 		require.EqualValues(t, 3, result.NextDesiredBlockHeight, "unexpected NextDesiredBlockHeight")
 
-		output, err := d.readSingleKeyFromRevision(ctx, 2, "c1", "key1")
+		output, err := d.ReadSingleKeyFromRevision(ctx, 2, "c1", "key1")
 		require.NoError(t, err)
 		require.EqualValues(t, v2, output, "unexpected value read")
-		output2, err := d.readSingleKeyFromRevision(ctx, 2, "c1", "key3")
+		output2, err := d.ReadSingleKeyFromRevision(ctx, 2, "c1", "key3")
 		require.NoError(t, err)
 		require.EqualValues(t, []byte{}, output2, "unexpected value read")
 	})

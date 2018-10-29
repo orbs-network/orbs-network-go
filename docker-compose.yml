@@ -1,4 +1,4 @@
-version: '2'
+version: '2.1'
 
 services:
   orbs-network-node-1:
@@ -13,6 +13,9 @@ services:
       - ./logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
+    sysctls:
+      net.core.somaxconn: 25000
+
     networks:
       orbs-network:
         ipv4_address: 192.168.199.2
@@ -29,6 +32,8 @@ services:
       - ./logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
+    sysctls:
+      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.3
@@ -45,6 +50,8 @@ services:
       - ./logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
+    sysctls:
+      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.4
@@ -53,7 +60,13 @@ services:
     image: orbs:e2e
     environment:
       API_ENDPOINT: http://orbs-network-node-3:8080/api/v1/
-    command: sh -c "sleep 10 && ./e2e.test"
+      STRESS_TEST_NUMBER_OF_TRANSACTIONS: 10000
+      STRESS_TEST_FAILURE_RATE: 20
+      STRESS_TEST_TARGET_TPS: 100
+      STRESS_TEST: 'true'
+    command: sh -c "sleep 10 && ./e2e.test -test.v"
+    sysctls:
+      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.5
