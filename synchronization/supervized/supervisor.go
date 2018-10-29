@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/pkg/errors"
 	"runtime"
+	"runtime/debug"
 	"strings"
 )
 
@@ -37,7 +38,7 @@ func LongLiving(ctx context.Context, logger Errorer, f func()) {
 func recoverPanics(logger Errorer) {
 	if p := recover(); p != nil {
 		e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
-		logger.Error("recovered panic", log.Error(e))
+		logger.Error("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
 	}
 }
 

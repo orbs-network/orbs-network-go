@@ -44,6 +44,8 @@ func TestOneOff_ReportsOnPanic(t *testing.T) {
 	errorField := report.fields[0]
 	stackTraceField := report.fields[1]
 	require.Contains(t, errorField.Value(), "foo")
+	require.Equal(t, stackTraceField.Key, "stack-trace")
+	require.Equal(t, stackTraceField.Key, "stack-trace")
 	require.Contains(t, stackTraceField.Value(), "localFunctionThatPanics")
 }
 
