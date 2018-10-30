@@ -8,6 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO: maybe move all of these actions (the hashes) to crypto/digest since the client needs them as well
+
 func (s *service) getSignerAddress(signer *protocol.Signer) (primitives.Ripmd160Sha256, error) {
 	switch signer.Scheme() {
 	case protocol.SIGNER_SCHEME_EDDSA:
