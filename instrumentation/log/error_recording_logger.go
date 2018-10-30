@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -13,7 +14,16 @@ type ErrorRecordingLogger struct {
 
 type errorRecorder struct {
 	sync.Mutex
-	unexpectedErrors []string
+	unexpectedErrors []*enexpectedError
+}
+
+type enexpectedError struct {
+	message string
+	err error
+}
+
+func (e *enexpectedError) String() string {
+	return fmt.Sprintf("%s (%s)", e.message, e.err)
 }
 
 func NewErrorRecordingLogger(wrapped BasicLogger, allowedErrors []string) *ErrorRecordingLogger {
@@ -74,12 +84,27 @@ func (l *ErrorRecordingLogger) WithFilters(filter ...Filter) BasicLogger {
 func (l *ErrorRecordingLogger) recordUnexpectedError(message string, fields []*Field) {
 	l.errorRecorder.Lock()
 	defer l.errorRecorder.Unlock()
-	l.errorRecorder.unexpectedErrors = append(l.errorRecorder.unexpectedErrors, message)
+
+	var err error
+	for _, f := range fields {
+		if f.Error != nil {
+			err = f.Error
+		}
+	}
+
+	l.errorRecorder.unexpectedErrors = append(l.errorRecorder.unexpectedErrors, &enexpectedError{message: message, err: err})
 
 }
 
-func (l *ErrorRecordingLogger) GetUnexpectedErrors() []string {
-	return l.errorRecorder.unexpectedErrors
+func (l *ErrorRecordingLogger) GetUnexpectedErrors() (errors []string) {
+	l.errorRecorder.Lock()
+	defer l.errorRecorder.Unlock()
+
+	for _, e := range l.errorRecorder.unexpectedErrors {
+		errors = append(errors, e.String())
+	}
+
+	return
 }
 
 func (l *ErrorRecordingLogger) HasErrors() bool {

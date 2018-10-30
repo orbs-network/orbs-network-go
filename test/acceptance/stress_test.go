@@ -16,9 +16,8 @@ import (
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
-			"consensus round tick failed",
-			"error adding forwarded transaction to pending pool",
-			"FORK!! block already in storage, transaction block header mismatch",
+			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
+			"FORK!! block already in storage, transaction block header mismatch", //TODO investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
@@ -30,7 +29,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	harness.Network(t).
-		AllowingErrors("consensus round tick failed").
+		AllowingErrors(
+			"consensus round tick failed", // transport failed to send - because we are failing the consensus messages, among other messages, and this kills the current consensus round
+		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
