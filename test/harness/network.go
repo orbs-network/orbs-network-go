@@ -26,10 +26,14 @@ import (
 )
 
 type InProcessNetwork interface {
+	PublicApi(nodeIndex int) services.PublicApi
+}
+
+type InProcessTestNetwork interface {
+	InProcessNetwork
+	GossipTransport() gossipAdapter.TamperingTransport
 	Description() string
 	DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int)
-	GossipTransport() gossipAdapter.TamperingTransport
-	PublicApi(nodeIndex int) services.PublicApi
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse
 	SendTransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256

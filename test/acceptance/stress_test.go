@@ -15,8 +15,13 @@ import (
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
 	harness.Network(t).
+		AllowingErrors(
+			"consensus round tick failed",
+			"error adding forwarded transaction to pending pool",
+			"FORK!! block already in storage, transaction block header mismatch",
+		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		network.GossipTransport().Duplicate(AnyNthMessage(7))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
@@ -25,8 +30,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	harness.Network(t).
+		AllowingErrors("consensus round tick failed").
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
@@ -36,7 +42,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	harness.Network(t).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 
 		network.GossipTransport().Delay(func() time.Duration {
 			return (time.Duration(rand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
@@ -48,7 +54,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("this test causes the system to hang, seems like consensus algo stops")
-	harness.Network(t).WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		network.GossipTransport().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
@@ -74,7 +80,7 @@ func AnyNthMessage(n int) MessagePredicate {
 	}
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.InProcessNetwork, t *testing.T, numTransactions int) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.InProcessTestNetwork, t *testing.T, numTransactions int) {
 	fromAddress := 5
 	toAddress := 6
 
