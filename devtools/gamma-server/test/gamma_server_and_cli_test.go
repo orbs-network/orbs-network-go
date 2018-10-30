@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -14,10 +18,6 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/stretchr/testify/require"
 )
 
 type TransactionReceipt struct {
@@ -250,7 +250,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 	targetAddress := builders.AddressForEd25519SignerForTests(2)
 	var amount uint64 = 42
 
@@ -268,7 +268,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond) // wait for server to start
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 
 	h.deployCounterContract(t, keyPair)
 	h.getCounterValue(t, 0)

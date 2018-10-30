@@ -2,7 +2,7 @@ package virtualmachine
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -19,7 +19,7 @@ func (s *service) getSignerAddress(signer *protocol.Signer) (primitives.Ripmd160
 
 func addressEd25519Signer(signer *protocol.Signer) (primitives.Ripmd160Sha256, error) {
 	signerPublicKey := signer.Eddsa().SignerPublicKey()
-	if len(signerPublicKey) != signature.ED25519_PUBLIC_KEY_SIZE_BYTES {
+	if len(signerPublicKey) != keys.ED25519_PUBLIC_KEY_SIZE_BYTES {
 		return nil, errors.New("transaction is not signed by a valid Signer")
 	}
 	return hash.CalcRipmd160Sha256(signerPublicKey), nil
