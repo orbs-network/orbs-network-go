@@ -1,7 +1,10 @@
 package keys
 
 import (
+	"encoding/hex"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ed25519"
 )
 
 const (
@@ -24,4 +27,20 @@ func (k *Ed25519KeyPair) PublicKey() primitives.Ed25519PublicKey {
 
 func (k *Ed25519KeyPair) PrivateKey() primitives.Ed25519PrivateKey {
 	return k.privateKey
+}
+
+func (k *Ed25519KeyPair) PublicKeyHex() string {
+	return hex.EncodeToString(k.publicKey)
+}
+
+func (k *Ed25519KeyPair) PrivateKeyHex() string {
+	return hex.EncodeToString(k.privateKey)
+}
+
+func GenerateEd25519Key() (*Ed25519KeyPair, error) {
+	if pub, pri, err := ed25519.GenerateKey(nil); err != nil {
+		return nil, errors.Wrapf(err, "cannot create new signature from random keys")
+	} else {
+		return NewEd25519KeyPair(primitives.Ed25519PublicKey(pub), primitives.Ed25519PrivateKey(pri)), nil
+	}
 }
