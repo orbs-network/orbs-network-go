@@ -62,7 +62,7 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 
 	if header.Timestamp() == 0 {
 		s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
-		s.logger.Error("got 0 timestamp from results block header")
+		s.logger.Info("got 0 timestamp from results block header")
 	} else {
 		s.mu.lastCommittedBlockTimestamp = header.Timestamp()
 	}

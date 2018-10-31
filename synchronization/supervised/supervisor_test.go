@@ -58,7 +58,7 @@ func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
 	require.NotPanicsf(t, func() {
 		LongLived(ctx, logger, func() {
 			count++
-			if count > 3 {
+			if count > 10 {
 				cancel()
 			}
 			panic("foo")

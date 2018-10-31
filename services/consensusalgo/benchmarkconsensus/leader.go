@@ -17,6 +17,8 @@ import (
 )
 
 func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
+	start := time.Now()
+
 	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock()
 	for {
 		err := s.leaderConsensusRoundTick(ctx)
@@ -36,6 +38,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			s.logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
+			s.metrics.consensusRoundTickTime.RecordSince(start)
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
 			s.logger.Info("consensus round waking up after retry timeout")
@@ -47,9 +50,6 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 
 func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
-
-	start := time.Now()
-	defer s.metrics.consensusRoundTickTime.RecordSince(start)
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == _lastCommittedBlockHeight {

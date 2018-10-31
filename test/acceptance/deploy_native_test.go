@@ -9,7 +9,7 @@ import (
 )
 
 func TestNonLeaderDeploysNativeContract(t *testing.T) {
-	harness.Network(t).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+	harness.Network(t).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 

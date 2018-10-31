@@ -10,15 +10,23 @@ import (
 )
 
 func TestBlockSync(t *testing.T) {
-	harness.Network(t).WithSetup(func(ctx context.Context, network harness.InProcessNetwork) {
+	harness.Network(t).
+		AllowingErrors(
+			"consensus round tick failed", // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
+			"intra-node sync to consensus algo failed", //TODO investigate and explain, or fix and remove expected error
+			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+		).
+		WithSetup(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		for i := 1; i <= 10; i++ {
 			blockPair := builders.BenchmarkConsensusBlockPair().
 				WithHeight(primitives.BlockHeight(i)).
 				WithTransactions(2).
 				Build()
 			network.BlockPersistence(0).WriteBlock(blockPair)
+
 		}
-	}).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+	}).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		require.Zero(t, len(network.BlockPersistence(1).ReadAllBlocks()))
 
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
