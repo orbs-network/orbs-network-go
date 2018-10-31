@@ -87,12 +87,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)
-			defer func() {
-				if logger.HasErrors() {
-					b.f.Fatal("Encountered unexpected errors:\n\t", strings.Join(logger.GetUnexpectedErrors(), "\n\t"))
-
-				}
-			}()
+			defer test.RequireNoUnexpectedErrors(b.f, logger)
 
 			if b.setupFunc != nil {
 				b.setupFunc(ctx, network)
