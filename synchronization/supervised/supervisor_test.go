@@ -50,6 +50,8 @@ func TestShortLived_ReportsOnPanic(t *testing.T) {
 }
 
 func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
+	numOfIterations := 10
+
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -58,14 +60,14 @@ func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
 	require.NotPanicsf(t, func() {
 		LongLived(ctx, logger, func() {
 			count++
-			if count > 10 {
+			if count > numOfIterations {
 				cancel()
 			}
 			panic("foo")
 		})
 	}, "LongLived panicked unexpectedly")
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < numOfIterations; i++ {
 		select {
 		case report := <-logger.errors:
 			require.Equal(t, report.message, "recovered panic")
@@ -73,4 +75,5 @@ func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
 			require.Fail(t, "long living goroutine didn't restart")
 		}
 	}
+
 }
