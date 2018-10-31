@@ -221,7 +221,7 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 	}
 	blocksToSearch := s.persistence.GetReceiptRelevantBlocks(input.TransactionTimestamp, searchRules)
 	if blocksToSearch == nil {
-		return nil, errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
+		return s.createEmptyTransactionReceiptResult(), errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
 	}
 
 	if len(blocksToSearch) == 0 {

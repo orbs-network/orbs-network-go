@@ -8,7 +8,7 @@ import (
 )
 
 func WithContext(f func(ctx context.Context)) {
-	fmt.Println("=== RUN  ", getCallerFuncName(), " (test.WithContext hack)") // we added this to workaround https://github.com/orbs-network/orbs-network-go/issues/377
+	fmt.Println("= RUNNING TEST  ", getCallerFuncName(), " (test.WithContext hack)") // we added this to workaround https://github.com/orbs-network/orbs-network-go/issues/377
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	f(ctx)
