@@ -17,13 +17,13 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 
 		t.Log("deploying contract")
 
-		<-network.SendDeployCounterContract(ctx, 1)
-		require.EqualValues(t, counterStart, <-network.CallCounterGet(ctx, 0), "get counter after deploy")
+		<-network.GetCounterContract().SendDeployCounterContract(ctx, 1)
+		require.EqualValues(t, counterStart, <-network.GetCounterContract().CallCounterGet(ctx, 0), "get counter after deploy")
 
 		t.Log("transacting with contract")
 
-		<-network.SendCounterAdd(ctx, 1, 17)
-		require.EqualValues(t, counterStart+17, <-network.CallCounterGet(ctx, 0), "get counter after transaction")
+		<-network.GetCounterContract().SendCounterAdd(ctx, 1, 17)
+		require.EqualValues(t, counterStart+17, <-network.GetCounterContract().CallCounterGet(ctx, 0), "get counter after transaction")
 
 	})
 }
