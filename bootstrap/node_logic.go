@@ -64,7 +64,7 @@ func NewNodeLogic(
 	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
 	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry))
 
-	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry)
+	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 
 	return &nodeLogic{

@@ -2,6 +2,8 @@ package metric
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"runtime"
 	"time"
 )
@@ -16,7 +18,7 @@ type runtimeReporter struct {
 	metrics runtimeMetrics
 }
 
-func NewRuntimeReporter(ctx context.Context, metricFactory Factory) interface{} {
+func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.BasicLogger) interface{} {
 	r := &runtimeReporter{
 		metrics: runtimeMetrics{
 			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc"),
@@ -25,22 +27,25 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory) interface{} 
 		},
 	}
 
-	go r.startReporting(ctx)
+	r.startReporting(ctx, logger)
 
 	return r
 }
 
-func (r *runtimeReporter) startReporting(ctx context.Context) {
+func (r *runtimeReporter) startReporting(ctx context.Context, logger log.BasicLogger) {
 	ticker := time.NewTicker(5 * time.Second)
-	for {
-		select {
-		case <-ctx.Done():
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			r.reportRuntimeMetrics()
+
+	supervised.LongLived(ctx, logger, func() {
+		for {
+			select {
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				r.reportRuntimeMetrics()
+			}
 		}
-	}
+	})
 }
 
 func (r *runtimeReporter) reportRuntimeMetrics() {
