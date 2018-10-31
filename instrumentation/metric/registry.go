@@ -108,7 +108,7 @@ func (r *inMemoryRegistry) report(logger log.BasicLogger) {
 }
 
 func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Duration, logger log.BasicLogger) {
-	synchronization.NewPeriodicalTrigger(ctx, interval, func() {
+	synchronization.NewPeriodicalTrigger(ctx, interval, logger, func() {
 		r.report(logger)
 
 		// We only rotate histograms because there is the only type of metric that we're currently rotating

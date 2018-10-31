@@ -181,7 +181,7 @@ type cleaner interface {
 
 func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, logger log.BasicLogger) chan struct{} {
 	stopped := make(chan struct{})
-	synchronization.NewPeriodicalTrigger(ctx, tickInterval(), func() {
+	synchronization.NewPeriodicalTrigger(ctx, tickInterval(), logger, func() {
 		c.clearTransactionsOlderThan(ctx, time.Now().Add(-1*expiration()))
 	}, func() {
 		close(stopped)
