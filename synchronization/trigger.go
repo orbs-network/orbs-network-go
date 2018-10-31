@@ -8,18 +8,13 @@ import (
 )
 
 type Trigger interface {
-	Start(ctx context.Context)
-	Reset(ctx context.Context, duration time.Duration)
 	TimesTriggered() uint64
-	TimesReset() uint64
-	TimesTriggeredManually() uint64
 	IsRunning() bool
-	FireNow(ctx context.Context)
 	Stop()
 }
 
 type Telemetry struct {
-	timesReset, timesTriggered, timesTriggeredManually uint64
+	timesTriggered uint64
 }
 
 type periodicalTrigger struct {
@@ -33,7 +28,7 @@ type periodicalTrigger struct {
 	wgSync  sync.WaitGroup
 }
 
-func NewPeriodicalTrigger(interval time.Duration, trigger func(), onStop func()) Trigger {
+func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, trigger func(), onStop func()) Trigger {
 	t := &periodicalTrigger{
 		ticker:  nil,
 		d:       interval,
@@ -43,6 +38,7 @@ func NewPeriodicalTrigger(interval time.Duration, trigger func(), onStop func())
 		stop:    make(chan struct{}),
 		running: false,
 	}
+	t.run(ctx)
 	return t
 }
 
@@ -54,15 +50,7 @@ func (t *periodicalTrigger) TimesTriggered() uint64 {
 	return atomic.LoadUint64(&t.metrics.timesTriggered)
 }
 
-func (t *periodicalTrigger) TimesReset() uint64 {
-	return atomic.LoadUint64(&t.metrics.timesReset)
-}
-
-func (t *periodicalTrigger) TimesTriggeredManually() uint64 {
-	return atomic.LoadUint64(&t.metrics.timesTriggeredManually)
-}
-
-func (t *periodicalTrigger) Start(ctx context.Context) {
+func (t *periodicalTrigger) run(ctx context.Context) {
 	if t.running {
 		return
 	}
@@ -94,25 +82,6 @@ func (t *periodicalTrigger) Start(ctx context.Context) {
 			}
 		}
 	}()
-}
-
-func (t *periodicalTrigger) FireNow(ctx context.Context) {
-	t.reset(ctx, t.d, true)
-	go t.f()
-	atomic.AddUint64(&t.metrics.timesTriggeredManually, 1)
-}
-
-func (t *periodicalTrigger) Reset(ctx context.Context, duration time.Duration) {
-	t.reset(ctx, duration, false)
-}
-
-func (t *periodicalTrigger) reset(ctx context.Context, duration time.Duration, internal bool) {
-	t.Stop()
-	if !internal {
-		atomic.AddUint64(&t.metrics.timesReset, 1)
-	}
-	t.d = duration
-	t.Start(ctx)
 }
 
 func (t *periodicalTrigger) Stop() {
