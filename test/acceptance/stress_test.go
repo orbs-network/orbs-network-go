@@ -18,7 +18,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
-			"FORK!! block already in storage, transaction block header mismatch", //TODO investigate and explain, or fix and remove expected error
+			//"FORK!! block already in storage, transaction block header mismatch", //TODO investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {

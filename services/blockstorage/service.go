@@ -83,31 +83,46 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	return storage
 }
 
-func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+func (s *service) commitWritePart(input *services.CommitBlockInput) error {
+	s.lastBlockLock.Lock()
+	defer s.lastBlockLock.Unlock()
+
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
 	s.logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
-		return nil, err
+		return err
 	}
 
 	// TODO there might be a non-idiomatic pattern here, but the commit block output is an empty struct, if that changes this should be refactored
 	if ok, err := s.validateBlockDoesNotExist(txBlockHeader); err != nil || !ok {
-		return nil, err
+		return err
 	}
 
 	if err := s.validateBlockHeight(input.BlockPair); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := s.persistence.WriteBlock(input.BlockPair); err != nil {
-		return nil, err
+		return err
 	}
 
 	s.updateLastCommittedBlock(input.BlockPair)
+
 	s.blockSync.HandleBlockCommitted()
 
-	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	return nil
+}
+
+
+func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+	err := s.commitWritePart(input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("committed a block", log.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 
 	if err := s.syncBlockToStateStorage(ctx, input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
@@ -123,9 +138,6 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 }
 
 func (s *service) updateLastCommittedBlock(block *protocol.BlockPairContainer) {
-	s.lastBlockLock.Lock()
-	defer s.lastBlockLock.Unlock()
-
 	blockHeight := int64(block.TransactionsBlock.Header.BlockHeight())
 	s.metrics.blockHeight.Update(blockHeight)
 	s.lastCommittedBlock = block
@@ -135,6 +147,11 @@ func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
 	s.lastBlockLock.RLock()
 	defer s.lastBlockLock.RUnlock()
 
+	return s.lastCommittedBlockHeight()
+}
+
+
+func (s *service) lastCommittedBlockHeight() primitives.BlockHeight {
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
@@ -142,20 +159,10 @@ func (s *service) LastCommittedBlockHeight() primitives.BlockHeight {
 }
 
 func (s *service) lastCommittedBlockTimestamp() primitives.TimestampNano {
-	s.lastBlockLock.RLock()
-	defer s.lastBlockLock.RUnlock()
-
 	if s.lastCommittedBlock == nil {
 		return 0
 	}
 	return s.lastCommittedBlock.TransactionsBlock.Header.Timestamp()
-}
-
-func (s *service) getLastCommittedBlock() *protocol.BlockPairContainer {
-	s.lastBlockLock.RLock()
-	defer s.lastBlockLock.RUnlock()
-
-	return s.lastCommittedBlock
 }
 
 func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
@@ -208,12 +215,15 @@ func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.Get
 func (s *service) createEmptyTransactionReceiptResult() *services.GetTransactionReceiptOutput {
 	return &services.GetTransactionReceiptOutput{
 		TransactionReceipt: nil,
-		BlockHeight:        s.LastCommittedBlockHeight(),
+		BlockHeight:        s.lastCommittedBlockHeight(),
 		BlockTimestamp:     s.lastCommittedBlockTimestamp(),
 	}
 }
 
 func (s *service) GetTransactionReceipt(ctx context.Context, input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
+	s.lastBlockLock.RLock()
+	defer s.lastBlockLock.RUnlock()
+
 	searchRules := adapter.BlockSearchRules{
 		EndGraceNano:          s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds(),
 		StartGraceNano:        s.config.BlockTransactionReceiptQueryGraceStart().Nanoseconds(),
@@ -247,8 +257,11 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 }
 
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+	s.lastBlockLock.RLock()
+	defer s.lastBlockLock.RUnlock()
+
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    s.LastCommittedBlockHeight(),
+		LastCommittedBlockHeight:    s.lastCommittedBlockHeight(),
 		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
 	}, nil
 }
@@ -284,7 +297,10 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 }
 
 func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
-	lastCommitted := s.getLastCommittedBlock()
+	s.lastBlockLock.RLock()
+	defer s.lastBlockLock.RUnlock()
+
+	lastCommitted := s.lastCommittedBlock
 
 	if lastCommitted != nil {
 		// passing nil on purpose, see spec
@@ -321,7 +337,7 @@ func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopi
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
-	currentBlockHeight := s.LastCommittedBlockHeight()
+	currentBlockHeight := s.lastCommittedBlockHeight()
 	attemptedBlockHeight := txBlockHeader.BlockHeight()
 
 	if attemptedBlockHeight < currentBlockHeight {
@@ -339,7 +355,7 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 		} else if !txBlockHeader.Equal(s.lastCommittedBlock.TransactionsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 
@@ -351,7 +367,7 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 }
 
 func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer) error {
-	expectedBlockHeight := s.LastCommittedBlockHeight() + 1
+	expectedBlockHeight := s.lastCommittedBlockHeight() + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
