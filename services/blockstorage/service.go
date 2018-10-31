@@ -334,12 +334,12 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 		if txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "FORK!! block already in storage, timestamp mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-timestamp", txBlockHeader.Timestamp()), log.Stringable("existing-timestamp", s.lastCommittedBlockTimestamp()))
 			return false, errors.New(errorMessage)
 		} else if !txBlockHeader.Equal(s.lastCommittedBlock.TransactionsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 

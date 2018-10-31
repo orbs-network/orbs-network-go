@@ -23,7 +23,7 @@ type enexpectedError struct {
 }
 
 func (e *enexpectedError) String() string {
-	return fmt.Sprintf("%s (%s)", e.message, e.err)
+	return fmt.Sprintf("%s (passed Error object: %v)", e.message, e.err)
 }
 
 func NewErrorRecordingLogger(wrapped BasicLogger, allowedErrors []string) *ErrorRecordingLogger {
