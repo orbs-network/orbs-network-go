@@ -2,9 +2,8 @@ package contracts
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -30,25 +29,12 @@ func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressI
 }
 
 func (c *contractClient) SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse {
-	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
-	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)
-	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder(),
-	}).Build()
+	tx := builders.TransferTransaction().
+		WithEd25519Signer(keys.Ed25519KeyPairForTests(fromAddressIndex)).
+		WithAmountAndTargetAddress(amount, builders.AddressForEd25519SignerForTests(toAddressIndex)).
+		Builder()
 
-	ch := make(chan *client.SendTransactionResponse)
-	supervized.ShortLived(c.logger, func() {
-		publicApi := c.apis[nodeIndex].GetPublicApi()
-		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest: request,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error in transfer: %v", err)) // TODO: improve
-		}
-		ch <- output.ClientResponse
-
-	})
-	return ch
+	return c.sendTransaction(ctx, tx, nodeIndex)
 }
 
 // TODO: when publicApi supports returning as soon as SendTransaction is in the pool, switch to blocking implementation that waits for this
@@ -56,10 +42,13 @@ func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex
 	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
 	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)
 	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder(),
+		SignedTransaction: builders.TransferTransaction().
+			WithEd25519Signer(signerKeyPair).
+			WithAmountAndTargetAddress(amount, targetAddress).
+			Builder(),
 	}).Build()
 
-	supervized.ShortLived(c.logger, func() {
+	supervised.ShortLived(c.logger, func() {
 		publicApi := c.apis[nodeIndex].GetPublicApi()
 		publicApi.SendTransaction(ctx, &services.SendTransactionInput{ // we ignore timeout here.
 			ClientRequest: request,
@@ -71,42 +60,16 @@ func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex
 func (c *contractClient) SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse {
 	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
 	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)
-	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithInvalidAmount(targetAddress).Builder(),
-	}).Build()
+	tx := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithInvalidAmount(targetAddress).Builder()
 
-	ch := make(chan *client.SendTransactionResponse)
-	supervized.ShortLived(c.logger, func() {
-		publicApi := c.apis[nodeIndex].GetPublicApi()
-		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest: request,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error in invalid transfer: %v", err)) // TODO: improve
-		}
-		ch <- output.ClientResponse
-	})
-	return ch
+	return c.sendTransaction(ctx, tx, nodeIndex)
 }
 
 func (c *contractClient) CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) chan uint64 {
-	signerKeyPair := keys.Ed25519KeyPairForTests(forAddressIndex)
-	targetAddress := builders.AddressForEd25519SignerForTests(forAddressIndex)
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: builders.GetBalanceTransaction().WithEd25519Signer(signerKeyPair).WithTargetAddress(targetAddress).Builder().Transaction,
-	}).Build()
+	tx := builders.GetBalanceTransaction().
+		WithEd25519Signer(keys.Ed25519KeyPairForTests(forAddressIndex)).
+		WithTargetAddress(builders.AddressForEd25519SignerForTests(forAddressIndex)).
+		Builder().Transaction
 
-	ch := make(chan uint64)
-	supervized.ShortLived(c.logger, func() {
-		publicApi := c.apis[nodeIndex].GetPublicApi()
-		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
-			ClientRequest: request,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error in get balance: %v", err)) // TODO: improve
-		}
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
-		ch <- outputArgsIterator.NextArguments().Uint64Value()
-	})
-	return ch
+	return c.callMethod(ctx, tx, nodeIndex)
 }
