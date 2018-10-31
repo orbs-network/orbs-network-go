@@ -3,7 +3,7 @@ package metric
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"runtime"
 	"time"
 )
@@ -33,19 +33,9 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.B
 }
 
 func (r *runtimeReporter) startReporting(ctx context.Context, logger log.BasicLogger) {
-	ticker := time.NewTicker(5 * time.Second)
-
-	supervised.LongLived(ctx, logger, func() {
-		for {
-			select {
-			case <-ctx.Done():
-				ticker.Stop()
-				return
-			case <-ticker.C:
-				r.reportRuntimeMetrics()
-			}
-		}
-	})
+	synchronization.NewPeriodicalTrigger(ctx, 5*time.Second, logger, func() {
+		r.reportRuntimeMetrics()
+	}, nil)
 }
 
 func (r *runtimeReporter) reportRuntimeMetrics() {
