@@ -1,4 +1,4 @@
-package supervized
+package supervised
 
 import (
 	"context"
@@ -24,8 +24,8 @@ func ShortLived(logger Errorer, f func()) {
 
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer; if the provided Context isn't closed, re-runs f()
 func LongLived(ctx context.Context, logger Errorer, f func()) {
-	defer recoverPanics(logger)
 	go func() {
+		defer recoverPanics(logger)
 		for {
 			f()
 			if ctx.Err() != nil { // this returns non-nil when context has been closed via cancellation or timeout or whatever
