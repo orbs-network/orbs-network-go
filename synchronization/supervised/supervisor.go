@@ -16,7 +16,7 @@ type Errorer interface {
 
 type failure struct {
 	stackTrace string
-	e error
+	e          error
 }
 
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
