@@ -6,12 +6,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
+	"hash/adler32"
 	"sync"
 	"time"
 )
@@ -78,7 +80,7 @@ func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
 }
 
 func (f *transactionForwarder) start(ctx context.Context) {
-	go func() {
+	supervised.LongLived(ctx, f.logger, func() {
 		for {
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
 
@@ -94,8 +96,7 @@ func (f *transactionForwarder) start(ctx context.Context) {
 				f.drainQueueAndForward(ctx)
 			}
 		}
-
-	}()
+	})
 }
 
 func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
@@ -140,12 +141,15 @@ func (f *transactionForwarder) drainQueue() []*protocol.SignedTransaction {
 }
 
 func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, hashes []primitives.Sha256) {
+	checksum := adler32.New()
 	for _, tx := range txs {
 		hash := digest.CalcTxHash(tx.Transaction())
 
 		hashes = append(hashes, hash)
-		oneBigHash = append(oneBigHash, hash...)
+		checksum.Write(hash)
 	}
+
+	oneBigHash = checksum.Sum(oneBigHash)
 
 	return
 }

@@ -11,11 +11,11 @@ import (
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
+		harness := newBlockStorageHarness().
+			withSyncBroadcast(1).
+			withValidateConsensusAlgos(1).
+			start(ctx)
 		block := builders.BlockPair().Build()
-
-		harness.expectValidateWithConsensusAlgosTimes(1)
 
 		_, err := harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
 		require.NoError(t, err, "block should be valid")
@@ -24,8 +24,7 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
+		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
 		block := builders.BlockPair().Build()
 
 		block.TransactionsBlock.Header.MutateProtocolVersion(998)
@@ -50,10 +49,11 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiff()
-		harness.expectValidateWithConsensusAlgosTimes(1)
+		harness := newBlockStorageHarness().
+			withSyncBroadcast(1).
+			withCommitStateDiff(1).
+			withValidateConsensusAlgos(1).
+			start(ctx)
 
 		harness.commitBlock(ctx, builders.BlockPair().Build())
 
@@ -66,10 +66,11 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiff()
-		harness.expectValidateWithConsensusAlgosTimes(1)
+		harness := newBlockStorageHarness().
+			withSyncBroadcast(1).
+			withCommitStateDiff(1).
+			withValidateConsensusAlgos(1).
+			start(ctx)
 
 		harness.commitBlock(ctx, builders.BlockPair().Build())
 

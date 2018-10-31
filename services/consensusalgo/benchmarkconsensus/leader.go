@@ -2,7 +2,6 @@ package benchmarkconsensus
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
@@ -18,12 +17,7 @@ import (
 )
 
 func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			// TODO: in production we need to restart our long running goroutine (decide on supervision mechanism)
-			s.logger.Error("panic in BenchmarkConsensus.leaderConsensusRoundRunLoop long running goroutine", log.String("panic", fmt.Sprintf("%v", r)))
-		}
-	}()
+	start := time.Now()
 
 	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock()
 	for {
@@ -44,6 +38,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			s.logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
+			s.metrics.consensusRoundTickTime.RecordSince(start)
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
 			s.logger.Info("consensus round waking up after retry timeout")
@@ -55,9 +50,6 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 
 func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
-
-	start := time.Now()
-	defer s.metrics.consensusRoundTickTime.RecordSince(start)
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == _lastCommittedBlockHeight {

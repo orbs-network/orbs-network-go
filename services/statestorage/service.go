@@ -3,7 +3,6 @@ package statestorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
@@ -24,29 +23,18 @@ type service struct {
 
 	mutex     sync.RWMutex
 	revisions *rollingRevisions
-	merkle    *merkle.Forest
 }
 
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
-	// TODO - tie/sync merkle forest to persistent state
-	forest, root := merkle.NewForest()
 
-	_, _, pRoot, err := persistence.ReadMetadata()
-	if err != nil {
-		panic(err)
-	}
-	if !pRoot.Equal(root) {
-		panic("Merkle forest out of sync with persisted state")
-	}
-
+	forest, _ := merkle.NewForest()
 	return &service{
 		config:       config,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
 		logger:       logger.WithTags(LogTag),
 
 		mutex:     sync.RWMutex{},
-		merkle:    forest,
-		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance())),
+		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance()), forest),
 	}
 }
 
@@ -68,37 +56,15 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: currentHeight + 1}, nil
 	}
 
-	// if updating state records fails downstream the merkle tree entries will not bother us
-	// TODO use input.resultheader.preexecutuion
-	root, err := s.revisions.getRevisionHash(commitBlockHeight - 1)
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find previous block merkle root. current block %d", currentHeight)
-	}
-	newRoot, err := s.merkle.Update(root, filterToMerkleInput(input.ContractStateDiffs))
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find new merkle root. current block %d", currentHeight)
-	}
+	// TODO assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
 
-	err = s.revisions.addRevision(commitBlockHeight, commitTimestamp, newRoot, inflateChainState(input.ContractStateDiffs))
+	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}
 
 	s.blockTracker.IncrementHeight()
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
-}
-
-func filterToMerkleInput(csd []*protocol.ContractStateDiff) merkle.MerkleDiffs {
-	result := make(merkle.MerkleDiffs)
-	for _, stateDiffs := range csd {
-		contract := stateDiffs.ContractName()
-		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
-			r := i.NextStateDiffs()
-			k := string(hash.CalcSha256(append([]byte(contract), r.Key()...)))
-			result[k] = hash.CalcSha256(r.Value())
-		}
-	}
-	return result
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {

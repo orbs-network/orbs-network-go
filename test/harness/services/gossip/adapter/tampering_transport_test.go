@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -21,7 +22,7 @@ func newTamperingHarness() *tamperingHarness {
 	senderKey := "sender"
 	listenerKey := "listener"
 	listener := &mockListener{}
-	transport := NewTamperingTransport()
+	transport := NewTamperingTransport(log.GetLogger(log.String("adapter", "transport")))
 	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
 
 	return &tamperingHarness{

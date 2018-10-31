@@ -9,6 +9,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -24,23 +26,28 @@ import (
 )
 
 type InProcessNetwork interface {
+	PublicApi(nodeIndex int) services.PublicApi
+
+	SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse
+	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	CallCounterGet(ctx context.Context, nodeIndex int) chan uint64
+}
+
+type InProcessTestNetwork interface {
+	InProcessNetwork
+	GossipTransport() gossipAdapter.TamperingTransport
 	Description() string
 	DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int)
-	GossipTransport() gossipAdapter.TamperingTransport
-	PublicApi(nodeIndex int) services.PublicApi
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse
 	SendTransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256
 	SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) chan uint64
-	SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse
-	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse
-	CallCounterGet(ctx context.Context, nodeIndex int) chan uint64
 	DumpState()
 	WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256)
 	WaitForTransactionInStateForAtMost(ctx context.Context, nodeIndex int, txhash primitives.Sha256, atMost time.Duration)
 	Size() int
-	MetricsString() string
+	MetricsString(nodeIndex int) string
 }
 
 type inProcessNetwork struct {
@@ -48,7 +55,6 @@ type inProcessNetwork struct {
 	gossipTransport gossipAdapter.TamperingTransport
 	description     string
 	testLogger      log.BasicLogger
-	metricRegistry  metric.Registry
 }
 
 func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
@@ -60,7 +66,7 @@ func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
 			node.statePersistence,
 			node.nativeCompiler,
 			n.testLogger.WithTags(log.Node(node.name)),
-			n.metricRegistry,
+			node.metricRegistry,
 			node.config,
 		)
 	}
@@ -75,6 +81,7 @@ type networkNode struct {
 	statePersistence stateStorageAdapter.TamperingStatePersistence
 	nativeCompiler   nativeProcessorAdapter.Compiler
 	nodeLogic        bootstrap.NodeLogic
+	metricRegistry   metric.Registry
 }
 
 func (n *inProcessNetwork) WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256) {
@@ -85,12 +92,13 @@ func (n *inProcessNetwork) WaitForTransactionInStateForAtMost(ctx context.Contex
 	blockHeight := n.BlockPersistence(nodeIndex).WaitForTransaction(ctx, txhash, atMost)
 	err := n.nodes[nodeIndex].statePersistence.WaitUntilCommittedBlockOfHeight(ctx, blockHeight)
 	if err != nil {
+		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
 }
 
-func (n *inProcessNetwork) MetricsString() string {
-	return n.metricRegistry.String()
+func (n *inProcessNetwork) MetricsString(i int) string {
+	return n.nodes[i].metricRegistry.String()
 }
 
 func (n *inProcessNetwork) Description() string {
@@ -124,7 +132,7 @@ func (n *inProcessNetwork) SendTransfer(ctx context.Context, nodeIndex int, amou
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	go func() {
+	supervised.ShortLived(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -133,7 +141,8 @@ func (n *inProcessNetwork) SendTransfer(ctx context.Context, nodeIndex int, amou
 			panic(fmt.Sprintf("error in transfer: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
-	}()
+
+	})
 	return ch
 }
 
@@ -145,12 +154,12 @@ func (n *inProcessNetwork) SendTransferInBackground(ctx context.Context, nodeInd
 		SignedTransaction: builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder(),
 	}).Build()
 
-	go func() {
+	supervised.ShortLived(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		publicApi.SendTransaction(ctx, &services.SendTransactionInput{ // we ignore timeout here.
 			ClientRequest: request,
 		})
-	}()
+	})
 	return digest.CalcTxHash(request.SignedTransaction().Transaction())
 }
 
@@ -162,7 +171,7 @@ func (n *inProcessNetwork) SendInvalidTransfer(ctx context.Context, nodeIndex in
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	go func() {
+	supervised.ShortLived(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -171,7 +180,7 @@ func (n *inProcessNetwork) SendInvalidTransfer(ctx context.Context, nodeIndex in
 			panic(fmt.Sprintf("error in invalid transfer: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
-	}()
+	})
 	return ch
 }
 
@@ -183,7 +192,7 @@ func (n *inProcessNetwork) CallGetBalance(ctx context.Context, nodeIndex int, fo
 	}).Build()
 
 	ch := make(chan uint64)
-	go func() {
+	supervised.ShortLived(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: request,
@@ -193,7 +202,7 @@ func (n *inProcessNetwork) CallGetBalance(ctx context.Context, nodeIndex int, fo
 		}
 		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
 		ch <- outputArgsIterator.NextArguments().Uint64Value()
-	}()
+	})
 	return ch
 }
 
@@ -219,7 +228,7 @@ func (n *inProcessNetwork) SendDeployCounterContract(ctx context.Context, nodeIn
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	go func() {
+	supervised.ShortLived(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -228,7 +237,7 @@ func (n *inProcessNetwork) SendDeployCounterContract(ctx context.Context, nodeIn
 			panic(fmt.Sprintf("error sending counter deploy: %v", err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
-	}()
+	})
 	return ch
 }
 
@@ -243,7 +252,7 @@ func (n *inProcessNetwork) SendCounterAdd(ctx context.Context, nodeIndex int, am
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	go func() {
+	supervised.ShortLived(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
@@ -252,7 +261,7 @@ func (n *inProcessNetwork) SendCounterAdd(ctx context.Context, nodeIndex int, am
 			panic(fmt.Sprintf("error sending counter add for the amount %d: %v", amount, err)) // TODO: improve
 		}
 		ch <- output.ClientResponse
-	}()
+	})
 	return ch
 }
 
@@ -265,7 +274,7 @@ func (n *inProcessNetwork) CallCounterGet(ctx context.Context, nodeIndex int) ch
 	}).Build()
 
 	ch := make(chan uint64)
-	go func() {
+	supervised.ShortLived(n.testLogger, func() {
 		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: request,
@@ -275,7 +284,7 @@ func (n *inProcessNetwork) CallCounterGet(ctx context.Context, nodeIndex int) ch
 		}
 		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
 		ch <- outputArgsIterator.NextArguments().Uint64Value()
-	}()
+	})
 	return ch
 }
 

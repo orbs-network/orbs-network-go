@@ -87,12 +87,12 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 
 func TestSendTransaction_TimesOut(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		timeout := 1 * time.Second
+		timeout := 10 * time.Millisecond
 		harness := newPublicApiHarness(ctx, timeout)
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {
-			time.Sleep(5 * time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 		})
 
 		start := time.Now()

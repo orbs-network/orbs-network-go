@@ -14,8 +14,18 @@ TBD
 * *We modified the default Go implementation*
 
 ### Synchronization
-TBD
-* *Channel vs mutex: guidelines for using each of them*
+
+Our coding conventions follow two alternative patterns for synchronization within a service:
+* **Channel-based** - where a long living goroutine handles serially messages sent to it via a channel.
+* **Mutex-based** - where a mutex is used for fine grained locks over shared data accessed by multiple goroutines.
+
+#### Mutex best practices
+
+* Use a `RWMutex` and separate between read locks and write locks. Do not assume that reading without a lock is safe.
+* All state variables that are protected by the mutex should have a name suffix `UnderMutex` and be declared immediately after the mutex.
+* Unlocks of the mutex should be done using `defer mutex.Unlock()` and appear immediately after the locks. Function scope should be designed according to this principle to avoid locking the mutex for too long.
+* Locks should be for as short as possible (only while the data is accessed). Never make a service RPC call or an IO call when the mutex is locked.
+* Beware of the classic pitfall of (1) Read lock and unlock (2) Processing (3) Write lock and unlock. During phase (2) the read data might no longer be relevant due to another write. A way to mitigate this is to compare the read data during phase (3) to make sure it's still as expected and if not, abort the write.
 
 ### Error handling
 The Orbs platform is a self-healing eco-system. This means that returning Go `Error`s is only meaningful as a logging tool.
@@ -39,6 +49,11 @@ TBD
 
 ### Performance testing
 TBD
+
+### Testing Strategy
+Before
+During
+After
 
 ### CI
 TBD

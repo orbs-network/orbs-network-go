@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -12,7 +13,7 @@ import (
 
 func TestWriteAtHeight(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(0)
-	d := newDriver(persistenceMock, 5)
+	d := newDriver(persistenceMock, 5, nil)
 	persistenceMock.
 		When("Read", primitives.ContractName("c"), "k1").
 		Return((*protocol.StateRecord)(nil), false, nil).
@@ -44,9 +45,9 @@ func TestNoLayers(t *testing.T) {
 		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
 		Return(nil).
 		Times(2)
-	d := newDriver(persistenceMock, 0)
-	d.writeFull(1, 1, primitives.MerkleSha256{1}, "c", "k", "v1")
-	d.writeFull(2, 2, primitives.MerkleSha256{2}, "c", "k", "v2")
+	d := newDriver(persistenceMock, 0, nil)
+	d.writeFull(1, 1, "c", "k", "v1")
+	d.writeFull(2, 2, "c", "k", "v2")
 
 	_, _, err := d.read(1, "c", "k")
 	require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
@@ -57,7 +58,7 @@ func TestNoLayers(t *testing.T) {
 }
 
 func TestWriteAtHeightAndDeleteAtLaterHeight(t *testing.T) {
-	d := newDriver(statePersistenceMockWithWriteAnyNoErrors(0), 5)
+	d := newDriver(statePersistenceMockWithWriteAnyNoErrors(0), 5, nil)
 	d.write(1, "", "k1", "v1")
 	d.write(2, "", "k1", "")
 
@@ -88,11 +89,11 @@ func TestMergeToPersistence(t *testing.T) {
 			return nil
 		}).
 		Times(2)
-	d := newDriver(persistenceMock, 2)
-	d.writeFull(1, 1, primitives.MerkleSha256{1}, "c", "k", "v1")
-	d.writeFull(2, 2, primitives.MerkleSha256{2}, "c", "k", "v2")
-	d.writeFull(3, 3, primitives.MerkleSha256{3}, "c", "k", "v3")
-	d.writeFull(4, 4, primitives.MerkleSha256{4}, "c", "k", "v4")
+	d := newDriver(persistenceMock, 2, nil)
+	d.writeFull(1, 1, "c", "k", "v1")
+	d.writeFull(2, 2, "c", "k", "v2")
+	d.writeFull(3, 3, "c", "k", "v3")
+	d.writeFull(4, 4, "c", "k", "v4")
 
 	_, errCalled := persistenceMock.Verify()
 	require.NoError(t, errCalled, "error happened when it should not")
@@ -100,11 +101,11 @@ func TestMergeToPersistence(t *testing.T) {
 
 func TestReadOutOfRange(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(2)
-	d := newDriver(persistenceMock, 2)
-	d.writeFull(1, 1, primitives.MerkleSha256{1}, "c", "k", "v1")
-	d.writeFull(2, 2, primitives.MerkleSha256{2}, "c", "k", "v2")
-	d.writeFull(3, 3, primitives.MerkleSha256{3}, "c", "k", "v3")
-	d.writeFull(4, 4, primitives.MerkleSha256{4}, "c", "k", "v4")
+	d := newDriver(persistenceMock, 2, nil)
+	d.writeFull(1, 1, "c", "k", "v1")
+	d.writeFull(2, 2, "c", "k", "v2")
+	d.writeFull(3, 3, "c", "k", "v3")
+	d.writeFull(4, 4, "c", "k", "v4")
 
 	_, _, err := d.read(1, "c", "k")
 	require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
@@ -118,9 +119,9 @@ func TestReadOutOfRange(t *testing.T) {
 
 func TestReadHash(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
-	d := newDriver(persistenceMock, 1)
-	d.writeFull(1, 1, primitives.MerkleSha256{1}, "c", "k", "v1")
-	d.writeFull(2, 2, primitives.MerkleSha256{2}, "c", "k", "v2")
+	d := newDriver(persistenceMock, 1, nil)
+	d.writeFull(1, 1, "c", "k", "v1")
+	d.writeFull(2, 2, "c", "k", "v2")
 
 	root, err := d.readHash(1)
 	require.NoError(t, err)
@@ -137,14 +138,37 @@ func TestReadHash(t *testing.T) {
 	require.NoError(t, errCalled, "error happened when it should not")
 }
 
-type driver struct {
-	inner *rollingRevisions
+func TestRevisionEviction(t *testing.T) {
+	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
+	var evictedMerkleRoots []primitives.MerkleSha256
+	d := newDriver(persistenceMock, 1, func(sha256 primitives.MerkleSha256){
+		evictedMerkleRoots = append(evictedMerkleRoots, sha256)
+	})
+
+	firstHash, _ := d.readHash(0)
+	d.writeFull(1, 1, "c", "k", "v1")
+	require.Len(t, evictedMerkleRoots, 0)
+
+	d.writeFull(2, 2, "c", "k", "v2")
+	require.Equal(t, []primitives.MerkleSha256{firstHash}, evictedMerkleRoots)
 }
 
-func newDriver(persistence adapter.StatePersistence, layers int) *driver {
-	return &driver{
-		newRollingRevisions(persistence, layers),
+type driver struct {
+	inner         *rollingRevisions
+	evictCallback func(h primitives.BlockHeight, ts primitives.TimestampNano, r primitives.MerkleSha256)
+}
+
+func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.MerkleSha256)) *driver {
+	m := newMerkleMock()
+	if merkleForgetCallback != nil {
+		m.When("Forget", mock.Any).Call(merkleForgetCallback).Return(nil).Times(1)
+	} else {
+		m.When("Forget", mock.Any).Return(nil).Times(1)
 	}
+	d := &driver{
+		inner: newRollingRevisions(persistence, layers, m),
+	}
+	return d
 }
 
 func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractName, kv ...string) error {
@@ -152,15 +176,15 @@ func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractNam
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
 	}
-	return d.inner.addRevision(h, 0, primitives.MerkleSha256{}, diff)
+	return d.inner.addRevision(h, 0, diff)
 }
 
-func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, contract primitives.ContractName, kv ...string) error {
+func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano, contract primitives.ContractName, kv ...string) error {
 	diff := adapter.ChainState{contract: make(adapter.ContractState)}
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
 	}
-	return d.inner.addRevision(h, ts, root, diff)
+	return d.inner.addRevision(h, ts, diff)
 }
 
 func (d *driver) read(h primitives.BlockHeight, contract primitives.ContractName, key string) (string, bool, error) {
@@ -198,4 +222,28 @@ func (spm *StatePersistenceMock) Read(contract primitives.ContractName, key stri
 }
 func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.MerkleSha256, error) {
 	return 0, 0, primitives.MerkleSha256{}, nil
+}
+
+type MerkleMock struct {
+	mock.Mock
+}
+
+func newMerkleMock() *MerkleMock {
+	m := &MerkleMock{}
+	var counter byte = 0
+	m.When("Update", mock.Any, mock.Any).
+		Call(func(root primitives.MerkleSha256, diff merkle.MerkleDiffs) (primitives.MerkleSha256, error){
+			counter++
+			return primitives.MerkleSha256{counter}, nil
+		}).
+		AtLeast(0)
+	return m
+}
+
+func (mm *MerkleMock) Update(rootMerkle primitives.MerkleSha256, diffs merkle.MerkleDiffs) (primitives.MerkleSha256, error) {
+	ret := mm.Mock.Called(rootMerkle, diffs)
+	return ret.Get(0).(primitives.MerkleSha256), ret.Error(1)
+}
+func (mm *MerkleMock) Forget(rootHash primitives.MerkleSha256) {
+	mm.Mock.Called(rootHash)
 }

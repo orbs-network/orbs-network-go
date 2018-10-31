@@ -11,40 +11,16 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"io"
-	"os"
 )
 
-func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensusAlgo consensus.ConsensusAlgoType, testId string) *inProcessNetwork {
-	var output io.Writer
-	output = os.Stdout
+func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *inProcessNetwork {
 
-	if os.Getenv("NO_LOG_STDOUT") == "true" {
-		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic(err)
-		}
-
-		output = logFile
-	}
-
-	testLogger := log.GetLogger(
-		log.String("_test", "acceptance"),
-		log.String("_branch", os.Getenv("GIT_BRANCH")),
-		log.String("_commit", os.Getenv("GIT_COMMIT")),
-		log.String("_test-id", testId),
-	).
-		WithOutput(log.NewOutput(output).WithFormatter(log.NewJsonFormatter())).
-		WithFilters(logFilters...).
-		WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
-	metricRegistry := metric.NewRegistry()
-
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport()
+	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger)
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
@@ -69,11 +45,14 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 			nodeKeyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
+			maxTxPerBlock,
 		)
 
 		node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 		node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
 		node.nativeCompiler = nativeProcessorAdapter.NewFakeCompiler()
+
+		node.metricRegistry = metric.NewRegistry()
 
 		nodes[i] = node
 	}
@@ -83,7 +62,6 @@ func NewAcceptanceTestNetwork(numNodes uint32, logFilters []log.Filter, consensu
 		gossipTransport: sharedTamperingTransport,
 		description:     description,
 		testLogger:      testLogger,
-		metricRegistry:  metricRegistry,
 	}
 
 	// must call network.StartNodes(ctx) to actually start the nodes in the network

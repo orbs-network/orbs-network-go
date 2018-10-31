@@ -60,7 +60,7 @@ type transportContractContext struct {
 
 func aTamperingTransport(ctx context.Context) *transportContractContext {
 	res := &transportContractContext{}
-	transport := NewTamperingTransport()
+	transport := NewTamperingTransport(log.GetLogger(log.String("adapter", "transport")))
 	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
 	res.listeners = []*mockListener{

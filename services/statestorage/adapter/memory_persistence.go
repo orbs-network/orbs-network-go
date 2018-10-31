@@ -21,15 +21,14 @@ type InMemoryStatePersistence struct {
 
 func NewInMemoryStatePersistence() *InMemoryStatePersistence {
 
-	// TODO - this is our hard coded Genesis block. Move this to a more dignified place or load from a file
-
-	_, root := merkle.NewForest()
+	_, merkleRoot := merkle.NewForest()
+	// TODO - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
 	return &InMemoryStatePersistence{
 		mutex:      sync.RWMutex{},
 		fullState:  ChainState{},
 		height:     0,
 		ts:         0,
-		merkleRoot: root,
+		merkleRoot: merkleRoot,
 	}
 }
 

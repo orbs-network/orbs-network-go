@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -98,7 +99,9 @@ func NewBenchmarkConsensusAlgo(
 	blockStorage.RegisterConsensusBlocksHandler(s)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
-		go s.leaderConsensusRoundRunLoop(ctx)
+		supervised.LongLived(ctx, logger, func() {
+			s.leaderConsensusRoundRunLoop(ctx)
+		})
 	}
 
 	return s
