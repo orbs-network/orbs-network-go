@@ -12,14 +12,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
-	testNativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
@@ -27,10 +25,7 @@ import (
 
 type InProcessNetwork interface {
 	PublicApi(nodeIndex int) services.PublicApi
-
-	SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse
-	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse
-	CallCounterGet(ctx context.Context, nodeIndex int) chan uint64
+	GetCounterContract() *contracts.CounterContract
 }
 
 type InProcessTestNetwork interface {
@@ -82,6 +77,14 @@ type networkNode struct {
 	nativeCompiler   nativeProcessorAdapter.Compiler
 	nodeLogic        bootstrap.NodeLogic
 	metricRegistry   metric.Registry
+}
+
+func (n *networkNode) GetPublicApi() services.PublicApi {
+	return n.nodeLogic.PublicApi()
+}
+
+func (n *networkNode) GetCompiler() nativeProcessorAdapter.Compiler {
+	return n.nativeCompiler
 }
 
 func (n *inProcessNetwork) WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256) {
@@ -206,86 +209,12 @@ func (n *inProcessNetwork) CallGetBalance(ctx context.Context, nodeIndex int, fo
 	return ch
 }
 
-func (n *inProcessNetwork) SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse {
-	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
-
-	// if needed, provide a fake implementation of this contract to all nodes
+func (n *inProcessNetwork) GetCounterContract() *contracts.CounterContract {
+	var apis []contracts.APIProvider
 	for _, node := range n.nodes {
-		if fakeCompiler, ok := node.nativeCompiler.(testNativeProcessorAdapter.FakeCompiler); ok {
-			fakeCompiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
-		}
+		apis = append(apis, node)
 	}
-
-	tx := builders.Transaction().
-		WithMethod("_Deployments", "deployService").
-		WithArgs(
-			fmt.Sprintf("CounterFrom%d", counterStart),
-			uint32(protocol.PROCESSOR_TYPE_NATIVE),
-			[]byte(contracts.NativeSourceCodeForCounter(counterStart)),
-		)
-	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: tx.Builder(),
-	}).Build()
-
-	ch := make(chan *client.SendTransactionResponse)
-	supervized.ShortLived(n.testLogger, func() {
-		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
-		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest: request,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error sending counter deploy: %v", err)) // TODO: improve
-		}
-		ch <- output.ClientResponse
-	})
-	return ch
-}
-
-func (n *inProcessNetwork) SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
-	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
-
-	tx := builders.Transaction().
-		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "add").
-		WithArgs(amount)
-	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: tx.Builder(),
-	}).Build()
-
-	ch := make(chan *client.SendTransactionResponse)
-	supervized.ShortLived(n.testLogger, func() {
-		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
-		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest: request,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error sending counter add for the amount %d: %v", amount, err)) // TODO: improve
-		}
-		ch <- output.ClientResponse
-	})
-	return ch
-}
-
-func (n *inProcessNetwork) CallCounterGet(ctx context.Context, nodeIndex int) chan uint64 {
-	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
-
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: builders.NonSignedTransaction().
-			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get").Builder(),
-	}).Build()
-
-	ch := make(chan uint64)
-	supervized.ShortLived(n.testLogger, func() {
-		publicApi := n.nodes[nodeIndex].nodeLogic.PublicApi()
-		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
-			ClientRequest: request,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error in calling counter get: %v", err)) // TODO: improve
-		}
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
-		ch <- outputArgsIterator.NextArguments().Uint64Value()
-	})
-	return ch
+	return &contracts.CounterContract{APIs:apis, Logger:n.testLogger}
 }
 
 func (n *inProcessNetwork) DumpState() {
