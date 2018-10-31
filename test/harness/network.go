@@ -27,6 +27,10 @@ import (
 
 type InProcessNetwork interface {
 	PublicApi(nodeIndex int) services.PublicApi
+
+	SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse
+	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	CallCounterGet(ctx context.Context, nodeIndex int) chan uint64
 }
 
 type InProcessTestNetwork interface {
@@ -39,9 +43,6 @@ type InProcessTestNetwork interface {
 	SendTransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256
 	SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse
 	CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) chan uint64
-	SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse
-	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse
-	CallCounterGet(ctx context.Context, nodeIndex int) chan uint64
 	DumpState()
 	WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256)
 	WaitForTransactionInStateForAtMost(ctx context.Context, nodeIndex int, txhash primitives.Sha256, atMost time.Duration)
