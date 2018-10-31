@@ -220,7 +220,7 @@ func (h *harness) getCounterValue(t *testing.T, expectedReturnValue uint64) {
 	require.EqualValues(t, expectedReturnValue, uint64(callResponse.OutputArguments[0].Value.(float64)), "counter value did not match expected one")
 }
 
-func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64) {
+func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64) primitives.BlockHeight {
 	addCounterJSONBytes := generateAddCounterJSON(amount)
 	err := ioutil.WriteFile("../json/add.json", addCounterJSONBytes, 0644)
 	if err != nil {
@@ -238,6 +238,8 @@ func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair,
 	require.NoError(t, addResponseUnmarshalErr, "error calling Counter.add()")
 	require.Equal(t, 1, addResponse.TransactionReceipt.ExecutionResult, "Wrong ExecutionResult value (expected 1 for success)")
 	require.EqualValues(t, nil, addResponse.TransactionReceipt.OutputArguments, "expected no output arguments")
+
+	return primitives.BlockHeight(addResponse.BlockHeight)
 }
 
 func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
@@ -277,7 +279,9 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddAmount := uint64(r.Intn(4000)) + 1000 // Random int between 1000 and 5000
 
-	h.addAmountToCounter(t, keyPair, randomAddAmount)
+	bh := h.addAmountToCounter(t, keyPair, randomAddAmount)
+
+	t.Logf("Added %d to counter contract, recorded at block-height=%s", randomAddAmount, bh)
 
 	h.getCounterValue(t, randomAddAmount)
 }
