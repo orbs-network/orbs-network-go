@@ -85,6 +85,7 @@ func AnyNthMessage(n int) MessagePredicate {
 func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.InProcessTestNetwork, t *testing.T, numTransactions int) {
 	fromAddress := 5
 	toAddress := 6
+	contract := network.GetBenchmarkTokenContract()
 
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256
@@ -92,7 +93,7 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.InP
 		amount := uint64(rand.Int63n(100))
 		expectedSum += amount
 
-		txHash := network.SendTransferInBackground(ctx, rand.Intn(network.Size()), amount, fromAddress, toAddress)
+		txHash := contract.SendTransferInBackground(ctx, rand.Intn(network.Size()), amount, fromAddress, toAddress)
 		txHashes = append(txHashes, txHash)
 	}
 	for _, txHash := range txHashes {
@@ -102,7 +103,7 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.InP
 	}
 
 	for i := 0; i < network.Size(); i++ {
-		actualSum := <-network.CallGetBalance(ctx, i, toAddress)
+		actualSum := <-contract.CallGetBalance(ctx, i, toAddress)
 
 		require.EqualValuesf(t, expectedSum, actualSum, "balance did not equal expected balance in node %d", i)
 	}

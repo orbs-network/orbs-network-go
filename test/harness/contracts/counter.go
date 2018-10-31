@@ -3,7 +3,6 @@ package contracts
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -14,17 +13,17 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-type CounterContract struct {
-	APIs   []APIProvider
-	Logger log.BasicLogger
-
+type CounterClient interface {
+	SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse
+	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse
+	CallCounterGet(ctx context.Context, nodeIndex int) chan uint64
 }
 
-func (c *CounterContract) SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse {
+func (c *contractClient) SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	// if needed, provide a fake implementation of this contract to all nodes
-	for _, api := range c.APIs {
+	for _, api := range c.apis {
 		if fakeCompiler, ok := api.GetCompiler().(adapter.FakeCompiler); ok {
 			fakeCompiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
 		}
@@ -42,8 +41,8 @@ func (c *CounterContract) SendDeployCounterContract(ctx context.Context, nodeInd
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	supervized.ShortLived(c.Logger, func() {
-		publicApi := c.APIs[nodeIndex].GetPublicApi()
+	supervized.ShortLived(c.logger, func() {
+		publicApi := c.apis[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
 		})
@@ -55,7 +54,7 @@ func (c *CounterContract) SendDeployCounterContract(ctx context.Context, nodeInd
 	return ch
 }
 
-func (c *CounterContract) SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
+func (c *contractClient) SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.Transaction().
@@ -66,8 +65,8 @@ func (c *CounterContract) SendCounterAdd(ctx context.Context, nodeIndex int, amo
 	}).Build()
 
 	ch := make(chan *client.SendTransactionResponse)
-	supervized.ShortLived(c.Logger, func() {
-		publicApi := c.APIs[nodeIndex].GetPublicApi()
+	supervized.ShortLived(c.logger, func() {
+		publicApi := c.apis[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: request,
 		})
@@ -79,7 +78,7 @@ func (c *CounterContract) SendCounterAdd(ctx context.Context, nodeIndex int, amo
 	return ch
 }
 
-func (c *CounterContract) CallCounterGet(ctx context.Context, nodeIndex int) chan uint64 {
+func (c *contractClient) CallCounterGet(ctx context.Context, nodeIndex int) chan uint64 {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	request := (&client.CallMethodRequestBuilder{
@@ -88,8 +87,8 @@ func (c *CounterContract) CallCounterGet(ctx context.Context, nodeIndex int) cha
 	}).Build()
 
 	ch := make(chan uint64)
-	supervized.ShortLived(c.Logger, func() {
-		publicApi := c.APIs[nodeIndex].GetPublicApi()
+	supervized.ShortLived(c.logger, func() {
+		publicApi := c.apis[nodeIndex].GetPublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: request,
 		})
