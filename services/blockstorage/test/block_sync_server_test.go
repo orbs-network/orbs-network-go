@@ -16,9 +16,8 @@ import (
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		sourcePK := keys.Ed25519KeyPairForTests(4).PublicKey()
-		harness := newHarness(ctx).withNodeKey(sourcePK)
-		harness.expectSyncToBroadcastInBackground()
-		harness.setupSomeBlocks(ctx, 3)
+		harness := newBlockStorageHarness().withNodeKey(sourcePK).withSyncBroadcast(1).start(ctx)
+		harness.commitSomeBlocks(ctx, 3)
 		senderPK := keys.Ed25519KeyPairForTests(1).PublicKey()
 
 		msg := builders.BlockAvailabilityRequestInput().
@@ -57,10 +56,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiff()
+		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(1).start(ctx)
 		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
@@ -74,11 +70,9 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *
 }
 
 func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
-
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.setupSomeBlocks(ctx, 3)
+		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness.commitSomeBlocks(ctx, 3)
 
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 		msg := builders.BlockAvailabilityRequestInput().
@@ -97,10 +91,14 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 func TestSourceRespondsWithChunks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		batchSize := uint32(10)
-		harness := newHarness(ctx).withBatchSize(batchSize).withNodeKey(keys.Ed25519KeyPairForTests(4).PublicKey())
-		harness.expectSyncToBroadcastInBackground()
+		harness := newBlockStorageHarness().
+			withBatchSize(batchSize).
+			withNodeKey(keys.Ed25519KeyPairForTests(4).PublicKey()).
+			withSyncBroadcast(1).
+			start(ctx)
+
 		lastBlock := 12
-		harness.setupSomeBlocks(ctx, lastBlock)
+		harness.commitSomeBlocks(ctx, lastBlock)
 
 		firstHeight := primitives.BlockHeight(1)
 		lastHeight := primitives.BlockHeight(10) // hardcoding this, but it is a function of the batchSize
@@ -143,9 +141,8 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 			WithLastCommittedBlockHeight(lastHeight).
 			Build()
 
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.setupSomeBlocks(ctx, lastBlock)
+		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness.commitSomeBlocks(ctx, lastBlock)
 
 		harness.gossip.Never("SendBlockSyncResponse", mock.Any, mock.Any)
 

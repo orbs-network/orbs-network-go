@@ -17,9 +17,7 @@ import (
 
 func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiffTimes(2)
+		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(2).start(ctx)
 
 		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
 		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
@@ -46,9 +44,7 @@ func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
 
 func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiffTimes(4)
+		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(4).start(ctx)
 
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -99,9 +95,7 @@ func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
 // TODO move to unit tests
 func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx)
-		harness.expectSyncToBroadcastInBackground()
-		harness.expectCommitStateDiffTimes(4)
+		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(4).start(ctx)
 
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -151,7 +145,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 
 func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
+		harness := newBlockStorageHarness().withSyncNoCommitTimeout(3 * time.Millisecond).start(ctx)
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(2)
 
@@ -161,9 +155,12 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx).withSyncNoCommitTimeout(3 * time.Millisecond)
-
-		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(1)
+		harness := newBlockStorageHarness().
+			withSyncNoCommitTimeout(3 * time.Millisecond).
+			withSyncBroadcast(1).
+			withCommitStateDiff(4).
+			withValidateConsensusAlgos(4).
+			start(ctx)
 
 		// latch until we sent the broadcast (meaning the state machine is now at collecting car state
 		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
@@ -200,9 +197,6 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
-		harness.expectCommitStateDiffTimes(4)
-		harness.expectValidateWithConsensusAlgosTimes(4)
-
 		// fake the response
 		harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse)
 
@@ -217,10 +211,11 @@ func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	// to make sure we stay at the same state logically.
 	// system timing may cause it to flake, but at a very low probability now
 	test.WithContext(func(ctx context.Context) {
-		harness := newHarness(ctx).withSyncNoCommitTimeout(5 * time.Millisecond)
-		harness.expectSyncToBroadcastInBackground() // this is the startup sync, we only expect that one
-
-		harness.expectCommitStateDiffTimes(10)
+		harness := newBlockStorageHarness().
+			withSyncNoCommitTimeout(5 * time.Millisecond).
+			withSyncBroadcast(1).
+			withCommitStateDiff(10).
+			start(ctx)
 
 		// we do not assume anything about the implementation, commit a block/ms and see if the sync tries to broadcast
 		latch := make(chan struct{})
