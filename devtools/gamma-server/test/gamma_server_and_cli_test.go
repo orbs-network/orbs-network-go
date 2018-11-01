@@ -186,7 +186,7 @@ func (h *harness) getBalanceOfAddress(t *testing.T, targetAddress primitives.Rip
 	require.EqualValues(t, expectedAmount, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
 }
 
-func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair) {
+func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair) primitives.BlockHeight {
 	deployCommandOutput := runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(h.port))
@@ -198,26 +198,45 @@ func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPa
 	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
 	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
+
+	return primitives.BlockHeight(response.BlockHeight)
 }
 
-func (h *harness) getCounterValue(t *testing.T, expectedReturnValue uint64) {
-	getCounterJSONBytes := generateGetCounterJSON()
-	err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
-	if err != nil {
-		t.Log("Couldn't write file", err)
+func (h *harness) getCounterValue(t *testing.T, expectedReturnValue uint64, asOfBlockHeight primitives.BlockHeight) {
+
+	innerGet := func() *callMethodCliResponse {
+		getCounterJSONBytes := generateGetCounterJSON()
+		err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
+		if err != nil {
+			t.Log("Couldn't write file", err)
+		}
+		require.NoError(t, err, "Couldn't write transfer JSON file")
+
+		// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
+		callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json", "-host", getNodeUrl(h.port))
+
+		callResponse := &callMethodCliResponse{}
+		callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
+
+		require.NoError(t, callUnmarshalErr, "error calling call_method")
+		require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, callResponse.CallResult, "wrong callResult value")
+		require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from Counter.get()")
+
+		return callResponse
 	}
-	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
-	callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json", "-host", getNodeUrl(h.port))
+	//TODO remove retry mechanism when spec changes as described in https://github.com/orbs-network/orbs-network-go/issues/400
+	for retries := 0; retries < 3; retries++ {
+		r := innerGet()
 
-	callResponse := &callMethodCliResponse{}
-	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
+		if primitives.BlockHeight(r.BlockHeight) >= asOfBlockHeight {
+			require.EqualValues(t, expectedReturnValue, uint64(r.OutputArguments[0].Value.(float64)), "counter value did not match expected one")
 
-	require.NoError(t, callUnmarshalErr, "error calling call_method")
-	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, callResponse.CallResult, "wrong callResult value")
-	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from Counter.get()")
-	require.EqualValues(t, expectedReturnValue, uint64(callResponse.OutputArguments[0].Value.(float64)), "counter value did not match expected one")
+			return
+		} else {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
 }
 
 func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64) primitives.BlockHeight {
@@ -272,16 +291,16 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
-	h.deployCounterContract(t, keyPair)
-	h.getCounterValue(t, 0)
+	deployedBlockHeight := h.deployCounterContract(t, keyPair)
+	h.getCounterValue(t, 0, deployedBlockHeight)
 
 	// Add a random amount to the counter using Counter.add()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddAmount := uint64(r.Intn(4000)) + 1000 // Random int between 1000 and 5000
 
-	bh := h.addAmountToCounter(t, keyPair, randomAddAmount)
+	addBlockHeight := h.addAmountToCounter(t, keyPair, randomAddAmount)
 
-	t.Logf("Added %d to counter contract, recorded at block-height=%s", randomAddAmount, bh)
+	t.Logf("Added %d to counter contract, recorded at block-height=%s", randomAddAmount, addBlockHeight)
 
-	h.getCounterValue(t, randomAddAmount)
+	h.getCounterValue(t, randomAddAmount, addBlockHeight)
 }
