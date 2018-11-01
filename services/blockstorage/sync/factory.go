@@ -36,7 +36,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 		sf:          f,
 		idleTimeout: f.config.BlockSyncNoCommitInterval,
 		logger:      f.logger,
-		restartIdle: make(chan struct{}, 1),
+		conduit:     f.c,
 	}
 }
 
@@ -66,7 +66,7 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519P
 		collectTimeout: f.config.BlockSyncCollectChunksTimeout,
 		logger:         f.logger,
 		abort:          make(chan struct{}),
-		c:              f.c,
+		conduit:        f.c,
 	}
 }
 

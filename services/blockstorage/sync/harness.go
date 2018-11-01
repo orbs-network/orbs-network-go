@@ -93,6 +93,7 @@ func newBlockSyncHarness() *blockSyncHarness {
 	logger := log.GetLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	conduit := &blockSyncConduit{
+		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
 	}

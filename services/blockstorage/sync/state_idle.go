@@ -11,8 +11,8 @@ import (
 type idleState struct {
 	idleTimeout func() time.Duration
 	logger      log.BasicLogger
-	restartIdle chan struct{}
 	sf          *stateFactory
+	conduit     *blockSyncConduit
 }
 
 func (s *idleState) name() string {
@@ -29,7 +29,7 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	case <-noCommitTimer.C:
 		s.logger.Info("starting sync after no-commit timer expired")
 		return s.sf.CreateCollectingAvailabilityResponseState()
-	case <-s.restartIdle:
+	case <-s.conduit.idleReset:
 		return s.sf.CreateIdleState()
 	case <-ctx.Done():
 		return nil
@@ -37,14 +37,11 @@ func (s *idleState) processState(ctx context.Context) syncState {
 }
 
 func (s *idleState) blockCommitted(ctx context.Context) {
-	// the default below is important as its possible to get a block committed event before the processState got to the select
-	// in a highly concurrent scenario where the state is recreated rapidly, this will deadlock the commit flow
-	// its better to skip notification to avoid that deadlock
 	select {
-	case s.restartIdle <- struct{}{}:
+	case s.conduit.idleReset <- struct{}{}:
 		s.logger.Info("sync got new block commit")
-	default:
-		s.logger.Info("channel was not ready, skipping notification")
+	case <-ctx.Done():
+		s.logger.Info("terminated on writing new block notification", log.String("context-message", ctx.Err().Error()))
 	}
 }
 

@@ -17,7 +17,7 @@ type waitingForChunksState struct {
 	collectTimeout func() time.Duration
 	logger         log.BasicLogger
 	abort          chan struct{}
-	c              *blockSyncConduit
+	conduit        *blockSyncConduit
 }
 
 func (s *waitingForChunksState) name() string {
@@ -40,7 +40,7 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateIdleState()
-	case blocks := <-s.c.blocks:
+	case blocks := <-s.conduit.blocks:
 		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateProcessingBlocksState(blocks)
 	case <-s.abort:
@@ -66,7 +66,7 @@ func (s *waitingForChunksState) gotBlocks(ctx context.Context, message *gossipme
 		s.abort <- struct{}{}
 	} else {
 		select {
-		case s.c.blocks <- message:
+		case s.conduit.blocks <- message:
 		case <-ctx.Done():
 			s.logger.Info("terminated on writing new block chunk message",
 				log.String("context-message", ctx.Err().Error()),

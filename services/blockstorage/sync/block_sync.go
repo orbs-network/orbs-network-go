@@ -38,6 +38,7 @@ type BlockSyncStorage interface {
 }
 
 type blockSyncConduit struct {
+	idleReset chan struct{}
 	responses chan *gossipmessages.BlockAvailabilityResponseMessage
 	blocks    chan *gossipmessages.BlockSyncResponseMessage
 }
@@ -54,6 +55,7 @@ type BlockSync struct {
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
 	conduit := &blockSyncConduit{
+		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
 	}
