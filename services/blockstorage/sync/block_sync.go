@@ -37,6 +37,11 @@ type BlockSyncStorage interface {
 	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
 }
 
+type blockSyncConduit struct {
+	Responses chan *gossipmessages.BlockAvailabilityResponseMessage
+	Blocks    chan *gossipmessages.BlockSyncResponseMessage
+}
+
 type BlockSync struct {
 	logger       log.BasicLogger
 	sf           *stateFactory
@@ -44,15 +49,22 @@ type BlockSync struct {
 	storage      BlockSyncStorage
 	config       blockSyncConfig
 	currentState syncState
+	C            *blockSyncConduit
 }
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
+	conduit := &blockSyncConduit{
+		Responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		Blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+	}
+
 	bs := &BlockSync{
 		logger:  logger.WithTags(log.String("flow", "block-sync")),
-		sf:      NewStateFactory(config, gossip, storage, logger),
+		sf:      NewStateFactory(config, gossip, storage, conduit, logger),
 		gossip:  gossip,
 		storage: storage,
 		config:  config,
+		C:       conduit,
 	}
 
 	bs.logger.Info("block sync init",
@@ -74,7 +86,6 @@ func (bs *BlockSync) syncLoop(ctx context.Context) {
 		// TODO add metrics
 		bs.currentState = bs.currentState.processState(ctx)
 	}
-
 }
 
 func (bs *BlockSync) HandleBlockCommitted() {

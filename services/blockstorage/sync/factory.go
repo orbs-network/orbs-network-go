@@ -11,14 +11,22 @@ type stateFactory struct {
 	config  blockSyncConfig
 	gossip  gossiptopics.BlockSync
 	storage BlockSyncStorage
+	c       *blockSyncConduit
 	logger  log.BasicLogger
 }
 
-func NewStateFactory(config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *stateFactory {
+func NewStateFactory(
+	config blockSyncConfig,
+	gossip gossiptopics.BlockSync,
+	storage BlockSyncStorage,
+	syncConduit *blockSyncConduit,
+	logger log.BasicLogger) *stateFactory {
+
 	return &stateFactory{
 		config:  config,
 		gossip:  gossip,
 		storage: storage,
+		c:       syncConduit,
 		logger:  logger,
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
@@ -91,10 +92,14 @@ func newBlockSyncHarness() *blockSyncHarness {
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
 	ctx, cancel := context.WithCancel(context.Background())
+	conduit := &blockSyncConduit{
+		Responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		Blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+	}
 
 	return &blockSyncHarness{
 		logger:    logger,
-		sf:        NewStateFactory(cfg, gossip, storage, logger),
+		sf:        NewStateFactory(cfg, gossip, storage, conduit, logger),
 		ctx:       ctx,
 		ctxCancel: cancel,
 		config:    cfg,
