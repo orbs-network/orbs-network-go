@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/pkg/errors"
@@ -49,12 +50,15 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	}
 
 	// server goroutine
-	go t.serverMainLoop(ctx, t.config.GossipListenPort())
+	supervised.LongLived(ctx, logger, func() {
+		t.serverMainLoop(ctx, t.config.GossipListenPort())
+	})
 
 	// client goroutines
 	for peerNodeKey, peer := range t.config.GossipPeers(0) {
 		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
+			//TODO supervise
 			go t.clientMainLoop(ctx, peerAddress, t.peerQueues[peerNodeKey])
 		}
 	}

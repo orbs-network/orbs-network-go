@@ -25,7 +25,11 @@ type histogramExport struct {
 	Samples int64
 }
 
-func toMillis(nanoseconds float64) float64 {
+func toMillis(nanoseconds int64) float64 {
+	return floatToMillis(float64(nanoseconds))
+}
+
+func floatToMillis(nanoseconds float64) float64 {
 	return nanoseconds / 1e+6
 }
 
@@ -54,14 +58,14 @@ func (h *Histogram) String() string {
 	}
 
 	return fmt.Sprintf(
-		"metric %s: [min=%d, p50=%d, p95=%d, p99=%d, max=%d, avg=%f, samples=%d, error rate=%f]\n",
+		"metric %s: [min=%f, p50=%f, p95=%f, p99=%f, max=%f, avg=%f, samples=%d, error rate=%f]\n",
 		h.name,
-		histo.Min(),
-		histo.ValueAtQuantile(50),
-		histo.ValueAtQuantile(95),
-		histo.ValueAtQuantile(99),
-		histo.Max(),
-		histo.Mean(),
+		toMillis(histo.Min()),
+		toMillis(histo.ValueAtQuantile(50)),
+		toMillis(histo.ValueAtQuantile(95)),
+		toMillis(histo.ValueAtQuantile(99)),
+		toMillis(histo.Max()),
+		floatToMillis(histo.Mean()),
 		histo.TotalCount(),
 		errorRate)
 }
@@ -71,12 +75,12 @@ func (h *Histogram) Export() exportedMetric {
 
 	return &histogramExport{
 		h.name,
-		toMillis(float64(histo.Min())),
-		toMillis(float64(histo.ValueAtQuantile(50))),
-		toMillis(float64(histo.ValueAtQuantile(95))),
-		toMillis(float64(histo.ValueAtQuantile(99))),
-		toMillis(float64(histo.Max())),
-		toMillis(histo.Mean()),
+		toMillis(histo.Min()),
+		toMillis(histo.ValueAtQuantile(50)),
+		toMillis(histo.ValueAtQuantile(95)),
+		toMillis(histo.ValueAtQuantile(99)),
+		toMillis(histo.Max()),
+		floatToMillis(histo.Mean()),
 		histo.TotalCount(),
 	}
 }

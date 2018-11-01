@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -181,19 +180,11 @@ type cleaner interface {
 }
 
 func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, logger log.BasicLogger) chan struct{} {
-	//TODO use PeriodicalTrigger?
 	stopped := make(chan struct{})
-	ticker := time.NewTicker(tickInterval())
-	supervized.LongLived(ctx, logger, func() {
-		for {
-			select {
-			case <-ctx.Done():
-				close(stopped)
-				return
-			case <-ticker.C:
-				c.clearTransactionsOlderThan(ctx, time.Now().Add(-1*expiration()))
-			}
-		}
+	synchronization.NewPeriodicalTrigger(ctx, tickInterval(), logger, func() {
+		c.clearTransactionsOlderThan(ctx, time.Now().Add(-1*expiration()))
+	}, func() {
+		close(stopped)
 	})
 
 	return stopped

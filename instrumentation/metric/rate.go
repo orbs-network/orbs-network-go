@@ -37,7 +37,7 @@ func (r *Rate) Export() exportedMetric {
 	return rateExport{
 		r.name,
 		r.movingAverage.Value(),
-		toMillis(float64(tickInterval.Nanoseconds())),
+		toMillis(tickInterval.Nanoseconds()),
 	}
 }
 

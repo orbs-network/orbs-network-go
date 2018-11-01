@@ -70,7 +70,7 @@ func getKeypairFromFlags(publicKey string, privateKey string) (*keys.Ed25519KeyP
 	return keyPair, nil
 }
 
-func HandleRunCommand(args []string) (string, error) {
+func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 	if len(args) < 2 {
 		return ShowUsage(), nil
 	}

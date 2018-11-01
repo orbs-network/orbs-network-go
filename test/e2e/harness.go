@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"testing"
 	"time"
 )
 
@@ -237,4 +238,9 @@ func (h *harness) getMetrics() metrics {
 	json.Unmarshal(bytes, &m)
 
 	return m
+}
+
+func printTestTime(t *testing.T, msg string, last *time.Time) {
+	t.Logf("%s (+%.3fs)", msg, time.Now().Sub(*last).Seconds())
+	*last = time.Now()
 }
