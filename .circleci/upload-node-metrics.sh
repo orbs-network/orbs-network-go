@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-export GIT_BRANCH=$(. ./docker-tag.sh)
+export GIT_BRANCH=$(. ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)
 
 # it's way better to store metrics as one file query-wise

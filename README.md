@@ -14,7 +14,7 @@ If you only want to build the Docker images containing the node binaries, you do
 
   > Verify with `docker version`
 
-* Run `./docker-build.sh` to create the images:
+* Run `./docker/build/build.sh` to create the images:
 
   * `orbs:export` contains `orbs-node` and `gamma-cli` binaries in the `/opt/orbs` directory.
   * `orbs:gamma-server` contains self-sufficient development binary (similar to Ethereum's Ganache) and `gamma-cli` to communicate with it's server counterpart.
@@ -97,47 +97,43 @@ We use the official go test runner `go test`. It has minimal UI and result cachi
 
 ### Test types
 
-* Slow tests:
+#### E2E tests (slow)
 
-  ##### E2E tests
+> End-to-end tests check the entire system in a real life scenario mimicking real production with multiple nodes. It runs on docker with several nodes connected in a cluster. Due to their nature, E2E tests are slow to run.
 
-  > End-to-end tests check the entire system in a real life scenario mimicking real production with multiple nodes. It runs on docker with several nodes connected in a cluster. Due to their nature, E2E tests are slow to run.
-
-  * The tests are found in [`/test/e2e`](test/e2e)
-  * Run the suite from project root with `go test ./test/e2e`
+* The tests are found in [`/test/e2e`](test/e2e)
+* Run the suite from project root with `go test ./test/e2e`
   
-  ##### Integration tests
-  
-  > Integration tests check the system adapters and make sure they meet the interface contract they implement. For example connection to a database or network sockets.
+#### Integration tests (slow)
 
-  * The tests are found per adapter (per service), eg. [`/services/gossip/adapter`](/services/gossip/adapter)
+> Integration tests check the system adapters and make sure they meet the interface contract they implement. For example connection to a database or network sockets.
 
-* Fast tests:
+* The tests are found per adapter (per service), eg. [`/services/gossip/adapter`](/services/gossip/adapter)
 
-  ##### Acceptance tests
+#### Acceptance tests (fast)
 
-  > Acceptance tests check the internal hexagon of the system (it's logic with all microservices) with faster adapters that allow the suite to run extremely fast.  
+> Acceptance tests check the internal hexagon of the system (it's logic with all microservices) with faster adapters that allow the suite to run extremely fast.
 
-  * The tests are found in [`/test/acceptance`](test/acceptance)
-  * Run the suite from project root with `go test ./test/acceptance`
+* The tests are found in [`/test/acceptance`](test/acceptance)
+* Run the suite from project root with `go test ./test/acceptance`
 
-  ##### Component tests
+#### Component tests (fast)
 
-  > Component tests check that a single service meets its specification while mocking the other services around it. They allow development of a service in isolation. 
+> Component tests check that a single service meets its specification while mocking the other services around it. They allow development of a service in isolation.
 
-  * The tests are found per service in the `test` directory, eg. [`/services/transactionpool/test`](/services/transactionpool/test)
+* The tests are found per service in the `test` directory, eg. [`/services/transactionpool/test`](/services/transactionpool/test)
 
-  ##### Unit tests
-  
-  > Unit tests are very specific tests that check a single unit or two. They test the unit in isolation and stub/mock everything around it. 
+#### Unit tests (fast)
 
-  * The tests are found next to the actual unit in a file with `_test.go` suffix, eg. `sha256_test.go` sitting next to `sha256.go`
+> Unit tests are very specific tests that check a single unit or two. They test the unit in isolation and stub/mock everything around it.
+
+* The tests are found next to the actual unit in a file with `_test.go` suffix, eg. `sha256_test.go` sitting next to `sha256.go`
 
 ### Testing on Docker
 
 All tests run automatically when the Docker images are built. The script `./test.sh` is part of the Docker build. 
 
-* Run `./docker-build.sh && ./docker-test.sh` to build all images and run E2E tests in a dockerized environment.
+* Run `./docker/build/build.sh && ./docker/test/test.sh` to build all images and run E2E tests in a dockerized environment.
 
 * The logs for all E2E nodes will be placed on your machine under the `./logs` directory of the project (and will be overridden on every E2E run).
 
@@ -148,7 +144,7 @@ To detect flaky tests of specific components, run **component** tests multiple t
 * *optional* To run a specific test (component, unit, of any other) multiple times (useful when debugging a specific scenario for flakiness), edit `test.components.sh`, comment the line `run_component_tests`,
 then uncomment the line starting with `run_specific_test` and modify the test name to run that one specific test multiple times on Docker.
 
-After you've finished editing, run `./docker-build.sh && ./docker-test.sh`
+After you've finished editing, run `./docker/build/build.sh && ./docker/test/test.sh`
 
 > You should probably not commit any of these edits you've made for testing, as they are transient in nature.
 
