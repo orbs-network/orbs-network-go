@@ -14,34 +14,57 @@ type Errorer interface {
 	Error(message string, fields ...*log.Field)
 }
 
+type failure struct {
+	stackTrace string
+	e          error
+}
+
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
 func ShortLived(logger Errorer, f func()) {
 	go func() {
-		defer recoverPanics(logger)
+		defer func() {
+			if p := recover(); p != nil {
+				e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
+				logger.Error("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
+			}
+		}()
 		f()
 	}()
 }
 
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer; if the provided Context isn't closed, re-runs f()
 func LongLived(ctx context.Context, logger Errorer, f func()) {
-	go func() {
-		defer recoverPanics(logger)
-		for {
-			f()
-			if ctx.Err() != nil { // this returns non-nil when context has been closed via cancellation or timeout or whatever
-				return
+	failed := make(chan *failure)
+
+	run := func() {
+		defer func() {
+			if p := recover(); p != nil {
+				e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
+				failed <- &failure{e: e, stackTrace: string(debug.Stack())}
 			}
-			// repeat
-			//TODO count restarts, fail if too many restarts, etc
+		}()
+
+		f()
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case failure := <-failed:
+				//TODO count restarts, fail if too many restarts, etc
+
+				if ctx.Err() == nil {
+					logger.Error("recovered panic", log.Error(failure.e), log.String("stack-trace", failure.stackTrace))
+					go run()
+				}
+
+			}
 		}
 	}()
-}
 
-func recoverPanics(logger Errorer) {
-	if p := recover(); p != nil {
-		e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
-		logger.Error("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
-	}
+	go run()
 }
 
 func identifyPanic() string {
