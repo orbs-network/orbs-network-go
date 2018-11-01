@@ -187,7 +187,7 @@ func (h *harness) callMethod(txBuilder *protocol.TransactionBuilder) (*client.Ca
 }
 
 func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, error) {
-	res, err := http.Post(h.apiUrlFor(endpoint), "application/octet-stream", bytes.NewReader(input.Raw()))
+	res, err := http.Post(h.apiUrlFor(endpoint), "application/membuffers", bytes.NewReader(input.Raw()))
 	if err != nil {
 		return nil, err
 	}

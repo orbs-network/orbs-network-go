@@ -1,7 +1,8 @@
 package config
 
 import (
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -100,7 +101,7 @@ func ForDevelopment(
 
 func ForDirectTransportTests(gossipPeers map[string]GossipPeer) GossipTransportConfig {
 	cfg := emptyConfig()
-	cfg.SetNodePublicKey(keys.Ed25519KeyPairForTests(0).PublicKey())
+	cfg.SetNodePublicKey(testKeys.Ed25519KeyPairForTests(0).PublicKey())
 	cfg.SetGossipPeers(gossipPeers)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)

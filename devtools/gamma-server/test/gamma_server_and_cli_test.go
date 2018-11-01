@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -15,10 +19,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/stretchr/testify/require"
 )
 
 type TransactionReceipt struct {
@@ -48,8 +48,8 @@ type callMethodCliResponse struct {
 }
 
 type harness struct {
-	gamma                 *gammacli.GammaServer
-	port                  int
+	gamma *gammacli.GammaServer
+	port  int
 }
 
 func (h *harness) shutdown() {
@@ -75,6 +75,7 @@ func (h *harness) cliBinaryPath() []string {
 }
 
 var precompiledBinaryPath string
+
 func (h *harness) compileBinary() {
 	binaryDir, err := ioutil.TempDir("", "gamma")
 	if err != nil {
@@ -294,7 +295,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	h := newHarness()
 	defer h.shutdown()
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 	targetAddress := builders.AddressForEd25519SignerForTests(2)
 	var amount uint64 = 42
 
@@ -310,7 +311,7 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	h := newHarness()
 	defer h.shutdown()
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 
 	deployedBlockHeight := h.deployCounterContract(t, keyPair)
 	h.getCounterValue(t, 0, deployedBlockHeight)

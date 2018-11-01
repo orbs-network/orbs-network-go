@@ -2,7 +2,7 @@ package keys
 
 import (
 	"encoding/hex"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 )
 
 type ed25519KeyPairHex struct {
@@ -23,16 +23,7 @@ var ed25519KeyPairs = []ed25519KeyPairHex{
 	{"70d92324eb8d24b7c7ed646e1996f94dcd52934a031935b9ac2d0e5bbcfa357c", "f1c41ba8a1d78f7cdc4f4ff23f3b736e30c630085697d6503e16ac899646f5ab70d92324eb8d24b7c7ed646e1996f94dcd52934a031935b9ac2d0e5bbcfa357c"},
 }
 
-type Ed25519KeyPair struct {
-	publicKey  primitives.Ed25519PublicKey
-	privateKey primitives.Ed25519PrivateKey
-}
-
-func NewEd25519KeyPair(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *Ed25519KeyPair {
-	return &Ed25519KeyPair{publicKey, privateKey}
-}
-
-func Ed25519KeyPairForTests(setIndex int) *Ed25519KeyPair {
+func Ed25519KeyPairForTests(setIndex int) *keys.Ed25519KeyPair {
 	if setIndex > len(ed25519KeyPairs) {
 		return nil
 	}
@@ -47,13 +38,5 @@ func Ed25519KeyPairForTests(setIndex int) *Ed25519KeyPair {
 		return nil
 	}
 
-	return &Ed25519KeyPair{pub, pri}
-}
-
-func (k *Ed25519KeyPair) PublicKey() primitives.Ed25519PublicKey {
-	return k.publicKey
-}
-
-func (k *Ed25519KeyPair) PrivateKey() primitives.Ed25519PrivateKey {
-	return k.privateKey
+	return keys.NewEd25519KeyPair(pub, pri)
 }

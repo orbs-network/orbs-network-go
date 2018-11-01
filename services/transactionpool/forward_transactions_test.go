@@ -3,11 +3,12 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -55,7 +56,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		gossip := &gossiptopics.MockTransactionRelay{}
-		cfg := &forwarderConfig{3, keys.Ed25519KeyPairForTests(0)}
+		cfg := &forwarderConfig{3, testKeys.Ed25519KeyPairForTests(0)}
 
 		txForwarder := NewTransactionForwarder(ctx, log.GetLogger(), cfg, gossip)
 
@@ -79,7 +80,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		gossip := &gossiptopics.MockTransactionRelay{}
-		cfg := &forwarderConfig{2, keys.Ed25519KeyPairForTests(0)}
+		cfg := &forwarderConfig{2, testKeys.Ed25519KeyPairForTests(0)}
 
 		txForwarder := NewTransactionForwarder(ctx, log.GetLogger(), cfg, gossip)
 

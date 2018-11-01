@@ -3,9 +3,10 @@ package builders
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -15,7 +16,7 @@ import (
 // protocol.BlockPairContainer
 
 func BenchmarkConsensusBlockPair() *blockPair {
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 	return BlockPair().WithBenchmarkConsensusBlockProof(keyPair)
 }
 
@@ -63,7 +64,7 @@ type committed struct {
 }
 
 func BenchmarkConsensusCommittedMessage() *committed {
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 	c := &committed{
 		status: &gossipmessages.BenchmarkConsensusStatusBuilder{
 			LastCommittedBlockHeight: 0,

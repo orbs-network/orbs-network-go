@@ -4,10 +4,11 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -31,15 +32,15 @@ type harness struct {
 }
 
 func leaderKeyPair() *keys.Ed25519KeyPair {
-	return keys.Ed25519KeyPairForTests(0)
+	return testKeys.Ed25519KeyPairForTests(0)
 }
 
 func nonLeaderKeyPair() *keys.Ed25519KeyPair {
-	return keys.Ed25519KeyPairForTests(1)
+	return testKeys.Ed25519KeyPairForTests(1)
 }
 
 func otherNonLeaderKeyPair() *keys.Ed25519KeyPair {
-	return keys.Ed25519KeyPairForTests(2)
+	return testKeys.Ed25519KeyPairForTests(2)
 }
 
 func newHarness(
@@ -48,7 +49,7 @@ func newHarness(
 
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < NETWORK_SIZE; i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+		publicKey := testKeys.Ed25519KeyPairForTests(i).PublicKey()
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 	}
 
