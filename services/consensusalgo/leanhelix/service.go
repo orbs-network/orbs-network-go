@@ -71,7 +71,7 @@ func NewLeanHelixConsensusAlgo(
 
 	gossip.RegisterLeanHelixHandler(s)
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX && config.ConstantConsensusLeader().Equal(config.NodePublicKey()) {
-		supervised.LongLived(ctx, logger, func() {
+		supervised.GoForever(ctx, logger, func() {
 			s.consensusRoundRunLoop(ctx)
 		})
 	}

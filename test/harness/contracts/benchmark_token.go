@@ -48,7 +48,7 @@ func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex
 			Builder(),
 	}).Build()
 
-	supervised.ShortLived(c.logger, func() {
+	supervised.GoOnce(c.logger, func() {
 		publicApi := c.apis[nodeIndex].GetPublicApi()
 		publicApi.SendTransaction(ctx, &services.SendTransactionInput{ // we ignore timeout here.
 			ClientRequest: request,
