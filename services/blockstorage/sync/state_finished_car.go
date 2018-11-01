@@ -39,14 +39,14 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	return s.sf.CreateWaitingForChunksState(syncSourceKey)
 }
 
-func (s *finishedCARState) blockCommitted() {
+func (s *finishedCARState) blockCommitted(ctx context.Context) {
 	return
 }
 
-func (s *finishedCARState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *finishedCARState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
 	return
 }
 
-func (s *finishedCARState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
+func (s *finishedCARState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
 	return
 }

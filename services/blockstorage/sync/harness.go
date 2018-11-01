@@ -93,8 +93,8 @@ func newBlockSyncHarness() *blockSyncHarness {
 	logger := log.GetLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	conduit := &blockSyncConduit{
-		Responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
-		Blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
 	}
 
 	return &blockSyncHarness{
@@ -106,6 +106,11 @@ func newBlockSyncHarness() *blockSyncHarness {
 		gossip:    gossip,
 		storage:   storage,
 	}
+}
+
+func (h *blockSyncHarness) withCtxTimeout(d time.Duration) *blockSyncHarness {
+	h.ctx, h.ctxCancel = context.WithTimeout(h.ctx, d)
+	return h
 }
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {

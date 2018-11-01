@@ -36,7 +36,7 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	}
 }
 
-func (s *idleState) blockCommitted() {
+func (s *idleState) blockCommitted(ctx context.Context) {
 	// the default below is important as its possible to get a block committed event before the processState got to the select
 	// in a highly concurrent scenario where the state is recreated rapidly, this will deadlock the commit flow
 	// its better to skip notification to avoid that deadlock
@@ -48,10 +48,10 @@ func (s *idleState) blockCommitted() {
 	}
 }
 
-func (s *idleState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *idleState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
 	return
 }
 
-func (s *idleState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
+func (s *idleState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
 	return
 }

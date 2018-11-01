@@ -52,7 +52,7 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
 	nextShouldBeFinished := h.nextState(collectingState, func() {
 		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast was not sent out")
-		collectingState.gotAvailabilityResponse(message)
+		collectingState.gotAvailabilityResponse(h.ctx, message)
 	})
 
 	require.IsType(t, &finishedCARState{}, nextShouldBeFinished, "state should transition to finished CAR")
@@ -82,18 +82,19 @@ func TestCollectingAvailabilityContextTermination(t *testing.T) {
 
 func TestCollectingReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
 	h := newBlockSyncHarness()
-	h.cancel()
+	h = h.withCtxTimeout(h.config.collectResponses / 2)
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
 	// not calling the process state will not activate the reader part
 	message := builders.BlockAvailabilityResponseInput().Build().Message
-	collectingState.gotAvailabilityResponse(message) // this will block if the test fails
+	collectingState.gotAvailabilityResponse(h.ctx, message) // this will block if the test fails
+	h.cancel()
 }
 
 func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	car := h.sf.CreateCollectingAvailabilityResponseState()
 	// these calls should do nothing, this is just a sanity that they do not panic and return nothing
-	car.gotBlocks(nil)
-	car.blockCommitted()
+	car.gotBlocks(h.ctx, nil)
+	car.blockCommitted(h.ctx)
 }

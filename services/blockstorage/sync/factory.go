@@ -46,7 +46,7 @@ func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
 		collectTimeout: f.config.BlockSyncCollectResponseTimeout,
 		logger:         f.logger,
-		responsesC:     make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		conduit:        f.c,
 	}
 }
 

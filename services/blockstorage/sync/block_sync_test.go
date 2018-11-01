@@ -33,7 +33,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 	// "commit" blocks at a rate of 1/ms, do not assume anything about the implementation
 	for i := 1; i < 10; i++ {
-		sync.HandleBlockCommitted()
+		sync.HandleBlockCommitted(h.ctx)
 		time.Sleep(500 * time.Microsecond)
 		require.IsType(t, &idleState{}, sync.currentState, "state should remain idle")
 	}

@@ -12,7 +12,7 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 	next := h.nextState(idle, func() {
 		// letting the goroutine start above
 		time.Sleep(time.Millisecond)
-		idle.blockCommitted()
+		idle.blockCommitted(h.ctx)
 	})
 
 	require.IsType(t, &idleState{}, next, "next should still be idle")
@@ -39,13 +39,13 @@ func TestIdleStateDoesNotBlockOnNewBlockNotificationWhenChannelIsNotReady(t *tes
 	h := newBlockSyncHarness()
 	h.cancel()
 	idle := h.sf.CreateIdleState()
-	idle.blockCommitted() // we did not call process, so channel is not ready, test only fails on timeout, if this blocks
+	idle.blockCommitted(h.ctx) // we did not call process, so channel is not ready, test only fails on timeout, if this blocks
 }
 
 func TestIdleNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	idle := h.sf.CreateIdleState()
 	// these calls should do nothing, this is just a sanity that they do not panic and return nothing
-	idle.gotAvailabilityResponse(nil)
-	idle.gotBlocks(nil)
+	idle.gotAvailabilityResponse(h.ctx, nil)
+	idle.gotBlocks(h.ctx, nil)
 }

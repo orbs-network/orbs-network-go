@@ -110,7 +110,7 @@ func TestProcessingNOP(t *testing.T) {
 	processing := h.sf.CreateProcessingBlocksState(nil)
 
 	// these tests are for sanity, they should not do anything
-	processing.blockCommitted()
-	processing.gotBlocks(nil)
-	processing.gotAvailabilityResponse(nil)
+	processing.blockCommitted(h.ctx)
+	processing.gotBlocks(h.ctx, nil)
+	processing.gotAvailabilityResponse(h.ctx, nil)
 }

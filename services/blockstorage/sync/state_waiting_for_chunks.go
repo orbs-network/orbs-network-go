@@ -50,15 +50,15 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	}
 }
 
-func (s *waitingForChunksState) blockCommitted() {
+func (s *waitingForChunksState) blockCommitted(ctx context.Context) {
 	return
 }
 
-func (s *waitingForChunksState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *waitingForChunksState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
 	return
 }
 
-func (s *waitingForChunksState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
+func (s *waitingForChunksState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
 	if !message.Sender.SenderPublicKey().Equal(s.sourceKey) {
 		s.logger.Info("byzantine message detected, expected source key does not match incoming",
 			log.Stringable("source-key", s.sourceKey),

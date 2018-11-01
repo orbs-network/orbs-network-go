@@ -17,9 +17,9 @@ type syncState interface {
 	name() string
 	String() string
 	processState(ctx context.Context) syncState
-	blockCommitted()
-	gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage)
-	gotBlocks(message *gossipmessages.BlockSyncResponseMessage)
+	blockCommitted(ctx context.Context)
+	gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage)
+	gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage)
 }
 
 type blockSyncConfig interface {
@@ -38,8 +38,8 @@ type BlockSyncStorage interface {
 }
 
 type blockSyncConduit struct {
-	Responses chan *gossipmessages.BlockAvailabilityResponseMessage
-	Blocks    chan *gossipmessages.BlockSyncResponseMessage
+	responses chan *gossipmessages.BlockAvailabilityResponseMessage
+	blocks    chan *gossipmessages.BlockSyncResponseMessage
 }
 
 type BlockSync struct {
@@ -49,13 +49,13 @@ type BlockSync struct {
 	storage      BlockSyncStorage
 	config       blockSyncConfig
 	currentState syncState
-	C            *blockSyncConduit
+	c            *blockSyncConduit
 }
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
 	conduit := &blockSyncConduit{
-		Responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
-		Blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
 	}
 
 	bs := &BlockSync{
@@ -64,7 +64,7 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 		gossip:  gossip,
 		storage: storage,
 		config:  config,
-		C:       conduit,
+		c:       conduit,
 	}
 
 	bs.logger.Info("block sync init",
@@ -88,22 +88,22 @@ func (bs *BlockSync) syncLoop(ctx context.Context) {
 	}
 }
 
-func (bs *BlockSync) HandleBlockCommitted() {
+func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	if bs.currentState != nil {
-		bs.currentState.blockCommitted()
+		bs.currentState.blockCommitted(ctx)
 	}
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if bs.currentState != nil {
-		bs.currentState.gotAvailabilityResponse(input.Message)
+		bs.currentState.gotAvailabilityResponse(ctx, input.Message)
 	}
 	return nil, nil
 }
 
 func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if bs.currentState != nil {
-		bs.currentState.gotBlocks(input.Message)
+		bs.currentState.gotBlocks(ctx, input.Message)
 	}
 	return nil, nil
 }

@@ -67,14 +67,14 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	return s.sf.CreateCollectingAvailabilityResponseState()
 }
 
-func (s *processingBlocksState) blockCommitted() {
+func (s *processingBlocksState) blockCommitted(ctx context.Context) {
 	return
 }
 
-func (s *processingBlocksState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *processingBlocksState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
 	return
 }
 
-func (s *processingBlocksState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
+func (s *processingBlocksState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
 	return
 }

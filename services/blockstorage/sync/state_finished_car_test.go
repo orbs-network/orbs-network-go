@@ -40,7 +40,7 @@ func TestFinishedNOP(t *testing.T) {
 	finishedState := h.sf.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
 
 	// sanity test, these should do nothing
-	finishedState.gotBlocks(nil)
-	finishedState.blockCommitted()
-	finishedState.gotAvailabilityResponse(nil)
+	finishedState.gotBlocks(h.ctx, nil)
+	finishedState.blockCommitted(h.ctx)
+	finishedState.gotAvailabilityResponse(h.ctx, nil)
 }
