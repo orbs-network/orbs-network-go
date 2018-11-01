@@ -57,7 +57,9 @@ func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(ctx conte
 	select {
 	case s.conduit.responses <- message:
 	case <-ctx.Done():
-		s.logger.Info("terminated on writing new availability response", log.String("context-message", ctx.Err().Error()), log.Stringable("response-source", message.Sender.SenderPublicKey()))
+		s.logger.Info("terminated on writing new availability response",
+			log.String("context-message", ctx.Err().Error()),
+			log.Stringable("response-source", message.Sender.SenderPublicKey()))
 	}
 }
 

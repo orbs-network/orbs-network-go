@@ -63,10 +63,10 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519P
 		sourceKey:      sourceKey,
 		sf:             f,
 		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
-		collectTimeout: f.config.BlockSyncCollectChunksTimeout(),
+		collectTimeout: f.config.BlockSyncCollectChunksTimeout,
 		logger:         f.logger,
-		blocksC:        make(chan *gossipmessages.BlockSyncResponseMessage),
 		abort:          make(chan struct{}),
+		c:              f.c,
 	}
 }
 

@@ -14,10 +14,10 @@ type waitingForChunksState struct {
 	sf             *stateFactory
 	sourceKey      primitives.Ed25519PublicKey
 	gossipClient   *blockSyncGossipClient
-	collectTimeout time.Duration
+	collectTimeout func() time.Duration
 	logger         log.BasicLogger
 	abort          chan struct{}
-	blocksC        chan *gossipmessages.BlockSyncResponseMessage
+	c              *blockSyncConduit
 }
 
 func (s *waitingForChunksState) name() string {
@@ -35,12 +35,12 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 		return s.sf.CreateIdleState()
 	}
 
-	timeout := synchronization.NewTimer(s.collectTimeout)
+	timeout := synchronization.NewTimer(s.collectTimeout())
 	select {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateIdleState()
-	case blocks := <-s.blocksC:
+	case blocks := <-s.c.blocks:
 		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
 		return s.sf.CreateProcessingBlocksState(blocks)
 	case <-s.abort:
@@ -66,9 +66,10 @@ func (s *waitingForChunksState) gotBlocks(ctx context.Context, message *gossipme
 		s.abort <- struct{}{}
 	} else {
 		select {
-		case s.blocksC <- message:
-		default:
-			s.logger.Info("received new blocks but channel was not ready",
+		case s.c.blocks <- message:
+		case <-ctx.Done():
+			s.logger.Info("terminated on writing new block chunk message",
+				log.String("context-message", ctx.Err().Error()),
 				log.Stringable("message-sender", message.Sender.SenderPublicKey()))
 		}
 	}

@@ -95,6 +95,7 @@ func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
 	h := newBlockSyncHarness()
 	car := h.sf.CreateCollectingAvailabilityResponseState()
 	// these calls should do nothing, this is just a sanity that they do not panic and return nothing
-	car.gotBlocks(h.ctx, nil)
+	blockmessage := builders.BlockSyncResponseInput().Build().Message
+	car.gotBlocks(h.ctx, blockmessage)
 	car.blockCommitted(h.ctx)
 }
