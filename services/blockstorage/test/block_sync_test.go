@@ -129,7 +129,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 }
 
 func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
-	t.Skip("this test is incorrect, needs to check that commit notify sync, and nothing else")
+	t.Skip("this test needs to move to CommitBlock unit test, as a 'CommitBlockUpdatesBlockSync'")
 	// this test may still be flaky, it runs commits in a busy wait loop that should take longer than the timeout,
 	// to make sure we stay at the same state logically.
 	// system timing may cause it to flake, but at a very low probability now
