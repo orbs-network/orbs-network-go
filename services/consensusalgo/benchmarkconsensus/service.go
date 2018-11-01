@@ -99,7 +99,7 @@ func NewBenchmarkConsensusAlgo(
 	blockStorage.RegisterConsensusBlocksHandler(s)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
-		supervised.LongLived(ctx, logger, func() {
+		supervised.GoForever(ctx, logger, func() {
 			s.leaderConsensusRoundRunLoop(ctx)
 		})
 	}

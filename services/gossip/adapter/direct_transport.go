@@ -50,7 +50,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	}
 
 	// server goroutine
-	supervised.LongLived(ctx, logger, func() {
+	supervised.GoForever(ctx, logger, func() {
 		t.serverMainLoop(ctx, t.config.GossipListenPort())
 	})
 

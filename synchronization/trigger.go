@@ -52,7 +52,7 @@ func (t *periodicalTrigger) TimesTriggered() uint64 {
 func (t *periodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
 	go func() {
-		supervised.LongLived(ctx, t.logger, func() {
+		supervised.GoForever(ctx, t.logger, func() {
 			t.wgSync.Add(1)
 			defer t.wgSync.Done()
 			for {
