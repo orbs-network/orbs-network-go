@@ -20,7 +20,9 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 		WithLogFilters(log.DiscardAll()).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 
-		network.DeployBenchmarkToken(ctx, 5)
+		contract := network.GetBenchmarkTokenContract()
+
+		contract.DeployBenchmarkToken(ctx, 5)
 
 		for i := 0; i < b.N; i++ {
 			if err := limiter.Wait(context.TODO()); err == nil {
@@ -29,7 +31,7 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 				go func() {
 					defer wg.Done()
 					nodeNum := rand.Intn(network.Size())
-					<-network.SendTransfer(ctx, nodeNum, uint64(rand.Intn(i)), 5, 6)
+					<-contract.SendTransfer(ctx, nodeNum, uint64(rand.Intn(i)), 5, 6)
 				}()
 
 			}
