@@ -3,6 +3,8 @@ package _manual
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	. "github.com/orbs-network/orbs-network-go/services/statestorage/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -16,23 +18,62 @@ import (
 	"time"
 )
 
-const AVG_TX = 100
-const TX_COUNT_SIX_MONTHS_AT_AVG_TPX int = 6 * 30 * 24 * 60 * 60 * AVG_TX
+const TX_AVG_TPS = 100
+const TX_COUNT_SIX_MONTHS_AT_AVG_TPS int = 6 * 30 * 24 * 60 * 60 * TX_AVG_TPS
 const MAX_BLOCK_SIZE = 200
 const USERS = 1000000
 
+func TestSimulateMerkleInitForAllUsers(t *testing.T) {
+	start := time.Now()
+	userKeys := randomUsers()
+
+	ms := runtime.MemStats{}
+	runtime.ReadMemStats(&ms)
+	t.Logf("Finished init phase in %v. HeapAlloc is %dMB", time.Now().Sub(start), ms.HeapAlloc/(1024*1024))
+
+	start = time.Now()
+	diffs := make(merkle.MerkleDiffs, 0, len(userKeys))
+	for _, u := range userKeys {
+		sha256 := hash.CalcSha256(u)
+		diffs = append(diffs, &merkle.MerkleDiff{
+			Key:   u,
+			Value: sha256,
+		})
+	}
+
+	forest, root := merkle.NewForest()
+	newRoot, err := forest.Update(root, diffs)
+	require.NoError(t, err)
+	require.NotEqual(t, root, newRoot)
+	duration := time.Now().Sub(start)
+	runtime.GC()
+	runtime.GC()
+	runtime.GC()
+	runtime.GC()
+	ms = runtime.MemStats{}
+	runtime.ReadMemStats(&ms)
+	t.Logf("Finished merkle build phase (%v keys) in %v. HeapAlloc is %dMB", len(userKeys), duration, ms.HeapAlloc/(1024*1024))
+
+	user500Proof, err := forest.GetProof(newRoot, userKeys[500])
+	t.Logf("user 500 value proof length is %v", len(user500Proof))
+	require.NoError(t, err)
+
+	valid, err := forest.Verify(newRoot, user500Proof, userKeys[500], hash.CalcSha256(userKeys[500]))
+	require.True(t, valid)
+	require.NoError(t, err)
+
+	require.WithinDuration(t, start, time.Now(), 30*time.Second, "Expected Merkle to be populated in 30 seconds")
+	require.True(t, ms.HeapAlloc < 500*1024*1024, "Expected memory use to be below 0.5GB")
+}
 
 func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 
 		// generate User keys
-		userKeys := make([][]byte, USERS)
+		userKeys := randomUsers()
+
 		keysWritten := make(map[string]bool)
-		for i := range userKeys {
-			userKeys[i] = make([]byte, 32)
-			rand.Read(userKeys[i])
-		}
 		start := time.Now()
 		txCount, blockCount, commitDuration := loadTransactions(userKeys, keysWritten, d, ctx, t)
 
@@ -42,7 +83,7 @@ func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
 		require.WithinDuration(t, start, start.Add(commitDuration), 10*time.Minute)
 
 		// test state volume
-		require.True(t, len(keysWritten) >= int(math.Min(float64(TX_COUNT_SIX_MONTHS_AT_AVG_TPX/4), USERS)))
+		require.True(t, len(keysWritten) >= int(math.Min(float64(TX_COUNT_SIX_MONTHS_AT_AVG_TPS/4), USERS)))
 		h, _, _ := d.GetBlockHeightAndTimestamp(ctx)
 		for userId := range keysWritten { // verify all state entries were recorded
 			value, _ := d.ReadSingleKeyFromRevision(ctx, h, "someContract", userId)
@@ -60,6 +101,15 @@ func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
 	})
 }
 
+func randomUsers() ([][]byte) {
+	userKeys := make([][]byte, USERS)
+	for i := range userKeys {
+		userKeys[i] = make([]byte, 32)
+		rand.Read(userKeys[i])
+	}
+	return userKeys
+}
+
 func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver, ctx context.Context, t *testing.T) (int, int, time.Duration) {
 	var txCount int
 	var blockCount int
@@ -68,7 +118,7 @@ func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver,
 	start := time.Now()
 	tickStart := start
 	var nextBlockHeight primitives.BlockHeight = 1
-	for txCount < TX_COUNT_SIX_MONTHS_AT_AVG_TPX { // create input for current simulated block
+	for txCount < TX_COUNT_SIX_MONTHS_AT_AVG_TPS { // create input for current simulated block
 		generationStart := time.Now()
 		commitTxs, commit := generateRandomBlockStateDiff(userKeys, keysWritten, nextBlockHeight, "someContract")
 
@@ -88,14 +138,14 @@ func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver,
 			elapsed := time.Now().Sub(start)
 			commitDuration = elapsed - generatingInputDuration
 			fmt.Printf("delta: %v, elapsed committing: %v, elapsed: %v, progress: %d, HeapSys: %dMB, HeapAlloc: %dMB, tx: %d, entries: %d\n",
-						elapsedTick,
-						commitDuration,
-						elapsed,
-						100*txCount/TX_COUNT_SIX_MONTHS_AT_AVG_TPX,
-						ms.HeapSys/(1024*1024),
-						ms.HeapAlloc/(1024*1024),
-						txCount,
-						len(keysWritten))
+				elapsedTick,
+				commitDuration,
+				elapsed,
+				100*txCount/TX_COUNT_SIX_MONTHS_AT_AVG_TPS,
+				ms.HeapSys/(1024*1024),
+				ms.HeapAlloc/(1024*1024),
+				txCount,
+				len(keysWritten))
 			tickStart = time.Now()
 		}
 	}
