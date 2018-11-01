@@ -50,15 +50,18 @@ Enjoy!
 	var result string
 	var err error
 
+
+	runner := commands.CommandRunner{}
+
 	switch os.Args[1] {
 	case "run":
-		result, err = commands.HandleRunCommand(os.Args[2:])
+		result, err = runner.HandleRunCommand(os.Args[2:])
 	case "start":
-		result, err = commands.HandleStartCommand(os.Args[2:])
+		result, err = runner.HandleStartCommand(os.Args[2:])
 	case "deploy":
-		result, err = commands.HandleDeployCommand(os.Args[2:])
+		result, err = runner.HandleDeployCommand(os.Args[2:])
 	case "genKeys":
-		result, err = commands.HandleGenKeysCommand()
+		result, err = runner.HandleGenKeysCommand()
 	}
 
 	fmt.Println(result)

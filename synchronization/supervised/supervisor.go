@@ -47,7 +47,7 @@ func LongLived(ctx context.Context, logger Errorer, f func()) {
 		f()
 	}
 
-	go func() {
+	supervise := func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -62,8 +62,9 @@ func LongLived(ctx context.Context, logger Errorer, f func()) {
 
 			}
 		}
-	}()
+	}
 
+	go supervise()
 	go run()
 }
 

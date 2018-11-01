@@ -2,6 +2,7 @@ package development
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/harness"
@@ -19,7 +20,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		network := harness.NewDevelopmentNetwork().StartNodes(ctx)
+		network := harness.NewDevelopmentNetwork(log.GetLogger()).StartNodes(ctx)
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
