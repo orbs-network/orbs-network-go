@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 
-docker build -f ./build/docker/Dockerfile.build -t orbs:build .
+docker build -f ./docker/build/Dockerfile.build -t orbs:build .
 
 [ "$(docker ps -a | grep orbs_build)" ] && docker rm -f orbs_build
 
@@ -14,7 +14,7 @@ docker cp orbs_build:$SRC/gamma-server .
 
 docker cp orbs_build:$SRC/e2e.test .
 
-docker build -f ./build/docker/Dockerfile.export -t orbs:export .
-docker build -f ./build/docker/Dockerfile.gamma -t orbs:gamma-server .
+docker build -f ./docker/build/Dockerfile.export -t orbs:export .
+docker build -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
 
-docker build -f ./build/docker/Dockerfile.e2e -t orbs:e2e .
+docker build -f ./docker/build/Dockerfile.e2e -t orbs:e2e .

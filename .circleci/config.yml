@@ -5,7 +5,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: ./build/docker/build.sh
+      - run: ./docker/build/build.sh
       - run: ./docker-test.sh
       - run: sudo chown -R circleci:circleci logs && ./.circleci/upload-node-metrics.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker-tag.sh)
@@ -19,7 +19,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: ./build/docker/build.flakiness.sh
+      - run: ./docker/build/build.flakiness.sh
       - run:
           # remove logs if the test was successful for quicker feedback loop
           command: ./docker-test.flakiness.sh #&& sudo find logs/acceptance -type f -delete
