@@ -30,12 +30,12 @@ func localFunctionThatPanics() {
 	panic("foo")
 }
 
-func TestShortLived_ReportsOnPanic(t *testing.T) {
+func TestGoOnce_ReportsOnPanic(t *testing.T) {
 	logger := mockLogger()
 
 	require.NotPanicsf(t, func() {
-		ShortLived(logger, localFunctionThatPanics)
-	}, "ShortLived panicked unexpectedly")
+		GoOnce(logger, localFunctionThatPanics)
+	}, "GoOnce panicked unexpectedly")
 
 	report := <-logger.errors
 	require.Equal(t, report.message, "recovered panic")
@@ -49,7 +49,7 @@ func TestShortLived_ReportsOnPanic(t *testing.T) {
 	require.Contains(t, stackTraceField.Value(), "localFunctionThatPanics")
 }
 
-func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
+func TestGoForever_ReportsOnPanicAndRestarts(t *testing.T) {
 	numOfIterations := 10
 
 	logger := mockLogger()
@@ -58,14 +58,15 @@ func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
 	count := 0
 
 	require.NotPanicsf(t, func() {
-		LongLived(ctx, logger, func() {
-			count++
+		GoForever(ctx, logger, func() {
 			if count > numOfIterations {
 				cancel()
+			} else {
+				count++
 			}
 			panic("foo")
 		})
-	}, "LongLived panicked unexpectedly")
+	}, "GoForever panicked unexpectedly")
 
 	for i := 0; i < numOfIterations; i++ {
 		select {
@@ -75,5 +76,11 @@ func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
 			require.Fail(t, "long living goroutine didn't restart")
 		}
 	}
+}
+
+func TestGoForever_TerminatesWhenContextIsClosed(t *testing.T) {
 
 }
+
+
+
