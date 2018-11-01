@@ -112,3 +112,27 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
 }
+
+func TestSendTransaction_ReturnImmediately(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		timeout := 100 * time.Second // won't actually wait please don't change
+		harness := newPublicApiHarness(ctx, timeout)
+
+		txb := builders.Transaction().Builder()
+		harness.onAddNewTransaction(func() {})
+
+		start := time.Now()
+		result, _ := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
+			ClientRequest: (&client.SendTransactionRequestBuilder{
+				SignedTransaction: txb,
+			}).Build(),
+			ReturnImmediately: 1,
+		})
+
+		harness.verifyMocks(t) // contract test
+
+		// value test
+		require.WithinDuration(t, time.Now(), start, 1*time.Millisecond, "timeout duration exceeded")
+		require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "should be pending")
+	})
+}
