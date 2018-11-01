@@ -36,7 +36,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 		sf:          f,
 		idleTimeout: f.config.BlockSyncNoCommitInterval,
 		logger:      f.logger,
-		restartIdle: make(chan struct{}),
+		restartIdle: make(chan struct{}, 1),
 	}
 }
 
