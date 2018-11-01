@@ -187,8 +187,8 @@ func (h *harness) transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519Key
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "JSONTransaction status to be successful = 1")
-	require.Equal(t, 1, response.TransactionStatus, "JSONTransaction status to be successful = 1")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt.ExecutionResult, "JSONTransaction status to be successful = 1")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus, "JSONTransaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 }
 
@@ -220,8 +220,8 @@ func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPa
 	unmarshalErr := json.Unmarshal([]byte(deployCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
-	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus, "Transaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 }
 
@@ -261,7 +261,7 @@ func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair,
 	addResponseUnmarshalErr := json.Unmarshal([]byte(addOutputAsString), &addResponse)
 
 	require.NoError(t, addResponseUnmarshalErr, "error calling Counter.add()")
-	require.Equal(t, 1, addResponse.TransactionReceipt.ExecutionResult, "Wrong ExecutionResult value (expected 1 for success)")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, addResponse.TransactionReceipt.ExecutionResult, "Wrong ExecutionResult value (expected 1 for success)")
 	require.EqualValues(t, nil, addResponse.TransactionReceipt.OutputArguments, "expected no output arguments")
 }
 
