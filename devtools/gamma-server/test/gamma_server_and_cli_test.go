@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,8 +48,8 @@ type callMethodCliResponse struct {
 }
 
 type harness struct {
-	gamma *gammacli.GammaServer
-	port  int
+	gamma                 *gammacli.GammaServer
+	port                  int
 }
 
 func (h *harness) shutdown() {
@@ -60,20 +61,43 @@ func newHarness() *harness {
 	return &harness{gamma: server, port: server.Port()}
 }
 
-func cliBinaryPath() []string {
+func (h *harness) cliBinaryPath() []string {
 	ciCliBinaryPath := "/opt/orbs/gamma-cli"
 	if _, err := os.Stat(ciCliBinaryPath); err == nil {
 		return []string{ciCliBinaryPath}
 	}
 
-	return []string{"go", "run", "../../gammacli/main/main.go"}
+	if precompiledBinaryPath == "" { // only do this once per process so as to share compiled binary between tests of this package
+		h.compileBinary()
+	}
+
+	return []string{precompiledBinaryPath}
 }
 
-func runCliCommand(t *testing.T, cliArgs ...string) string {
-	command := cliBinaryPath()
+var precompiledBinaryPath string
+func (h *harness) compileBinary() {
+	binaryDir, err := ioutil.TempDir("", "gamma")
+	if err != nil {
+		panic(err)
+	}
+
+	precompiledBinaryPath = binaryDir + "/gamma-cli"
+	cmd := exec.Command("go", "build", "-o", precompiledBinaryPath, "../../gammacli/main/main.go")
+	err = cmd.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (h *harness) runCliCommand(t *testing.T, cliArgs ...string) string {
+	h.gamma.Logger.Info("runCliCommand about to run command " + strings.Join(cliArgs, " "))
+	defer h.gamma.Logger.Info("runCliCommand finished running command " + strings.Join(cliArgs, " "))
+
+	command := h.cliBinaryPath()
 	command = append(command, cliArgs...)
 
 	cmd := exec.Command(command[0], command[1:]...)
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -81,7 +105,8 @@ func runCliCommand(t *testing.T, cliArgs ...string) string {
 
 	require.NoError(t, err, "gamma cli command should not fail")
 
-	return stdout.String()
+	s := stdout.String()
+	return s
 }
 
 func generateTransferJSON(amount uint64, targetAddress []byte) []byte {
@@ -154,7 +179,7 @@ func (h *harness) transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519Key
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	sendCommandOutput := runCliCommand(t, "run", "send", "../json/transfer.json",
+	sendCommandOutput := h.runCliCommand(t, "run", "send", "../json/transfer.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(h.port))
 
@@ -175,7 +200,7 @@ func (h *harness) getBalanceOfAddress(t *testing.T, targetAddress primitives.Rip
 	}
 	require.NoError(t, err, "Couldn't write getBalance JSON file")
 
-	callOutputAsString := runCliCommand(t, "run", "call", "../json/getBalance.json", "-host", getNodeUrl(h.port))
+	callOutputAsString := h.runCliCommand(t, "run", "call", "../json/getBalance.json", "-host", getNodeUrl(h.port))
 
 	callResponse := &callMethodCliResponse{}
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
@@ -187,7 +212,7 @@ func (h *harness) getBalanceOfAddress(t *testing.T, targetAddress primitives.Rip
 }
 
 func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair) {
-	deployCommandOutput := runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
+	deployCommandOutput := h.runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(h.port))
 
@@ -209,7 +234,7 @@ func (h *harness) getCounterValue(t *testing.T, expectedReturnValue uint64) {
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
 	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
-	callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json", "-host", getNodeUrl(h.port))
+	callOutputAsString := h.runCliCommand(t, "run", "call", "../json/getCounter.json", "-host", getNodeUrl(h.port))
 
 	callResponse := &callMethodCliResponse{}
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
@@ -228,7 +253,7 @@ func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair,
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	addOutputAsString := runCliCommand(t, "run", "send", "../json/add.json",
+	addOutputAsString := h.runCliCommand(t, "run", "send", "../json/add.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(h.port))
 
@@ -248,8 +273,6 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	h := newHarness()
 	defer h.shutdown()
 
-	time.Sleep(100 * time.Millisecond) // wait for server to start
-
 	keyPair := keys.Ed25519KeyPairForTests(0)
 	targetAddress := builders.AddressForEd25519SignerForTests(2)
 	var amount uint64 = 42
@@ -265,8 +288,6 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 
 	h := newHarness()
 	defer h.shutdown()
-
-	time.Sleep(100 * time.Millisecond) // wait for server to start
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 

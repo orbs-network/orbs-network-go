@@ -41,7 +41,8 @@ func findGammaServerBinary(pathToBinary string) string {
 	return ""
 }
 
-func HandleStartCommand(args []string) (string, error) {
+func (r *CommandRunner) HandleStartCommand(args []string) (string, error) {
+
 	flagSet := flag.NewFlagSet("start", flag.ExitOnError)
 
 	binaryPtr := flagSet.String("binaryPath", "", "Provide your own path to a pre-compiled gamma binary")
