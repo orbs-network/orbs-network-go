@@ -79,6 +79,36 @@ func TestGoForever_ReportsOnPanicAndRestarts(t *testing.T) {
 }
 
 func TestGoForever_TerminatesWhenContextIsClosed(t *testing.T) {
+	logger := mockLogger()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	bgStarted := make(chan struct{})
+	bgEnded := make(chan struct{})
+	shutdown := GoForever(ctx, logger, func() {
+		bgStarted <- struct{}{}
+		select {
+		case <-ctx.Done():
+			bgEnded <- struct{}{}
+			return
+		}
+	})
+
+	<- bgStarted
+	cancel()
+
+	select {
+	case <- bgEnded:
+		// ok, invocation of cancel() caused goroutine to stop, we can now check if it restarts
+	case <-time.After(1 * time.Second):
+		require.Fail(t, "long living goroutine didn't stop")
+	}
+
+	select {
+	case <- shutdown:
+		// system has shutdown, all ok
+	case <-time.After(1 * time.Second):
+		t.Fatalf("long living goroutine did not return")
+	}
 
 }
 
