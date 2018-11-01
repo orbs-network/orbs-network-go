@@ -140,6 +140,10 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.serverPort)))
 
 	for {
+		if ctx.Err() != nil {
+			t.logger.Info("ending server main loop (system shutting down)")
+		}
+
 		conn, err := listener.Accept()
 		if err != nil {
 			if !t.isServerListening() {
