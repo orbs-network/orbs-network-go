@@ -76,9 +76,7 @@ TBD
 TBD
 
 ### Testing Strategy
-Before
-During
-After
+Contributions without full test coverage will _not_ be accepted. We use Test-Driven Development to help shape and evolve our design, and would prefer any contributed code to have been developed using TDD.
 
 ### CI
 TBD
