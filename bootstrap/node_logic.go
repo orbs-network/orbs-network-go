@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
+	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -58,11 +59,16 @@ func NewNodeLogic(
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, logger, metricRegistry)
 
-	consensusAlgos := make([]services.ConsensusAlgo, 0)
+	// TODO Uncomment and append to consensusAlgo when you want to integrate Lean Helix.
+	// TODO For now, NewLeanHelixConsensusAlgo() is executed to ensure compilation
+	/*leanHelixAlgo := */
+	leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
+	benchmarkConsensusAlgo := benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
 
 	// TODO: Restore this when lean-helix-go submodule is integrated
-	//consensusAlgos = append(consensusAlgos, leanhelix.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, transactionPoolService, consensusContextService, logger, nodeConfig))
-	consensusAlgos = append(consensusAlgos, benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry))
+	consensusAlgos := make([]services.ConsensusAlgo, 0)
+	//consensusAlgos = append(consensusAlgos, leanHelixAlgo)
+	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry)
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)

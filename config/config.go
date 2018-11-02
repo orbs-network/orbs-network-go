@@ -20,6 +20,9 @@ type NodeConfig interface {
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	ConsensusContextPercentageOfNodesRequiredForConsensus() uint32
 
+	// Lean Helix consensus
+	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
 
