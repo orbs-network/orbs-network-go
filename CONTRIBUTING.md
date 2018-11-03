@@ -23,24 +23,17 @@ Our coding conventions follow two alternative patterns for synchronization withi
 
 * Use a `RWMutex` and separate between read locks and write locks. Do not assume that reading without a lock is safe.
 * All state variables that are protected by the a mutex should be grouped in an anonymous struct that embeds the mutex.
-* Unlocks of the mutex should be done using `defer mutex.Unlock()` and appear immediately after the locks. Function scope should be designed according to this principle to avoid locking the mutex for too long. It's best to create mutex access methods that lock the mutex, defer the unlock and perform the read/write.
+* Unlocks of the mutex should be done using `defer mutex.Unlock()` and appear immediately after the locks. Function scope should be designed according to this principle to avoid locking the mutex for too long. It's best to create mutex access methods that lock the mutex, defer the unlock, perform the read/write and return.
 * Locks should be for as short as possible (only while the data is accessed). Never make an out-of-service-bound call or an IO call when the mutex is locked.
-* Beware of the classic pitfall of (1) Read lock and unlock (2) Processing (3) Write lock and unlock. During phase (2) the read data might no longer be relevant due to another write. A way to mitigate this is to compare the read data during phase (3) to make sure it's still as expected and if not, abort the write.
 
 ```golang
 type inMemoryBlockPersistence struct {
+	// this struct couples the data with a mutex that controls its access
 	blockChain struct {
 		sync.RWMutex
 		blocks []*protocol.BlockPairContainer
 	}
-
-	failNextBlocks bool
-	tracker        *synchronization.BlockTracker
-
-	blockHeightsPerTxHash struct {
-		sync.Mutex
-		channels map[string]blockHeightChan
-	}
+	// ...
 }
 
 func (bp *inMemoryBlockPersistence) addBlockToInMemoryChain(blockPair *protocol.BlockPairContainer) {
@@ -51,6 +44,7 @@ func (bp *inMemoryBlockPersistence) addBlockToInMemoryChain(blockPair *protocol.
 }
 
 ```
+* Beware of the classic pitfall of (1) Read lock and unlock (2) Processing (3) Write lock and unlock. During phase (2) the read data might no longer be relevant due to another write. A way to mitigate this is to compare the read data during phase (3) to make sure it's still as expected and if not, abort the write.
 
 ### Error handling
 The Orbs platform is a self-healing eco-system. This means that returning Go `Error`s is only meaningful as a logging tool.
