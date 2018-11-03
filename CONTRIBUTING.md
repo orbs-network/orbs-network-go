@@ -25,6 +25,7 @@ Our coding conventions follow two alternative patterns for synchronization withi
 * All state variables that are protected by the a mutex should be grouped in an anonymous struct that embeds the mutex.
 * Unlocks of the mutex should be done using `defer mutex.Unlock()` and appear immediately after the locks. Function scope should be designed according to this principle to avoid locking the mutex for too long. It's best to create mutex access methods that lock the mutex, defer the unlock, perform the read/write and return.
 * Locks should be for as short as possible (only while the data is accessed). Never make an out-of-service-bound call or an IO call when the mutex is locked.
+* A mutex protects fields used together atomically. If two fields have different access patterns, they should be separated, each under its own mutex.
 
 ```golang
 type inMemoryBlockPersistence struct {
@@ -33,7 +34,15 @@ type inMemoryBlockPersistence struct {
 		sync.RWMutex
 		blocks []*protocol.BlockPairContainer
 	}
-	// ...
+	
+	failNextBlocks bool
+	tracker        *synchronization.BlockTracker
+	
+	// this is another mutex-protected field, with different locking patterns
+ 	blockHeightsPerTxHash struct {
+		sync.Mutex
+		channels map[string]blockHeightChan
+	}
 }
 
 func (bp *inMemoryBlockPersistence) addBlockToInMemoryChain(blockPair *protocol.BlockPairContainer) {
