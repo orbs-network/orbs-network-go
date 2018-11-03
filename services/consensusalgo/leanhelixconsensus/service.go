@@ -3,9 +3,10 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
-	"github.com/orbs-network/lean-helix-go/primitives"
+	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -38,6 +39,9 @@ type metrics struct {
 }
 
 type Config interface {
+	NodePublicKey() primitives.Ed25519PublicKey
+	NodePrivateKey() primitives.Ed25519PrivateKey
+
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 }
@@ -58,13 +62,13 @@ type BlockPairWrapper struct {
 	blockPair *protocol.BlockPairContainer
 }
 
-func (b *BlockPairWrapper) Height() primitives.BlockHeight {
-	return primitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
+func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
+	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
 }
 
-func (b *BlockPairWrapper) BlockHash() primitives.Uint256 {
+func (b *BlockPairWrapper) BlockHash() lhprimitives.Uint256 {
 	// TODO This is surely incorrect, fix to use the right hash
-	return primitives.Uint256(b.blockPair.TransactionsBlock.Header.MetadataHash())
+	return lhprimitives.Uint256(b.blockPair.TransactionsBlock.Header.MetadataHash())
 }
 
 func NewBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapper {

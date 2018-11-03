@@ -2,17 +2,20 @@ package leanhelixconsensus
 
 import (
 	"github.com/orbs-network/lean-helix-go"
-	"github.com/orbs-network/lean-helix-go/primitives"
+	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-func (s *service) Sign(content []byte) []byte {
-	panic("implement me")
+func (s *service) Sign(content []byte) ([]byte, error) {
+	return signature.SignEd25519(s.config.NodePrivateKey(), content)
 }
 
 func (s *service) Verify(content []byte, sender *leanhelix.SenderSignature) bool {
-	panic("implement me")
+
+	return signature.VerifyEd25519(primitives.Ed25519PublicKey(sender.SenderPublicKey()), content, primitives.Ed25519Sig(sender.Signature()))
 }
 
-func (s *service) MyPublicKey() primitives.Ed25519PublicKey {
-	panic("implement me")
+func (s *service) MyPublicKey() lhprimitives.Ed25519PublicKey {
+	return lhprimitives.Ed25519PublicKey(s.config.NodePublicKey())
 }

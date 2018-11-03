@@ -5,9 +5,12 @@ import (
 	"github.com/orbs-network/lean-helix-go"
 	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/logic"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -55,15 +58,65 @@ func (s *service) RequestNewBlock(ctx context.Context, blockHeight lhprimitives.
 		return nil, err
 	}
 
+	// generate signed block
+	pair, err := s.SignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
 	blockPairWrapper := NewBlockPairWrapper(&protocol.BlockPairContainer{
-		TransactionsBlock: txOutput.TransactionsBlock,
-		ResultsBlock:      rxOutput.ResultsBlock,
+		TransactionsBlock: pair.TransactionsBlock,
+		ResultsBlock:      pair.ResultsBlock,
 	})
 
-	// generate signed block
 	return blockPairWrapper, nil
+
+}
+
+func (s *service) SignBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
+	blockPair := &protocol.BlockPairContainer{
+		TransactionsBlock: transactionsBlock,
+		ResultsBlock:      resultsBlock,
+	}
+
+	// prepare signature over the block headers
+	signedData := s.signedDataForBlockProof(blockPair)
+	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	if err != nil {
+		return nil, err
+	}
+
+	// generate tx block proof
+	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
+		Type:               protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{},
+	}).Build()
+
+	// generate rx block proof
+	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
+		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
+			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
+				SenderPublicKey: s.config.NodePublicKey(),
+				Signature:       sig,
+			},
+		},
+	}).Build()
+	return blockPair, nil
+}
+
+func (s *service) hash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.ResultsBlockContainer) []byte {
+	txHash := digest.CalcTransactionsBlockHash(txBlock)
+	rxHash := digest.CalcResultsBlockHash(rxBlock)
+	xorHash := logic.CalcXor(txHash, rxHash)
+	return xorHash
+}
+
+func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
+	return s.hash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
+}
+
+func (s *service) signedDataForBlockProofWrapper(blockPairWrapper *BlockPairWrapper) []byte {
+	return s.hash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
 }
 
 func (s *service) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
-	panic("implement me - call digest() ")
+
+	return s.signedDataForBlockProofWrapper(block.(*BlockPairWrapper))
 }
