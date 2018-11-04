@@ -19,7 +19,7 @@ import (
 type APIProvider interface {
 	GetPublicApi() services.PublicApi
 	GetCompiler() adapter.Compiler
-	WaitForTransactionInStateForAtMost(ctx context.Context, txhash primitives.Sha256, atMost time.Duration)
+	WaitForTransactionInStateForAtMost(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) // TODO remove atMost and use context with timeout
 }
 
 type contractClient struct {

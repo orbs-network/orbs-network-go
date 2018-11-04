@@ -5,12 +5,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"sync"
-	"time"
 )
 
 type BlockTracker struct {
 	graceDistance uint16 // this is not primitives.BlockHeight on purpose, to indicate that grace distance should be small
-	timeout       time.Duration
 
 	mutex         sync.RWMutex
 	currentHeight uint64 // this is not primitives.BlockHeight so as to avoid unnecessary casts
@@ -19,11 +17,10 @@ type BlockTracker struct {
 	fireOnWait func() // used by unit test
 }
 
-func NewBlockTracker(startingHeight uint64, graceDist uint16, timeout time.Duration) *BlockTracker {
+func NewBlockTracker(startingHeight uint64, graceDist uint16) *BlockTracker {
 	return &BlockTracker{
 		currentHeight: startingHeight,
 		graceDistance: graceDist,
-		timeout:       timeout,
 		latch:         make(chan struct{}),
 	}
 }
@@ -45,6 +42,8 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 	return t.currentHeight, t.latch
 }
 
+// waits until we reach a block at the specified height, or until the context is closed
+// to wait until some timeout, pass a child context with a deadline
 func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primitives.BlockHeight) error {
 
 	requestedHeightUint := uint64(requestedHeight)
@@ -57,9 +56,6 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 	if currentHeight+uint64(t.graceDistance) < requestedHeightUint { // requested block too far ahead, no grace
 		return errors.Errorf("requested future block outside of grace range")
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, t.timeout)
-	defer cancel()
 
 	for currentHeight < requestedHeightUint {
 		if t.fireOnWait != nil {

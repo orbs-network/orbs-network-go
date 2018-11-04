@@ -39,13 +39,9 @@ type inMemoryBlockPersistence struct {
 }
 
 func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
-	return NewInMemoryBlockPersistenceWithBlockTimeout(1000 * time.Millisecond)
-}
-
-func NewInMemoryBlockPersistenceWithBlockTimeout(duration time.Duration) InMemoryBlockPersistence {
 	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
-		tracker:        synchronization.NewBlockTracker(0, 5, duration),
+		tracker:        synchronization.NewBlockTracker(0, 5),
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)

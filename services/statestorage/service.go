@@ -30,7 +30,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 	forest, _ := merkle.NewForest()
 	return &service{
 		config:       config,
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
 		logger:       logger.WithTags(LogTag),
 
 		mutex:     sync.RWMutex{},
@@ -72,7 +72,8 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		return nil, errors.Errorf("missing contract name")
 	}
 
-	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
+	timeoutCtx, _ := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
@@ -116,7 +117,8 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 }
 
 func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
+	timeoutCtx, _ := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 

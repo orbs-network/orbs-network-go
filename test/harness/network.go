@@ -78,8 +78,10 @@ func (n *networkNode) GetCompiler() nativeProcessorAdapter.Compiler {
 }
 
 func (n *networkNode) WaitForTransactionInStateForAtMost(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) {
-	blockHeight := n.blockPersistence.WaitForTransaction(ctx, txhash, atMost)
-	err := n.statePersistence.WaitUntilCommittedBlockOfHeight(ctx, blockHeight)
+	timeoutCtx, _ := context.WithTimeout(ctx, atMost)
+
+	blockHeight := n.blockPersistence.WaitForTransaction(timeoutCtx, txhash, atMost)
+	err := n.statePersistence.WaitUntilCommittedBlockOfHeight(timeoutCtx, blockHeight)
 	if err != nil {
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
