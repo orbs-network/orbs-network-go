@@ -70,7 +70,6 @@ type NodeConfig interface {
 
 type mutableNodeConfig interface {
 	NodeConfig
-
 	Set(key string, value NodeConfigValue) mutableNodeConfig
 	SetDuration(key string, value time.Duration) mutableNodeConfig
 	SetUint32(key string, value uint32) mutableNodeConfig
@@ -79,12 +78,9 @@ type mutableNodeConfig interface {
 	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
 	SetNodePublicKey(key primitives.Ed25519PublicKey) mutableNodeConfig
 	SetNodePrivateKey(key primitives.Ed25519PrivateKey) mutableNodeConfig
-
 	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
-
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
-
 	OverrideNodeSpecificValues(
 		federationNodes map[string]FederationNode,
 		gossipPeers map[string]GossipPeer,
