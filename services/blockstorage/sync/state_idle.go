@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
@@ -13,6 +14,7 @@ type idleState struct {
 	logger      log.BasicLogger
 	sf          *stateFactory
 	conduit     *blockSyncConduit
+	latency     *metric.Histogram
 }
 
 func (s *idleState) name() string {
@@ -24,6 +26,9 @@ func (s *idleState) String() string {
 }
 
 func (s *idleState) processState(ctx context.Context) syncState {
+	start := time.Now()
+	defer s.latency.RecordSince(start) // runtime metric
+
 	noCommitTimer := synchronization.NewTimer(s.idleTimeout())
 	select {
 	case <-noCommitTimer.C:

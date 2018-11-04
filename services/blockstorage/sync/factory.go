@@ -2,9 +2,11 @@ package sync
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"time"
 )
 
 type stateFactory struct {
@@ -13,6 +15,27 @@ type stateFactory struct {
 	storage BlockSyncStorage
 	c       *blockSyncConduit
 	logger  log.BasicLogger
+	metrics *stateMetrics
+}
+
+type stateMetrics struct {
+	blocksPerSecond           *metric.Rate
+	idleStateLatency          *metric.Histogram
+	carStateLatency           *metric.Histogram
+	finishedCarStateLatency   *metric.Histogram
+	waitingChunksStateLatency *metric.Histogram
+	processingStateLatency    *metric.Histogram
+}
+
+func newStateMetrics(factory metric.Factory) *stateMetrics {
+	return &stateMetrics{
+		blocksPerSecond:           factory.NewRate("BlockSync.BlocksPerSecond"),
+		idleStateLatency:          factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
+		carStateLatency:           factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
+		finishedCarStateLatency:   factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
+		waitingChunksStateLatency: factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
+		processingStateLatency:    factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
+	}
 }
 
 func NewStateFactory(
@@ -20,7 +43,8 @@ func NewStateFactory(
 	gossip gossiptopics.BlockSync,
 	storage BlockSyncStorage,
 	syncConduit *blockSyncConduit,
-	logger log.BasicLogger) *stateFactory {
+	logger log.BasicLogger,
+	factory metric.Factory) *stateFactory {
 
 	return &stateFactory{
 		config:  config,
@@ -28,6 +52,7 @@ func NewStateFactory(
 		storage: storage,
 		c:       syncConduit,
 		logger:  logger,
+		metrics: newStateMetrics(factory),
 	}
 }
 
@@ -37,6 +62,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 		idleTimeout: f.config.BlockSyncNoCommitInterval,
 		logger:      f.logger,
 		conduit:     f.c,
+		latency:     f.metrics.idleStateLatency,
 	}
 }
 

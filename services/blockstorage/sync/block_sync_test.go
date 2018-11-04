@@ -11,7 +11,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 
 	h.expectingSyncOnStart()
 
-	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
+	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger, h.m)
 
 	h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	h.cancel()
@@ -27,7 +27,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	h := newBlockSyncHarness().withNoCommitTimeout(20 * time.Millisecond)
 	h.expectingSyncOnStart()
 
-	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
+	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger, h.m)
 	idleReached := h.waitForState(sync, h.sf.CreateIdleState())
 	require.True(t, idleReached, "idle state was not reached when expected, most likely something else is broken")
 

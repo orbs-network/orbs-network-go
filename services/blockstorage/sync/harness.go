@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -77,6 +78,7 @@ type blockSyncHarness struct {
 	storage   *blockSyncStorageMock
 	logger    log.BasicLogger
 	ctxCancel context.CancelFunc
+	m         metric.Factory
 }
 
 func newBlockSyncHarness() *blockSyncHarness {
@@ -97,15 +99,17 @@ func newBlockSyncHarness() *blockSyncHarness {
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
 	}
+	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{
 		logger:    logger,
-		sf:        NewStateFactory(cfg, gossip, storage, conduit, logger),
+		sf:        NewStateFactory(cfg, gossip, storage, conduit, logger, metricFactory),
 		ctx:       ctx,
 		ctxCancel: cancel,
 		config:    cfg,
 		gossip:    gossip,
 		storage:   storage,
+		m:         metricFactory,
 	}
 }
 

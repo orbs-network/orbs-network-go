@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -51,22 +52,37 @@ type BlockSync struct {
 	config       blockSyncConfig
 	currentState syncState
 	c            *blockSyncConduit
+
+	metrics *stateMachineMetrics
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger) *BlockSync {
+type stateMachineMetrics struct {
+	statesTransitioned *metric.Gauge
+}
+
+func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
+	return &stateMachineMetrics{
+		statesTransitioned: factory.NewGauge("BlockSync.StateTransitions"),
+	}
+}
+
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, factory metric.Factory) *BlockSync {
 	conduit := &blockSyncConduit{
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
 	}
 
+	metrics := newStateMachineMetrics(factory)
+
 	bs := &BlockSync{
 		logger:  logger.WithTags(log.String("flow", "block-sync")),
-		sf:      NewStateFactory(config, gossip, storage, conduit, logger),
+		sf:      NewStateFactory(config, gossip, storage, conduit, logger, factory),
 		gossip:  gossip,
 		storage: storage,
 		config:  config,
 		c:       conduit,
+		metrics: metrics,
 	}
 
 	bs.logger.Info("block sync init",
@@ -85,8 +101,9 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 func (bs *BlockSync) syncLoop(ctx context.Context) {
 	for bs.currentState = bs.sf.CreateCollectingAvailabilityResponseState(); bs.currentState != nil; {
 		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
-		// TODO add metrics
+
 		bs.currentState = bs.currentState.processState(ctx)
+		bs.metrics.statesTransitioned.Inc()
 	}
 }
 
