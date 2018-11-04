@@ -59,7 +59,7 @@ func NewTransactionPool(ctx context.Context,
 
 		pendingPool:          pendingPool,
 		committedPool:        committedPool,
-		blockTracker:         synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), time.Duration(config.BlockTrackerGraceTimeout())),
+		blockTracker:         synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
 		transactionForwarder: txForwarder,
 	}
 
@@ -104,7 +104,8 @@ func (s *service) currentBlockHeightAndTime() (primitives.BlockHeight, primitive
 }
 
 func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
-	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
+	timeoutCtx, _ := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, err
 	}
 

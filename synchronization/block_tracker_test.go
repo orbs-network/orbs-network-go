@@ -6,37 +6,40 @@ import (
 	"github.com/stretchr/testify/require"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(1, 1, 10*time.Millisecond)
+		tracker := NewBlockTracker(1, 1)
 
 		err := tracker.WaitForBlock(ctx, 3)
 		require.EqualError(t, err, "requested future block outside of grace range", "did not fail immediately")
 	})
 }
 
-func TestWaitForBlockWithinGraceFailsAfterTimeout(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(1, 1, 1*time.Millisecond)
+func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
+	test.WithContext(func(parentCtx context.Context) {
+		ctx, cancel := context.WithCancel(parentCtx)
+		tracker := NewBlockTracker(1, 1)
+		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
-		require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
+		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
 	})
 }
 
 func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(0, 5, 1*time.Millisecond)
+	test.WithContext(func(parentCtx context.Context) {
+		ctx, cancel := context.WithCancel(parentCtx)
+		tracker := NewBlockTracker(0, 5)
+		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
-		require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
+		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
 	})
 }
 
-func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeTimeoutAfterWaiting(t *testing.T) {
+func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(1, 2, 1*time.Second)
+		tracker := NewBlockTracker(1, 2)
 
 		var waitCount int32
 		internalWaitChan := make(chan int32)
@@ -60,7 +63,7 @@ func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeTimeoutAfterW
 
 func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(1, 1, 1*time.Second)
+		tracker := NewBlockTracker(1, 1)
 
 		var waitCount int32
 		internalWaitChan := make(chan int32)
