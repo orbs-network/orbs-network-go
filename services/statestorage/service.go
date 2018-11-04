@@ -34,7 +34,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 		logger:       logger.WithTags(LogTag),
 
 		mutex:     sync.RWMutex{},
-		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance()), forest),
+		revisions: newRollingRevisions(persistence, int(config.StateStorageHistorySnapshotNum()), forest),
 	}
 }
 
@@ -80,8 +80,8 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 	defer s.mutex.RUnlock()
 
 	currentHeight := s.revisions.getCurrentHeight()
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()))
 	}
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
@@ -124,8 +124,8 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	defer s.mutex.RUnlock()
 
 	currentHeight := s.revisions.getCurrentHeight()
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()))
 	}
 
 	value, err := s.revisions.getRevisionHash(input.BlockHeight)

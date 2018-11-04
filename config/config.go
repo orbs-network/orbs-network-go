@@ -18,7 +18,7 @@ type NodeConfig interface {
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	ConsensusContextPercentageOfNodesRequiredForConsensus() uint32
+	ConsensusRequiredQuorumPercentage() uint32
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
@@ -33,14 +33,14 @@ type NodeConfig interface {
 	BlockSyncCollectChunksTimeout() time.Duration
 
 	// state storage
-	StateStorageHistoryRetentionDistance() uint32
+	StateStorageHistorySnapshotNum() uint32
 
 	// block tracker
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
 
 	// consensus context
-	ConsensusContextMinimalBlockDelay() time.Duration
+	ConsensusContextMinimalBlockTime() time.Duration
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMaximumTransactionsInBlock() uint32
 
@@ -113,7 +113,7 @@ type GossipTransportConfig interface {
 type ConsensusContextConfig interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
-	ConsensusContextMinimalBlockDelay() time.Duration
+	ConsensusContextMinimalBlockTime() time.Duration
 }
 
 type PublicApiConfig interface {
@@ -122,7 +122,7 @@ type PublicApiConfig interface {
 }
 
 type StateStorageConfig interface {
-	StateStorageHistoryRetentionDistance() uint32
+	StateStorageHistorySnapshotNum() uint32
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
 }

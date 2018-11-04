@@ -31,8 +31,8 @@ func ForGossipAdapterTests(publicKey primitives.Ed25519PublicKey, gossipListenPo
 func ForConsensusContextTests() ConsensusContextConfig {
 	cfg := emptyConfig()
 
-	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_DELAY, 1*time.Millisecond)
-	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTION_IN_BLOCK, 2)
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 1*time.Millisecond)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK, 2)
 	return cfg
 }
 
@@ -47,7 +47,7 @@ func ForPublicApiTests(virtualChain uint32, txTimeout time.Duration) PublicApiCo
 func ForStateStorageTest(numOfStateRevisionsToRetain uint32, graceBlockDiff uint32, graceTimeoutMillis uint64) StateStorageConfig {
 	cfg := emptyConfig()
 
-	cfg.SetUint32(STATE_STORAGE_HISTORY_RETENTION_DISTANCE, numOfStateRevisionsToRetain)
+	cfg.SetUint32(STATE_STORAGE_HISTORY_SNAPSHOT_NUM, numOfStateRevisionsToRetain)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, time.Duration(graceTimeoutMillis)*time.Millisecond)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, graceBlockDiff)
 	return cfg
