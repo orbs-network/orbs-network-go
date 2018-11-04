@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 //TODO abstract public API's methods
@@ -19,7 +18,7 @@ import (
 type APIProvider interface {
 	GetPublicApi() services.PublicApi
 	GetCompiler() adapter.Compiler
-	WaitForTransactionInStateForAtMost(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) // TODO remove atMost and use context with timeout
+	WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256)
 }
 
 type contractClient struct {

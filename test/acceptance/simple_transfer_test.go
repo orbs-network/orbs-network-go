@@ -8,15 +8,17 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
 			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
-		).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		contract := network.GetBenchmarkTokenContract()
+		).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+		ctx, _ := context.WithTimeout(parent, 1 * time.Second)
 
+		contract := network.GetBenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
@@ -46,9 +48,10 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
 			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
-		).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		contract := network.GetBenchmarkTokenContract()
+		).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+		ctx, _ := context.WithTimeout(parent, 1 * time.Second)
 
+		contract := network.GetBenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
