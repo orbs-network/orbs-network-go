@@ -121,7 +121,7 @@ func newHarness() *harness {
 
 			nodeLogger := logger.WithOutput(log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter()))
 
-			cfg := config.ForProduction(processorArtifactPath)
+			cfg := config.ForE2E(processorArtifactPath)
 			cfg.OverrideNodeSpecificValues(
 				federationNodes,
 				gossipPeers,
