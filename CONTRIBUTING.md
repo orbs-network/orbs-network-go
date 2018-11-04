@@ -22,9 +22,37 @@ Our coding conventions follow two alternative patterns for synchronization withi
 #### Mutex best practices
 
 * Use a `RWMutex` and separate between read locks and write locks. Do not assume that reading without a lock is safe.
-* All state variables that are protected by the mutex should have a name suffix `UnderMutex` and be declared immediately after the mutex.
-* Unlocks of the mutex should be done using `defer mutex.Unlock()` and appear immediately after the locks. Function scope should be designed according to this principle to avoid locking the mutex for too long.
-* Locks should be for as short as possible (only while the data is accessed). Never make a service RPC call or an IO call when the mutex is locked.
+* All state variables that are protected by the a mutex should be grouped in an anonymous struct that embeds the mutex.
+* Unlocks of the mutex should be done using `defer mutex.Unlock()` and appear immediately after the locks. Function scope should be designed according to this principle to avoid locking the mutex for too long. It's best to create mutex access methods that lock the mutex, defer the unlock, perform the read/write and return.
+* Locks should be for as short as possible (only while the data is accessed). Never make an out-of-service-bound call or an IO call when the mutex is locked.
+* A mutex protects fields used together atomically. If two fields have different access patterns, they should be separated, each under its own mutex.
+
+```golang
+type inMemoryBlockPersistence struct {
+	// this struct couples the data with a mutex that controls its access
+	blockChain struct {
+		sync.RWMutex
+		blocks []*protocol.BlockPairContainer
+	}
+	
+	failNextBlocks bool
+	tracker        *synchronization.BlockTracker
+	
+	// this is another mutex-protected field, with different locking patterns
+ 	blockHeightsPerTxHash struct {
+		sync.Mutex
+		channels map[string]blockHeightChan
+	}
+}
+
+func (bp *inMemoryBlockPersistence) addBlockToInMemoryChain(blockPair *protocol.BlockPairContainer) {
+	bp.blockChain.Lock()
+	defer bp.blockChain.Unlock()
+
+	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
+}
+
+```
 * Beware of the classic pitfall of (1) Read lock and unlock (2) Processing (3) Write lock and unlock. During phase (2) the read data might no longer be relevant due to another write. A way to mitigate this is to compare the read data during phase (3) to make sure it's still as expected and if not, abort the write.
 
 ### Error handling
@@ -51,9 +79,7 @@ TBD
 TBD
 
 ### Testing Strategy
-Before
-During
-After
+Contributions without full test coverage will _not_ be accepted. We use Test-Driven Development to help shape and evolve our design, and would prefer any contributed code to have been developed using TDD.
 
 ### CI
 TBD
