@@ -37,7 +37,7 @@ func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
 		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 		node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 
-		node.config = config.ForDevelopment(
+		node.config = config.ForGamma(
 			federationNodes,
 			gossipPeers,
 			nodeKeyPair.PublicKey(),
