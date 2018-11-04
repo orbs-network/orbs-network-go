@@ -93,24 +93,21 @@ func TestGoForever_TerminatesWhenContextIsClosed(t *testing.T) {
 		}
 	})
 
-	<- bgStarted
+	<-bgStarted
 	cancel()
 
 	select {
-	case <- bgEnded:
+	case <-bgEnded:
 		// ok, invocation of cancel() caused goroutine to stop, we can now check if it restarts
 	case <-time.After(1 * time.Second):
 		require.Fail(t, "long living goroutine didn't stop")
 	}
 
 	select {
-	case <- shutdown:
+	case <-shutdown:
 		// system has shutdown, all ok
 	case <-time.After(1 * time.Second):
 		t.Fatalf("long living goroutine did not return")
 	}
 
 }
-
-
-

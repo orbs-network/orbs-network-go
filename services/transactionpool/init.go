@@ -62,4 +62,3 @@ func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha2
 		}
 	}
 }
-

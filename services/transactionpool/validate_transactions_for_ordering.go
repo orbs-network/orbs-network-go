@@ -42,4 +42,3 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 	}
 	return &services.ValidateTransactionsForOrderingOutput{}, nil
 }
-

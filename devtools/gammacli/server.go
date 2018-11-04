@@ -44,7 +44,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 		ctxCancel:    cancel,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
 		httpServer:   httpServer,
-		Logger: testLogger,
+		Logger:       testLogger,
 	}
 
 	if blocking == true {

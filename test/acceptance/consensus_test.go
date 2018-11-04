@@ -78,5 +78,5 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 
 			blockSyncTamper.Release(ctx)
-	})
+		})
 }
