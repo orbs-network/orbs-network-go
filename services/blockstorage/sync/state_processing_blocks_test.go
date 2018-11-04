@@ -76,7 +76,7 @@ func TestProcessingCommitFailureReturnsToCAR(t *testing.T) {
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(6)
 	h.storage.When("CommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) error {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(message.SignedChunkRange.FirstBlockHeight() + 5) {
-			return errors.New("failed to validate block #6")
+			return errors.New("failed to commit block #6")
 		}
 		return nil
 	}).Times(6)

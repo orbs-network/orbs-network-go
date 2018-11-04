@@ -24,17 +24,30 @@ type stateMetrics struct {
 	carStateLatency           *metric.Histogram
 	finishedCarStateLatency   *metric.Histogram
 	waitingChunksStateLatency *metric.Histogram
-	processingStateLatency    *metric.Histogram
+	processingStateMetrics
+}
+
+type processingStateMetrics struct {
+	stateLatency           *metric.Histogram
+	throughputRate         *metric.Rate
+	committedBlocks        *metric.Gauge
+	failedCommitBlocks     *metric.Gauge
+	failedValidationBlocks *metric.Gauge
 }
 
 func newStateMetrics(factory metric.Factory) *stateMetrics {
 	return &stateMetrics{
-		blocksPerSecond:           factory.NewRate("BlockSync.BlocksPerSecond"),
-		idleStateLatency:          factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
-		carStateLatency:           factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
-		finishedCarStateLatency:   factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
-		waitingChunksStateLatency: factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
-		processingStateLatency:    factory.NewLatency("BlockSync.IdleStateLatency", 24*30*time.Hour),
+		idleStateLatency:          factory.NewLatency("BlockSync.State.IdleStateLatency", 24*30*time.Hour),
+		carStateLatency:           factory.NewLatency("BlockSync.State.CollectingStateLatency", 24*30*time.Hour),
+		finishedCarStateLatency:   factory.NewLatency("BlockSync.State.FinishedCollectingStateLatency", 24*30*time.Hour),
+		waitingChunksStateLatency: factory.NewLatency("BlockSync.State.WaitingStateLatency", 24*30*time.Hour),
+		processingStateMetrics: processingStateMetrics{
+			stateLatency:           factory.NewLatency("BlockSync.State.Processing.StateLatency", 24*30*time.Hour),
+			throughputRate:         factory.NewRate("BlockSync.Processing.BlocksRate"),
+			committedBlocks:        factory.NewGauge("BlockSync.Processing.CommittedBlocks"),
+			failedCommitBlocks:     factory.NewGauge("BlockSync.Processing.FailedToCommitBlocks"),
+			failedValidationBlocks: factory.NewGauge("BlockSync.Processing.FailedToValidateBlocks"),
+		},
 	}
 }
 
@@ -105,6 +118,6 @@ func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.Block
 		sf:      f,
 		logger:  f.logger,
 		storage: f.storage,
-		latency: f.metrics.processingStateLatency,
+		m:       f.metrics.processingStateMetrics,
 	}
 }

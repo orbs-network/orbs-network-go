@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
@@ -15,7 +14,7 @@ type processingBlocksState struct {
 	logger  log.BasicLogger
 	storage BlockSyncStorage
 	sf      *stateFactory
-	latency *metric.Histogram
+	m       processingStateMetrics
 }
 
 func (s *processingBlocksState) name() string {
@@ -32,7 +31,7 @@ func (s *processingBlocksState) String() string {
 
 func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.latency.RecordSince(start) // runtime metric
+	defer s.m.stateLatency.RecordSince(start) // runtime metric
 
 	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
 		return nil
@@ -53,9 +52,11 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Stringable("last-block-height", lastBlockHeight))
 
 	for _, blockPair := range s.blocks.BlockPairs {
+		s.m.throughputRate.Measure(1)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
 		if err != nil {
+			s.m.failedValidationBlocks.Inc()
 			s.logger.Error("failed to validate block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock))
 			break
 		}
@@ -63,9 +64,11 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		_, err = s.storage.CommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
 
 		if err != nil {
+			s.m.failedCommitBlocks.Inc()
 			s.logger.Error("failed to commit block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			break
 		} else {
+			s.m.committedBlocks.Inc()
 			s.logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}
 	}
