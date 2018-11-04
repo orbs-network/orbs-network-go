@@ -40,4 +40,3 @@ func (s *service) currentNodeTimeWithGrace() primitives.TimestampNano {
 	defer s.mu.RUnlock()
 	return s.mu.lastCommittedBlockTimestamp + primitives.TimestampNano(s.config.TransactionPoolFutureTimestampGraceTimeout().Nanoseconds())
 }
-

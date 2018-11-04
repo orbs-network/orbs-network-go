@@ -48,7 +48,8 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
 		).WithMaxTxPerBlock(1).
 		Start(func(parent context.Context, network harness.InProcessTestNetwork) {
-			ctx, _ := context.WithTimeout(parent, 1*time.Second)
+			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			defer cancel()
 
 			contract := network.GetBenchmarkTokenContract()
 			contract.DeployBenchmarkToken(ctx, 5)
@@ -78,5 +79,5 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 
 			blockSyncTamper.Release(ctx)
-	})
+		})
 }

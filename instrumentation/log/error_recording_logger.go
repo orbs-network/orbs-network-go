@@ -19,7 +19,7 @@ type errorRecorder struct {
 
 type enexpectedError struct {
 	message string
-	err error
+	err     error
 }
 
 func (e *enexpectedError) String() string {
@@ -61,7 +61,7 @@ func (l *ErrorRecordingLogger) Metric(params ...*Field) {
 
 func (l *ErrorRecordingLogger) WithTags(params ...*Field) BasicLogger {
 	return &ErrorRecordingLogger{
-		nested: l.nested.WithTags(),
+		nested:        l.nested.WithTags(),
 		allowedErrors: l.allowedErrors,
 		errorRecorder: l.errorRecorder,
 	}
@@ -112,5 +112,3 @@ func (l *ErrorRecordingLogger) HasErrors() bool {
 	defer l.errorRecorder.Unlock()
 	return len(l.errorRecorder.unexpectedErrors) > 0
 }
-
-

@@ -10,7 +10,9 @@ import (
 )
 
 func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
-	timeoutCtx, _ := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	defer cancel()
+
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, err
 	}
@@ -42,4 +44,3 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 	}
 	return &services.ValidateTransactionsForOrderingOutput{}, nil
 }
-

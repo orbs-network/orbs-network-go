@@ -72,7 +72,9 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		return nil, errors.Errorf("missing contract name")
 	}
 
-	timeoutCtx, _ := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	defer cancel()
+
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
@@ -117,7 +119,8 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 }
 
 func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	timeoutCtx, _ := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	defer cancel()
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}

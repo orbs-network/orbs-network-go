@@ -51,4 +51,3 @@ func (s *service) createValidationContext() *validationContext {
 		virtualChainId:              s.config.VirtualChainId(),
 	}
 }
-

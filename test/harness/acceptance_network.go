@@ -15,7 +15,6 @@ import (
 
 func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *inProcessNetwork {
 
-
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
