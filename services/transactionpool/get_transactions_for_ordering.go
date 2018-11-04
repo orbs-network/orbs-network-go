@@ -10,7 +10,9 @@ import (
 
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 
-	timeoutCtx, _ := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	defer cancel()
+
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, err
 	}

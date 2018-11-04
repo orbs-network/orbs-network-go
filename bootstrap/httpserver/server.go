@@ -88,7 +88,9 @@ func (s *server) listen(addr string) (net.Listener, error) {
 func (s *server) GracefulShutdown(timeout time.Duration) {
 	ctx := context.Background()
 	if timeout > 0 {
-		ctx, _ = context.WithTimeout(context.Background(), timeout)
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 	if err := s.httpServer.Shutdown(ctx); err != nil {
 		s.logger.Error("failed to stop http server gracefully", log.Error(err))

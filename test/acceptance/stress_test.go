@@ -60,7 +60,8 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("this test causes the system to hang, seems like consensus algo stops")
 	harness.Network(t).WithNumNodes(3).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
-		ctx, _ := context.WithTimeout(parent, 2*time.Second)
+		ctx, cancel := context.WithTimeout(parent, 2*time.Second)
+		defer cancel()
 
 		network.GossipTransport().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
