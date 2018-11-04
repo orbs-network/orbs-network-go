@@ -43,10 +43,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	harness.Network(t).
-		AllowingErrors(
-			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
-		).WithMaxTxPerBlock(1).
+	harness.Network(t).WithMaxTxPerBlock(1).
 		Start(func(parent context.Context, network harness.InProcessTestNetwork) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()

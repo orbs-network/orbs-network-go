@@ -17,7 +17,6 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 	harness.Network(t).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool",                 // because we duplicate, among other messages, the transaction propagation message
-			"consensus round tick failed",                                        // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
 			"FORK!! block already in storage, transaction block header mismatch", //TODO investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
@@ -30,9 +29,6 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	harness.Network(t).
-		AllowingErrors(
-			"consensus round tick failed", // transport failed to send - because we are failing the consensus messages, among other messages, and this kills the current consensus round
-		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
@@ -43,9 +39,6 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	harness.Network(t).
-		AllowingErrors(
-			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
-		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 
