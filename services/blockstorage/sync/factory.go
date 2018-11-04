@@ -19,12 +19,17 @@ type stateFactory struct {
 }
 
 type stateMetrics struct {
-	blocksPerSecond           *metric.Rate
-	idleStateLatency          *metric.Histogram
 	carStateLatency           *metric.Histogram
 	finishedCarStateLatency   *metric.Histogram
 	waitingChunksStateLatency *metric.Histogram
+	idleStateMetrics
 	processingStateMetrics
+}
+
+type idleStateMetrics struct {
+	stateLatency *metric.Histogram
+	timesReset   *metric.Gauge
+	timesExpired *metric.Gauge
 }
 
 type processingStateMetrics struct {
@@ -37,10 +42,14 @@ type processingStateMetrics struct {
 
 func newStateMetrics(factory metric.Factory) *stateMetrics {
 	return &stateMetrics{
-		idleStateLatency:          factory.NewLatency("BlockSync.State.IdleStateLatency", 24*30*time.Hour),
 		carStateLatency:           factory.NewLatency("BlockSync.State.CollectingStateLatency", 24*30*time.Hour),
 		finishedCarStateLatency:   factory.NewLatency("BlockSync.State.FinishedCollectingStateLatency", 24*30*time.Hour),
 		waitingChunksStateLatency: factory.NewLatency("BlockSync.State.WaitingStateLatency", 24*30*time.Hour),
+		idleStateMetrics: idleStateMetrics{
+			stateLatency: factory.NewLatency("BlockSync.Idle.StateLatency", 24*30*time.Hour),
+			timesReset:   factory.NewGauge("BlockSync.Idle.TimesReset"),
+			timesExpired: factory.NewGauge("BlockSync.Idle.TimesExpired"),
+		},
 		processingStateMetrics: processingStateMetrics{
 			stateLatency:           factory.NewLatency("BlockSync.State.Processing.StateLatency", 24*30*time.Hour),
 			throughputRate:         factory.NewRate("BlockSync.Processing.BlocksRate"),
@@ -75,7 +84,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 		idleTimeout: f.config.BlockSyncNoCommitInterval,
 		logger:      f.logger,
 		conduit:     f.c,
-		latency:     f.metrics.idleStateLatency,
+		m:           f.metrics.idleStateMetrics,
 	}
 }
 
