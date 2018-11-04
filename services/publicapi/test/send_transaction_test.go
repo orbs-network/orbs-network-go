@@ -91,9 +91,7 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 		harness := newPublicApiHarness(ctx, timeout)
 
 		txb := builders.Transaction().Builder()
-		harness.onAddNewTransaction(func() {
-			time.Sleep(1 * time.Millisecond)
-		})
+		harness.onAddNewTransaction(func() {})
 
 		start := time.Now()
 		result, err := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
