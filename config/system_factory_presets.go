@@ -58,14 +58,14 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 func ForE2E(processorArtifactPath string) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
-	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Second)
-	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 500*time.Millisecond) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 250*time.Millisecond)
+	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 100*time.Millisecond) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK, 1)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 100)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 100)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
-	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 2500*time.Millisecond)
+	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 1000*time.Millisecond)
 
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
