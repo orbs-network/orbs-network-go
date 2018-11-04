@@ -2,6 +2,7 @@ package synchronization
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"sync"
@@ -63,7 +64,7 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 		}
 		select {
 		case <-ctx.Done():
-			return errors.Errorf("timed out waiting for block at height %v", requestedHeight)
+			return errors.Wrap(ctx.Err(), fmt.Sprintf("aborted while waiting for block at height %v", requestedHeight))
 		case <-currentLatch:
 			currentHeight, currentLatch = t.readAtomicHeightAndLatch()
 		}

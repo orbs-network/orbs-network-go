@@ -23,7 +23,7 @@ func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
 		tracker := NewBlockTracker(1, 1)
 		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
-		require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
+		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
 	})
 }
 
@@ -33,7 +33,7 @@ func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
 		tracker := NewBlockTracker(0, 5)
 		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
-		require.EqualError(t, err, "timed out waiting for block at height 2", "did not timeout as expected")
+		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
 	})
 }
 

@@ -86,7 +86,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testi
 		}
 
 		err := <-timeoutError
-		require.EqualError(t, err, "timed out waiting for block at height 5", "expect a timeout as the requested block height never reached")
+		require.EqualError(t, err, "aborted while waiting for block at height 5: context canceled", "expect a timeout as the requested block height never reached")
 	})
 }
 
@@ -166,6 +166,6 @@ func TestReturnResultsBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T
 		}
 
 		err := <-timeoutError
-		require.EqualError(t, err, "timed out waiting for block at height 5", "expect a timeout as the requested block height never reached")
+		require.EqualError(t, err, "aborted while waiting for block at height 5: context canceled", "expect a timeout as the requested block height never reached")
 	})
 }
