@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -18,6 +19,7 @@ type waitingForChunksState struct {
 	logger         log.BasicLogger
 	abort          chan struct{}
 	conduit        *blockSyncConduit
+	latency        *metric.Histogram
 }
 
 func (s *waitingForChunksState) name() string {
@@ -29,6 +31,9 @@ func (s *waitingForChunksState) String() string {
 }
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
+	start := time.Now()
+	defer s.latency.RecordSince(start) // runtime metric
+
 	err := s.gossipClient.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
 		s.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))

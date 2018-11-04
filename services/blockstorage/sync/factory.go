@@ -73,6 +73,7 @@ func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 		collectTimeout: f.config.BlockSyncCollectResponseTimeout,
 		logger:         f.logger,
 		conduit:        f.c,
+		latency:        f.metrics.carStateLatency,
 	}
 }
 
@@ -81,6 +82,7 @@ func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockA
 		responses: responses,
 		logger:    f.logger,
 		sf:        f,
+		latency:   f.metrics.finishedCarStateLatency,
 	}
 }
 
@@ -93,6 +95,7 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519P
 		logger:         f.logger,
 		abort:          make(chan struct{}),
 		conduit:        f.c,
+		latency:        f.metrics.waitingChunksStateLatency,
 	}
 }
 
@@ -102,5 +105,6 @@ func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.Block
 		sf:      f,
 		logger:  f.logger,
 		storage: f.storage,
+		latency: f.metrics.processingStateLatency,
 	}
 }

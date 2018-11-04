@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type processingBlocksState struct {
@@ -13,6 +15,7 @@ type processingBlocksState struct {
 	logger  log.BasicLogger
 	storage BlockSyncStorage
 	sf      *stateFactory
+	latency *metric.Histogram
 }
 
 func (s *processingBlocksState) name() string {
@@ -28,6 +31,9 @@ func (s *processingBlocksState) String() string {
 }
 
 func (s *processingBlocksState) processState(ctx context.Context) syncState {
+	start := time.Now()
+	defer s.latency.RecordSince(start) // runtime metric
+
 	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
 		return nil
 	}
