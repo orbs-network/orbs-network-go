@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -19,7 +18,7 @@ type waitingForChunksState struct {
 	logger         log.BasicLogger
 	abort          chan struct{}
 	conduit        *blockSyncConduit
-	latency        *metric.Histogram
+	m              waitingStateMetrics
 }
 
 func (s *waitingForChunksState) name() string {
@@ -32,7 +31,7 @@ func (s *waitingForChunksState) String() string {
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.latency.RecordSince(start) // runtime metric
+	defer s.m.stateLatency.RecordSince(start) // runtime metric
 
 	err := s.gossipClient.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
@@ -44,11 +43,14 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	select {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
+		s.m.timesTimeout.Inc()
 		return s.sf.CreateIdleState()
 	case blocks := <-s.conduit.blocks:
 		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
+		s.m.timesSuccessful.Inc()
 		return s.sf.CreateProcessingBlocksState(blocks)
 	case <-s.abort:
+		s.m.timesByzanitine.Inc()
 		return s.sf.CreateIdleState()
 	case <-ctx.Done():
 		return nil
