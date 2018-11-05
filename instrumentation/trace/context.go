@@ -33,6 +33,10 @@ func FromContext(ctx context.Context) (e *Context, ok bool) {
 }
 
 func (c *Context) NestedFields() []*log.Field {
+	if c == nil { // this can happen if the tracing.Context was never created, e.g. context logged doesn't have this context value
+		return nil
+	}
+
 	return []*log.Field{
 		log.String("entry-point", c.name),
 		log.String("request-id", c.requestId),
