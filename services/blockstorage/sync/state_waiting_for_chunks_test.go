@@ -14,7 +14,7 @@ import (
 func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
 	h := newBlockSyncHarness()
 
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -28,7 +28,7 @@ func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
 func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 	h := newBlockSyncHarness()
 
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -43,7 +43,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	blocksMessage := builders.BlockSyncResponseInput().Build().Message
 	h := newBlockSyncHarness().withNodeKey(blocksMessage.Sender.SenderPublicKey()).withWaitForChunksTimeout(time.Second)
 
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -66,7 +66,7 @@ func TestWaitingTerminatesOnContextTermination(t *testing.T) {
 	h := newBlockSyncHarness()
 	h.cancel()
 
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -81,7 +81,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	stateSourceKey := keys.Ed25519KeyPairForTests(8).PublicKey()
 	h := newBlockSyncHarness().withNodeKey(stateSourceKey)
 
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())

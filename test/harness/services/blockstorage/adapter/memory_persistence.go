@@ -69,12 +69,34 @@ func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txha
 	}
 }
 
-func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairContainer) error {
+func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
+	bp.blockChain.RLock()
+	defer bp.blockChain.RUnlock()
+
+	count := len(bp.blockChain.blocks)
+	if count == 0 {
+		return nil, nil
+	}
+
+	return bp.blockChain.blocks[count-1], nil
+}
+
+func (bp *inMemoryBlockPersistence) GetNumBlocks() (primitives.BlockHeight, error) {
+	bp.blockChain.RLock()
+	defer bp.blockChain.RUnlock()
+
+	return primitives.BlockHeight(len(bp.blockChain.blocks)), nil
+}
+
+func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 	if bp.failNextBlocks {
 		return errors.New("could not write a block")
 	}
 
-	bp.addBlockToInMemoryChain(blockPair)
+	err := bp.validateAndAddNextBlock(blockPair)
+	if err != nil {
+		return err
+	}
 
 	bp.tracker.IncrementHeight()
 
@@ -83,11 +105,19 @@ func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairCont
 	return nil
 }
 
-func (bp *inMemoryBlockPersistence) ReadAllBlocks() []*protocol.BlockPairContainer {
-	return bp.getBlockPairs()
+func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) error {
+	bp.blockChain.Lock()
+	defer bp.blockChain.Unlock()
+
+	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 != blockPair.TransactionsBlock.Header.BlockHeight() {
+		return errors.Errorf("block persistence tried to write next block with height %d when %d exist", blockPair.TransactionsBlock.Header.BlockHeight(), len(bp.blockChain.blocks))
+	}
+
+	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
+	return nil
 }
 
-func (bp *inMemoryBlockPersistence) GetReceiptRelevantBlocks(txTimeStamp primitives.TimestampNano, rules adapter.BlockSearchRules) []*protocol.BlockPairContainer {
+func (bp *inMemoryBlockPersistence) GetBlocksRelevantToTxTimestamp(txTimeStamp primitives.TimestampNano, rules adapter.BlockSearchRules) []*protocol.BlockPairContainer {
 	start := txTimeStamp - primitives.TimestampNano(rules.StartGraceNano)
 	end := txTimeStamp + primitives.TimestampNano(rules.EndGraceNano+rules.TransactionExpireNano)
 
@@ -101,7 +131,10 @@ func (bp *inMemoryBlockPersistence) GetReceiptRelevantBlocks(txTimeStamp primiti
 		return nil
 	}
 
-	blockPairs := bp.getBlockPairs()
+	bp.blockChain.RLock()
+	defer bp.blockChain.RUnlock()
+
+	blockPairs := bp.blockChain.blocks
 
 	for _, blockPair := range blockPairs {
 		delta := end - blockPair.TransactionsBlock.Header.Timestamp()
@@ -112,35 +145,38 @@ func (bp *inMemoryBlockPersistence) GetReceiptRelevantBlocks(txTimeStamp primiti
 	return relevantBlocks
 }
 
-func (bp *inMemoryBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
-	blockPairs := bp.getBlockPairs()
+func (bp *inMemoryBlockPersistence) getBlockPairAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+	bp.blockChain.RLock()
+	defer bp.blockChain.RUnlock()
 
-	for _, blockPair := range blockPairs {
-		if blockPair.TransactionsBlock.Header.BlockHeight() == height {
-			return blockPair.TransactionsBlock, nil
-		}
+	if height > primitives.BlockHeight(len(bp.blockChain.blocks)) {
+		return nil, errors.Errorf("block with height %d not found in block persistence", height)
 	}
 
-	return nil, fmt.Errorf("transactions block header with height %v not found", height)
+	return bp.blockChain.blocks[height-1], nil
+}
+
+func (bp *inMemoryBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+	blockPair, err := bp.getBlockPairAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	return blockPair.TransactionsBlock, nil
 }
 
 func (bp *inMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
-	blockPairs := bp.getBlockPairs()
-
-	for _, blockPair := range blockPairs {
-		if blockPair.TransactionsBlock.Header.BlockHeight() == height {
-			return blockPair.ResultsBlock, nil
-		}
+	blockPair, err := bp.getBlockPairAtHeight(height)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, fmt.Errorf("results block header with height %v not found", height)
+	return blockPair.ResultsBlock, nil
 }
 
 func (bp *inMemoryBlockPersistence) FailNextBlocks() {
 	bp.failNextBlocks = true
 }
 
-// Is covered by the mutex in WriteBlock
+// Is covered by the mutex in WriteNextBlock
 func (bp *inMemoryBlockPersistence) getChanFor(txhash primitives.Sha256) blockHeightChan {
 	bp.blockHeightsPerTxHash.Lock()
 	defer bp.blockHeightsPerTxHash.Unlock()
@@ -166,28 +202,29 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 	}
 }
 
-func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
-	blockPairs := bp.getBlockPairs()
+// TODO: better support for paging
+func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
+	// FIXME use more efficient way to slice blocks
 
-	count := len(blockPairs)
-
-	if count == 0 {
-		return nil, nil
-	}
-
-	return blockPairs[count-1], nil
-}
-
-func (bp *inMemoryBlockPersistence) getBlockPairs() []*protocol.BlockPairContainer {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	return bp.blockChain.blocks
-}
+	allBlocks := bp.blockChain.blocks
+	allBlocksLength := primitives.BlockHeight(len(allBlocks))
 
-func (bp *inMemoryBlockPersistence) addBlockToInMemoryChain(blockPair *protocol.BlockPairContainer) {
-	bp.blockChain.Lock()
-	defer bp.blockChain.Unlock()
+	if first > allBlocksLength {
+		return nil, 0, 0, nil
+	}
+	firstReturnedBlockHeight = first
 
-	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
+	lastReturnedBlockHeight = last
+	if last > allBlocksLength {
+		lastReturnedBlockHeight = allBlocksLength
+	}
+
+	for i := first - 1; i < lastReturnedBlockHeight; i++ {
+		blocks = append(blocks, allBlocks[i])
+	}
+
+	return blocks, firstReturnedBlockHeight, lastReturnedBlockHeight, nil
 }

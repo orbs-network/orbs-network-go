@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 )
@@ -38,9 +39,14 @@ func (c *blockSyncGossipClient) petitionerUpdateConsensusAlgos(ctx context.Conte
 }
 
 func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
-	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
-	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
+	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
+	if err != nil {
+		return err
+	}
+	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
+
+	firstBlockHeight := _lastCommittedBlockHeight + 1
+	lastBlockHeight := _lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
 	if firstBlockHeight > lastBlockHeight {
 		return errors.Errorf("invalid block request: from %d to %d", firstBlockHeight, lastBlockHeight)
@@ -59,20 +65,24 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
 				LastBlockHeight:          lastBlockHeight,
 				FirstBlockHeight:         firstBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
+				LastCommittedBlockHeight: _lastCommittedBlockHeight,
 			}).Build(),
 		},
 	}
 
-	_, err := c.gossip.BroadcastBlockAvailabilityRequest(ctx, input)
+	_, err = c.gossip.BroadcastBlockAvailabilityRequest(ctx, input)
 	return err
 }
 
 func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
-	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
+	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
+	if err != nil {
+		return err
+	}
+	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
-	firstBlockHeight := lastCommittedBlockHeight + 1
-	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
+	firstBlockHeight := _lastCommittedBlockHeight + 1
+	lastBlockHeight := _lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
 	request := &gossiptopics.BlockSyncRequestInput{
 		RecipientPublicKey: senderPublicKey,
@@ -84,11 +94,11 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Conte
 				BlockType:                blockType,
 				LastBlockHeight:          lastBlockHeight,
 				FirstBlockHeight:         firstBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
+				LastCommittedBlockHeight: _lastCommittedBlockHeight,
 			}).Build(),
 		},
 	}
 
-	_, err := c.gossip.SendBlockSyncRequest(ctx, request)
+	_, err = c.gossip.SendBlockSyncRequest(ctx, request)
 	return err
 }

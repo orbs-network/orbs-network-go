@@ -12,9 +12,10 @@ import (
 
 func TestProcessingBlocksCommitsAccordinglyAndMovesToCAR(t *testing.T) {
 	h := newBlockSyncHarness()
-
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(11)
-	h.storage.When("CommitBlock", mock.Any, mock.Any).Return(nil, nil).Times(11)
+
+	outCommit := &services.CommitBlockOutput{}
+	h.storage.When("CommitBlock", mock.Any, mock.Any).Return(outCommit, nil).Times(11)
 
 	message := builders.BlockSyncResponseInput().
 		WithFirstBlockHeight(10).
@@ -48,11 +49,11 @@ func TestProcessingValidationFailureReturnsToCAR(t *testing.T) {
 		WithLastCommittedBlockHeight(20).
 		Build().Message
 
-	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) error {
+	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(message.SignedChunkRange.FirstBlockHeight() + 5) {
-			return errors.New("failed to validate block #6")
+			return nil, errors.New("failed to validate block #6")
 		}
-		return nil
+		return nil, nil
 	}).Times(6)
 	h.storage.When("CommitBlock", mock.Any, mock.Any).Return(nil, nil).Times(5)
 
@@ -74,11 +75,11 @@ func TestProcessingCommitFailureReturnsToCAR(t *testing.T) {
 		Build().Message
 
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(6)
-	h.storage.When("CommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) error {
+	h.storage.When("CommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(message.SignedChunkRange.FirstBlockHeight() + 5) {
-			return errors.New("failed to validate block #6")
+			return nil, errors.New("failed to validate block #6")
 		}
-		return nil
+		return nil, nil
 	}).Times(6)
 
 	processingState := h.sf.CreateProcessingBlocksState(message)

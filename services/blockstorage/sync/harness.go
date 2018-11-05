@@ -19,19 +19,31 @@ type blockSyncStorageMock struct {
 	mock.Mock
 }
 
-func (s *blockSyncStorageMock) LastCommittedBlockHeight() primitives.BlockHeight {
-	ret := s.Called()
-	return ret.Get(0).(primitives.BlockHeight)
+func (s *blockSyncStorageMock) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+	ret := s.Called(ctx, input)
+	if out := ret.Get(0); out != nil {
+		return out.(*services.GetLastCommittedBlockHeightOutput), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
 }
 
 func (s *blockSyncStorageMock) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	ret := s.Called(ctx, input)
-	return nil, ret.Error(0)
+	if out := ret.Get(0); out != nil {
+		return out.(*services.CommitBlockOutput), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
 }
 
 func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	ret := s.Called(ctx, input)
-	return nil, ret.Error(0)
+	if out := ret.Get(0); out != nil {
+		return out.(*services.ValidateBlockForCommitOutput), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
 }
 
 func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
@@ -141,7 +153,7 @@ func (h *blockSyncHarness) cancel() {
 
 func (h *blockSyncHarness) expectingSyncOnStart() {
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
@@ -166,4 +178,12 @@ func (h *blockSyncHarness) nextState(state syncState, trigger func()) syncState 
 	trigger()
 	<-latch
 	return nextState
+}
+
+func (h *blockSyncHarness) expectLastCommittedBlockHeight(expectedHeight primitives.BlockHeight) {
+	out := &services.GetLastCommittedBlockHeightOutput{
+		LastCommittedBlockHeight:    expectedHeight,
+		LastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+	}
+	h.storage.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(out, nil).Times(1)
 }

@@ -15,7 +15,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T)
 	h := newBlockSyncHarness()
 
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
@@ -31,7 +31,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *tes
 	h := newBlockSyncHarness().withBatchSize(0)
 
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(0)).Times(1) // new server
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(0)) // new server
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
 	nextShouldBeIdle := collectingState.processState(h.ctx)
@@ -45,7 +45,7 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 	h := newBlockSyncHarness()
 
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	message := builders.BlockAvailabilityResponseInput().Build().Message
@@ -69,7 +69,7 @@ func TestCollectingAvailabilityContextTermination(t *testing.T) {
 	h.cancel()
 
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()

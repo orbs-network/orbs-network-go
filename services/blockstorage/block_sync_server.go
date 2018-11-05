@@ -2,11 +2,12 @@ package blockstorage
 
 import (
 	"context"
-	"errors"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 )
 
 func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, message *gossipmessages.BlockAvailabilityRequestMessage) error {
@@ -16,9 +17,13 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 		log.Stringable("requested-last-block", message.SignedBatchRange.LastBlockHeight()),
 		log.Stringable("requested-last-committed-block", message.SignedBatchRange.LastCommittedBlockHeight()))
 
-	lastCommittedBlockHeight := s.LastCommittedBlockHeight()
+	out, err := s.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
+	if err != nil {
+		return err
+	}
+	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
-	if lastCommittedBlockHeight <= message.SignedBatchRange.LastCommittedBlockHeight() {
+	if _lastCommittedBlockHeight <= message.SignedBatchRange.LastCommittedBlockHeight() {
 		return nil
 	}
 
@@ -33,9 +38,9 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 			}).Build(),
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                blockType,
-				LastBlockHeight:          lastCommittedBlockHeight,
+				LastBlockHeight:          _lastCommittedBlockHeight,
 				FirstBlockHeight:         firstAvailableBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
+				LastCommittedBlockHeight: _lastCommittedBlockHeight,
 			}).Build(),
 		},
 	}
@@ -48,7 +53,7 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 		log.Stringable("source", response.Message.Sender.SenderPublicKey()),
 	)
 
-	_, err := s.gossip.SendBlockAvailabilityResponse(ctx, response)
+	_, err = s.gossip.SendBlockAvailabilityResponse(ctx, response)
 	return err
 }
 
@@ -57,23 +62,31 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 	blockType := message.SignedChunkRange.BlockType()
 	firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
 	lastRequestedBlockHeight := message.SignedChunkRange.LastBlockHeight()
-	lastCommittedBlockHeight := s.LastCommittedBlockHeight()
+
+	out, err := s.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
+	if err != nil {
+		return err
+	}
+	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
 	s.logger.Info("received block sync request",
 		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
 		log.Stringable("first-requested-block-height", firstRequestedBlockHeight),
 		log.Stringable("last-requested-block-height", lastRequestedBlockHeight),
-		log.Stringable("last-committed-block-height", lastCommittedBlockHeight))
+		log.Stringable("last-committed-block-height", _lastCommittedBlockHeight))
 
-	if lastCommittedBlockHeight <= firstRequestedBlockHeight {
-		return errors.New("firstBlockHeight is greater or equal to lastCommittedBlockHeight")
+	if _lastCommittedBlockHeight <= firstRequestedBlockHeight {
+		return errors.New("firstBlockHeight is greater or equal to _lastCommittedBlockHeight")
 	}
 
-	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncBatchSize()-1) {
+	if firstRequestedBlockHeight-_lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncBatchSize()-1) {
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize()-1)
 	}
 
-	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := s.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
+	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight, err := s.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
+	if err != nil {
+		return errors.Wrap(err, "block sync failed reading from block persistence")
+	}
 
 	s.logger.Info("sending blocks to another node via block sync",
 		log.Stringable("petitioner", senderPublicKey),
@@ -90,11 +103,11 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 				BlockType:                blockType,
 				FirstBlockHeight:         firstAvailableBlockHeight,
 				LastBlockHeight:          lastAvailableBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
+				LastCommittedBlockHeight: _lastCommittedBlockHeight,
 			}).Build(),
 			BlockPairs: blocks,
 		},
 	}
-	_, err := s.gossip.SendBlockSyncResponse(ctx, response)
+	_, err = s.gossip.SendBlockSyncResponse(ctx, response)
 	return err
 }
