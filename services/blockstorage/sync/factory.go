@@ -19,9 +19,9 @@ type stateFactory struct {
 }
 
 type stateMetrics struct {
-	finishedCarStateLatency *metric.Histogram
 	idleStateMetrics
 	collectingStateMetrics
+	finishedCollectingStateMetrics
 	waitingStateMetrics
 	processingStateMetrics
 }
@@ -35,6 +35,12 @@ type idleStateMetrics struct {
 type collectingStateMetrics struct {
 	stateLatency    *metric.Histogram
 	timesSuccessful *metric.Gauge
+}
+
+type finishedCollectingStateMetrics struct {
+	stateLatency       *metric.Histogram
+	timesNoResponses   *metric.Gauge
+	timesWithResponses *metric.Gauge
 }
 
 type waitingStateMetrics struct {
@@ -54,7 +60,6 @@ type processingStateMetrics struct {
 
 func newStateMetrics(factory metric.Factory) *stateMetrics {
 	return &stateMetrics{
-		finishedCarStateLatency: factory.NewLatency("BlockSync.State.FinishedCollectingStateLatency", 24*30*time.Hour),
 		idleStateMetrics: idleStateMetrics{
 			stateLatency: factory.NewLatency("BlockSync.Idle.StateLatency", 24*30*time.Hour),
 			timesReset:   factory.NewGauge("BlockSync.Idle.TimesReset"),
@@ -63,6 +68,11 @@ func newStateMetrics(factory metric.Factory) *stateMetrics {
 		collectingStateMetrics: collectingStateMetrics{
 			stateLatency:    factory.NewLatency("BlockSync.Collecting.StateLatency", 24*30*time.Hour),
 			timesSuccessful: factory.NewGauge("BlockSync.Collecting.SuccessCount"),
+		},
+		finishedCollectingStateMetrics: finishedCollectingStateMetrics{
+			stateLatency:       factory.NewLatency("BlockSync.FinishedCollecting.StateLatency", 24*30*time.Hour),
+			timesNoResponses:   factory.NewGauge("BlockSync.FinishedCollecting.NoResponsesCount"),
+			timesWithResponses: factory.NewGauge("BlockSync.FinishedCollecting.WithResponsesCount"),
 		},
 		waitingStateMetrics: waitingStateMetrics{
 			stateLatency:    factory.NewLatency("BlockSync.Waiting.StateLatency", 24*30*time.Hour),
@@ -124,7 +134,7 @@ func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockA
 		responses: responses,
 		logger:    f.logger,
 		sf:        f,
-		latency:   f.metrics.finishedCarStateLatency,
+		m:         f.metrics.finishedCollectingStateMetrics,
 	}
 }
 

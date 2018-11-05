@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"math/rand"
 	"time"
@@ -14,7 +13,7 @@ type finishedCARState struct {
 	responses []*gossipmessages.BlockAvailabilityResponseMessage
 	logger    log.BasicLogger
 	sf        *stateFactory
-	latency   *metric.Histogram
+	m         finishedCollectingStateMetrics
 }
 
 func (s *finishedCARState) name() string {
@@ -27,7 +26,7 @@ func (s *finishedCARState) String() string {
 
 func (s *finishedCARState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.latency.RecordSince(start) // runtime metric
+	defer s.m.stateLatency.RecordSince(start) // runtime metric
 
 	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
 		return nil
@@ -36,8 +35,10 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	c := len(s.responses)
 	if c == 0 {
 		s.logger.Info("no responses received")
+		s.m.timesNoResponses.Inc()
 		return s.sf.CreateIdleState()
 	}
+	s.m.timesWithResponses.Inc()
 	s.logger.Info("selecting from received sources", log.Int("sources-count", c))
 	syncSource := s.responses[rand.Intn(c)]
 	syncSourceKey := syncSource.Sender.SenderPublicKey()
