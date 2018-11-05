@@ -32,7 +32,7 @@ func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger(log.Node("node1"), log.Service("public-api")).
 		WithOutput(log.NewOutput(b)).
-		Info("Service initialized", )
+		Info("Service initialized")
 
 	jsonMap := parseOutput(b.String())
 

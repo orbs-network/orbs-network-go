@@ -15,4 +15,3 @@ func TestEntryPoint_DecoratesContext(t *testing.T) {
 	require.Equal(t, "foo", ep.name)
 	require.NotEmpty(t, ep.requestId)
 }
-

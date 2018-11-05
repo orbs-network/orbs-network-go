@@ -48,5 +48,3 @@ func LogFieldFrom(ctx context.Context) *log.Field {
 	return &log.Field{Key: "trace", Nested: trace, Type: log.AggregateType}
 
 }
-
-

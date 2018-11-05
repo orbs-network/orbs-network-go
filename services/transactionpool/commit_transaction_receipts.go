@@ -29,7 +29,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 		s.committedPool.add(receipt, timestampOrNow(removedTx))
 
-		s.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Stringable("txHash", receipt.Txhash()))
+		s.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
 
 	}
 

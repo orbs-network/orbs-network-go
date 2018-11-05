@@ -23,10 +23,9 @@ type Field struct {
 	Bytes       []byte
 	Float       float64
 
-	Error error
+	Error  error
 	Nested AggregateField
 }
-
 
 const (
 	NoType = iota
@@ -73,6 +72,10 @@ func String(key string, value string) *Field {
 
 func Stringable(key string, value fmt.Stringer) *Field {
 	return &Field{Key: key, String: value.String(), Type: StringType}
+}
+
+func Transaction(txHash primitives.Sha256) *Field {
+	return Stringable("txHash", txHash)
 }
 
 func StringableSlice(key string, values interface{}) *Field {

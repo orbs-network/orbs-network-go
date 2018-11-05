@@ -67,7 +67,7 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 
 	for _, tx := range txBlock.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		s.logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
+		s.logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Transaction(txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
 	}
 
 	return &services.RequestNewTransactionsBlockOutput{

@@ -13,7 +13,7 @@ import (
 func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
-	logger := s.logger.WithTags(log.Stringable("txHash", txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
+	logger := s.logger.WithTags(log.Transaction(txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
 
 	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))
 

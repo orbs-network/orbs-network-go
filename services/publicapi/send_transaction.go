@@ -23,7 +23,7 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
 	tx := input.ClientRequest.SignedTransaction()
 	txHash := digest.CalcTxHash(tx.Transaction())
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Stringable("txHash", txHash), log.String("flow", "checkpoint"))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
 
 	if txStatus := isTransactionRequestValid(s.config, tx.Transaction()); txStatus != protocol.TRANSACTION_STATUS_RESERVED {
 		err := errors.Errorf("error input %s", txStatus.String())

@@ -25,7 +25,7 @@ func (s *service) CallMethod(ctx context.Context, input *services.CallMethodInpu
 		s.logger.Info("call method received via public api", log.Error(err))
 		return toCallMethodOutput(&services.RunLocalMethodOutput{CallResult: protocol.EXECUTION_RESULT_ERROR_INPUT}), err
 	}
-	s.logger.Info("call method request received via public api", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+	s.logger.Info("call method request received via public api", log.String("flow", "checkpoint"), log.Transaction(txHash))
 
 	start := time.Now()
 	defer s.metrics.callMethodTime.RecordSince(start)
@@ -34,7 +34,7 @@ func (s *service) CallMethod(ctx context.Context, input *services.CallMethodInpu
 		Transaction: tx,
 	})
 	if err != nil {
-		s.logger.Info("call method request failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		s.logger.Info("call method request failed", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
 		return toCallMethodOutput(result), err
 	}
 
