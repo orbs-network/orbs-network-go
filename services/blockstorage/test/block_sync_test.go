@@ -15,83 +15,6 @@ import (
 	"time"
 )
 
-func TestSyncSourceHandlesBlockAvailabilityRequest(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(2).start(ctx)
-
-		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build())
-		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build())
-
-		senderKeyPair := keys.Ed25519KeyPairForTests(9)
-
-		input := builders.BlockAvailabilityRequestInput().WithLastCommittedBlockHeight(primitives.BlockHeight(0)).WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
-
-		response := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
-			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(2)).
-			WithSenderPublicKey(harness.config.NodePublicKey()).
-			WithRecipientPublicKey(senderKeyPair.PublicKey()).Build()
-
-		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, response).Return(nil, nil).Times(1)
-
-		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, input)
-		require.NoError(t, err)
-
-		harness.verifyMocks(t, 2)
-	})
-}
-
-func TestSyncSourceHandlesBlockSyncRequest(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(4).start(ctx)
-
-		blocks := []*protocol.BlockPairContainer{
-			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
-			builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build(),
-			builders.BlockPair().WithHeight(primitives.BlockHeight(3)).WithBlockCreated(time.Now()).Build(),
-			builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
-		}
-
-		harness.commitBlock(ctx, blocks[0])
-		harness.commitBlock(ctx, blocks[1])
-		harness.commitBlock(ctx, blocks[2])
-		harness.commitBlock(ctx, blocks[3])
-
-		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
-
-		senderKeyPair := keys.Ed25519KeyPairForTests(9)
-		input := builders.BlockSyncRequestInput().
-			WithFirstBlockHeight(primitives.BlockHeight(2)).
-			WithLastBlockHeight(primitives.BlockHeight(10002)).
-			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
-			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
-
-		response := &gossiptopics.BlockSyncResponseInput{
-			RecipientPublicKey: senderKeyPair.PublicKey(),
-			Message: &gossipmessages.BlockSyncResponseMessage{
-				Sender: (&gossipmessages.SenderSignatureBuilder{
-					SenderPublicKey: harness.config.NodePublicKey(),
-				}).Build(),
-				SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-					BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-					FirstBlockHeight:         primitives.BlockHeight(2),
-					LastBlockHeight:          primitives.BlockHeight(3),
-					LastCommittedBlockHeight: primitives.BlockHeight(4),
-				}).Build(),
-				BlockPairs: expectedBlocks,
-			},
-		}
-
-		harness.gossip.When("SendBlockSyncResponse", mock.Any, response).Return(nil, nil).Times(1)
-
-		_, err := harness.blockStorage.HandleBlockSyncRequest(ctx, input)
-		require.NoError(t, err)
-
-		harness.verifyMocks(t, 4)
-	})
-}
-
 // TODO move to unit tests
 func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
@@ -206,7 +129,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 }
 
 func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
-	t.Skip("this test is incorrect, needs to check that commit notify sync, and nothing else")
+	t.Skip("this test needs to move to CommitBlock unit test, as a 'CommitBlockUpdatesBlockSync'")
 	// this test may still be flaky, it runs commits in a busy wait loop that should take longer than the timeout,
 	// to make sure we stay at the same state logically.
 	// system timing may cause it to flake, but at a very low probability now
