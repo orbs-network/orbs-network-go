@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -12,12 +13,14 @@ import (
 	"time"
 )
 
-func (s *service) SendTransaction(ctx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
+func (s *service) SendTransaction(parentCtx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
 	if input.ClientRequest == nil {
 		err := errors.Errorf("error missing input (client request is nil)")
 		s.logger.Info("send transaction received missing input", log.Error(err))
 		return nil, err
 	}
+
+	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
 
 	tx := input.ClientRequest.SignedTransaction()
 	if txStatus := isTransactionRequestValid(s.config, tx.Transaction()); txStatus != protocol.TRANSACTION_STATUS_RESERVED {

@@ -2,8 +2,10 @@ package log_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -28,7 +30,9 @@ func parseOutput(input string) map[string]interface{} {
 
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(b)).Info("Service initialized")
+	log.GetLogger(log.Node("node1"), log.Service("public-api")).
+		WithOutput(log.NewOutput(b)).
+		Info("Service initialized", )
 
 	jsonMap := parseOutput(b.String())
 
@@ -39,6 +43,20 @@ func TestSimpleLogger(t *testing.T) {
 	require.Equal(t, "Service initialized", jsonMap["message"])
 	require.Regexp(t, "^instrumentation/log/basic_logger_test.go", jsonMap["source"])
 	require.NotNil(t, jsonMap["timestamp"])
+}
+
+func TestSimpleLogger_TraceContext(t *testing.T) {
+	ctx := trace.NewContext(context.Background(), "foo")
+	b := new(bytes.Buffer)
+	log.GetLogger().
+		WithOutput(log.NewOutput(b)).
+		Info("bar", trace.TraceField(ctx))
+
+	jsonMap := parseOutput(b.String())
+
+	require.Equal(t, "foo", jsonMap["entry-point"])
+	require.NotEmpty(t, jsonMap["request-id"])
+
 }
 
 func TestBasicLogger_WithFilter(t *testing.T) {

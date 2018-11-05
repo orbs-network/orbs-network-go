@@ -24,13 +24,23 @@ func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field
 	logLine["timestamp"] = time.Now().UTC().Format(TIMESTAMP_FORMAT)
 	logLine["message"] = message
 
-	for _, param := range params {
-		logLine[param.Key] = param.Value()
-	}
+	j.logFields(params, logLine)
 
 	logLineAsJson, _ := json.Marshal(logLine)
 
 	return string(logLineAsJson)
+}
+
+func (j *jsonFormatter) logFields(params []*Field, logLine map[string]interface{}) {
+	for _, param := range params {
+		if !param.IsNested() {
+			logLine[param.Key] = param.Value()
+		} else if nestedFields, ok := param.Value().([]*Field); ok {
+			j.logFields(nestedFields, logLine)
+		} else {
+			panic("log field of nested type did not return []*Field")
+		}
+	}
 }
 
 func NewJsonFormatter() LogFormatter {

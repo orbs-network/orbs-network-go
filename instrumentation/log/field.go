@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type AggregateField interface {
+	NestedFields() []*Field
+}
+
 type Field struct {
 	Key  string
 	Type FieldType
@@ -20,7 +24,26 @@ type Field struct {
 	Float       float64
 
 	Error error
+	Nested AggregateField
 }
+
+
+const (
+	NoType = iota
+	ErrorType
+	NodeType
+	ServiceType
+	StringType
+	IntType
+	UintType
+	BytesType
+	FloatType
+	FunctionType
+	SourceType
+	StringArrayType
+	TimeType
+	AggregateType
+)
 
 func (this *Field) Equal(other *Field) bool {
 	return this.Type == other.Type && this.Value() == other.Value() && this.Key == other.Key
@@ -160,7 +183,13 @@ func (f *Field) Value() interface{} {
 		return f.Error.Error()
 	case StringArrayType:
 		return f.StringArray
+	case AggregateType:
+		return f.Nested.NestedFields()
 	}
 
 	return nil
+}
+
+func (f *Field) IsNested() bool {
+	return f.Type == AggregateType
 }

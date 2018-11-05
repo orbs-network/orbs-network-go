@@ -27,22 +27,6 @@ type basicLogger struct {
 	filters               []Filter
 }
 
-const (
-	NoType = iota
-	ErrorType
-	NodeType
-	ServiceType
-	StringType
-	IntType
-	UintType
-	BytesType
-	FloatType
-	FunctionType
-	SourceType
-	StringArrayType
-	TimeType
-)
-
 func GetLogger(params ...*Field) BasicLogger {
 	logger := &basicLogger{
 		tags:         params,
