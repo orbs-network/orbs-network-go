@@ -24,19 +24,19 @@ func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field
 	logLine["timestamp"] = time.Now().UTC().Format(TIMESTAMP_FORMAT)
 	logLine["message"] = message
 
-	j.logFields(params, logLine)
+	logFields(params, logLine)
 
 	logLineAsJson, _ := json.Marshal(logLine)
 
 	return string(logLineAsJson)
 }
 
-func (j *jsonFormatter) logFields(params []*Field, logLine map[string]interface{}) {
+func logFields(params []*Field, logLine map[string]interface{}) {
 	for _, param := range params {
 		if !param.IsNested() {
 			logLine[param.Key] = param.Value()
 		} else if nestedFields, ok := param.Value().([]*Field); ok {
-			j.logFields(nestedFields, logLine)
+			logFields(nestedFields, logLine)
 		} else {
 			panic("log field of nested type did not return []*Field")
 		}
@@ -178,9 +178,7 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 		return strings.Index(param.Key, "_") == 0
 	})
 
-	for _, param := range newParams {
-		printParam(&builder, param)
-	}
+	printParams(&builder, newParams)
 
 	// append the function/source
 	printParam(&builder, functionParam)
@@ -190,6 +188,18 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 		printParam(&builder, param)
 	}
 	return builder.String()
+}
+
+func printParams(builder *strings.Builder, params []*Field) {
+	for _, param := range params {
+		if !param.IsNested() {
+			printParam(builder, param)
+		} else if nestedFields, ok := param.Value().([]*Field); ok {
+			printParams(builder, nestedFields)
+		} else {
+			panic("log field of nested type did not return []*Field")
+		}
+	}
 }
 
 func NewHumanReadableFormatter() LogFormatter {
