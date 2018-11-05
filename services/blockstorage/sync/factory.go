@@ -19,9 +19,9 @@ type stateFactory struct {
 }
 
 type stateMetrics struct {
-	carStateLatency         *metric.Histogram
 	finishedCarStateLatency *metric.Histogram
 	idleStateMetrics
+	collectingStateMetrics
 	waitingStateMetrics
 	processingStateMetrics
 }
@@ -32,11 +32,16 @@ type idleStateMetrics struct {
 	timesExpired *metric.Gauge
 }
 
+type collectingStateMetrics struct {
+	stateLatency    *metric.Histogram
+	timesSuccessful *metric.Gauge
+}
+
 type waitingStateMetrics struct {
 	stateLatency    *metric.Histogram
 	timesTimeout    *metric.Gauge
 	timesSuccessful *metric.Gauge
-	timesByzanitine *metric.Gauge
+	timesByzantine  *metric.Gauge
 }
 
 type processingStateMetrics struct {
@@ -49,16 +54,19 @@ type processingStateMetrics struct {
 
 func newStateMetrics(factory metric.Factory) *stateMetrics {
 	return &stateMetrics{
-		carStateLatency:         factory.NewLatency("BlockSync.State.CollectingStateLatency", 24*30*time.Hour),
 		finishedCarStateLatency: factory.NewLatency("BlockSync.State.FinishedCollectingStateLatency", 24*30*time.Hour),
 		idleStateMetrics: idleStateMetrics{
 			stateLatency: factory.NewLatency("BlockSync.Idle.StateLatency", 24*30*time.Hour),
 			timesReset:   factory.NewGauge("BlockSync.Idle.TimesReset"),
 			timesExpired: factory.NewGauge("BlockSync.Idle.TimesExpired"),
 		},
+		collectingStateMetrics: collectingStateMetrics{
+			stateLatency:    factory.NewLatency("BlockSync.Collecting.StateLatency", 24*30*time.Hour),
+			timesSuccessful: factory.NewGauge("BlockSync.Collecting.SuccessCount"),
+		},
 		waitingStateMetrics: waitingStateMetrics{
 			stateLatency:    factory.NewLatency("BlockSync.Waiting.StateLatency", 24*30*time.Hour),
-			timesByzanitine: factory.NewGauge("BlockSync.Waiting.ByzantineResponseCount"),
+			timesByzantine:  factory.NewGauge("BlockSync.Waiting.ByzantineResponseCount"),
 			timesSuccessful: factory.NewGauge("BlockSync.Waiting.SuccessResponseCount"),
 			timesTimeout:    factory.NewGauge("BlockSync.Waiting.TimeoutCount"),
 		},
@@ -107,7 +115,7 @@ func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 		collectTimeout: f.config.BlockSyncCollectResponseTimeout,
 		logger:         f.logger,
 		conduit:        f.c,
-		latency:        f.metrics.carStateLatency,
+		m:              f.metrics.collectingStateMetrics,
 	}
 }
 

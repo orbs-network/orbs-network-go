@@ -50,7 +50,7 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 		s.m.timesSuccessful.Inc()
 		return s.sf.CreateProcessingBlocksState(blocks)
 	case <-s.abort:
-		s.m.timesByzanitine.Inc()
+		s.m.timesByzantine.Inc()
 		return s.sf.CreateIdleState()
 	case <-ctx.Done():
 		return nil

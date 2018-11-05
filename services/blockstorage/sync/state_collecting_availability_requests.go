@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
@@ -15,7 +14,7 @@ type collectingAvailabilityResponsesState struct {
 	collectTimeout func() time.Duration
 	logger         log.BasicLogger
 	conduit        *blockSyncConduit
-	latency        *metric.Histogram
+	m              collectingStateMetrics
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -28,7 +27,7 @@ func (s *collectingAvailabilityResponsesState) String() string {
 
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.latency.RecordSince(start) // runtime metric
+	defer s.m.stateLatency.RecordSince(start) // runtime metric
 
 	responses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
@@ -43,6 +42,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	for { // the forever is because of responses handling loop
 		select {
 		case <-waitForResponses.C:
+			s.m.timesSuccessful.Inc()
 			s.logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
 			return s.sf.CreateFinishedCARState(responses)
 		case r := <-s.conduit.responses:
