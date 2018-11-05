@@ -108,24 +108,27 @@ func (bs *BlockSync) syncLoop(ctx context.Context) {
 }
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
-	ctx, _ = context.WithTimeout(ctx, bs.config.BlockSyncNoCommitInterval()/2)
+	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncNoCommitInterval()/2)
 	if bs.currentState != nil {
 		bs.currentState.blockCommitted(ctx)
 	}
+	cancel()
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	ctx, _ = context.WithTimeout(ctx, bs.config.BlockSyncCollectResponseTimeout()/2)
+	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectResponseTimeout()/2)
 	if bs.currentState != nil {
 		bs.currentState.gotAvailabilityResponse(ctx, input.Message)
 	}
+	cancel()
 	return nil, nil
 }
 
 func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	ctx, _ = context.WithTimeout(ctx, bs.config.BlockSyncCollectChunksTimeout()/2)
+	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectChunksTimeout()/2)
 	if bs.currentState != nil {
 		bs.currentState.gotBlocks(ctx, input.Message)
 	}
+	cancel()
 	return nil, nil
 }
