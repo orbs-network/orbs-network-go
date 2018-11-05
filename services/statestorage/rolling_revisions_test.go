@@ -141,7 +141,7 @@ func TestReadHash(t *testing.T) {
 func TestRevisionEviction(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
 	var evictedMerkleRoots []primitives.MerkleSha256
-	d := newDriver(persistenceMock, 1, func(sha256 primitives.MerkleSha256){
+	d := newDriver(persistenceMock, 1, func(sha256 primitives.MerkleSha256) {
 		evictedMerkleRoots = append(evictedMerkleRoots, sha256)
 	})
 
@@ -232,7 +232,7 @@ func newMerkleMock() *MerkleMock {
 	m := &MerkleMock{}
 	var counter byte = 0
 	m.When("Update", mock.Any, mock.Any).
-		Call(func(root primitives.MerkleSha256, diff merkle.MerkleDiffs) (primitives.MerkleSha256, error){
+		Call(func(root primitives.MerkleSha256, diff merkle.MerkleDiffs) (primitives.MerkleSha256, error) {
 			counter++
 			return primitives.MerkleSha256{counter}, nil
 		}).

@@ -151,7 +151,7 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) 
 	})
 }
 
-func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
+func TestPublicApiWaiter_CompleteOnBothWhenOneIsCanceled(t *testing.T) {
 	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		key := "key"
@@ -161,12 +161,14 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsTimedOut(t *testing.T) {
 
 		done := make(chan struct{}, 2)
 
-		go waitHarness(ctx, t, "1", waiter, wc1, 5*time.Millisecond, true, done)
+		ctx2, cancel := context.WithCancel(ctx)
+		cancel()
+
+		go waitHarness(ctx2, t, "1", waiter, wc1, 1*time.Second, true, done)
 		go waitHarness(ctx, t, "2", waiter, wc2, 1*time.Second, false, done)
 
-		time.Sleep(15 * time.Millisecond)
+		<-done // force waiting till first go routine finishes in the "cancel" capacity.
 		waiter.complete(key, "hello")
-		<-done
 		<-done
 
 		_, open := <-wc1.c

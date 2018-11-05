@@ -17,48 +17,48 @@ import (
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	// TODO: atMost time.Duration can probably be combined into ctx and removed (context refactor)
-	WaitForTransaction(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight
+	WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight
 }
 
 type blockHeightChan chan primitives.BlockHeight
 
 type inMemoryBlockPersistence struct {
-	blockPairs     []*protocol.BlockPairContainer
+	blockChain struct {
+		sync.RWMutex
+		blocks []*protocol.BlockPairContainer
+	}
+
 	failNextBlocks bool
 	tracker        *synchronization.BlockTracker
 
-	lock                  *sync.RWMutex
-	blockHeightsPerTxHash map[string]blockHeightChan
+	blockHeightsPerTxHash struct {
+		sync.Mutex
+		channels map[string]blockHeightChan
+	}
 }
 
 func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
-	return NewInMemoryBlockPersistenceWithBlockTimeout(1000 * time.Millisecond)
-}
-
-func NewInMemoryBlockPersistenceWithBlockTimeout(duration time.Duration) InMemoryBlockPersistence {
-	return &inMemoryBlockPersistence{
+	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
-		tracker:        synchronization.NewBlockTracker(0, 5, duration),
-
-		lock: &sync.RWMutex{},
-		blockHeightsPerTxHash: make(map[string]blockHeightChan),
+		tracker:        synchronization.NewBlockTracker(0, 5),
 	}
+
+	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
+
+	return p
 }
 
 func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
 	return bp.tracker
 }
 
-func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight {
-	bp.lock.Lock()
+func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight {
 	ch := bp.getChanFor(txhash)
-	bp.lock.Unlock()
 
 	select {
 	case h := <-ch:
 		return h
-	case <-time.After(atMost):
+	case <-ctx.Done():
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txhash))
 	}
@@ -69,10 +69,8 @@ func (bp *inMemoryBlockPersistence) WriteBlock(blockPair *protocol.BlockPairCont
 		return errors.New("could not write a block")
 	}
 
-	bp.lock.Lock()
-	defer bp.lock.Unlock()
+	bp.addBlockToInMemoryChain(blockPair)
 
-	bp.blockPairs = append(bp.blockPairs, blockPair)
 	bp.tracker.IncrementHeight()
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
@@ -139,10 +137,13 @@ func (bp *inMemoryBlockPersistence) FailNextBlocks() {
 
 // Is covered by the mutex in WriteBlock
 func (bp *inMemoryBlockPersistence) getChanFor(txhash primitives.Sha256) blockHeightChan {
-	ch, ok := bp.blockHeightsPerTxHash[txhash.KeyForMap()]
+	bp.blockHeightsPerTxHash.Lock()
+	defer bp.blockHeightsPerTxHash.Unlock()
+
+	ch, ok := bp.blockHeightsPerTxHash.channels[txhash.KeyForMap()]
 	if !ok {
 		ch = make(blockHeightChan, 1)
-		bp.blockHeightsPerTxHash[txhash.KeyForMap()] = ch
+		bp.blockHeightsPerTxHash.channels[txhash.KeyForMap()] = ch
 	}
 
 	return ch
@@ -173,8 +174,15 @@ func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer
 }
 
 func (bp *inMemoryBlockPersistence) getBlockPairs() []*protocol.BlockPairContainer {
-	bp.lock.RLock()
-	defer bp.lock.RUnlock()
+	bp.blockChain.RLock()
+	defer bp.blockChain.RUnlock()
 
-	return bp.blockPairs
+	return bp.blockChain.blocks
+}
+
+func (bp *inMemoryBlockPersistence) addBlockToInMemoryChain(blockPair *protocol.BlockPairContainer) {
+	bp.blockChain.Lock()
+	defer bp.blockChain.Unlock()
+
+	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
 }

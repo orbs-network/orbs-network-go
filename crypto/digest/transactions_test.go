@@ -27,10 +27,10 @@ func TestCalcTxHash(t *testing.T) {
 	hash := digest.CalcTxHash(tx)
 	expectedHash, err := hex.DecodeString(ExpectedTransactionHashHex)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if !hash.Equal(expectedHash) {
-		t.Errorf("Hash invalid, expected %x, got %x", expectedHash, []byte(hash))
+		t.Fatalf("Hash invalid, expected %x, got %x", expectedHash, []byte(hash))
 	}
 }
 
@@ -42,7 +42,7 @@ func TestCalcTxId(t *testing.T) {
 	// leaving the implementation detail in the test as the encoding part is something the test should 'test'
 	expectedHash, err := hex.DecodeString(ExpectedTransactionHashHex)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	expectedId := make([]byte, 8)
 	binary.LittleEndian.PutUint64(expectedId, uint64(tx.Timestamp()))
@@ -50,7 +50,22 @@ func TestCalcTxId(t *testing.T) {
 	expectedId = append(expectedId, expectedHash...)
 
 	if !bytes.Equal(txId, expectedId) {
-		t.Errorf("txid came out wrong, expected %x, got %x", expectedId, txId)
+		t.Fatalf("txid came out wrong, expected %x, got %x", expectedId, txId)
+	}
+
+	// extract txid
+
+	txHash, txTimestamp, err := digest.ExtractTxId(txId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(txHash, expectedHash) {
+		t.Fatalf("extracted txhash came out wrong, expected %x, got %x", expectedHash, txHash)
+	}
+
+	if !txTimestamp.Equal(tx.Timestamp()) {
+		t.Fatalf("extracted txTimestamp came out wrong, expected %s, got %s", tx.Timestamp(), txTimestamp)
 	}
 }
 

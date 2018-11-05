@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestReturnTransactionBlockHeader(t *testing.T) {
@@ -61,10 +60,9 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 	})
 }
 
-func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
+func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().
-			withBlockTrackerTimeout(30 * time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -76,17 +74,19 @@ func TestReturnTransactionBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) 
 		timeoutError := make(chan error)
 		blockHeightInTheFuture := primitives.BlockHeight(5)
 
+		childCtx, cancel := context.WithCancel(ctx)
 		go func() {
-			_, err := harness.blockStorage.GetTransactionsBlockHeader(ctx, &services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
+			_, err := harness.blockStorage.GetTransactionsBlockHeader(childCtx, &services.GetTransactionsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
 			timeoutError <- err
 		}()
+		cancel()
 
 		for i := primitives.BlockHeight(2); i <= 4; i++ {
 			harness.commitBlock(ctx, builders.BlockPair().WithHeight(i).Build())
 		}
 
 		err := <-timeoutError
-		require.EqualError(t, err, "timed out waiting for block at height 5", "expect a timeout as the requested block height never reached")
+		require.EqualError(t, err, "aborted while waiting for block at height 5: context canceled", "expect a timeout as the requested block height never reached")
 	})
 }
 
@@ -140,10 +140,9 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 	})
 }
 
-func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
+func TestReturnResultsBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().
-			withBlockTrackerTimeout(30 * time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -155,16 +154,18 @@ func TestReturnResultsBlockHeaderFromNearFutureReturnsTimeout(t *testing.T) {
 		timeoutError := make(chan error)
 		blockHeightInTheFuture := primitives.BlockHeight(5)
 
+		childCtx, cancel := context.WithCancel(ctx)
 		go func() {
-			_, err := harness.blockStorage.GetResultsBlockHeader(ctx, &services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
+			_, err := harness.blockStorage.GetResultsBlockHeader(childCtx, &services.GetResultsBlockHeaderInput{BlockHeight: blockHeightInTheFuture})
 			timeoutError <- err
 		}()
+		cancel()
 
 		for i := primitives.BlockHeight(2); i <= blockHeightInTheFuture-1; i++ {
 			harness.commitBlock(ctx, builders.BlockPair().WithHeight(i).Build())
 		}
 
 		err := <-timeoutError
-		require.EqualError(t, err, "timed out waiting for block at height 5", "expect a timeout as the requested block height never reached")
+		require.EqualError(t, err, "aborted while waiting for block at height 5: context canceled", "expect a timeout as the requested block height never reached")
 	})
 }

@@ -13,7 +13,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 	start := time.Now()
 	defer s.metrics.createTxBlockTime.RecordSince(start)
 
-	proposedTransactions, err := s.fetchTransactions(ctx, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockDelay())
+	proposedTransactions, err := s.fetchTransactions(ctx, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
 	if err != nil {
 		return nil, err
 	}

@@ -29,7 +29,7 @@ type Config interface {
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
-	ConsensusContextPercentageOfNodesRequiredForConsensus() uint32
+	ConsensusRequiredQuorumPercentage() uint32
 }
 
 type service struct {
@@ -99,7 +99,7 @@ func NewBenchmarkConsensusAlgo(
 	blockStorage.RegisterConsensusBlocksHandler(s)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
-		supervised.LongLived(ctx, logger, func() {
+		supervised.GoForever(ctx, logger, func() {
 			s.leaderConsensusRoundRunLoop(ctx)
 		})
 	}

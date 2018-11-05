@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"sync"
 	"time"
 )
@@ -109,27 +108,19 @@ func (r *inMemoryRegistry) report(logger log.BasicLogger) {
 }
 
 func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Duration, logger log.BasicLogger) {
-	supervised.LongLived(ctx, logger, func() {
-		periodicalTrigger := synchronization.NewPeriodicalTrigger(interval, func() {
-			r.report(logger)
+	synchronization.NewPeriodicalTrigger(ctx, interval, logger, func() {
+		r.report(logger)
 
-			// We only rotate histograms because there is the only type of metric that we're currently rotating
-			r.mu.Lock()
-			defer r.mu.Unlock()
-			for _, m := range r.mu.metrics {
-				switch m.(type) {
-				case *Histogram:
-					m.(*Histogram).Rotate()
-				}
+		// We only rotate histograms because there is the only type of metric that we're currently rotating
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		for _, m := range r.mu.metrics {
+			switch m.(type) {
+			case *Histogram:
+				m.(*Histogram).Rotate()
 			}
-		})
-
-		periodicalTrigger.Start()
-
-		select {
-		case <-ctx.Done():
-			periodicalTrigger.Stop()
-			r.report(logger) // always report on stop so we can collect all the metrics
 		}
+	}, func() {
+		r.report(logger)
 	})
 }

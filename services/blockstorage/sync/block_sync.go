@@ -91,7 +91,7 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.config.BlockSyncBatchSize()))
 
-	supervised.LongLived(ctx, logger, func() {
+	supervised.GoForever(ctx, logger, func() {
 		bs.syncLoop(ctx)
 	})
 

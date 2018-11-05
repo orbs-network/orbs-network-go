@@ -23,7 +23,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	for {
 		err := s.leaderConsensusRoundTick(ctx)
 		if err != nil {
-			s.logger.Error("consensus round tick failed", log.Error(err))
+			s.logger.Info("consensus round tick failed", log.Error(err))
 			s.metrics.failedConsensusTicksRate.Measure(1)
 		}
 		select {
@@ -55,10 +55,12 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	if s.lastSuccessfullyVotedBlock == _lastCommittedBlockHeight {
 		proposedBlock, err := s.leaderGenerateNewProposedBlock(ctx, _lastCommittedBlockHeight, _lastCommittedBlock)
 		if err != nil {
+			s.logger.Error("leader failed to generate block", log.Error(err))
 			return err
 		}
 		err = s.saveToBlockStorage(ctx, proposedBlock)
 		if err != nil {
+			s.logger.Error("leader failed to save block to storage", log.Error(err))
 			return err
 		}
 
@@ -169,7 +171,9 @@ func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *
 
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
 	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
-		return errors.Errorf("attempting to broadcast commit of a partial block that is missing fields like block proofs: %v", blockPair.String())
+		err := errors.Errorf("attempting to broadcast commit of a partial block that is missing fields like block proofs: %v", blockPair.String())
+		s.logger.Error("leader broadcast commit failed", log.Error(err))
+		return err
 	}
 
 	_, err := s.gossip.BroadcastBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{

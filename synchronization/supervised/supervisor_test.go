@@ -30,12 +30,12 @@ func localFunctionThatPanics() {
 	panic("foo")
 }
 
-func TestShortLived_ReportsOnPanic(t *testing.T) {
+func TestGoOnce_ReportsOnPanic(t *testing.T) {
 	logger := mockLogger()
 
 	require.NotPanicsf(t, func() {
-		ShortLived(logger, localFunctionThatPanics)
-	}, "ShortLived panicked unexpectedly")
+		GoOnce(logger, localFunctionThatPanics)
+	}, "GoOnce panicked unexpectedly")
 
 	report := <-logger.errors
 	require.Equal(t, report.message, "recovered panic")
@@ -49,23 +49,26 @@ func TestShortLived_ReportsOnPanic(t *testing.T) {
 	require.Contains(t, stackTraceField.Value(), "localFunctionThatPanics")
 }
 
-func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
+func TestGoForever_ReportsOnPanicAndRestarts(t *testing.T) {
+	numOfIterations := 10
+
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	count := 0
 
 	require.NotPanicsf(t, func() {
-		LongLived(ctx, logger, func() {
-			count++
-			if count > 10 {
+		GoForever(ctx, logger, func() {
+			if count > numOfIterations {
 				cancel()
+			} else {
+				count++
 			}
 			panic("foo")
 		})
-	}, "LongLived panicked unexpectedly")
+	}, "GoForever panicked unexpectedly")
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < numOfIterations; i++ {
 		select {
 		case report := <-logger.errors:
 			require.Equal(t, report.message, "recovered panic")
@@ -73,4 +76,38 @@ func TestLongLived_ReportsOnPanicAndRestarts(t *testing.T) {
 			require.Fail(t, "long living goroutine didn't restart")
 		}
 	}
+}
+
+func TestGoForever_TerminatesWhenContextIsClosed(t *testing.T) {
+	logger := mockLogger()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	bgStarted := make(chan struct{})
+	bgEnded := make(chan struct{})
+	shutdown := GoForever(ctx, logger, func() {
+		bgStarted <- struct{}{}
+		select {
+		case <-ctx.Done():
+			bgEnded <- struct{}{}
+			return
+		}
+	})
+
+	<-bgStarted
+	cancel()
+
+	select {
+	case <-bgEnded:
+		// ok, invocation of cancel() caused goroutine to stop, we can now check if it restarts
+	case <-time.After(1 * time.Second):
+		require.Fail(t, "long living goroutine didn't stop")
+	}
+
+	select {
+	case <-shutdown:
+		// system has shutdown, all ok
+	case <-time.After(1 * time.Second):
+		t.Fatalf("long living goroutine did not return")
+	}
+
 }

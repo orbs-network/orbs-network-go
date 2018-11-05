@@ -25,7 +25,7 @@ func TestGetStateHashFutureHeightWithinGrace(t *testing.T) {
 		d := newStateStorageDriverWithGrace(1, 1, 1)
 
 		output, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{BlockHeight: 1})
-		require.EqualError(t, errors.Cause(err), "timed out waiting for block at height 1", "expected timeout error")
+		require.EqualError(t, errors.Cause(err), "context deadline exceeded", "expected timeout error")
 		require.Nil(t, output, "expected nil output when timing out")
 	})
 }
