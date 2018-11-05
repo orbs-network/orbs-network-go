@@ -52,7 +52,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Stringable("last-block-height", lastBlockHeight))
 
 	for _, blockPair := range s.blocks.BlockPairs {
-		s.m.throughputRate.Measure(1)
+		s.m.blocksRate.Measure(1)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
 		if err != nil {

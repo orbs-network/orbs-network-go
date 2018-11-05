@@ -34,7 +34,7 @@ type idleStateMetrics struct {
 
 type processingStateMetrics struct {
 	stateLatency           *metric.Histogram
-	throughputRate         *metric.Rate
+	blocksRate             *metric.Rate
 	committedBlocks        *metric.Gauge
 	failedCommitBlocks     *metric.Gauge
 	failedValidationBlocks *metric.Gauge
@@ -52,7 +52,7 @@ func newStateMetrics(factory metric.Factory) *stateMetrics {
 		},
 		processingStateMetrics: processingStateMetrics{
 			stateLatency:           factory.NewLatency("BlockSync.State.Processing.StateLatency", 24*30*time.Hour),
-			throughputRate:         factory.NewRate("BlockSync.Processing.BlocksRate"),
+			blocksRate:             factory.NewRate("BlockSync.Processing.BlocksRate"),
 			committedBlocks:        factory.NewGauge("BlockSync.Processing.CommittedBlocks"),
 			failedCommitBlocks:     factory.NewGauge("BlockSync.Processing.FailedToCommitBlocks"),
 			failedValidationBlocks: factory.NewGauge("BlockSync.Processing.FailedToValidateBlocks"),
