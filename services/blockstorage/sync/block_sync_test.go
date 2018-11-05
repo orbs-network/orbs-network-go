@@ -11,7 +11,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 
 	h.expectingSyncOnStart()
 
-	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
+	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger, h.m)
 
 	h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	h.cancel()
@@ -24,19 +24,24 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	// its to cover that specific line of code in blockSync engine, rather then the service handler code
 	// (or the idle state code)
 
-	h := newBlockSyncHarness().withNoCommitTimeout(8 * time.Millisecond)
+	h := newBlockSyncHarness().withNoCommitTimeout(20 * time.Millisecond)
 	h.expectingSyncOnStart()
 
-	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger)
+	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger, h.m)
 	idleReached := h.waitForState(sync, h.sf.CreateIdleState())
 	require.True(t, idleReached, "idle state was not reached when expected, most likely something else is broken")
 
-	// "commit" blocks at a rate of 1/ms, do not assume anything about the implementation
-	for i := 1; i < 10; i++ {
-		sync.HandleBlockCommitted()
-		time.Sleep(500 * time.Microsecond)
-		require.IsType(t, &idleState{}, sync.currentState, "state should remain idle")
-	}
+	// "commit" blocks loop
+	go func() {
+		for {
+			sync.HandleBlockCommitted(h.ctx)
+			time.Sleep(1 * time.Millisecond)
+		}
+	}()
+
+	time.Sleep(30 * time.Millisecond)
+
+	require.IsType(t, &idleState{}, sync.currentState, "state should remain idle")
 
 	h.verifyMocks(t)
 	h.cancel() // kill the sync (goroutine)

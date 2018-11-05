@@ -13,7 +13,8 @@ type collectingAvailabilityResponsesState struct {
 	gossipClient   *blockSyncGossipClient
 	collectTimeout func() time.Duration
 	logger         log.BasicLogger
-	responsesC     chan *gossipmessages.BlockAvailabilityResponseMessage
+	conduit        *blockSyncConduit
+	m              collectingStateMetrics
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -25,6 +26,9 @@ func (s *collectingAvailabilityResponsesState) String() string {
 }
 
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
+	start := time.Now()
+	defer s.m.stateLatency.RecordSince(start) // runtime metric
+
 	responses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
 	s.gossipClient.petitionerUpdateConsensusAlgos(ctx)
@@ -38,9 +42,10 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	for { // the forever is because of responses handling loop
 		select {
 		case <-waitForResponses.C:
+			s.m.timesSuccessful.Inc()
 			s.logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
 			return s.sf.CreateFinishedCARState(responses)
-		case r := <-s.responsesC:
+		case r := <-s.conduit.responses:
 			responses = append(responses, r)
 		case <-ctx.Done():
 			return nil
@@ -48,19 +53,22 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	}
 }
 
-func (s *collectingAvailabilityResponsesState) blockCommitted() {
+func (s *collectingAvailabilityResponsesState) blockCommitted(ctx context.Context) {
 	return
 }
 
-func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
 	s.logger.Info("got a new availability response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
 	select {
-	case s.responsesC <- message:
-	default:
-		s.logger.Info("response channel was not ready, dropping response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
+	case s.conduit.responses <- message:
+	case <-ctx.Done():
+		s.logger.Info("terminated on writing new availability response",
+			log.String("context-message", ctx.Err().Error()),
+			log.Stringable("response-source", message.Sender.SenderPublicKey()))
 	}
 }
 
-func (s *collectingAvailabilityResponsesState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
+func (s *collectingAvailabilityResponsesState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
+	s.logger.Info("got a block chunk in availability response state", log.Stringable("block-source", message.Sender.SenderPublicKey()))
 	return
 }
