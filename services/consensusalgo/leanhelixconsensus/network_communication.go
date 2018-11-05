@@ -10,6 +10,22 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
+func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
+
+	message := leanhelix.CreateConsensusRawMessage(
+		leanhelix.MessageType(input.Message.MessageType),
+		input.Message.Content,
+		&BlockPairWrapper{
+			blockPair: input.Message.BlockPair,
+		},
+	)
+
+	for _, messageReceiver := range s.messageReceivers {
+		messageReceiver(ctx, message)
+	}
+	return nil, nil
+}
+
 func (s *service) RequestOrderedCommittee(seed uint64) []lhprimitives.Ed25519PublicKey {
 	panic("implement me")
 }
@@ -18,28 +34,20 @@ func (s *service) IsMember(pk lhprimitives.Ed25519PublicKey) bool {
 	panic("implement me")
 }
 
-type leanHelixHandlerImpl struct {
-	handlerFunc func(ctx context.Context, message leanhelix.ConsensusRawMessage)
-}
-
 // Lib calls this method to register itself for incoming messages, and supplies the callback
 func (s *service) RegisterOnMessage(onReceivedMessage func(ctx context.Context, message leanhelix.ConsensusRawMessage)) int {
-	panic("maybe remove from interface altogether - added LeanHelix.OnReceiveMessage() instead")
-	//handler := &leanHelixHandlerImpl{
-	//	handlerFunc: onReceivedMessage,
-	//}
-	//
-	//a.gossip.RegisterLeanHelixHandler(handler)
-	//
-	//return 1 // TODO Do we really need to return an int here? in LH code it returns the total # of subscriptions.
+	s.messageReceiversCounter++
+	s.messageReceivers[s.messageReceiversCounter] = onReceivedMessage
+
+	return s.messageReceiversCounter
 }
 
 func (s *service) UnregisterOnMessage(subscriptionToken int) {
-	panic("maybe remove from interface altogether - presently unused")
+	delete(s.messageReceivers, subscriptionToken)
 }
 
 // LeanHelix lib sends its messages here
-func (s *service) SendMessage(ctx context.Context, lhtargets []lhprimitives.Ed25519PublicKey, consensusRawMessage leanhelix.ConsensusRawMessage) error {
+func (s *service) SendMessage(ctx context.Context, lhtargets []lhprimitives.Ed25519PublicKey, consensusRawMessage leanhelix.ConsensusRawMessage) {
 
 	targets := make([]primitives.Ed25519PublicKey, 0, len(lhtargets))
 	for i, lhtarget := range lhtargets {
@@ -59,6 +67,5 @@ func (s *service) SendMessage(ctx context.Context, lhtargets []lhprimitives.Ed25
 			BlockPair:   blockPairWrapper.blockPair,
 		},
 	}
-	_, err := s.gossip.SendLeanHelixMessage(ctx, message)
-	return err
+	s.gossip.SendLeanHelixMessage(ctx, message)
 }

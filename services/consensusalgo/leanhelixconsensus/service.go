@@ -18,17 +18,20 @@ import (
 var LogTag = log.Service("consensus-algo-lean-helix")
 
 type service struct {
-	gossip                  gossiptopics.LeanHelix
-	blockStorage            services.BlockStorage
-	consensusContext        services.ConsensusContext
-	logger                  log.BasicLogger
-	config                  Config
-	metrics                 *metrics
-	leanHelixMessageHandler *LeanHelixMessageHandler
-	leanHelix               leanhelix.LeanHelix
+	gossip           gossiptopics.LeanHelix
+	blockStorage     services.BlockStorage
+	consensusContext services.ConsensusContext
+	logger           log.BasicLogger
+	config           Config
+	metrics          *metrics
+	leanHelix        leanhelix.LeanHelix
 
-	mutex                        *sync.RWMutex
-	lastCommittedBlockUnderMutex *protocol.BlockPairContainer
+	lastCommittedBlock struct {
+		sync.RWMutex
+		block *protocol.BlockPairContainer
+	}
+	messageReceivers        map[int]func(ctx context.Context, message leanhelix.ConsensusRawMessage)
+	messageReceiversCounter int
 }
 
 type metrics struct {
@@ -54,10 +57,6 @@ func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
 	}
 }
 
-type LeanHelixMessageHandler struct {
-	leanHelix leanhelix.LeanHelix
-}
-
 type BlockPairWrapper struct {
 	blockPair *protocol.BlockPairContainer
 }
@@ -77,20 +76,6 @@ func NewBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapp
 	}
 }
 
-func (h *LeanHelixMessageHandler) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
-
-	message := leanhelix.CreateConsensusRawMessage(
-		leanhelix.MessageType(input.Message.MessageType),
-		input.Message.Content,
-		&BlockPairWrapper{
-			blockPair: input.Message.BlockPair,
-		},
-	)
-
-	err := h.leanHelix.OnReceiveMessage(ctx, message)
-	return nil, err
-}
-
 func NewLeanHelixConsensusAlgo(
 	ctx context.Context,
 	gossip gossiptopics.LeanHelix,
@@ -99,6 +84,7 @@ func NewLeanHelixConsensusAlgo(
 	logger log.BasicLogger,
 	config Config,
 	metricFactory metric.Factory,
+
 ) services.ConsensusAlgoLeanHelix {
 
 	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
@@ -110,8 +96,9 @@ func NewLeanHelixConsensusAlgo(
 		logger:                  logger.WithTags(LogTag),
 		config:                  config,
 		metrics:                 newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
-		leanHelixMessageHandler: nil,
 		leanHelix:               nil,
+		messageReceivers:        make(map[int]func(ctx context.Context, message leanhelix.ConsensusRawMessage)),
+		messageReceiversCounter: 0,
 	}
 
 	leanHelixConfig := &leanhelix.Config{
@@ -123,16 +110,11 @@ func NewLeanHelixConsensusAlgo(
 
 	leanHelix := leanhelix.NewLeanHelix(leanHelixConfig)
 
-	leanHelixMessageHandler := &LeanHelixMessageHandler{
-		leanHelix: leanHelix,
-	}
-
-	s.leanHelixMessageHandler = leanHelixMessageHandler
 	s.leanHelix = leanHelix
 
-	gossip.RegisterLeanHelixHandler(s.leanHelixMessageHandler)
+	gossip.RegisterLeanHelixHandler(s)
 
-	// TODO Add OnCommit handler
+	// TODO uncomment after BlockStorage mutex issues (s.lastBlockLock) are fixed
 	//blockStorage.RegisterConsensusBlocksHandler(s)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {

@@ -5,5 +5,6 @@ import (
 )
 
 func (s *service) ValidateBlock(block leanhelix.Block) bool {
-	panic("implement me")
+	// TODO implement me
+	return true
 }

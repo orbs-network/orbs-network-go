@@ -12,64 +12,141 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/pkg/errors"
 )
 
 func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-	panic("implement validate block consensus (call the lib)")
+
+	blockType := input.BlockType
+	mode := input.Mode
+	blockPair := input.BlockPair
+	prevCommittedBlockPair := input.PrevCommittedBlockPair
+	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
+		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
+	}
+
+	// validate the block consensus
+	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY {
+		err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// update lastCommitted to reflect this if newer
+	// TODO: Gad - how to update internal block height and continue from there
+	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
+		//_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
+		//
+		//
+		//if blockPair.TransactionsBlock.Header.BlockHeight() > _lastCommittedBlockHeight {
+		//
+		//	// TODO Set last committed block here?
+		//	//err := s.setLastCommittedBlock(blockPair, _lastCommittedBlock)
+		//	//if err != nil {
+		//	//	return err
+		//	//}
+		//	// don't forget to update internal vars too since they may be used later on in the function
+		//	_lastCommittedBlock = blockPair
+		//	_lastCommittedBlockHeight = _lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+		//}
+	}
+
+	return nil, nil
 }
 
-func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
-	panic("implement me")
+func (s *service) updateLastCommit(mode handlers.HandleBlockConsensusMode, blockPair *protocol.BlockPairContainer) {
+}
+
+func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+	// correct block type
+	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
+		return errors.Errorf("incorrect block proof type: %s", blockPair.TransactionsBlock.BlockProof.Type())
+	}
+	if !blockPair.ResultsBlock.BlockProof.IsTypeLeanHelix() {
+		return errors.Errorf("incorrect block proof type: %s", blockPair.ResultsBlock.BlockProof.Type())
+	}
+
+	panic("should not have reached here - not supposed to have generated any Lean Helix blocks!!")
+
+	// TODO Verify with Gad - do this here?
+	// prev block hash ptr (if given)
+	if prevCommittedBlockPair != nil {
+		prevTxHash := digest.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
+		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
+			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
+		}
+		prevRxHash := digest.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
+		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
+			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
+		}
+	}
+
+	// TODO block proof
+	//blockProof := blockPair.ResultsBlock.BlockProof.LeanHelix()
+	//if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
+	//	return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
+	//}
+	//signedData := s.signedDataForBlockProof(blockPair)
+	//if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
+	//	return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
+	//}
+
+	return nil
 }
 
 func (s *service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.BlockPairContainer) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.lastCommittedBlock.RLock()
+	defer s.lastCommittedBlock.RUnlock()
 
-	if s.lastCommittedBlockUnderMutex == nil {
+	if s.lastCommittedBlock.block == nil {
 		return 0, nil
 	}
-	return s.lastCommittedBlockUnderMutex.TransactionsBlock.Header.BlockHeight(), s.lastCommittedBlockUnderMutex
+	return s.lastCommittedBlock.block.TransactionsBlock.Header.BlockHeight(), s.lastCommittedBlock.block
 }
 
-func (s *service) RequestNewBlock(ctx context.Context, blockHeight lhprimitives.BlockHeight) (leanhelix.Block, error) {
+func (s *service) RequestNewBlock(parentCtx context.Context, blockHeight lhprimitives.BlockHeight) leanhelix.Block {
 
-	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
-	s.logger.Info("generating new proposed block", log.BlockHeight(_lastCommittedBlockHeight+1))
+	// TODO Is this the right timeout here - probably should be a little smaller
+	ctxWithTimeout, cancel := context.WithTimeout(parentCtx, s.config.LeanHelixConsensusRoundTimeoutInterval())
+	defer cancel()
+
+	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
+	s.logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
 
 	// get tx
-	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   _lastCommittedBlockHeight + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(_lastCommittedBlock.TransactionsBlock),
+	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctxWithTimeout, &services.RequestNewTransactionsBlockInput{
+		BlockHeight:   lastCommittedBlockHeight + 1,
+		PrevBlockHash: digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	// get rx
-	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       _lastCommittedBlockHeight + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(_lastCommittedBlock.ResultsBlock),
+	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctxWithTimeout, &services.RequestNewResultsBlockInput{
+		BlockHeight:       lastCommittedBlockHeight + 1,
+		PrevBlockHash:     digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	// generate signed block
-	pair, err := s.SignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
+	// TODO what to do in case of error - similar to handling timeout
+	pair, err := s.signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
 	blockPairWrapper := NewBlockPairWrapper(&protocol.BlockPairContainer{
 		TransactionsBlock: pair.TransactionsBlock,
 		ResultsBlock:      pair.ResultsBlock,
 	})
 
-	return blockPairWrapper, nil
+	return blockPairWrapper
 
 }
 
-func (s *service) SignBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
+func (s *service) signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
 		ResultsBlock:      resultsBlock,

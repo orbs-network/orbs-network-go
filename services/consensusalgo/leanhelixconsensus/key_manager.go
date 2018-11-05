@@ -7,8 +7,9 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-func (s *service) Sign(content []byte) ([]byte, error) {
-	return signature.SignEd25519(s.config.NodePrivateKey(), content)
+func (s *service) Sign(content []byte) []byte {
+	sig, _ := signature.SignEd25519(s.config.NodePrivateKey(), content)
+	return sig
 }
 
 func (s *service) Verify(content []byte, sender *leanhelix.SenderSignature) bool {
