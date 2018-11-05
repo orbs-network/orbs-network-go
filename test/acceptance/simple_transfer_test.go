@@ -12,10 +12,7 @@ import (
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.Network(t).
-		AllowingErrors(
-			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
-		).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+	harness.Network(t).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -46,10 +43,7 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	harness.Network(t).
-		AllowingErrors(
-			"consensus round tick failed", // (aborting shared state update due to inconsistency) //TODO investigate and explain, or fix and remove expected error
-		).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+	harness.Network(t).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
