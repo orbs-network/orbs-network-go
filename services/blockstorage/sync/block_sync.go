@@ -38,6 +38,8 @@ type BlockSyncStorage interface {
 	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
 }
 
+// the conduit connects between the states and the state machine (which is connected to the gossip handler)
+// the data that the states receive, regardless of their instance, is waiting at these channels
 type blockSyncConduit struct {
 	idleReset chan struct{}
 	responses chan *gossipmessages.BlockAvailabilityResponseMessage
