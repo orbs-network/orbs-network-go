@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"testing"
 	"time"
 )
 
@@ -120,7 +121,7 @@ func newHarness() *harness {
 
 			nodeLogger := logger.WithOutput(log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter()))
 
-			cfg := config.ForProduction(processorArtifactPath)
+			cfg := config.ForE2E(processorArtifactPath)
 			cfg.OverrideNodeSpecificValues(
 				federationNodes,
 				gossipPeers,
@@ -186,7 +187,7 @@ func (h *harness) callMethod(txBuilder *protocol.TransactionBuilder) (*client.Ca
 }
 
 func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, error) {
-	res, err := http.Post(h.apiUrlFor(endpoint), "application/octet-stream", bytes.NewReader(input.Raw()))
+	res, err := http.Post(h.apiUrlFor(endpoint), "application/membuffers", bytes.NewReader(input.Raw()))
 	if err != nil {
 		return nil, err
 	}
@@ -237,4 +238,9 @@ func (h *harness) getMetrics() metrics {
 	json.Unmarshal(bytes, &m)
 
 	return m
+}
+
+func printTestTime(t *testing.T, msg string, last *time.Time) {
+	t.Logf("%s (+%.3fs)", msg, time.Now().Sub(*last).Seconds())
+	*last = time.Now()
 }

@@ -1,4 +1,4 @@
-package supervized
+package supervised
 
 import (
 	"context"
@@ -14,27 +14,39 @@ type Errorer interface {
 	Error(message string, fields ...*log.Field)
 }
 
+type ContextEndedChan chan struct{}
+
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
-func ShortLived(logger Errorer, f func()) {
+func GoOnce(errorer Errorer, f func()) {
 	go func() {
-		defer recoverPanics(logger)
-		f()
+		tryOnce(errorer, f)
 	}()
 }
 
-// Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer; if the provided Context isn't closed, re-runs f()
-func LongLived(ctx context.Context, logger Errorer, f func()) {
-	defer recoverPanics(logger)
+// Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
+// If the provided Context isn't closed, re-runs f()
+// Returns a channel that is closed when the goroutine has quit due to context ending
+func GoForever(ctx context.Context, logger Errorer, f func()) ContextEndedChan {
+	c := make(ContextEndedChan)
 	go func() {
+		defer close(c)
+
 		for {
-			f()
+			tryOnce(logger, f)
+			//TODO count restarts, fail if too many restarts, etc
 			if ctx.Err() != nil { // this returns non-nil when context has been closed via cancellation or timeout or whatever
 				return
 			}
-			// repeat
-			//TODO count restarts, fail if too many restarts, etc
 		}
 	}()
+	return c
+}
+
+// this function is needed so that we don't return out of the goroutine when it panics
+func tryOnce(errorer Errorer, f func()) {
+	defer recoverPanics(errorer)
+	f()
+
 }
 
 func recoverPanics(logger Errorer) {

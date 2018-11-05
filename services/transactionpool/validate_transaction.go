@@ -1,7 +1,7 @@
 package transactionpool
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -53,8 +53,8 @@ func validateSignature(transaction *protocol.SignedTransaction) *ErrTransactionR
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME, log.String("signer-scheme", "Eddsa"), log.Stringable("signer", tx.Signer())}
 	}
 
-	if len(tx.Signer().Eddsa().SignerPublicKey()) != signature.ED25519_PUBLIC_KEY_SIZE_BYTES {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, log.Int("signature-length", signature.ED25519_PUBLIC_KEY_SIZE_BYTES), log.Int("signature-length", len(tx.Signer().Eddsa().SignerPublicKey()))}
+	if len(tx.Signer().Eddsa().SignerPublicKey()) != keys.ED25519_PUBLIC_KEY_SIZE_BYTES {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, log.Int("signature-length", keys.ED25519_PUBLIC_KEY_SIZE_BYTES), log.Int("signature-length", len(tx.Signer().Eddsa().SignerPublicKey()))}
 	}
 
 	//TODO actually verify the signature

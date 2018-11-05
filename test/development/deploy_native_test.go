@@ -2,6 +2,7 @@ package development
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/harness"
@@ -19,19 +20,19 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		network := harness.NewDevelopmentNetwork().StartNodes(ctx)
+		network := harness.NewDevelopmentNetwork(log.GetLogger()).StartNodes(ctx)
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 		t.Log("deploying contract")
 
-		<-network.SendDeployCounterContract(ctx, 1) // leader is nodeIndex 0, validator is nodeIndex 1
-		require.EqualValues(t, counterStart, <-network.CallCounterGet(ctx, 0), "get counter after deploy")
+		<-network.GetCounterContract().SendDeployCounterContract(ctx, 1) // leader is nodeIndex 0, validator is nodeIndex 1
+		require.EqualValues(t, counterStart, <-network.GetCounterContract().CallCounterGet(ctx, 0), "get counter after deploy")
 
 		t.Log("transacting with contract")
 
-		<-network.SendCounterAdd(ctx, 1, 17)
-		require.EqualValues(t, counterStart+17, <-network.CallCounterGet(ctx, 0), "get counter after transaction")
+		<-network.GetCounterContract().SendCounterAdd(ctx, 1, 17)
+		require.EqualValues(t, counterStart+17, <-network.GetCounterContract().CallCounterGet(ctx, 0), "get counter after transaction")
 
 	})
 	time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully

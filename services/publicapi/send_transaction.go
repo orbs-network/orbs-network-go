@@ -46,6 +46,11 @@ func (s *service) SendTransaction(ctx context.Context, input *services.SendTrans
 		return toSendTxOutput(toTxResponse(addResp)), nil
 	}
 
+	if input.ReturnImmediately != 0 {
+		s.waiter.deleteByChannel(waitResult)
+		return toSendTxOutput(toTxResponse(addResp)), nil
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, s.config.SendTransactionTimeout())
 	defer cancel()
 

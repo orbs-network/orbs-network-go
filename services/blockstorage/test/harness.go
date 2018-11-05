@@ -76,20 +76,29 @@ type harness struct {
 	logger         log.BasicLogger
 }
 
-func (d *harness) expectCommitStateDiff() {
-	d.expectCommitStateDiffTimes(1)
+func (d *harness) withSyncBroadcast(times int) *harness {
+	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(times)
+	return d
+}
+
+func (d *harness) withCommitStateDiff(times int) *harness {
+	csdOut := &services.CommitStateDiffOutput{}
+
+	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Return(csdOut, nil).Times(times)
+	return d
+}
+
+func (d *harness) withValidateConsensusAlgos(times int) *harness {
+	out := &handlers.HandleBlockConsensusOutput{}
+
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(times)
+	return d
 }
 
 func (d *harness) expectCommitStateDiffTimes(times int) {
 	csdOut := &services.CommitStateDiffOutput{}
 
 	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Return(csdOut, nil).Times(times)
-}
-
-func (d *harness) expectValidateWithConsensusAlgosTimes(times int) {
-	out := &handlers.HandleBlockConsensusOutput{}
-
-	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(times)
 }
 
 func (d *harness) verifyMocks(t *testing.T, times int) {
@@ -133,13 +142,30 @@ func (d *harness) withNodeKey(key primitives.Ed25519PublicKey) *harness {
 	return d
 }
 
-func (d *harness) expectSyncToBroadcastInBackground() {
-	// we call this when we do not care about the sync
-	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
-}
-
 func (d *harness) failNextBlocks() {
 	d.storageAdapter.FailNextBlocks()
+}
+
+func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
+	d.expectCommitStateDiffTimes(count)
+
+	for i := 1; i <= count; i++ {
+		d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+	}
+}
+
+func (d *harness) setupCustomBlocksForInit() time.Time {
+	now := time.Now()
+	for i := 1; i <= 10; i++ {
+		now = now.Add(1 * time.Millisecond)
+		d.storageAdapter.WriteBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(now).Build())
+	}
+
+	out := &handlers.HandleBlockConsensusOutput{}
+
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(1)
+
+	return now
 }
 
 func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorageConfig {
@@ -157,15 +183,7 @@ func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorage
 	return cfg
 }
 
-func (d *harness) setupSomeBlocks(ctx context.Context, count int) {
-	d.expectCommitStateDiffTimes(count)
-
-	for i := 1; i <= count; i++ {
-		d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
-	}
-}
-
-func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.InMemoryBlockPersistence, consensus *handlers.MockConsensusBlocksHandler)) *harness {
+func newBlockStorageHarness() *harness {
 	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
 	cfg := createConfig(keyPair.PublicKey())
@@ -176,28 +194,26 @@ func newCustomSetupHarness(ctx context.Context, setup func(persistence adapter.I
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
+	// TODO: this might create issues with some tests later on, should move it to behavior or some other means of setup
 	// Always expect at least 0 because sometimes it gets triggered because of the timings
 	// HandleBlockConsensus always gets called when we try to start the sync which happens automatically
 	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
-
-	if setup != nil {
-		setup(d.storageAdapter, d.consensus)
-	}
 
 	d.gossip = &gossiptopics.MockBlockSync{}
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 
 	d.txPool = &services.MockTransactionPool{}
+	// TODO: this might create issues with some tests later on, should move it to behavior or some other means of setup
 	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
-
-	registry := metric.NewRegistry()
-
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, cfg, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, logger, registry)
-	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	return d
 }
 
-func newHarness(ctx context.Context) *harness {
-	return newCustomSetupHarness(ctx, nil)
+func (d *harness) start(ctx context.Context) *harness {
+	registry := metric.NewRegistry()
+
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, d.logger, registry)
+	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
+
+	return d
 }

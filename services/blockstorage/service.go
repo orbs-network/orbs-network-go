@@ -56,7 +56,7 @@ func newMetrics(m metric.Factory) *metrics {
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
 	txPool services.TransactionPool, logger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
-	storage := &service{
+	s := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
 		gossip:        gossip,
@@ -74,13 +74,13 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	}
 
 	if lastBlock != nil {
-		storage.updateLastCommittedBlock(lastBlock)
+		s.updateLastCommittedBlock(lastBlock)
 	}
 
-	gossip.RegisterBlockSyncHandler(storage)
-	storage.blockSync = blockSync.NewBlockSync(ctx, config, gossip, storage, logger)
+	gossip.RegisterBlockSyncHandler(s)
+	s.blockSync = blockSync.NewBlockSync(ctx, config, gossip, s, logger)
 
-	return storage
+	return s
 }
 
 func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -221,7 +221,7 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 	}
 	blocksToSearch := s.persistence.GetReceiptRelevantBlocks(input.TransactionTimestamp, searchRules)
 	if blocksToSearch == nil {
-		return nil, errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
+		return s.createEmptyTransactionReceiptResult(), errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
 	}
 
 	if len(blocksToSearch) == 0 {
@@ -247,9 +247,16 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 }
 
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+	b := s.getLastCommittedBlock()
+	if b == nil {
+		return &services.GetLastCommittedBlockHeightOutput{
+			LastCommittedBlockHeight:    0,
+			LastCommittedBlockTimestamp: 0,
+		}, nil
+	}
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    s.LastCommittedBlockHeight(),
-		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
+		LastCommittedBlockHeight:    b.TransactionsBlock.Header.BlockHeight(),
+		LastCommittedBlockTimestamp: b.TransactionsBlock.Header.Timestamp(),
 	}, nil
 }
 
@@ -334,12 +341,12 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 		if txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "FORK!! block already in storage, timestamp mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		} else if !txBlockHeader.Equal(s.lastCommittedBlock.TransactionsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 

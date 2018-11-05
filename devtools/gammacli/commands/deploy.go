@@ -12,7 +12,7 @@ func ShowDeployUsage() string {
 	return "Usage:  $ gamma-cli deploy MyContractName path/to/contract.go"
 }
 
-func HandleDeployCommand(args []string) (string, error) {
+func (r *CommandRunner) HandleDeployCommand(args []string) (string, error) {
 	if len(args) < 2 {
 		return ShowDeployUsage(), nil
 	}
@@ -71,5 +71,5 @@ pathToCodeFile
 	runArgs := []string{"send", "./.deploy.json"}
 	runArgs = append(runArgs, args[2:]...)
 
-	return HandleRunCommand(runArgs)
+	return r.HandleRunCommand(runArgs)
 }

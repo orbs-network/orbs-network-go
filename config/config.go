@@ -18,7 +18,7 @@ type NodeConfig interface {
 	// consensus
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	ConsensusContextPercentageOfNodesRequiredForConsensus() uint32
+	ConsensusRequiredQuorumPercentage() uint32
 
 	// Lean Helix consensus
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
@@ -36,14 +36,14 @@ type NodeConfig interface {
 	BlockSyncCollectChunksTimeout() time.Duration
 
 	// state storage
-	StateStorageHistoryRetentionDistance() uint32
+	StateStorageHistorySnapshotNum() uint32
 
 	// block tracker
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
 
 	// consensus context
-	ConsensusContextMinimalBlockDelay() time.Duration
+	ConsensusContextMinimalBlockTime() time.Duration
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMaximumTransactionsInBlock() uint32
 
@@ -73,7 +73,6 @@ type NodeConfig interface {
 
 type mutableNodeConfig interface {
 	NodeConfig
-
 	Set(key string, value NodeConfigValue) mutableNodeConfig
 	SetDuration(key string, value time.Duration) mutableNodeConfig
 	SetUint32(key string, value uint32) mutableNodeConfig
@@ -82,12 +81,9 @@ type mutableNodeConfig interface {
 	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
 	SetNodePublicKey(key primitives.Ed25519PublicKey) mutableNodeConfig
 	SetNodePrivateKey(key primitives.Ed25519PrivateKey) mutableNodeConfig
-
 	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
-
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
-
 	OverrideNodeSpecificValues(
 		federationNodes map[string]FederationNode,
 		gossipPeers map[string]GossipPeer,
@@ -120,7 +116,7 @@ type GossipTransportConfig interface {
 type ConsensusContextConfig interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
-	ConsensusContextMinimalBlockDelay() time.Duration
+	ConsensusContextMinimalBlockTime() time.Duration
 }
 
 type PublicApiConfig interface {
@@ -129,7 +125,7 @@ type PublicApiConfig interface {
 }
 
 type StateStorageConfig interface {
-	StateStorageHistoryRetentionDistance() uint32
+	StateStorageHistorySnapshotNum() uint32
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
 }

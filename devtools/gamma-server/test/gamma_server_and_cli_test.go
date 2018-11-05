@@ -4,20 +4,21 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/stretchr/testify/require"
 )
 
 type TransactionReceipt struct {
@@ -60,20 +61,44 @@ func newHarness() *harness {
 	return &harness{gamma: server, port: server.Port()}
 }
 
-func cliBinaryPath() []string {
+func (h *harness) cliBinaryPath() []string {
 	ciCliBinaryPath := "/opt/orbs/gamma-cli"
 	if _, err := os.Stat(ciCliBinaryPath); err == nil {
 		return []string{ciCliBinaryPath}
 	}
 
-	return []string{"go", "run", "../../gammacli/main/main.go"}
+	if precompiledBinaryPath == "" { // only do this once per process so as to share compiled binary between tests of this package
+		h.compileBinary()
+	}
+
+	return []string{precompiledBinaryPath}
 }
 
-func runCliCommand(t *testing.T, cliArgs ...string) string {
-	command := cliBinaryPath()
+var precompiledBinaryPath string
+
+func (h *harness) compileBinary() {
+	binaryDir, err := ioutil.TempDir("", "gamma")
+	if err != nil {
+		panic(err)
+	}
+
+	precompiledBinaryPath = binaryDir + "/gamma-cli"
+	cmd := exec.Command("go", "build", "-o", precompiledBinaryPath, "../../gammacli/main/main.go")
+	err = cmd.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (h *harness) runCliCommand(t *testing.T, cliArgs ...string) string {
+	h.gamma.Logger.Info("runCliCommand about to run command " + strings.Join(cliArgs, " "))
+	defer h.gamma.Logger.Info("runCliCommand finished running command " + strings.Join(cliArgs, " "))
+
+	command := h.cliBinaryPath()
 	command = append(command, cliArgs...)
 
 	cmd := exec.Command(command[0], command[1:]...)
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -81,7 +106,8 @@ func runCliCommand(t *testing.T, cliArgs ...string) string {
 
 	require.NoError(t, err, "gamma cli command should not fail")
 
-	return stdout.String()
+	s := stdout.String()
+	return s
 }
 
 func generateTransferJSON(amount uint64, targetAddress []byte) []byte {
@@ -154,7 +180,7 @@ func (h *harness) transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519Key
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	sendCommandOutput := runCliCommand(t, "run", "send", "../json/transfer.json",
+	sendCommandOutput := h.runCliCommand(t, "run", "send", "../json/transfer.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(h.port))
 
@@ -162,8 +188,8 @@ func (h *harness) transferAmountToAddress(t *testing.T, keyPair *keys.Ed25519Key
 	unmarshalErr := json.Unmarshal([]byte(sendCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "JSONTransaction status to be successful = 1")
-	require.Equal(t, 1, response.TransactionStatus, "JSONTransaction status to be successful = 1")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt.ExecutionResult, "JSONTransaction status to be successful = 1")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus, "JSONTransaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
 }
 
@@ -175,7 +201,7 @@ func (h *harness) getBalanceOfAddress(t *testing.T, targetAddress primitives.Rip
 	}
 	require.NoError(t, err, "Couldn't write getBalance JSON file")
 
-	callOutputAsString := runCliCommand(t, "run", "call", "../json/getBalance.json", "-host", getNodeUrl(h.port))
+	callOutputAsString := h.runCliCommand(t, "run", "call", "../json/getBalance.json", "-host", getNodeUrl(h.port))
 
 	callResponse := &callMethodCliResponse{}
 	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
@@ -186,8 +212,8 @@ func (h *harness) getBalanceOfAddress(t *testing.T, targetAddress primitives.Rip
 	require.EqualValues(t, expectedAmount, uint64(callResponse.OutputArguments[0].Value.(float64)), "expected balance to equal 42")
 }
 
-func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair) {
-	deployCommandOutput := runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
+func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPair) primitives.BlockHeight {
+	deployCommandOutput := h.runCliCommand(t, "deploy", "Counter", "../counterContract/counter.go",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(h.port))
 
@@ -195,32 +221,51 @@ func (h *harness) deployCounterContract(t *testing.T, keyPair *keys.Ed25519KeyPa
 	unmarshalErr := json.Unmarshal([]byte(deployCommandOutput), &response)
 
 	require.NoError(t, unmarshalErr, "error unmarshal cli response")
-	require.Equal(t, 1, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
-	require.Equal(t, 1, response.TransactionStatus, "Transaction status to be successful = 1")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt.ExecutionResult, "Transaction status to be successful = 1")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus, "Transaction status to be successful = 1")
 	require.NotNil(t, response.TransactionReceipt.Txhash, "got empty txhash")
+
+	return primitives.BlockHeight(response.BlockHeight)
 }
 
-func (h *harness) getCounterValue(t *testing.T, expectedReturnValue uint64) {
-	getCounterJSONBytes := generateGetCounterJSON()
-	err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
-	if err != nil {
-		t.Log("Couldn't write file", err)
+func (h *harness) getCounterValue(t *testing.T, expectedReturnValue uint64, asOfBlockHeight primitives.BlockHeight) {
+
+	innerGet := func() *callMethodCliResponse {
+		getCounterJSONBytes := generateGetCounterJSON()
+		err := ioutil.WriteFile("../json/getCounter.json", getCounterJSONBytes, 0644)
+		if err != nil {
+			t.Log("Couldn't write file", err)
+		}
+		require.NoError(t, err, "Couldn't write transfer JSON file")
+
+		// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
+		callOutputAsString := h.runCliCommand(t, "run", "call", "../json/getCounter.json", "-host", getNodeUrl(h.port))
+
+		callResponse := &callMethodCliResponse{}
+		callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
+
+		require.NoError(t, callUnmarshalErr, "error calling call_method")
+		require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, callResponse.CallResult, "wrong callResult value")
+		require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from Counter.get()")
+
+		return callResponse
 	}
-	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	// Our contract is deployed, now let's continue to see we get 0 for the counter value (as it's the value it's init'd to
-	callOutputAsString := runCliCommand(t, "run", "call", "../json/getCounter.json", "-host", getNodeUrl(h.port))
+	//TODO remove retry mechanism when spec changes as described in https://github.com/orbs-network/orbs-spec/issues/109
+	for retries := 0; retries < 3; retries++ {
+		r := innerGet()
 
-	callResponse := &callMethodCliResponse{}
-	callUnmarshalErr := json.Unmarshal([]byte(callOutputAsString), &callResponse)
+		if primitives.BlockHeight(r.BlockHeight) >= asOfBlockHeight {
+			require.EqualValues(t, expectedReturnValue, uint64(r.OutputArguments[0].Value.(float64)), "counter value did not match expected one")
 
-	require.NoError(t, callUnmarshalErr, "error calling call_method")
-	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, callResponse.CallResult, "wrong callResult value")
-	require.Len(t, callResponse.OutputArguments, 1, "expected exactly one output argument returned from Counter.get()")
-	require.EqualValues(t, expectedReturnValue, uint64(callResponse.OutputArguments[0].Value.(float64)), "counter value did not match expected one")
+			return
+		} else {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
 }
 
-func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64) {
+func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair, amount uint64) primitives.BlockHeight {
 	addCounterJSONBytes := generateAddCounterJSON(amount)
 	err := ioutil.WriteFile("../json/add.json", addCounterJSONBytes, 0644)
 	if err != nil {
@@ -228,7 +273,7 @@ func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair,
 	}
 	require.NoError(t, err, "Couldn't write transfer JSON file")
 
-	addOutputAsString := runCliCommand(t, "run", "send", "../json/add.json",
+	addOutputAsString := h.runCliCommand(t, "run", "send", "../json/add.json",
 		"-public-key", keyPair.PublicKey().String(),
 		"-private-key", keyPair.PrivateKey().String(), "-host", getNodeUrl(h.port))
 
@@ -236,8 +281,10 @@ func (h *harness) addAmountToCounter(t *testing.T, keyPair *keys.Ed25519KeyPair,
 	addResponseUnmarshalErr := json.Unmarshal([]byte(addOutputAsString), &addResponse)
 
 	require.NoError(t, addResponseUnmarshalErr, "error calling Counter.add()")
-	require.Equal(t, 1, addResponse.TransactionReceipt.ExecutionResult, "Wrong ExecutionResult value (expected 1 for success)")
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, addResponse.TransactionReceipt.ExecutionResult, "Wrong ExecutionResult value (expected 1 for success)")
 	require.EqualValues(t, nil, addResponse.TransactionReceipt.OutputArguments, "expected no output arguments")
+
+	return primitives.BlockHeight(addResponse.BlockHeight)
 }
 
 func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
@@ -248,9 +295,7 @@ func TestGammaFlowWithActualJSONFilesUsingBenchmarkToken(t *testing.T) {
 	h := newHarness()
 	defer h.shutdown()
 
-	time.Sleep(100 * time.Millisecond) // wait for server to start
-
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 	targetAddress := builders.AddressForEd25519SignerForTests(2)
 	var amount uint64 = 42
 
@@ -266,18 +311,18 @@ func TestGammaCliDeployWithUserDefinedContract(t *testing.T) {
 	h := newHarness()
 	defer h.shutdown()
 
-	time.Sleep(100 * time.Millisecond) // wait for server to start
+	keyPair := testKeys.Ed25519KeyPairForTests(0)
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
-
-	h.deployCounterContract(t, keyPair)
-	h.getCounterValue(t, 0)
+	deployedBlockHeight := h.deployCounterContract(t, keyPair)
+	h.getCounterValue(t, 0, deployedBlockHeight)
 
 	// Add a random amount to the counter using Counter.add()
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddAmount := uint64(r.Intn(4000)) + 1000 // Random int between 1000 and 5000
 
-	h.addAmountToCounter(t, keyPair, randomAddAmount)
+	addBlockHeight := h.addAmountToCounter(t, keyPair, randomAddAmount)
 
-	h.getCounterValue(t, randomAddAmount)
+	t.Logf("Added %d to counter contract, recorded at block-height=%s", randomAddAmount, addBlockHeight)
+
+	h.getCounterValue(t, randomAddAmount, addBlockHeight)
 }

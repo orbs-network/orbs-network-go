@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/pkg/errors"
@@ -49,12 +50,15 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	}
 
 	// server goroutine
-	go t.serverMainLoop(ctx, t.config.GossipListenPort())
+	supervised.GoForever(ctx, logger, func() {
+		t.serverMainLoop(ctx, t.config.GossipListenPort())
+	})
 
 	// client goroutines
 	for peerNodeKey, peer := range t.config.GossipPeers(0) {
 		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
+			//TODO supervise
 			go t.clientMainLoop(ctx, peerAddress, t.peerQueues[peerNodeKey])
 		}
 	}
@@ -136,6 +140,10 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.serverPort)))
 
 	for {
+		if ctx.Err() != nil {
+			t.logger.Info("ending server main loop (system shutting down)")
+		}
+
 		conn, err := listener.Accept()
 		if err != nil {
 			if !t.isServerListening() {

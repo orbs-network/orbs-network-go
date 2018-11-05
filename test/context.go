@@ -1,6 +1,8 @@
 package test
 
-import "context"
+import (
+	"context"
+)
 
 func WithContext(f func(ctx context.Context)) {
 	ctx, cancel := context.WithCancel(context.Background())

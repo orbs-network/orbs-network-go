@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -60,7 +61,10 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.config.BlockSyncBatchSize()))
 
-	go bs.syncLoop(ctx)
+	supervised.GoForever(ctx, logger, func() {
+		bs.syncLoop(ctx)
+	})
+
 	return bs
 }
 

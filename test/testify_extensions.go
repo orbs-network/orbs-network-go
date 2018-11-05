@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -22,4 +23,19 @@ func RequireCmpEqual(t *testing.T, expected interface{}, actual interface{}, msg
 		return
 	}
 	t.FailNow()
+}
+
+type Fataler interface {
+	Fatal(args ...interface{})
+}
+
+type ErrorTracker interface {
+	HasErrors() bool
+	GetUnexpectedErrors() []string
+}
+
+func RequireNoUnexpectedErrors(f Fataler, errorTracker ErrorTracker) {
+	if errorTracker.HasErrors() {
+		f.Fatal("Encountered unexpected errors:\n\t", strings.Join(errorTracker.GetUnexpectedErrors(), "\n\t"))
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -28,7 +29,7 @@ type Config interface {
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
-	ConsensusContextPercentageOfNodesRequiredForConsensus() uint32
+	ConsensusRequiredQuorumPercentage() uint32
 }
 
 type service struct {
@@ -98,7 +99,9 @@ func NewBenchmarkConsensusAlgo(
 	blockStorage.RegisterConsensusBlocksHandler(s)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
-		go s.leaderConsensusRoundRunLoop(ctx)
+		supervised.GoForever(ctx, logger, func() {
+			s.leaderConsensusRoundRunLoop(ctx)
+		})
 	}
 
 	return s

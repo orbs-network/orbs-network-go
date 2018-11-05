@@ -6,7 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervized"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -80,7 +80,7 @@ func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
 }
 
 func (f *transactionForwarder) start(ctx context.Context) {
-	supervized.LongLived(ctx, f.logger, func() {
+	supervised.GoForever(ctx, f.logger, func() {
 		for {
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
 
