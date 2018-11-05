@@ -59,6 +59,22 @@ func TestSimpleLogger_AggregateField(t *testing.T) {
 
 }
 
+func TestSimpleLogger_AggregateField_NestedLogger(t *testing.T) {
+	ctx := trace.NewContext(context.Background(), "foo")
+	b := new(bytes.Buffer)
+	log.GetLogger(log.String("k1", "v1")).
+		WithTags(trace.LogFieldFrom(ctx)).
+		WithOutput(log.NewOutput(b)).
+		Info("bar")
+
+	jsonMap := parseOutput(b.String())
+
+	require.Equal(t, "foo", jsonMap["entry-point"])
+	require.Equal(t, "v1", jsonMap["k1"])
+	require.NotEmpty(t, jsonMap["request-id"])
+
+}
+
 func TestBasicLogger_WithFilter(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger().WithOutput(log.NewOutput(b)).

@@ -13,26 +13,28 @@ import (
 func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
-	s.logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash), trace.LogFieldFrom(ctx))
+	logger := s.logger.WithTags(log.Stringable("txHash", txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
+
+	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))
 
 	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
-		s.logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash), trace.LogFieldFrom(ctx))
+		s.logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 
 	if alreadyCommitted := s.committedPool.get(digest.CalcTxHash(input.SignedTransaction.Transaction())); alreadyCommitted != nil {
-		s.logger.Info("transaction already committed", log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash), trace.LogFieldFrom(ctx))
+		logger.Info("transaction already committed")
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(ctx, input.SignedTransaction); err != nil {
 		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
-		s.logger.Error("error validating transaction for preorder", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash), trace.LogFieldFrom(ctx))
+		logger.Error("error validating transaction for preorder", log.Error(err))
 		return s.addTransactionOutputFor(nil, status), err
 	}
 
 	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodePublicKey()); err != nil {
-		s.logger.Error("error adding transaction to pending pool", log.Error(err), log.Stringable("transaction", input.SignedTransaction), log.Stringable("txHash", txHash), trace.LogFieldFrom(ctx))
+		s.logger.Error("error adding transaction to pending pool", log.Error(err))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 
 	}
