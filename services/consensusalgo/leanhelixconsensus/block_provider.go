@@ -136,7 +136,7 @@ func (s *service) RequestNewBlock(parentCtx context.Context, blockHeight lhprimi
 
 	// generate signed block
 	// TODO what to do in case of error - similar to handling timeout
-	pair, err := s.signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
+	pair, _ := s.signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
 	blockPairWrapper := NewBlockPairWrapper(&protocol.BlockPairContainer{
 		TransactionsBlock: pair.TransactionsBlock,
 		ResultsBlock:      pair.ResultsBlock,

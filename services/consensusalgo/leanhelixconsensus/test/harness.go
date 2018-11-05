@@ -38,57 +38,54 @@ func nonLeaderKeyPair() *keys.Ed25519KeyPair {
 	return keys.Ed25519KeyPairForTests(1)
 }
 
-func otherNonLeaderKeyPair() *keys.Ed25519KeyPair {
-	return keys.Ed25519KeyPairForTests(2)
-}
-
-func newHarness(
-	isLeader bool,
-) *harness {
-
-	federationNodes := make(map[string]config.FederationNode)
-	for i := 0; i < NETWORK_SIZE; i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
-	}
-
-	nodeKeyPair := leaderKeyPair()
-	if !isLeader {
-		nodeKeyPair = nonLeaderKeyPair()
-	}
-
-	cfg := config.ForAcceptanceTests(
-		federationNodes,
-		make(map[string]config.GossipPeer),
-		nodeKeyPair.PublicKey(),
-		nodeKeyPair.PrivateKey(),
-		leaderKeyPair().PublicKey(),
-		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
-		1,
-	)
-
-	cfg.SetDuration(config.LEAN_HELIX_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
-
-	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-
-	gossip := &gossiptopics.MockLeanHelix{}
-	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
-
-	blockStorage := &services.MockBlockStorage{}
-	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
-
-	consensusContext := &services.MockConsensusContext{}
-
-	return &harness{
-		gossip:           gossip,
-		blockStorage:     blockStorage,
-		consensusContext: consensusContext,
-		reporting:        log,
-		config:           cfg,
-		service:          nil,
-		registry:         metric.NewRegistry(),
-	}
-}
+// TODO Uncomment when used
+//func newHarness(
+//	isLeader bool,
+//) *harness {
+//
+//	federationNodes := make(map[string]config.FederationNode)
+//	for i := 0; i < NETWORK_SIZE; i++ {
+//		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+//		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+//	}
+//
+//	nodeKeyPair := leaderKeyPair()
+//	if !isLeader {
+//		nodeKeyPair = nonLeaderKeyPair()
+//	}
+//
+//	cfg := config.ForAcceptanceTests(
+//		federationNodes,
+//		make(map[string]config.GossipPeer),
+//		nodeKeyPair.PublicKey(),
+//		nodeKeyPair.PrivateKey(),
+//		leaderKeyPair().PublicKey(),
+//		consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
+//		1,
+//	)
+//
+//	cfg.SetDuration(config.LEAN_HELIX_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
+//
+//	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+//
+//	gossip := &gossiptopics.MockLeanHelix{}
+//	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
+//
+//	blockStorage := &services.MockBlockStorage{}
+//	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
+//
+//	consensusContext := &services.MockConsensusContext{}
+//
+//	return &harness{
+//		gossip:           gossip,
+//		blockStorage:     blockStorage,
+//		consensusContext: consensusContext,
+//		reporting:        log,
+//		config:           cfg,
+//		service:          nil,
+//		registry:         metric.NewRegistry(),
+//	}
+//}
 
 func (h *harness) createService(ctx context.Context) {
 	h.service = leanhelixconsensus.NewLeanHelixConsensusAlgo(
