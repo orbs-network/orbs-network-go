@@ -39,7 +39,7 @@ func (c *Context) NestedFields() []*log.Field {
 	}
 }
 
-func TraceField(ctx context.Context) *log.Field {
+func LogFieldFrom(ctx context.Context) *log.Field {
 	trace, _ := FromContext(ctx)
 	return &log.Field{Key: "trace", Nested: trace, Type: log.AggregateType}
 

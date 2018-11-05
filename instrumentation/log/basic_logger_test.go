@@ -50,7 +50,7 @@ func TestSimpleLogger_AggregateField(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger().
 		WithOutput(log.NewOutput(b)).
-		Info("bar", trace.TraceField(ctx))
+		Info("bar", trace.LogFieldFrom(ctx))
 
 	jsonMap := parseOutput(b.String())
 
@@ -143,7 +143,7 @@ func TestHumanReadable_AggregateField(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger().
 		WithOutput(log.NewOutput(b).WithFormatter(log.NewHumanReadableFormatter())).
-		Info("bar", trace.TraceField(ctx))
+		Info("bar", trace.LogFieldFrom(ctx))
 
 	out := b.String()
 	require.Regexp(t, "entry-point=foo", out)
