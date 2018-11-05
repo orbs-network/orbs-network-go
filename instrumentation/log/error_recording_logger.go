@@ -61,12 +61,10 @@ func (l *ErrorRecordingLogger) Metric(params ...*Field) {
 
 func (l *ErrorRecordingLogger) WithTags(params ...*Field) BasicLogger {
 	return &ErrorRecordingLogger{
-		nested:        l.nested.WithTags(),
+		nested:        l.nested.WithTags(params...),
 		allowedErrors: l.allowedErrors,
 		errorRecorder: l.errorRecorder,
 	}
-
-	return NewErrorRecordingLogger(l.nested.WithTags(), l.allowedErrors)
 }
 
 func (l *ErrorRecordingLogger) Tags() []*Field {
