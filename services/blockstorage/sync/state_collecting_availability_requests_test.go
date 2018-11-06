@@ -50,13 +50,14 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 
 	message := builders.BlockAvailabilityResponseInput().Build().Message
 	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
-	nextShouldBeFinished := h.nextState(collectingState, func() {
+	nextState := h.processStateAndWaitUntilFinished(collectingState, func() {
 		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast was not sent out")
 		collectingState.gotAvailabilityResponse(h.ctx, message)
+
 	})
 
-	require.IsType(t, &finishedCARState{}, nextShouldBeFinished, "state should transition to finished CAR")
-	fcar := nextShouldBeFinished.(*finishedCARState)
+	require.IsType(t, &finishedCARState{}, nextState, "state should transition to finished CAR")
+	fcar := nextState.(*finishedCARState)
 	require.Equal(t, 1, len(fcar.responses), "there should be one response")
 	require.Equal(t, message.Sender, fcar.responses[0].Sender, "state sender should match message sender")
 	require.Equal(t, message.SignedBatchRange, fcar.responses[0].SignedBatchRange, "state payload should match message")

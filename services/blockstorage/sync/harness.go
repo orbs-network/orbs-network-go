@@ -183,15 +183,15 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	require.True(t, ok)
 }
 
-func (h *blockSyncHarness) nextState(state syncState, trigger func()) syncState {
+func (h *blockSyncHarness) processStateAndWaitUntilFinished(state syncState, whileStateIsProcessing func()) syncState {
 	var nextState syncState
-	latch := make(chan struct{})
+	stateProcessingFinished := make(chan bool)
 	go func() {
 		nextState = state.processState(h.ctx)
-		latch <- struct{}{}
+		stateProcessingFinished <- true
 	}()
-	trigger()
-	<-latch
+	whileStateIsProcessing()
+	<-stateProcessingFinished
 	return nextState
 }
 
