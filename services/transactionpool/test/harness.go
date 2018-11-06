@@ -5,11 +5,12 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -30,8 +31,8 @@ type harness struct {
 }
 
 var (
-	thisNodeKeyPair  = keys.Ed25519KeyPairForTests(8)
-	otherNodeKeyPair = keys.Ed25519KeyPairForTests(9)
+	thisNodeKeyPair  = testKeys.Ed25519KeyPairForTests(8)
+	otherNodeKeyPair = testKeys.Ed25519KeyPairForTests(9)
 )
 
 func (h *harness) expectTransactionsToBeForwarded(sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {

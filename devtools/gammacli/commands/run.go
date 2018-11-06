@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"io/ioutil"
 	"os"
@@ -70,7 +70,7 @@ func getKeypairFromFlags(publicKey string, privateKey string) (*keys.Ed25519KeyP
 	return keyPair, nil
 }
 
-func HandleRunCommand(args []string) (string, error) {
+func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 	if len(args) < 2 {
 		return ShowUsage(), nil
 	}

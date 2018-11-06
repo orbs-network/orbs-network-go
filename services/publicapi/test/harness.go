@@ -24,7 +24,7 @@ type harness struct {
 }
 
 func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	cfg := config.ForPublicApiTests(uint32(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID), txTimeout)
 	txpMock := makeTxMock()
 	vmMock := &services.MockVirtualMachine{}

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestDeploymentOfNativeContract(t *testing.T) {
@@ -17,8 +18,12 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
+	lt := time.Now()
+	printTestTime(t, "started", &lt)
+
 	h := newHarness()
 	defer h.gracefulShutdown()
+	printTestTime(t, "new harness", &lt) // slow do to warm up compilation
 
 	counterStart := uint64(100 * rand.Intn(1000))
 
@@ -30,7 +35,11 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 			uint32(protocol.PROCESSOR_TYPE_NATIVE),
 			[]byte(contracts.NativeSourceCodeForCounter(counterStart)),
 		).Builder()
+
+	printTestTime(t, "send deploy - start", &lt)
 	response, err := h.sendTransaction(deploy)
+	printTestTime(t, "send deploy - end", &lt)
+
 	require.NoError(t, err, "deploy transaction should not return error")
 	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "deploy transaction should be successfully committed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "deploy transaction should execute successfully")
@@ -40,7 +49,10 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		getCounter := builders.NonSignedTransaction().
 			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get")
 
+		printTestTime(t, "call method - start", &lt)
 		response, err := h.callMethod(getCounter.Builder())
+		printTestTime(t, "call method - end", &lt)
+
 		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
@@ -57,7 +69,11 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "add").
 		WithArgs(amount).
 		Builder()
+
+	printTestTime(t, "send transaction - start", &lt)
 	response, err = h.sendTransaction(add)
+	printTestTime(t, "send transaction - end", &lt)
+
 	require.NoError(t, err, "add transaction should not return error")
 	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "add transaction should be successfully committed")
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "add transaction should execute successfully")
@@ -76,5 +92,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		}
 		return false
 	})
+
 	require.True(t, ok, "get counter should return counter start plus added value")
+	printTestTime(t, "done", &lt)
 }

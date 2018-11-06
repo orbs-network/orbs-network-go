@@ -10,8 +10,8 @@ import (
 	"testing"
 )
 
+var hextext = "0123456789abcdef"
 
-var hextext ="0123456789abcdef"
 func bytesToHexString(s []byte) string {
 	hexText := ""
 	for _, b := range s {
@@ -35,7 +35,7 @@ func updateStringEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues 
 	}
 	diffs := make(MerkleDiffs, len(keyValues)/2)
 	for i := 0; i < len(keyValues); i = i + 2 {
-		diffs[i/2] = &MerkleDiff{Key: hexStringToBytes(keyValues[i]), Value : hash.CalcSha256([]byte(keyValues[i+1]))}
+		diffs[i/2] = &MerkleDiff{Key: hexStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
 	}
 
 	currentRoot, _ := f.Update(baseHash, diffs)
@@ -433,7 +433,8 @@ func (f *Forest) dump(t *testing.T) {
 	t.Logf("---------------- TRIE END --------------------")
 }
 
-var hexValues ="012345679abcdef"
+var hexValues = "012345679abcdef"
+
 func (n *node) printNode(label string, depth int, trie *Forest, t *testing.T) {
 	prefix := strings.Repeat(" ", depth)
 	leafText := ""

@@ -168,11 +168,6 @@ func (d *harness) setupCustomBlocksForInit() time.Time {
 	return now
 }
 
-func (d *harness) withBlockTrackerTimeout(duration time.Duration) *harness {
-	d.storageAdapter = adapter.NewInMemoryBlockPersistenceWithBlockTimeout(duration)
-	return d
-}
-
 func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorageConfig {
 	cfg := &configForBlockStorageTests{}
 	cfg.pk = nodePublicKey
@@ -189,7 +184,7 @@ func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorage
 }
 
 func newBlockStorageHarness() *harness {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	keyPair := keys.Ed25519KeyPairForTests(0)
 	cfg := createConfig(keyPair.PublicKey())
 

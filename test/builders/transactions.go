@@ -2,8 +2,9 @@ package builders
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"time"
@@ -17,7 +18,7 @@ type TransactionBuilder struct {
 }
 
 func TransferTransaction() *TransactionBuilder {
-	keyPair := keys.Ed25519KeyPairForTests(1)
+	keyPair := testKeys.Ed25519KeyPairForTests(1)
 	t := &TransactionBuilder{
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
@@ -42,7 +43,7 @@ func TransferTransaction() *TransactionBuilder {
 }
 
 func GetBalanceTransaction() *TransactionBuilder {
-	keyPair := keys.Ed25519KeyPairForTests(1)
+	keyPair := testKeys.Ed25519KeyPairForTests(1)
 	t := &TransactionBuilder{
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
@@ -107,7 +108,7 @@ func (t *TransactionBuilder) WithInvalidEd25519Signer(keyPair *keys.Ed25519KeyPa
 }
 
 func (t *TransactionBuilder) WithInvalidPublicKey() *TransactionBuilder {
-	keyPair := keys.Ed25519KeyPairForTests(1)
+	keyPair := testKeys.Ed25519KeyPairForTests(1)
 	t.builder.Transaction.Signer.Eddsa.SignerPublicKey = keyPair.PublicKey()[1:]
 	t.signer = keyPair.PrivateKey()
 	return t
@@ -173,7 +174,7 @@ type NonSignedTransactionBuilder struct {
 }
 
 func NonSignedTransaction() *NonSignedTransactionBuilder {
-	keyPair := keys.Ed25519KeyPairForTests(1)
+	keyPair := testKeys.Ed25519KeyPairForTests(1)
 	return &NonSignedTransactionBuilder{
 		&protocol.TransactionBuilder{
 			ProtocolVersion: 1,

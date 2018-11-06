@@ -15,7 +15,6 @@ import (
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 type InProcessNetwork interface {
@@ -77,8 +76,8 @@ func (n *networkNode) GetCompiler() nativeProcessorAdapter.Compiler {
 	return n.nativeCompiler
 }
 
-func (n *networkNode) WaitForTransactionInStateForAtMost(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) {
-	blockHeight := n.blockPersistence.WaitForTransaction(ctx, txhash, atMost)
+func (n *networkNode) WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256) {
+	blockHeight := n.blockPersistence.WaitForTransaction(ctx, txhash)
 	err := n.statePersistence.WaitUntilCommittedBlockOfHeight(ctx, blockHeight)
 	if err != nil {
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
@@ -87,7 +86,7 @@ func (n *networkNode) WaitForTransactionInStateForAtMost(ctx context.Context, tx
 }
 
 func (n *inProcessNetwork) WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256) {
-	n.nodes[nodeIndex].WaitForTransactionInStateForAtMost(ctx, txhash, 1*time.Second)
+	n.nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
 }
 
 func (n *inProcessNetwork) MetricsString(i int) string {

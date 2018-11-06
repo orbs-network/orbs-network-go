@@ -93,7 +93,7 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 		config.ForGossipAdapterTests(res.publicKeys[3], uint16(firstRandomPort+3), gossipPeers),
 	}
 
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
 	res.transports = []adapter.Transport{
 		adapter.NewDirectTransport(ctx, configs[0], logger),

@@ -56,7 +56,7 @@ func newMetrics(m metric.Factory) *metrics {
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
 	txPool services.TransactionPool, logger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
-	storage := &service{
+	s := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
 		gossip:        gossip,
@@ -74,13 +74,13 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	}
 
 	if lastBlock != nil {
-		storage.updateLastCommittedBlock(lastBlock)
+		s.updateLastCommittedBlock(lastBlock)
 	}
 
-	gossip.RegisterBlockSyncHandler(storage)
-	storage.blockSync = blockSync.NewBlockSync(ctx, config, gossip, storage, logger)
+	gossip.RegisterBlockSyncHandler(s)
+	s.blockSync = blockSync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
-	return storage
+	return s
 }
 
 func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -105,7 +105,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 	}
 
 	s.updateLastCommittedBlock(input.BlockPair)
-	s.blockSync.HandleBlockCommitted()
+	s.blockSync.HandleBlockCommitted(ctx)
 
 	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
@@ -247,9 +247,16 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 }
 
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+	b := s.getLastCommittedBlock()
+	if b == nil {
+		return &services.GetLastCommittedBlockHeightOutput{
+			LastCommittedBlockHeight:    0,
+			LastCommittedBlockTimestamp: 0,
+		}, nil
+	}
 	return &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    s.LastCommittedBlockHeight(),
-		LastCommittedBlockTimestamp: s.lastCommittedBlockTimestamp(),
+		LastCommittedBlockHeight:    b.TransactionsBlock.Header.BlockHeight(),
+		LastCommittedBlockTimestamp: b.TransactionsBlock.Header.Timestamp(),
 	}, nil
 }
 

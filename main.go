@@ -29,8 +29,8 @@ func getLogger(path string, silent bool) log.BasicLogger {
 		stdout = ioutil.Discard
 	}
 
-	stdoutOutput := log.NewOutput(stdout).WithFormatter(log.NewHumanReadableFormatter())
-	fileOutput := log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter())
+	stdoutOutput := log.NewFormattingOutput(stdout, log.NewHumanReadableFormatter())
+	fileOutput := log.NewFormattingOutput(logFile, log.NewJsonFormatter())
 
 	return log.GetLogger().WithTags(
 		log.String("_branch", os.Getenv("GIT_BRANCH")),

@@ -17,13 +17,25 @@ type GammaServer struct {
 	logic        bootstrap.NodeLogic
 	shutdownCond *sync.Cond
 	ctxCancel    context.CancelFunc
+	Logger       log.BasicLogger
 }
 
 func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	network := harness.NewDevelopmentNetwork().StartNodes(ctx)
-	testLogger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	testLogger := log.GetLogger().
+		WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())).
+		WithFilters(
+			//TODO what do we really want to output to the gamma server log? maybe some meaningful data for our users?
+			log.IgnoreMessagesMatching("Metric recorded"),
+			log.IgnoreMessagesMatching("state transitioning"),
+			log.IgnoreMessagesMatching("finished waiting for responses"),
+			log.IgnoreMessagesMatching("no responses received"),
+		)
+
+	network := harness.NewDevelopmentNetwork(testLogger).StartNodes(ctx)
+	testLogger.Info("finished creating development network")
+
 	metricRegistry := metric.NewRegistry()
 
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0), metricRegistry)
@@ -32,6 +44,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 		ctxCancel:    cancel,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
 		httpServer:   httpServer,
+		Logger:       testLogger,
 	}
 
 	if blocking == true {

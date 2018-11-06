@@ -11,13 +11,11 @@ import (
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"os"
 )
 
-func NewDevelopmentNetwork() *inProcessNetwork {
+func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
 	numNodes := 2
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
 	logger.Info("creating development network")
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
@@ -39,7 +37,7 @@ func NewDevelopmentNetwork() *inProcessNetwork {
 		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 		node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 
-		node.config = config.ForDevelopment(
+		node.config = config.ForGamma(
 			federationNodes,
 			gossipPeers,
 			nodeKeyPair.PublicKey(),

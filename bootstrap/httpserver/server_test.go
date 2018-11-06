@@ -91,7 +91,7 @@ func TestHttpServerWriteTextResponse(t *testing.T) {
 		logField: nil,
 		message:  "hello test",
 	}
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	rec := httptest.NewRecorder()
 	writeErrorResponseAndLog(logger, rec, e)
 	require.Equal(t, http.StatusAccepted, rec.Code, "code value is not equal")

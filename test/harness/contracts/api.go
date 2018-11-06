@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 //TODO abstract public API's methods
@@ -19,7 +18,7 @@ import (
 type APIProvider interface {
 	GetPublicApi() services.PublicApi
 	GetCompiler() adapter.Compiler
-	WaitForTransactionInStateForAtMost(ctx context.Context, txhash primitives.Sha256, atMost time.Duration)
+	WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256)
 }
 
 type contractClient struct {
@@ -33,7 +32,7 @@ func NewContractClient(apis []APIProvider, logger log.BasicLogger) *contractClie
 
 func (c *contractClient) sendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse {
 	ch := make(chan *client.SendTransactionResponse)
-	supervised.ShortLived(c.logger, func() {
+	supervised.GoOnce(c.logger, func() {
 		publicApi := c.apis[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
@@ -49,7 +48,7 @@ func (c *contractClient) sendTransaction(ctx context.Context, tx *protocol.Signe
 func (c *contractClient) callMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan uint64 {
 
 	ch := make(chan uint64)
-	supervised.ShortLived(c.logger, func() {
+	supervised.GoOnce(c.logger, func() {
 		publicApi := c.apis[nodeIndex].GetPublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: (&client.CallMethodRequestBuilder{Transaction: tx}).Build(),
