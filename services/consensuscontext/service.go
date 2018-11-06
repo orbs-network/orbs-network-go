@@ -105,8 +105,18 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 }
 
 func CalculateCommitteeSize(requestedCommitteeSize int, federationSize int) int {
+
 	if requestedCommitteeSize > federationSize {
 		return federationSize
 	}
 	return requestedCommitteeSize
+}
+
+// Smart algo!
+func ChooseRandomCommitteeIndices(input *services.RequestCommitteeInput) []int {
+	indices := make([]int, input.MaxCommitteeSize)
+	for i := 0; i < int(input.MaxCommitteeSize); i++ {
+		indices[i] = i
+	}
+	return indices
 }

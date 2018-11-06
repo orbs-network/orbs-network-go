@@ -3,6 +3,7 @@ package test
 import (
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -63,6 +64,41 @@ func TestCommitteeSizeVSTotalNodesCount(t *testing.T) {
 				testCase.expectedCommitteeSize, actualCommitteeSize)
 		})
 	}
+}
+
+func TestChooseRandomCommitteeIndices(t *testing.T) {
+	input := &services.RequestCommitteeInput{
+		BlockHeight:      1,
+		RandomSeed:       123456789,
+		MaxCommitteeSize: 5,
+	}
+
+	t.Run("Receive same number of indices as requested", func(t *testing.T) {
+		indices := consensuscontext.ChooseRandomCommitteeIndices(input)
+		indicesLen := uint32(len(indices))
+		require.Equal(t, input.MaxCommitteeSize, indicesLen, "Expected to receive %d indices but got %d", input.MaxCommitteeSize, indicesLen)
+	})
+
+	t.Run("Receive unique indices", func(t *testing.T) {
+		indices := consensuscontext.ChooseRandomCommitteeIndices(input)
+		uniqueIndices := unique(indices)
+		uniqueIndicesLen := uint32(len(uniqueIndices))
+		require.Equal(t, input.MaxCommitteeSize, uniqueIndicesLen, "Expected to receive %d unique indices but got %d", input.MaxCommitteeSize, uniqueIndicesLen)
+	})
+
+}
+
+func unique(input []int) []int {
+	u := make([]int, 0, len(input))
+	m := make(map[int]bool)
+
+	for _, val := range input {
+		if _, ok := m[val]; !ok {
+			m[val] = true
+			u = append(u, val)
+		}
+	}
+	return u
 }
 
 // TODO Set a meaningful test name
