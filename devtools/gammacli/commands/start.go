@@ -48,7 +48,10 @@ func (r *CommandRunner) HandleStartCommand(args []string) (string, error) {
 	binaryPtr := flagSet.String("binaryPath", "", "Provide your own path to a pre-compiled gamma binary")
 	portPtr := flagSet.String("port", "8080", "The port to bind the gamma-server on")
 
-	flagSet.Parse(args)
+	err := flagSet.Parse(args)
+	if err != nil {
+		return "", errors.Wrapf(err , "flag issues")
+	}
 
 	pathToBinary := findGammaServerBinary(*binaryPtr)
 	if pathToBinary != "" {

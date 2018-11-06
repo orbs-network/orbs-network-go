@@ -2,7 +2,6 @@ package gammacli
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -14,7 +13,6 @@ import (
 
 type GammaServer struct {
 	httpServer   httpserver.HttpServer
-	logic        bootstrap.NodeLogic
 	shutdownCond *sync.Cond
 	ctxCancel    context.CancelFunc
 	Logger       log.BasicLogger
@@ -47,7 +45,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 		Logger:       testLogger,
 	}
 
-	if blocking == true {
+	if blocking {
 		s.WaitUntilShutdown()
 	} else { // Used primarily in testing
 		go s.WaitUntilShutdown()

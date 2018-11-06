@@ -43,7 +43,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	}
 
 	// client channels (not under mutex, before all goroutines)
-	for peerNodeKey, _ := range t.config.GossipPeers(0) {
+	for peerNodeKey := range t.config.GossipPeers(0) {
 		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
 			t.peerQueues[peerNodeKey] = make(chan *TransportData)
 		}
@@ -361,7 +361,10 @@ func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout tim
 	buffer := make([]byte, totalSize)
 	totalRead := uint32(0)
 	for totalRead < totalSize {
-		conn.SetReadDeadline(time.Now().Add(timeout))
+		err := conn.SetReadDeadline(time.Now().Add(timeout))
+		if err != nil {
+			return nil, err
+		}
 		read, err := conn.Read(buffer[totalRead:])
 		totalRead += uint32(read)
 		if totalRead == totalSize {
@@ -382,7 +385,10 @@ func write(ctx context.Context, conn net.Conn, buffer []byte, timeout time.Durat
 		return err
 	}
 
-	conn.SetWriteDeadline(time.Now().Add(timeout))
+	err = conn.SetWriteDeadline(time.Now().Add(timeout))
+	if err != nil {
+		return err
+	}
 	written, err := conn.Write(buffer)
 	if written != len(buffer) {
 		if err == nil {

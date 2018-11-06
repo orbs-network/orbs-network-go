@@ -183,7 +183,7 @@ func TestClearReadUint32ByKey(t *testing.T) {
 
 func createStateSdk() *stateSdk {
 	return &stateSdk{
-		handler:         &contractSdkStateCallHandlerStub{make(map[string]*protocol.MethodArgument, 0)},
+		handler:         &contractSdkStateCallHandlerStub{make(map[string]*protocol.MethodArgument)},
 		permissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	}
 }

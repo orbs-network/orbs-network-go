@@ -47,8 +47,14 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	tc.SetKeepAlive(true)
-	tc.SetKeepAlivePeriod(3 * time.Minute)
+	err = tc.SetKeepAlive(true)
+	if err != nil {
+		return nil, err
+	}
+	err = tc.SetKeepAlivePeriod(3 * time.Minute)
+	if err != nil {
+		return nil, err
+	}
 	return tc, nil
 }
 
@@ -109,72 +115,75 @@ func (s *server) createRouter() http.Handler {
 func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
-	w.Write(bytes)
+	_, err := w.Write(bytes)
+	if err != nil {
+		s.logger.Info("error writing response", log.Error(err))
+	}
 }
 
 func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
-		writeErrorResponseAndLog(s.logger, w, e)
+		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
 	clientRequest := client.SendTransactionRequestReader(bytes)
 	if e := validate(clientRequest); e != nil {
-		writeErrorResponseAndLog(s.logger, w, e)
+		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
 	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.SendTransaction(r.Context(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
-		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
+		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
-		writeErrorResponseAndLog(s.logger, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
 func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
-		writeErrorResponseAndLog(s.logger, w, e)
+		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
 	clientRequest := client.CallMethodRequestReader(bytes)
 	if e := validate(clientRequest); e != nil {
-		writeErrorResponseAndLog(s.logger, w, e)
+		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
 	s.logger.Info("http server received call-method", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.CallMethod(r.Context(), &services.CallMethodInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
-		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
+		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
 	} else {
-		writeErrorResponseAndLog(s.logger, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
 func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
-		writeErrorResponseAndLog(s.logger, w, e)
+		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
 	clientRequest := client.GetTransactionStatusRequestReader(bytes)
 	if e := validate(clientRequest); e != nil {
-		writeErrorResponseAndLog(s.logger, w, e)
+		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
 	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetTransactionStatus(r.Context(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
-		writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
+		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {
-		writeErrorResponseAndLog(s.logger, w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
@@ -217,20 +226,26 @@ func translateStatusToHttpCode(responseCode protocol.RequestStatus) int {
 	return http.StatusNotImplemented
 }
 
-func writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, httpCode int, orbsText string) {
+func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, httpCode int, orbsText string) {
 	w.Header().Set("Content-Type", "application/vnd.membuffers")
 	w.WriteHeader(httpCode)
 	w.Header().Set("X-ORBS-CODE-NAME", orbsText)
-	w.Write(message.Raw())
+	_, err := w.Write(message.Raw())
+	if err != nil {
+		s.logger.Info("error writing response", log.Error(err))
+	}
 }
 
-func writeErrorResponseAndLog(reporting log.BasicLogger, w http.ResponseWriter, m *httpErr) {
+func (s *server) writeErrorResponseAndLog(w http.ResponseWriter, m *httpErr) {
 	if m.logField == nil {
-		reporting.Info(m.message)
+		s.logger.Info(m.message)
 	} else {
-		reporting.Info(m.message, m.logField)
+		s.logger.Info(m.message, m.logField)
 	}
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(m.code)
-	w.Write([]byte(m.message))
+	_, err := w.Write([]byte(m.message))
+	if err != nil {
+		s.logger.Info("error writing response", log.Error(err))
+	}
 }

@@ -155,7 +155,6 @@ func TestRevisionEviction(t *testing.T) {
 
 type driver struct {
 	inner         *rollingRevisions
-	evictCallback func(h primitives.BlockHeight, ts primitives.TimestampNano, r primitives.MerkleSha256)
 }
 
 func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.MerkleSha256)) *driver {
