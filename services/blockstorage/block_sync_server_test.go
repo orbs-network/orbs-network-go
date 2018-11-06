@@ -13,7 +13,7 @@ import (
 
 func TestAvailabilityRequestWithNilOrInvalidPayloadDoesNotPanic(t *testing.T) {
 	// TODO move the next ~10 lines to a harness if writing more tests
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	ctx := context.Background()
 	gossip := &gossiptopics.MockBlockSync{}
 

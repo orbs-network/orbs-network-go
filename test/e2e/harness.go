@@ -105,7 +105,7 @@ func newHarness() *harness {
 			log.String("_test", "e2e"),
 			log.String("_branch", os.Getenv("GIT_BRANCH")),
 			log.String("_commit", os.Getenv("GIT_COMMIT"))).
-			WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+			WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
@@ -116,7 +116,7 @@ func newHarness() *harness {
 				panic(err)
 			}
 
-			nodeLogger := logger.WithOutput(log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter()))
+			nodeLogger := logger.WithOutput(log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
 			processorArtifactPath, _ := getProcessorArtifactPath()
 
 			cfg := config.ForE2E(processorArtifactPath)

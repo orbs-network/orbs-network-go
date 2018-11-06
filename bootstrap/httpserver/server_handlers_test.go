@@ -20,7 +20,7 @@ import (
 )
 
 func makeServer(papiMock *services.MockPublicApi) HttpServer {
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
 	return NewHttpServer("", logger, papiMock, metric.NewRegistry())
 }
