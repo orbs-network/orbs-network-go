@@ -32,9 +32,9 @@ type config struct {
 }
 
 const (
-	VIRTUAL_CHAIN_ID = "VIRTUAL_CHAIN_ID"
-
-	BENCHMARK_CONSENSUS_RETRY_INTERVAL   = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
+	VIRTUAL_CHAIN_ID                    = "VIRTUAL_CHAIN_ID"
+	BENCHMARK_CONSENSUS_RETRY_INTERVAL  = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
+	LEAN_HELIX_CONSENSUS_RETRY_INTERVAL = "LEAN_HELIX_CONSENSUS_RETRY_INTERVAL"
 	CONSENSUS_REQUIRED_QUORUM_PERCENTAGE = "CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
 
 	BLOCK_SYNC_BATCH_SIZE               = "BLOCK_SYNC_BATCH_SIZE"
@@ -183,6 +183,10 @@ func (c *config) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 
 func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
 	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL].DurationValue
+}
+
+func (c *config) LeanHelixConsensusRoundTimeoutInterval() time.Duration {
+	return c.kv[LEAN_HELIX_CONSENSUS_RETRY_INTERVAL].DurationValue
 }
 
 func (c *config) BlockSyncBatchSize() uint32 {

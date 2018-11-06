@@ -2,7 +2,6 @@ package gammacli
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -14,7 +13,6 @@ import (
 
 type GammaServer struct {
 	httpServer   httpserver.HttpServer
-	logic        bootstrap.NodeLogic
 	shutdownCond *sync.Cond
 	ctxCancel    context.CancelFunc
 	Logger       log.BasicLogger
@@ -24,7 +22,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	testLogger := log.GetLogger().
-		WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter())).
+		WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())).
 		WithFilters(
 			//TODO what do we really want to output to the gamma server log? maybe some meaningful data for our users?
 			log.IgnoreMessagesMatching("Metric recorded"),
@@ -47,7 +45,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 		Logger:       testLogger,
 	}
 
-	if blocking == true {
+	if blocking {
 		s.WaitUntilShutdown()
 	} else { // Used primarily in testing
 		go s.WaitUntilShutdown()

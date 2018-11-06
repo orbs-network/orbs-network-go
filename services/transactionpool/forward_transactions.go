@@ -31,7 +31,11 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 
 func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 	sender := input.Message.Sender
-	oneBigHash, _ := HashTransactions(input.Message.SignedTransactions...)
+	oneBigHash, _ , err:= HashTransactions(input.Message.SignedTransactions...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not create one hash, invalid signature in relay message from sender %s", sender.SenderPublicKey())
+	}
+
 
 	if !signature.VerifyEd25519(sender.SenderPublicKey(), oneBigHash, sender.Signature()) {
 		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderPublicKey())
@@ -105,7 +109,11 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 		return
 	}
 
-	oneBigHash, hashes := HashTransactions(txs...)
+	oneBigHash, hashes, err := HashTransactions(txs...)
+	if err != nil {
+		f.logger.Error("error creating one big hash while signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		return
+	}
 
 	sig, err := signature.SignEd25519(f.config.NodePrivateKey(), oneBigHash)
 	if err != nil {
@@ -140,13 +148,16 @@ func (f *transactionForwarder) drainQueue() []*protocol.SignedTransaction {
 	return txs
 }
 
-func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, hashes []primitives.Sha256) {
+func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, hashes []primitives.Sha256, err error) {
 	checksum := adler32.New()
 	for _, tx := range txs {
 		hash := digest.CalcTxHash(tx.Transaction())
 
 		hashes = append(hashes, hash)
-		checksum.Write(hash)
+		_, err = checksum.Write(hash)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	oneBigHash = checksum.Sum(oneBigHash)

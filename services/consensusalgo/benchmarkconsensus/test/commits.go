@@ -44,7 +44,7 @@ func (h *harness) expectCommitSaveAndReply(expectedBlockPair *protocol.BlockPair
 			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(1)
+	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{BlockPair: expectedBlockPair}).Return(nil, nil).Times(1)
 	h.gossip.When("SendBenchmarkConsensusCommitted", mock.Any, mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
 }
 
@@ -64,7 +64,7 @@ func (h *harness) expectCommitReplyWithoutSave(expectedBlockPair *protocol.Block
 			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
 	}
 
-	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{expectedBlockPair}).Return(nil, nil).Times(0)
+	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{BlockPair: expectedBlockPair}).Return(nil, nil).Times(0)
 	h.gossip.When("SendBenchmarkConsensusCommitted", mock.Any, mock.AnyIf(fmt.Sprintf("LastCommittedBlockHeight equals %d, recipient equals %s and sender equals %s", expectedLastCommitted, expectedRecipient, expectedSender), lastCommittedReplyMatcher)).Times(1)
 }
 

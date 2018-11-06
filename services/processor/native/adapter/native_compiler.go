@@ -102,7 +102,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	soFilePath := filepath.Join(dir, filenamePrefix) + ".so"
 
 	// if the file is currently loaded as plugin, we won't be able to delete and it's ok
-	if _, err := os.Stat(soFilePath); err == nil {
+	if _, err = os.Stat(soFilePath); err == nil {
 		err = os.Remove(soFilePath)
 		if err != nil {
 			return soFilePath, nil

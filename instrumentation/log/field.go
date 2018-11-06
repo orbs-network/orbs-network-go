@@ -183,7 +183,6 @@ func (f *Field) Value() interface{} {
 		} else {
 			return "<nil>"
 		}
-		return f.Error.Error()
 	case StringArrayType:
 		return f.StringArray
 	case AggregateType:

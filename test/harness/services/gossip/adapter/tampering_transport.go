@@ -245,7 +245,7 @@ type failingTamperer struct {
 
 func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		return &adapter.ErrTransportFailed{data}, true
+		return &adapter.ErrTransportFailed{Data:data}, true
 	}
 
 	return nil, false

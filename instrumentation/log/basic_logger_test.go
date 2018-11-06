@@ -30,9 +30,7 @@ func parseOutput(input string) map[string]interface{} {
 
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).
-		WithOutput(log.NewOutput(b)).
-		Info("Service initialized")
+	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
 
 	jsonMap := parseOutput(b.String())
 
@@ -49,7 +47,7 @@ func TestSimpleLogger_AggregateField(t *testing.T) {
 	ctx := trace.NewContext(context.Background(), "foo")
 	b := new(bytes.Buffer)
 	log.GetLogger().
-		WithOutput(log.NewOutput(b)).
+		WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
 		Info("bar", trace.LogFieldFrom(ctx))
 
 	jsonMap := parseOutput(b.String())
@@ -64,7 +62,7 @@ func TestSimpleLogger_AggregateField_NestedLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger(log.String("k1", "v1")).
 		WithTags(trace.LogFieldFrom(ctx)).
-		WithOutput(log.NewOutput(b)).
+		WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
 		Info("bar")
 
 	jsonMap := parseOutput(b.String())
@@ -77,7 +75,7 @@ func TestSimpleLogger_AggregateField_NestedLogger(t *testing.T) {
 
 func TestBasicLogger_WithFilter(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger().WithOutput(log.NewOutput(b)).
+	log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
 		WithFilters(log.OnlyErrors()).
 		Info("foo")
 	require.Empty(t, b.String(), "output was not empty")
@@ -85,7 +83,7 @@ func TestBasicLogger_WithFilter(t *testing.T) {
 
 func TestCompareLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger().WithOutput(log.NewOutput(b)).
+	log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
 		LogFailedExpectation("Service initialized compare", log.BlockHeight(primitives.BlockHeight(9999)), log.BlockHeight(primitives.BlockHeight(8888)), log.Bytes("bytes", []byte{2, 3, 99}))
 
 	jsonMap := parseOutput(b.String())
@@ -100,7 +98,7 @@ func TestNestedLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 
 	txId := log.String("txId", "1234567")
-	txFlowLogger := log.GetLogger().WithOutput(log.NewOutput(b)).WithTags(log.String("flow", TransactionFlow))
+	txFlowLogger := log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).WithTags(log.String("flow", TransactionFlow))
 	txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99, 250}))
 
 	jsonMap := parseOutput(b.String())
@@ -116,7 +114,7 @@ func TestStringableSlice(t *testing.T) {
 	b := new(bytes.Buffer)
 	var receipts = []*protocol.TransactionReceipt{builders.TransactionReceipt().Build(), builders.TransactionReceipt().Build()}
 
-	log.GetLogger().WithOutput(log.NewOutput(b)).Info("StringableSlice test", log.StringableSlice("a-collection", receipts))
+	log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("StringableSlice test", log.StringableSlice("a-collection", receipts))
 
 	jsonMap := parseOutput(b.String())
 
@@ -129,7 +127,7 @@ func TestStringableSlice(t *testing.T) {
 func TestCustomLogFormatter(t *testing.T) {
 	b := new(bytes.Buffer)
 	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-		WithOutput(log.NewOutput(b).WithFormatter(log.NewHumanReadableFormatter()))
+		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()))
 	serviceLogger.Info("Service initialized",
 		log.Int("some-int-value", 12),
 		log.BlockHeight(primitives.BlockHeight(9999)),
@@ -158,7 +156,7 @@ func TestHumanReadable_AggregateField(t *testing.T) {
 	ctx := trace.NewContext(context.Background(), "foo")
 	b := new(bytes.Buffer)
 	log.GetLogger().
-		WithOutput(log.NewOutput(b).WithFormatter(log.NewHumanReadableFormatter())).
+		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter())).
 		Info("bar", trace.LogFieldFrom(ctx))
 
 	out := b.String()
@@ -171,7 +169,7 @@ func TestHumanReadableFormatterFormatWithStringableSlice(t *testing.T) {
 	b := new(bytes.Buffer)
 	transactions := []*protocol.SignedTransaction{builders.TransferTransaction().Build()}
 
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(b).WithFormatter(log.NewHumanReadableFormatter())).
+	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter())).
 		Info("StringableSlice HR test", log.StringableSlice("a-collection", transactions))
 
 	out := b.String()
@@ -191,7 +189,7 @@ func TestMultipleOutputs(t *testing.T) {
 
 	b := new(bytes.Buffer)
 
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(b), log.NewOutput(fileOutput)).
+	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter()), log.NewFormattingOutput(fileOutput, log.NewJsonFormatter())).
 		Info("Service initialized")
 
 	rawFile, _ := ioutil.ReadFile(tempFile.Name())
@@ -225,7 +223,7 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 	fileOutput, _ := os.Create(tempFile.Name())
 
 	require.NotPanics(t, func() {
-		log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewOutput(b).WithFormatter(log.NewHumanReadableFormatter()), log.NewOutput(fileOutput)).
+		log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()), log.NewFormattingOutput(fileOutput, log.NewJsonFormatter())).
 			Info("Service initialized")
 	})
 }
@@ -241,7 +239,7 @@ func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
 	for _, formatter := range formatters {
 		b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
 			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-				WithOutput(log.NewOutput(ioutil.Discard).WithFormatter(formatter))
+				WithOutput(log.NewFormattingOutput(ioutil.Discard, log.NewJsonFormatter()))
 
 			b.StartTimer()
 			for i := 0; i < b.N; i++ {
@@ -264,7 +262,7 @@ func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
 		b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
 
 			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-				WithOutput(log.NewOutput(output).WithFormatter(log.NewHumanReadableFormatter()))
+				WithOutput(log.NewFormattingOutput(output, log.NewHumanReadableFormatter()))
 
 			b.StartTimer()
 			for i := 0; i < b.N; i++ {

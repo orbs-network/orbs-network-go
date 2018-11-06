@@ -66,6 +66,14 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 	}
 }
 
+func mockServer() *server {
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	return &server{
+		logger:         logger.WithTags(LogTag),
+	}
+}
+
+
 func TestHttpServerWriteMembuffResponse(t *testing.T) {
 	expectedResponse := (&client.SendTransactionResponseBuilder{
 		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
@@ -75,8 +83,9 @@ func TestHttpServerWriteMembuffResponse(t *testing.T) {
 		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
 	}).Build()
 
+	s := mockServer()
 	rec := httptest.NewRecorder()
-	writeMembuffResponse(rec, expectedResponse, http.StatusOK, "hello")
+	s.writeMembuffResponse(rec, expectedResponse, http.StatusOK, "hello")
 
 	require.Equal(t, http.StatusOK, rec.Code, "code value is not equal")
 	require.Equal(t, "application/vnd.membuffers", rec.Header().Get("Content-Type"), "should have our content type")
@@ -91,9 +100,9 @@ func TestHttpServerWriteTextResponse(t *testing.T) {
 		logField: nil,
 		message:  "hello test",
 	}
-	logger := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	s := mockServer()
 	rec := httptest.NewRecorder()
-	writeErrorResponseAndLog(logger, rec, e)
+	s.writeErrorResponseAndLog(rec, e)
 	require.Equal(t, http.StatusAccepted, rec.Code, "code value is not equal")
 	require.Equal(t, "text/plain", rec.Header().Get("Content-Type"), "should have our content type")
 	require.Equal(t, "hello test", rec.Body.String(), "should have text value")

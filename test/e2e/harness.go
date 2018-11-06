@@ -45,7 +45,7 @@ const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
-	bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
+	isBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
 	apiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
@@ -54,10 +54,10 @@ func getConfig() E2EConfig {
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
 
-	if !bootstrap {
+	if !isBootstrap {
 		apiEndpoint = os.Getenv("API_ENDPOINT")
-		url, _ := url.Parse(apiEndpoint)
-		baseUrl = url.Scheme + "://" + url.Host
+		apiUrl, _ := url.Parse(apiEndpoint)
+		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
 
 		if stressTestEnabled {
 			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
@@ -67,7 +67,7 @@ func getConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		bootstrap,
+		isBootstrap,
 		apiEndpoint,
 		baseUrl,
 		StressTestConfig{
@@ -105,10 +105,7 @@ func newHarness() *harness {
 			log.String("_test", "e2e"),
 			log.String("_branch", os.Getenv("GIT_BRANCH")),
 			log.String("_commit", os.Getenv("GIT_COMMIT"))).
-			WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-
-		processorArtifactPath, dirToCleanup := getProcessorArtifactPath()
-		os.RemoveAll(dirToCleanup)
+			WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
@@ -119,7 +116,8 @@ func newHarness() *harness {
 				panic(err)
 			}
 
-			nodeLogger := logger.WithOutput(log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter()))
+			nodeLogger := logger.WithOutput(log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
+			processorArtifactPath, _ := getProcessorArtifactPath()
 
 			cfg := config.ForE2E(processorArtifactPath)
 			cfg.OverrideNodeSpecificValues(
@@ -148,8 +146,6 @@ func (h *harness) gracefulShutdown() {
 			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 		}
 	}
-	_, dirToCleanup := getProcessorArtifactPath()
-	os.RemoveAll(dirToCleanup)
 }
 
 func (h *harness) sendTransaction(txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
@@ -196,13 +192,13 @@ func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, e
 		return nil, errors.Errorf("got http status code %s calling %s", res.StatusCode, endpoint)
 	}
 
-	bytes, err := ioutil.ReadAll(res.Body)
+	readBytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	return bytes, nil
+	return readBytes, nil
 }
 
 func (h *harness) absoluteUrlFor(endpoint string) string {
@@ -231,16 +227,16 @@ func (h *harness) getMetrics() metrics {
 		return nil
 	}
 
-	bytes, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(string(bytes))
+	readBytes, _ := ioutil.ReadAll(res.Body)
+	fmt.Println(string(readBytes))
 
 	m := make(metrics)
-	json.Unmarshal(bytes, &m)
+	json.Unmarshal(readBytes, &m)
 
 	return m
 }
 
 func printTestTime(t *testing.T, msg string, last *time.Time) {
-	t.Logf("%s (+%.3fs)", msg, time.Now().Sub(*last).Seconds())
+	t.Logf("%s (+%.3fs)", msg, time.Since(*last).Seconds())
 	*last = time.Now()
 }

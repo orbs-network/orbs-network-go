@@ -53,12 +53,15 @@ func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha2
 	bh, ts := s.currentBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		for _, trh := range s.transactionResultsHandlers {
-			trh.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{
+			_, err := trh.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{
 				Txhash:            txHash,
 				TransactionStatus: removalReason,
 				BlockTimestamp:    ts,
 				BlockHeight:       bh,
 			})
+			if err != nil {
+				s.logger.Info("notify tx error failed", log.Error(err))
+			}
 		}
 	}
 }
