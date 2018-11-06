@@ -125,7 +125,7 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	}
 
 	for _, output := range b.outputs {
-		output.Append(level, message, enrichmentParams)
+		output.Append(level, message, enrichmentParams...)
 	}
 }
 

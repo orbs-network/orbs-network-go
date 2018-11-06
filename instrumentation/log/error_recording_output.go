@@ -29,7 +29,7 @@ func NewErrorRecordingOutput(allowedErrors []string) *ErrorRecordingOutput {
 	return &ErrorRecordingOutput{allowedErrors: allowedErrors, errorRecorder: &errorRecorder{}}
 }
 
-func (o *ErrorRecordingOutput) Append(level string, message string, params []*Field) {
+func (o *ErrorRecordingOutput) Append(level string, message string, params ...*Field) {
 	if level == "error" {
 		for _, allowedMessage := range o.allowedErrors {
 			if allowedMessage == message {

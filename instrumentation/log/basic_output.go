@@ -6,7 +6,7 @@ import (
 )
 
 type Output interface {
-	Append(level string, message string, fields []*Field)
+	Append(level string, message string, fields ...*Field)
 }
 
 type basicOutput struct {
@@ -14,7 +14,7 @@ type basicOutput struct {
 	writer    io.Writer
 }
 
-func (out *basicOutput) Append(level string, message string, fields []*Field) {
+func (out *basicOutput) Append(level string, message string, fields ...*Field) {
 	logLine := out.formatter.FormatRow(level, message, fields...)
 	fmt.Fprintln(out.writer, logLine)
 }
