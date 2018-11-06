@@ -113,6 +113,8 @@ type GossipTransportConfig interface {
 	GossipNetworkTimeout() time.Duration
 }
 
+// TODO See if more config props needed here, based on:
+// https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32

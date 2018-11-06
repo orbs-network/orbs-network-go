@@ -103,3 +103,10 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
 	panic("Not implemented")
 }
+
+func CalculateCommitteeSize(requestedCommitteeSize int, federationSize int) int {
+	if requestedCommitteeSize > federationSize {
+		return federationSize
+	}
+	return requestedCommitteeSize
+}
