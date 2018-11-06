@@ -82,12 +82,12 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 		// start test
 		test.WithContext(func(ctx context.Context) {
 			testId := b.testId + "-" + consensusAlgo.String()
-			logger := b.makeLogger(testId)
+			logger, errorRecorder := b.makeLogger(testId)
 			network := NewAcceptanceTestNetwork(b.numNodes, logger, consensusAlgo, b.maxTxPerBlock)
 
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)
-			defer test.RequireNoUnexpectedErrors(b.f, logger)
+			defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
 
 			if b.setupFunc != nil {
 				b.setupFunc(ctx, network)
@@ -103,7 +103,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 	}
 }
 
-func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) *log.ErrorRecordingLogger {
+func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
 	var output io.Writer
 	output = os.Stdout
 
@@ -116,17 +116,19 @@ func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) *log.ErrorRecor
 		output = logFile
 	}
 
+	formattingOutput := log.NewFormattingOutput(output, log.NewJsonFormatter())
+	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId),
 	).
-		WithOutput(log.NewOutput(output).WithFormatter(log.NewJsonFormatter())).
+		WithOutput(formattingOutput, errorRecorder).
 		WithFilters(b.logFilters...).
 		WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
-	return log.NewErrorRecordingLogger(logger, b.allowedErrors)
+	return logger, errorRecorder
 }
 
 func printTestIdOnFailure(f canFail, testId string) {

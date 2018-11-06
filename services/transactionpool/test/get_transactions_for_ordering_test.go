@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -170,7 +171,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 			MaxNumberOfTransactions: 1,
 		})
 
-		require.EqualError(t, err, "timed out waiting for block at height 2", "did not time out")
+		require.EqualError(t, errors.Cause(err), "context deadline exceeded", "did not time out")
 	})
 }
 

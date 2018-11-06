@@ -24,7 +24,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	testLogger := log.GetLogger().
-		WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter())).
+		WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())).
 		WithFilters(
 			//TODO what do we really want to output to the gamma server log? maybe some meaningful data for our users?
 			log.IgnoreMessagesMatching("Metric recorded"),
@@ -44,7 +44,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 		ctxCancel:    cancel,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
 		httpServer:   httpServer,
-		Logger: testLogger,
+		Logger:       testLogger,
 	}
 
 	if blocking == true {

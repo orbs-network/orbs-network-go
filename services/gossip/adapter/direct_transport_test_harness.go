@@ -51,7 +51,7 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 }
 
 func makeTransport(ctx context.Context, cfg config.GossipTransportConfig) *directTransport {
-	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	transport := NewDirectTransport(ctx, cfg, log).(*directTransport)
 	// to synchronize tests, wait until server is ready
 	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {

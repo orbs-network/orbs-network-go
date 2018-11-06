@@ -105,10 +105,7 @@ func newHarness() *harness {
 			log.String("_test", "e2e"),
 			log.String("_branch", os.Getenv("GIT_BRANCH")),
 			log.String("_commit", os.Getenv("GIT_COMMIT"))).
-			WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
-
-		processorArtifactPath, dirToCleanup := getProcessorArtifactPath()
-		os.RemoveAll(dirToCleanup)
+			WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
@@ -119,9 +116,10 @@ func newHarness() *harness {
 				panic(err)
 			}
 
-			nodeLogger := logger.WithOutput(log.NewOutput(logFile).WithFormatter(log.NewJsonFormatter()))
+			nodeLogger := logger.WithOutput(log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
+			processorArtifactPath, _ := getProcessorArtifactPath()
 
-			cfg := config.ForProduction(processorArtifactPath)
+			cfg := config.ForE2E(processorArtifactPath)
 			cfg.OverrideNodeSpecificValues(
 				federationNodes,
 				gossipPeers,
@@ -148,8 +146,6 @@ func (h *harness) gracefulShutdown() {
 			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 		}
 	}
-	_, dirToCleanup := getProcessorArtifactPath()
-	os.RemoveAll(dirToCleanup)
 }
 
 func (h *harness) sendTransaction(txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {

@@ -22,7 +22,7 @@ type harness struct {
 }
 
 func newHarness() *harness {
-	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 

@@ -50,7 +50,6 @@ Enjoy!
 	var result string
 	var err error
 
-
 	runner := commands.CommandRunner{}
 
 	switch os.Args[1] {

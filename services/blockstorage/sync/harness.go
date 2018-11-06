@@ -4,9 +4,11 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
@@ -88,6 +90,7 @@ type blockSyncHarness struct {
 	storage   *blockSyncStorageMock
 	logger    log.BasicLogger
 	ctxCancel context.CancelFunc
+	m         metric.Factory
 }
 
 func newBlockSyncHarness() *blockSyncHarness {
@@ -103,16 +106,28 @@ func newBlockSyncHarness() *blockSyncHarness {
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
 	ctx, cancel := context.WithCancel(context.Background())
+	conduit := &blockSyncConduit{
+		idleReset: make(chan struct{}),
+		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+	}
+	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{
 		logger:    logger,
-		sf:        NewStateFactory(cfg, gossip, storage, logger),
+		sf:        NewStateFactory(cfg, gossip, storage, conduit, logger, metricFactory),
 		ctx:       ctx,
 		ctxCancel: cancel,
 		config:    cfg,
 		gossip:    gossip,
 		storage:   storage,
+		m:         metricFactory,
 	}
+}
+
+func (h *blockSyncHarness) withCtxTimeout(d time.Duration) *blockSyncHarness {
+	h.ctx, h.ctxCancel = context.WithTimeout(h.ctx, d)
+	return h
 }
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {

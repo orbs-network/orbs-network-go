@@ -30,11 +30,11 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 	forest, _ := merkle.NewForest()
 	return &service{
 		config:       config,
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance()), config.BlockTrackerGraceTimeout()),
+		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
 		logger:       logger.WithTags(LogTag),
 
 		mutex:     sync.RWMutex{},
-		revisions: newRollingRevisions(persistence, int(config.StateStorageHistoryRetentionDistance()), forest),
+		revisions: newRollingRevisions(persistence, int(config.StateStorageHistorySnapshotNum()), forest),
 	}
 }
 
@@ -72,7 +72,10 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		return nil, errors.Errorf("missing contract name")
 	}
 
-	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	defer cancel()
+
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
@@ -80,8 +83,8 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 	defer s.mutex.RUnlock()
 
 	currentHeight := s.revisions.getCurrentHeight()
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()))
 	}
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
@@ -116,7 +119,9 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 }
 
 func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	if err := s.blockTracker.WaitForBlock(ctx, input.BlockHeight); err != nil {
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
+	defer cancel()
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
 		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
 	}
 
@@ -124,8 +129,8 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	defer s.mutex.RUnlock()
 
 	currentHeight := s.revisions.getCurrentHeight()
-	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()) <= currentHeight {
-		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistoryRetentionDistance()))
+	if input.BlockHeight+primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()) <= currentHeight {
+		return nil, errors.Errorf("unsupported block height: block %v too old. currently at %v. keeping %v back", input.BlockHeight, currentHeight, primitives.BlockHeight(s.config.StateStorageHistorySnapshotNum()))
 	}
 
 	value, err := s.revisions.getRevisionHash(input.BlockHeight)

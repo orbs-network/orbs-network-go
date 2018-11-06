@@ -49,7 +49,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := h.nextState(waitingState, func() {
 		time.Sleep(10 * time.Millisecond) // yield to make sure the state is fully 'running', cannot latch the internal goroutine
-		waitingState.gotBlocks(blocksMessage)
+		waitingState.gotBlocks(h.ctx, blocksMessage)
 	})
 
 	require.IsType(t, &processingBlocksState{}, nextState, "expecting to be at processing state after blocks arrived")
@@ -86,7 +86,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := h.nextState(waitingState, func() {
-		waitingState.gotBlocks(blocksMessage)
+		waitingState.gotBlocks(h.ctx, blocksMessage)
 	})
 
 	require.IsType(t, &idleState{}, nextState, "expecting to abort sync and go back to idle (ignore blocks)")
@@ -96,11 +96,12 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 
 func TestWaitingDoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
 	h := newBlockSyncHarness()
-	h.cancel()
+	h = h.withCtxTimeout(h.config.collectChunks / 2)
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 	messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
 	blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
-	waitingState.gotBlocks(blocksMessage) // we did not call process, so channel is not ready, test fails if this blocks
+	waitingState.gotBlocks(h.ctx, blocksMessage) // we did not call process, so channel is not ready, test fails if this blocks
+	h.cancel()
 }
 
 func TestWaitingNOP(t *testing.T) {
@@ -108,6 +109,6 @@ func TestWaitingNOP(t *testing.T) {
 	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
 
 	// this is sanity, these calls should do nothing
-	waitingState.gotAvailabilityResponse(nil)
-	waitingState.blockCommitted()
+	waitingState.gotAvailabilityResponse(h.ctx, nil)
+	waitingState.blockCommitted(h.ctx)
 }

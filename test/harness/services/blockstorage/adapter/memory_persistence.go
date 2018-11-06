@@ -17,8 +17,7 @@ import (
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	// TODO: atMost time.Duration can probably be combined into ctx and removed (context refactor)
-	WaitForTransaction(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight
+	WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight
 }
 
 type blockHeightChan chan primitives.BlockHeight
@@ -39,13 +38,9 @@ type inMemoryBlockPersistence struct {
 }
 
 func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
-	return NewInMemoryBlockPersistenceWithBlockTimeout(1000 * time.Millisecond)
-}
-
-func NewInMemoryBlockPersistenceWithBlockTimeout(duration time.Duration) InMemoryBlockPersistence {
 	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
-		tracker:        synchronization.NewBlockTracker(0, 5, duration),
+		tracker:        synchronization.NewBlockTracker(0, 5),
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
@@ -57,13 +52,13 @@ func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTrac
 	return bp.tracker
 }
 
-func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txhash primitives.Sha256, atMost time.Duration) primitives.BlockHeight {
+func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight {
 	ch := bp.getChanFor(txhash)
 
 	select {
 	case h := <-ch:
 		return h
-	case <-time.After(atMost):
+	case <-ctx.Done():
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txhash))
 	}

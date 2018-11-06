@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"time"
 )
 
 type TamperingStatePersistence interface {
@@ -22,7 +21,7 @@ type TestStatePersistence struct {
 func NewTamperingStatePersistence() TamperingStatePersistence {
 	return &TestStatePersistence{
 		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(),
-		blockTrackerForTests:     synchronization.NewBlockTracker(0, 64000, time.Duration(10*time.Second)),
+		blockTrackerForTests:     synchronization.NewBlockTracker(0, 64000),
 	}
 }
 

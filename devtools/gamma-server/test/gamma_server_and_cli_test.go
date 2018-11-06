@@ -251,7 +251,7 @@ func (h *harness) getCounterValue(t *testing.T, expectedReturnValue uint64, asOf
 		return callResponse
 	}
 
-	//TODO remove retry mechanism when spec changes as described in https://github.com/orbs-network/orbs-network-go/issues/400
+	//TODO remove retry mechanism when spec changes as described in https://github.com/orbs-network/orbs-spec/issues/109
 	for retries := 0; retries < 3; retries++ {
 		r := innerGet()
 
