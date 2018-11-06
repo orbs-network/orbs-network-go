@@ -47,7 +47,7 @@ func GetLogger(params ...*Field) BasicLogger {
 	logger := &basicLogger{
 		tags:         params,
 		nestingLevel: 4,
-		outputs:      []Output{&basicOutput{output: os.Stdout, formatter: NewJsonFormatter()}},
+		outputs:      []Output{&basicOutput{writer: os.Stdout, formatter: NewJsonFormatter()}},
 	}
 
 	fpcs := make([]uintptr, 2)
@@ -125,8 +125,7 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	}
 
 	for _, output := range b.outputs {
-		logLine := output.Formatter().FormatRow(level, message, enrichmentParams...)
-		fmt.Fprintln(output.Output(), logLine)
+		output.Append(level, message, enrichmentParams)
 	}
 }
 

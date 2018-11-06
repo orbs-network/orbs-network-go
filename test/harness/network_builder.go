@@ -122,7 +122,7 @@ func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) *log.ErrorRecor
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId),
 	).
-		WithOutput(log.NewOutput(output).WithFormatter(log.NewJsonFormatter())).
+		WithOutput(log.NewFormattingOutput(output, log.NewJsonFormatter())).
 		WithFilters(b.logFilters...).
 		WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 

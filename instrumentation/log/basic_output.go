@@ -1,31 +1,26 @@
 package log
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 type Output interface {
-	Output() io.Writer
-	Formatter() LogFormatter
-	WithFormatter(f LogFormatter) Output
+	Append(level string, message string, fields []*Field)
 }
 
 type basicOutput struct {
 	formatter LogFormatter
-	output    io.Writer
+	writer    io.Writer
 }
 
-func (out *basicOutput) Formatter() LogFormatter {
-	return out.formatter
+func (out *basicOutput) Append(level string, message string, fields []*Field) {
+	logLine := out.formatter.FormatRow(level, message, fields...)
+	fmt.Fprintln(out.writer, logLine)
 }
 
-func (out *basicOutput) Output() io.Writer {
-	return out.output
+func NewFormattingOutput(writer io.Writer, formatter LogFormatter) Output {
+	return &basicOutput{formatter, writer}
 }
 
-func (out *basicOutput) WithFormatter(f LogFormatter) Output {
-	out.formatter = f
-	return out
-}
 
-func NewOutput(writer io.Writer) Output {
-	return &basicOutput{NewJsonFormatter(), writer}
-}
