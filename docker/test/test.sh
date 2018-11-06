@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 
-rm -rf logs
+rm -rf _logs
 
 export GIT_BRANCH=$(source ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)

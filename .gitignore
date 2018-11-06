@@ -80,7 +80,7 @@ fabric.properties
 
 # Logs
 *.log
-logs/
+_logs/
 
 # binaries
 orbs-*

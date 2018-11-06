@@ -10,7 +10,7 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - ../../logs/:/opt/orbs/logs
+      - ../../_logs/:/opt/orbs/logs
       - ../../e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
     sysctls:
@@ -29,7 +29,7 @@ services:
     ports:
       - 8081:8080
     volumes:
-      - ../../logs/:/opt/orbs/logs
+      - ../../_logs/:/opt/orbs/logs
       - ../../e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
     sysctls:
@@ -47,7 +47,7 @@ services:
     ports:
       - 8082:8080
     volumes:
-      - ../../logs/:/opt/orbs/logs
+      - ../../_logs/:/opt/orbs/logs
       - ../../e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
     sysctls:

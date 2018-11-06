@@ -135,7 +135,7 @@ All tests run automatically when the Docker images are built. The script `./test
 
 * Run `./docker/build/build.sh && ./docker/test/test.sh` to build all images and run E2E tests in a dockerized environment.
 
-* The logs for all E2E nodes will be placed on your machine under the `./logs` directory of the project (and will be overridden on every E2E run).
+* The logs for all E2E nodes will be placed on your machine under the `./_logs` directory of the project (and will be overridden on every E2E run).
 
 #### Component tests on Docker
 To detect flaky tests of specific components, run **component** tests multiple times on Docker:
