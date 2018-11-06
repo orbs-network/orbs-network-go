@@ -107,9 +107,6 @@ func newHarness() *harness {
 			log.String("_commit", os.Getenv("GIT_COMMIT"))).
 			WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
-		processorArtifactPath, dirToCleanup := getProcessorArtifactPath()
-		os.RemoveAll(dirToCleanup)
-
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
@@ -120,6 +117,7 @@ func newHarness() *harness {
 			}
 
 			nodeLogger := logger.WithOutput(log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
+			processorArtifactPath, _ := getProcessorArtifactPath()
 
 			cfg := config.ForE2E(processorArtifactPath)
 			cfg.OverrideNodeSpecificValues(
@@ -148,8 +146,6 @@ func (h *harness) gracefulShutdown() {
 			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 		}
 	}
-	_, dirToCleanup := getProcessorArtifactPath()
-	os.RemoveAll(dirToCleanup)
 }
 
 func (h *harness) sendTransaction(txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
