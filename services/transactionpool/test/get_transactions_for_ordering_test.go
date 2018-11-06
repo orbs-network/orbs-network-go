@@ -104,7 +104,7 @@ func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testi
 		require.NoError(t, err, "failed getting transactions unexpectedly")
 		require.Empty(t, txSet.SignedTransactions, "got a transaction that has already been committed")
 
-		txSet, err = h.getTransactionsForOrdering(ctx, 1)
+		txSet, _ = h.getTransactionsForOrdering(ctx, 1)
 		require.Len(t, txSet.SignedTransactions, 1, "did not get a valid transaction from the pool")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not executed as expected")

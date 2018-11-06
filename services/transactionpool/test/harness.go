@@ -96,7 +96,7 @@ func (h *harness) verifyMocks() error {
 }
 
 func (h *harness) handleForwardFrom(ctx context.Context, sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
-	oneBigHash, _ := transactionpool.HashTransactions(transactions...)
+	oneBigHash, _, _ := transactionpool.HashTransactions(transactions...)
 
 	sig, err := signature.SignEd25519(sender.PrivateKey(), oneBigHash)
 	if err != nil {

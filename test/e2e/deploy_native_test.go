@@ -50,10 +50,10 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 			WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get")
 
 		printTestTime(t, "call method - start", &lt)
-		response, err := h.callMethod(getCounter.Builder())
+		response, err2 := h.callMethod(getCounter.Builder())
 		printTestTime(t, "call method - end", &lt)
 
-		if err == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
+		if err2 == nil && response.CallMethodResult() == protocol.EXECUTION_RESULT_SUCCESS {
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(response)
 			if outputArgsIterator.HasNext() {
 				return outputArgsIterator.NextArguments().Uint64Value() == counterStart

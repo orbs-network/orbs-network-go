@@ -39,11 +39,14 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {
-			handler.HandleTransactionResults(ctx, &handlers.HandleTransactionResultsInput{
+			_, err := handler.HandleTransactionResults(ctx, &handlers.HandleTransactionResultsInput{
 				BlockHeight:         bh,
 				Timestamp:           input.ResultsBlockHeader.Timestamp(),
 				TransactionReceipts: myReceipts,
 			})
+			if err != nil {
+				s.logger.Info("notify tx result failed", log.Error(err))
+			}
 		}
 	}
 

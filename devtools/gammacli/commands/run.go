@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/devtools/gammacli"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -81,14 +82,17 @@ func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 	privateKeyPtr := flagSet.String("private-key", "", "public key in hex form")
 	hostPtr := flagSet.String("host", "http://localhost:8080", "<http://..../api>")
 
-	flagSet.Parse(args[2:])
+	err := flagSet.Parse(args[2:])
+	if err != nil {
+		return "", errors.Wrapf(err , "flag issues")
+	}
 
 	runType := args[0]
 	pathToJson := args[1]
 
 	tx := &gammacli.JSONTransaction{}
 	var jsonBytes []byte
-	_, err := os.Stat(pathToJson)
+	_, err = os.Stat(pathToJson)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +104,7 @@ func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 			return "", err
 		}
 
-		if err := json.Unmarshal(jsonBytes, tx); err != nil {
+		if err = json.Unmarshal(jsonBytes, tx); err != nil {
 			return "", err
 		}
 	}

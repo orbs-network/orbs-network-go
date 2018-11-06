@@ -62,6 +62,9 @@ pathToCodeFile
 	}
 
 	jsonBytes, err := json.Marshal(deployTx)
+	if err != nil {
+		return "", err
+	}
 
 	err = ioutil.WriteFile("./.deploy.json", jsonBytes, 0644)
 	if err != nil {

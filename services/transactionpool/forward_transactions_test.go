@@ -63,7 +63,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
 
-		oneBigHash, _ := HashTransactions(tx, anotherTx)
+		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
 		sig, _ := signature.SignEd25519(cfg.NodePrivateKey(), oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodePublicKey(), sig, tx, anotherTx)
@@ -87,7 +87,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
 
-		oneBigHash, _ := HashTransactions(tx, anotherTx)
+		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
 		sig, _ := signature.SignEd25519(cfg.NodePrivateKey(), oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodePublicKey(), sig, tx, anotherTx)

@@ -31,9 +31,8 @@ func MethodArguments(args ...interface{}) (res []*protocol.MethodArgument) {
 func MethodArgumentsArray(args ...interface{}) *protocol.MethodArgumentArray {
 	res := []*protocol.MethodArgumentBuilder{}
 	builders := MethodArgumentsBuilders(args...)
-	for _, builder := range builders {
-		res = append(res, builder)
-	}
+	res = append(res, builders...)
+
 	return (&protocol.MethodArgumentArrayBuilder{Arguments: res}).Build()
 }
 

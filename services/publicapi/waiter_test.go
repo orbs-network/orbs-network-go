@@ -190,7 +190,8 @@ func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 		wc2 := waiter.add(key)
 
 		var waitTillCancelled = func(wc *waiterChannel) {
-			ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+			var cancel func()
+			ctx, cancel = context.WithTimeout(ctx, 1*time.Second)
 			defer cancel()
 
 			startTime := time.Now()
