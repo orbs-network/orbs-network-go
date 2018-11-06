@@ -103,20 +103,3 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
 	panic("Not implemented")
 }
-
-func CalculateCommitteeSize(requestedCommitteeSize int, federationSize int) int {
-
-	if requestedCommitteeSize > federationSize {
-		return federationSize
-	}
-	return requestedCommitteeSize
-}
-
-// Smart algo!
-func ChooseRandomCommitteeIndices(input *services.RequestCommitteeInput) []int {
-	indices := make([]int, input.MaxCommitteeSize)
-	for i := 0; i < int(input.MaxCommitteeSize); i++ {
-		indices[i] = i
-	}
-	return indices
-}
