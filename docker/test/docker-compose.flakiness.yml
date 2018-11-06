@@ -8,4 +8,4 @@ services:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
     volumes:
-      - ../../_logs:/go/src/github.com/orbs-network/orbs-network-go/logs
+      - ../../_logs:/go/src/github.com/orbs-network/orbs-network-go/_logs
