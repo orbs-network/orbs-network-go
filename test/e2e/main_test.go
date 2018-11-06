@@ -6,11 +6,15 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	_, dirToCleanup := getProcessorArtifactPath()
-	os.RemoveAll(dirToCleanup)
+	cleanNativeProcessorCache()
 
 	exitCode := m.Run()
 
-	os.RemoveAll(dirToCleanup)
+	cleanNativeProcessorCache()
 	os.Exit(exitCode)
+}
+
+func cleanNativeProcessorCache() {
+	_, dirToCleanup := getProcessorArtifactPath()
+	os.RemoveAll(dirToCleanup)
 }
