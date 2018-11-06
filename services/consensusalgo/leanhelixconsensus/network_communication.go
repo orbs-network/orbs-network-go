@@ -46,6 +46,10 @@ func (s *service) UnregisterOnMessage(subscriptionToken int) {
 	delete(s.messageReceivers, subscriptionToken)
 }
 
+func (s *service) CountRegisteredOnMessage() int {
+	return len(s.messageReceivers)
+}
+
 // LeanHelix lib sends its messages here
 func (s *service) SendMessage(ctx context.Context, lhtargets []lhprimitives.Ed25519PublicKey, consensusRawMessage leanhelix.ConsensusRawMessage) {
 

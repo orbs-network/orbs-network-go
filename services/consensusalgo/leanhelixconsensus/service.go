@@ -17,6 +17,11 @@ import (
 
 var LogTag = log.Service("consensus-algo-lean-helix")
 
+type lastCommittedBlock struct {
+	sync.RWMutex
+	block *protocol.BlockPairContainer
+}
+
 type service struct {
 	gossip           gossiptopics.LeanHelix
 	blockStorage     services.BlockStorage
@@ -25,11 +30,7 @@ type service struct {
 	config           Config
 	metrics          *metrics
 	leanHelix        leanhelix.LeanHelix
-
-	lastCommittedBlock struct {
-		sync.RWMutex
-		block *protocol.BlockPairContainer
-	}
+	*lastCommittedBlock
 	messageReceivers        map[int]func(ctx context.Context, message leanhelix.ConsensusRawMessage)
 	messageReceiversCounter int
 }
