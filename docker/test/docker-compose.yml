@@ -11,7 +11,7 @@ services:
       - 8080:8080
     volumes:
       - ../../_logs/:/opt/orbs/logs
-      - ../../e2e-config/:/opt/orbs/config
+      - ./e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
     sysctls:
       net.core.somaxconn: 25000
@@ -30,7 +30,7 @@ services:
       - 8081:8080
     volumes:
       - ../../_logs/:/opt/orbs/logs
-      - ../../e2e-config/:/opt/orbs/config
+      - ./e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
     sysctls:
       net.core.somaxconn: 25000
@@ -48,7 +48,7 @@ services:
       - 8082:8080
     volumes:
       - ../../_logs/:/opt/orbs/logs
-      - ../../e2e-config/:/opt/orbs/config
+      - ./e2e-config/:/opt/orbs/config
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
     sysctls:
       net.core.somaxconn: 25000
