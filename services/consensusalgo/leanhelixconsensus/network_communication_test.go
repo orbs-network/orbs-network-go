@@ -46,7 +46,7 @@ func (g *testGossip) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHand
 
 // TODO Extract a harness out of this mess after 3+ tests are written
 func TestMessageRegistration(t *testing.T) {
-	log := log.GetLogger().WithOutput(log.NewOutput(os.Stdout).WithFormatter(log.NewHumanReadableFormatter()))
+	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	timeout := 1 * time.Millisecond
 	metricFactory := metric.NewRegistry()
 	ctx, ctxCancel := context.WithCancel(context.Background())
