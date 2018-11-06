@@ -10,6 +10,22 @@ import (
 )
 
 func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, message *gossipmessages.BlockAvailabilityRequestMessage) error {
+	// the three error messages below are added because of issue #437
+	if message == nil {
+		s.logger.Error("received block availability request with nil message")
+		return nil
+	}
+
+	if message.Sender == nil {
+		s.logger.Error("received block availability request with nil Sender")
+		return nil
+	}
+
+	if message.SignedBatchRange == nil {
+		s.logger.Error("received block availability request with nil SignedBatchRange")
+		return nil
+	}
+
 	s.logger.Info("received block availability request",
 		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
 		log.Stringable("requested-first-block", message.SignedBatchRange.FirstBlockHeight()),

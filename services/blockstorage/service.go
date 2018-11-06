@@ -78,7 +78,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	}
 
 	gossip.RegisterBlockSyncHandler(s)
-	s.blockSync = blockSync.NewBlockSync(ctx, config, gossip, s, logger)
+	s.blockSync = blockSync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
 	return s
 }
@@ -105,7 +105,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 	}
 
 	s.updateLastCommittedBlock(input.BlockPair)
-	s.blockSync.HandleBlockCommitted()
+	s.blockSync.HandleBlockCommitted(ctx)
 
 	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 

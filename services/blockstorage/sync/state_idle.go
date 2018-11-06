@@ -11,8 +11,9 @@ import (
 type idleState struct {
 	idleTimeout func() time.Duration
 	logger      log.BasicLogger
-	restartIdle chan struct{}
 	sf          *stateFactory
+	conduit     *blockSyncConduit
+	m           idleStateMetrics
 }
 
 func (s *idleState) name() string {
@@ -24,34 +25,36 @@ func (s *idleState) String() string {
 }
 
 func (s *idleState) processState(ctx context.Context) syncState {
+	start := time.Now()
+	defer s.m.stateLatency.RecordSince(start) // runtime metric
+
 	noCommitTimer := synchronization.NewTimer(s.idleTimeout())
 	select {
 	case <-noCommitTimer.C:
 		s.logger.Info("starting sync after no-commit timer expired")
+		s.m.timesExpired.Inc()
 		return s.sf.CreateCollectingAvailabilityResponseState()
-	case <-s.restartIdle:
+	case <-s.conduit.idleReset:
+		s.m.timesReset.Inc()
 		return s.sf.CreateIdleState()
 	case <-ctx.Done():
 		return nil
 	}
 }
 
-func (s *idleState) blockCommitted() {
-	// the default below is important as its possible to get a block committed event before the processState got to the select
-	// in a highly concurrent scenario where the state is recreated rapidly, this will deadlock the commit flow
-	// its better to skip notification to avoid that deadlock
+func (s *idleState) blockCommitted(ctx context.Context) {
 	select {
-	case s.restartIdle <- struct{}{}:
+	case s.conduit.idleReset <- struct{}{}:
 		s.logger.Info("sync got new block commit")
-	default:
-		s.logger.Info("channel was not ready, skipping notification")
+	case <-ctx.Done():
+		s.logger.Info("terminated on writing new block notification", log.String("context-message", ctx.Err().Error()))
 	}
 }
 
-func (s *idleState) gotAvailabilityResponse(message *gossipmessages.BlockAvailabilityResponseMessage) {
+func (s *idleState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
 	return
 }
 
-func (s *idleState) gotBlocks(message *gossipmessages.BlockSyncResponseMessage) {
+func (s *idleState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
 	return
 }
