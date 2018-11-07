@@ -123,7 +123,6 @@ func Decode(source []byte) ([]byte, error) {
 			decodedBytes[totalBytesUsed] = byte(decodedIntegers[currentDecodedIndex] >> conversionMask)
 			totalBytesUsed++
 		}
-		bytesLeft = 4
 		currentDecodedIndex++
 	}
 

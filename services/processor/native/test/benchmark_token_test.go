@@ -68,7 +68,7 @@ func TestBenchmarkToken_TransferLargerThanAvailableFails(t *testing.T) {
 		h := newHarness()
 		callerAddress := builders.AddressForEd25519SignerForTests(0)
 		targetAddress := builders.AddressForEd25519SignerForTests(1)
-		const amount, callerBalance, targetBalance = uint64(9999), uint64(20), uint64(10)
+		const amount, callerBalance = uint64(9999), uint64(20)
 
 		t.Log("Runs BenchmarkToken.transfer large amount")
 

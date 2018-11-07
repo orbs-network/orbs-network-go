@@ -45,7 +45,7 @@ const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
-	bootstrap := len(os.Getenv("API_ENDPOINT")) == 0
+	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
 	apiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
@@ -54,10 +54,10 @@ func getConfig() E2EConfig {
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
 
-	if !bootstrap {
+	if !shouldBootstrap {
 		apiEndpoint = os.Getenv("API_ENDPOINT")
-		url, _ := url.Parse(apiEndpoint)
-		baseUrl = url.Scheme + "://" + url.Host
+		apiUrl, _ := url.Parse(apiEndpoint)
+		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
 
 		if stressTestEnabled {
 			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
@@ -67,7 +67,7 @@ func getConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		bootstrap,
+		shouldBootstrap,
 		apiEndpoint,
 		baseUrl,
 		StressTestConfig{
@@ -99,7 +99,7 @@ func newHarness() *harness {
 			gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 		}
 
-		os.MkdirAll(config.GetProjectSourceRootPath()+"/logs", 0755)
+		os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
 
 		logger := log.GetLogger().WithTags(
 			log.String("_test", "e2e"),
@@ -111,7 +111,7 @@ func newHarness() *harness {
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 
-			logFile, err := os.OpenFile(fmt.Sprintf("%s/logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			logFile, err := os.OpenFile(fmt.Sprintf("%s/_logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				panic(err)
 			}
@@ -192,13 +192,13 @@ func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, e
 		return nil, errors.Errorf("got http status code %s calling %s", res.StatusCode, endpoint)
 	}
 
-	bytes, err := ioutil.ReadAll(res.Body)
+	readBytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	return bytes, nil
+	return readBytes, nil
 }
 
 func (h *harness) absoluteUrlFor(endpoint string) string {
@@ -227,16 +227,16 @@ func (h *harness) getMetrics() metrics {
 		return nil
 	}
 
-	bytes, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(string(bytes))
+	readBytes, _ := ioutil.ReadAll(res.Body)
+	fmt.Println(string(readBytes))
 
 	m := make(metrics)
-	json.Unmarshal(bytes, &m)
+	json.Unmarshal(readBytes, &m)
 
 	return m
 }
 
 func printTestTime(t *testing.T, msg string, last *time.Time) {
-	t.Logf("%s (+%.3fs)", msg, time.Now().Sub(*last).Seconds())
+	t.Logf("%s (+%.3fs)", msg, time.Since(*last).Seconds())
 	*last = time.Now()
 }

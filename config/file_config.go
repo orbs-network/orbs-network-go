@@ -50,7 +50,8 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 		for _, item := range nodeList {
 			kv := item.(map[string]interface{})
 
-			if publicKey, err := hex.DecodeString(kv["Key"].(string)); err == nil {
+			var publicKey []byte
+			if publicKey, err = hex.DecodeString(kv["Key"].(string)); err == nil {
 				nodePublicKey := primitives.Ed25519PublicKey(publicKey)
 
 				var gossipPort uint16
@@ -75,19 +76,18 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 	return nodes, peers, err
 }
 
-func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) (err error) {
+func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) (error) {
 	for key, value := range data {
 		var duration time.Duration
 		var numericValue uint32
 		var publicKey primitives.Ed25519PublicKey
+		var err error
 
 		switch value.(type) {
 		case float64:
 			numericValue, err = parseUint32(value.(float64))
 		case string:
-			if parsedDuration, err := time.ParseDuration(value.(string)); err == nil {
-				duration = parsedDuration
-			}
+			duration, err = time.ParseDuration(value.(string))
 		}
 
 		if numericValue != 0 {

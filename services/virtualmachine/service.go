@@ -13,7 +13,6 @@ import (
 var LogTag = log.Service("virtual-machine")
 
 type service struct {
-	blockStorage         services.BlockStorage
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector

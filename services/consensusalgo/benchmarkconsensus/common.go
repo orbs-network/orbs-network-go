@@ -119,8 +119,9 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 				return err
 			}
 			// don't forget to update internal vars too since they may be used later on in the function
-			_lastCommittedBlock = blockPair
-			_lastCommittedBlockHeight = _lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+			// lines left on purpose to remind that they need to be uncommented if the values used.
+			// _lastCommittedBlock = blockPair
+			// _lastCommittedBlockHeight = _lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 		}
 	}
 
