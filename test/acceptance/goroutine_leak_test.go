@@ -30,6 +30,7 @@ func TestGoroutineLeaks_OnSystemShutdown(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
 	runtime.GC()
+	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
 
 	numGoroutineAfter := runtime.NumGoroutine()
 	pprof.Lookup("goroutine").WriteTo(after, 1)
