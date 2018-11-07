@@ -99,7 +99,7 @@ func newHarness() *harness {
 			gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
 		}
 
-		os.MkdirAll(config.GetProjectSourceRootPath()+"/logs", 0755)
+		os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
 
 		logger := log.GetLogger().WithTags(
 			log.String("_test", "e2e"),
@@ -111,7 +111,7 @@ func newHarness() *harness {
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 			nodeKeyPair := keys.Ed25519KeyPairForTests(i)
 
-			logFile, err := os.OpenFile(fmt.Sprintf("%s/logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			logFile, err := os.OpenFile(fmt.Sprintf("%s/_logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				panic(err)
 			}

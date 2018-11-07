@@ -21,8 +21,8 @@ check_exit_code_and_report () {
     fi
 
     # copy full log for further investigation
-    mkdir -p logs
-    cp *.out logs
+    mkdir -p _logs
+    cp *.out _logs
 
     exit $EXIT_CODE
 }

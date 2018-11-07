@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+  orbs-flakiness:
+    image: orbs:flakiness
+    command: sh -x test.flakiness.sh
+    environment:
+      GIT_BRANCH: $GIT_BRANCH
+      GIT_COMMIT: $GIT_COMMIT
+    volumes:
+      - ../../_logs:/go/src/github.com/orbs-network/orbs-network-go/_logs
