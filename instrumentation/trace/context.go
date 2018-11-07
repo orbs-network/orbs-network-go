@@ -10,6 +10,7 @@ import (
 type entryPointKeyType string
 
 const entryPointKey entryPointKeyType = "ep"
+const RequestId = "request-id"
 
 type Context struct {
 	created   time.Time
@@ -39,12 +40,15 @@ func (c *Context) NestedFields() []*log.Field {
 
 	return []*log.Field{
 		log.String("entry-point", c.name),
-		log.String("request-id", c.requestId),
+		log.String(RequestId, c.requestId),
 	}
 }
 
 func LogFieldFrom(ctx context.Context) *log.Field {
-	trace, _ := FromContext(ctx)
-	return &log.Field{Key: "trace", Nested: trace, Type: log.AggregateType}
+	if trace, ok := FromContext(ctx); ok {
+		return &log.Field{Key: "trace", Nested: trace, Type: log.AggregateType}
+	} else {
+		return log.String("trace", "NO-CONTEXT")
+	}
 
 }

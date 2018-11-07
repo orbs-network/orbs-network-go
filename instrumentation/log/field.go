@@ -142,6 +142,9 @@ func Timestamp(key string, value time.Time) *Field {
 }
 
 func Error(value error) *Field {
+	if value == nil {
+		panic("error field must have non-nil error value")
+	}
 	return &Field{Key: "error", Error: value, Type: ErrorType}
 }
 

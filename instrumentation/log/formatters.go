@@ -2,6 +2,7 @@ package log
 
 import (
 	"encoding/json"
+	"github.com/go-playground/ansi"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
 	"strconv"
 	"strings"
@@ -74,15 +75,15 @@ func printParam(builder *strings.Builder, param *Field) {
 
 	switch param.Type {
 	case StringType:
-		value = param.String
+		value = param.StringVal
 	case NodeType:
-		value = param.String
+		value = param.StringVal
 	case ServiceType:
-		value = param.String
+		value = param.StringVal
 	case FunctionType:
-		value = param.String
+		value = param.StringVal
 	case SourceType:
-		value = param.String
+		value = param.StringVal
 	case IntType:
 		value = strconv.FormatInt(param.Int, 10)
 	case UintType:
@@ -156,9 +157,11 @@ func extractParamByConditionAndRemove(params []*Field, condition func(param *Fie
 
 func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
 	builder := strings.Builder{}
+	var newParams = flattenParams(params)
 
 	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
+	builder.WriteString(colorize(newParams))
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
 	builder.WriteString(timestamp)
@@ -166,9 +169,6 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 
 	builder.WriteString(message)
 	builder.WriteString(SPACE)
-
-	var newParams = make([]*Field, len(params))
-	copy(newParams, params)
 
 	_, newParams = extractParamByTypePrintAndRemove(newParams, NodeType, &builder)
 	_, newParams = extractParamByTypePrintAndRemove(newParams, ServiceType, &builder)
@@ -178,7 +178,9 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 		return strings.Index(param.Key, "_") == 0
 	})
 
-	printParams(&builder, newParams)
+	for _, p := range newParams {
+		printParam(&builder, p)
+	}
 
 	// append the function/source
 	printParam(&builder, functionParam)
@@ -190,16 +192,30 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	return builder.String()
 }
 
-func printParams(builder *strings.Builder, params []*Field) {
+func colorize(fields []*Field) string {
+	colors := []string{ansi.Cyan, ansi.Yellow, ansi.LightBlue, ansi.Magenta, ansi.LightYellow, ansi.LightRed}
+	for _, f := range fields {
+		if f.Key == "request-id" {
+			lastChar := int(f.StringVal[len(f.StringVal) - 1])
+			return colors[lastChar % len(colors)]
+		}
+	}
+
+	return ""
+}
+
+func flattenParams(params []*Field) []*Field {
+	var flattened []*Field
 	for _, param := range params {
 		if !param.IsNested() {
-			printParam(builder, param)
+			flattened = append(flattened, param)
 		} else if nestedFields, ok := param.Value().([]*Field); ok {
-			printParams(builder, nestedFields)
+			flattened = append(flattened, flattenParams(nestedFields)...)
 		} else {
 			panic("log field of nested type did not return []*Field")
 		}
 	}
+	return flattened
 }
 
 func NewHumanReadableFormatter() LogFormatter {

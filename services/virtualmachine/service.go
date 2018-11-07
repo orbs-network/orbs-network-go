@@ -3,6 +3,7 @@ package virtualmachine
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -70,9 +71,10 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 }
 
 func (s *service) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
 
-	s.logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
+	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
 	receipts, stateDiffs := s.processTransactionSet(ctx, previousBlockHeight, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
@@ -82,6 +84,8 @@ func (s *service) ProcessTransactionSet(ctx context.Context, input *services.Pro
 }
 
 func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 	// FIXME sometimes we get value of ffffffffffffffff
 	previousBlockHeight := input.BlockHeight - 1 // our contracts rely on this block's state for execution
@@ -98,9 +102,9 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	}
 
 	if err != nil {
-		s.logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+		logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
 	} else {
-		s.logger.Info("performed pre order checks", log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+		logger.Info("performed pre order checks", log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
 	}
 
 	return &services.TransactionSetPreOrderOutput{

@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	blockSync "github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -86,8 +87,9 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 }
 
 func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
-	s.logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	logger.Info("trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
@@ -95,6 +97,15 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	// TODO there might be a non-idiomatic pattern here, but the commit block output is an empty struct, if that changes this should be refactored
 	if ok, err := s.validateBlockDoesNotExist(txBlockHeader); err != nil || !ok {
+		currentBlockHeight := s.LastCommittedBlockHeight()
+		attemptedBlockHeight := txBlockHeader.BlockHeight()
+
+		if err == nil {
+			s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+		} else {
+			s.logger.Error(err.Error(), log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
+
+		}
 		return nil, err
 	}
 
@@ -109,16 +120,16 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 	s.updateLastCommittedBlock(input.BlockPair)
 	s.blockSync.HandleBlockCommitted(ctx)
 
-	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.syncBlockToStateStorage(ctx, input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
-		s.logger.Error("intra-node sync to state storage failed", log.Error(err))
+		logger.Error("intra-node sync to state storage failed", log.Error(err))
 	}
 
 	if err := s.syncBlockToTxPool(ctx, input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, should we fail if pool fails ?
-		s.logger.Error("intra-node sync to tx pool failed", log.Error(err))
+		logger.Error("intra-node sync to tx pool failed", log.Error(err))
 	}
 
 	return nil, nil
@@ -330,29 +341,24 @@ func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopi
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
 func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
+
 	currentBlockHeight := s.LastCommittedBlockHeight()
 	attemptedBlockHeight := txBlockHeader.BlockHeight()
 
 	if attemptedBlockHeight < currentBlockHeight {
-		// we can't check for fork because we don't have the tx header of the old block easily accessible
-		errorMessage := "block already in storage, skipping"
-		s.logger.Info(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
-		return false, errors.New(errorMessage)
+		return false, nil
 	} else if attemptedBlockHeight == currentBlockHeight {
 		// we can check for fork because we do have the tx header of the old block easily accessible
 		if txBlockHeader.Timestamp() != s.lastCommittedBlockTimestamp() {
 			errorMessage := "FORK!! block already in storage, timestamp mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		} else if !txBlockHeader.Equal(s.lastCommittedBlock.TransactionsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 
-		s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 		return false, nil
 	}
 

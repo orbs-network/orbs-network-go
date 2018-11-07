@@ -35,3 +35,6 @@
 [submodule "vendor/github.com/VividCortex/ewma"]
 	path = vendor/github.com/VividCortex/ewma
 	url = https://github.com/VividCortex/ewma
+[submodule "vendor/github.com/go-playground/ansi"]
+	path = vendor/github.com/go-playground/ansi
+	url = https://github.com/go-playground/ansi
