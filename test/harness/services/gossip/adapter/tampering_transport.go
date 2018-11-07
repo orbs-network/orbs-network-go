@@ -89,6 +89,7 @@ func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 	}
 
 	supervised.GoOnce(t.logger, func() {
+
 		t.receive(ctx, data)
 	})
 
@@ -174,7 +175,14 @@ func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 	panic("Tamperer not found in ongoing tamperer list")
 }
 
-func (t *tamperingTransport) receive(ctx context.Context, data *adapter.TransportData) {
+func (t *tamperingTransport) receive(parentCtx context.Context, data *adapter.TransportData) {
+
+	// if handling a transport message takes more than 1 second in acceptance tests, something is surely wrong
+	//TODO what actually needs to happen here is a new context, to simulate the fact that in inter-process communication we're running in a different process in this method
+	//TODO new context should propagate trace.Context if it exists when DirectTransport implements same logic
+	ctx, cancel := context.WithTimeout(parentCtx, 1 * time.Second)
+	defer cancel()
+
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
