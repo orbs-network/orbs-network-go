@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"testing"
-	"time"
 )
 
 // this test should not run in parallel with any other test (even package parallel) since it's examining shared global system state (num goroutines)
@@ -29,8 +28,8 @@ func TestGoroutineLeaks_OnSystemShutdown(t *testing.T) {
 	t.Run("TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages)
 	t.Run("TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages)
 
+	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
 	runtime.GC()
-	time.Sleep(50 * time.Millisecond) // give goroutines time to terminate
 
 	numGoroutineAfter := runtime.NumGoroutine()
 	pprof.Lookup("goroutine").WriteTo(after, 1)
