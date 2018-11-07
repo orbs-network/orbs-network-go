@@ -45,7 +45,7 @@ const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
-	isBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
+	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
 	apiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
@@ -54,7 +54,7 @@ func getConfig() E2EConfig {
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
 
-	if !isBootstrap {
+	if !shouldBootstrap {
 		apiEndpoint = os.Getenv("API_ENDPOINT")
 		apiUrl, _ := url.Parse(apiEndpoint)
 		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
@@ -67,7 +67,7 @@ func getConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		isBootstrap,
+		shouldBootstrap,
 		apiEndpoint,
 		baseUrl,
 		StressTestConfig{

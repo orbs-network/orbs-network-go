@@ -190,12 +190,11 @@ func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 		wc2 := waiter.add(key)
 
 		var waitTillCancelled = func(wc *waiterChannel) {
-			var cancel func()
-			ctx, cancel = context.WithTimeout(ctx, 1*time.Second)
+			ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
 			defer cancel()
 
 			startTime := time.Now()
-			wo, err := waiter.wait(ctx, wc)
+			wo, err := waiter.wait(ctxWithTimeout, wc)
 			assert.Error(t, err, "expected waiting to be aborted")
 			assert.WithinDuration(t, time.Now(), startTime, 100*time.Millisecond, "expected not to reach timeout")
 			require.Nil(t, wo, "wait object (1) should be nil")

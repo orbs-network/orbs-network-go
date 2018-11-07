@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-func NewEmptyFileConfig(source string) (mutableNodeConfig, error) {
-	return NewFileConfig(emptyConfig(), source)
+func newEmptyFileConfig(source string) (mutableNodeConfig, error) {
+	return newFileConfig(emptyConfig(), source)
 }
 
-func NewFileConfig(parent mutableNodeConfig, source string) (mutableNodeConfig, error) {
+func newFileConfig(parent mutableNodeConfig, source string) (mutableNodeConfig, error) {
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(source), &data); err != nil {
 		return nil, err
@@ -50,15 +50,15 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 		for _, item := range nodeList {
 			kv := item.(map[string]interface{})
 
-			var publicKey []byte
-			if publicKey, err = hex.DecodeString(kv["Key"].(string)); err == nil {
+			if publicKey, err := hex.DecodeString(kv["Key"].(string)); err != nil {
+				return nodes, peers, err
+			} else {
 				nodePublicKey := primitives.Ed25519PublicKey(publicKey)
 
-				var gossipPort uint16
-				var i uint32
-
-				if i, err = parseUint32(kv["Port"].(float64)); err == nil {
-					gossipPort = uint16(i)
+				if i, err := parseUint32(kv["Port"].(float64)); err != nil {
+					return nodes, peers, err
+				} else {
+					gossipPort := uint16(i)
 
 					nodes[nodePublicKey.KeyForMap()] = &hardCodedFederationNode{
 						nodePublicKey: nodePublicKey,
@@ -73,7 +73,7 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 		}
 	}
 
-	return nodes, peers, err
+	return nodes, peers, nil
 }
 
 func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) (error) {
