@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+var LogTag = log.String("flow", "block-sync")
+
 // this is coupled to gossip because the entire service is (block storage)
 // nothing to gain right now in decoupling just the sync
 type syncState interface {
@@ -68,7 +70,7 @@ func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
 	}
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, factory metric.Factory) *BlockSync {
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, factory metric.Factory) *BlockSync {
 	conduit := &blockSyncConduit{
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
@@ -77,8 +79,9 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 
 	metrics := newStateMachineMetrics(factory)
 
+	logger := parentLogger.WithTags(LogTag)
 	bs := &BlockSync{
-		logger:  logger.WithTags(log.String("flow", "block-sync")),
+		logger:  logger,
 		sf:      NewStateFactory(config, gossip, storage, conduit, logger, factory),
 		gossip:  gossip,
 		storage: storage,
@@ -87,13 +90,13 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 		metrics: metrics,
 	}
 
-	bs.logger.Info("block sync init",
+	logger.Info("block sync init",
 		log.Stringable("no-commit-timeout", bs.config.BlockSyncNoCommitInterval()),
 		log.Stringable("collect-responses-timeout", bs.config.BlockSyncCollectResponseTimeout()),
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.config.BlockSyncBatchSize()))
 
-	supervised.GoForever(ctx, logger, func() {
+	supervised.GoForever(ctx, parentLogger, func() {
 		bs.syncLoop(ctx)
 	})
 

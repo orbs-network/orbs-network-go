@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"os"
@@ -111,7 +112,8 @@ func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogge
 		log.String("_test-id", testId)).
 		WithOutput(makeFormattingOutput(testId), errorRecorder).
 		WithFilters(b.logFilters...).
-		WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
+		WithFilters(log.ExcludeField(sync.LogTag))
+		//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
 	return logger, errorRecorder
 }

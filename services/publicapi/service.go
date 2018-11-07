@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -72,8 +73,10 @@ func NewPublicApi(
 }
 
 func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	for _, txReceipt := range input.TransactionReceipts {
-		s.logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Transaction(txReceipt.Txhash()))
+		logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Transaction(txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
 			&txResponse{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,

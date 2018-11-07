@@ -83,8 +83,11 @@ func (b *basicLogger) Tags() []*Field {
 }
 
 func (b *basicLogger) WithTags(params ...*Field) BasicLogger {
-	prefixes := append(b.tags, params...)
-	return &basicLogger{tags: prefixes, nestingLevel: b.nestingLevel, outputs: b.outputs, sourceRootPrefixIndex: b.sourceRootPrefixIndex, filters: b.filters}
+	newTags := make([]*Field, len(b.tags))
+	copy(newTags, b.tags)
+	newTags = append(newTags, params...)
+	//prefixes := append(b.tags, params...)
+	return &basicLogger{tags: newTags, nestingLevel: b.nestingLevel, outputs: b.outputs, sourceRootPrefixIndex: b.sourceRootPrefixIndex, filters: b.filters}
 }
 
 func (b *basicLogger) Metric(params ...*Field) {

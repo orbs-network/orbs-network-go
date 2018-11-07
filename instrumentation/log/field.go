@@ -16,7 +16,7 @@ type Field struct {
 	Key  string
 	Type FieldType
 
-	String      string
+	StringVal   string
 	StringArray []string
 	Int         int64
 	Uint        uint64
@@ -26,6 +26,7 @@ type Field struct {
 	Error  error
 	Nested AggregateField
 }
+
 
 const (
 	NoType = iota
@@ -44,34 +45,34 @@ const (
 	AggregateType
 )
 
-func (this *Field) Equal(other *Field) bool {
-	return this.Type == other.Type && this.Value() == other.Value() && this.Key == other.Key
+func (f *Field) Equal(other *Field) bool {
+	return f.Type == other.Type && f.Value() == other.Value() && f.Key == other.Key
 }
 
 type FieldType uint8
 
 func Node(value string) *Field {
-	return &Field{Key: "node", String: value, Type: NodeType}
+	return &Field{Key: "node", StringVal: value, Type: NodeType}
 }
 
 func Service(value string) *Field {
-	return &Field{Key: "service", String: value, Type: ServiceType}
+	return &Field{Key: "service", StringVal: value, Type: ServiceType}
 }
 
 func Function(value string) *Field {
-	return &Field{Key: "function", String: value, Type: FunctionType}
+	return &Field{Key: "function", StringVal: value, Type: FunctionType}
 }
 
 func Source(value string) *Field {
-	return &Field{Key: "source", String: value, Type: SourceType}
+	return &Field{Key: "source", StringVal: value, Type: SourceType}
 }
 
 func String(key string, value string) *Field {
-	return &Field{Key: key, String: value, Type: StringType}
+	return &Field{Key: key, StringVal: value, Type: StringType}
 }
 
 func Stringable(key string, value fmt.Stringer) *Field {
-	return &Field{Key: key, String: value.String(), Type: StringType}
+	return &Field{Key: key, StringVal: value.String(), Type: StringType}
 }
 
 func Transaction(txHash primitives.Sha256) *Field {
@@ -145,11 +146,11 @@ func Error(value error) *Field {
 }
 
 func BlockHeight(value primitives.BlockHeight) *Field {
-	return &Field{Key: "block-height", String: value.String(), Type: StringType}
+	return &Field{Key: "block-height", StringVal: value.String(), Type: StringType}
 }
 
 func VirtualChainId(value primitives.VirtualChainId) *Field {
-	return &Field{Key: "vcid", String: value.String(), Type: StringType}
+	return &Field{Key: "vcid", StringVal: value.String(), Type: StringType}
 }
 
 func (f *Field) Value() interface{} {
@@ -158,15 +159,15 @@ func (f *Field) Value() interface{} {
 	}
 	switch f.Type {
 	case NodeType:
-		return f.String
+		return f.StringVal
 	case ServiceType:
-		return f.String
+		return f.StringVal
 	case FunctionType:
-		return f.String
+		return f.StringVal
 	case SourceType:
-		return f.String
+		return f.StringVal
 	case StringType:
-		return f.String
+		return f.StringVal
 	case IntType:
 		return f.Int
 	case TimeType:
@@ -194,4 +195,9 @@ func (f *Field) Value() interface{} {
 
 func (f *Field) IsNested() bool {
 	return f.Type == AggregateType
+}
+
+
+func (f *Field) String() string {
+	return fmt.Sprintf("Field: key=%s, value=%v", f.Key, f.Value())
 }

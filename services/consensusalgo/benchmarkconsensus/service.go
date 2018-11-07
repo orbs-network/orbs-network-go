@@ -72,16 +72,18 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	logger log.BasicLogger,
+	parentLogger log.BasicLogger,
 	config Config,
 	metricFactory metric.Factory,
 ) services.ConsensusAlgoBenchmark {
+
+	logger := parentLogger.WithTags(LogTag)
 
 	s := &service{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		logger:           logger.WithTags(LogTag),
+		logger:           logger,
 		config:           config,
 
 		isLeader:                   config.ConstantConsensusLeader().Equal(config.NodePublicKey()),

@@ -28,6 +28,20 @@ func parseOutput(input string) map[string]interface{} {
 	return jsonMap
 }
 
+func TestBasicLogger_WithTags_ClonesLoggerFully(t *testing.T) {
+	v1 := log.String("k1", "v1")
+	v2 := log.String("c1", "v2")
+	v3 := log.String("c2", "v3")
+
+	parent := log.GetLogger(v1)
+	child1 := parent.WithTags(v2)
+	child2 := parent.WithTags(v3)
+
+	require.ElementsMatch(t, []*log.Field{v1}, parent.Tags())
+	require.ElementsMatch(t, []*log.Field{v1, v2}, child1.Tags())
+	require.ElementsMatch(t, []*log.Field{v1, v3}, child2.Tags())
+}
+
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
@@ -53,7 +67,7 @@ func TestSimpleLogger_AggregateField(t *testing.T) {
 	jsonMap := parseOutput(b.String())
 
 	require.Equal(t, "foo", jsonMap["entry-point"])
-	require.NotEmpty(t, jsonMap["request-id"])
+	require.NotEmpty(t, jsonMap[trace.RequestId])
 
 }
 
@@ -69,7 +83,7 @@ func TestSimpleLogger_AggregateField_NestedLogger(t *testing.T) {
 
 	require.Equal(t, "foo", jsonMap["entry-point"])
 	require.Equal(t, "v1", jsonMap["k1"])
-	require.NotEmpty(t, jsonMap["request-id"])
+	require.NotEmpty(t, jsonMap[trace.RequestId])
 
 }
 
@@ -161,7 +175,7 @@ func TestHumanReadable_AggregateField(t *testing.T) {
 
 	out := b.String()
 	require.Regexp(t, "entry-point=foo", out)
-	require.Regexp(t, "request-id=foo.*", out)
+	require.Regexp(t, trace.RequestId + "=foo.*", out)
 
 }
 

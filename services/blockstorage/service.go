@@ -55,13 +55,15 @@ func newMetrics(m metric.Factory) *metrics {
 }
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
-	txPool services.TransactionPool, logger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
+	txPool services.TransactionPool, parentLogger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
+	logger := parentLogger.WithTags(LogTag)
+
 	s := &service{
 		persistence:   persistence,
 		stateStorage:  stateStorage,
 		gossip:        gossip,
 		txPool:        txPool,
-		logger:        logger.WithTags(LogTag),
+		logger:        logger,
 		config:        config,
 		lastBlockLock: &sync.RWMutex{},
 		metrics:       newMetrics(metricFactory),
