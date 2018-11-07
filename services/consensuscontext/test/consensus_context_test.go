@@ -1,6 +1,10 @@
 package test
 
 import (
+	"context"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -16,17 +20,37 @@ Questions:
 
 */
 
-// TODO Set a meaningful test name
-// cc implements this
-func TestRequestOrderingCommitteeXXX(t *testing.T) {
+func TestRequestOrderingCommittee(t *testing.T) {
+	h := newHarness()
+	blockHeight := primitives.BlockHeight(1)
+	federationSize := len(h.config.FederationNodes(uint64(blockHeight)))
 
-	// config.FederationNodes
-	// Check size of committee < total
-	// Check size of committee >= total
-
-	// Order nodes based on weighted random sorting algorithm (reputation is taken into account here).
-
-	// Create table-tests with federation nodes - unit-test
+	t.Run("if committee size <= federation size, then return same count of committee members as requested by config", func(t *testing.T) {
+		input := &services.RequestCommitteeInput{
+			BlockHeight:      blockHeight,
+			RandomSeed:       0,
+			MaxCommitteeSize: uint32(federationSize),
+		}
+		output, err := h.service.RequestOrderingCommittee(context.Background(), input)
+		if err != nil {
+			t.Error(err)
+		}
+		actualFederationSize := len(output.NodePublicKeys)
+		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
+	})
+	t.Run("if committee size > federation size, then return all federation members", func(t *testing.T) {
+		input := &services.RequestCommitteeInput{
+			BlockHeight:      blockHeight,
+			RandomSeed:       0,
+			MaxCommitteeSize: uint32(federationSize + 1),
+		}
+		output, err := h.service.RequestOrderingCommittee(context.Background(), input)
+		if err != nil {
+			t.Error(err)
+		}
+		actualFederationSize := len(output.NodePublicKeys)
+		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
+	})
 }
 
 // cc implements this

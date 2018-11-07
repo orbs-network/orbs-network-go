@@ -19,6 +19,7 @@ type NodeConfig interface {
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	ConsensusRequiredQuorumPercentage() uint32
+	ConsensusMinimumCommitteeSize() uint32
 
 	// Lean Helix consensus
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
@@ -119,6 +120,8 @@ type ConsensusContextConfig interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMinimalBlockTime() time.Duration
+	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	ConsensusMinimumCommitteeSize() uint32
 }
 
 type PublicApiConfig interface {
