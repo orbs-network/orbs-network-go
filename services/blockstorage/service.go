@@ -445,31 +445,17 @@ func (s *service) validateWithConsensusAlgosWithMode(
 }
 
 // Returns a slice of blocks containing first and last
-// TODO support chunking
-func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
-	// FIXME use more efficient way to slice blocks
-
-	allBlocks := s.persistence.ReadAllBlocks()
-	allBlocksLength := primitives.BlockHeight(len(allBlocks))
-
-	s.logger.Info("Reading all blocks", log.Stringable("blocks-total", allBlocksLength))
-
-	firstAvailableBlockHeight = first
-
-	// FIXME what does it even mean
-	if firstAvailableBlockHeight > allBlocksLength {
-		return blocks, firstAvailableBlockHeight, firstAvailableBlockHeight
+func (s *service) getBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight) {
+	blocks, err := s.persistence.GetBlocks(first, last)
+	if err != nil {
+		s.logger.Error("failed retrieving block range", log.Error(err))
+		return nil, 0, 0
 	}
 
-	lastAvailableBlockHeight = last
-	if allBlocksLength < last {
-		lastAvailableBlockHeight = allBlocksLength
-	}
-
-	for i := first - 1; i < lastAvailableBlockHeight; i++ {
-		s.logger.Info("Retrieving block", log.BlockHeight(i), log.Stringable("blocks-total", i))
-		blocks = append(blocks, allBlocks[i])
-	}
+	s.logger.Info("retrieved block range",
+		log.Stringable("first-requested-block-height", first),
+		log.Stringable("last-requested-block-height", last),
+		log.Int("blocks-total", len(blocks)))
 
 	return blocks, firstAvailableBlockHeight, lastAvailableBlockHeight
 }

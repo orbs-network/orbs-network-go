@@ -89,7 +89,7 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize()-1)
 	}
 
-	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := s.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
+	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight := s.getBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
 
 	s.logger.Info("sending blocks to another node via block sync",
 		log.Stringable("petitioner", senderPublicKey),

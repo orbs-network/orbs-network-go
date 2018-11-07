@@ -16,6 +16,7 @@ type BlockPersistence interface {
 	WriteBlock(blockPairs *protocol.BlockPairContainer) error
 	// FIXME kill it
 	ReadAllBlocks() []*protocol.BlockPairContainer
+	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, error)
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 	GetBlockTracker() *synchronization.BlockTracker
 	GetReceiptRelevantBlocks(txTimeStamp primitives.TimestampNano, rules BlockSearchRules) []*protocol.BlockPairContainer

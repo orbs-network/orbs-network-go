@@ -186,3 +186,17 @@ func (bp *inMemoryBlockPersistence) addBlockToInMemoryChain(blockPair *protocol.
 
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
 }
+
+func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, error) {
+	if first > last {
+		return nil, errors.Errorf("invalid block range: %s > %s", first, last)
+	}
+
+	blockPairs := bp.getBlockPairs()
+	size := primitives.BlockHeight(len(blockPairs))
+	if size < last {
+		last = size
+	}
+
+	return blockPairs[first-1 : last], nil
+}
