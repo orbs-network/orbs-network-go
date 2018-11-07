@@ -82,8 +82,7 @@ func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 	privateKeyPtr := flagSet.String("private-key", "", "public key in hex form")
 	hostPtr := flagSet.String("host", "http://localhost:8080", "<http://..../api>")
 
-	err := flagSet.Parse(args[2:])
-	if err != nil {
+	if err := flagSet.Parse(args[2:]); err != nil {
 		return "", errors.Wrapf(err , "flag issues")
 	}
 
@@ -91,34 +90,19 @@ func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 	pathToJson := args[1]
 
 	tx := &gammacli.JSONTransaction{}
-	var jsonBytes []byte
-	_, err = os.Stat(pathToJson)
-	if err != nil {
+	if _, err := os.Stat(pathToJson); err != nil {
 		return "", err
 	}
 
-	if err == nil {
-		jsonBytes, err = ioutil.ReadFile(pathToJson)
-
-		if err != nil {
-			return "", err
-		}
-
-		if err = json.Unmarshal(jsonBytes, tx); err != nil {
-			return "", err
-		}
+	if jsonBytes, err := ioutil.ReadFile(pathToJson); err != nil {
+		return "", err
+	} else if err := json.Unmarshal(jsonBytes, tx); err != nil {
+		return "", err
 	}
 
 	switch runType {
 	case "send":
-		var keyPair *keys.Ed25519KeyPair
-
-		if *publicKeyPtr != "" && *privateKeyPtr != "" {
-			keyPair, err = getKeypairFromFlags(*publicKeyPtr, *privateKeyPtr)
-		} else {
-			keyPair, err = getKeypairFromOrbsKeyFile()
-		}
-
+		keyPair, err := readKeyPair(*publicKeyPtr, *privateKeyPtr)
 		if err != nil {
 			return "", err
 		}
@@ -130,6 +114,7 @@ func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 
 		jsonBytes, _ := json.Marshal(result)
 		return string(jsonBytes), nil
+
 	case "call":
 		result, _ := gammacli.CallMethod(tx, *hostPtr, false)
 
@@ -137,5 +122,21 @@ func (r *CommandRunner) HandleRunCommand(args []string) (string, error) {
 		return string(jsonBytes), nil
 	default:
 		return ShowUsage(), nil
+	}
+}
+
+func readKeyPair(publicKey, privateKey string) (*keys.Ed25519KeyPair, error) {
+	if publicKey != "" && privateKey != "" {
+		if keyPair, err := getKeypairFromFlags(publicKey, privateKey); err != nil {
+			return nil, err
+		} else {
+			return keyPair, nil
+		}
+	} else {
+		if keyPair, err := getKeypairFromOrbsKeyFile(); err != nil {
+			return nil, err
+		} else {
+			return keyPair, nil
+		}
 	}
 }

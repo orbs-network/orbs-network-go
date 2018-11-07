@@ -9,14 +9,14 @@ import (
 )
 
 func TestFileConfigConstructor(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{}`)
+	cfg, err := newEmptyFileConfig(`{}`)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
 }
 
 func TestFileConfigSetUint32(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{"block-sync-batch-size": 999}`)
+	cfg, err := newEmptyFileConfig(`{"block-sync-batch-size": 999}`)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -24,7 +24,7 @@ func TestFileConfigSetUint32(t *testing.T) {
 }
 
 func TestFileConfigSetDuration(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{"block-sync-collect-response-timeout": "10m"}`)
+	cfg, err := newEmptyFileConfig(`{"block-sync-collect-response-timeout": "10m"}`)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -32,7 +32,7 @@ func TestFileConfigSetDuration(t *testing.T) {
 }
 
 func TestSetNodePublicKey(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{"node-public-key": "dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"}`)
+	cfg, err := newEmptyFileConfig(`{"node-public-key": "dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"}`)
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -42,7 +42,7 @@ func TestSetNodePublicKey(t *testing.T) {
 }
 
 func TestSetNodePrivateKey(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{"node-private-key": "93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"}`)
+	cfg, err := newEmptyFileConfig(`{"node-private-key": "93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"}`)
 
 	keyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -52,7 +52,7 @@ func TestSetNodePrivateKey(t *testing.T) {
 }
 
 func TestSetConstantConsensusLeader(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{"constant-consensus-leader": "92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152"}`)
+	cfg, err := newEmptyFileConfig(`{"constant-consensus-leader": "92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152"}`)
 
 	keyPair := keys.Ed25519KeyPairForTests(1)
 
@@ -62,7 +62,7 @@ func TestSetConstantConsensusLeader(t *testing.T) {
 }
 
 func TestSetActiveConsensusAlgo(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{"active-consensus-algo": 999}`)
+	cfg, err := newEmptyFileConfig(`{"active-consensus-algo": 999}`)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestSetActiveConsensusAlgo(t *testing.T) {
 }
 
 func TestSetFederationNodes(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{
+	cfg, err := newEmptyFileConfig(`{
 	"federation-nodes": [
 		{"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","Port":4400},
 		{"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","Port":4400},
@@ -92,7 +92,7 @@ func TestSetFederationNodes(t *testing.T) {
 }
 
 func TestSetGossipPeers(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{
+	cfg, err := newEmptyFileConfig(`{
 	"federation-nodes": [
 		{"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","Port":4400},
 		{"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","Port":4400},
@@ -115,7 +115,7 @@ func TestSetGossipPeers(t *testing.T) {
 }
 
 func TestSetGossipPort(t *testing.T) {
-	cfg, err := NewEmptyFileConfig(`{"gossip-port": 4500}`)
+	cfg, err := newEmptyFileConfig(`{"gossip-port": 4500}`)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
