@@ -23,7 +23,7 @@ func TestProcessingBlocksCommitsAccordinglyAndMovesToCAR(t *testing.T) {
 		WithLastCommittedBlockHeight(20).
 		Build().Message
 
-	processingState := h.sf.CreateProcessingBlocksState(message)
+	processingState := h.factory.CreateProcessingBlocksState(message)
 	next := processingState.processState(h.ctx)
 
 	require.IsType(t, &collectingAvailabilityResponsesState{}, next, "next state after commit should be collecting availability responses")
@@ -34,7 +34,7 @@ func TestProcessingBlocksCommitsAccordinglyAndMovesToCAR(t *testing.T) {
 func TestProcessingWithNoBlocksReturnsToIdle(t *testing.T) {
 	h := newBlockSyncHarness()
 
-	processingState := h.sf.CreateProcessingBlocksState(nil)
+	processingState := h.factory.CreateProcessingBlocksState(nil)
 	next := processingState.processState(h.ctx)
 
 	require.IsType(t, &idleState{}, next, "commit initialized invalid should move to idle")
@@ -57,7 +57,7 @@ func TestProcessingValidationFailureReturnsToCAR(t *testing.T) {
 	}).Times(6)
 	h.storage.When("CommitBlock", mock.Any, mock.Any).Return(nil, nil).Times(5)
 
-	processingState := h.sf.CreateProcessingBlocksState(message)
+	processingState := h.factory.CreateProcessingBlocksState(message)
 	next := processingState.processState(h.ctx)
 
 	require.IsType(t, &collectingAvailabilityResponsesState{}, next, "next state after validation error should be collecting availability responses")
@@ -82,7 +82,7 @@ func TestProcessingCommitFailureReturnsToCAR(t *testing.T) {
 		return nil, nil
 	}).Times(6)
 
-	processingState := h.sf.CreateProcessingBlocksState(message)
+	processingState := h.factory.CreateProcessingBlocksState(message)
 	next := processingState.processState(h.ctx)
 
 	require.IsType(t, &collectingAvailabilityResponsesState{}, next, "next state after commit error should be collecting availability responses")
@@ -100,7 +100,7 @@ func TestProcessingContextTerminationFlow(t *testing.T) {
 		WithLastCommittedBlockHeight(20).
 		Build().Message
 
-	processingState := h.sf.CreateProcessingBlocksState(message)
+	processingState := h.factory.CreateProcessingBlocksState(message)
 	next := processingState.processState(h.ctx)
 
 	require.Nil(t, next, "next state should be nil on context termination")
@@ -108,7 +108,7 @@ func TestProcessingContextTerminationFlow(t *testing.T) {
 
 func TestProcessingNOP(t *testing.T) {
 	h := newBlockSyncHarness()
-	processing := h.sf.CreateProcessingBlocksState(nil)
+	processing := h.factory.CreateProcessingBlocksState(nil)
 
 	// these tests are for sanity, they should not do anything
 	processing.blockCommitted(h.ctx)

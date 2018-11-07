@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -82,26 +83,59 @@ func (c *blockSyncConfigForTests) BlockSyncCollectChunksTimeout() time.Duration 
 	return c.collectChunks
 }
 
-type blockSyncHarness struct {
-	sf        *stateFactory
-	ctx       context.Context
-	config    *blockSyncConfigForTests
-	gossip    *gossiptopics.MockBlockSync
-	storage   *blockSyncStorageMock
-	logger    log.BasicLogger
-	ctxCancel context.CancelFunc
-	m         metric.Factory
-}
-
-func newBlockSyncHarness() *blockSyncHarness {
-
-	cfg := &blockSyncConfigForTests{
+func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
+	return &blockSyncConfigForTests{
 		pk:               keys.Ed25519KeyPairForTests(1).PublicKey(),
 		batchSize:        10,
 		noCommit:         3 * time.Millisecond,
 		collectResponses: 3 * time.Millisecond,
 		collectChunks:    3 * time.Millisecond,
 	}
+}
+
+type blockSyncHarness struct {
+	factory       *stateFactory
+	ctx           context.Context
+	config        *blockSyncConfigForTests
+	gossip        *gossiptopics.MockBlockSync
+	storage       *blockSyncStorageMock
+	logger        log.BasicLogger
+	ctxCancel     context.CancelFunc
+	metricFactory metric.Factory
+}
+
+func newBlockSyncHarnessWithTimers(
+	explicitCollectTimeoutTimer *synchronization.Timer,
+	explicitNoCommitTimeoutTimer *synchronization.Timer,
+	explicitWaitForChunksTimeoutTimer *synchronization.Timer,
+) *blockSyncHarness {
+
+	cfg := newDefaultBlockSyncConfigForTests()
+
+	createCollectTimeoutTimer := func() *synchronization.Timer {
+		if explicitCollectTimeoutTimer == nil {
+			return synchronization.NewTimer(cfg.BlockSyncCollectResponseTimeout())
+		} else {
+			return explicitCollectTimeoutTimer
+		}
+	}
+
+	createNoCommitTimeoutTimer := func() *synchronization.Timer {
+		if explicitNoCommitTimeoutTimer == nil {
+			return synchronization.NewTimer(cfg.BlockSyncNoCommitInterval())
+		} else {
+			return explicitNoCommitTimeoutTimer
+		}
+	}
+
+	createWaitForChunksTimeoutTimer := func() *synchronization.Timer {
+		if explicitWaitForChunksTimeoutTimer == nil {
+			return synchronization.NewTimer(cfg.BlockSyncCollectChunksTimeout())
+		} else {
+			return explicitWaitForChunksTimeoutTimer
+		}
+	}
+
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
@@ -114,15 +148,31 @@ func newBlockSyncHarness() *blockSyncHarness {
 	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{
-		logger:    logger,
-		sf:        NewStateFactory(cfg, gossip, storage, conduit, logger, metricFactory),
-		ctx:       ctx,
-		ctxCancel: cancel,
-		config:    cfg,
-		gossip:    gossip,
-		storage:   storage,
-		m:         metricFactory,
+		logger:        logger,
+		factory:       NewStateFactory(cfg, gossip, storage, conduit, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
+		ctx:           ctx,
+		ctxCancel:     cancel,
+		config:        cfg,
+		gossip:        gossip,
+		storage:       storage,
+		metricFactory: metricFactory,
 	}
+}
+
+func newBlockSyncHarness() *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, nil, nil)
+}
+
+func newBlockSyncHarnessWithCollectResponsesTimer(manualTimer *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(manualTimer, nil, nil)
+}
+
+func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(manualTimer *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, manualTimer, nil)
+}
+
+func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(manualTimer *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, nil, manualTimer)
 }
 
 func (h *blockSyncHarness) withCtxTimeout(d time.Duration) *blockSyncHarness {
@@ -144,16 +194,6 @@ func (h *blockSyncHarness) waitForState(bs *BlockSync, desiredState syncState) b
 
 func (h *blockSyncHarness) withNodeKey(key primitives.Ed25519PublicKey) *blockSyncHarness {
 	h.config.pk = key
-	return h
-}
-
-func (h *blockSyncHarness) withNoCommitTimeout(duration time.Duration) *blockSyncHarness {
-	h.config.noCommit = duration
-	return h
-}
-
-func (h *blockSyncHarness) withWaitForChunksTimeout(duration time.Duration) *blockSyncHarness {
-	h.config.collectChunks = duration
 	return h
 }
 

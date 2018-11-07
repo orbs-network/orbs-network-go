@@ -9,12 +9,12 @@ import (
 )
 
 type collectingAvailabilityResponsesState struct {
-	sf             *stateFactory
-	gossipClient   *blockSyncGossipClient
-	collectTimeout func() time.Duration
-	logger         log.BasicLogger
-	conduit        *blockSyncConduit
-	m              collectingStateMetrics
+	factory                   *stateFactory
+	gossipClient              *blockSyncGossipClient
+	createCollectTimeoutTimer func() *synchronization.Timer
+	logger                    log.BasicLogger
+	conduit                   *blockSyncConduit
+	metrics                   collectingStateMetrics
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -27,7 +27,7 @@ func (s *collectingAvailabilityResponsesState) String() string {
 
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.m.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
 	responses := []*gossipmessages.BlockAvailabilityResponseMessage{}
 
@@ -35,16 +35,16 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	err := s.gossipClient.petitionerBroadcastBlockAvailabilityRequest(ctx)
 	if err != nil {
 		s.logger.Info("failed to broadcast block availability request", log.Error(err))
-		return s.sf.CreateIdleState()
+		return s.factory.CreateIdleState()
 	}
 
-	waitForResponses := synchronization.NewTimer(s.collectTimeout())
+	waitForResponses := s.createCollectTimeoutTimer()
 	for { // the forever is because of responses handling loop
 		select {
 		case <-waitForResponses.C:
-			s.m.timesSuccessful.Inc()
+			s.metrics.timesSuccessful.Inc()
 			s.logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
-			return s.sf.CreateFinishedCARState(responses)
+			return s.factory.CreateFinishedCARState(responses)
 		case r := <-s.conduit.responses:
 			responses = append(responses, r)
 		case <-ctx.Done():

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -53,7 +54,7 @@ type BlockSync struct {
 	storage      BlockSyncStorage
 	config       blockSyncConfig
 	currentState syncState
-	c            *blockSyncConduit
+	conduit      *blockSyncConduit
 
 	metrics *stateMachineMetrics
 }
@@ -79,13 +80,14 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 
 	bs := &BlockSync{
 		logger:  logger.WithTags(log.String("flow", "block-sync")),
-		sf:      NewStateFactory(config, gossip, storage, conduit, logger, factory),
 		gossip:  gossip,
 		storage: storage,
 		config:  config,
-		c:       conduit,
+		conduit: conduit,
 		metrics: metrics,
 	}
+
+	bs.sf = NewStateFactory(config, gossip, storage, conduit, bs.createCollectTimeoutTimer, bs.createNoCommitTimeoutTimer, bs.createWaitForChunksTimeoutTimer, logger, factory)
 
 	bs.logger.Info("block sync init",
 		log.Stringable("no-commit-timeout", bs.config.BlockSyncNoCommitInterval()),
@@ -98,6 +100,18 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	})
 
 	return bs
+}
+
+func (bs *BlockSync) createCollectTimeoutTimer() *synchronization.Timer {
+	return synchronization.NewTimer(bs.config.BlockSyncCollectResponseTimeout())
+}
+
+func (bs *BlockSync) createNoCommitTimeoutTimer() *synchronization.Timer {
+	return synchronization.NewTimer(bs.config.BlockSyncNoCommitInterval())
+}
+
+func (bs *BlockSync) createWaitForChunksTimeoutTimer() *synchronization.Timer {
+	return synchronization.NewTimer(bs.config.BlockSyncCollectChunksTimeout())
 }
 
 func (bs *BlockSync) syncLoop(ctx context.Context) {

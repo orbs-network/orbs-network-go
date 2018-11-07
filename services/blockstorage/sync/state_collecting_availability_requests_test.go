@@ -3,6 +3,7 @@ package sync
 import (
 	"errors"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,7 +19,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T)
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
-	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 	nextShouldBeIdle := collectingState.processState(h.ctx)
 
 	require.IsType(t, &idleState{}, nextShouldBeIdle, "should be idle on gossip error")
@@ -33,7 +34,7 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *tes
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(0)) // new server
 
-	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 	nextShouldBeIdle := collectingState.processState(h.ctx)
 
 	require.IsType(t, &idleState{}, nextShouldBeIdle, "should be idle on gossip flow error")
@@ -42,18 +43,19 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *tes
 }
 
 func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) {
-	h := newBlockSyncHarness()
+	manualCollectResponsesTimer := synchronization.NewTimerWithManualTick()
+	h := newBlockSyncHarnessWithCollectResponsesTimer(manualCollectResponsesTimer)
 
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	message := builders.BlockAvailabilityResponseInput().Build().Message
-	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 	nextState := h.processStateAndWaitUntilFinished(collectingState, func() {
 		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast was not sent out")
 		collectingState.gotAvailabilityResponse(h.ctx, message)
-
+		manualCollectResponsesTimer.ManualTick()
 	})
 
 	require.IsType(t, &finishedCARState{}, nextState, "state should transition to finished CAR")
@@ -73,7 +75,7 @@ func TestCollectingAvailabilityContextTermination(t *testing.T) {
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
-	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 	nextState := collectingState.processState(h.ctx)
 
 	require.Nil(t, nextState, "context terminated, next state should be nil")
@@ -85,7 +87,7 @@ func TestCollectingReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
 	h := newBlockSyncHarness()
 	h = h.withCtxTimeout(h.config.collectResponses / 2)
 
-	collectingState := h.sf.CreateCollectingAvailabilityResponseState()
+	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 	// not calling the process state will not activate the reader part
 	message := builders.BlockAvailabilityResponseInput().Build().Message
 	collectingState.gotAvailabilityResponse(h.ctx, message) // this will block if the test fails
@@ -94,7 +96,7 @@ func TestCollectingReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
 
 func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
 	h := newBlockSyncHarness()
-	car := h.sf.CreateCollectingAvailabilityResponseState()
+	car := h.factory.CreateCollectingAvailabilityResponseState()
 	// these calls should do nothing, this is just a sanity that they do not panic and return nothing
 	blockmessage := builders.BlockSyncResponseInput().Build().Message
 	car.gotBlocks(h.ctx, blockmessage)

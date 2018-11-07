@@ -3,12 +3,12 @@ package sync
 import (
 	"errors"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
@@ -17,7 +17,7 @@ func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
-	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
 
 	require.IsType(t, &idleState{}, nextState, "expecting back to idle on transport error")
@@ -31,7 +31,7 @@ func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
-	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
 
 	require.IsType(t, &idleState{}, nextState, "expecting back to idle on timeout")
@@ -40,16 +40,17 @@ func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 }
 
 func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
+	manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
 	blocksMessage := builders.BlockSyncResponseInput().Build().Message
-	h := newBlockSyncHarness().withNodeKey(blocksMessage.Sender.SenderPublicKey()).withWaitForChunksTimeout(time.Second)
+	h := newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(manualWaitForChunksTimer).withNodeKey(blocksMessage.Sender.SenderPublicKey())
 
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
-	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := h.processStateAndWaitUntilFinished(waitingState, func() {
-		time.Sleep(10 * time.Millisecond) // yield to make sure the state is fully 'running', cannot latch the internal goroutine
 		waitingState.gotBlocks(h.ctx, blocksMessage)
+		manualWaitForChunksTimer.ManualTick()
 	})
 
 	require.IsType(t, &processingBlocksState{}, nextState, "expecting to be at processing state after blocks arrived")
@@ -69,7 +70,7 @@ func TestWaitingTerminatesOnContextTermination(t *testing.T) {
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
-	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := waitingState.processState(h.ctx)
 
 	require.Nil(t, nextState, "context terminated, expected nil state")
@@ -84,7 +85,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
-	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 	nextState := h.processStateAndWaitUntilFinished(waitingState, func() {
 		waitingState.gotBlocks(h.ctx, blocksMessage)
 	})
@@ -97,7 +98,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 func TestWaitingDoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
 	h := newBlockSyncHarness()
 	h = h.withCtxTimeout(h.config.collectChunks / 2)
-	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 	messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
 	blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
 	waitingState.gotBlocks(h.ctx, blocksMessage) // we did not call process, so channel is not ready, test fails if this blocks
@@ -106,7 +107,7 @@ func TestWaitingDoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing
 
 func TestWaitingNOP(t *testing.T) {
 	h := newBlockSyncHarness()
-	waitingState := h.sf.CreateWaitingForChunksState(h.config.NodePublicKey())
+	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 
 	// this is sanity, these calls should do nothing
 	waitingState.gotAvailabilityResponse(h.ctx, nil)
