@@ -85,6 +85,8 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 
 func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
+	rsBlockHeader := input.BlockPair.ResultsBlock.Header
+
 	s.logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
@@ -92,7 +94,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 	}
 
 	// TODO there might be a non-idiomatic pattern here, but the commit block output is an empty struct, if that changes this should be refactored
-	if ok, err := s.validateBlockDoesNotExist(txBlockHeader); err != nil || !ok {
+	if ok, err := s.validateBlockDoesNotExist(txBlockHeader, rsBlockHeader); err != nil || !ok {
 		return nil, err
 	}
 
@@ -327,7 +329,7 @@ func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopi
 }
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
-func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader) (bool, error) {
+func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader, rsBlockHeader *protocol.ResultsBlockHeader) (bool, error) {
 	currentBlockHeight := s.LastCommittedBlockHeight()
 	attemptedBlockHeight := txBlockHeader.BlockHeight()
 
@@ -347,6 +349,11 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
 			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.TransactionsBlock.Header))
+			return false, errors.New(errorMessage)
+		} else if !rsBlockHeader.Equal(s.lastCommittedBlock.ResultsBlock.Header) {
+			errorMessage := "FORK!! block already in storage, results block header mismatch"
+			// fork found! this is a major error we must report to logs
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", rsBlockHeader), log.Stringable("existing-block", s.lastCommittedBlock.ResultsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 
