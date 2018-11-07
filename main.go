@@ -22,9 +22,7 @@ func getLogger(path string, silent bool) log.BasicLogger {
 		panic(err)
 	}
 
-	var stdout io.Writer
-	stdout = os.Stdout
-
+	var stdout io.Writer = os.Stdout
 	if silent {
 		stdout = ioutil.Discard
 	}

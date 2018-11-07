@@ -30,7 +30,7 @@ func (w *waiter) add(k string) *waiterChannel {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	var wcs waiterChannels
-	exists := false
+	var exists bool
 	if wcs, exists = w.m[k]; !exists {
 		wcs = make(waiterChannels)
 		w.m[k] = wcs

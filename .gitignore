@@ -80,9 +80,10 @@ fabric.properties
 
 # Logs
 *.log
-logs/
+_logs/
 
 # binaries
+_bin
 orbs-*
 .deploy.json
 devtools/gamma-server/json/*.json

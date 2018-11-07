@@ -143,7 +143,6 @@ var METHOD_INVALID_NO_ERROR = sdk.MethodInfo{
 }
 
 func (c *contract) invalidNoError(ctx sdk.Context) {
-	return
 }
 
 ///////////////////////////////////////////////////////////////////////////

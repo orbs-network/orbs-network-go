@@ -39,9 +39,9 @@ func TestE2EStress(t *testing.T) {
 				amount := uint64(rand.Intn(10))
 
 				transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
-				_, err := h.sendTransaction(transfer)
+				_, err2 := h.sendTransaction(transfer)
 
-				if err != nil {
+				if err2 != nil {
 					t.Logf("error sending transaction %s\n", err)
 				}
 			}()

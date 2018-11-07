@@ -162,6 +162,9 @@ func convertMethodArgument(arg *protocol.MethodArgument) JSONMethodArgument {
 
 func SendTransaction(transferJson *JSONTransaction, keyPair *keys.Ed25519KeyPair, serverUrl string, logVerbose bool) (*SendTransactionOutput, error) {
 	tx, err := ConvertAndSignTransaction(transferJson, keyPair)
+	if err != nil {
+		return nil, err
+	}
 
 	if logVerbose {
 		log.GetLogger().Info("sending transaction", log.Stringable("transaction", tx.Build()))

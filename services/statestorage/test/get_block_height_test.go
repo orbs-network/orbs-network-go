@@ -22,7 +22,7 @@ func TestInitToZero(t *testing.T) {
 func TestReflectsSuccessfulCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
-		heightBefore, _, err := d.GetBlockHeightAndTimestamp(ctx)
+		heightBefore, _, _ := d.GetBlockHeightAndTimestamp(ctx)
 		d.service.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithBlockTimestamp(6579).WithDiff(builders.ContractStateDiff().Build()).Build())
 		heightAfter, timestampAfter, err := d.GetBlockHeightAndTimestamp(ctx)
 
@@ -38,7 +38,7 @@ func TestIgnoreFailedCommit(t *testing.T) {
 		stateDiff := builders.ContractStateDiff().Build()
 		d.service.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithDiff(stateDiff).Build())
 		d.service.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(2).WithDiff(stateDiff).Build())
-		heightBefore, _, err := d.GetBlockHeightAndTimestamp(ctx)
+		heightBefore, _, _ := d.GetBlockHeightAndTimestamp(ctx)
 		d.service.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithDiff(stateDiff).Build())
 		heightAfter, _, err := d.GetBlockHeightAndTimestamp(ctx)
 

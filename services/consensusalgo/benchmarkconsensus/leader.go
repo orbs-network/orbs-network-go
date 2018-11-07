@@ -48,7 +48,7 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	}
 }
 
-func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
+func (s *service) leaderConsensusRoundTick(ctx context.Context) (error) {
 	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
 
 	// check if we need to move to next block
@@ -74,7 +74,7 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) (err error) {
 	}
 
 	// broadcast the commit via gossip for last committed block
-	err = s.leaderBroadcastCommittedBlock(ctx, _lastCommittedBlock)
+	err := s.leaderBroadcastCommittedBlock(ctx, _lastCommittedBlock)
 	if err != nil {
 		return err
 	}

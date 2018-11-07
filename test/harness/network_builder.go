@@ -104,11 +104,10 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 }
 
 func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
-	var output io.Writer
-	output = os.Stdout
+	var output io.Writer = os.Stdout
 
 	if os.Getenv("NO_LOG_STDOUT") == "true" {
-		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			panic(err)
 		}

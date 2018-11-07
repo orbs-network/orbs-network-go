@@ -187,6 +187,6 @@ func (s *semaphore) dec() {
 }
 
 func (s *semaphore) waitUntilZero() {
-	for _ = range s.c {
+	for range s.c {
 	}
 }

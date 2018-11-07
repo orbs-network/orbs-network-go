@@ -1,5 +1,5 @@
 #!/bin/sh -x
 
-bzip2 logs/*.out
+bzip2 _logs/*.out
 
-tar jcvf logs/acceptance.tar.bz2 logs/acceptance/ && rm -rf logs/acceptance
+tar jcvf _logs/acceptance.tar.bz2 _logs/acceptance/ && rm -rf _logs/acceptance
