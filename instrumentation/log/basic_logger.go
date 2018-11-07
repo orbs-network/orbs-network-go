@@ -31,7 +31,7 @@ func GetLogger(params ...*Field) BasicLogger {
 	logger := &basicLogger{
 		tags:         params,
 		nestingLevel: 4,
-		outputs:      []Output{&basicOutput{writer: os.Stdout, formatter: NewJsonFormatter()}},
+		outputs:      []Output{&basicOutput{writer: os.Stdout, formatter: NewHumanReadableFormatter()}},
 	}
 
 	fpcs := make([]uintptr, 2)
