@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"testing"
+	"time"
 )
 
 // this test should not run in parallel with any other test (even package parallel) since it's examining shared global system state (num goroutines)
