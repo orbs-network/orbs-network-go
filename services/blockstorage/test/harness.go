@@ -149,6 +149,16 @@ func (d *harness) withSyncNoCommitTimeout(duration time.Duration) *harness {
 	return d
 }
 
+func (d *harness) withSyncCollectResponsesTimeout(duration time.Duration) *harness {
+	d.config.(*configForBlockStorageTests).syncCollectResponses = duration
+	return d
+}
+
+func (d *harness) withSyncCollectChunksTimeout(duration time.Duration) *harness {
+	d.config.(*configForBlockStorageTests).syncCollectChunks = duration
+	return d
+}
+
 func (d *harness) withBatchSize(size uint32) *harness {
 	d.config.(*configForBlockStorageTests).syncBatchSize = size
 	return d
