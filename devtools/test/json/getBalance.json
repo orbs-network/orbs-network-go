@@ -1,0 +1,1 @@
+{"ContractName":"BenchmarkToken","MethodName":"getBalance","Arguments":[{"Name":"targetAddress","Type":"bytes","Value":"e07a5b1541638deba341dcc7b7c4994b0d3beaab"}]}

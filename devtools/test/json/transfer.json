@@ -1,0 +1,1 @@
+{"ContractName":"BenchmarkToken","MethodName":"transfer","Arguments":[{"Name":"amount","Type":"uint64","Value":42},{"Name":"targetAddress","Type":"bytes","Value":"e07a5b1541638deba341dcc7b7c4994b0d3beaab"}]}

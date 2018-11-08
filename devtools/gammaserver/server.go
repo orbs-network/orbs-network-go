@@ -1,4 +1,4 @@
-package gammacli
+package gammaserver
 
 import (
 	"context"
