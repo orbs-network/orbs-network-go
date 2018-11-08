@@ -12,8 +12,8 @@ import (
 func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
 	federationNodes := s.config.FederationNodes(uint64(input.BlockHeight))
 	federationNodesPublicKeys := toAscendingPublicKeys(federationNodes)
-	committeeSize := CalculateCommitteeSize(input.MaxCommitteeSize, s.config.ConsensusMinimumCommitteeSize(), uint32(len(federationNodesPublicKeys)))
-	indices := ChooseRandomCommitteeIndices(committeeSize, input.RandomSeed)
+	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.ConsensusMinimumCommitteeSize(), uint32(len(federationNodesPublicKeys)))
+	indices := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed)
 
 	committeePublicKeys := make([]primitives.Ed25519PublicKey, len(indices))
 	for i, index := range indices {
@@ -45,7 +45,7 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	return s.RequestOrderingCommittee(ctx, input)
 }
 
-func CalculateCommitteeSize(requestedCommitteeSize uint32, minimumCommitteeSize uint32, federationSize uint32) uint32 {
+func calculateCommitteeSize(requestedCommitteeSize uint32, minimumCommitteeSize uint32, federationSize uint32) uint32 {
 
 	if federationSize < minimumCommitteeSize {
 		panic(fmt.Sprintf("config error: federation size %d cannot be less than minimum committee size %d", federationSize, minimumCommitteeSize))
@@ -62,7 +62,7 @@ func CalculateCommitteeSize(requestedCommitteeSize uint32, minimumCommitteeSize 
 }
 
 // Smart algo!
-func ChooseRandomCommitteeIndices(committeeSize uint32, randomSeed uint64) []uint32 {
+func chooseRandomCommitteeIndices(committeeSize uint32, randomSeed uint64) []uint32 {
 	indices := make([]uint32, committeeSize)
 	for i := 0; i < int(committeeSize); i++ {
 		indices[i] = uint32(i)

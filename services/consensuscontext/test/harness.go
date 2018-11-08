@@ -85,6 +85,7 @@ func newHarness() *harness {
 	}
 
 	cfg := config.ForConsensusContextTests(federationNodes)
+
 	metricFactory := metric.NewRegistry()
 
 	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,

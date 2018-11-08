@@ -25,7 +25,7 @@ func TestRequestOrderingCommittee(t *testing.T) {
 	blockHeight := primitives.BlockHeight(1)
 	federationSize := len(h.config.FederationNodes(uint64(blockHeight)))
 
-	t.Run("if committee size <= federation size, then return same count of committee members as requested by config", func(t *testing.T) {
+	t.Run("if MaxCommitteeSize <= federationSize, then return MaxCommitteeSize members", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{
 			BlockHeight:      blockHeight,
 			RandomSeed:       0,
@@ -38,7 +38,7 @@ func TestRequestOrderingCommittee(t *testing.T) {
 		actualFederationSize := len(output.NodePublicKeys)
 		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
 	})
-	t.Run("if committee size > federation size, then return all federation members", func(t *testing.T) {
+	t.Run("if MaxCommitteeSize > federationSize, then return all federation members (federationSize)", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{
 			BlockHeight:      blockHeight,
 			RandomSeed:       0,
@@ -51,20 +51,4 @@ func TestRequestOrderingCommittee(t *testing.T) {
 		actualFederationSize := len(output.NodePublicKeys)
 		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
 	})
-}
-
-// cc implements this
-func TestRequestValidationCommittee(t *testing.T) {
-	// Same as prev one
-}
-
-//// Tests for RequestNewTransactionsBlock
-// cc implements this
-func TestRequestNewTransactionsBlockXXX(t *testing.T) {
-	// Same as prev one
-}
-
-// cc implements this
-func TestRequestNewResultsBlockXXX(t *testing.T) {
-	// Same as prev one
 }
