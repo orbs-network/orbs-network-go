@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -13,7 +14,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
+func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inProcessNetwork {
 	numNodes := 2
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
 	logger.Info("creating development network")
@@ -29,7 +30,7 @@ func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(logger, federationNodes)
+	sharedTransport := gossipAdapter.NewTamperingTransport(logger, federationNodes)
 
 	nodes := make([]*networkNode, numNodes)
 	for i := range nodes {
@@ -56,12 +57,14 @@ func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
 		nodes[i] = node
 	}
 
-	return &inProcessNetwork{
+	network := &inProcessNetwork{
 		nodes:           nodes,
-		gossipTransport: sharedTamperingTransport,
+		gossipTransport: sharedTransport,
 		description:     description,
 		testLogger:      logger,
 	}
 
-	// must call network.Start(ctx) to actually start the nodes in the network
+	network.Start(ctx) // must call network.Start(ctx) to actually start the nodes in the network
+
+	return network
 }

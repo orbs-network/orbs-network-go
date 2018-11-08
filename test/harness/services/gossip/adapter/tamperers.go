@@ -36,7 +36,7 @@ func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.Tra
 	if o.predicate(data) {
 		supervised.GoOnce(o.transport.logger, func() {
 			time.Sleep(10 * time.Millisecond)
-			o.transport.sendToPeers(data)
+			o.transport.sendToPeers(ctx, data)
 		})
 	}
 	return nil, false
@@ -56,7 +56,7 @@ func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.Transp
 	if o.predicate(data) {
 		supervised.GoOnce(o.transport.logger, func() {
 			time.Sleep(o.duration())
-			o.transport.sendToPeers(data)
+			o.transport.sendToPeers(ctx, data)
 		})
 		return nil, true
 	}

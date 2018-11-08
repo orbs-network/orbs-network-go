@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"sync"
 	"time"
 )
@@ -59,10 +58,7 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	peers struct {
-		sync.RWMutex
-		byPublicKey map[string]*peer
-	}
+	peers adapter.Transport
 
 	tamperers struct {
 		sync.RWMutex
@@ -80,24 +76,15 @@ func NewTamperingTransport(logger log.BasicLogger, federationNodes map[string]co
 		federation: federationNodes,
 	}
 
-	t.peers.byPublicKey = make(map[string]*peer)
-
 	return t
 }
 
 func (t *tamperingTransport) Start(ctx context.Context) {
-	t.peers.Lock()
-	defer t.peers.Unlock()
-	for _, node := range t.federation {
-		key := node.NodePublicKey().KeyForMap()
-		t.peers.byPublicKey[key] = newPeer(ctx, t.logger.WithTags(log.String("peer-listener", key)))
-	}
+	t.peers = NewChannelTransport(ctx, t.logger, t.federation)
 }
 
 func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
-	t.peers.Lock()
-	defer t.peers.Unlock()
-	t.peers.byPublicKey[string(listenerPublicKey)].attach(listener)
+	t.peers.RegisterListener(listener, listenerPublicKey)
 }
 
 func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
@@ -108,7 +95,7 @@ func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 	}
 
 	supervised.GoOnce(t.logger, func() {
-		t.sendToPeers(data)
+		t.sendToPeers(ctx, data)
 	})
 
 	return nil
@@ -193,24 +180,8 @@ func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 	panic("Tamperer not found in ongoing tamperer list")
 }
 
-func (t *tamperingTransport) sendToPeers(data *adapter.TransportData) {
-	switch data.RecipientMode {
-
-	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for key, peer := range t.peers.byPublicKey {
-			if key != data.SenderPublicKey.KeyForMap() {
-				peer.send(data.Payloads)
-			}
-		}
-
-	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
-		for _, k := range data.RecipientPublicKeys {
-			t.peers.byPublicKey[k.KeyForMap()].send(data.Payloads)
-		}
-
-	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
-		panic("Not implemented")
-	}
+func (t *tamperingTransport) sendToPeers(ctx context.Context, data *adapter.TransportData) {
+	t.peers.Send(ctx, data)
 }
 
 func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
