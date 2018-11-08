@@ -10,22 +10,7 @@ import (
 )
 
 func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	federationNodes := s.config.FederationNodes(uint64(input.BlockHeight))
-	federationNodesPublicKeys := toAscendingPublicKeys(federationNodes)
-	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.ConsensusMinimumCommitteeSize(), uint32(len(federationNodesPublicKeys)))
-	indices := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed)
-
-	committeePublicKeys := make([]primitives.Ed25519PublicKey, len(indices))
-	for i, index := range indices {
-		committeePublicKeys[i] = primitives.Ed25519PublicKey(federationNodesPublicKeys[int(index)])
-	}
-
-	res := &services.RequestCommitteeOutput{
-		NodePublicKeys:           committeePublicKeys,
-		NodeRandomSeedPublicKeys: nil,
-	}
-
-	return res, nil
+	return s.RequestOrderingCommittee(ctx, input)
 }
 
 func toAscendingPublicKeys(nodes map[string]config.FederationNode) []string {
@@ -42,7 +27,22 @@ func toAscendingPublicKeys(nodes map[string]config.FederationNode) []string {
 
 // TODO Pending a different impl if necessary
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	return s.RequestOrderingCommittee(ctx, input)
+	federationNodes := s.config.FederationNodes(uint64(input.BlockHeight))
+	federationNodesPublicKeys := toAscendingPublicKeys(federationNodes)
+	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.ConsensusMinimumCommitteeSize(), uint32(len(federationNodesPublicKeys)))
+	indices := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed)
+
+	committeePublicKeys := make([]primitives.Ed25519PublicKey, len(indices))
+	for i, index := range indices {
+		committeePublicKeys[i] = primitives.Ed25519PublicKey(federationNodesPublicKeys[int(index)])
+	}
+
+	res := &services.RequestCommitteeOutput{
+		NodePublicKeys:           committeePublicKeys,
+		NodeRandomSeedPublicKeys: nil,
+	}
+
+	return res, nil
 }
 
 func calculateCommitteeSize(requestedCommitteeSize uint32, minimumCommitteeSize uint32, federationSize uint32) uint32 {
