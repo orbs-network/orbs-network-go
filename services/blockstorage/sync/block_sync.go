@@ -125,26 +125,32 @@ func (bs *BlockSync) syncLoop(ctx context.Context) {
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncNoCommitInterval()/2)
-	if bs.currentState != nil {
-		bs.currentState.blockCommitted(ctx)
+	defer cancel()
+
+	cs := bs.currentState // careful! we're reading a shared variable here from a different goroutine
+	if cs != nil {
+		cs.blockCommitted(ctx)
 	}
-	cancel()
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectResponseTimeout()/2)
-	if bs.currentState != nil {
-		bs.currentState.gotAvailabilityResponse(ctx, input.Message)
+	defer cancel()
+
+	cs := bs.currentState // careful! we're reading a shared variable here from a different goroutine
+	if cs != nil {
+		cs.gotAvailabilityResponse(ctx, input.Message)
 	}
-	cancel()
 	return nil, nil
 }
 
 func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectChunksTimeout()/2)
-	if bs.currentState != nil {
-		bs.currentState.gotBlocks(ctx, input.Message)
+	defer cancel()
+
+	cs := bs.currentState // careful! we're reading a shared variable here from a different goroutine
+	if cs != nil {
+		cs.gotBlocks(ctx, input.Message)
 	}
-	cancel()
 	return nil, nil
 }
