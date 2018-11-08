@@ -26,13 +26,11 @@ func TestBlockSync(t *testing.T) {
 				network.BlockPersistence(0).WriteNextBlock(blockPair)
 
 			}
+
+			numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
+			require.NoError(t, err)
+			require.Zero(t, numBlocks)
 		}).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-
-		// TODO: isn't this check flaky? because sync could have happened theoretically before this line runs
-		numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
-		require.NoError(t, err)
-		require.Zero(t, numBlocks)
-
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}
