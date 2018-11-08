@@ -13,7 +13,7 @@ import (
 
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	t.Skip("putting lean helix on hold until external library is integrated")
-	harness.Network(t).WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
+	harness.Network(t).WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		contract := network.GetBenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
@@ -44,7 +44,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 	harness.Network(t).WithMaxTxPerBlock(1).
-		Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+		Start(func(parent context.Context, network harness.TestNetworkDriver) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 

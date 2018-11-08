@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
+	inProcessAdapter "github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -69,7 +70,7 @@ func aChannelTransport(ctx context.Context) *transportContractContext {
 
 	logger := log.GetLogger(log.String("adapter", "transport"))
 
-	transport := NewChannelTransport(ctx, logger, federationNodes)
+	transport := inProcessAdapter.NewChannelTransport(ctx, logger, federationNodes)
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
 	res.listeners = []*mockListener{
 		listenTo(res.transports[0], res.publicKeys[0]),

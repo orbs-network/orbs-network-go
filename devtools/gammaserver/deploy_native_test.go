@@ -1,26 +1,22 @@
-package development
+package gammaserver
 
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
-// Gamma is based on harness.NewDevelopmentNetwork instead of harness.NewAcceptanceTestNetwork
-// NewDevelopmentNetwork is almost identical to NewAcceptanceTestNetwork (in-memory adapters) except it uses real compilation (real processor/native/adapter)
-// this test is very similar to the acceptance test, just checks contract deployment with real compilation
 func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		network := harness.NewDevelopmentNetwork(ctx, log.GetLogger())
+		network := NewDevelopmentNetwork(ctx, log.GetLogger())
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 

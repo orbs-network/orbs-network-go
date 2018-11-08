@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"os"
 	"sync"
 	"time"
@@ -31,7 +30,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 			log.IgnoreMessagesMatching("no responses received"),
 		)
 
-	network := harness.NewDevelopmentNetwork(ctx, testLogger)
+	network := NewDevelopmentNetwork(ctx, testLogger)
 	testLogger.Info("finished creating development network")
 
 	metricRegistry := metric.NewRegistry()

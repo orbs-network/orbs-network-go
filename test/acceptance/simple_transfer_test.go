@@ -12,7 +12,7 @@ import (
 )
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -43,7 +43,7 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 

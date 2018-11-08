@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
+	inProcessAdapter "github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -76,7 +77,7 @@ func NewTamperingTransport(logger log.BasicLogger, federationNodes map[string]co
 }
 
 func (t *TamperingTransport) Start(ctx context.Context) {
-	t.nested = NewChannelTransport(ctx, t.logger, t.federation)
+	t.nested = inProcessAdapter.NewChannelTransport(ctx, t.logger, t.federation)
 }
 
 func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
