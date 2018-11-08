@@ -15,7 +15,7 @@ import (
 
 type tamperingHarness struct {
 	senderKey string
-	transport TamperingTransport
+	transport *TamperingTransport
 	listener  *mockListener
 }
 

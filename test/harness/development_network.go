@@ -14,11 +14,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inProcessNetwork {
+func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) InProcessNetwork {
 	numNodes := 2
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
 	logger.Info("creating development network")
-	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
@@ -30,7 +29,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inProce
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
-	sharedTransport := gossipAdapter.NewTamperingTransport(logger, federationNodes)
+	sharedTransport := gossipAdapter.NewChannelTransport(ctx, logger, federationNodes)
 
 	nodes := make([]*networkNode, numNodes)
 	for i := range nodes {
@@ -58,13 +57,12 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inProce
 	}
 
 	network := &inProcessNetwork{
-		nodes:           nodes,
-		gossipTransport: sharedTransport,
-		description:     description,
-		testLogger:      logger,
+		nodes:     nodes,
+		logger:    logger,
+		transport: sharedTransport,
 	}
 
-	network.Start(ctx) // must call network.Start(ctx) to actually start the nodes in the network
+	network.createAndStartNodes(ctx) // must call network.Start(ctx) to actually start the nodes in the network
 
 	return network
 }

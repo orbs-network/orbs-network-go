@@ -21,7 +21,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		network.GossipTransport().Duplicate(AnyNthMessage(7))
+		network.TransportTamperer().Duplicate(AnyNthMessage(7))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
 	})
@@ -31,7 +31,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 	harness.Network(t).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
+		network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
 	})
@@ -42,7 +42,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 
-		network.GossipTransport().Delay(func() time.Duration {
+		network.TransportTamperer().Delay(func() time.Duration {
 			return (time.Duration(rand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
 		}, AnyNthMessage(2))
 
@@ -56,7 +56,7 @@ func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *
 		ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 		defer cancel()
 
-		network.GossipTransport().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
+		network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
 	})

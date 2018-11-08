@@ -13,11 +13,7 @@ import (
 
 // The TamperingTransport is an in-memory implementation of the Gossip Transport adapter, that adds the ability
 // to tamper with the messages or to synchronize the test's goroutine with the SUT's goroutines
-type TamperingTransport interface {
-	adapter.Transport
-
-	// Starts sending traffic between nodes
-	Start(ctx context.Context)
+type Tamperer interface {
 
 	// Creates an ongoing tamper which fails messages matching the given predicate, returning an error object to the sender.
 	// This is useful to emulate network errors, for instance
@@ -57,8 +53,8 @@ type LatchingTamper interface {
 	Remove()
 }
 
-type tamperingTransport struct {
-	peers adapter.Transport
+type TamperingTransport struct {
+	nested adapter.Transport
 
 	tamperers struct {
 		sync.RWMutex
@@ -70,8 +66,8 @@ type tamperingTransport struct {
 	federation map[string]config.FederationNode
 }
 
-func NewTamperingTransport(logger log.BasicLogger, federationNodes map[string]config.FederationNode) TamperingTransport {
-	t := &tamperingTransport{
+func NewTamperingTransport(logger log.BasicLogger, federationNodes map[string]config.FederationNode) *TamperingTransport {
+	t := &TamperingTransport{
 		logger: logger.WithTags(log.String("adapter", "transport")),
 		federation: federationNodes,
 	}
@@ -79,15 +75,15 @@ func NewTamperingTransport(logger log.BasicLogger, federationNodes map[string]co
 	return t
 }
 
-func (t *tamperingTransport) Start(ctx context.Context) {
-	t.peers = NewChannelTransport(ctx, t.logger, t.federation)
+func (t *TamperingTransport) Start(ctx context.Context) {
+	t.nested = NewChannelTransport(ctx, t.logger, t.federation)
 }
 
-func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
-	t.peers.RegisterListener(listener, listenerPublicKey)
+func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
+	t.nested.RegisterListener(listener, listenerPublicKey)
 }
 
-func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
+func (t *TamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
 	t.releaseLatches(data)
 
 	if err, shouldReturn := t.maybeTamper(ctx, data); shouldReturn {
@@ -101,7 +97,7 @@ func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 	return nil
 }
 
-func (t *tamperingTransport) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+func (t *TamperingTransport) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	t.tamperers.RLock()
 	defer t.tamperers.RUnlock()
 	for _, o := range t.tamperers.ongoingTamperers {
@@ -114,27 +110,27 @@ func (t *tamperingTransport) maybeTamper(ctx context.Context, data *adapter.Tran
 
 }
 
-func (t *tamperingTransport) Pause(predicate MessagePredicate) OngoingTamper {
+func (t *TamperingTransport) Pause(predicate MessagePredicate) OngoingTamper {
 	return t.addTamperer(&pausingTamperer{predicate: predicate, transport: t, lock: &sync.Mutex{}})
 }
 
-func (t *tamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
+func (t *TamperingTransport) Fail(predicate MessagePredicate) OngoingTamper {
 	return t.addTamperer(&failingTamperer{predicate: predicate, transport: t})
 }
 
-func (t *tamperingTransport) Duplicate(predicate MessagePredicate) OngoingTamper {
+func (t *TamperingTransport) Duplicate(predicate MessagePredicate) OngoingTamper {
 	return t.addTamperer(&duplicatingTamperer{predicate: predicate, transport: t})
 }
 
-func (t *tamperingTransport) Corrupt(predicate MessagePredicate) OngoingTamper {
+func (t *TamperingTransport) Corrupt(predicate MessagePredicate) OngoingTamper {
 	return t.addTamperer(&corruptingTamperer{predicate: predicate, transport: t})
 }
 
-func (t *tamperingTransport) Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper {
+func (t *TamperingTransport) Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper {
 	return t.addTamperer(&delayingTamperer{predicate: predicate, transport: t, duration: duration})
 }
 
-func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper {
+func (t *TamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper {
 	tamperer := &latchingTamperer{predicate: predicate, transport: t, cond: sync.NewCond(&sync.Mutex{})}
 	t.tamperers.Lock()
 	defer t.tamperers.Unlock()
@@ -144,7 +140,7 @@ func (t *tamperingTransport) LatchOn(predicate MessagePredicate) LatchingTamper 
 	return tamperer
 }
 
-func (t *tamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
+func (t *TamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 	t.tamperers.Lock()
 	defer t.tamperers.Unlock()
 	a := t.tamperers.ongoingTamperers
@@ -162,7 +158,7 @@ func (t *tamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 	panic("Tamperer not found in ongoing tamperer list")
 }
 
-func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
+func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
 	t.tamperers.Lock()
 	defer t.tamperers.Unlock()
 	a := t.tamperers.latches
@@ -180,11 +176,11 @@ func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 	panic("Tamperer not found in ongoing tamperer list")
 }
 
-func (t *tamperingTransport) sendToPeers(ctx context.Context, data *adapter.TransportData) {
-	t.peers.Send(ctx, data)
+func (t *TamperingTransport) sendToPeers(ctx context.Context, data *adapter.TransportData) {
+	t.nested.Send(ctx, data)
 }
 
-func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
+func (t *TamperingTransport) releaseLatches(data *adapter.TransportData) {
 	t.tamperers.RLock()
 	defer t.tamperers.RUnlock()
 
@@ -195,7 +191,7 @@ func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
 	}
 }
 
-func (t *tamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
+func (t *TamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
 	t.tamperers.Lock()
 	defer t.tamperers.Unlock()
 	t.tamperers.ongoingTamperers = append(t.tamperers.ongoingTamperers, tamperer)

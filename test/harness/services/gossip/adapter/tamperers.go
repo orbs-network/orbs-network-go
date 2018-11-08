@@ -12,7 +12,7 @@ import (
 
 type failingTamperer struct {
 	predicate MessagePredicate
-	transport *tamperingTransport
+	transport *TamperingTransport
 }
 
 func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
@@ -29,7 +29,7 @@ func (o *failingTamperer) Release(ctx context.Context) {
 
 type duplicatingTamperer struct {
 	predicate MessagePredicate
-	transport *tamperingTransport
+	transport *TamperingTransport
 }
 
 func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
@@ -48,7 +48,7 @@ func (o *duplicatingTamperer) Release(ctx context.Context) {
 
 type delayingTamperer struct {
 	predicate MessagePredicate
-	transport *tamperingTransport
+	transport *TamperingTransport
 	duration  func() time.Duration
 }
 
@@ -70,7 +70,7 @@ func (o *delayingTamperer) Release(ctx context.Context) {
 
 type corruptingTamperer struct {
 	predicate MessagePredicate
-	transport *tamperingTransport
+	transport *TamperingTransport
 }
 
 func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
@@ -90,7 +90,7 @@ func (o *corruptingTamperer) Release(ctx context.Context) {
 
 type pausingTamperer struct {
 	predicate MessagePredicate
-	transport *tamperingTransport
+	transport *TamperingTransport
 	messages  []*adapter.TransportData
 	lock      *sync.Mutex
 }
@@ -116,7 +116,7 @@ func (o *pausingTamperer) Release(ctx context.Context) {
 
 type latchingTamperer struct {
 	predicate MessagePredicate
-	transport *tamperingTransport
+	transport *TamperingTransport
 	cond      *sync.Cond
 }
 

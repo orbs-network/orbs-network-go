@@ -18,8 +18,8 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 		contract := network.GetBenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
-		prePrepareLatch := network.GossipTransport().LatchOn(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
-		prePrepareTamper := network.GossipTransport().Fail(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
+		prePrepareLatch := network.TransportTamperer().LatchOn(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
+		prePrepareTamper := network.TransportTamperer().Fail(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
 		<-contract.SendTransfer(ctx, 0, 17, 5, 6)
 
 		prePrepareLatch.Wait()
@@ -51,9 +51,9 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			contract := network.GetBenchmarkTokenContract()
 			contract.DeployBenchmarkToken(ctx, 5)
 
-			committedTamper := network.GossipTransport().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
-			blockSyncTamper := network.GossipTransport().Fail(adapter.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
-			committedLatch := network.GossipTransport().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+			committedTamper := network.TransportTamperer().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+			blockSyncTamper := network.TransportTamperer().Fail(adapter.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
+			committedLatch := network.TransportTamperer().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 
 			contract.SendTransferInBackground(ctx, 0, 0, 5, 6) // send a transaction so that network advances to block 1. the tamper prevents COMMITTED messages from reaching leader, so it doesn't move to block 2
 			committedLatch.Wait()                              // wait for validator to try acknowledge that it reached block 1 (and fail)

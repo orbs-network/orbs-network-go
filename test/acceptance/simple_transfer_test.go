@@ -52,7 +52,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 
-		pausedTxForwards := network.GossipTransport().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
+		pausedTxForwards := network.TransportTamperer().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		txHash := contract.SendTransferInBackground(ctx, 1, 17, 5, 6)
 
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 2); err != nil {
