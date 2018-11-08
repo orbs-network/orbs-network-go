@@ -31,7 +31,6 @@ func TestContract_SendToAllButList(t *testing.T) {
 
 func broadcastTest(makeContext func(ctx context.Context) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
-		t.Parallel()
 		test.WithContext(func(ctx context.Context) {
 			c := makeContext(ctx)
 

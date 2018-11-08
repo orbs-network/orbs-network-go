@@ -8,20 +8,19 @@ import (
 )
 
 type peer struct {
-	listener adapter.TransportListener
 	socket   chan [][]byte
+	listener chan adapter.TransportListener
 }
 
 func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket:make(chan [][]byte)}
+	p := &peer{socket:make(chan [][]byte), listener: make(chan adapter.TransportListener)}
 
-	ctx, cancel := context.WithCancel(bgCtx)
-	defer cancel()
-	supervised.GoForever(ctx, logger, func() {
+	supervised.GoForever(bgCtx, logger, func() {
+		// wait till we have a listener attached
 		select {
-		case payloads := <-p.socket:
-			p.listener.OnTransportMessageReceived(ctx, payloads)
-		case <-ctx.Done():
+		case l := <-p.listener:
+			p.acceptUsing(bgCtx, l)
+		case <-bgCtx.Done():
 			return
 		}
 	})
@@ -29,11 +28,22 @@ func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
 	return p
 }
 
+func (p *peer) attach(listener adapter.TransportListener) {
+	p.listener <- listener
+}
+
 func (p *peer) send(payloads [][]byte) {
-	//select {
-	//case p.socket <- payloads:
-	//default:
-	//	// maybe listener is not yet ready
-	//}
+	p.socket <- payloads
+}
+
+func (p *peer) acceptUsing(ctx context.Context, listener adapter.TransportListener) {
+	for {
+		select {
+		case payloads := <-p.socket:
+			listener.OnTransportMessageReceived(ctx, payloads)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 

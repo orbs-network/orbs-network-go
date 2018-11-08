@@ -105,7 +105,7 @@ func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener
 
 	t.peers.Lock()
 	defer t.peers.Unlock()
-	t.peers.byPublicKey[string(listenerPublicKey)].listener = listener
+	t.peers.byPublicKey[string(listenerPublicKey)].attach(listener)
 }
 
 func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
@@ -202,13 +202,20 @@ func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 }
 
 func (t *tamperingTransport) receive(ctx context.Context, data *adapter.TransportData) {
+	useChannels := true
+	if useChannels {
+		t.sendToPeers(data)
+
+	} else {
+		t.receiveUsingOldMethod(data, ctx)
+	}
+
+}
+
+func (t *tamperingTransport) sendToPeers(data *adapter.TransportData) {
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for _, l := range t.getTransportListenersExceptPublicKeys(data.SenderPublicKey) {
-			l.OnTransportMessageReceived(ctx, data.Payloads)
-		}
-
 		for key, peer := range t.peers.byPublicKey {
 			if key != data.SenderPublicKey.KeyForMap() {
 				peer.send(data.Payloads)
@@ -216,10 +223,6 @@ func (t *tamperingTransport) receive(ctx context.Context, data *adapter.Transpor
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
-		for _, l := range t.getTransportListenersByPublicKeys(data.RecipientPublicKeys) {
-			l.OnTransportMessageReceived(ctx, data.Payloads)
-		}
-
 		for _, k := range data.RecipientPublicKeys {
 			t.peers.byPublicKey[k.KeyForMap()].send(data.Payloads)
 		}
@@ -227,7 +230,24 @@ func (t *tamperingTransport) receive(ctx context.Context, data *adapter.Transpor
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
 		panic("Not implemented")
 	}
+}
 
+func (t *tamperingTransport) receiveUsingOldMethod(data *adapter.TransportData, ctx context.Context) {
+	switch data.RecipientMode {
+
+	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
+		for _, l := range t.getTransportListenersExceptPublicKeys(data.SenderPublicKey) {
+			l.OnTransportMessageReceived(ctx, data.Payloads)
+		}
+
+	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
+		for _, l := range t.getTransportListenersByPublicKeys(data.RecipientPublicKeys) {
+			l.OnTransportMessageReceived(ctx, data.Payloads)
+		}
+
+	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
+		panic("Not implemented")
+	}
 }
 
 func (t *tamperingTransport) getTransportListenersExceptPublicKeys(exceptPublicKey primitives.Ed25519PublicKey) (listeners []adapter.TransportListener) {
@@ -274,3 +294,4 @@ func (t *tamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
 	t.tamperers.ongoingTamperers = append(t.tamperers.ongoingTamperers, tamperer)
 	return tamperer
 }
+
