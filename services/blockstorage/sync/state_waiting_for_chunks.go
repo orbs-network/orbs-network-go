@@ -11,14 +11,14 @@ import (
 )
 
 type waitingForChunksState struct {
-	factory                         *stateFactory
-	sourceKey                       primitives.Ed25519PublicKey
-	gossipClient                    *blockSyncGossipClient
-	createWaitForChunksTimeoutTimer func() *synchronization.Timer
-	logger                          log.BasicLogger
-	abort                           chan struct{}
-	conduit                         *blockSyncConduit
-	metrics                         waitingStateMetrics
+	factory      *stateFactory
+	sourceKey    primitives.Ed25519PublicKey
+	gossipClient *blockSyncGossipClient
+	createTimer  func() *synchronization.Timer
+	logger       log.BasicLogger
+	abort        chan struct{}
+	conduit      *blockSyncConduit
+	metrics      waitingStateMetrics
 }
 
 func (s *waitingForChunksState) name() string {
@@ -39,7 +39,7 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 		return s.factory.CreateIdleState()
 	}
 
-	timeout := s.createWaitForChunksTimeoutTimer()
+	timeout := s.createTimer()
 	select {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))

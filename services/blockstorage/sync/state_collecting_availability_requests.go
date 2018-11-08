@@ -9,12 +9,12 @@ import (
 )
 
 type collectingAvailabilityResponsesState struct {
-	factory                   *stateFactory
-	gossipClient              *blockSyncGossipClient
-	createCollectTimeoutTimer func() *synchronization.Timer
-	logger                    log.BasicLogger
-	conduit                   *blockSyncConduit
-	metrics                   collectingStateMetrics
+	factory      *stateFactory
+	gossipClient *blockSyncGossipClient
+	createTimer  func() *synchronization.Timer
+	logger       log.BasicLogger
+	conduit      *blockSyncConduit
+	metrics      collectingStateMetrics
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -38,7 +38,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 		return s.factory.CreateIdleState()
 	}
 
-	waitForResponses := s.createCollectTimeoutTimer()
+	waitForResponses := s.createTimer()
 	for { // the forever is because of responses handling loop
 		select {
 		case <-waitForResponses.C:

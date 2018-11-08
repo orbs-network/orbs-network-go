@@ -98,22 +98,22 @@ func (f *stateFactory) defaultCreateWaitForChunksTimeoutTimer() *synchronization
 
 func (f *stateFactory) CreateIdleState() syncState {
 	return &idleState{
-		factory:                    f,
-		createNoCommitTimeoutTimer: f.createNoCommitTimeoutTimer,
-		logger:  f.logger,
-		conduit: f.conduit,
-		metrics: f.metrics.idleStateMetrics,
+		factory:     f,
+		createTimer: f.createNoCommitTimeoutTimer,
+		logger:      f.logger,
+		conduit:     f.conduit,
+		metrics:     f.metrics.idleStateMetrics,
 	}
 }
 
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
-		factory:                   f,
-		gossipClient:              newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
-		createCollectTimeoutTimer: f.createCollectTimeoutTimer,
-		logger:  f.logger,
-		conduit: f.conduit,
-		metrics: f.metrics.collectingStateMetrics,
+		factory:      f,
+		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
+		createTimer:  f.createCollectTimeoutTimer,
+		logger:       f.logger,
+		conduit:      f.conduit,
+		metrics:      f.metrics.collectingStateMetrics,
 	}
 }
 
@@ -128,14 +128,14 @@ func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockA
 
 func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519PublicKey) syncState {
 	return &waitingForChunksState{
-		sourceKey:                       sourceKey,
-		factory:                         f,
-		gossipClient:                    newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
-		createWaitForChunksTimeoutTimer: f.createWaitForChunksTimeoutTimer,
-		logger:  f.logger,
-		abort:   make(chan struct{}),
-		conduit: f.conduit,
-		metrics: f.metrics.waitingStateMetrics,
+		sourceKey:    sourceKey,
+		factory:      f,
+		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
+		createTimer:  f.createWaitForChunksTimeoutTimer,
+		logger:       f.logger,
+		abort:        make(chan struct{}),
+		conduit:      f.conduit,
+		metrics:      f.metrics.waitingStateMetrics,
 	}
 }
 
