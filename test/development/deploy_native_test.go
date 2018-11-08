@@ -20,7 +20,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		network := harness.NewDevelopmentNetwork(log.GetLogger()).StartNodes(ctx)
+		network := harness.NewDevelopmentNetwork(log.GetLogger()).Start(ctx)
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 

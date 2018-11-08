@@ -60,8 +60,17 @@ type transportContractContext struct {
 
 func aTamperingTransport(ctx context.Context) *transportContractContext {
 	res := &transportContractContext{}
-	transport := NewTamperingTransport(log.GetLogger(log.String("adapter", "transport")))
 	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
+
+	federationNodes := make(map[string]config.FederationNode)
+	for _, key := range res.publicKeys {
+		federationNodes[key.KeyForMap()] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(key))
+	}
+
+	logger := log.GetLogger(log.String("adapter", "transport"))
+
+	transport := NewTamperingTransport(logger, federationNodes)
+	transport.Start(ctx)
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
 	res.listeners = []*mockListener{
 		listenTo(res.transports[0], res.publicKeys[0]),
@@ -69,6 +78,7 @@ func aTamperingTransport(ctx context.Context) *transportContractContext {
 		listenTo(res.transports[2], res.publicKeys[2]),
 		listenTo(res.transports[3], res.publicKeys[3]),
 	}
+
 	return res
 }
 

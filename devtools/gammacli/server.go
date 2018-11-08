@@ -31,7 +31,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 			log.IgnoreMessagesMatching("no responses received"),
 		)
 
-	network := harness.NewDevelopmentNetwork(testLogger).StartNodes(ctx)
+	network := harness.NewDevelopmentNetwork(testLogger).Start(ctx)
 	testLogger.Info("finished creating development network")
 
 	metricRegistry := metric.NewRegistry()

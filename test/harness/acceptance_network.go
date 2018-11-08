@@ -19,7 +19,6 @@ func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, conse
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger)
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
@@ -29,6 +28,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, conse
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
+	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger, federationNodes)
 
 	nodes := make([]*networkNode, numNodes)
 	for i := range nodes {
@@ -63,5 +63,5 @@ func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, conse
 		testLogger:      testLogger,
 	}
 
-	// must call network.StartNodes(ctx) to actually start the nodes in the network
+	// must call network.Start(ctx) to actually start the nodes in the network
 }

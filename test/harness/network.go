@@ -41,7 +41,9 @@ type inProcessNetwork struct {
 	testLogger      log.BasicLogger
 }
 
-func (n *inProcessNetwork) StartNodes(ctx context.Context) InProcessNetwork {
+func (n *inProcessNetwork) Start(ctx context.Context) InProcessNetwork {
+	n.gossipTransport.Start(ctx) // needs to start first so that nodes can register their listeners to it
+
 	for _, node := range n.nodes {
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,

@@ -19,7 +19,6 @@ func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
 	logger.Info("creating development network")
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(logger)
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
@@ -29,6 +28,8 @@ func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
+
+	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(logger, federationNodes)
 
 	nodes := make([]*networkNode, numNodes)
 	for i := range nodes {
@@ -62,5 +63,5 @@ func NewDevelopmentNetwork(logger log.BasicLogger) *inProcessNetwork {
 		testLogger:      logger,
 	}
 
-	// must call network.StartNodes(ctx) to actually start the nodes in the network
+	// must call network.Start(ctx) to actually start the nodes in the network
 }

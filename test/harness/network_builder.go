@@ -93,7 +93,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 				b.setupFunc(ctx, network)
 			}
 
-			network.StartNodes(ctx)
+			network.Start(ctx)
 
 			f(ctx, network)
 		})

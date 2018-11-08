@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -15,6 +16,9 @@ import (
 // to tamper with the messages or to synchronize the test's goroutine with the SUT's goroutines
 type TamperingTransport interface {
 	adapter.Transport
+
+	// Starts sending traffic between nodes
+	Start(ctx context.Context)
 
 	// Creates an ongoing tamper which fails messages matching the given predicate, returning an error object to the sender.
 	// This is useful to emulate network errors, for instance
@@ -58,19 +62,39 @@ type tamperingTransport struct {
 	listenerLock                 sync.RWMutex
 	transportListenersUnderMutex map[string]adapter.TransportListener
 
+	peers struct {
+		sync.RWMutex
+		byPublicKey map[string]*peer
+	}
+
 	tamperers struct {
 		sync.RWMutex
 		latches          []*latchingTamperer
 		ongoingTamperers []OngoingTamper
 	}
 
-	logger                      log.BasicLogger
+	logger     log.BasicLogger
+	federation map[string]config.FederationNode
 }
 
-func NewTamperingTransport(logger log.BasicLogger) TamperingTransport {
-	return &tamperingTransport{
-		logger: logger,
+func NewTamperingTransport(logger log.BasicLogger, federationNodes map[string]config.FederationNode) TamperingTransport {
+	t := &tamperingTransport{
+		logger: logger.WithTags(log.String("adapter", "transport")),
 		transportListenersUnderMutex: make(map[string]adapter.TransportListener),
+		federation: federationNodes,
+	}
+
+	t.peers.byPublicKey = make(map[string]*peer)
+
+	return t
+}
+
+func (t *tamperingTransport) Start(ctx context.Context) {
+	t.peers.Lock()
+	defer t.peers.Unlock()
+	for _, node := range t.federation {
+		key := node.NodePublicKey().KeyForMap()
+		t.peers.byPublicKey[key] = newPeer(ctx, t.logger.WithTags(log.String("peer-listener", key)))
 	}
 }
 
@@ -78,6 +102,10 @@ func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener
 	t.listenerLock.Lock()
 	defer t.listenerLock.Unlock()
 	t.transportListenersUnderMutex[string(listenerPublicKey)] = listener
+
+	t.peers.Lock()
+	defer t.peers.Unlock()
+	t.peers.byPublicKey[string(listenerPublicKey)].listener = listener
 }
 
 func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
@@ -181,9 +209,19 @@ func (t *tamperingTransport) receive(ctx context.Context, data *adapter.Transpor
 			l.OnTransportMessageReceived(ctx, data.Payloads)
 		}
 
+		for key, peer := range t.peers.byPublicKey {
+			if key != data.SenderPublicKey.KeyForMap() {
+				peer.send(data.Payloads)
+			}
+		}
+
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, l := range t.getTransportListenersByPublicKeys(data.RecipientPublicKeys) {
 			l.OnTransportMessageReceived(ctx, data.Payloads)
+		}
+
+		for _, k := range data.RecipientPublicKeys {
+			t.peers.byPublicKey[k.KeyForMap()].send(data.Payloads)
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
