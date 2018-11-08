@@ -15,9 +15,8 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 
 		idle := h.factory.CreateIdleState()
 		nextState := h.processStateAndWaitUntilFinished(ctx, idle, func() {
-			// letting the goroutine start above
 			idle.blockCommitted(ctx)
-			manualNoCommitTimer.ManualTick()
+			manualNoCommitTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
 
 		require.IsType(t, &idleState{}, nextState, "nextState should still be idle")

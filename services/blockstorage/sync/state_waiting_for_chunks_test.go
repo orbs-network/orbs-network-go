@@ -57,7 +57,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 		nextState := h.processStateAndWaitUntilFinished(ctx, waitingState, func() {
 			waitingState.gotBlocks(ctx, blocksMessage)
-			manualWaitForChunksTimer.ManualTick()
+			manualWaitForChunksTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
 
 		require.IsType(t, &processingBlocksState{}, nextState, "expecting to be at processing state after blocks arrived")
