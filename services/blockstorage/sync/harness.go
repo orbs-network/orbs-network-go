@@ -95,12 +95,10 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 
 type blockSyncHarness struct {
 	factory       *stateFactory
-	ctx           context.Context
 	config        *blockSyncConfigForTests
 	gossip        *gossiptopics.MockBlockSync
 	storage       *blockSyncStorageMock
 	logger        log.BasicLogger
-	ctxCancel     context.CancelFunc
 	metricFactory metric.Factory
 }
 
@@ -114,7 +112,6 @@ func newBlockSyncHarnessWithTimers(
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
-	ctx, cancel := context.WithCancel(context.Background())
 	conduit := &blockSyncConduit{
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
@@ -140,8 +137,6 @@ func newBlockSyncHarnessWithTimers(
 	return &blockSyncHarness{
 		logger:        logger,
 		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
-		ctx:           ctx,
-		ctxCancel:     cancel,
 		config:        cfg,
 		gossip:        gossip,
 		storage:       storage,
@@ -163,11 +158,6 @@ func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(manualTimer *synchronizat
 
 func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(manualTimer *synchronization.Timer) *blockSyncHarness {
 	return newBlockSyncHarnessWithTimers(nil, nil, manualTimer)
-}
-
-func (h *blockSyncHarness) withCtxTimeout(d time.Duration) *blockSyncHarness {
-	h.ctx, h.ctxCancel = context.WithTimeout(h.ctx, d)
-	return h
 }
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
@@ -192,10 +182,6 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 	return h
 }
 
-func (h *blockSyncHarness) cancel() {
-	h.ctxCancel()
-}
-
 func (h *blockSyncHarness) expectingSyncOnStart() {
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
@@ -213,11 +199,11 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	require.True(t, ok)
 }
 
-func (h *blockSyncHarness) processStateAndWaitUntilFinished(state syncState, whileStateIsProcessing func()) syncState {
+func (h *blockSyncHarness) processStateAndWaitUntilFinished(ctx context.Context, state syncState, whileStateIsProcessing func()) syncState {
 	var nextState syncState
 	stateProcessingFinished := make(chan bool)
 	go func() {
-		nextState = state.processState(h.ctx)
+		nextState = state.processState(ctx)
 		stateProcessingFinished <- true
 	}()
 	whileStateIsProcessing()
