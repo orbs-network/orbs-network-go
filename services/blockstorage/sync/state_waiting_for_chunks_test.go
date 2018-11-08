@@ -49,7 +49,9 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
 		blocksMessage := builders.BlockSyncResponseInput().Build().Message
-		h := newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(manualWaitForChunksTimer).withNodeKey(blocksMessage.Sender.SenderPublicKey())
+		h := newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(func() *synchronization.Timer {
+			return manualWaitForChunksTimer
+		}).withNodeKey(blocksMessage.Sender.SenderPublicKey())
 
 		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)

@@ -50,7 +50,9 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *tes
 func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualCollectResponsesTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithCollectResponsesTimer(manualCollectResponsesTimer)
+		h := newBlockSyncHarnessWithCollectResponsesTimer(func() *synchronization.Timer {
+			return manualCollectResponsesTimer
+		})
 
 		h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))

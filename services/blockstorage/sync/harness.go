@@ -103,9 +103,9 @@ type blockSyncHarness struct {
 }
 
 func newBlockSyncHarnessWithTimers(
-	explicitCollectTimeoutTimer *synchronization.Timer,
-	explicitNoCommitTimeoutTimer *synchronization.Timer,
-	explicitWaitForChunksTimeoutTimer *synchronization.Timer,
+	createCollectTimeoutTimer func() *synchronization.Timer,
+	createNoCommitTimeoutTimer func() *synchronization.Timer,
+	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
 ) *blockSyncHarness {
 
 	cfg := newDefaultBlockSyncConfigForTests()
@@ -118,21 +118,6 @@ func newBlockSyncHarnessWithTimers(
 		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
 	}
 	metricFactory := metric.NewRegistry()
-
-	var createCollectTimeoutTimer func() *synchronization.Timer = nil
-	if explicitCollectTimeoutTimer != nil {
-		createCollectTimeoutTimer = func() *synchronization.Timer { return explicitCollectTimeoutTimer }
-	}
-
-	var createNoCommitTimeoutTimer func() *synchronization.Timer = nil
-	if explicitNoCommitTimeoutTimer != nil {
-		createNoCommitTimeoutTimer = func() *synchronization.Timer { return explicitNoCommitTimeoutTimer }
-	}
-
-	var createWaitForChunksTimeoutTimer func() *synchronization.Timer = nil
-	if explicitWaitForChunksTimeoutTimer != nil {
-		createWaitForChunksTimeoutTimer = func() *synchronization.Timer { return explicitWaitForChunksTimeoutTimer }
-	}
 
 	return &blockSyncHarness{
 		logger:        logger,
@@ -148,16 +133,16 @@ func newBlockSyncHarness() *blockSyncHarness {
 	return newBlockSyncHarnessWithTimers(nil, nil, nil)
 }
 
-func newBlockSyncHarnessWithCollectResponsesTimer(manualTimer *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(manualTimer, nil, nil)
+func newBlockSyncHarnessWithCollectResponsesTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(createTimer, nil, nil)
 }
 
-func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(manualTimer *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(nil, manualTimer, nil)
+func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, createTimer, nil)
 }
 
-func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(manualTimer *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(nil, nil, manualTimer)
+func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, nil, createTimer)
 }
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
@@ -190,6 +175,11 @@ func (h *blockSyncHarness) expectingSyncOnStart() {
 
 func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
 	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
+	require.NoError(t, err)
+}
+
+func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int) {
+	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
 	require.NoError(t, err)
 }
 

@@ -11,7 +11,9 @@ import (
 func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualNoCommitTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(manualNoCommitTimer)
+		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
+			return manualNoCommitTimer
+		})
 
 		idle := h.factory.CreateIdleState()
 		nextState := h.processStateAndWaitUntilFinished(ctx, idle, func() {

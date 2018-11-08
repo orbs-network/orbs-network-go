@@ -68,22 +68,16 @@ func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
 	}
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
-	conduit := &blockSyncConduit{
-		idleReset: make(chan struct{}),
-		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
-		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
-	}
-
+func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
 	metrics := newStateMachineMetrics(metricFactory)
 
 	bs := &BlockSync{
 		logger:  logger.WithTags(log.String("flow", "block-sync")),
-		factory: NewStateFactory(config, gossip, storage, conduit, logger, metricFactory),
+		factory: factory,
 		gossip:  gossip,
 		storage: storage,
 		config:  config,
-		conduit: conduit,
+		conduit: factory.conduit,
 		metrics: metrics,
 	}
 
@@ -98,6 +92,23 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	})
 
 	return bs
+}
+
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+	conduit := &blockSyncConduit{
+		idleReset: make(chan struct{}),
+		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
+		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+	}
+	return newBlockSyncWithFactory(
+		ctx,
+		NewStateFactory(config, gossip, storage, conduit, logger, metricFactory),
+		config,
+		gossip,
+		storage,
+		logger,
+		metricFactory,
+	)
 }
 
 func (bs *BlockSync) syncLoop(ctx context.Context) {
