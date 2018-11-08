@@ -111,31 +111,6 @@ func newBlockSyncHarnessWithTimers(
 ) *blockSyncHarness {
 
 	cfg := newDefaultBlockSyncConfigForTests()
-
-	createCollectTimeoutTimer := func() *synchronization.Timer {
-		if explicitCollectTimeoutTimer == nil {
-			return synchronization.NewTimer(cfg.BlockSyncCollectResponseTimeout())
-		} else {
-			return explicitCollectTimeoutTimer
-		}
-	}
-
-	createNoCommitTimeoutTimer := func() *synchronization.Timer {
-		if explicitNoCommitTimeoutTimer == nil {
-			return synchronization.NewTimer(cfg.BlockSyncNoCommitInterval())
-		} else {
-			return explicitNoCommitTimeoutTimer
-		}
-	}
-
-	createWaitForChunksTimeoutTimer := func() *synchronization.Timer {
-		if explicitWaitForChunksTimeoutTimer == nil {
-			return synchronization.NewTimer(cfg.BlockSyncCollectChunksTimeout())
-		} else {
-			return explicitWaitForChunksTimeoutTimer
-		}
-	}
-
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
@@ -147,9 +122,24 @@ func newBlockSyncHarnessWithTimers(
 	}
 	metricFactory := metric.NewRegistry()
 
+	var createCollectTimeoutTimer func() *synchronization.Timer = nil
+	if explicitCollectTimeoutTimer != nil {
+		createCollectTimeoutTimer = func() *synchronization.Timer { return explicitCollectTimeoutTimer }
+	}
+
+	var createNoCommitTimeoutTimer func() *synchronization.Timer = nil
+	if explicitNoCommitTimeoutTimer != nil {
+		createNoCommitTimeoutTimer = func() *synchronization.Timer { return explicitNoCommitTimeoutTimer }
+	}
+
+	var createWaitForChunksTimeoutTimer func() *synchronization.Timer = nil
+	if explicitWaitForChunksTimeoutTimer != nil {
+		createWaitForChunksTimeoutTimer = func() *synchronization.Timer { return explicitWaitForChunksTimeoutTimer }
+	}
+
 	return &blockSyncHarness{
 		logger:        logger,
-		factory:       NewStateFactory(cfg, gossip, storage, conduit, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
+		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
 		ctx:           ctx,
 		ctxCancel:     cancel,
 		config:        cfg,
