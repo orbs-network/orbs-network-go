@@ -21,9 +21,9 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	if err != nil {
 		return err
 	}
-	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
-	if _lastCommittedBlockHeight <= message.SignedBatchRange.LastCommittedBlockHeight() {
+	if lastCommittedBlockHeight <= message.SignedBatchRange.LastCommittedBlockHeight() {
 		return nil
 	}
 
@@ -38,9 +38,9 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 			}).Build(),
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                blockType,
-				LastBlockHeight:          _lastCommittedBlockHeight,
+				LastBlockHeight:          lastCommittedBlockHeight,
 				FirstBlockHeight:         firstAvailableBlockHeight,
-				LastCommittedBlockHeight: _lastCommittedBlockHeight,
+				LastCommittedBlockHeight: lastCommittedBlockHeight,
 			}).Build(),
 		},
 	}
@@ -67,19 +67,19 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 	if err != nil {
 		return err
 	}
-	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
 	s.logger.Info("received block sync request",
 		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
 		log.Stringable("first-requested-block-height", firstRequestedBlockHeight),
 		log.Stringable("last-requested-block-height", lastRequestedBlockHeight),
-		log.Stringable("last-committed-block-height", _lastCommittedBlockHeight))
+		log.Stringable("last-committed-block-height", lastCommittedBlockHeight))
 
-	if _lastCommittedBlockHeight <= firstRequestedBlockHeight {
-		return errors.New("firstBlockHeight is greater or equal to _lastCommittedBlockHeight")
+	if lastCommittedBlockHeight <= firstRequestedBlockHeight {
+		return errors.New("firstBlockHeight is greater or equal to lastCommittedBlockHeight")
 	}
 
-	if firstRequestedBlockHeight-_lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncBatchSize()-1) {
+	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncBatchSize()-1) {
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize()-1)
 	}
 
@@ -103,7 +103,7 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 				BlockType:                blockType,
 				FirstBlockHeight:         firstAvailableBlockHeight,
 				LastBlockHeight:          lastAvailableBlockHeight,
-				LastCommittedBlockHeight: _lastCommittedBlockHeight,
+				LastCommittedBlockHeight: lastCommittedBlockHeight,
 			}).Build(),
 			BlockPairs: blocks,
 		},

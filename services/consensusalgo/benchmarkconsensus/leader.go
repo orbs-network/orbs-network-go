@@ -48,12 +48,12 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 	}
 }
 
-func (s *service) leaderConsensusRoundTick(ctx context.Context) (error) {
-	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
+func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
+	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
 	// check if we need to move to next block
-	if s.lastSuccessfullyVotedBlock == _lastCommittedBlockHeight {
-		proposedBlock, err := s.leaderGenerateNewProposedBlock(ctx, _lastCommittedBlockHeight, _lastCommittedBlock)
+	if s.lastSuccessfullyVotedBlock == lastCommittedBlockHeight {
+		proposedBlock, err := s.leaderGenerateNewProposedBlock(ctx, lastCommittedBlockHeight, lastCommittedBlock)
 		if err != nil {
 			s.logger.Error("leader failed to generate block", log.Error(err))
 			return err
@@ -64,23 +64,23 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) (error) {
 			return err
 		}
 
-		err = s.setLastCommittedBlock(proposedBlock, _lastCommittedBlock)
+		err = s.setLastCommittedBlock(proposedBlock, lastCommittedBlock)
 		if err != nil {
 			return err
 		}
 		// don't forget to update internal vars too since they may be used later on in the function
-		_lastCommittedBlock = proposedBlock
-		_lastCommittedBlockHeight = _lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+		lastCommittedBlock = proposedBlock
+		lastCommittedBlockHeight = lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 	}
 
 	// broadcast the commit via gossip for last committed block
-	err := s.leaderBroadcastCommittedBlock(ctx, _lastCommittedBlock)
+	err := s.leaderBroadcastCommittedBlock(ctx, lastCommittedBlock)
 	if err != nil {
 		return err
 	}
 
 	if s.config.NetworkSize(0) == 1 {
-		s.successfullyVotedBlocks <- _lastCommittedBlockHeight
+		s.successfullyVotedBlocks <- lastCommittedBlockHeight
 	}
 
 	return nil
@@ -108,13 +108,13 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	return blockPair
 }
 
-func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, _lastCommittedBlockHeight primitives.BlockHeight, _lastCommittedBlock *protocol.BlockPairContainer) (*protocol.BlockPairContainer, error) {
-	s.logger.Info("generating new proposed block", log.BlockHeight(_lastCommittedBlockHeight+1))
+func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) (*protocol.BlockPairContainer, error) {
+	s.logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   _lastCommittedBlockHeight + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(_lastCommittedBlock.TransactionsBlock),
+		BlockHeight:   lastCommittedBlockHeight + 1,
+		PrevBlockHash: digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
 	})
 	if err != nil {
 		return nil, err
@@ -122,8 +122,8 @@ func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, _lastCommi
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       _lastCommittedBlockHeight + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(_lastCommittedBlock.ResultsBlock),
+		BlockHeight:       lastCommittedBlockHeight + 1,
+		PrevBlockHash:     digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
@@ -202,33 +202,33 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 		}
 	}()
 
-	_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
+	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
 	// validate the vote
-	err := s.leaderValidateVote(sender, status, _lastCommittedBlockHeight)
+	err := s.leaderValidateVote(sender, status, lastCommittedBlockHeight)
 	if err != nil {
 		return err
 	}
 
 	// add the vote
-	enoughVotesReceived, err := s.leaderAddVote(sender, status, _lastCommittedBlock)
+	enoughVotesReceived, err := s.leaderAddVote(sender, status, lastCommittedBlock)
 	if err != nil {
 		return err
 	}
 
 	// move the consensus forward
 	if enoughVotesReceived {
-		s.successfullyVotedBlocks <- _lastCommittedBlockHeight
+		s.successfullyVotedBlocks <- lastCommittedBlockHeight
 	}
 
 	return nil
 }
 
-func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, _lastCommittedBlockHeight primitives.BlockHeight) error {
+func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, lastCommittedBlockHeight primitives.BlockHeight) error {
 	// block height
 	blockHeight := status.LastCommittedBlockHeight()
-	if blockHeight != _lastCommittedBlockHeight {
-		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, _lastCommittedBlockHeight)
+	if blockHeight != lastCommittedBlockHeight {
+		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, lastCommittedBlockHeight)
 	}
 
 	// approved signer

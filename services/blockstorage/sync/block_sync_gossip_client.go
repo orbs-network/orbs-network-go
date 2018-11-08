@@ -43,10 +43,10 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 	if err != nil {
 		return err
 	}
-	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
-	firstBlockHeight := _lastCommittedBlockHeight + 1
-	lastBlockHeight := _lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
+	firstBlockHeight := lastCommittedBlockHeight + 1
+	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
 	if firstBlockHeight > lastBlockHeight {
 		return errors.Errorf("invalid block request: from %d to %d", firstBlockHeight, lastBlockHeight)
@@ -65,7 +65,7 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
 				LastBlockHeight:          lastBlockHeight,
 				FirstBlockHeight:         firstBlockHeight,
-				LastCommittedBlockHeight: _lastCommittedBlockHeight,
+				LastCommittedBlockHeight: lastCommittedBlockHeight,
 			}).Build(),
 		},
 	}
@@ -79,10 +79,10 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Conte
 	if err != nil {
 		return err
 	}
-	_lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
-	firstBlockHeight := _lastCommittedBlockHeight + 1
-	lastBlockHeight := _lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
+	firstBlockHeight := lastCommittedBlockHeight + 1
+	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
 	request := &gossiptopics.BlockSyncRequestInput{
 		RecipientPublicKey: senderPublicKey,
@@ -94,7 +94,7 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Conte
 				BlockType:                blockType,
 				LastBlockHeight:          lastBlockHeight,
 				FirstBlockHeight:         firstBlockHeight,
-				LastCommittedBlockHeight: _lastCommittedBlockHeight,
+				LastCommittedBlockHeight: lastCommittedBlockHeight,
 			}).Build(),
 		},
 	}

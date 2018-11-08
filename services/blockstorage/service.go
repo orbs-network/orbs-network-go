@@ -90,16 +90,16 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 	}
 
 	// the source of truth for the last committed block is persistence
-	_lastCommittedBlock, err := s.persistence.GetLastBlock()
+	lastCommittedBlock, err := s.persistence.GetLastBlock()
 	if err != nil {
 		return nil, err
 	}
 
-	if ok, err := s.validateBlockDoesNotExist(txBlockHeader, _lastCommittedBlock); err != nil || !ok {
+	if ok, err := s.validateBlockDoesNotExist(txBlockHeader, lastCommittedBlock); err != nil || !ok {
 		return nil, err
 	}
 
-	if err := s.validateBlockHeight(input.BlockPair, _lastCommittedBlock); err != nil {
+	if err := s.validateBlockHeight(input.BlockPair, lastCommittedBlock); err != nil {
 		return nil, err
 	}
 
@@ -246,18 +246,18 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 	}
 
 	// the source of truth for the last committed block is persistence
-	_lastCommittedBlock, err := s.persistence.GetLastBlock()
+	lastCommittedBlock, err := s.persistence.GetLastBlock()
 	if err != nil {
 		return nil, err
 	}
 
-	if blockHeightError := s.validateBlockHeight(input.BlockPair, _lastCommittedBlock); blockHeightError != nil {
+	if blockHeightError := s.validateBlockHeight(input.BlockPair, lastCommittedBlock); blockHeightError != nil {
 		return nil, blockHeightError
 	}
 
 	if err := s.validateWithConsensusAlgosWithMode(
 		ctx,
-		_lastCommittedBlock,
+		lastCommittedBlock,
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
@@ -277,15 +277,15 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 // TODO: this function should return an error
 func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
 	// the source of truth for the last committed block is persistence
-	_lastCommittedBlock, err := s.persistence.GetLastBlock()
+	lastCommittedBlock, err := s.persistence.GetLastBlock()
 	if err != nil {
 		s.logger.Error(err.Error())
 		return
 	}
 
-	if _lastCommittedBlock != nil {
+	if lastCommittedBlock != nil {
 		// passing nil on purpose, see spec
-		err := s.validateWithConsensusAlgos(ctx, nil, _lastCommittedBlock)
+		err := s.validateWithConsensusAlgos(ctx, nil, lastCommittedBlock)
 		if err != nil {
 			s.logger.Error(err.Error())
 			return
@@ -318,8 +318,8 @@ func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopi
 }
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
-func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader, _lastCommittedBlock *protocol.BlockPairContainer) (bool, error) {
-	currentBlockHeight := getBlockHeight(_lastCommittedBlock)
+func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader, lastCommittedBlock *protocol.BlockPairContainer) (bool, error) {
+	currentBlockHeight := getBlockHeight(lastCommittedBlock)
 	attemptedBlockHeight := txBlockHeader.BlockHeight()
 
 	if attemptedBlockHeight < currentBlockHeight {
@@ -329,15 +329,15 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 		return false, errors.New(errorMessage)
 	} else if attemptedBlockHeight == currentBlockHeight {
 		// we can check for fork because we do have the tx header of the old block easily accessible
-		if txBlockHeader.Timestamp() != getBlockTimestamp(_lastCommittedBlock) {
+		if txBlockHeader.Timestamp() != getBlockTimestamp(lastCommittedBlock) {
 			errorMessage := "FORK!! block already in storage, timestamp mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", _lastCommittedBlock.TransactionsBlock.Header))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
-		} else if !txBlockHeader.Equal(_lastCommittedBlock.TransactionsBlock.Header) {
+		} else if !txBlockHeader.Equal(lastCommittedBlock.TransactionsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", _lastCommittedBlock.TransactionsBlock.Header))
+			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 
@@ -348,8 +348,8 @@ func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.Transactions
 	return true, nil
 }
 
-func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer, _lastCommittedBlock *protocol.BlockPairContainer) error {
-	expectedBlockHeight := getBlockHeight(_lastCommittedBlock) + 1
+func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer, lastCommittedBlock *protocol.BlockPairContainer) error {
+	expectedBlockHeight := getBlockHeight(lastCommittedBlock) + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
@@ -407,22 +407,22 @@ func (s *service) syncBlockToTxPool(ctx context.Context, committedBlockPair *pro
 func (s *service) validateWithConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
-	_lastCommittedBlockPair *protocol.BlockPairContainer) error {
+	lastCommittedBlockPair *protocol.BlockPairContainer) error {
 
-	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, _lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
+	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 }
 
 func (s *service) validateWithConsensusAlgosWithMode(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
-	_lastCommittedBlockPair *protocol.BlockPairContainer,
+	lastCommittedBlockPair *protocol.BlockPairContainer,
 	mode handlers.HandleBlockConsensusMode) error {
 
 	for _, handler := range s.consensusBlocksHandlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              _lastCommittedBlockPair,
+			BlockPair:              lastCommittedBlockPair,
 			PrevCommittedBlockPair: prevBlockPair,
 		})
 
