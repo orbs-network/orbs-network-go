@@ -59,9 +59,6 @@ type LatchingTamper interface {
 }
 
 type tamperingTransport struct {
-	listenerLock                 sync.RWMutex
-	transportListenersUnderMutex map[string]adapter.TransportListener
-
 	peers struct {
 		sync.RWMutex
 		byPublicKey map[string]*peer
@@ -80,7 +77,6 @@ type tamperingTransport struct {
 func NewTamperingTransport(logger log.BasicLogger, federationNodes map[string]config.FederationNode) TamperingTransport {
 	t := &tamperingTransport{
 		logger: logger.WithTags(log.String("adapter", "transport")),
-		transportListenersUnderMutex: make(map[string]adapter.TransportListener),
 		federation: federationNodes,
 	}
 
@@ -99,10 +95,6 @@ func (t *tamperingTransport) Start(ctx context.Context) {
 }
 
 func (t *tamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
-	t.listenerLock.Lock()
-	defer t.listenerLock.Unlock()
-	t.transportListenersUnderMutex[string(listenerPublicKey)] = listener
-
 	t.peers.Lock()
 	defer t.peers.Unlock()
 	t.peers.byPublicKey[string(listenerPublicKey)].attach(listener)
@@ -116,7 +108,7 @@ func (t *tamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 	}
 
 	supervised.GoOnce(t.logger, func() {
-		t.receive(ctx, data)
+		t.sendToPeers(data)
 	})
 
 	return nil
@@ -201,17 +193,6 @@ func (t *tamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 	panic("Tamperer not found in ongoing tamperer list")
 }
 
-func (t *tamperingTransport) receive(ctx context.Context, data *adapter.TransportData) {
-	useChannels := true
-	if useChannels {
-		t.sendToPeers(data)
-
-	} else {
-		t.receiveUsingOldMethod(data, ctx)
-	}
-
-}
-
 func (t *tamperingTransport) sendToPeers(data *adapter.TransportData) {
 	switch data.RecipientMode {
 
@@ -230,51 +211,6 @@ func (t *tamperingTransport) sendToPeers(data *adapter.TransportData) {
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
 		panic("Not implemented")
 	}
-}
-
-func (t *tamperingTransport) receiveUsingOldMethod(data *adapter.TransportData, ctx context.Context) {
-	switch data.RecipientMode {
-
-	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for _, l := range t.getTransportListenersExceptPublicKeys(data.SenderPublicKey) {
-			l.OnTransportMessageReceived(ctx, data.Payloads)
-		}
-
-	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
-		for _, l := range t.getTransportListenersByPublicKeys(data.RecipientPublicKeys) {
-			l.OnTransportMessageReceived(ctx, data.Payloads)
-		}
-
-	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
-		panic("Not implemented")
-	}
-}
-
-func (t *tamperingTransport) getTransportListenersExceptPublicKeys(exceptPublicKey primitives.Ed25519PublicKey) (listeners []adapter.TransportListener) {
-	t.listenerLock.RLock()
-	defer t.listenerLock.RUnlock()
-
-	for stringPublicKey, l := range t.transportListenersUnderMutex {
-		if stringPublicKey != string(exceptPublicKey) {
-			listeners = append(listeners, l)
-		}
-	}
-
-	return listeners
-}
-
-func (t *tamperingTransport) getTransportListenersByPublicKeys(publicKeys []primitives.Ed25519PublicKey) (listeners []adapter.TransportListener) {
-	t.listenerLock.RLock()
-	defer t.listenerLock.RUnlock()
-
-	for _, recipientPublicKey := range publicKeys {
-		stringPublicKey := string(recipientPublicKey)
-		if listener, found := t.transportListenersUnderMutex[stringPublicKey]; found {
-			listeners = append(listeners, listener)
-		}
-	}
-
-	return listeners
 }
 
 func (t *tamperingTransport) releaseLatches(data *adapter.TransportData) {
