@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -21,19 +22,31 @@ type blockSyncStorageMock struct {
 	mock.Mock
 }
 
-func (s *blockSyncStorageMock) LastCommittedBlockHeight() primitives.BlockHeight {
-	ret := s.Called()
-	return ret.Get(0).(primitives.BlockHeight)
+func (s *blockSyncStorageMock) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+	ret := s.Called(ctx, input)
+	if out := ret.Get(0); out != nil {
+		return out.(*services.GetLastCommittedBlockHeightOutput), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
 }
 
 func (s *blockSyncStorageMock) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	ret := s.Called(ctx, input)
-	return nil, ret.Error(0)
+	if out := ret.Get(0); out != nil {
+		return out.(*services.CommitBlockOutput), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
 }
 
 func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	ret := s.Called(ctx, input)
-	return nil, ret.Error(0)
+	if out := ret.Get(0); out != nil {
+		return out.(*services.ValidateBlockForCommitOutput), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
 }
 
 func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
@@ -70,30 +83,35 @@ func (c *blockSyncConfigForTests) BlockSyncCollectChunksTimeout() time.Duration 
 	return c.collectChunks
 }
 
-type blockSyncHarness struct {
-	sf        *stateFactory
-	ctx       context.Context
-	config    *blockSyncConfigForTests
-	gossip    *gossiptopics.MockBlockSync
-	storage   *blockSyncStorageMock
-	logger    log.BasicLogger
-	ctxCancel context.CancelFunc
-	m         metric.Factory
-}
-
-func newBlockSyncHarness() *blockSyncHarness {
-
-	cfg := &blockSyncConfigForTests{
+func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
+	return &blockSyncConfigForTests{
 		pk:               keys.Ed25519KeyPairForTests(1).PublicKey(),
 		batchSize:        10,
 		noCommit:         3 * time.Millisecond,
 		collectResponses: 3 * time.Millisecond,
 		collectChunks:    3 * time.Millisecond,
 	}
+}
+
+type blockSyncHarness struct {
+	factory       *stateFactory
+	config        *blockSyncConfigForTests
+	gossip        *gossiptopics.MockBlockSync
+	storage       *blockSyncStorageMock
+	logger        log.BasicLogger
+	metricFactory metric.Factory
+}
+
+func newBlockSyncHarnessWithTimers(
+	createCollectTimeoutTimer func() *synchronization.Timer,
+	createNoCommitTimeoutTimer func() *synchronization.Timer,
+	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
+) *blockSyncHarness {
+
+	cfg := newDefaultBlockSyncConfigForTests()
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
-	ctx, cancel := context.WithCancel(context.Background())
 	conduit := &blockSyncConduit{
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
@@ -102,20 +120,29 @@ func newBlockSyncHarness() *blockSyncHarness {
 	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{
-		logger:    logger,
-		sf:        NewStateFactory(cfg, gossip, storage, conduit, logger, metricFactory),
-		ctx:       ctx,
-		ctxCancel: cancel,
-		config:    cfg,
-		gossip:    gossip,
-		storage:   storage,
-		m:         metricFactory,
+		logger:        logger,
+		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
+		config:        cfg,
+		gossip:        gossip,
+		storage:       storage,
+		metricFactory: metricFactory,
 	}
 }
 
-func (h *blockSyncHarness) withCtxTimeout(d time.Duration) *blockSyncHarness {
-	h.ctx, h.ctxCancel = context.WithTimeout(h.ctx, d)
-	return h
+func newBlockSyncHarness() *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, nil, nil)
+}
+
+func newBlockSyncHarnessWithCollectResponsesTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(createTimer, nil, nil)
+}
+
+func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, createTimer, nil)
+}
+
+func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(nil, nil, createTimer)
 }
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
@@ -135,33 +162,24 @@ func (h *blockSyncHarness) withNodeKey(key primitives.Ed25519PublicKey) *blockSy
 	return h
 }
 
-func (h *blockSyncHarness) withNoCommitTimeout(duration time.Duration) *blockSyncHarness {
-	h.config.noCommit = duration
-	return h
-}
-
-func (h *blockSyncHarness) withWaitForChunksTimeout(duration time.Duration) *blockSyncHarness {
-	h.config.collectChunks = duration
-	return h
-}
-
 func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 	h.config.batchSize = size
 	return h
 }
 
-func (h *blockSyncHarness) cancel() {
-	h.ctxCancel()
-}
-
 func (h *blockSyncHarness) expectingSyncOnStart() {
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.storage.When("LastCommittedBlockHeight").Return(primitives.BlockHeight(10)).Times(1)
+	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
 func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
 	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
+	require.NoError(t, err)
+}
+
+func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int) {
+	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
 	require.NoError(t, err)
 }
 
@@ -171,14 +189,22 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	require.True(t, ok)
 }
 
-func (h *blockSyncHarness) nextState(state syncState, trigger func()) syncState {
+func (h *blockSyncHarness) processStateAndWaitUntilFinished(ctx context.Context, state syncState, whileStateIsProcessing func()) syncState {
 	var nextState syncState
-	latch := make(chan struct{})
+	stateProcessingFinished := make(chan bool)
 	go func() {
-		nextState = state.processState(h.ctx)
-		latch <- struct{}{}
+		nextState = state.processState(ctx)
+		stateProcessingFinished <- true
 	}()
-	trigger()
-	<-latch
+	whileStateIsProcessing()
+	<-stateProcessingFinished
 	return nextState
+}
+
+func (h *blockSyncHarness) expectLastCommittedBlockHeight(expectedHeight primitives.BlockHeight) {
+	out := &services.GetLastCommittedBlockHeightOutput{
+		LastCommittedBlockHeight:    expectedHeight,
+		LastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+	}
+	h.storage.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(out, nil).Times(1)
 }

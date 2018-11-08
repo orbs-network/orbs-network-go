@@ -1,48 +1,59 @@
 package sync
 
 import (
+	"context"
+	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
-	h := newBlockSyncHarness().withNoCommitTimeout(time.Hour) // we want to see that the sync immediately starts, and not in an hour
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
+		return synchronization.NewTimerWithManualTick()
+	})
 
-	h.expectingSyncOnStart()
+	var bs *BlockSync
+	test.WithContext(func(ctx context.Context) {
+		h.expectingSyncOnStart()
 
-	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger, h.m)
+		bs = newBlockSyncWithFactory(ctx, h.factory, h.config, h.gossip, h.storage, h.logger, h.metricFactory)
 
-	h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
-	h.cancel()
-	shutdown := h.waitForShutdown(sync)
+		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
+	})
+
+	shutdown := h.waitForShutdown(bs)
 	require.True(t, shutdown, "expecting state to be set to nil (=shutdown)")
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
-	// although we test this use case at the service level, this test is testing the same logic on the sync unit level
-	// its to cover that specific line of code in blockSync engine, rather then the service handler code
-	// (or the idle state code)
+	manualNoCommitTimers := []*synchronization.Timer{}
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
+		timer := synchronization.NewTimerWithManualTick()
+		manualNoCommitTimers = append(manualNoCommitTimers, timer)
+		return timer
+	})
 
-	h := newBlockSyncHarness().withNoCommitTimeout(20 * time.Millisecond)
-	h.expectingSyncOnStart()
+	var bs *BlockSync
+	test.WithContext(func(ctx context.Context) {
+		h.expectingSyncOnStart()
 
-	sync := NewBlockSync(h.ctx, h.config, h.gossip, h.storage, h.logger, h.m)
-	idleReached := h.waitForState(sync, h.sf.CreateIdleState())
-	require.True(t, idleReached, "idle state was not reached when expected, most likely something else is broken")
+		bs = newBlockSyncWithFactory(ctx, h.factory, h.config, h.gossip, h.storage, h.logger, h.metricFactory)
 
-	// "commit" blocks loop
-	go func() {
-		for {
-			sync.HandleBlockCommitted(h.ctx)
-			time.Sleep(1 * time.Millisecond)
-		}
-	}()
+		ok := test.Eventually(50*time.Millisecond, func() bool {
+			if len(manualNoCommitTimers) > 0 {
+				bs.HandleBlockCommitted(ctx)         // exit the first idle state by committing a block
+				manualNoCommitTimers[0].ManualTick() // manual tick of no commit timer should do nothing for the first idle state now
+				return true
+			}
+			return false
+		})
+		require.True(t, ok, "no commit timer of the first idle state should be created")
 
-	time.Sleep(30 * time.Millisecond)
+		h.consistentlyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
+	})
 
-	require.IsType(t, &idleState{}, sync.currentState, "state should remain idle")
-
-	h.verifyMocks(t)
-	h.cancel() // kill the sync (goroutine)
+	shutdown := h.waitForShutdown(bs)
+	require.True(t, shutdown, "expecting state to be set to nil (=shutdown)")
 }

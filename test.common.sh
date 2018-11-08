@@ -24,5 +24,8 @@ check_exit_code_and_report () {
     mkdir -p _logs
     cp *.out _logs
 
-    exit $EXIT_CODE
+    if [ $EXIT_CODE != 0 ]; then
+        exit $EXIT_CODE
+    fi
 }
+
