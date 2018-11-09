@@ -28,11 +28,15 @@ func ForGossipAdapterTests(publicKey primitives.Ed25519PublicKey, gossipListenPo
 	return cfg
 }
 
-func ForConsensusContextTests() ConsensusContextConfig {
+func ForConsensusContextTests(federationNodes map[string]FederationNode) ConsensusContextConfig {
 	cfg := emptyConfig()
 
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 1*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK, 2)
+	cfg.SetUint32(CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
+	if federationNodes != nil {
+		cfg.SetFederationNodes(federationNodes)
+	}
 	return cfg
 }
 

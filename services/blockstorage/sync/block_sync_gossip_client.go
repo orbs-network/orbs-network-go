@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
 )
@@ -38,7 +39,12 @@ func (c *blockSyncGossipClient) petitionerUpdateConsensusAlgos(ctx context.Conte
 }
 
 func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
-	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
+	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
+	if err != nil {
+		return err
+	}
+	lastCommittedBlockHeight := out.LastCommittedBlockHeight
+
 	firstBlockHeight := lastCommittedBlockHeight + 1
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
@@ -64,12 +70,16 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 		},
 	}
 
-	_, err := c.gossip.BroadcastBlockAvailabilityRequest(ctx, input)
+	_, err = c.gossip.BroadcastBlockAvailabilityRequest(ctx, input)
 	return err
 }
 
 func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
-	lastCommittedBlockHeight := c.storage.LastCommittedBlockHeight()
+	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
+	if err != nil {
+		return err
+	}
+	lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
 	firstBlockHeight := lastCommittedBlockHeight + 1
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
@@ -89,6 +99,6 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Conte
 		},
 	}
 
-	_, err := c.gossip.SendBlockSyncRequest(ctx, request)
+	_, err = c.gossip.SendBlockSyncRequest(ctx, request)
 	return err
 }

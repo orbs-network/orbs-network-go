@@ -99,11 +99,3 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
 	panic("Not implemented")
 }
-
-func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	panic("Not implemented")
-}
-
-func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	panic("Not implemented")
-}

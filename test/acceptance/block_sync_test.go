@@ -23,12 +23,14 @@ func TestBlockSync(t *testing.T) {
 					WithHeight(primitives.BlockHeight(i)).
 					WithTransactions(2).
 					Build()
-				network.BlockPersistence(0).WriteBlock(blockPair)
+				network.BlockPersistence(0).WriteNextBlock(blockPair)
 
 			}
-		}).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		require.Zero(t, len(network.BlockPersistence(1).ReadAllBlocks()))
 
+			numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
+			require.NoError(t, err)
+			require.Zero(t, numBlocks)
+		}).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}

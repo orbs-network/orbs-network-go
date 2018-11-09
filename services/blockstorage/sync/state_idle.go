@@ -9,11 +9,11 @@ import (
 )
 
 type idleState struct {
-	idleTimeout func() time.Duration
+	createTimer func() *synchronization.Timer
 	logger      log.BasicLogger
-	sf          *stateFactory
+	factory     *stateFactory
 	conduit     *blockSyncConduit
-	m           idleStateMetrics
+	metrics     idleStateMetrics
 }
 
 func (s *idleState) name() string {
@@ -26,17 +26,17 @@ func (s *idleState) String() string {
 
 func (s *idleState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.m.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
-	noCommitTimer := synchronization.NewTimer(s.idleTimeout())
+	noCommitTimer := s.createTimer()
 	select {
 	case <-noCommitTimer.C:
 		s.logger.Info("starting sync after no-commit timer expired")
-		s.m.timesExpired.Inc()
-		return s.sf.CreateCollectingAvailabilityResponseState()
+		s.metrics.timesExpired.Inc()
+		return s.factory.CreateCollectingAvailabilityResponseState()
 	case <-s.conduit.idleReset:
-		s.m.timesReset.Inc()
-		return s.sf.CreateIdleState()
+		s.metrics.timesReset.Inc()
+		return s.factory.CreateIdleState()
 	case <-ctx.Done():
 		return nil
 	}

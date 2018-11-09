@@ -19,6 +19,7 @@ type NodeConfig interface {
 	ConstantConsensusLeader() primitives.Ed25519PublicKey
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	ConsensusRequiredQuorumPercentage() uint32
+	ConsensusMinimumCommitteeSize() uint32
 
 	// Lean Helix consensus
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
@@ -113,10 +114,14 @@ type GossipTransportConfig interface {
 	GossipNetworkTimeout() time.Duration
 }
 
+// TODO See if more config props needed here, based on:
+// https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMinimalBlockTime() time.Duration
+	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	ConsensusMinimumCommitteeSize() uint32
 }
 
 type PublicApiConfig interface {
