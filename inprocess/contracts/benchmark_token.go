@@ -3,7 +3,6 @@ package contracts
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -44,11 +43,11 @@ func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex
 		WithEd25519Signer(signerKeyPair).
 		WithAmountAndTargetAddress(amount, targetAddress).
 		Builder()
+	builtTx := tx.Build()
 
-	supervised.GoOnce(c.logger, func() {
-		c.API.SendTransaction(ctx, tx, nodeIndex)
-	})
-	return digest.CalcTxHash(tx.Transaction.Build())
+	c.API.SendTransaction(ctx, tx, nodeIndex)
+
+	return digest.CalcTxHash(builtTx.Transaction())
 }
 
 func (c *contractClient) SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse {

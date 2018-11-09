@@ -125,7 +125,10 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		if err != nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
 		}
-		ch <- output.ClientResponse
+		select {
+		case ch <- output.ClientResponse:
+		case <-ctx.Done():
+		}
 	})
 	return ch
 }
@@ -142,15 +145,16 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 			panic(fmt.Sprintf("error calling method: %v", err)) // TODO: improve
 		}
 		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
-		ch <- outputArgsIterator.NextArguments().Uint64Value()
+		select {
+		case ch <- outputArgsIterator.NextArguments().Uint64Value():
+		case <-ctx.Done():
+		}
 	})
 	return ch
 }
-
 
 func (n *Network) WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256) {
 	for _, node := range n.Nodes {
 		node.WaitForTransactionInState(ctx, txhash)
 	}
 }
-
