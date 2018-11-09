@@ -14,6 +14,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
+		network.MockContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
 
 		t.Log("deploying contract")
 

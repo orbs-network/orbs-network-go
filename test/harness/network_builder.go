@@ -22,7 +22,7 @@ type canFail interface {
 
 type acceptanceTestNetworkBuilder struct {
 	f              canFail
-	numNodes       uint32
+	numNodes       int
 	consensusAlgos []consensus.ConsensusAlgoType
 	testId         string
 	setupFunc      func(ctx context.Context, network TestNetworkDriver)
@@ -50,7 +50,7 @@ func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTest
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) WithNumNodes(numNodes uint32) *acceptanceTestNetworkBuilder {
+func (b *acceptanceTestNetworkBuilder) WithNumNodes(numNodes int) *acceptanceTestNetworkBuilder {
 	b.numNodes = numNodes
 	return b
 }

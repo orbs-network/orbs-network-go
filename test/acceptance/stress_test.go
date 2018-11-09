@@ -96,9 +96,7 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.Tes
 		txHashes = append(txHashes, txHash)
 	}
 	for _, txHash := range txHashes {
-		for i := 0; i < network.Size(); i++ {
-			network.WaitForTransactionInState(ctx, i, txHash)
-		}
+		network.WaitForTransactionInState(ctx, txHash)
 	}
 
 	for i := 0; i < network.Size(); i++ {

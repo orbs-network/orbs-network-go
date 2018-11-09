@@ -69,10 +69,10 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			committedLatch.Remove()
 			committedTamper.Release(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
 
-			network.WaitForTransactionInState(ctx, 0, txHash)
+			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 0, 6), "eventual getBalance result on leader")
 
-			network.WaitForTransactionInState(ctx, 1, txHash)
+			network.WaitForTransactionInNodeState(ctx, txHash, 1)
 			require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 
 			blockSyncTamper.Release(ctx)

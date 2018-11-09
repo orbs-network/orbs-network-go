@@ -3,12 +3,13 @@ package harness
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/inprocess"
 	"github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
+	"github.com/orbs-network/orbs-network-go/inprocess/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
@@ -23,14 +24,14 @@ type TestNetworkDriver interface {
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
-	WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256)
-	Size() int
+	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int,)
+	MockContract(fakeContractInfo *sdk.ContractInfo, code string)
 }
 
-func NewAcceptanceTestNetwork(ctx context.Context, numNodes uint32, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *acceptanceNetwork {
+func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *acceptanceNetwork {
 
 	testLogger.Info("===========================================================================")
-	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
+	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
 	leaderKeyPair := testKeys.Ed25519KeyPairForTests(0)
@@ -45,8 +46,13 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes uint32, testLogger l
 
 	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger, adapter.NewChannelTransport(ctx, testLogger, federationNodes))
 
-	nodes := make([]*inprocess.Node, numNodes)
-	for i := range nodes {
+	network := &acceptanceNetwork{
+		Network:            inprocess.NewNetwork(testLogger, sharedTamperingTransport),
+		tamperingTransport: sharedTamperingTransport,
+		description:        description,
+	}
+
+	for i := 0; i < numNodes; i++ {
 		keyPair := testKeys.Ed25519KeyPairForTests(i)
 		cfg := config.ForAcceptanceTests(
 			federationNodes,
@@ -57,14 +63,11 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes uint32, testLogger l
 			consensusAlgo,
 			maxTxPerBlock,
 		)
-		nodes[i] = inprocess.NewNode(i, keyPair, cfg, nativeProcessorAdapter.NewFakeCompiler())
+
+		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewFakeCompiler())
 	}
 
-	return &acceptanceNetwork{
-		Network:            inprocess.Network{Nodes: nodes, Logger: testLogger, Transport: sharedTamperingTransport},
-		tamperingTransport: sharedTamperingTransport,
-		description:        description,
-	}
+	return network
 
 	// must call network.Start(ctx) to actually start the nodes in the network
 }
@@ -76,12 +79,11 @@ type acceptanceNetwork struct {
 	description        string
 }
 
-func (n *acceptanceNetwork) Start(ctx context.Context) inprocess.NetworkDriver {
+func (n *acceptanceNetwork) Start(ctx context.Context) {
 	n.CreateAndStartNodes(ctx) // needs to start first so that nodes can register their listeners to it
-	return n
 }
 
-func (n *acceptanceNetwork) WaitForTransactionInState(ctx context.Context, nodeIndex int, txhash primitives.Sha256) {
+func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int, ) {
 	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
 }
 
@@ -98,7 +100,7 @@ func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.
 }
 
 func (n *acceptanceNetwork) GetBenchmarkTokenContract() contracts.BenchmarkTokenClient {
-	return contracts.NewContractClient(n.GetAPIProviders(), n.Logger)
+	return contracts.NewContractClient(n, n.Logger)
 }
 
 func (n *acceptanceNetwork) DumpState() {
@@ -107,7 +109,15 @@ func (n *acceptanceNetwork) DumpState() {
 	}
 }
 
-func (n *acceptanceNetwork) Size() int {
-	return len(n.Nodes)
+func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdk.ContractInfo, code string) {
+
+	// if needed, provide a fake implementation of this contract to all nodes
+	for _, node := range n.Nodes {
+		if fakeCompiler, ok := node.GetCompiler().(nativeProcessorAdapter.FakeCompiler); ok {
+			fakeCompiler.ProvideFakeContract(fakeContractInfo, code)
+		}
+	}
 }
+
+
 

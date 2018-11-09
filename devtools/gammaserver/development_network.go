@@ -28,26 +28,23 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inproces
 
 	sharedTransport := gossipAdapter.NewChannelTransport(ctx, logger, federationNodes)
 
-	nodes := make([]*inprocess.Node, numNodes)
-	for i := range nodes {
-		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+	network := &inprocess.Network{
+		Logger:    logger,
+		Transport: sharedTransport,
+	}
+
+	for i := 0; i < numNodes; i++ {
+		keyPair := keys.Ed25519KeyPairForTests(i)
 		cfg := config.ForGamma(
 			federationNodes,
 			gossipPeers,
-			nodeKeyPair.PublicKey(),
-			nodeKeyPair.PrivateKey(),
+			keyPair.PublicKey(),
+			keyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
 		)
-		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, logger)
 
-		nodes[i] = inprocess.NewNode(i, nodeKeyPair, cfg, compiler)
-	}
-
-	network := &inprocess.Network{
-		Nodes:     nodes,
-		Logger:    logger,
-		Transport: sharedTransport,
+		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger))
 	}
 
 	network.CreateAndStartNodes(ctx) // must call network.Start(ctx) to actually start the nodes in the network
