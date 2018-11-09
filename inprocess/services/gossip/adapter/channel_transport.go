@@ -46,13 +46,13 @@ func (p *channelTransport) Send(ctx context.Context, data *adapter.TransportData
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for key, peer := range p.byPublicKey {
 			if key != data.SenderPublicKey.KeyForMap() {
-				peer.send(data)
+				peer.send(ctx, data)
 			}
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, k := range data.RecipientPublicKeys {
-			p.byPublicKey[k.KeyForMap()].send(data)
+			p.byPublicKey[k.KeyForMap()].send(ctx, data)
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
@@ -63,7 +63,7 @@ func (p *channelTransport) Send(ctx context.Context, data *adapter.TransportData
 }
 
 func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket:make(chan [][]byte), listener: make(chan adapter.TransportListener)}
+	p := &peer{socket: make(chan [][]byte), listener: make(chan adapter.TransportListener)}
 
 	supervised.GoForever(bgCtx, logger, func() {
 		// wait till we have a listener attached
@@ -82,8 +82,12 @@ func (p *peer) attach(listener adapter.TransportListener) {
 	p.listener <- listener
 }
 
-func (p *peer) send(data *adapter.TransportData) {
-	p.socket <- data.Payloads
+func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
+	select {
+	case p.socket <- data.Payloads:
+	case <- ctx.Done():
+		return
+	}
 }
 
 func (p *peer) acceptUsing(ctx context.Context, listener adapter.TransportListener) {
@@ -96,4 +100,3 @@ func (p *peer) acceptUsing(ctx context.Context, listener adapter.TransportListen
 		}
 	}
 }
-

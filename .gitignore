@@ -87,5 +87,3 @@ _bin
 orbs-*
 .deploy.json
 devtools/test/json/*.json
-gamma-cli
-gamma-server
