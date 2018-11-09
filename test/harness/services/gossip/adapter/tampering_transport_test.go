@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
+	inProcess "github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -29,8 +30,7 @@ func newTamperingHarness(ctx context.Context) *tamperingHarness {
 	federationNodes[senderKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(senderKey))
 	federationNodes[listenerKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(listenerKey))
 
-	transport := NewTamperingTransport(logger, federationNodes)
-	transport.Start(ctx)
+	transport := NewTamperingTransport(logger, inProcess.NewChannelTransport(ctx, logger, federationNodes))
 
 	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
 

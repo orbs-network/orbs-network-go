@@ -83,7 +83,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 		test.WithContext(func(ctx context.Context) {
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)
-			network := NewAcceptanceTestNetwork(b.numNodes, logger, consensusAlgo, b.maxTxPerBlock)
+			network := NewAcceptanceTestNetwork(ctx, b.numNodes, logger, consensusAlgo, b.maxTxPerBlock)
 
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)

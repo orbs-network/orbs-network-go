@@ -93,8 +93,7 @@ func aTamperingTransport(ctx context.Context) *transportContractContext {
 
 	logger := log.GetLogger(log.String("adapter", "transport"))
 
-	transport := NewTamperingTransport(logger, federationNodes)
-	transport.Start(ctx)
+	transport := NewTamperingTransport(logger, inProcessAdapter.NewChannelTransport(ctx, logger, federationNodes))
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
 	res.listeners = []*mockListener{
 		listenTo(res.transports[0], res.publicKeys[0]),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/inprocess"
+	"github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
@@ -26,7 +27,7 @@ type TestNetworkDriver interface {
 	Size() int
 }
 
-func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *acceptanceNetwork {
+func NewAcceptanceTestNetwork(ctx context.Context, numNodes uint32, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *acceptanceNetwork {
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
@@ -42,7 +43,7 @@ func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, conse
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger, federationNodes)
+	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger, adapter.NewChannelTransport(ctx, testLogger, federationNodes))
 
 	nodes := make([]*inprocess.Node, numNodes)
 	for i := range nodes {
@@ -71,12 +72,11 @@ func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, conse
 type acceptanceNetwork struct {
 	inprocess.Network
 
-	tamperingTransport *gossipAdapter.TamperingTransport
+	tamperingTransport gossipAdapter.Tamperer
 	description        string
 }
 
 func (n *acceptanceNetwork) Start(ctx context.Context) inprocess.NetworkDriver {
-	n.tamperingTransport.Start(ctx)
 	n.CreateAndStartNodes(ctx) // needs to start first so that nodes can register their listeners to it
 	return n
 }
