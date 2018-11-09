@@ -113,7 +113,11 @@ func (d *harness) commitBlock(ctx context.Context, blockPairContainer *protocol.
 }
 
 func (d *harness) numOfWrittenBlocks() int {
-	return len(d.storageAdapter.ReadAllBlocks())
+	numBlocks, err := d.storageAdapter.GetNumBlocks()
+	if err != nil {
+		panic(err)
+	}
+	return int(numBlocks)
 }
 
 func (d *harness) getLastBlockHeight(ctx context.Context, t *testing.T) *services.GetLastCommittedBlockHeightOutput {
@@ -124,11 +128,34 @@ func (d *harness) getLastBlockHeight(ctx context.Context, t *testing.T) *service
 }
 
 func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
-	return d.storageAdapter.ReadAllBlocks()[height-1]
+	txBlock, err := d.storageAdapter.GetTransactionsBlock(primitives.BlockHeight(height))
+	if err != nil {
+		panic(err)
+	}
+
+	rxBlock, err := d.storageAdapter.GetResultsBlock(primitives.BlockHeight(height))
+	if err != nil {
+		panic(err)
+	}
+
+	return &protocol.BlockPairContainer{
+		TransactionsBlock: txBlock,
+		ResultsBlock:      rxBlock,
+	}
 }
 
 func (d *harness) withSyncNoCommitTimeout(duration time.Duration) *harness {
 	d.config.(*configForBlockStorageTests).syncNoCommit = duration
+	return d
+}
+
+func (d *harness) withSyncCollectResponsesTimeout(duration time.Duration) *harness {
+	d.config.(*configForBlockStorageTests).syncCollectResponses = duration
+	return d
+}
+
+func (d *harness) withSyncCollectChunksTimeout(duration time.Duration) *harness {
+	d.config.(*configForBlockStorageTests).syncCollectChunks = duration
 	return d
 }
 
@@ -158,7 +185,7 @@ func (d *harness) setupCustomBlocksForInit() time.Time {
 	now := time.Now()
 	for i := 1; i <= 10; i++ {
 		now = now.Add(1 * time.Millisecond)
-		d.storageAdapter.WriteBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(now).Build())
+		d.storageAdapter.WriteNextBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(now).Build())
 	}
 
 	out := &handlers.HandleBlockConsensusOutput{}

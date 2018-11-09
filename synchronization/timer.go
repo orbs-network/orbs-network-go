@@ -8,6 +8,8 @@ import "time"
 type Timer struct {
 	timer *time.Timer
 	C     <-chan time.Time
+
+	writableC *chan time.Time // the same as C just writable and not exported, used by NewTimerWithManualTick()
 }
 
 func NewTimer(d time.Duration) *Timer {
@@ -20,12 +22,20 @@ func (t *Timer) GetTimer() *time.Timer {
 }
 
 func (t *Timer) Reset(d time.Duration) bool {
+	if t.timer == nil {
+		return false
+	}
+
 	active := t.Stop()
 	t.timer.Reset(d)
 	return active
 }
 
 func (t *Timer) Stop() bool {
+	if t.timer == nil {
+		return false
+	}
+
 	active := t.timer.Stop()
 	if !active {
 		select {
@@ -34,4 +44,22 @@ func (t *Timer) Stop() bool {
 		}
 	}
 	return active
+}
+
+// used primarily for tests
+func (t *Timer) ManualTick() {
+	if t.writableC != nil {
+		go func() { // ManualTick is expected to be non blocking
+			*t.writableC <- time.Now()
+		}()
+	}
+}
+
+// used primarily for tests
+func NewTimerWithManualTick() *Timer {
+	c := make(chan time.Time)
+	return &Timer{
+		C:         c,
+		writableC: &c,
+	}
 }

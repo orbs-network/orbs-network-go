@@ -11,14 +11,14 @@ import (
 )
 
 type waitingForChunksState struct {
-	sf             *stateFactory
-	sourceKey      primitives.Ed25519PublicKey
-	gossipClient   *blockSyncGossipClient
-	collectTimeout func() time.Duration
-	logger         log.BasicLogger
-	abort          chan struct{}
-	conduit        *blockSyncConduit
-	m              waitingStateMetrics
+	factory      *stateFactory
+	sourceKey    primitives.Ed25519PublicKey
+	gossipClient *blockSyncGossipClient
+	createTimer  func() *synchronization.Timer
+	logger       log.BasicLogger
+	abort        chan struct{}
+	conduit      *blockSyncConduit
+	metrics      waitingStateMetrics
 }
 
 func (s *waitingForChunksState) name() string {
@@ -31,27 +31,27 @@ func (s *waitingForChunksState) String() string {
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.m.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
 	err := s.gossipClient.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
 		s.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))
-		return s.sf.CreateIdleState()
+		return s.factory.CreateIdleState()
 	}
 
-	timeout := synchronization.NewTimer(s.collectTimeout())
+	timeout := s.createTimer()
 	select {
 	case <-timeout.C:
 		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
-		s.m.timesTimeout.Inc()
-		return s.sf.CreateIdleState()
+		s.metrics.timesTimeout.Inc()
+		return s.factory.CreateIdleState()
 	case blocks := <-s.conduit.blocks:
 		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
-		s.m.timesSuccessful.Inc()
-		return s.sf.CreateProcessingBlocksState(blocks)
+		s.metrics.timesSuccessful.Inc()
+		return s.factory.CreateProcessingBlocksState(blocks)
 	case <-s.abort:
-		s.m.timesByzantine.Inc()
-		return s.sf.CreateIdleState()
+		s.metrics.timesByzantine.Inc()
+		return s.factory.CreateIdleState()
 	case <-ctx.Done():
 		return nil
 	}

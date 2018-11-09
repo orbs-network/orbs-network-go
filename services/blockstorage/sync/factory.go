@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -10,12 +11,142 @@ import (
 )
 
 type stateFactory struct {
-	config  blockSyncConfig
-	gossip  gossiptopics.BlockSync
-	storage BlockSyncStorage
-	c       *blockSyncConduit
-	logger  log.BasicLogger
-	metrics *stateMetrics
+	config                          blockSyncConfig
+	gossip                          gossiptopics.BlockSync
+	storage                         BlockSyncStorage
+	conduit                         *blockSyncConduit
+	createCollectTimeoutTimer       func() *synchronization.Timer
+	createNoCommitTimeoutTimer      func() *synchronization.Timer
+	createWaitForChunksTimeoutTimer func() *synchronization.Timer
+	logger                          log.BasicLogger
+	metrics                         *stateMetrics
+}
+
+func NewStateFactory(
+	config blockSyncConfig,
+	gossip gossiptopics.BlockSync,
+	storage BlockSyncStorage,
+	conduit *blockSyncConduit,
+	logger log.BasicLogger,
+	factory metric.Factory,
+) *stateFactory {
+	return NewStateFactoryWithTimers(
+		config,
+		gossip,
+		storage,
+		conduit,
+		nil,
+		nil,
+		nil,
+		logger,
+		factory)
+}
+
+func NewStateFactoryWithTimers(
+	config blockSyncConfig,
+	gossip gossiptopics.BlockSync,
+	storage BlockSyncStorage,
+	conduit *blockSyncConduit,
+	createCollectTimeoutTimer func() *synchronization.Timer,
+	createNoCommitTimeoutTimer func() *synchronization.Timer,
+	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
+	logger log.BasicLogger,
+	factory metric.Factory,
+) *stateFactory {
+
+	f := &stateFactory{
+		config:  config,
+		gossip:  gossip,
+		storage: storage,
+		conduit: conduit,
+		logger:  logger,
+		metrics: newStateMetrics(factory),
+	}
+
+	if createCollectTimeoutTimer == nil {
+		f.createCollectTimeoutTimer = f.defaultCreateCollectTimeoutTimer
+	} else {
+		f.createCollectTimeoutTimer = createCollectTimeoutTimer
+	}
+
+	if createNoCommitTimeoutTimer == nil {
+		f.createNoCommitTimeoutTimer = f.defaultCreateNoCommitTimeoutTimer
+	} else {
+		f.createNoCommitTimeoutTimer = createNoCommitTimeoutTimer
+	}
+
+	if createWaitForChunksTimeoutTimer == nil {
+		f.createWaitForChunksTimeoutTimer = f.defaultCreateWaitForChunksTimeoutTimer
+	} else {
+		f.createWaitForChunksTimeoutTimer = createWaitForChunksTimeoutTimer
+	}
+
+	return f
+}
+
+func (f *stateFactory) defaultCreateCollectTimeoutTimer() *synchronization.Timer {
+	return synchronization.NewTimer(f.config.BlockSyncCollectResponseTimeout())
+}
+
+func (f *stateFactory) defaultCreateNoCommitTimeoutTimer() *synchronization.Timer {
+	return synchronization.NewTimer(f.config.BlockSyncNoCommitInterval())
+}
+
+func (f *stateFactory) defaultCreateWaitForChunksTimeoutTimer() *synchronization.Timer {
+	return synchronization.NewTimer(f.config.BlockSyncCollectChunksTimeout())
+}
+
+func (f *stateFactory) CreateIdleState() syncState {
+	return &idleState{
+		factory:     f,
+		createTimer: f.createNoCommitTimeoutTimer,
+		logger:      f.logger,
+		conduit:     f.conduit,
+		metrics:     f.metrics.idleStateMetrics,
+	}
+}
+
+func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
+	return &collectingAvailabilityResponsesState{
+		factory:      f,
+		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
+		createTimer:  f.createCollectTimeoutTimer,
+		logger:       f.logger,
+		conduit:      f.conduit,
+		metrics:      f.metrics.collectingStateMetrics,
+	}
+}
+
+func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockAvailabilityResponseMessage) syncState {
+	return &finishedCARState{
+		responses: responses,
+		logger:    f.logger,
+		factory:   f,
+		metrics:   f.metrics.finishedCollectingStateMetrics,
+	}
+}
+
+func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519PublicKey) syncState {
+	return &waitingForChunksState{
+		sourceKey:    sourceKey,
+		factory:      f,
+		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
+		createTimer:  f.createWaitForChunksTimeoutTimer,
+		logger:       f.logger,
+		abort:        make(chan struct{}),
+		conduit:      f.conduit,
+		metrics:      f.metrics.waitingStateMetrics,
+	}
+}
+
+func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.BlockSyncResponseMessage) syncState {
+	return &processingBlocksState{
+		blocks:  message,
+		factory: f,
+		logger:  f.logger,
+		storage: f.storage,
+		metrics: f.metrics.processingStateMetrics,
+	}
 }
 
 type stateMetrics struct {
@@ -87,76 +218,5 @@ func newStateMetrics(factory metric.Factory) *stateMetrics {
 			failedCommitBlocks:     factory.NewGauge("BlockSync.Processing.FailedToCommitBlocks"),
 			failedValidationBlocks: factory.NewGauge("BlockSync.Processing.FailedToValidateBlocks"),
 		},
-	}
-}
-
-func NewStateFactory(
-	config blockSyncConfig,
-	gossip gossiptopics.BlockSync,
-	storage BlockSyncStorage,
-	syncConduit *blockSyncConduit,
-	logger log.BasicLogger,
-	factory metric.Factory) *stateFactory {
-
-	return &stateFactory{
-		config:  config,
-		gossip:  gossip,
-		storage: storage,
-		c:       syncConduit,
-		logger:  logger,
-		metrics: newStateMetrics(factory),
-	}
-}
-
-func (f *stateFactory) CreateIdleState() syncState {
-	return &idleState{
-		sf:          f,
-		idleTimeout: f.config.BlockSyncNoCommitInterval,
-		logger:      f.logger,
-		conduit:     f.c,
-		m:           f.metrics.idleStateMetrics,
-	}
-}
-
-func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
-	return &collectingAvailabilityResponsesState{
-		sf:             f,
-		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
-		collectTimeout: f.config.BlockSyncCollectResponseTimeout,
-		logger:         f.logger,
-		conduit:        f.c,
-		m:              f.metrics.collectingStateMetrics,
-	}
-}
-
-func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockAvailabilityResponseMessage) syncState {
-	return &finishedCARState{
-		responses: responses,
-		logger:    f.logger,
-		sf:        f,
-		m:         f.metrics.finishedCollectingStateMetrics,
-	}
-}
-
-func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519PublicKey) syncState {
-	return &waitingForChunksState{
-		sourceKey:      sourceKey,
-		sf:             f,
-		gossipClient:   newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
-		collectTimeout: f.config.BlockSyncCollectChunksTimeout,
-		logger:         f.logger,
-		abort:          make(chan struct{}),
-		conduit:        f.c,
-		m:              f.metrics.waitingStateMetrics,
-	}
-}
-
-func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.BlockSyncResponseMessage) syncState {
-	return &processingBlocksState{
-		blocks:  message,
-		sf:      f,
-		logger:  f.logger,
-		storage: f.storage,
-		m:       f.metrics.processingStateMetrics,
 	}
 }
