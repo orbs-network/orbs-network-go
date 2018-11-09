@@ -45,7 +45,7 @@ func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex
 		Builder()
 	builtTx := tx.Build()
 
-	c.API.SendTransaction(ctx, tx, nodeIndex)
+	c.API.SendTransactionInBackground(ctx, tx, nodeIndex)
 
 	return digest.CalcTxHash(builtTx.Transaction())
 }

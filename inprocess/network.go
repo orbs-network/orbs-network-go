@@ -133,6 +133,19 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 	return ch
 }
 
+func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
+	supervised.GoOnce(n.Logger, func() {
+		publicApi := n.Nodes[nodeIndex].GetPublicApi()
+		_, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
+			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
+			ReturnImmediately: 1,
+		})
+		if err != nil {
+			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
+		}
+	})
+}
+
 func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan uint64 {
 
 	ch := make(chan uint64)
