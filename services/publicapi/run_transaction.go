@@ -19,7 +19,7 @@ func (s *service) CallMethod(parentCtx context.Context, input *services.CallMeth
 		return nil, err
 	}
 
-	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
+	ctx := trace.NewContext(parentCtx, "PublicApi.CallMethod")
 	tx := input.ClientRequest.Transaction()
 	txHash := digest.CalcTxHash(tx)
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
