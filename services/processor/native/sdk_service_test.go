@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestCallMethod(t *testing.T) {
+func TestServiceSdk_CallMethod(t *testing.T) {
 	s := createServiceSdk()
 
 	res, err := s.CallMethod(EXAMPLE_CONTEXT, "AnotherContract", "someMethod", uint64(17), "hello")

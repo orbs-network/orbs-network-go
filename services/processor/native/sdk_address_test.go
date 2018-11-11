@@ -14,7 +14,7 @@ import (
 var exampleAddress1, _ = hex.DecodeString("1acb19a469206161ed7e5ed9feb996a6e24be441") // ripmd160
 var exampleAddress2, _ = hex.DecodeString("223344a469206161ed7e5ed9feb996a6e24be441") // ripmd160
 
-func TestValidateAddress(t *testing.T) {
+func TestAddressSdk_ValidateAddress(t *testing.T) {
 	s := createAddressSdk()
 
 	err := s.ValidateAddress(EXAMPLE_CONTEXT, []byte{})
@@ -27,7 +27,7 @@ func TestValidateAddress(t *testing.T) {
 	require.NoError(t, err, "address should be valid")
 }
 
-func TestGetSignerAddress(t *testing.T) {
+func TestAddressSdk_GetSignerAddress(t *testing.T) {
 	s := createAddressSdk()
 
 	address, err := s.GetSignerAddress(EXAMPLE_CONTEXT)
@@ -35,7 +35,7 @@ func TestGetSignerAddress(t *testing.T) {
 	require.EqualValues(t, exampleAddress1, address, "example1 should be returned")
 }
 
-func TestGetCallerAddress(t *testing.T) {
+func TestAddressSdk_GetCallerAddress(t *testing.T) {
 	s := createAddressSdk()
 
 	address, err := s.GetCallerAddress(EXAMPLE_CONTEXT)

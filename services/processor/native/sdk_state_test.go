@@ -21,7 +21,7 @@ func exampleKeyAddress() sdk.Ripmd160Sha256 {
 	return sdk.Ripmd160Sha256(hash.CalcRipmd160Sha256([]byte(exampleKey())))
 }
 
-func TestWriteReadBytesByAddress(t *testing.T) {
+func TestStateSdk_WriteReadBytesByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteBytesByAddress(EXAMPLE_CONTEXT, exampleKeyAddress(), []byte{0x01, 0x02, 0x03})
 	require.NoError(t, err, "write should succeed")
@@ -31,7 +31,7 @@ func TestWriteReadBytesByAddress(t *testing.T) {
 	require.Equal(t, []byte{0x01, 0x02, 0x03}, bytes, "read should return what was written")
 }
 
-func TestWriteReadBytesByKey(t *testing.T) {
+func TestStateSdk_WriteReadBytesByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteBytesByKey(EXAMPLE_CONTEXT, exampleKey(), []byte{0x01, 0x02, 0x03})
 	require.NoError(t, err, "write should succeed")
@@ -41,7 +41,7 @@ func TestWriteReadBytesByKey(t *testing.T) {
 	require.Equal(t, []byte{0x01, 0x02, 0x03}, bytes, "read should return what was written")
 }
 
-func TestClearReadBytesByAddress(t *testing.T) {
+func TestStateSdk_ClearReadBytesByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByAddress(EXAMPLE_CONTEXT, exampleKeyAddress())
 	require.NoError(t, err, "clear should succeed")
@@ -51,7 +51,7 @@ func TestClearReadBytesByAddress(t *testing.T) {
 	require.Equal(t, []byte{}, bytes, "read should return what was written")
 }
 
-func TestClearReadBytesByKey(t *testing.T) {
+func TestStateSdk_ClearReadBytesByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByKey(EXAMPLE_CONTEXT, exampleKey())
 	require.NoError(t, err, "clear should succeed")
@@ -61,7 +61,7 @@ func TestClearReadBytesByKey(t *testing.T) {
 	require.Equal(t, []byte{}, bytes, "read should return what was written")
 }
 
-func TestWriteReadStringByAddress(t *testing.T) {
+func TestStateSdk_WriteReadStringByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteStringByAddress(EXAMPLE_CONTEXT, exampleKeyAddress(), "hello")
 	require.NoError(t, err, "write should succeed")
@@ -71,7 +71,7 @@ func TestWriteReadStringByAddress(t *testing.T) {
 	require.Equal(t, "hello", str, "read should return what was written")
 }
 
-func TestWriteReadStringByKey(t *testing.T) {
+func TestStateSdk_WriteReadStringByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteStringByKey(EXAMPLE_CONTEXT, exampleKey(), "hello")
 	require.NoError(t, err, "write should succeed")
@@ -81,7 +81,7 @@ func TestWriteReadStringByKey(t *testing.T) {
 	require.Equal(t, "hello", str, "read should return what was written")
 }
 
-func TestClearReadStringByAddress(t *testing.T) {
+func TestStateSdk_ClearReadStringByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByAddress(EXAMPLE_CONTEXT, exampleKeyAddress())
 	require.NoError(t, err, "clear should succeed")
@@ -91,7 +91,7 @@ func TestClearReadStringByAddress(t *testing.T) {
 	require.Equal(t, "", str, "read should return what was written")
 }
 
-func TestClearReadStringByKey(t *testing.T) {
+func TestStateSdk_ClearReadStringByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByKey(EXAMPLE_CONTEXT, exampleKey())
 	require.NoError(t, err, "clear should succeed")
@@ -101,7 +101,7 @@ func TestClearReadStringByKey(t *testing.T) {
 	require.Equal(t, "", str, "read should return what was written")
 }
 
-func TestWriteReadUint64ByAddress(t *testing.T) {
+func TestStateSdk_WriteReadUint64ByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteUint64ByAddress(EXAMPLE_CONTEXT, exampleKeyAddress(), uint64(17))
 	require.NoError(t, err, "write should succeed")
@@ -111,7 +111,7 @@ func TestWriteReadUint64ByAddress(t *testing.T) {
 	require.Equal(t, uint64(17), num, "read should return what was written")
 }
 
-func TestWriteReadUint64ByKey(t *testing.T) {
+func TestStateSdk_WriteReadUint64ByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteUint64ByKey(EXAMPLE_CONTEXT, exampleKey(), uint64(17))
 	require.NoError(t, err, "write should succeed")
@@ -121,7 +121,7 @@ func TestWriteReadUint64ByKey(t *testing.T) {
 	require.Equal(t, uint64(17), num, "read should return what was written")
 }
 
-func TestClearReadUint64ByAddress(t *testing.T) {
+func TestStateSdk_ClearReadUint64ByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByAddress(EXAMPLE_CONTEXT, exampleKeyAddress())
 	require.NoError(t, err, "clear should succeed")
@@ -131,7 +131,7 @@ func TestClearReadUint64ByAddress(t *testing.T) {
 	require.Equal(t, uint64(0), num, "read should return what was written")
 }
 
-func TestClearReadUint64ByKey(t *testing.T) {
+func TestStateSdk_ClearReadUint64ByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByKey(EXAMPLE_CONTEXT, exampleKey())
 	require.NoError(t, err, "clear should succeed")
@@ -141,7 +141,7 @@ func TestClearReadUint64ByKey(t *testing.T) {
 	require.Equal(t, uint64(0), num, "read should return what was written")
 }
 
-func TestWriteReadUint32ByAddress(t *testing.T) {
+func TestStateSdk_WriteReadUint32ByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteUint32ByAddress(EXAMPLE_CONTEXT, exampleKeyAddress(), uint32(15))
 	require.NoError(t, err, "write should succeed")
@@ -151,7 +151,7 @@ func TestWriteReadUint32ByAddress(t *testing.T) {
 	require.Equal(t, uint32(15), num, "read should return what was written")
 }
 
-func TestWriteReadUint32ByKey(t *testing.T) {
+func TestStateSdk_WriteReadUint32ByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.WriteUint32ByKey(EXAMPLE_CONTEXT, exampleKey(), uint32(15))
 	require.NoError(t, err, "write should succeed")
@@ -161,7 +161,7 @@ func TestWriteReadUint32ByKey(t *testing.T) {
 	require.Equal(t, uint32(15), num, "read should return what was written")
 }
 
-func TestClearReadUint32ByAddress(t *testing.T) {
+func TestStateSdk_ClearReadUint32ByAddress(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByAddress(EXAMPLE_CONTEXT, exampleKeyAddress())
 	require.NoError(t, err, "clear should succeed")
@@ -171,7 +171,7 @@ func TestClearReadUint32ByAddress(t *testing.T) {
 	require.Equal(t, uint32(0), num, "read should return what was written")
 }
 
-func TestClearReadUint32ByKey(t *testing.T) {
+func TestStateSdk_ClearReadUint32ByKey(t *testing.T) {
 	s := createStateSdk()
 	err := s.ClearByKey(EXAMPLE_CONTEXT, exampleKey())
 	require.NoError(t, err, "clear should succeed")
