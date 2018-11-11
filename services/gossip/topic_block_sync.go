@@ -29,17 +29,10 @@ func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipme
 }
 
 func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	header := (&gossipmessages.HeaderBuilder{
-		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
-		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-	}).Build()
-
-	if input.Message.SignedBatchRange == nil {
-		return nil, errors.Errorf("cannot encode BlockAvailabilityRequestMessage: %s", input.Message.String())
+	payloads, err := codec.EncodeBlockAvailabilityRequest(input.Message)
+	if err != nil {
+		return nil, err
 	}
-	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
-
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
@@ -48,23 +41,12 @@ func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *
 }
 
 func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 2 {
+	message, err := codec.DecodeBlockAvailabilityRequest(payloads)
+	if err != nil {
 		return
 	}
-	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
-	// attempting with talkol to fix issue #437
-	if !senderSignature.IsValid() {
-		return
-	}
-
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{
-			Message: &gossipmessages.BlockAvailabilityRequestMessage{
-				SignedBatchRange: batchRange,
-				Sender:           senderSignature,
-			},
-		})
+		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockAvailabilityRequest failed", log.Error(err))
 		}
