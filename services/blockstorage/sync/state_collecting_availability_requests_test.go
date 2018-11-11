@@ -2,8 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -17,7 +15,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 		h := newBlockSyncHarness()
 
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
-		h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+		h.expectBroadcastOfBlockAvailabilityRequestToFail()
 
 		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 		nextShouldBeIdle := collectingState.processState(ctx)
@@ -52,8 +50,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 		})
 
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
-
-		h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+		h.expectBroadcastOfBlockAvailabilityRequest()
 
 		message := builders.BlockAvailabilityResponseInput().Build().Message
 		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
@@ -79,8 +76,7 @@ func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	h := newBlockSyncHarness()
 
 	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
-
-	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+	h.expectBroadcastOfBlockAvailabilityRequest()
 
 	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 	nextState := collectingState.processState(ctx)

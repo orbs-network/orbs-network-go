@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -173,4 +174,12 @@ func (h *blockSyncHarness) expectLastCommittedBlockHeightQueryFromStorage(expect
 func (h *blockSyncHarness) expectPreSynchronizationUpdateOfConsensusAlgos(expectedHeight int) {
 	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
 	h.expectLastCommittedBlockHeightQueryFromStorage(expectedHeight)
+}
+
+func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequestToFail() {
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+}
+
+func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequest() {
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
