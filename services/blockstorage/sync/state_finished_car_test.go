@@ -9,48 +9,51 @@ import (
 	"testing"
 )
 
-func TestFinishedWithNoResponsesGoBackToIdle(t *testing.T) {
+func TestStateFinishedCollectingAvailabilityResponses_ReturnsToIdleWhenNoResponsesReceived(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
-		finishedState := h.factory.CreateFinishedCARState(nil)
-		shouldBeIdleState := finishedState.processState(ctx)
 
-		require.IsType(t, &idleState{}, shouldBeIdleState, "next state should be idle")
+		state := h.factory.CreateFinishedCARState(nil)
+		nextState := state.processState(ctx)
+
+		require.IsType(t, &idleState{}, nextState, "next state should be idle")
 	})
 }
 
-func TestFinishedWithResponsesMoveToWaitingForChunk(t *testing.T) {
+func TestStateFinishedCollectingAvailabilityResponses_MovesToWaitingForChunks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
+		h := newBlockSyncHarness()
+
 		response := builders.BlockAvailabilityResponseInput().Build().Message
-		h := newBlockSyncHarness()
-		finishedState := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
-		shouldBeWaitingState := finishedState.processState(ctx)
+		state := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
+		nextState := state.processState(ctx)
 
-		require.IsType(t, &waitingForChunksState{}, shouldBeWaitingState, "next state should be waiting for chunk")
+		require.IsType(t, &waitingForChunksState{}, nextState, "next state should be waiting for chunks")
 	})
 }
 
-func TestFinishedContextTerminationFlow(t *testing.T) {
+func TestStateFinishedCollectingAvailabilityResponses_ContextTerminationFlow(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	h := newBlockSyncHarness()
+
 	response := builders.BlockAvailabilityResponseInput().Build().Message
-	finishedState := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
+	state := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
 
 	cancel()
-	shouldBeNil := finishedState.processState(ctx)
+	shouldBeNil := state.processState(ctx)
 
 	require.Nil(t, shouldBeNil, "context terminated, state should be nil")
 }
 
-func TestFinishedNOP(t *testing.T) {
+func TestStateFinishedCollectingAvailabilityResponses_NOP(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
-		finishedState := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
+
+		state := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
 
 		// sanity test, these should do nothing
-		finishedState.gotBlocks(ctx, nil)
-		finishedState.blockCommitted(ctx)
-		finishedState.gotAvailabilityResponse(ctx, nil)
+		state.gotBlocks(ctx, nil)
+		state.blockCommitted(ctx)
+		state.gotAvailabilityResponse(ctx, nil)
 	})
 }
