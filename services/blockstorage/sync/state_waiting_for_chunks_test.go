@@ -56,7 +56,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
-		nextState := h.processStateAndWaitUntilFinished(ctx, waitingState, func() {
+		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, waitingState, func() {
 			waitingState.gotBlocks(ctx, blocksMessage)
 			manualWaitForChunksTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
@@ -97,7 +97,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
-		nextState := h.processStateAndWaitUntilFinished(ctx, waitingState, func() {
+		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, waitingState, func() {
 			waitingState.gotBlocks(ctx, blocksMessage)
 		})
 

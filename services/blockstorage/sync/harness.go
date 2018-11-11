@@ -151,7 +151,7 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	require.True(t, ok)
 }
 
-func (h *blockSyncHarness) processStateAndWaitUntilFinished(ctx context.Context, state syncState, whileStateIsProcessing func()) syncState {
+func (h *blockSyncHarness) processStateInBackgroundAndWaitUntilFinished(ctx context.Context, state syncState, whileStateIsProcessing func()) syncState {
 	var nextState syncState
 	stateProcessingFinished := make(chan bool)
 	go func() {
@@ -182,4 +182,8 @@ func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequestToFail() {
 
 func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequest() {
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+}
+
+func (h *blockSyncHarness) verifyBroadcastOfBlockAvailabilityRequest(t *testing.T) {
+	require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast should be sent")
 }

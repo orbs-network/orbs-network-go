@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *testing.T) {
@@ -17,27 +16,25 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 		h.expectBroadcastOfBlockAvailabilityRequestToFail()
 
-		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
-		nextShouldBeIdle := collectingState.processState(ctx)
+		state := h.factory.CreateCollectingAvailabilityResponseState()
+		nextState := state.processState(ctx)
 
-		require.IsType(t, &idleState{}, nextShouldBeIdle, "should be idle on gossip error")
-
+		require.IsType(t, &idleState{}, nextState, "next state should be idle on gossip error")
 		h.verifyMocks(t)
 	})
 }
 
-func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSize(t *testing.T) {
+func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		// this can probably happen only if BatchSize config is invalid
 		h := newBlockSyncHarness().withBatchSize(0)
 
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(0) // new server
 
-		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
-		nextShouldBeIdle := collectingState.processState(ctx)
+		state := h.factory.CreateCollectingAvailabilityResponseState()
+		nextState := state.processState(ctx)
 
-		require.IsType(t, &idleState{}, nextShouldBeIdle, "should be idle on gossip flow error")
-
+		require.IsType(t, &idleState{}, nextState, "next state should be idle on gossip error flow")
 		h.verifyMocks(t)
 	})
 }
@@ -53,10 +50,10 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 		h.expectBroadcastOfBlockAvailabilityRequest()
 
 		message := builders.BlockAvailabilityResponseInput().Build().Message
-		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
-		nextState := h.processStateAndWaitUntilFinished(ctx, collectingState, func() {
-			require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast was not sent out")
-			collectingState.gotAvailabilityResponse(ctx, message)
+		state := h.factory.CreateCollectingAvailabilityResponseState()
+		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
+			h.verifyBroadcastOfBlockAvailabilityRequest(t)
+			state.gotAvailabilityResponse(ctx, message)
 			manualCollectResponsesTimer.ManualTick()
 		})
 
@@ -78,8 +75,8 @@ func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()
 
-	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
-	nextState := collectingState.processState(ctx)
+	state := h.factory.CreateCollectingAvailabilityResponseState()
+	nextState := state.processState(ctx)
 
 	require.Nil(t, nextState, "context terminated, next state should be nil")
 
@@ -90,21 +87,21 @@ func TestStateCollectingAvailabilityResponses_ReceiveResponseWhenNotReadyDoesNot
 	h := newBlockSyncHarness()
 	test.WithContextWithTimeout(h.config.collectResponses/2, func(ctx context.Context) {
 
-		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
+		state := h.factory.CreateCollectingAvailabilityResponseState()
 		// not calling the process state will not activate the reader part
 		message := builders.BlockAvailabilityResponseInput().Build().Message
-		collectingState.gotAvailabilityResponse(ctx, message) // this will block if the test fails
+		state.gotAvailabilityResponse(ctx, message) // this will block if the test fails
 	})
 }
 
 func TestStateCollectingAvailabilityResponses_NOP(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
-		car := h.factory.CreateCollectingAvailabilityResponseState()
+		state := h.factory.CreateCollectingAvailabilityResponseState()
 		// these calls should do nothing, this is just a sanity that they do not panic and return nothing
 		blockmessage := builders.BlockSyncResponseInput().Build().Message
-		car.gotBlocks(ctx, blockmessage)
-		car.blockCommitted(ctx)
+		state.gotBlocks(ctx, blockmessage)
+		state.blockCommitted(ctx)
 	})
 
 }

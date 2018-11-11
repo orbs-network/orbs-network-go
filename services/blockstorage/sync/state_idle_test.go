@@ -16,7 +16,7 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 		})
 
 		idle := h.factory.CreateIdleState()
-		nextState := h.processStateAndWaitUntilFinished(ctx, idle, func() {
+		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, idle, func() {
 			idle.blockCommitted(ctx)
 			manualNoCommitTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
