@@ -17,7 +17,7 @@ func runCommand(command []string) {
 	err := cmd.Run()
 
 	if err != nil {
-		fmt.Println("Could not start gamma-server", err)
+		fmt.Println("Could not start gammaserver", err)
 		os.Exit(1)
 	}
 }
@@ -29,7 +29,7 @@ func findGammaServerBinary(pathToBinary string) string {
 		lookups = append(lookups, pathToBinary)
 	}
 
-	lookups = append(lookups, "./gamma-server", "/usr/local/bin/gamma-server")
+	lookups = append(lookups, "./gammaserver", "/usr/local/bin/gammaserver")
 
 	for _, binaryPath := range lookups {
 		_, err := os.Stat(binaryPath)
@@ -46,7 +46,7 @@ func (r *CommandRunner) HandleStartCommand(args []string) (string, error) {
 	flagSet := flag.NewFlagSet("start", flag.ExitOnError)
 
 	binaryPtr := flagSet.String("binaryPath", "", "Provide your own path to a pre-compiled gamma binary")
-	portPtr := flagSet.String("port", "8080", "The port to bind the gamma-server on")
+	portPtr := flagSet.String("port", "8080", "The port to bind the gammaserver on")
 
 	err := flagSet.Parse(args)
 	if err != nil {
@@ -56,8 +56,8 @@ func (r *CommandRunner) HandleStartCommand(args []string) (string, error) {
 	pathToBinary := findGammaServerBinary(*binaryPtr)
 	if pathToBinary != "" {
 		startMessage := `
-gamma-server started and listening on port ` + *portPtr + `
-For debugging/logging please run gamma-server directly
+gammaserver started and listening on port ` + *portPtr + `
+For debugging/logging please run gammaserver directly
 
 `
 		execCommand := []string{pathToBinary, "-port", *portPtr, "&>/dev/null", "&"}
@@ -66,5 +66,5 @@ For debugging/logging please run gamma-server directly
 		return startMessage, nil
 	}
 
-	return "", errors.Errorf("Could not find gamma-server on this machine")
+	return "", errors.Errorf("Could not find gammaserver on this machine")
 }
