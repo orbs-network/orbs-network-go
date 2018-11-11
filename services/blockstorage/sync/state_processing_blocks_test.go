@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestProcessingBlocksCommitsAccordinglyAndMovesToCAR(t *testing.T) {
+func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilityResponses(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 		h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(11)
@@ -34,7 +34,7 @@ func TestProcessingBlocksCommitsAccordinglyAndMovesToCAR(t *testing.T) {
 	})
 }
 
-func TestProcessingWithNoBlocksReturnsToIdle(t *testing.T) {
+func TestStateProcessingBlocks_ReturnsToIdleWhenNoBlocksReceived(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
@@ -45,7 +45,7 @@ func TestProcessingWithNoBlocksReturnsToIdle(t *testing.T) {
 	})
 }
 
-func TestProcessingValidationFailureReturnsToCAR(t *testing.T) {
+func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabilityResponses(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
@@ -72,7 +72,7 @@ func TestProcessingValidationFailureReturnsToCAR(t *testing.T) {
 	})
 }
 
-func TestProcessingCommitFailureReturnsToCAR(t *testing.T) {
+func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailabilityResponses(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
@@ -99,7 +99,7 @@ func TestProcessingCommitFailureReturnsToCAR(t *testing.T) {
 	})
 }
 
-func TestProcessingContextTerminationFlow(t *testing.T) {
+func TestStateProcessingBlocks_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := newBlockSyncHarness()
 	cancel()
@@ -116,7 +116,7 @@ func TestProcessingContextTerminationFlow(t *testing.T) {
 	require.Nil(t, next, "next state should be nil on context termination")
 }
 
-func TestProcessingNOP(t *testing.T) {
+func TestStateProcessingBlocks_NOP(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 		processing := h.factory.CreateProcessingBlocksState(nil)
