@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestIdleStateStaysIdleOnCommit(t *testing.T) {
+func TestStateIdle_StaysIdleOnCommit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualNoCommitTimer := synchronization.NewTimerWithManualTick()
 		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
@@ -26,7 +26,7 @@ func TestIdleStateStaysIdleOnCommit(t *testing.T) {
 	})
 }
 
-func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
+func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 		idle := h.factory.CreateIdleState()
@@ -35,7 +35,7 @@ func TestIdleStateMovesToCollectingOnNoCommitTimeout(t *testing.T) {
 	})
 }
 
-func TestIdleStateTerminatesOnContextTermination(t *testing.T) {
+func TestStateIdle_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := newBlockSyncHarness()
 	cancel()
@@ -45,7 +45,7 @@ func TestIdleStateTerminatesOnContextTermination(t *testing.T) {
 	require.Nil(t, next, "context termination should return a nil new state")
 }
 
-func TestIdleStateDoesNotBlockOnNewBlockNotificationWhenChannelIsNotReady(t *testing.T) {
+func TestStateIdle_DoesNotBlockOnNewBlockNotificationWhenChannelIsNotReady(t *testing.T) {
 	h := newBlockSyncHarness()
 	test.WithContextWithTimeout(h.config.noCommit/2, func(ctx context.Context) {
 		idle := h.factory.CreateIdleState()
@@ -53,7 +53,7 @@ func TestIdleStateDoesNotBlockOnNewBlockNotificationWhenChannelIsNotReady(t *tes
 	})
 }
 
-func TestIdleNOP(t *testing.T) {
+func TestStateIdle_NOP(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 		idle := h.factory.CreateIdleState()
