@@ -122,7 +122,7 @@ func (s *service) HandleBenchmarkConsensusCommit(ctx context.Context, input *gos
 
 func (s *service) HandleBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
 	if s.isLeader {
-		return nil, s.leaderHandleCommittedVote(input.Message.Sender, input.Message.Status)
+		return nil, s.leaderHandleCommittedVote(ctx, input.Message.Sender, input.Message.Status)
 	}
 	return nil, nil
 }

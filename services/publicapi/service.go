@@ -73,10 +73,10 @@ func NewPublicApi(
 }
 
 func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.String("flow", "checkpoint"))
 
 	for _, txReceipt := range input.TransactionReceipts {
-		logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Transaction(txReceipt.Txhash()))
+		logger.Info("transaction reported as committed", log.Transaction(txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
 			&txResponse{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
@@ -89,7 +89,9 @@ func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.
 }
 
 func (s *service) HandleTransactionError(ctx context.Context, input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
-	s.logger.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Transaction(input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.String("flow", "checkpoint"))
+
+	logger.Info("transaction reported as errored", log.Transaction(input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
 	s.waiter.complete(input.Txhash.KeyForMap(),
 		&txResponse{
 			transactionStatus:  input.TransactionStatus,

@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -30,6 +31,8 @@ func (s *service) RegisterTransactionResultsHandler(handler handlers.Transaction
 }
 
 func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	sender := input.Message.Sender
 	oneBigHash, _ , err:= HashTransactions(input.Message.SignedTransactions...)
 	if err != nil {
@@ -43,9 +46,9 @@ func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossip
 
 	for _, tx := range input.Message.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		s.logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", tx), log.Transaction(txHash))
+		logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", tx), log.Transaction(txHash))
 		if _, err := s.pendingPool.add(tx, sender.SenderPublicKey()); err != nil {
-			s.logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), log.Transaction(txHash))
+			logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), log.Transaction(txHash))
 		}
 	}
 	return nil, nil
@@ -83,9 +86,10 @@ func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
 	f.transactionAdded <- count
 }
 
-func (f *transactionForwarder) start(ctx context.Context) {
-	supervised.GoForever(ctx, f.logger, func() {
+func (f *transactionForwarder) start(parent context.Context) {
+	supervised.GoForever(parent, f.logger, func() {
 		for {
+			ctx := trace.NewContext(parent, "TransactionForwarder")
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
 
 			select {
@@ -104,6 +108,7 @@ func (f *transactionForwarder) start(ctx context.Context) {
 }
 
 func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
+	logger := f.logger.WithTags(trace.LogFieldFrom(ctx))
 	txs := f.drainQueue()
 	if len(txs) == 0 {
 		return
@@ -111,13 +116,13 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 
 	oneBigHash, hashes, err := HashTransactions(txs...)
 	if err != nil {
-		f.logger.Error("error creating one big hash while signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		logger.Error("error creating one big hash while signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
 		return
 	}
 
 	sig, err := signature.SignEd25519(f.config.NodePrivateKey(), oneBigHash)
 	if err != nil {
-		f.logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
 		return
 	}
 
@@ -133,9 +138,9 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 
 	for _, hash := range hashes {
 		if err != nil {
-			f.logger.Info("failed forwarding transaction via gossip", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(hash))
+			logger.Info("failed forwarding transaction via gossip", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(hash))
 		} else {
-			f.logger.Info("forwarded transaction via gossip", log.String("flow", "checkpoint"), log.Transaction(hash))
+			logger.Info("forwarded transaction via gossip", log.String("flow", "checkpoint"), log.Transaction(hash))
 		}
 	}
 }

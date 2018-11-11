@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	blockSync "github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -84,8 +85,10 @@ func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *servic
 }
 
 func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
-	s.logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
@@ -97,7 +100,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, err
 	}
 
-	if ok, err := s.validateBlockDoesNotExist(txBlockHeader, lastCommittedBlock); err != nil || !ok {
+	if ok, err := s.validateBlockDoesNotExist(ctx, txBlockHeader, lastCommittedBlock); err != nil || !ok {
 		return nil, err
 	}
 
@@ -113,7 +116,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	s.blockSync.HandleBlockCommitted(ctx)
 
-	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.syncBlockToStateStorage(ctx, input.BlockPair); err != nil {
 		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
@@ -243,6 +246,8 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 
 // FIXME implement all block checks
 func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
 		return nil, protocolVersionError
 	}
@@ -263,7 +268,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		s.logger.Error("intra-node sync to consensus algo failed", log.Error(err))
+		logger.Error("intra-node sync to consensus algo failed", log.Error(err))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -320,30 +325,32 @@ func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopi
 }
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
-func (s *service) validateBlockDoesNotExist(txBlockHeader *protocol.TransactionsBlockHeader, lastCommittedBlock *protocol.BlockPairContainer) (bool, error) {
+func (s *service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *protocol.TransactionsBlockHeader, lastCommittedBlock *protocol.BlockPairContainer) (bool, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	currentBlockHeight := getBlockHeight(lastCommittedBlock)
 	attemptedBlockHeight := txBlockHeader.BlockHeight()
 
 	if attemptedBlockHeight < currentBlockHeight {
 		// we can't check for fork because we don't have the tx header of the old block easily accessible
 		errorMessage := "block already in storage, skipping"
-		s.logger.Info(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+		logger.Info(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 		return false, errors.New(errorMessage)
 	} else if attemptedBlockHeight == currentBlockHeight {
 		// we can check for fork because we do have the tx header of the old block easily accessible
 		if txBlockHeader.Timestamp() != getBlockTimestamp(lastCommittedBlock) {
 			errorMessage := "FORK!! block already in storage, timestamp mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
+			logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		} else if !txBlockHeader.Equal(lastCommittedBlock.TransactionsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
+			logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 
-		s.logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+		logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 		return false, nil
 	}
 

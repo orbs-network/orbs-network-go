@@ -193,23 +193,7 @@ func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *
 	return err
 }
 
-func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
-	defer func() {
-		// FIXME remove the recover once we start passing context everywhere
-		// TODO (talkol) - it's a pattern we need to decide on: many short lived writers, one long lived reader
-		// closing the channel when long lived reader terminates will cause the writers to panic - a smell
-		// the better fix is to send ctx to all writers and when they block write, select on the ctx.Done as well
-		// we can only implement this once ctx can be sent to the writers
-		if r := recover(); r != nil {
-			fields := []*log.Field{}
-			if err, ok := r.(error); ok {
-				fields = append(fields, log.Error(err))
-			}
-
-			s.logger.Info("recovering from failure to collect vote, possibly because consensus was shut down", fields...)
-		}
-	}()
-
+func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
 	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
 	// validate the vote
@@ -219,7 +203,7 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	}
 
 	// add the vote
-	enoughVotesReceived, err := s.leaderAddVote(sender, status, lastCommittedBlock)
+	enoughVotesReceived, err := s.leaderAddVote(ctx, sender, status, lastCommittedBlock)
 	if err != nil {
 		return err
 	}
@@ -253,7 +237,9 @@ func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	return nil
 }
 
-func (s *service) leaderAddVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) (bool, error) {
+func (s *service) leaderAddVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) (bool, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -266,7 +252,7 @@ func (s *service) leaderAddVote(sender *gossipmessages.SenderSignature, status *
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVotersUnderMutex) + 1
-	s.logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
+	logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorumUnderMutex {
 		s.lastCommittedBlockVotersReachedQuorumUnderMutex = true
 		return true, nil
