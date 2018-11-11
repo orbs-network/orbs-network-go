@@ -5,13 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func EncodeBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityRequestMessage) ([][]byte, error) {
-	header := (&gossipmessages.HeaderBuilder{
-		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
-		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-	}).Build()
-
+func EncodeBlockAvailabilityRequest(header *gossipmessages.Header, message *gossipmessages.BlockAvailabilityRequestMessage) ([][]byte, error) {
 	if message.SignedBatchRange == nil {
 		return nil, errors.New("missing SignedBatchRange")
 	}
@@ -19,8 +13,8 @@ func EncodeBlockAvailabilityRequest(message *gossipmessages.BlockAvailabilityReq
 }
 
 func DecodeBlockAvailabilityRequest(payloads [][]byte) (*gossipmessages.BlockAvailabilityRequestMessage, error) {
-	if len(payloads) < 2 {
-		return nil, errors.New("not enough payloads")
+	if len(payloads) != 2 {
+		return nil, errors.New("wrong num of payloads")
 	}
 	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])

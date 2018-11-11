@@ -29,7 +29,12 @@ func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipme
 }
 
 func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-	payloads, err := codec.EncodeBlockAvailabilityRequest(input.Message)
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+	}).Build()
+	payloads, err := codec.EncodeBlockAvailabilityRequest(header, input.Message)
 	if err != nil {
 		return nil, err
 	}
