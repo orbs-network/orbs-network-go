@@ -2,8 +2,8 @@ package gammaserver
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/inprocess"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
@@ -11,7 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inprocess.NetworkDriver {
+func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory.NetworkDriver {
 	numNodes := 2
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
 	logger.Info("creating development network")
@@ -28,7 +28,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inproces
 
 	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
 
-	network := &inprocess.Network{
+	network := &inmemory.Network{
 		Logger:    logger,
 		Transport: sharedTransport,
 	}

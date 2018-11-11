@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/inprocess"
 	"github.com/orbs-network/orbs-network-go/inprocess/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -18,7 +18,7 @@ import (
 )
 
 type TestNetworkDriver interface {
-	inprocess.NetworkDriver
+	inmemory.NetworkDriver
 	GetBenchmarkTokenContract() contracts.BenchmarkTokenClient
 	TransportTamperer() testGossipAdapter.Tamperer
 	Description() string
@@ -47,7 +47,7 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.
 	sharedTamperingTransport := testGossipAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
 
 	network := &acceptanceNetwork{
-		Network:            inprocess.NewNetwork(testLogger, sharedTamperingTransport),
+		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
 		tamperingTransport: sharedTamperingTransport,
 		description:        description,
 	}
@@ -73,7 +73,7 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.
 }
 
 type acceptanceNetwork struct {
-	inprocess.Network
+	inmemory.Network
 
 	tamperingTransport testGossipAdapter.Tamperer
 	description        string

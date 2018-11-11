@@ -1,4 +1,4 @@
-package inprocess
+package inmemory
 
 import (
 	"context"
