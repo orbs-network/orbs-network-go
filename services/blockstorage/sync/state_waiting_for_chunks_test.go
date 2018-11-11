@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
+func TestStateWaitingForChunks_MovesToIdleOnTransportError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
@@ -28,7 +28,7 @@ func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
 	})
 }
 
-func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
+func TestStateWaitingForChunks_MovesToIdleOnTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
@@ -44,7 +44,7 @@ func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 	})
 }
 
-func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
+func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
 		blocksMessage := builders.BlockSyncResponseInput().Build().Message
@@ -72,7 +72,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	})
 }
 
-func TestWaitingTerminatesOnContextTermination(t *testing.T) {
+func TestStateWaitingForChunks_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := newBlockSyncHarness()
 	cancel()
@@ -86,7 +86,7 @@ func TestWaitingTerminatesOnContextTermination(t *testing.T) {
 	require.Nil(t, nextState, "context terminated, expected nil state")
 }
 
-func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
+func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
 		blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
@@ -107,7 +107,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	})
 }
 
-func TestWaitingDoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
+func TestStateWaitingForChunks_DoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
 	h := newBlockSyncHarness()
 	test.WithContextWithTimeout(h.config.collectChunks/2, func(ctx context.Context) {
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -117,7 +117,7 @@ func TestWaitingDoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing
 	})
 }
 
-func TestWaitingNOP(t *testing.T) {
+func TestStateWaitingForChunks_NOP(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
