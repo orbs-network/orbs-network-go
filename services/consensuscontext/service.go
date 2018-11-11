@@ -2,6 +2,8 @@ package consensuscontext
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -89,7 +91,24 @@ func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.Re
 }
 
 func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
-	panic("Not implemented")
+
+	// TODO maybe put these validations in a table
+	requiredProtocolVersion := s.config.ProtocolVersion()
+	requiredVirtualChainId := s.config.VirtualChainId()
+
+	header := input.TransactionsBlock.Header
+	blockProtocolVersion := header.ProtocolVersion()
+	blockVirtualChainId := header.VirtualChainId()
+
+	if blockProtocolVersion != requiredProtocolVersion {
+		return nil, errors.New(fmt.Sprintf("Incorrect protocol version: needed %v but received %v", requiredProtocolVersion, blockProtocolVersion))
+	}
+	if blockVirtualChainId != requiredVirtualChainId {
+		return nil, errors.New(fmt.Sprintf("Incorrect virtual chain ID: needed %v but received %v", requiredVirtualChainId, blockVirtualChainId))
+	}
+
+	return &services.ValidateTransactionsBlockOutput{}, nil
+
 }
 
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {

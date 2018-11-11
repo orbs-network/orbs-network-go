@@ -29,7 +29,8 @@ func BlockPair() *blockPair {
 		txHeader: &protocol.TransactionsBlockHeaderBuilder{
 			BlockHeight:           1,
 			Timestamp:             primitives.TimestampNano(createdDate.UnixNano()),
-			ProtocolVersion:       primitives.ProtocolVersion(1),
+			ProtocolVersion:       DEFAULT_TEST_PROTOCOL_VERSION,
+			VirtualChainId:        DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			NumSignedTransactions: 1,
 		},
 		txMetadata: &protocol.TransactionsBlockMetadataBuilder{},
@@ -40,7 +41,8 @@ func BlockPair() *blockPair {
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
 			BlockHeight:            1,
 			Timestamp:              primitives.TimestampNano(createdDate.UnixNano()),
-			ProtocolVersion:        primitives.ProtocolVersion(1),
+			ProtocolVersion:        DEFAULT_TEST_PROTOCOL_VERSION,
+			VirtualChainId:         DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			NumContractStateDiffs:  1,
 			NumTransactionReceipts: 1,
 		},
@@ -102,6 +104,12 @@ func (b *blockPair) WithBlockCreated(time time.Time) *blockPair {
 func (b *blockPair) WithProtocolVersion(version primitives.ProtocolVersion) *blockPair {
 	b.txHeader.ProtocolVersion = version
 	b.rxHeader.ProtocolVersion = version
+	return b
+}
+
+func (b *blockPair) WithVirtualChainId(virtualChainId primitives.VirtualChainId) *blockPair {
+	b.txHeader.VirtualChainId = virtualChainId
+	b.rxHeader.VirtualChainId = virtualChainId
 	return b
 }
 

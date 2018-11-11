@@ -3,9 +3,11 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"strconv"
 	"time"
 )
 
@@ -18,13 +20,20 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 		return nil, err
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
+	merkleTransactionsRoot, err := calculateTransactionsRootHash(proposedTransactions.SignedTransactions)
+	if err != nil {
+		return nil, err
+	}
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion: primitives.ProtocolVersion(1), // TODO: fix
-			BlockHeight:     blockHeight,
-			//Timestamp: 			   primitives.TimestampNano(time.Now().UnixNano()),
+			ProtocolVersion:       primitives.ProtocolVersion(1),
+			VirtualChainId:        s.config.VirtualChainId(),
+			BlockHeight:           blockHeight,
 			PrevBlockHashPtr:      prevBlockHash,
+			Timestamp:             primitives.TimestampNano(time.Now().UnixNano()),
+			TransactionsRootHash:  merkleTransactionsRoot,
+			MetadataHash:          nil,
 			NumSignedTransactions: uint32(txCount),
 		}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
@@ -32,6 +41,19 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 		BlockProof:         nil,
 	}
 	return txBlock, nil
+}
+
+func calculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.MerkleSha256, error) {
+	forest, root := merkle.NewForest()
+	diffs := make([]*merkle.MerkleDiff, len(txs))
+	for i := 0; i < len(txs); i++ {
+		txHash := digest.CalcTxHash(txs[i].Transaction())
+		diffs[i] = &merkle.MerkleDiff{
+			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
+			Value: txHash,
+		}
+	}
+	return forest.Update(root, diffs)
 }
 
 func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
@@ -45,19 +67,57 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 	if err != nil {
 		return nil, err
 	}
+	merkleReceiptsRoot, err := calculateReceiptsRootHash(output.TransactionReceipts)
+	if err != nil {
+		return nil, err
+	}
+	preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
+		BlockHeight: blockHeight,
+	})
+	if err != nil {
+		return nil, err
+	}
+	stateDiffHash, err := calculateStateDiffHash(output.ContractStateDiffs)
+	if err != nil {
+		return nil, err
+	}
 
 	rxBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:          primitives.ProtocolVersion(1), // TODO: fix
-			BlockHeight:              blockHeight,
-			PrevBlockHashPtr:         prevBlockHash,
-			TransactionsBlockHashPtr: digest.CalcTransactionsBlockHash(transactionsBlock),
-			NumTransactionReceipts:   uint32(len(output.TransactionReceipts)),
-			NumContractStateDiffs:    uint32(len(output.ContractStateDiffs)),
+			ProtocolVersion:           primitives.ProtocolVersion(1),
+			VirtualChainId:            s.config.VirtualChainId(),
+			BlockHeight:               blockHeight,
+			PrevBlockHashPtr:          prevBlockHash,
+			Timestamp:                 primitives.TimestampNano(time.Now().UnixNano()),
+			ReceiptsRootHash:          merkleReceiptsRoot,
+			StateDiffHash:             stateDiffHash,
+			TransactionsBlockHashPtr:  digest.CalcTransactionsBlockHash(transactionsBlock),
+			PreExecutionStateRootHash: preExecutionStateRootHash.StateRootHash,
+			TxhashBloomFilter:         nil, // TODO ODEDW to decide
+			TimestampBloomFilter:      nil, // TODO ODEDW to decide
+			NumTransactionReceipts:    uint32(len(output.TransactionReceipts)),
+			NumContractStateDiffs:     uint32(len(output.ContractStateDiffs)),
 		}).Build(),
 		TransactionReceipts: output.TransactionReceipts,
 		ContractStateDiffs:  output.ContractStateDiffs,
 		BlockProof:          nil,
 	}
 	return rxBlock, nil
+}
+func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+	panic("not impl") // TODO ODEDW to decide
+
+}
+
+func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.MerkleSha256, error) {
+	forest, root := merkle.NewForest()
+	diffs := make([]*merkle.MerkleDiff, len(receipts))
+	for i := 0; i < len(receipts); i++ {
+		diffs[i] = &merkle.MerkleDiff{
+			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
+			Value: receipts[i].Txhash(),
+		}
+	}
+	return forest.Update(root, diffs)
+
 }
