@@ -1,4 +1,4 @@
-package gossip
+package codec
 
 import (
 	"github.com/google/go-cmp/cmp"
@@ -78,14 +78,14 @@ var multipleBlockPairsTable = []struct {
 
 func TestBlockPair(t *testing.T) {
 	for _, tt := range blockPairTable {
-		payloads, err := encodeBlockPair(tt.origin)
+		payloads, err := EncodeBlockPair(tt.origin)
 		if tt.encodeErr != (err != nil) {
 			t.Fatalf("Expected encode error to be %v but got: %v", tt.encodeErr, err)
 		}
 		if err != nil {
 			continue
 		}
-		res, err := decodeBlockPair(payloads)
+		res, err := DecodeBlockPair(payloads)
 		if tt.decodeErr != (err != nil) {
 			t.Fatalf("Expected decode error to be %v but got: %v", tt.decodeErr, err)
 		}
@@ -100,14 +100,14 @@ func TestBlockPair(t *testing.T) {
 
 func TestMultipleBlockPairs(t *testing.T) {
 	for _, tt := range multipleBlockPairsTable {
-		payloads, err := encodeBlockPairs(tt.origin)
+		payloads, err := EncodeBlockPairs(tt.origin)
 		if tt.encodeErr != (err != nil) {
 			t.Fatalf("Expected encode error to be %v but got: %v", tt.encodeErr, err)
 		}
 		if err != nil {
 			continue
 		}
-		res, err := decodeBlockPairs(payloads)
+		res, err := DecodeBlockPairs(payloads)
 		if tt.decodeErr != (err != nil) {
 			t.Fatalf("Expected decode error to be %v but got: %v", tt.decodeErr, err)
 		}

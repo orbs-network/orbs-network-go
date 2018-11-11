@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -165,7 +166,7 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 	}
 	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
 
-	blockPairPayloads, err := encodeBlockPairs(input.Message.BlockPairs)
+	blockPairPayloads, err := codec.EncodeBlockPairs(input.Message.BlockPairs)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +187,7 @@ func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipm
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
-	blocks, err := decodeBlockPairs(payloads[2:])
+	blocks, err := codec.DecodeBlockPairs(payloads[2:])
 
 	if err != nil {
 		s.logger.Error("could not decode block pair from block sync", log.Error(err))

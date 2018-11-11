@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -31,7 +32,7 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 		RecipientMode:      gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	blockPairPayloads, err := encodeBlockPair(input.Message.BlockPair)
+	blockPairPayloads, err := codec.EncodeBlockPair(input.Message.BlockPair)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 }
 
 func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	blockPair, err := decodeBlockPair(payloads)
+	blockPair, err := codec.DecodeBlockPair(payloads)
 	if err != nil {
 		s.logger.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
 		return

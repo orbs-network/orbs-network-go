@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
@@ -21,7 +22,7 @@ func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 
 	messageType := header.LeanHelix()
 	content := payloads[1]
-	blockPair, err := decodeBlockPair(payloads[2:])
+	blockPair, err := codec.DecodeBlockPair(payloads[2:])
 	if err != nil {
 		return
 	}
@@ -47,7 +48,7 @@ func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	blockPairPayloads, err := encodeBlockPair(input.Message.BlockPair)
+	blockPairPayloads, err := codec.EncodeBlockPair(input.Message.BlockPair)
 	if err != nil {
 		return nil, err
 	}
