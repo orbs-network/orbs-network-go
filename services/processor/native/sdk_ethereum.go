@@ -2,11 +2,13 @@ package native
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 type ethereumSdk struct {
@@ -17,7 +19,7 @@ type ethereumSdk struct {
 const SDK_OPERATION_NAME_ETHEREUM = "Sdk.Ethereum"
 
 func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress string, jsonAbi string, methodName string, out interface{}, args ...interface{}) error {
-	packedInput, err := ethereumPackInputArguments(args)
+	packedInput, err := ethereumPackInputArguments(jsonAbi, methodName, args...)
 	if err != nil {
 		return err
 	}
@@ -60,9 +62,12 @@ func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress
 	return ethereumUnpackOutput(out, output.OutputArguments[0].BytesValue())
 }
 
-// TODO: @jlevison add
-func ethereumPackInputArguments(args []interface{}) ([]byte, error) {
-	return nil, nil
+func ethereumPackInputArguments(jsonAbi string, method string, args ...interface{}) ([]byte, error) {
+	if parsedABI, err := abi.JSON(strings.NewReader(jsonAbi)); err != nil {
+		return nil, errors.WithStack(err)
+	} else {
+		return parsedABI.Pack(method, args...)
+	}
 }
 
 // TODO: @jlevison add
