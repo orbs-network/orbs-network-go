@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -70,10 +71,9 @@ func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
 	}
 }
 
-func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
 	metrics := newStateMachineMetrics(metricFactory)
 
-	logger := parentLogger.WithTags(LogTag)
 	bs := &BlockSync{
 		logger:  logger,
 		factory: factory,
@@ -90,14 +90,16 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.config.BlockSyncBatchSize()))
 
-	supervised.GoForever(ctx, parentLogger, func() {
+	supervised.GoForever(ctx, logger, func() {
 		bs.syncLoop(ctx)
 	})
 
 	return bs
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+	logger := parentLogger.WithTags(LogTag)
+
 	conduit := &blockSyncConduit{
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
@@ -114,9 +116,10 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	)
 }
 
-func (bs *BlockSync) syncLoop(ctx context.Context) {
+func (bs *BlockSync) syncLoop(parent context.Context) {
 	for bs.currentState = bs.factory.CreateCollectingAvailabilityResponseState(); bs.currentState != nil; {
-		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
+		ctx := trace.NewContext(parent, "BlockSync")
+		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState), trace.LogFieldFrom(ctx))
 
 		bs.currentState = bs.currentState.processState(ctx)
 		bs.metrics.statesTransitioned.Inc()

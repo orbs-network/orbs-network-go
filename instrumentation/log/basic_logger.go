@@ -97,13 +97,13 @@ func (b *basicLogger) Metric(params ...*Field) {
 func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	function, source := b.getCaller(b.nestingLevel)
 
-	enrichmentParams := []*Field{
-		Function(function),
-		Source(source),
-	}
-
-	enrichmentParams = append(enrichmentParams, b.tags...)
-	enrichmentParams = append(enrichmentParams, params...)
+	enrichmentParams := flattenParams(
+		append(
+			append(
+				[]*Field{Function(function), Source(source)},
+				b.tags...),
+			params...),
+		)
 
 	for _, f := range b.filters {
 		if !f.Allows(level, message, enrichmentParams) {
@@ -139,4 +139,18 @@ func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {
 func (b *basicLogger) WithFilters(filter ...Filter) BasicLogger {
 	b.filters = append(b.filters, filter...) // this is not thread safe, I know
 	return b
+}
+
+func flattenParams(params []*Field) []*Field {
+	var flattened []*Field
+	for _, param := range params {
+		if !param.IsNested() {
+			flattened = append(flattened, param)
+		} else if nestedFields, ok := param.Value().([]*Field); ok {
+			flattened = append(flattened, flattenParams(nestedFields)...)
+		} else {
+			panic("log field of nested type did not return []*Field")
+		}
+	}
+	return flattened
 }

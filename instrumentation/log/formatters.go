@@ -34,13 +34,7 @@ func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field
 
 func logFields(params []*Field, logLine map[string]interface{}) {
 	for _, param := range params {
-		if !param.IsNested() {
-			logLine[param.Key] = param.Value()
-		} else if nestedFields, ok := param.Value().([]*Field); ok {
-			logFields(nestedFields, logLine)
-		} else {
-			panic("log field of nested type did not return []*Field")
-		}
+		logLine[param.Key] = param.Value()
 	}
 }
 
@@ -157,11 +151,12 @@ func extractParamByConditionAndRemove(params []*Field, condition func(param *Fie
 
 func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
 	builder := strings.Builder{}
-	var newParams = flattenParams(params)
+	var mutableParams = make([]*Field, len(params)) // this is needed because extractParamByTypePrintAndRemove mutates the array
+	copy(mutableParams, params)
 
 	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
-	builder.WriteString(colorize(newParams))
+	builder.WriteString(colorize(mutableParams))
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
 	builder.WriteString(timestamp)
@@ -170,15 +165,15 @@ func (j *humanReadableFormatter) FormatRow(level string, message string, params 
 	builder.WriteString(message)
 	builder.WriteString(SPACE)
 
-	_, newParams = extractParamByTypePrintAndRemove(newParams, NodeType, &builder)
-	_, newParams = extractParamByTypePrintAndRemove(newParams, ServiceType, &builder)
-	functionParam, newParams := extractParamByTypeAndRemove(newParams, FunctionType)
-	sourceParam, newParams := extractParamByTypeAndRemove(newParams, SourceType)
-	underscoreParams, newParams := extractParamByConditionAndRemove(newParams, func(param *Field) bool {
+	_, mutableParams = extractParamByTypePrintAndRemove(mutableParams, NodeType, &builder)
+	_, mutableParams = extractParamByTypePrintAndRemove(mutableParams, ServiceType, &builder)
+	functionParam, mutableParams := extractParamByTypeAndRemove(mutableParams, FunctionType)
+	sourceParam, mutableParams := extractParamByTypeAndRemove(mutableParams, SourceType)
+	underscoreParams, mutableParams := extractParamByConditionAndRemove(mutableParams, func(param *Field) bool {
 		return strings.Index(param.Key, "_") == 0
 	})
 
-	for _, p := range newParams {
+	for _, p := range mutableParams {
 		printParam(&builder, p)
 	}
 
@@ -202,20 +197,6 @@ func colorize(fields []*Field) string {
 	}
 
 	return ""
-}
-
-func flattenParams(params []*Field) []*Field {
-	var flattened []*Field
-	for _, param := range params {
-		if !param.IsNested() {
-			flattened = append(flattened, param)
-		} else if nestedFields, ok := param.Value().([]*Field); ok {
-			flattened = append(flattened, flattenParams(nestedFields)...)
-		} else {
-			panic("log field of nested type did not return []*Field")
-		}
-	}
-	return flattened
 }
 
 func NewHumanReadableFormatter() LogFormatter {
