@@ -1,67 +1,123 @@
 package harness
 
 import (
+	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-func NewAcceptanceTestNetwork(numNodes uint32, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *inProcessNetwork {
+type TestNetworkDriver interface {
+	inmemory.NetworkDriver
+	GetBenchmarkTokenContract() contracts.BenchmarkTokenClient
+	TransportTamperer() testGossipAdapter.Tamperer
+	Description() string
+	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
+	DumpState()
+	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int,)
+	MockContract(fakeContractInfo *sdk.ContractInfo, code string)
+}
+
+func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *acceptanceNetwork {
 
 	testLogger.Info("===========================================================================")
-	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Uint32("num-nodes", numNodes))
+	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", numNodes, consensusAlgo)
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger)
-	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+	leaderKeyPair := testKeys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
 	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < int(numNodes); i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
+		publicKey := testKeys.Ed25519KeyPairForTests(i).PublicKey()
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
-	nodes := make([]*networkNode, numNodes)
-	for i := range nodes {
-		node := &networkNode{}
-		node.index = i
-		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-		node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
+	sharedTamperingTransport := testGossipAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
 
-		node.config = config.ForAcceptanceTests(
+	network := &acceptanceNetwork{
+		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
+		tamperingTransport: sharedTamperingTransport,
+		description:        description,
+	}
+
+	for i := 0; i < numNodes; i++ {
+		keyPair := testKeys.Ed25519KeyPairForTests(i)
+		cfg := config.ForAcceptanceTests(
 			federationNodes,
 			gossipPeers,
-			nodeKeyPair.PublicKey(),
-			nodeKeyPair.PrivateKey(),
+			keyPair.PublicKey(),
+			keyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
 			maxTxPerBlock,
 		)
 
-		node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
-		node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
-		node.nativeCompiler = nativeProcessorAdapter.NewFakeCompiler()
-
-		node.metricRegistry = metric.NewRegistry()
-
-		nodes[i] = node
+		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewFakeCompiler())
 	}
 
-	return &inProcessNetwork{
-		nodes:           nodes,
-		gossipTransport: sharedTamperingTransport,
-		description:     description,
-		testLogger:      testLogger,
-	}
+	return network
 
-	// must call network.StartNodes(ctx) to actually start the nodes in the network
+	// must call network.Start(ctx) to actually start the nodes in the network
 }
+
+type acceptanceNetwork struct {
+	inmemory.Network
+
+	tamperingTransport testGossipAdapter.Tamperer
+	description        string
+}
+
+func (n *acceptanceNetwork) Start(ctx context.Context) {
+	n.CreateAndStartNodes(ctx) // needs to start first so that nodes can register their listeners to it
+}
+
+func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int, ) {
+	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
+}
+
+func (n *acceptanceNetwork) Description() string {
+	return n.description
+}
+
+func (n *acceptanceNetwork) TransportTamperer() testGossipAdapter.Tamperer {
+	return n.tamperingTransport
+}
+
+func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
+	return n.GetBlockPersistence(nodeIndex)
+}
+
+func (n *acceptanceNetwork) GetBenchmarkTokenContract() contracts.BenchmarkTokenClient {
+	return contracts.NewContractClient(n)
+}
+
+func (n *acceptanceNetwork) DumpState() {
+	for i := range n.Nodes {
+		n.Logger.Info("state dump", log.Int("node", i), log.String("data", n.GetStatePersistence(i).Dump()))
+	}
+}
+
+func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdk.ContractInfo, code string) {
+
+	// if needed, provide a fake implementation of this contract to all nodes
+	for _, node := range n.Nodes {
+		if fakeCompiler, ok := node.GetCompiler().(nativeProcessorAdapter.FakeCompiler); ok {
+			fakeCompiler.ProvideFakeContract(fakeContractInfo, code)
+		}
+	}
+}
+
+
+

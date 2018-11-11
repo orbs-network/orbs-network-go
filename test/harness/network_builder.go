@@ -22,10 +22,10 @@ type canFail interface {
 
 type acceptanceTestNetworkBuilder struct {
 	f              canFail
-	numNodes       uint32
+	numNodes       int
 	consensusAlgos []consensus.ConsensusAlgoType
 	testId         string
-	setupFunc      func(ctx context.Context, network InProcessTestNetwork)
+	setupFunc      func(ctx context.Context, network TestNetworkDriver)
 	logFilters     []log.Filter
 	maxTxPerBlock  uint32
 	allowedErrors  []string
@@ -50,7 +50,7 @@ func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTest
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) WithNumNodes(numNodes uint32) *acceptanceTestNetworkBuilder {
+func (b *acceptanceTestNetworkBuilder) WithNumNodes(numNodes int) *acceptanceTestNetworkBuilder {
 	b.numNodes = numNodes
 	return b
 }
@@ -61,7 +61,7 @@ func (b *acceptanceTestNetworkBuilder) WithConsensusAlgos(algos ...consensus.Con
 }
 
 // setup runs when all adapters have been created but before the nodes are started
-func (b *acceptanceTestNetworkBuilder) WithSetup(f func(ctx context.Context, network InProcessTestNetwork)) *acceptanceTestNetworkBuilder {
+func (b *acceptanceTestNetworkBuilder) WithSetup(f func(ctx context.Context, network TestNetworkDriver)) *acceptanceTestNetworkBuilder {
 	b.setupFunc = f
 	return b
 }
@@ -76,14 +76,14 @@ func (b *acceptanceTestNetworkBuilder) AllowingErrors(allowedErrors ...string) *
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network InProcessTestNetwork)) {
+func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network TestNetworkDriver)) {
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
 		test.WithContext(func(ctx context.Context) {
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)
-			network := NewAcceptanceTestNetwork(b.numNodes, logger, consensusAlgo, b.maxTxPerBlock)
+			network := NewAcceptanceTestNetwork(ctx, b.numNodes, logger, consensusAlgo, b.maxTxPerBlock)
 
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)
@@ -93,7 +93,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 				b.setupFunc(ctx, network)
 			}
 
-			network.StartNodes(ctx)
+			network.Start(ctx)
 
 			f(ctx, network)
 		})
@@ -139,7 +139,7 @@ func printTestIdOnFailure(f canFail, testId string) {
 	}
 }
 
-func dumpStateOnFailure(f canFail, network InProcessTestNetwork) {
+func dumpStateOnFailure(f canFail, network TestNetworkDriver) {
 	if f.Failed() {
 		network.DumpState()
 	}
