@@ -6,7 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/inprocess/contracts"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -25,7 +25,6 @@ import (
 type NetworkDriver interface {
 	contracts.ContractAPI
 	PublicApi(nodeIndex int) services.PublicApi
-	GetCounterContract() contracts.CounterClient
 	Size() int
 }
 
@@ -97,10 +96,6 @@ func (n *Node) WaitForTransactionInState(ctx context.Context, txhash primitives.
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
 	return n.Nodes[nodeIndex].nodeLogic.PublicApi()
-}
-
-func (n *Network) GetCounterContract() contracts.CounterClient {
-	return contracts.NewContractClient(n, n.Logger)
 }
 
 func (n *Network) GetBlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {

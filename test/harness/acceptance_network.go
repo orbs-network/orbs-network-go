@@ -6,7 +6,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/inprocess/contracts"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -100,7 +100,7 @@ func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.
 }
 
 func (n *acceptanceNetwork) GetBenchmarkTokenContract() contracts.BenchmarkTokenClient {
-	return contracts.NewContractClient(n, n.Logger)
+	return contracts.NewContractClient(n)
 }
 
 func (n *acceptanceNetwork) DumpState() {
