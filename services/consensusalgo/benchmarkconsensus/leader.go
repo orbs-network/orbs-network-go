@@ -32,12 +32,6 @@ func (s *service) leaderConsensusRoundRunLoop(parent context.Context) {
 		select {
 		case <-ctx.Done():
 			logger.Info("consensus round run loop terminating with context")
-			// FIXME remove the channel close once we start passing context everywhere
-			// TODO (talkol) - it's a pattern we need to decide on: many short lived writers, one long lived reader
-			// closing the channel when long lived reader terminates will cause the writers to panic - a smell
-			// the better fix is to send ctx to all writers and when they block write, select on the ctx.Done as well
-			// we can only implement this once ctx can be sent to the writers
-			close(s.successfullyVotedBlocks)
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
 			logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
@@ -210,7 +204,12 @@ func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipm
 
 	// move the consensus forward
 	if enoughVotesReceived {
-		s.successfullyVotedBlocks <- lastCommittedBlockHeight
+		select {
+		case s.successfullyVotedBlocks <- lastCommittedBlockHeight:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
 	}
 
 	return nil

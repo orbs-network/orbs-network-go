@@ -46,6 +46,8 @@ func NewVirtualMachine(
 }
 
 func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	blockHeight, blockTimestamp, err := s.getRecentBlockHeight(ctx)
 	if err != nil {
 		return &services.RunLocalMethodOutput{
@@ -56,7 +58,7 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 		}, err
 	}
 
-	s.logger.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
+	logger.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
 	callResult, outputArgs, err := s.runMethod(ctx, blockHeight, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
