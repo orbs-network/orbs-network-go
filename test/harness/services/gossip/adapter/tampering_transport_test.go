@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -14,15 +15,22 @@ import (
 
 type tamperingHarness struct {
 	senderKey string
-	transport TamperingTransport
-	listener  *mockListener
+	transport *TamperingTransport
+	listener  *adapter.MockTransportListener
 }
 
-func newTamperingHarness() *tamperingHarness {
+func newTamperingHarness(ctx context.Context) *tamperingHarness {
 	senderKey := "sender"
 	listenerKey := "listener"
-	listener := &mockListener{}
-	transport := NewTamperingTransport(log.GetLogger(log.String("adapter", "transport")))
+	listener := &adapter.MockTransportListener{}
+	logger := log.GetLogger(log.String("adapter", "transport"))
+
+	federationNodes := make(map[string]config.FederationNode)
+	federationNodes[senderKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(senderKey))
+	federationNodes[listenerKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(listenerKey))
+
+	transport := NewTamperingTransport(logger, adapter.NewMemoryTransport(ctx, logger, federationNodes))
+
 	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
 
 	return &tamperingHarness{
@@ -46,13 +54,13 @@ func (c *tamperingHarness) broadcast(ctx context.Context, sender string, payload
 
 func TestFailingTamperer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		c := newTamperingHarness()
+		c := newTamperingHarness(ctx)
 
 		c.transport.Fail(anyMessage())
 
 		c.send(ctx, nil)
 
-		c.listener.expectNotReceive()
+		c.listener.ExpectNotReceive()
 
 		ok, err := c.listener.Verify()
 		if !ok {
@@ -63,7 +71,7 @@ func TestFailingTamperer(t *testing.T) {
 
 func TestPausingTamperer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		c := newTamperingHarness()
+		c := newTamperingHarness(ctx)
 
 		digits := make(chan byte, 10)
 
@@ -95,7 +103,7 @@ func TestPausingTamperer(t *testing.T) {
 
 func TestLatchingTamperer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		c := newTamperingHarness()
+		c := newTamperingHarness(ctx)
 
 		called := make(chan bool)
 

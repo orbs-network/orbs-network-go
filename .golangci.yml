@@ -35,7 +35,7 @@ run:
   skip-files:
   - ".*test.*go$"
   - lib/bad.go
-  - devtools/gamma-server/counterContract/counter.go
+  - devtools/gammaserver/counterContract/counter.go
   # output configuration options
 output:
   # colored-line-number|line-number|json|tab|checkstyle, default is "colored-line-number"

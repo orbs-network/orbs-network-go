@@ -17,18 +17,20 @@ func TestBlockSync(t *testing.T) {
 			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
-		WithSetup(func(ctx context.Context, network harness.InProcessTestNetwork) {
+		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
 			for i := 1; i <= 10; i++ {
 				blockPair := builders.BenchmarkConsensusBlockPair().
 					WithHeight(primitives.BlockHeight(i)).
 					WithTransactions(2).
 					Build()
-				network.BlockPersistence(0).WriteBlock(blockPair)
+				network.BlockPersistence(0).WriteNextBlock(blockPair)
 
 			}
-		}).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		require.Zero(t, len(network.BlockPersistence(1).ReadAllBlocks()))
 
+			numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
+			require.NoError(t, err)
+			require.Zero(t, numBlocks)
+		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}

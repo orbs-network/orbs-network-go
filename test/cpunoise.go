@@ -14,9 +14,13 @@ var (
 	MAX_BURST_DURATION = 10 * time.Millisecond
 )
 
+var once sync.Once
+
 // creates ongoing random bursts of cpu noise (all cores together) to make goroutine scheduling erratic in -count 100 flakiness tests
 func StartCpuSchedulingJitter() {
-	go generateCpuNoiseRunLoop()
+	once.Do(func() {
+		go generateCpuNoiseRunLoop()
+	})
 }
 
 func generateCpuNoiseRunLoop() {

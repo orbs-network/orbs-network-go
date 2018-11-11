@@ -14,7 +14,7 @@ import (
 var globalBlock *protocol.BlockPairContainer
 
 func TestMemoryLeaks_AfterSomeTransactions(t *testing.T) {
-	harness.Network(t).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+	harness.Network(t).Start(func(ctx context.Context, network harness.NetworkDriver) {
 		network.DeployBenchmarkToken(ctx, 5)
 		globalBlock = nil
 
@@ -67,7 +67,7 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	runtime.GC()
 	pprof.WriteHeapProfile(before)
 
-	harness.Network(t).Start(func(ctx context.Context, network harness.InProcessNetwork) {
+	harness.Network(t).Start(func(ctx context.Context, network harness.NetworkDriver) {
 		network.DeployBenchmarkToken(ctx, 5)
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 		for i := 0; i < 20; i++ {
@@ -84,7 +84,7 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	pprof.WriteHeapProfile(after)
 }
 
-func sendTransactionAndWaitUntilInState(ctx context.Context, network harness.InProcessNetwork) {
+func sendTransactionAndWaitUntilInState(ctx context.Context, network harness.NetworkDriver) {
 	tx := <-network.SendTransfer(ctx, 0, 1, 5, 6)
 	network.WaitForTransactionInState(ctx, 0, tx.TransactionReceipt().Txhash())
 	network.WaitForTransactionInState(ctx, 1, tx.TransactionReceipt().Txhash())

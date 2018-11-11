@@ -20,8 +20,8 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 			"FORK!! block already in storage, transaction block header mismatch", //TODO investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		network.GossipTransport().Duplicate(AnyNthMessage(7))
+		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		network.TransportTamperer().Duplicate(AnyNthMessage(7))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
 	})
@@ -30,8 +30,8 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	harness.Network(t).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
-		network.GossipTransport().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
+		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
 	})
@@ -40,9 +40,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	harness.Network(t).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
+		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-		network.GossipTransport().Delay(func() time.Duration {
+		network.TransportTamperer().Delay(func() time.Duration {
 			return (time.Duration(rand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
 		}, AnyNthMessage(2))
 
@@ -52,11 +52,11 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("this test causes the system to hang, seems like consensus algo stops")
-	harness.Network(t).WithNumNodes(3).Start(func(parent context.Context, network harness.InProcessTestNetwork) {
+	harness.Network(t).WithNumNodes(3).Start(func(parent context.Context, network harness.TestNetworkDriver) {
 		ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 		defer cancel()
 
-		network.GossipTransport().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
+		network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
 	})
@@ -81,7 +81,7 @@ func AnyNthMessage(n int) MessagePredicate {
 	}
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.InProcessTestNetwork, t *testing.T, numTransactions int) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.TestNetworkDriver, t *testing.T, numTransactions int) {
 	fromAddress := 5
 	toAddress := 6
 	contract := network.GetBenchmarkTokenContract()
@@ -96,9 +96,7 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.InP
 		txHashes = append(txHashes, txHash)
 	}
 	for _, txHash := range txHashes {
-		for i := 0; i < network.Size(); i++ {
-			network.WaitForTransactionInState(ctx, i, txHash)
-		}
+		network.WaitForTransactionInState(ctx, txHash)
 	}
 
 	for i := 0; i < network.Size(); i++ {

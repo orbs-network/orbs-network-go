@@ -18,7 +18,7 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 
 	harness.Network(b).
 		WithLogFilters(log.DiscardAll()).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.InProcessTestNetwork) {
+		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		contract := network.GetBenchmarkTokenContract()
 
@@ -40,9 +40,6 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 
 		wg.Wait()
 
-		for i := 0; i < network.Size(); i++ {
-			println(network.MetricsString(i))
-		}
 	})
 
 }

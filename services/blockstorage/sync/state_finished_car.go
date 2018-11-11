@@ -12,8 +12,8 @@ import (
 type finishedCARState struct {
 	responses []*gossipmessages.BlockAvailabilityResponseMessage
 	logger    log.BasicLogger
-	sf        *stateFactory
-	m         finishedCollectingStateMetrics
+	factory   *stateFactory
+	metrics   finishedCollectingStateMetrics
 }
 
 func (s *finishedCARState) name() string {
@@ -26,7 +26,7 @@ func (s *finishedCARState) String() string {
 
 func (s *finishedCARState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.m.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
 	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
 		return nil
@@ -35,15 +35,15 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	c := len(s.responses)
 	if c == 0 {
 		s.logger.Info("no responses received")
-		s.m.timesNoResponses.Inc()
-		return s.sf.CreateIdleState()
+		s.metrics.timesNoResponses.Inc()
+		return s.factory.CreateIdleState()
 	}
-	s.m.timesWithResponses.Inc()
+	s.metrics.timesWithResponses.Inc()
 	s.logger.Info("selecting from received sources", log.Int("sources-count", c))
 	syncSource := s.responses[rand.Intn(c)]
 	syncSourceKey := syncSource.Sender.SenderPublicKey()
 
-	return s.sf.CreateWaitingForChunksState(syncSourceKey)
+	return s.factory.CreateWaitingForChunksState(syncSourceKey)
 }
 
 func (s *finishedCARState) blockCommitted(ctx context.Context) {
