@@ -9,6 +9,7 @@ import (
 type executionContext struct {
 	contextId           primitives.ExecutionContextId
 	blockHeight         primitives.BlockHeight
+	blockTimestamp      primitives.TimestampNano
 	serviceStack        []primitives.ContractName
 	transientState      *transientState
 	accessScope         protocol.ExecutionAccessScope
@@ -66,12 +67,13 @@ func newExecutionContextProvider() *executionContextProvider {
 	}
 }
 
-func (cp *executionContextProvider) allocateExecutionContext(blockHeight primitives.BlockHeight, accessScope protocol.ExecutionAccessScope, transaction *protocol.Transaction) (primitives.ExecutionContextId, *executionContext) {
+func (cp *executionContextProvider) allocateExecutionContext(blockHeight primitives.BlockHeight, blockTimestamp primitives.TimestampNano, accessScope protocol.ExecutionAccessScope, transaction *protocol.Transaction) (primitives.ExecutionContextId, *executionContext) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
 	newContext := &executionContext{
 		blockHeight:    blockHeight,
+		blockTimestamp: blockTimestamp,
 		serviceStack:   []primitives.ContractName{},
 		transientState: newTransientState(),
 		accessScope:    accessScope,
