@@ -130,8 +130,7 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 }
 
 func (h *blockSyncHarness) expectingSyncOnStart() {
-	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
+	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
@@ -163,10 +162,15 @@ func (h *blockSyncHarness) processStateAndWaitUntilFinished(ctx context.Context,
 	return nextState
 }
 
-func (h *blockSyncHarness) expectLastCommittedBlockHeight(expectedHeight primitives.BlockHeight) {
+func (h *blockSyncHarness) expectLastCommittedBlockHeightQueryFromStorage(expectedHeight int) {
 	out := &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    expectedHeight,
+		LastCommittedBlockHeight:    primitives.BlockHeight(expectedHeight),
 		LastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 	}
 	h.storage.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(out, nil).Times(1)
+}
+
+func (h *blockSyncHarness) expectPreSynchronizationUpdateOfConsensusAlgos(expectedHeight int) {
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
+	h.expectLastCommittedBlockHeightQueryFromStorage(expectedHeight)
 }

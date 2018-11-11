@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -17,7 +16,7 @@ func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
+		h.expectLastCommittedBlockHeightQueryFromStorage(0)
 		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -33,7 +32,7 @@ func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
+		h.expectLastCommittedBlockHeightQueryFromStorage(0)
 		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -53,7 +52,7 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 			return manualWaitForChunksTimer
 		}).withNodeKey(blocksMessage.Sender.SenderPublicKey())
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
+		h.expectLastCommittedBlockHeightQueryFromStorage(10)
 		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -78,7 +77,7 @@ func TestWaitingTerminatesOnContextTermination(t *testing.T) {
 	h := newBlockSyncHarness()
 	cancel()
 
-	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
+	h.expectLastCommittedBlockHeightQueryFromStorage(10)
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
@@ -94,7 +93,7 @@ func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
 		stateSourceKey := keys.Ed25519KeyPairForTests(8).PublicKey()
 		h := newBlockSyncHarness().withNodeKey(stateSourceKey)
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
+		h.expectLastCommittedBlockHeightQueryFromStorage(10)
 		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())

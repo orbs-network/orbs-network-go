@@ -7,18 +7,16 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
-func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T) {
+func TestStateCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
-		h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
+		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 		h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 
 		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
@@ -30,13 +28,12 @@ func TestCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T)
 	})
 }
 
-func TestCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *testing.T) {
+func TestStateCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		// this can probably happen only if BatchSize config is invalid
 		h := newBlockSyncHarness().withBatchSize(0)
 
-		h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(0)) // new server
+		h.expectPreSynchronizationUpdateOfConsensusAlgos(0) // new server
 
 		collectingState := h.factory.CreateCollectingAvailabilityResponseState()
 		nextShouldBeIdle := collectingState.processState(ctx)
@@ -54,8 +51,8 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 			return manualCollectResponsesTimer
 		})
 
-		h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
+		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
+
 		h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		message := builders.BlockAvailabilityResponseInput().Build().Message
@@ -81,8 +78,8 @@ func TestCollectingAvailabilityContextTermination(t *testing.T) {
 	cancel()
 	h := newBlockSyncHarness()
 
-	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
+	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
+
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 	collectingState := h.factory.CreateCollectingAvailabilityResponseState()
