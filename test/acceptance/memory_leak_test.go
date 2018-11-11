@@ -26,11 +26,11 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	t.Run("TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages)
 	t.Run("TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages)
 
+	time.Sleep(100 * time.Millisecond)
 	runtime.GC()
 	runtime.GC()
 	runtime.GC()
 	runtime.GC()
-	time.Sleep(50 * time.Millisecond)
 
 	memUsageBefore := getMemUsage()
 	pprof.WriteHeapProfile(before)
@@ -41,11 +41,11 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 		t.Run("TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages)
 	}
 
+	time.Sleep(100 * time.Millisecond)
 	runtime.GC()
 	runtime.GC()
 	runtime.GC()
 	runtime.GC()
-	time.Sleep(50 * time.Millisecond)
 
 	memUsageAfter := getMemUsage()
 	pprof.WriteHeapProfile(after)

@@ -28,5 +28,5 @@ func (c *config) OverrideNodeSpecificValues(
 }
 
 func (c *config) MergeWithFileConfig(source string) (mutableNodeConfig, error) {
-	return NewFileConfig(c, source)
+	return newFileConfig(c, source)
 }

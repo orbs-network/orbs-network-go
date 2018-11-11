@@ -52,6 +52,10 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 	}
 	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
+	// attempting with talkol to fix issue #437
+	if !senderSignature.IsValid() {
+		return
+	}
 
 	for _, l := range s.blockSyncHandlers {
 		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{

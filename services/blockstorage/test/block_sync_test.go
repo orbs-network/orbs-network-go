@@ -16,7 +16,7 @@ import (
 )
 
 // TODO move to unit tests
-func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
+func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(4).start(ctx)
 
@@ -66,7 +66,7 @@ func TestSyncSourceIgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(
 	})
 }
 
-func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
+func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().withSyncNoCommitTimeout(3 * time.Millisecond).start(ctx)
 
@@ -76,33 +76,32 @@ func TestSyncPetitionerBroadcastsBlockAvailabilityRequest(t *testing.T) {
 	})
 }
 
-func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
+func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().
-			withSyncNoCommitTimeout(3 * time.Millisecond).
+			withSyncCollectResponsesTimeout(50 * time.Millisecond).
+			withSyncCollectChunksTimeout(50 * time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(4).
 			withValidateConsensusAlgos(4).
 			start(ctx)
 
 		// latch until we sent the broadcast (meaning the state machine is now at collecting car state
-		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
+		require.NoError(t, test.EventuallyVerify(200*time.Millisecond, harness.gossip), "availability response stage failed")
 
 		senderKeyPair := keys.Ed25519KeyPairForTests(7)
-
 		blockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
 			WithLastBlockHeight(primitives.BlockHeight(4)).
 			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
-		// TODO: the source key here is the same for both because the sync process will pick them at random, refactor when we change the random
-		anotherSenderKeyPair := keys.Ed25519KeyPairForTests(7)
+		// TODO: the source key here is the same for both to make our lives easier in BlockSyncResponse
 		anotherBlockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(3)).
+			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(3)).
-			WithSenderPublicKey(anotherSenderKeyPair.PublicKey()).Build()
+			WithLastBlockHeight(primitives.BlockHeight(4)).
+			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
 		// fake the collecting car response
 		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
@@ -111,8 +110,9 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		// latch until we pick a source and request blocks from it
-		require.NoError(t, test.EventuallyVerify(50*time.Millisecond, harness.gossip), "availability response stage failed")
+		require.NoError(t, test.EventuallyVerify(200*time.Millisecond, harness.gossip), "availability response stage failed")
 
+		// senderKeyPair must be the same as the chosen BlockAvailabilityResponse
 		blockSyncResponse := builders.BlockSyncResponseInput().
 			WithSenderPublicKey(senderKeyPair.PublicKey()).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
@@ -128,7 +128,7 @@ func TestSyncCompletePetitionerSyncFlow(t *testing.T) {
 	})
 }
 
-func TestSyncNeverStartsWhenBlocksAreCommitted(t *testing.T) {
+func TestSyncPetitioner_NeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	t.Skip("this test needs to move to CommitBlock unit test, as a 'CommitBlockUpdatesBlockSync'")
 	// this test may still be flaky, it runs commits in a busy wait loop that should take longer than the timeout,
 	// to make sure we stay at the same state logically.

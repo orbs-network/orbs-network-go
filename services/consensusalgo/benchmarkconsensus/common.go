@@ -111,17 +111,17 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 
 	// update lastCommitted to reflect this if newer
 	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
-		_lastCommittedBlockHeight, _lastCommittedBlock := s.getLastCommittedBlock()
+		lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
-		if blockPair.TransactionsBlock.Header.BlockHeight() > _lastCommittedBlockHeight {
-			err := s.setLastCommittedBlock(blockPair, _lastCommittedBlock)
+		if blockPair.TransactionsBlock.Header.BlockHeight() > lastCommittedBlockHeight {
+			err := s.setLastCommittedBlock(blockPair, lastCommittedBlock)
 			if err != nil {
 				return err
 			}
 			// don't forget to update internal vars too since they may be used later on in the function
 			// lines left on purpose to remind that they need to be uncommented if the values used.
-			// _lastCommittedBlock = blockPair
-			// _lastCommittedBlockHeight = _lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+			// lastCommittedBlock = blockPair
+			// lastCommittedBlockHeight = lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 		}
 	}
 

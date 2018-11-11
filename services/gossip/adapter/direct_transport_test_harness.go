@@ -24,7 +24,7 @@ type directHarness struct {
 	peersListeners            []net.Listener
 	peersListenersConnections []net.Conn
 	peerTalkerConnection      net.Conn
-	listenerMock              *transportListenerMock
+	listenerMock              *MockTransportListener
 }
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
@@ -41,7 +41,7 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	h := &directHarness{
 		config:                    cfg,
 		transport:                 transport,
-		listenerMock:              &transportListenerMock{},
+		listenerMock:              &MockTransportListener{},
 		peerTalkerConnection:      peerTalkerConnection,
 		peersListenersConnections: peersListenersConnections,
 		peersListeners:            peersListeners,

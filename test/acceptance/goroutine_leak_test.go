@@ -29,8 +29,9 @@ func TestGoroutineLeaks_OnSystemShutdown(t *testing.T) {
 	t.Run("TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages)
 	t.Run("TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages)
 
+	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
 	runtime.GC()
-	time.Sleep(50 * time.Millisecond) // give goroutines time to terminate
+	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
 
 	numGoroutineAfter := runtime.NumGoroutine()
 	pprof.Lookup("goroutine").WriteTo(after, 1)
