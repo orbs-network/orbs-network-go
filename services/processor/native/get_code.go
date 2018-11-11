@@ -26,6 +26,7 @@ func initializeContractInstance(contractInfo *sdk.ContractInfo, sdkHandler handl
 	return contractInfo.InitSingleton(sdk.NewBaseContract(
 		&stateSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
 		&serviceSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
+		&ethereumSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
 		&addressSdk{sdkHandler, protocol.ExecutionPermissionScope(contractInfo.Permission)},
 	))
 }
