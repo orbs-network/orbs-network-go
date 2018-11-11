@@ -28,6 +28,11 @@ func NewContext(parent context.Context, name string) context.Context {
 	return context.WithValue(parent, entryPointKey, ep)
 }
 
+func PropagateContext(parent context.Context, tracingContext *Context) context.Context {
+	return context.WithValue(parent, entryPointKey, tracingContext)
+
+}
+
 func FromContext(ctx context.Context) (e *Context, ok bool) {
 	e, ok = ctx.Value(entryPointKey).(*Context)
 	return

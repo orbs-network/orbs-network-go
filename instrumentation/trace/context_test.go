@@ -27,3 +27,15 @@ func TestNestedContextsRetainValue(t *testing.T) {
 	require.Equal(t, "foo", ep.name)
 	require.NotEmpty(t, ep.requestId)
 }
+
+func TestPropagateContextRetainsValue(t *testing.T) {
+	ctx := NewContext(context.Background(), "foo")
+	ep, ok := FromContext(ctx)
+
+	anotherCtx := context.Background()
+	propgatedTracingContext, ok := FromContext(PropagateContext(anotherCtx, ep))
+
+	require.True(t, ok)
+	require.Equal(t, "foo", propgatedTracingContext.name)
+	require.NotEmpty(t, propgatedTracingContext.requestId)
+}
