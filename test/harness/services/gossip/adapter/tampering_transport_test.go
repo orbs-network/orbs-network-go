@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	inProcess "github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -17,20 +16,20 @@ import (
 type tamperingHarness struct {
 	senderKey string
 	transport *TamperingTransport
-	listener  *mockListener
+	listener  *adapter.MockTransportListener
 }
 
 func newTamperingHarness(ctx context.Context) *tamperingHarness {
 	senderKey := "sender"
 	listenerKey := "listener"
-	listener := &mockListener{}
+	listener := &adapter.MockTransportListener{}
 	logger := log.GetLogger(log.String("adapter", "transport"))
 
 	federationNodes := make(map[string]config.FederationNode)
 	federationNodes[senderKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(senderKey))
 	federationNodes[listenerKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(listenerKey))
 
-	transport := NewTamperingTransport(logger, inProcess.NewChannelTransport(ctx, logger, federationNodes))
+	transport := NewTamperingTransport(logger, adapter.NewMemoryTransport(ctx, logger, federationNodes))
 
 	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
 
@@ -61,7 +60,7 @@ func TestFailingTamperer(t *testing.T) {
 
 		c.send(ctx, nil)
 
-		c.listener.expectNotReceive()
+		c.listener.ExpectNotReceive()
 
 		ok, err := c.listener.Verify()
 		if !ok {

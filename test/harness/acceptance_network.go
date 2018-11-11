@@ -6,12 +6,12 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/inprocess"
-	"github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/inprocess/contracts"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -20,7 +20,7 @@ import (
 type TestNetworkDriver interface {
 	inprocess.NetworkDriver
 	GetBenchmarkTokenContract() contracts.BenchmarkTokenClient
-	TransportTamperer() gossipAdapter.Tamperer
+	TransportTamperer() testGossipAdapter.Tamperer
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
@@ -44,7 +44,7 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
-	sharedTamperingTransport := gossipAdapter.NewTamperingTransport(testLogger, adapter.NewChannelTransport(ctx, testLogger, federationNodes))
+	sharedTamperingTransport := testGossipAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
 
 	network := &acceptanceNetwork{
 		Network:            inprocess.NewNetwork(testLogger, sharedTamperingTransport),
@@ -75,7 +75,7 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.
 type acceptanceNetwork struct {
 	inprocess.Network
 
-	tamperingTransport gossipAdapter.Tamperer
+	tamperingTransport testGossipAdapter.Tamperer
 	description        string
 }
 
@@ -91,7 +91,7 @@ func (n *acceptanceNetwork) Description() string {
 	return n.description
 }
 
-func (n *acceptanceNetwork) TransportTamperer() gossipAdapter.Tamperer {
+func (n *acceptanceNetwork) TransportTamperer() testGossipAdapter.Tamperer {
 	return n.tamperingTransport
 }
 

@@ -3,9 +3,7 @@ package adapter
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	inProcessAdapter "github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,7 +16,6 @@ import (
 )
 
 func TestContract_SendBroadcast(t *testing.T) {
-	t.Run("TamperingTransport", broadcastTest(aTamperingTransport))
 	t.Run("DirectTransport", broadcastTest(aDirectTransport))
 	t.Run("ChannelTransport", broadcastTest(aChannelTransport))
 }
@@ -36,16 +33,16 @@ func broadcastTest(makeContext func(ctx context.Context) *transportContractConte
 		test.WithContext(func(ctx context.Context) {
 			c := makeContext(ctx)
 
-			data := &adapter.TransportData{
+			data := &TransportData{
 				SenderPublicKey: c.publicKeys[3],
 				RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 				Payloads:        [][]byte{{0x71, 0x72, 0x73}},
 			}
 
-			c.listeners[0].expectReceive(data.Payloads)
-			c.listeners[1].expectReceive(data.Payloads)
-			c.listeners[2].expectReceive(data.Payloads)
-			c.listeners[3].expectNotReceive()
+			c.listeners[0].ExpectReceive(data.Payloads)
+			c.listeners[1].ExpectReceive(data.Payloads)
+			c.listeners[2].ExpectReceive(data.Payloads)
+			c.listeners[3].ExpectNotReceive()
 
 			c.transports[3].Send(ctx, data)
 			c.verify(t)
@@ -55,8 +52,8 @@ func broadcastTest(makeContext func(ctx context.Context) *transportContractConte
 
 type transportContractContext struct {
 	publicKeys []primitives.Ed25519PublicKey
-	transports []adapter.Transport
-	listeners  []*mockListener
+	transports []Transport
+	listeners  []*MockTransportListener
 }
 
 func aChannelTransport(ctx context.Context) *transportContractContext {
@@ -70,32 +67,9 @@ func aChannelTransport(ctx context.Context) *transportContractContext {
 
 	logger := log.GetLogger(log.String("adapter", "transport"))
 
-	transport := inProcessAdapter.NewChannelTransport(ctx, logger, federationNodes)
-	res.transports = []adapter.Transport{transport, transport, transport, transport}
-	res.listeners = []*mockListener{
-		listenTo(res.transports[0], res.publicKeys[0]),
-		listenTo(res.transports[1], res.publicKeys[1]),
-		listenTo(res.transports[2], res.publicKeys[2]),
-		listenTo(res.transports[3], res.publicKeys[3]),
-	}
-
-	return res
-}
-
-func aTamperingTransport(ctx context.Context) *transportContractContext {
-	res := &transportContractContext{}
-	res.publicKeys = []primitives.Ed25519PublicKey{{0x01}, {0x02}, {0x03}, {0x04}}
-
-	federationNodes := make(map[string]config.FederationNode)
-	for _, key := range res.publicKeys {
-		federationNodes[key.KeyForMap()] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(key))
-	}
-
-	logger := log.GetLogger(log.String("adapter", "transport"))
-
-	transport := NewTamperingTransport(logger, inProcessAdapter.NewChannelTransport(ctx, logger, federationNodes))
-	res.transports = []adapter.Transport{transport, transport, transport, transport}
-	res.listeners = []*mockListener{
+	transport := NewMemoryTransport(ctx, logger, federationNodes)
+	res.transports = []Transport{transport, transport, transport, transport}
+	res.listeners = []*MockTransportListener{
 		listenTo(res.transports[0], res.publicKeys[0]),
 		listenTo(res.transports[1], res.publicKeys[1]),
 		listenTo(res.transports[2], res.publicKeys[2]),
@@ -128,13 +102,13 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
-	res.transports = []adapter.Transport{
-		adapter.NewDirectTransport(ctx, configs[0], logger),
-		adapter.NewDirectTransport(ctx, configs[1], logger),
-		adapter.NewDirectTransport(ctx, configs[2], logger),
-		adapter.NewDirectTransport(ctx, configs[3], logger),
+	res.transports = []Transport{
+		NewDirectTransport(ctx, configs[0], logger),
+		NewDirectTransport(ctx, configs[1], logger),
+		NewDirectTransport(ctx, configs[2], logger),
+		NewDirectTransport(ctx, configs[3], logger),
 	}
-	res.listeners = []*mockListener{
+	res.listeners = []*MockTransportListener{
 		listenTo(res.transports[0], res.publicKeys[0]),
 		listenTo(res.transports[1], res.publicKeys[1]),
 		listenTo(res.transports[2], res.publicKeys[2]),

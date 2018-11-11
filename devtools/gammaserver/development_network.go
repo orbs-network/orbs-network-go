@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/inprocess"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/inprocess/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -26,7 +26,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inproces
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
-	sharedTransport := gossipAdapter.NewChannelTransport(ctx, logger, federationNodes)
+	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
 
 	network := &inprocess.Network{
 		Logger:    logger,

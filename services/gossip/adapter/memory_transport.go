@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -13,16 +12,20 @@ import (
 
 type peer struct {
 	socket   chan [][]byte
-	listener chan adapter.TransportListener
+	listener chan TransportListener
 }
 
-type channelTransport struct {
+type memoryTransport struct {
 	sync.RWMutex
 	byPublicKey map[string]*peer
 }
 
-func NewChannelTransport(ctx context.Context, logger log.BasicLogger, federation map[string]config.FederationNode) *channelTransport {
-	peers := &channelTransport{byPublicKey: make(map[string]*peer)}
+/*
+Package adapter provides an in-memory implementation of the Gossip Transport adapter, meant for usage in fast tests that
+should not use the TCP-based adapter, such as acceptance tests or sociable unit tests, or in other in-process network use cases
+*/
+func NewMemoryTransport(ctx context.Context, logger log.BasicLogger, federation map[string]config.FederationNode) *memoryTransport {
+	peers := &memoryTransport{byPublicKey: make(map[string]*peer)}
 
 	peers.Lock()
 	defer peers.Unlock()
@@ -34,13 +37,13 @@ func NewChannelTransport(ctx context.Context, logger log.BasicLogger, federation
 	return peers
 }
 
-func (p *channelTransport) RegisterListener(listener adapter.TransportListener, key primitives.Ed25519PublicKey) {
+func (p *memoryTransport) RegisterListener(listener TransportListener, key primitives.Ed25519PublicKey) {
 	p.Lock()
 	defer p.Unlock()
 	p.byPublicKey[string(key)].attach(listener)
 }
 
-func (p *channelTransport) Send(ctx context.Context, data *adapter.TransportData) error {
+func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
@@ -63,7 +66,7 @@ func (p *channelTransport) Send(ctx context.Context, data *adapter.TransportData
 }
 
 func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket: make(chan [][]byte), listener: make(chan adapter.TransportListener)}
+	p := &peer{socket: make(chan [][]byte), listener: make(chan TransportListener)}
 
 	supervised.GoForever(bgCtx, logger, func() {
 		// wait till we have a listener attached
@@ -78,11 +81,11 @@ func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
 	return p
 }
 
-func (p *peer) attach(listener adapter.TransportListener) {
+func (p *peer) attach(listener TransportListener) {
 	p.listener <- listener
 }
 
-func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
+func (p *peer) send(ctx context.Context, data *TransportData) {
 	select {
 	case p.socket <- data.Payloads:
 	case <- ctx.Done():
@@ -90,7 +93,7 @@ func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
 	}
 }
 
-func (p *peer) acceptUsing(ctx context.Context, listener adapter.TransportListener) {
+func (p *peer) acceptUsing(ctx context.Context, listener TransportListener) {
 	for {
 		select {
 		case payloads := <-p.socket:
