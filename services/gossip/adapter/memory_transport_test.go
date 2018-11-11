@@ -18,35 +18,40 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 
 	test.WithContext(func(parentContext context.Context) {
 		key := primitives.Ed25519PublicKey{0x01}
-		federationNodes := make(map[string]config.FederationNode)
-		federationNodes[key.KeyForMap()] = config.NewHardCodedFederationNode(key)
 
-		transport := NewMemoryTransport(parentContext, log.GetLogger(), federationNodes)
+		transport := NewMemoryTransport(parentContext, log.GetLogger(), makeFederation(key))
 		listener := listenTo(transport, key)
 
-		childContext, cancel := context.WithCancel(parentContext)
+		childContext, cancel := context.WithCancel(parentContext) // this is required so that the parent context does not get polluted
 		defer cancel()
 
 		contextWithTrace := trace.NewContext(childContext, "foo")
 		originalTracingContext, _ := trace.FromContext(contextWithTrace)
 
-		data := &TransportData{
+		listener.expectTracingContextToPropagate(t, originalTracingContext)
+
+		transport.Send(contextWithTrace, &TransportData{
 			SenderPublicKey: primitives.Ed25519PublicKey{0x02},
 			RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-			Payloads:        [][]byte{},
-		}
+		})
 
-		listener.When("OnTransportMessageReceived", mock.Any, mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
-			propagatedTracingContext, ok := trace.FromContext(ctx)
-			require.True(t, ok, "memory transport did not create a tracing context")
-
-			require.NotEmpty(t, propagatedTracingContext.NestedFields())
-			require.Equal(t, propagatedTracingContext.NestedFields(), originalTracingContext.NestedFields())
-		}).Times(1)
-
-		transport.Send(contextWithTrace, data)
-
-		test.EventuallyVerify(100 * time.Millisecond, listener)
+		test.EventuallyVerify(100*time.Millisecond, listener)
 	})
+}
+
+func (l *MockTransportListener) expectTracingContextToPropagate(t *testing.T, originalTracingContext *trace.Context) *mock.MockFunction {
+	return l.When("OnTransportMessageReceived", mock.Any, mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+		propagatedTracingContext, ok := trace.FromContext(ctx)
+		require.True(t, ok, "memory transport did not create a tracing context")
+
+		require.NotEmpty(t, propagatedTracingContext.NestedFields())
+		require.Equal(t, propagatedTracingContext.NestedFields(), originalTracingContext.NestedFields())
+	}).Times(1)
+}
+
+func makeFederation(key primitives.Ed25519PublicKey) map[string]config.FederationNode {
+	federationNodes := make(map[string]config.FederationNode)
+	federationNodes[key.KeyForMap()] = config.NewHardCodedFederationNode(key)
+	return federationNodes
 }
 
