@@ -54,7 +54,7 @@ If you only want to build the Docker images containing the node binaries, you do
   git checkout master
   ```
 
-* Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
+* Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DEPENDENCIES.md).
 
 * Build with `go install`
 
