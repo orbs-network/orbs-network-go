@@ -32,6 +32,7 @@ type config struct {
 }
 
 const (
+	PROTOCOL_VERSION                     = "PROTOCOL_VERSION"
 	VIRTUAL_CHAIN_ID                     = "VIRTUAL_CHAIN_ID"
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL   = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	LEAN_HELIX_CONSENSUS_RETRY_INTERVAL  = "LEAN_HELIX_CONSENSUS_RETRY_INTERVAL"
@@ -157,6 +158,10 @@ func (c *config) NodePublicKey() primitives.Ed25519PublicKey {
 
 func (c *config) NodePrivateKey() primitives.Ed25519PrivateKey {
 	return c.nodePrivateKey
+}
+
+func (c *config) ProtocolVersion() primitives.ProtocolVersion {
+	return primitives.ProtocolVersion(c.kv[PROTOCOL_VERSION].Uint32Value)
 }
 
 func (c *config) VirtualChainId() primitives.VirtualChainId {

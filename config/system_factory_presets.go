@@ -11,6 +11,7 @@ import (
 func defaultProductionConfig() mutableNodeConfig {
 	cfg := emptyConfig()
 
+	cfg.SetUint32(PROTOCOL_VERSION, 1)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)

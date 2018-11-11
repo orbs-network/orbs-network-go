@@ -8,6 +8,7 @@ import (
 
 type NodeConfig interface {
 	// shared
+	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
@@ -117,12 +118,13 @@ type GossipTransportConfig interface {
 
 // Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
+	ProtocolVersion() primitives.ProtocolVersion
+	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMinimalBlockTime() time.Duration
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	ConsensusMinimumCommitteeSize() uint32
-	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 }
 
