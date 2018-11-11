@@ -18,9 +18,6 @@ func DecodeBlockAvailabilityRequest(payloads [][]byte) (*gossipmessages.BlockAva
 	}
 	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
-	if !senderSignature.IsValid() {
-		return nil, errors.New("senderSignature is not valid")
-	}
 	return &gossipmessages.BlockAvailabilityRequestMessage{
 		SignedBatchRange: batchRange,
 		Sender:           senderSignature,

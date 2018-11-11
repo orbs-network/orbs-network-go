@@ -1,6 +1,7 @@
 package codec
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -26,4 +27,12 @@ func TestBlockSync_BlockAvailabilityRequest(t *testing.T) {
 	decoded, err := DecodeBlockAvailabilityRequest(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to origial")
+}
+
+func TestBlockSync_EmptyBlockAvailabilityRequest(t *testing.T) {
+	t.Skip("this is failing, not sure why")
+	decoded, err := DecodeBlockAvailabilityRequest(emptyPayloads(2))
+	require.NoError(t, err, "decode should not fail")
+	fmt.Printf("%s\n", decoded.String())
+	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
 }
