@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func TestStateCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testing.T) {
+func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
@@ -28,7 +28,7 @@ func TestStateCollectingAvailabilityResponsesReturnsToIdleOnGossipError(t *testi
 	})
 }
 
-func TestStateCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t *testing.T) {
+func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSize(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		// this can probably happen only if BatchSize config is invalid
 		h := newBlockSyncHarness().withBatchSize(0)
@@ -44,7 +44,7 @@ func TestStateCollectingAvailabilityResponsesReturnsToIdleOnInvalidRequestSize(t
 	})
 }
 
-func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) {
+func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualCollectResponsesTimer := synchronization.NewTimerWithManualTick()
 		h := newBlockSyncHarnessWithCollectResponsesTimer(func() *synchronization.Timer {
@@ -73,7 +73,7 @@ func TestCollectingAvailabilityResponsesMovesToFinishedCollecting(t *testing.T) 
 	})
 }
 
-func TestCollectingAvailabilityContextTermination(t *testing.T) {
+func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	h := newBlockSyncHarness()
@@ -90,7 +90,7 @@ func TestCollectingAvailabilityContextTermination(t *testing.T) {
 	h.verifyMocks(t)
 }
 
-func TestCollectingReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
+func TestStateCollectingAvailabilityResponses_ReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
 	h := newBlockSyncHarness()
 	test.WithContextWithTimeout(h.config.collectResponses/2, func(ctx context.Context) {
 
@@ -101,7 +101,7 @@ func TestCollectingReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
 	})
 }
 
-func TestCollectingAvailabilityResponsesNOP(t *testing.T) {
+func TestStateCollectingAvailabilityResponses_NOP(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 		car := h.factory.CreateCollectingAvailabilityResponseState()
