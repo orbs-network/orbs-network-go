@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -32,18 +33,23 @@ func newHttpHarness(handler http.Handler) *httpOutputHarness {
 
 func (h *httpOutputHarness) start(t *testing.T) {
 	go func() {
-		listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", h.port))
+		address := fmt.Sprintf("0.0.0.0:%d", h.port)
+		t.Log("Serving http requests on", address)
+
+		listener, err := net.Listen("tcp", address)
 		h.listener = listener
 
 		require.NoError(t, err, "failed to use http port")
 
 		err = http.Serve(listener, h.router)
-		require.NoError(t, err, "failed to server http requests")
+		require.NoError(t, err, "failed to serve http requests")
 	}()
 }
 
 func (h *httpOutputHarness) stop() {
-	h.listener.Close()
+	if h.listener != nil {
+		h.listener.Close()
+	}
 }
 
 func TestHttpWriter_Write(t *testing.T) {
@@ -62,4 +68,31 @@ func TestHttpWriter_Write(t *testing.T) {
 	size, err := w.Write([]byte("hello"))
 	require.NoError(t, err)
 	require.EqualValues(t, 5, size)
+}
+
+func TestHttpOutput_Append(t *testing.T) {
+	h := newHttpHarness(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		lines := strings.Split(string(body), "\n")
+		require.EqualValues(t, 4, len(lines))
+
+		w.WriteHeader(200)
+	}))
+	h.start(t)
+	defer h.stop()
+
+	logger := GetLogger().WithOutput(
+		NewHttpOutput(
+			NewHttpWriter(fmt.Sprintf("http://localhost:%d/submit-logs", h.port)),
+			NewJsonFormatter(),
+			10000,
+			time.Microsecond))
+
+	logger.Info("Ground control to Major Tom")
+	logger.Info("Commencing countdown")
+	logger.Info("Engines on")
+
+	time.Sleep(2 * time.Millisecond)
 }
