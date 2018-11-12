@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestBlockSync(t *testing.T) {
+func TestInterBlockSync(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error

@@ -6,13 +6,14 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
@@ -23,6 +24,7 @@ type TestNetworkDriver interface {
 	TransportTamperer() testGossipAdapter.Tamperer
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
+	StatePersistence(nodeIndex int) stateStorageAdapter.TamperingStatePersistence
 	DumpState()
 	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int,)
 	MockContract(fakeContractInfo *sdk.ContractInfo, code string)
@@ -83,7 +85,7 @@ func (n *acceptanceNetwork) Start(ctx context.Context) {
 	n.CreateAndStartNodes(ctx) // needs to start first so that nodes can register their listeners to it
 }
 
-func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int, ) {
+func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int) {
 	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
 }
 
@@ -97,6 +99,10 @@ func (n *acceptanceNetwork) TransportTamperer() testGossipAdapter.Tamperer {
 
 func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
 	return n.GetBlockPersistence(nodeIndex)
+}
+
+func (n *acceptanceNetwork) StatePersistence(nodeIndex int) stateStorageAdapter.TamperingStatePersistence {
+	return n.GetStatePersistence(nodeIndex)
 }
 
 func (n *acceptanceNetwork) GetBenchmarkTokenContract() contracts.BenchmarkTokenClient {
