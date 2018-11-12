@@ -19,7 +19,7 @@ type ethereumSdk struct {
 const SDK_OPERATION_NAME_ETHEREUM = "Sdk.Ethereum"
 
 func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress string, jsonAbi string, methodName string, out interface{}, args ...interface{}) error {
-	packedInput, err := ethereumPackInputArguments(jsonAbi, methodName, args...)
+	packedInput, err := ethereumPackInputArguments(jsonAbi, methodName, args)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress
 	return ethereumUnpackOutput(out, output.OutputArguments[0].BytesValue())
 }
 
-func ethereumPackInputArguments(jsonAbi string, method string, args ...interface{}) ([]byte, error) {
+func ethereumPackInputArguments(jsonAbi string, method string, args []interface{}) ([]byte, error) {
 	if parsedABI, err := abi.JSON(strings.NewReader(jsonAbi)); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
