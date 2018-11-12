@@ -130,9 +130,9 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 	return h
 }
 
-func (h *blockSyncHarness) expectingSyncOnStart() {
+func (h *blockSyncHarness) expectSyncOnStart() {
 	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
-	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+	h.expectBroadcastOfBlockAvailabilityRequest()
 }
 
 func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {

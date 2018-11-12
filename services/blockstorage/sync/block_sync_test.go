@@ -16,7 +16,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 
 	var bs *BlockSync
 	test.WithContext(func(ctx context.Context) {
-		h.expectingSyncOnStart()
+		h.expectSyncOnStart()
 
 		bs = newBlockSyncWithFactory(ctx, h.factory, h.config, h.gossip, h.storage, h.logger, h.metricFactory)
 
@@ -37,7 +37,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 	var bs *BlockSync
 	test.WithContext(func(ctx context.Context) {
-		h.expectingSyncOnStart()
+		h.expectSyncOnStart()
 
 		bs = newBlockSyncWithFactory(ctx, h.factory, h.config, h.gossip, h.storage, h.logger, h.metricFactory)
 
