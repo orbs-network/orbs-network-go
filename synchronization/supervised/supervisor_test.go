@@ -1,3 +1,5 @@
+// +build !norecover
+
 package supervised
 
 import (
