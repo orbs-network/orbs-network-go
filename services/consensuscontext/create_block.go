@@ -3,6 +3,7 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -72,7 +73,7 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 		return nil, err
 	}
 	preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-		BlockHeight: blockHeight,
+		BlockHeight: blockHeight - 1,
 	})
 	if err != nil {
 		return nil, err
@@ -105,8 +106,9 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 	return rxBlock, nil
 }
 func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	panic("not impl") // TODO ODEDW to decide
 
+	// TODO Just a placeholder for now, ODEDW to decide
+	return hash.CalcSha256([]byte{1, 2, 3, 4, 5, 6, 6, 7, 8}), nil
 }
 
 func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.MerkleSha256, error) {

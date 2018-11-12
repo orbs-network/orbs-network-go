@@ -32,6 +32,8 @@ var federationNodePublicKeysForTest = []primitives.Ed25519PublicKey{
 
 type harness struct {
 	transactionPool *services.MockTransactionPool
+	virtualMachine  *services.MockVirtualMachine
+	stateStorage    *services.MockStateStorage
 	reporting       log.BasicLogger
 	service         services.ConsensusContext
 	config          config.ConsensusContextConfig
@@ -50,7 +52,19 @@ func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.Trans
 	return output.TransactionsBlock, nil
 }
 
-func (h *harness) expectTransactionsRequestedFromTransactionPool(numTransactionsToReturn uint32) {
+func (h *harness) requestResultsBlock(ctx context.Context, txBlockContainer *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
+	output, err := h.service.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
+		BlockHeight:       1,
+		PrevBlockHash:     hash.CalcSha256([]byte{1}),
+		TransactionsBlock: txBlockContainer,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return output.ResultsBlock, nil
+}
+
+func (h *harness) expectTxPoolToReturnXTransactions(numTransactionsToReturn uint32) {
 
 	output := &services.GetTransactionsForOrderingOutput{
 		SignedTransactions: nil,
@@ -68,17 +82,44 @@ func (h *harness) expectTransactionsNoLongerRequestedFromTransactionPool() {
 	h.transactionPool.When("GetTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
+func (h *harness) expectVirtualMachineToReturnXTransactionReceipts(receiptsCount int) {
+
+	receipts := make([]*protocol.TransactionReceipt, receiptsCount)
+	for i := 0; i < receiptsCount; i++ {
+		receipts[i] = (&protocol.TransactionReceiptBuilder{
+			Txhash:              hash.CalcSha256([]byte{1, 1, 1}),
+			ExecutionResult:     protocol.ExecutionResult(123),
+			OutputArgumentArray: []byte{9, 9, 9},
+		}).Build()
+	}
+	output := &services.ProcessTransactionSetOutput{
+		TransactionReceipts: receipts,
+		ContractStateDiffs:  nil,
+	}
+	h.virtualMachine.When("ProcessTransactionSet", mock.Any, mock.Any).Return(output, nil)
+}
+
 func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	ok, _ := h.transactionPool.Verify()
 
 	// TODO: How to print err if it's sometimes nil
 	require.True(t, ok)
 }
+func (h *harness) expectStateHash() {
+
+	stateHashOutput := &services.GetStateHashOutput{
+		StateRootHash: []byte{1, 2, 3, 4, 5},
+	}
+	h.stateStorage.When("GetStateHash", mock.Any, mock.Any).Return(stateHashOutput, nil)
+
+}
 
 func newHarness() *harness {
 	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
-	transactionPool := &services.MockTransactionPool{}
+	txPool := &services.MockTransactionPool{}
+	machine := &services.MockVirtualMachine{}
+	state := &services.MockStateStorage{}
 	federationNodes := make(map[string]config.FederationNode)
 	for _, pk := range federationNodePublicKeysForTest {
 		federationNodes[pk.KeyForMap()] = config.NewHardCodedFederationNode(pk)
@@ -88,11 +129,16 @@ func newHarness() *harness {
 
 	metricFactory := metric.NewRegistry()
 
-	service := consensuscontext.NewConsensusContext(transactionPool, nil, nil,
+	service := consensuscontext.NewConsensusContext(
+		txPool,
+		machine,
+		state,
 		cfg, log, metricFactory)
 
 	return &harness{
-		transactionPool: transactionPool,
+		transactionPool: txPool,
+		virtualMachine:  machine,
+		stateStorage:    state,
 		reporting:       log,
 		service:         service,
 		config:          cfg,
