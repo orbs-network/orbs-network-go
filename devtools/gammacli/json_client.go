@@ -178,7 +178,7 @@ func SendTransaction(transferJson *JSONTransaction, keyPair *keys.Ed25519KeyPair
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got unexpected http status code ", res.StatusCode)
+		return nil, errors.Errorf("got unexpected http status code %v", res.StatusCode)
 	}
 
 	readBytes, err := ioutil.ReadAll(res.Body)
@@ -208,7 +208,7 @@ func CallMethod(transferJson *JSONTransaction, serverUrl string, logVerbose bool
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got unexpected http status code ", res.StatusCode)
+		return nil, errors.Errorf("got unexpected http status code %v", res.StatusCode)
 	}
 
 	readBytes, err := ioutil.ReadAll(res.Body)
