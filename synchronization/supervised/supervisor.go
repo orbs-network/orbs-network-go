@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/pkg/errors"
 	"runtime"
-	"runtime/debug"
 	"strings"
 )
 
@@ -47,13 +45,6 @@ func tryOnce(errorer Errorer, f func()) {
 	defer recoverPanics(errorer)
 	f()
 
-}
-
-func recoverPanics(logger Errorer) {
-	if p := recover(); p != nil {
-		e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
-		logger.Error("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
-	}
 }
 
 func identifyPanic() string {
