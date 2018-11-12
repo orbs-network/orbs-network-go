@@ -1,4 +1,4 @@
-package sync
+package externalsync
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"

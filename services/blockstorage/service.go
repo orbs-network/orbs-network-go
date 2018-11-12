@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	blockSync "github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
+	extSync "github.com/orbs-network/orbs-network-go/services/blockstorage/externalsync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -37,7 +37,7 @@ type service struct {
 
 	// lastCommittedBlock state variable is inside adapter.BlockPersistence (GetLastBlock)
 
-	blockSync *blockSync.BlockSync
+	extSync *extSync.BlockSync
 
 	metrics *metrics
 }
@@ -65,7 +65,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	}
 
 	gossip.RegisterBlockSyncHandler(s)
-	s.blockSync = blockSync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
+	s.extSync = extSync.NewExtBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
 	return s
 }
@@ -111,18 +111,18 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 
-	s.blockSync.HandleBlockCommitted(ctx)
+	s.extSync.HandleBlockCommitted(ctx)
 
 	s.logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.syncBlockToStateStorage(ctx, input.BlockPair); err != nil {
-		// TODO: since the intra-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
-		s.logger.Error("intra-node sync to state storage failed", log.Error(err))
+		// TODO: since the internal-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
+		s.logger.Error("internal-node sync to state storage failed", log.Error(err))
 	}
 
 	if err := s.syncBlockToTxPool(ctx, input.BlockPair); err != nil {
-		// TODO: since the intra-node sync flow is self healing, should we fail if pool fails ?
-		s.logger.Error("intra-node sync to tx pool failed", log.Error(err))
+		// TODO: since the internal-node sync flow is self healing, should we fail if pool fails ?
+		s.logger.Error("internal-node sync to tx pool failed", log.Error(err))
 	}
 
 	return nil, nil
@@ -263,7 +263,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		s.logger.Error("intra-node sync to consensus algo failed", log.Error(err))
+		s.logger.Error("internal-node sync to consensus algo failed", log.Error(err))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -301,8 +301,8 @@ func (s *service) HandleBlockAvailabilityRequest(ctx context.Context, input *gos
 }
 
 func (s *service) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.blockSync != nil {
-		s.blockSync.HandleBlockAvailabilityResponse(ctx, input)
+	if s.extSync != nil {
+		s.extSync.HandleBlockAvailabilityResponse(ctx, input)
 	}
 	return nil, nil
 }
@@ -313,8 +313,8 @@ func (s *service) HandleBlockSyncRequest(ctx context.Context, input *gossiptopic
 }
 
 func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.blockSync != nil {
-		s.blockSync.HandleBlockSyncResponse(ctx, input)
+	if s.extSync != nil {
+		s.extSync.HandleBlockSyncResponse(ctx, input)
 	}
 	return nil, nil
 }

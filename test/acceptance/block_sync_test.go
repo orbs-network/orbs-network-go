@@ -13,7 +13,7 @@ func TestBlockSync(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"intra-node sync to consensus algo failed",            //TODO investigate and explain, or fix and remove expected error
+			"internal-node sync to consensus algo failed",            //TODO investigate and explain, or fix and remove expected error
 			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
