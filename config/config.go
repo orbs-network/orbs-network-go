@@ -70,6 +70,9 @@ type NodeConfig interface {
 
 	// metrics
 	MetricsReportInterval() time.Duration
+
+	// ethereum connector (sidechain)
+	EthereumEndpoint() string
 }
 
 type mutableNodeConfig interface {

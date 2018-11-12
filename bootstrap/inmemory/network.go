@@ -6,14 +6,15 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	ethereumConnectorAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -35,14 +36,15 @@ type Network struct {
 }
 
 type Node struct {
-	index            int
-	name             string
-	config           config.NodeConfig
-	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.TamperingStatePersistence
-	nativeCompiler   nativeProcessorAdapter.Compiler
-	nodeLogic        bootstrap.NodeLogic
-	metricRegistry   metric.Registry
+	index             int
+	name              string
+	config            config.NodeConfig
+	blockPersistence  blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence  stateStorageAdapter.TamperingStatePersistence
+	ethereumConnector ethereumConnectorAdapter.EthereumNodeConnector
+	nativeCompiler    nativeProcessorAdapter.Compiler
+	nodeLogic         bootstrap.NodeLogic
+	metricRegistry    metric.Registry
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
@@ -73,6 +75,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context) {
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
 			node.config,
+			node.ethereumConnector,
 		)
 	}
 }
@@ -132,7 +135,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 	supervised.GoOnce(n.Logger, func() {
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		_, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
+			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
 			ReturnImmediately: 1,
 		})
 		if err != nil {
