@@ -214,3 +214,11 @@ func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpec
 		return nil, nil
 	}).Times(numExpectedBlocks)
 }
+
+func (h *blockSyncHarness) expectSendingOfBlockSyncRequest() {
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+}
+
+func (h *blockSyncHarness) expectSendingOfBlockSyncRequestToFail() {
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+}
