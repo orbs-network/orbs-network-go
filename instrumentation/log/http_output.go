@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"net/http"
-	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,34 +23,45 @@ type httpOutput struct {
 	bulkSize int
 	delay    time.Duration
 
-	logs    []*row
-	updated time.Time
+	lock *sync.Mutex
+	logs []*row
 }
 
 func (out *httpOutput) Append(level string, message string, fields ...*Field) {
-	timestamp := time.Now()
-	row := &row{level, timestamp, message, fields}
+	row := &row{level, time.Now(), message, fields}
 
+	out.lock.Lock()
 	out.logs = append(out.logs, row)
-	out.updated = timestamp
+	out.lock.Unlock()
+
+	out.flush()
+}
+
+func (out *httpOutput) flush() {
+	out.lock.Lock()
+	defer out.lock.Unlock()
 
 	if len(out.logs) >= out.bulkSize {
-		lines := []string{}
+		b := new(bytes.Buffer)
+
 		for _, row := range out.logs {
 			// FIXME timestamp problem
-			lines = append(lines, out.formatter.FormatRow(row.level, row.message, row.fields...))
+			b.Write([]byte(out.formatter.FormatRow(row.level, row.message, row.fields...)))
+			b.Write([]byte("\n"))
 		}
 
-		go out.writer.Write([]byte(strings.Join(lines, "\n")))
+		out.logs = nil
+
+		go out.writer.Write(b.Bytes())
 	}
 }
 
-func NewHttpOutput(writer io.Writer, formatter LogFormatter, bulkSize int, maxDelay time.Duration) Output {
+func NewHttpOutput(writer io.Writer, formatter LogFormatter, bulkSize int) Output {
 	return &httpOutput{
 		formatter: formatter,
 		writer:    writer,
 		bulkSize:  bulkSize,
-		delay:     maxDelay,
+		lock:      &sync.Mutex{},
 	}
 }
 

@@ -94,7 +94,7 @@ func TestHttpOutput_Append(t *testing.T) {
 		defer r.Body.Close()
 
 		lines := strings.Split(string(body), "\n")
-		require.EqualValues(t, 3, len(lines))
+		require.EqualValues(t, 4, len(lines))
 
 		w.WriteHeader(200)
 		wg.Done()
@@ -106,8 +106,7 @@ func TestHttpOutput_Append(t *testing.T) {
 		NewHttpOutput(
 			NewHttpWriter(fmt.Sprintf("http://localhost:%d/submit-logs", h.port)),
 			NewJsonFormatter(),
-			3,
-			time.Microsecond))
+			3))
 
 	logger.Info("Ground control to Major Tom")
 	logger.Info("Commencing countdown")
