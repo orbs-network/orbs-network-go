@@ -25,7 +25,7 @@ func getLogger(path string, silent bool, httpLogEndpoint string) log.BasicLogger
 		log.NewFormattingOutput(logFile, log.NewJsonFormatter()),
 	}
 
-	if silent {
+	if !silent {
 		outputs = append(outputs, log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	}
 
