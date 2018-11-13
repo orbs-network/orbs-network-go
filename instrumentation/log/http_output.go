@@ -45,8 +45,7 @@ func (out *httpOutput) flush() {
 		b := new(bytes.Buffer)
 
 		for _, row := range out.logs {
-			// FIXME timestamp problem
-			b.Write([]byte(out.formatter.FormatRow(row.level, row.message, row.fields...)))
+			b.Write([]byte(out.formatter.FormatRow(row.timestamp, row.level, row.message, row.fields...)))
 			b.Write([]byte("\n"))
 		}
 

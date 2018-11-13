@@ -9,7 +9,7 @@ import (
 )
 
 type LogFormatter interface {
-	FormatRow(level string, message string, params ...*Field) (formattedRow string)
+	FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string)
 }
 
 type jsonFormatter struct {
@@ -17,11 +17,11 @@ type jsonFormatter struct {
 
 const TIMESTAMP_FORMAT = "2006-01-02T15:04:05.999999999Z"
 
-func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
+func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
-	logLine["timestamp"] = time.Now().UTC().Format(TIMESTAMP_FORMAT)
+	logLine["timestamp"] = timestamp.UTC().Format(TIMESTAMP_FORMAT)
 	logLine["message"] = message
 
 	for _, param := range params {
@@ -144,14 +144,14 @@ func extractParamByConditionAndRemove(params []*Field, condition func(param *Fie
 	return results, newParams
 }
 
-func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
+func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
 	builder := strings.Builder{}
 
-	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000000Z07:00")
+	ts := timestamp.UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
-	builder.WriteString(timestamp)
+	builder.WriteString(ts)
 	builder.WriteString(SPACE)
 
 	builder.WriteString(message)
