@@ -54,7 +54,7 @@ func (out *httpOutput) flush() {
 
 		go func() {
 			if n, err := out.writer.Write(b.Bytes()); err != nil {
-				fmt.Println("%s failed to send logs via http, %d bytes lost: %s", time.Now().String(), n, err)
+				fmt.Println(fmt.Sprintf("%s failed to send logs via http, %d bytes lost: %s", time.Now().String(), n, err))
 			}
 		}()
 	}
