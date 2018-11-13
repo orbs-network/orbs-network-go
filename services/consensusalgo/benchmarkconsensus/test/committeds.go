@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -35,14 +36,19 @@ func multipleCommittedMessages() *committed {
 	return &committed{}
 }
 
-func (c *committed) WithCountBelowQuorum() *committed {
+func (c *committed) WithCountBelowQuorum(cfg benchmarkconsensus.Config) *committed {
+	if cfg.NetworkSize(0) != 5 || cfg.ConsensusRequiredQuorumPercentage() != 66 {
+		panic("tests assumes 5 nodes with quorum percentage of 66, quorum is 4/5 = 3 other nodes")
+	}
 	c.count = 2
 	return c
 }
 
-func (c *committed) WithCountAboveQuorum() *committed {
-	//TODO: Change count to 3 once requiredQuorumSize is 2/3
-	c.count = 4
+func (c *committed) WithCountAboveQuorum(cfg benchmarkconsensus.Config) *committed {
+	if cfg.NetworkSize(0) != 5 || cfg.ConsensusRequiredQuorumPercentage() != 66 {
+		panic("tests assumes 5 nodes with quorum percentage of 66, quorum is 4/5 = 3 other nodes")
+	}
+	c.count = 3
 	return c
 }
 
