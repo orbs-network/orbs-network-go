@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-// the storage mock should be moved to its own file, but i have a weird goland bug where it will not identify it and its driving me mad, putting this here for now
 type blockSyncStorageMock struct {
 	mock.Mock
 }
