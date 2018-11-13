@@ -13,7 +13,6 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
@@ -24,7 +23,6 @@ type TestNetworkDriver interface {
 	TransportTamperer() testGossipAdapter.Tamperer
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
-	StatePersistence(nodeIndex int) stateStorageAdapter.TamperingStatePersistence
 	DumpState()
 	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int,)
 	MockContract(fakeContractInfo *sdk.ContractInfo, code string)
@@ -99,10 +97,6 @@ func (n *acceptanceNetwork) TransportTamperer() testGossipAdapter.Tamperer {
 
 func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
 	return n.GetBlockPersistence(nodeIndex)
-}
-
-func (n *acceptanceNetwork) StatePersistence(nodeIndex int) stateStorageAdapter.TamperingStatePersistence {
-	return n.GetStatePersistence(nodeIndex)
 }
 
 func (n *acceptanceNetwork) GetBenchmarkTokenContract() contracts.BenchmarkTokenClient {

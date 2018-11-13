@@ -123,6 +123,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		select {
 		case ch <- output.ClientResponse:
 		case <-ctx.Done():
+			close(ch)
 		}
 	})
 	return ch
@@ -156,6 +157,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		select {
 		case ch <- outputArgsIterator.NextArguments().Uint64Value():
 		case <-ctx.Done():
+			close(ch)
 		}
 	})
 	return ch
