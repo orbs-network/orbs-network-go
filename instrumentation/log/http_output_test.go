@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -8,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -16,6 +18,7 @@ type httpOutputHarness struct {
 	port     uint16
 	listener net.Listener
 	router   *http.ServeMux
+	server   *http.Server
 }
 
 func newHttpHarness(handler http.Handler) *httpOutputHarness {
@@ -41,18 +44,27 @@ func (h *httpOutputHarness) start(t *testing.T) {
 
 		require.NoError(t, err, "failed to use http port")
 
-		err = http.Serve(listener, h.router)
+		server := &http.Server{
+			Handler: h.router,
+		}
+		err = server.Serve(h.listener)
 		require.NoError(t, err, "failed to serve http requests")
 	}()
 }
 
-func (h *httpOutputHarness) stop() {
-	if h.listener != nil {
-		h.listener.Close()
+func (h *httpOutputHarness) stop(t *testing.T) {
+	if h.server != nil {
+		ctx, _ := context.WithTimeout(context.Background(), 2*time.Millisecond)
+		if err := h.server.Shutdown(ctx); err != nil {
+			t.Error("failed to stop http server gracefully", err)
+		}
 	}
 }
 
 func TestHttpWriter_Write(t *testing.T) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
 	h := newHttpHarness(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
@@ -60,39 +72,46 @@ func TestHttpWriter_Write(t *testing.T) {
 		require.EqualValues(t, []byte("hello"), body)
 
 		w.WriteHeader(200)
+		wg.Done()
 	}))
 	h.start(t)
-	defer h.stop()
+	defer h.stop(t)
 
 	w := NewHttpWriter(fmt.Sprintf("http://localhost:%d/submit-logs", h.port))
 	size, err := w.Write([]byte("hello"))
 	require.NoError(t, err)
 	require.EqualValues(t, 5, size)
+
+	wg.Wait()
 }
 
 func TestHttpOutput_Append(t *testing.T) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
 	h := newHttpHarness(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 
 		lines := strings.Split(string(body), "\n")
-		require.EqualValues(t, 4, len(lines))
+		require.EqualValues(t, 3, len(lines))
 
 		w.WriteHeader(200)
+		wg.Done()
 	}))
 	h.start(t)
-	defer h.stop()
+	defer h.stop(t)
 
 	logger := GetLogger().WithOutput(
 		NewHttpOutput(
 			NewHttpWriter(fmt.Sprintf("http://localhost:%d/submit-logs", h.port)),
 			NewJsonFormatter(),
-			10000,
+			3,
 			time.Microsecond))
 
 	logger.Info("Ground control to Major Tom")
 	logger.Info("Commencing countdown")
 	logger.Info("Engines on")
 
-	time.Sleep(2 * time.Millisecond)
+	wg.Wait()
 }

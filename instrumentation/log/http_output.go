@@ -31,7 +31,10 @@ func (out *httpOutput) Append(level string, message string, fields ...*Field) {
 	timestamp := time.Now()
 	row := &row{level, timestamp, message, fields}
 
-	if len(out.logs) >= out.bulkSize || (out.updated.UnixNano()-timestamp.UnixNano()) >= out.delay.Nanoseconds() {
+	out.logs = append(out.logs, row)
+	out.updated = timestamp
+
+	if len(out.logs) >= out.bulkSize {
 		lines := []string{}
 		for _, row := range out.logs {
 			// FIXME timestamp problem
@@ -40,9 +43,6 @@ func (out *httpOutput) Append(level string, message string, fields ...*Field) {
 
 		go out.writer.Write([]byte(strings.Join(lines, "\n")))
 	}
-
-	out.logs = append(out.logs, row)
-	out.updated = timestamp
 }
 
 func NewHttpOutput(writer io.Writer, formatter LogFormatter, bulkSize int, maxDelay time.Duration) Output {
