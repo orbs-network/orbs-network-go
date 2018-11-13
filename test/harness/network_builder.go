@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"io"
 	"os"
 	"runtime"
 	"strconv"
@@ -104,30 +103,32 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 }
 
 func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
-	var output io.Writer = os.Stdout
+	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
+	logger := log.GetLogger(
+		log.String("_test", "acceptance"),
+		log.String("_branch", os.Getenv("GIT_BRANCH")),
+		log.String("_commit", os.Getenv("GIT_COMMIT")),
+		log.String("_test-id", testId)).
+		WithOutput(makeFormattingOutput(testId), errorRecorder).
+		WithFilters(b.logFilters...)
+		//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
+	return logger, errorRecorder
+}
+
+func makeFormattingOutput(testId string) log.Output {
+	var output log.Output
 	if os.Getenv("NO_LOG_STDOUT") == "true" {
 		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			panic(err)
 		}
 
-		output = logFile
+		output = log.NewFormattingOutput(logFile, log.NewJsonFormatter())
+	} else {
+		output = log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())
 	}
-
-	formattingOutput := log.NewFormattingOutput(output, log.NewJsonFormatter())
-	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
-	logger := log.GetLogger(
-		log.String("_test", "acceptance"),
-		log.String("_branch", os.Getenv("GIT_BRANCH")),
-		log.String("_commit", os.Getenv("GIT_COMMIT")),
-		log.String("_test-id", testId),
-	).
-		WithOutput(formattingOutput, errorRecorder).
-		WithFilters(b.logFilters...).
-		WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
-
-	return logger, errorRecorder
+	return output
 }
 
 func printTestIdOnFailure(f canFail, testId string) {

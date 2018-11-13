@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -11,6 +12,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"time"
 )
+
+var LogTag = log.String("flow", "block-sync")
 
 // this is coupled to gossip because the entire service is (block storage)
 // nothing to gain right now in decoupling just the sync
@@ -72,7 +75,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 	metrics := newStateMachineMetrics(metricFactory)
 
 	bs := &BlockSync{
-		logger:  logger.WithTags(log.String("flow", "block-sync")),
+		logger:  logger,
 		factory: factory,
 		gossip:  gossip,
 		storage: storage,
@@ -81,7 +84,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 		metrics: metrics,
 	}
 
-	bs.logger.Info("block sync init",
+	logger.Info("block sync init",
 		log.Stringable("no-commit-timeout", bs.config.BlockSyncNoCommitInterval()),
 		log.Stringable("collect-responses-timeout", bs.config.BlockSyncCollectResponseTimeout()),
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
@@ -94,7 +97,9 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 	return bs
 }
 
-func NewExtBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+func NewExtBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+	logger := parentLogger.WithTags(LogTag)
+
 	conduit := &blockSyncConduit{
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
@@ -111,9 +116,10 @@ func NewExtBlockSync(ctx context.Context, config blockSyncConfig, gossip gossipt
 	)
 }
 
-func (bs *BlockSync) syncLoop(ctx context.Context) {
+func (bs *BlockSync) syncLoop(parent context.Context) {
 	for bs.currentState = bs.factory.CreateCollectingAvailabilityResponseState(); bs.currentState != nil; {
-		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState))
+		ctx := trace.NewContext(parent, "BlockSync")
+		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState), trace.LogFieldFrom(ctx))
 
 		bs.currentState = bs.currentState.processState(ctx)
 		bs.metrics.statesTransitioned.Inc()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -32,21 +33,22 @@ func (s *waitingForChunksState) String() string {
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	err := s.gossipClient.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceKey)
 	if err != nil {
-		s.logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))
+		logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceKey))
 		return s.factory.CreateIdleState()
 	}
 
 	timeout := s.createTimer()
 	select {
 	case <-timeout.C:
-		s.logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
+		logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceKey))
 		s.metrics.timesTimeout.Inc()
 		return s.factory.CreateIdleState()
 	case blocks := <-s.conduit.blocks:
-		s.logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
+		logger.Info("got blocks from sync", log.Stringable("source", s.sourceKey))
 		s.metrics.timesSuccessful.Inc()
 		return s.factory.CreateProcessingBlocksState(blocks)
 	case <-s.abort:
@@ -66,8 +68,10 @@ func (s *waitingForChunksState) gotAvailabilityResponse(ctx context.Context, mes
 }
 
 func (s *waitingForChunksState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	if !message.Sender.SenderPublicKey().Equal(s.sourceKey) {
-		s.logger.Info("byzantine message detected, expected source key does not match incoming",
+		logger.Info("byzantine message detected, expected source key does not match incoming",
 			log.Stringable("source-key", s.sourceKey),
 			log.Stringable("message-sender-key", message.Sender.SenderPublicKey()))
 		s.abort <- struct{}{}
@@ -75,7 +79,7 @@ func (s *waitingForChunksState) gotBlocks(ctx context.Context, message *gossipme
 		select {
 		case s.conduit.blocks <- message:
 		case <-ctx.Done():
-			s.logger.Info("terminated on writing new block chunk message",
+			logger.Info("terminated on writing new block chunk message",
 				log.String("context-message", ctx.Err().Error()),
 				log.Stringable("message-sender", message.Sender.SenderPublicKey()))
 		}

@@ -3,6 +3,7 @@ package externalsync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
@@ -26,6 +27,7 @@ func (s *collectingAvailabilityResponsesState) String() string {
 }
 
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
@@ -34,7 +36,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	s.gossipClient.petitionerUpdateConsensusAlgos(ctx)
 	err := s.gossipClient.petitionerBroadcastBlockAvailabilityRequest(ctx)
 	if err != nil {
-		s.logger.Info("failed to broadcast block availability request", log.Error(err))
+		logger.Info("failed to broadcast block availability request", log.Error(err))
 		return s.factory.CreateIdleState()
 	}
 
@@ -43,7 +45,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 		select {
 		case <-waitForResponses.C:
 			s.metrics.timesSuccessful.Inc()
-			s.logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
+			logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
 			return s.factory.CreateFinishedCARState(responses)
 		case r := <-s.conduit.responses:
 			responses = append(responses, r)
@@ -58,17 +60,21 @@ func (s *collectingAvailabilityResponsesState) blockCommitted(ctx context.Contex
 }
 
 func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
-	s.logger.Info("got a new availability response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	logger.Info("got a new availability response", log.Stringable("response-source", message.Sender.SenderPublicKey()))
 	select {
 	case s.conduit.responses <- message:
 	case <-ctx.Done():
-		s.logger.Info("terminated on writing new availability response",
+		logger.Info("terminated on writing new availability response",
 			log.String("context-message", ctx.Err().Error()),
 			log.Stringable("response-source", message.Sender.SenderPublicKey()))
 	}
 }
 
 func (s *collectingAvailabilityResponsesState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
-	s.logger.Info("got a block chunk in availability response state", log.Stringable("block-source", message.Sender.SenderPublicKey()))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	logger.Info("got a block chunk in availability response state", log.Stringable("block-source", message.Sender.SenderPublicKey()))
 	return
 }

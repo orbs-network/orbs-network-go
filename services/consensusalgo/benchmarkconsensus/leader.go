@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -16,32 +17,28 @@ import (
 	"time"
 )
 
-func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
-	start := time.Now()
-
+func (s *service) leaderConsensusRoundRunLoop(parent context.Context) {
 	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock()
 	for {
+		start := time.Now()
+		ctx := trace.NewContext(parent, "BenchmarkConsensus.Tick")
+		logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 		err := s.leaderConsensusRoundTick(ctx)
 		if err != nil {
-			s.logger.Info("consensus round tick failed", log.Error(err))
+			logger.Info("consensus round tick failed", log.Error(err))
 			s.metrics.failedConsensusTicksRate.Measure(1)
 		}
 		select {
 		case <-ctx.Done():
-			s.logger.Info("consensus round run loop terminating with context")
-			// FIXME remove the channel close once we start passing context everywhere
-			// TODO (talkol) - it's a pattern we need to decide on: many short lived writers, one long lived reader
-			// closing the channel when long lived reader terminates will cause the writers to panic - a smell
-			// the better fix is to send ctx to all writers and when they block write, select on the ctx.Done as well
-			// we can only implement this once ctx can be sent to the writers
-			close(s.successfullyVotedBlocks)
+			logger.Info("consensus round run loop terminating with context")
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			s.logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
+			logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
 			s.metrics.consensusRoundTickTime.RecordSince(start)
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
-			s.logger.Info("consensus round waking up after retry timeout")
+			logger.Info("consensus round waking up after retry timeout")
 			s.metrics.timedOutConsensusTicksRate.Measure(1)
 			continue
 		}
@@ -50,17 +47,19 @@ func (s *service) leaderConsensusRoundRunLoop(ctx context.Context) {
 
 func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	// check if we need to move to next block
 	if s.lastSuccessfullyVotedBlock == lastCommittedBlockHeight {
 		proposedBlock, err := s.leaderGenerateNewProposedBlock(ctx, lastCommittedBlockHeight, lastCommittedBlock)
 		if err != nil {
-			s.logger.Error("leader failed to generate block", log.Error(err))
+			logger.Error("leader failed to generate block", log.Error(err))
 			return err
 		}
+
 		err = s.saveToBlockStorage(ctx, proposedBlock)
 		if err != nil {
-			s.logger.Error("leader failed to save block to storage", log.Error(err))
+			logger.Error("leader failed to save block to storage", log.Error(err))
 			return err
 		}
 
@@ -109,7 +108,9 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 }
 
 func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) (*protocol.BlockPairContainer, error) {
-	s.logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
@@ -167,12 +168,13 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 }
 
 func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
-	s.logger.Info("broadcasting commit block", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger.Info("broadcasting commit block", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
 	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
 		err := errors.Errorf("attempting to broadcast commit of a partial block that is missing fields like block proofs: %v", blockPair.String())
-		s.logger.Error("leader broadcast commit failed", log.Error(err))
+		logger.Error("leader broadcast commit failed", log.Error(err))
 		return err
 	}
 
@@ -185,23 +187,7 @@ func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *
 	return err
 }
 
-func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
-	defer func() {
-		// FIXME remove the recover once we start passing context everywhere
-		// TODO (talkol) - it's a pattern we need to decide on: many short lived writers, one long lived reader
-		// closing the channel when long lived reader terminates will cause the writers to panic - a smell
-		// the better fix is to send ctx to all writers and when they block write, select on the ctx.Done as well
-		// we can only implement this once ctx can be sent to the writers
-		if r := recover(); r != nil {
-			fields := []*log.Field{}
-			if err, ok := r.(error); ok {
-				fields = append(fields, log.Error(err))
-			}
-
-			s.logger.Info("recovering from failure to collect vote, possibly because consensus was shut down", fields...)
-		}
-	}()
-
+func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
 	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
 	// validate the vote
@@ -211,14 +197,19 @@ func (s *service) leaderHandleCommittedVote(sender *gossipmessages.SenderSignatu
 	}
 
 	// add the vote
-	enoughVotesReceived, err := s.leaderAddVote(sender, status, lastCommittedBlock)
+	enoughVotesReceived, err := s.leaderAddVote(ctx, sender, status, lastCommittedBlock)
 	if err != nil {
 		return err
 	}
 
 	// move the consensus forward
 	if enoughVotesReceived {
-		s.successfullyVotedBlocks <- lastCommittedBlockHeight
+		select {
+		case s.successfullyVotedBlocks <- lastCommittedBlockHeight:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
 	}
 
 	return nil
@@ -245,7 +236,9 @@ func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	return nil
 }
 
-func (s *service) leaderAddVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) (bool, error) {
+func (s *service) leaderAddVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) (bool, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -258,7 +251,7 @@ func (s *service) leaderAddVote(sender *gossipmessages.SenderSignature, status *
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVotersUnderMutex) + 1
-	s.logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
+	logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorumUnderMutex {
 		s.lastCommittedBlockVotersReachedQuorumUnderMutex = true
 		return true, nil

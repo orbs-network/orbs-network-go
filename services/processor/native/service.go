@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -68,6 +69,7 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 }
 
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	// retrieve code
 	executionContextId := sdk.Context(input.ContextId)
 	contractInfo, methodInfo, err := s.retrieveContractAndMethodInfoFromRepository(ctx, executionContextId, string(input.ContractName), string(input.MethodName))
@@ -93,11 +95,15 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	defer s.metrics.processCallTime.RecordSince(start)
 
 	// execute
+	logger.Info("processor executing contract", log.String("contract", contractInfo.Name), log.String("method", methodInfo.Name))
+
 	outputArgs, contractErr, err := s.processMethodCall(executionContextId, contractInfo, methodInfo, input.InputArgumentArray)
 	if outputArgs == nil {
 		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
 	}
 	if err != nil {
+		logger.Info("contract execution failed", log.Error(err))
+
 		return &services.ProcessCallOutput{
 			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
@@ -108,6 +114,8 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	// result
 	callResult := protocol.EXECUTION_RESULT_SUCCESS
 	if contractErr != nil {
+		logger.Info("contract returned error", log.Error(contractErr))
+
 		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
 	}
 	return &services.ProcessCallOutput{

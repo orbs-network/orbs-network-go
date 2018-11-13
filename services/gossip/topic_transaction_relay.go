@@ -3,6 +3,7 @@ package gossip
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -21,7 +22,7 @@ func (s *service) receivedTransactionRelayMessage(ctx context.Context, header *g
 }
 
 func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
-	s.logger.Info("broadcasting forwarded transactions", log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
+	s.logger.Info("broadcasting forwarded transactions", trace.LogFieldFrom(ctx), log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
 
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
@@ -44,6 +45,7 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 }
 
 func (s *service) receivedForwardedTransactions(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	txs := make([]*protocol.SignedTransaction, 0, len(payloads)-1)
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[0])
 
@@ -52,7 +54,7 @@ func (s *service) receivedForwardedTransactions(ctx context.Context, header *gos
 		txs = append(txs, tx)
 	}
 
-	s.logger.Info("received forwarded transactions", log.Stringable("sender", senderSignature), log.StringableSlice("transactions", txs))
+	logger.Info("received forwarded transactions", log.Stringable("sender", senderSignature), log.StringableSlice("transactions", txs))
 
 	for _, l := range s.transactionHandlers {
 		_, err := l.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
@@ -62,7 +64,7 @@ func (s *service) receivedForwardedTransactions(ctx context.Context, header *gos
 			},
 		})
 		if err != nil {
-			s.logger.Info("HandleForwardedTransactions failed", log.Error(err))
+			logger.Info("HandleForwardedTransactions failed", log.Error(err))
 		}
 	}
 }
