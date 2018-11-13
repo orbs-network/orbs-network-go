@@ -36,7 +36,7 @@ func newHttpHarness(handler http.Handler) *httpOutputHarness {
 
 func (h *httpOutputHarness) start(t *testing.T) {
 	go func() {
-		address := fmt.Sprintf("0.0.0.0:%d", h.port)
+		address := fmt.Sprintf("127.0.0.1:%d", h.port)
 		t.Log("Serving http requests on", address)
 
 		listener, err := net.Listen("tcp", address)
@@ -50,6 +50,7 @@ func (h *httpOutputHarness) start(t *testing.T) {
 		err = server.Serve(h.listener)
 		require.NoError(t, err, "failed to serve http requests")
 	}()
+	time.Sleep(1 * time.Millisecond)
 }
 
 func (h *httpOutputHarness) stop(t *testing.T) {
@@ -59,6 +60,10 @@ func (h *httpOutputHarness) stop(t *testing.T) {
 			t.Error("failed to stop http server gracefully", err)
 		}
 	}
+}
+
+func (h *httpOutputHarness) endpointUrl() string {
+	return fmt.Sprintf("http://127.0.0.1:%d/submit-logs", h.port)
 }
 
 func TestHttpWriter_Write(t *testing.T) {
@@ -77,7 +82,7 @@ func TestHttpWriter_Write(t *testing.T) {
 	h.start(t)
 	defer h.stop(t)
 
-	w := NewHttpWriter(fmt.Sprintf("http://localhost:%d/submit-logs", h.port))
+	w := NewHttpWriter(h.endpointUrl())
 	size, err := w.Write([]byte("hello"))
 	require.NoError(t, err)
 	require.EqualValues(t, 5, size)
@@ -104,7 +109,7 @@ func TestHttpOutput_Append(t *testing.T) {
 
 	logger := GetLogger().WithOutput(
 		NewHttpOutput(
-			NewHttpWriter(fmt.Sprintf("http://localhost:%d/submit-logs", h.port)),
+			NewHttpWriter(h.endpointUrl()),
 			NewJsonFormatter(),
 			3))
 
