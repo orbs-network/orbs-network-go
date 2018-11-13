@@ -2,50 +2,45 @@ package sync
 
 import (
 	"context"
-	"errors"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestWaitingMovedToIdleOnTransportError(t *testing.T) {
+func TestStateWaitingForChunks_MovesToIdleOnTransportError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
-		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+		h.expectLastCommittedBlockHeightQueryFromStorage(0)
+		h.expectSendingOfBlockSyncRequestToFail()
 
-		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
-		nextState := waitingState.processState(ctx)
+		state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
+		nextState := state.processState(ctx)
 
 		require.IsType(t, &idleState{}, nextState, "expecting back to idle on transport error")
-
 		h.verifyMocks(t)
 	})
 }
 
-func TestWaitingMovesToIdleOnTimeout(t *testing.T) {
+func TestStateWaitingForChunks_MovesToIdleOnTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(0))
-		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+		h.expectLastCommittedBlockHeightQueryFromStorage(0)
+		h.expectSendingOfBlockSyncRequest()
 
-		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
-		nextState := waitingState.processState(ctx)
+		state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
+		nextState := state.processState(ctx)
 
 		require.IsType(t, &idleState{}, nextState, "expecting back to idle on timeout")
-
 		h.verifyMocks(t)
 	})
 }
 
-func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
+func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
 		blocksMessage := builders.BlockSyncResponseInput().Build().Message
@@ -53,12 +48,12 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 			return manualWaitForChunksTimer
 		}).withNodeKey(blocksMessage.Sender.SenderPublicKey())
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
-		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+		h.expectLastCommittedBlockHeightQueryFromStorage(10)
+		h.expectSendingOfBlockSyncRequest()
 
-		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
-		nextState := h.processStateAndWaitUntilFinished(ctx, waitingState, func() {
-			waitingState.gotBlocks(ctx, blocksMessage)
+		state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
+		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
+			state.gotBlocks(ctx, blocksMessage)
 			manualWaitForChunksTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
 
@@ -73,58 +68,57 @@ func TestWaitingAcceptsNewBlockAndMovesToProcessing(t *testing.T) {
 	})
 }
 
-func TestWaitingTerminatesOnContextTermination(t *testing.T) {
+func TestStateWaitingForChunks_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := newBlockSyncHarness()
+
+	h.expectLastCommittedBlockHeightQueryFromStorage(10)
+	h.expectSendingOfBlockSyncRequest()
+
 	cancel()
-
-	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
-	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
-
-	waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
-	nextState := waitingState.processState(ctx)
+	state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
+	nextState := state.processState(ctx)
 
 	require.Nil(t, nextState, "context terminated, expected nil state")
 }
 
-func TestWaitingMovesToIdleOnIncorrectMessageSource(t *testing.T) {
+func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
 		blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
 		stateSourceKey := keys.Ed25519KeyPairForTests(8).PublicKey()
 		h := newBlockSyncHarness().withNodeKey(stateSourceKey)
 
-		h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
-		h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+		h.expectLastCommittedBlockHeightQueryFromStorage(10)
+		h.expectSendingOfBlockSyncRequest()
 
-		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
-		nextState := h.processStateAndWaitUntilFinished(ctx, waitingState, func() {
-			waitingState.gotBlocks(ctx, blocksMessage)
+		state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
+		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
+			state.gotBlocks(ctx, blocksMessage)
 		})
 
 		require.IsType(t, &idleState{}, nextState, "expecting to abort sync and go back to idle (ignore blocks)")
-
 		h.verifyMocks(t)
 	})
 }
 
-func TestWaitingDoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
+func TestStateWaitingForChunks_DoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
 	h := newBlockSyncHarness()
 	test.WithContextWithTimeout(h.config.collectChunks/2, func(ctx context.Context) {
-		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
+		state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 		messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
 		blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message
-		waitingState.gotBlocks(ctx, blocksMessage) // we did not call process, so channel is not ready, test fails if this blocks
+		state.gotBlocks(ctx, blocksMessage) // we did not call process, so channel is not ready, test fails if this blocks
 	})
 }
 
-func TestWaitingNOP(t *testing.T) {
+func TestStateWaitingForChunks_NOP(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
-		waitingState := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
+		state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 
 		// this is sanity, these calls should do nothing
-		waitingState.gotAvailabilityResponse(ctx, nil)
-		waitingState.blockCommitted(ctx)
+		state.gotAvailabilityResponse(ctx, nil)
+		state.blockCommitted(ctx)
 	})
 }

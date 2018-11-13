@@ -84,17 +84,53 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 	})
 }
 
-func TestCommitBlockReturnsErrorIfBlockExistsButIsDifferent(t *testing.T) {
+func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(1).start(ctx)
 
 		blockPair := builders.BlockPair()
-
 		harness.commitBlock(ctx, blockPair.Build())
 
-		_, err := harness.commitBlock(ctx, blockPair.WithBlockCreated(time.Now().Add(1*time.Hour)).Build())
+		mutatedBlockPair := blockPair.WithBlockCreated(time.Now().Add(1 * time.Hour)).Build()
+		_, err := harness.commitBlock(ctx, mutatedBlockPair)
 
 		require.EqualError(t, err, "FORK!! block already in storage, timestamp mismatch", "same block, different timestamp should return an error")
+		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
+		harness.verifyMocks(t, 1)
+	})
+}
+
+func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(1).start(ctx)
+
+		blockPair := builders.BlockPair()
+		harness.commitBlock(ctx, blockPair.Build())
+
+		mutatedBlock := blockPair.Build()
+		mutatedBlock.TransactionsBlock.Header.MutateNumSignedTransactions(999)
+
+		_, err := harness.commitBlock(ctx, mutatedBlock)
+
+		require.EqualError(t, err, "FORK!! block already in storage, transaction block header mismatch", "same block, different timestamp should return an error")
+		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
+		harness.verifyMocks(t, 1)
+	})
+}
+
+func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(1).start(ctx)
+
+		blockPair := builders.BlockPair()
+		harness.commitBlock(ctx, blockPair.Build())
+
+		mutatedBlock := blockPair.Build()
+		mutatedBlock.ResultsBlock.Header.MutateNumTransactionReceipts(999)
+
+		_, err := harness.commitBlock(ctx, mutatedBlock)
+
+		require.EqualError(t, err, "FORK!! block already in storage, results block header mismatch", "same block, different timestamp should return an error")
 		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
 		harness.verifyMocks(t, 1)
 	})

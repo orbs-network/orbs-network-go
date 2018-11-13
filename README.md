@@ -54,7 +54,7 @@ If you only want to build the Docker images containing the node binaries, you do
   git checkout master
   ```
 
-* Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DependencyManagement.md).
+* Install dependencies with `./git-submodule-checkout.sh`. To understand dependency management flow please refer to the [dependency documentation](DEPENDENCIES.md).
 
 * Build with `go install`
 
@@ -171,6 +171,9 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
   * "All" with `Directory` set to project root
   * It's also recommended to uncheck `Show Ignored` tests and check `Show Passed` in the test panel after running the configuration
   * If you have a failed test which keeps failing due to cache click `Rerun Failed Tests` in the test panel (it will ignore cache)
+
+* The supervized package recovers and suppresses panics in goroutines. You can disable this behavior when running tests in the IDE:
+  * Under `Preferences | Go | Vendoring & Build Tags | Custom tags ` add the tag `norecover`
 
 * You may enable the following automatic tools that run on file changes:
   * "go fmt" in `Preferences | Tools | File Watchers`, add with `+` the `go fmt` watcher
