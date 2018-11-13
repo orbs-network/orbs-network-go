@@ -13,6 +13,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 const (
@@ -180,6 +181,13 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 		log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()), log.NewFormattingOutput(fileOutput, log.NewJsonFormatter())).
 			Info("Service initialized")
 	})
+}
+
+func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
+	f := log.NewJsonFormatter().WithTimestampColumn("@timestamp")
+	row := f.FormatRow(time.Now(), "info", "hello")
+
+	require.Regexp(t, "@timestamp", row)
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {

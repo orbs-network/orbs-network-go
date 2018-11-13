@@ -13,15 +13,17 @@ type LogFormatter interface {
 }
 
 type jsonFormatter struct {
+	timestampColumn string
 }
 
+const DEFAULT_TIMESTAMP_COLUMN = "timestamp"
 const TIMESTAMP_FORMAT = "2006-01-02T15:04:05.999999999Z"
 
 func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
-	logLine["timestamp"] = timestamp.UTC().Format(TIMESTAMP_FORMAT)
+	logLine[j.timestampColumn] = timestamp.UTC().Format(TIMESTAMP_FORMAT)
 	logLine["message"] = message
 
 	for _, param := range params {
@@ -33,8 +35,15 @@ func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message str
 	return string(logLineAsJson)
 }
 
-func NewJsonFormatter() LogFormatter {
-	return &jsonFormatter{}
+func NewJsonFormatter() *jsonFormatter {
+	return &jsonFormatter{
+		timestampColumn: DEFAULT_TIMESTAMP_COLUMN,
+	}
+}
+
+func (j *jsonFormatter) WithTimestampColumn(column string) *jsonFormatter {
+	j.timestampColumn = column
+	return j
 }
 
 type humanReadableFormatter struct {
