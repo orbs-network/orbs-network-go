@@ -2,8 +2,10 @@ package log_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -27,6 +29,20 @@ func parseOutput(input string) map[string]interface{} {
 	return jsonMap
 }
 
+func TestBasicLogger_WithTags_ClonesLoggerFully(t *testing.T) {
+	v1 := log.String("k1", "v1")
+	v2 := log.String("c1", "v2")
+	v3 := log.String("c2", "v3")
+
+	parent := log.GetLogger(v1)
+	child1 := parent.WithTags(v2)
+	child2 := parent.WithTags(v3)
+
+	require.ElementsMatch(t, []*log.Field{v1}, parent.Tags())
+	require.ElementsMatch(t, []*log.Field{v1, v2}, child1.Tags())
+	require.ElementsMatch(t, []*log.Field{v1, v3}, child2.Tags())
+}
+
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
@@ -40,6 +56,36 @@ func TestSimpleLogger(t *testing.T) {
 	require.Equal(t, "Service initialized", jsonMap["message"])
 	require.Regexp(t, "^instrumentation/log/basic_logger_test.go", jsonMap["source"])
 	require.NotNil(t, jsonMap["timestamp"])
+}
+
+func TestSimpleLogger_AggregateField(t *testing.T) {
+	ctx := trace.NewContext(context.Background(), "foo")
+	b := new(bytes.Buffer)
+	log.GetLogger().
+		WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
+		Info("bar", trace.LogFieldFrom(ctx))
+
+	jsonMap := parseOutput(b.String())
+
+	require.Equal(t, "foo", jsonMap["entry-point"])
+	require.NotEmpty(t, jsonMap[trace.RequestId])
+
+}
+
+func TestSimpleLogger_AggregateField_NestedLogger(t *testing.T) {
+	ctx := trace.NewContext(context.Background(), "foo")
+	b := new(bytes.Buffer)
+	log.GetLogger(log.String("k1", "v1")).
+		WithTags(trace.LogFieldFrom(ctx)).
+		WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
+		Info("bar")
+
+	jsonMap := parseOutput(b.String())
+
+	require.Equal(t, "foo", jsonMap["entry-point"])
+	require.Equal(t, "v1", jsonMap["k1"])
+	require.NotEmpty(t, jsonMap[trace.RequestId])
+
 }
 
 func TestBasicLogger_WithFilter(t *testing.T) {
@@ -95,7 +141,8 @@ func TestStringableSlice(t *testing.T) {
 
 func TestCustomLogFormatter(t *testing.T) {
 	b := new(bytes.Buffer)
-	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()))
+	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()))
 	serviceLogger.Info("Service initialized",
 		log.Int("some-int-value", 12),
 		log.BlockHeight(primitives.BlockHeight(9999)),
@@ -118,6 +165,19 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "source=instrumentation/log/basic_logger_test.go", out)
 	require.Regexp(t, "_test-id=hello", out)
 	require.Regexp(t, "_underscore=wow", out)
+}
+
+func TestHumanReadable_AggregateField(t *testing.T) {
+	ctx := trace.NewContext(context.Background(), "foo")
+	b := new(bytes.Buffer)
+	log.GetLogger().
+		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter())).
+		Info("bar", trace.LogFieldFrom(ctx))
+
+	out := b.String()
+	require.Regexp(t, "entry-point=foo", out)
+	require.Regexp(t, trace.RequestId + "=foo.*", out)
+
 }
 
 func TestHumanReadableFormatterFormatWithStringableSlice(t *testing.T) {

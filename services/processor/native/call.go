@@ -2,7 +2,6 @@ package native
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -39,10 +38,10 @@ func (s *service) verifyInternalMethodCall(contractInfo *sdk.ContractInfo, metho
 }
 
 func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
+
 	defer func() {
 		if r := recover(); r != nil {
-			contractOutputErr = errors.Errorf("%s", r)
-			s.logger.Info("contract execution failed by contract panic", log.Error(contractOutputErr))
+			contractOutputErr = errors.Errorf("contract panic: %s", r)
 			contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()
@@ -54,7 +53,6 @@ func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo
 	}
 
 	// execute the call
-	s.logger.Info("processor executing contract", log.String("contract", contractInfo.Name), log.String("method", methodInfo.Name))
 	contractInstance := s.getContractInstanceFromRepository(contractInfo.Name)
 	if contractInstance == nil {
 		return nil, nil, errors.New("contract repository is not initialized yet")
@@ -79,7 +77,6 @@ func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo
 	// create contract output error
 	contractOutputErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
 	if contractOutputErr != nil {
-		s.logger.Info("contract execution failed by contract error", log.Error(contractOutputErr))
 		contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 	}
 

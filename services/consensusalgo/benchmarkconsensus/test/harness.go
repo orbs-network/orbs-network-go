@@ -69,6 +69,7 @@ func newHarness(
 	)
 
 	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
+	cfg.SetUint32(config.CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
 
 	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 

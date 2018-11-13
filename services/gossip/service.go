@@ -3,6 +3,7 @@ package gossip
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -37,16 +38,17 @@ func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogge
 }
 
 func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(payloads) == 0 {
-		s.logger.Error("transport did not receive any payloads, header missing")
+		logger.Error("transport did not receive any payloads, header missing")
 		return
 	}
 	header := gossipmessages.HeaderReader(payloads[0])
 	if !header.IsValid() {
-		s.logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
+		logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
 		return
 	}
-	s.logger.Info("transport message received", log.Stringable("header", header))
+	logger.Info("transport message received", log.Stringable("header", header))
 	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		s.receivedTransactionRelayMessage(ctx, header, payloads[1:])

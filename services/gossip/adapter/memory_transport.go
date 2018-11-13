@@ -4,20 +4,26 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"sync"
 )
 
+type message struct {
+	payloads     [][]byte
+	traceContext *trace.Context
+}
+
 type peer struct {
-	socket   chan [][]byte
+	socket   chan message
 	listener chan TransportListener
 }
 
 type memoryTransport struct {
 	sync.RWMutex
-	byPublicKey map[string]*peer
+	peers map[string]*peer
 }
 
 /*
@@ -25,29 +31,29 @@ Package adapter provides an in-memory implementation of the Gossip Transport ada
 should not use the TCP-based adapter, such as acceptance tests or sociable unit tests, or in other in-process network use cases
 */
 func NewMemoryTransport(ctx context.Context, logger log.BasicLogger, federation map[string]config.FederationNode) *memoryTransport {
-	peers := &memoryTransport{byPublicKey: make(map[string]*peer)}
+	transport := &memoryTransport{peers: make(map[string]*peer)}
 
-	peers.Lock()
-	defer peers.Unlock()
+	transport.Lock()
+	defer transport.Unlock()
 	for _, node := range federation {
 		key := node.NodePublicKey().KeyForMap()
-		peers.byPublicKey[key] = newPeer(ctx, logger.WithTags(log.String("peer-listener", key)))
+		transport.peers[key] = newPeer(ctx, logger.WithTags(log.String("peer-listener", key)))
 	}
 
-	return peers
+	return transport
 }
 
 func (p *memoryTransport) RegisterListener(listener TransportListener, key primitives.Ed25519PublicKey) {
 	p.Lock()
 	defer p.Unlock()
-	p.byPublicKey[string(key)].attach(listener)
+	p.peers[string(key)].attach(listener)
 }
 
 func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for key, peer := range p.byPublicKey {
+		for key, peer := range p.peers {
 			if key != data.SenderPublicKey.KeyForMap() {
 				peer.send(ctx, data)
 			}
@@ -55,7 +61,7 @@ func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, k := range data.RecipientPublicKeys {
-			p.byPublicKey[k.KeyForMap()].send(ctx, data)
+			p.peers[k.KeyForMap()].send(ctx, data)
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
@@ -66,7 +72,7 @@ func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
 }
 
 func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket: make(chan [][]byte), listener: make(chan TransportListener)}
+	p := &peer{socket: make(chan message), listener: make(chan TransportListener)}
 
 	supervised.GoForever(bgCtx, logger, func() {
 		// wait till we have a listener attached
@@ -86,20 +92,36 @@ func (p *peer) attach(listener TransportListener) {
 }
 
 func (p *peer) send(ctx context.Context, data *TransportData) {
+	tracingContext, _ := trace.FromContext(ctx)
 	select {
-	case p.socket <- data.Payloads:
-	case <- ctx.Done():
+	case p.socket <- message{payloads: data.Payloads, traceContext: tracingContext}:
+	case <-ctx.Done():
 		return
 	}
 }
 
-func (p *peer) acceptUsing(ctx context.Context, listener TransportListener) {
+func (p *peer) acceptUsing(bgCtx context.Context, listener TransportListener) {
 	for {
 		select {
-		case payloads := <-p.socket:
-			listener.OnTransportMessageReceived(ctx, payloads)
-		case <-ctx.Done():
+		case message := <-p.socket:
+			receive(bgCtx, listener, message)
+		case <-bgCtx.Done():
 			return
 		}
+	}
+}
+
+func receive(bgCtx context.Context, listener TransportListener, message message) {
+	ctx, cancel := context.WithCancel(bgCtx)
+	defer cancel()
+	traceContext := contextFrom(ctx, message)
+	listener.OnTransportMessageReceived(traceContext, message.payloads)
+}
+
+func contextFrom(ctx context.Context, message message) context.Context {
+	if message.traceContext == nil {
+		return trace.NewContext(ctx, "memory-transport")
+	} else {
+		return trace.PropagateContext(ctx, message.traceContext)
 	}
 }

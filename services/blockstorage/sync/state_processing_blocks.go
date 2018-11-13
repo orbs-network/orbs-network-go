@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
@@ -30,6 +31,8 @@ func (s *processingBlocksState) String() string {
 }
 
 func (s *processingBlocksState) processState(ctx context.Context) syncState {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
@@ -45,7 +48,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	firstBlockHeight := s.blocks.SignedChunkRange.FirstBlockHeight()
 	lastBlockHeight := s.blocks.SignedChunkRange.LastBlockHeight()
 
-	s.logger.Info("committing blocks from sync",
+	logger.Info("committing blocks from sync",
 		log.Int("block-count", len(s.blocks.BlockPairs)),
 		log.Stringable("sender", s.blocks.Sender),
 		log.Stringable("first-block-height", firstBlockHeight),
@@ -57,7 +60,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 		if err != nil {
 			s.metrics.failedValidationBlocks.Inc()
-			s.logger.Error("failed to validate block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock))
+			logger.Error("failed to validate block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock))
 			break
 		}
 
@@ -65,11 +68,11 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 		if err != nil {
 			s.metrics.failedCommitBlocks.Inc()
-			s.logger.Error("failed to commit block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			logger.Error("failed to commit block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			break
 		} else {
 			s.metrics.committedBlocks.Inc()
-			s.logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}
 	}
 

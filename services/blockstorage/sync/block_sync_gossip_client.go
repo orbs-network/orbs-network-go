@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -39,6 +40,8 @@ func (c *blockSyncGossipClient) petitionerUpdateConsensusAlgos(ctx context.Conte
 }
 
 func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
+	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
@@ -52,7 +55,7 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 		return errors.Errorf("invalid block request: from %d to %d", firstBlockHeight, lastBlockHeight)
 	}
 
-	c.logger.Info("broadcast block availability request",
+	logger.Info("broadcast block availability request",
 		log.Stringable("first-block-height", firstBlockHeight),
 		log.Stringable("last-block-height", lastBlockHeight))
 

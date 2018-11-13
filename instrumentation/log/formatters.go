@@ -2,6 +2,7 @@ package log
 
 import (
 	"encoding/json"
+	"github.com/go-playground/ansi"
 	"github.com/orbs-network/orbs-network-go/crypto/base58"
 	"strconv"
 	"strings"
@@ -26,13 +27,17 @@ func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message str
 	logLine[j.timestampColumn] = timestamp.UTC().Format(TIMESTAMP_FORMAT)
 	logLine["message"] = message
 
-	for _, param := range params {
-		logLine[param.Key] = param.Value()
-	}
+	logFields(params, logLine)
 
 	logLineAsJson, _ := json.Marshal(logLine)
 
 	return string(logLineAsJson)
+}
+
+func logFields(params []*Field, logLine map[string]interface{}) {
+	for _, param := range params {
+		logLine[param.Key] = param.Value()
+	}
 }
 
 func NewJsonFormatter() *jsonFormatter {
@@ -73,15 +78,15 @@ func printParam(builder *strings.Builder, param *Field) {
 
 	switch param.Type {
 	case StringType:
-		value = param.String
+		value = param.StringVal
 	case NodeType:
-		value = param.String
+		value = param.StringVal
 	case ServiceType:
-		value = param.String
+		value = param.StringVal
 	case FunctionType:
-		value = param.String
+		value = param.StringVal
 	case SourceType:
-		value = param.String
+		value = param.StringVal
 	case IntType:
 		value = strconv.FormatInt(param.Int, 10)
 	case UintType:
@@ -155,9 +160,12 @@ func extractParamByConditionAndRemove(params []*Field, condition func(param *Fie
 
 func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
 	builder := strings.Builder{}
+	var mutableParams = make([]*Field, len(params)) // this is needed because extractParamByTypePrintAndRemove mutates the array
+	copy(mutableParams, params)
 
 	ts := timestamp.UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
+	builder.WriteString(colorize(mutableParams))
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
 	builder.WriteString(ts)
@@ -166,19 +174,16 @@ func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, me
 	builder.WriteString(message)
 	builder.WriteString(SPACE)
 
-	var newParams = make([]*Field, len(params))
-	copy(newParams, params)
-
-	_, newParams = extractParamByTypePrintAndRemove(newParams, NodeType, &builder)
-	_, newParams = extractParamByTypePrintAndRemove(newParams, ServiceType, &builder)
-	functionParam, newParams := extractParamByTypeAndRemove(newParams, FunctionType)
-	sourceParam, newParams := extractParamByTypeAndRemove(newParams, SourceType)
-	underscoreParams, newParams := extractParamByConditionAndRemove(newParams, func(param *Field) bool {
+	_, mutableParams = extractParamByTypePrintAndRemove(mutableParams, NodeType, &builder)
+	_, mutableParams = extractParamByTypePrintAndRemove(mutableParams, ServiceType, &builder)
+	functionParam, mutableParams := extractParamByTypeAndRemove(mutableParams, FunctionType)
+	sourceParam, mutableParams := extractParamByTypeAndRemove(mutableParams, SourceType)
+	underscoreParams, mutableParams := extractParamByConditionAndRemove(mutableParams, func(param *Field) bool {
 		return strings.Index(param.Key, "_") == 0
 	})
 
-	for _, param := range newParams {
-		printParam(&builder, param)
+	for _, p := range mutableParams {
+		printParam(&builder, p)
 	}
 
 	// append the function/source
@@ -189,6 +194,18 @@ func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, me
 		printParam(&builder, param)
 	}
 	return builder.String()
+}
+
+func colorize(fields []*Field) string {
+	colors := []string{ansi.Cyan, ansi.Yellow, ansi.LightBlue, ansi.Magenta, ansi.LightYellow, ansi.LightRed, ansi.LightGreen, ansi.LightMagenta, ansi.Green}
+	for _, f := range fields {
+		if f.Key == "request-id" {
+			lastChar := int(f.StringVal[len(f.StringVal)-1])
+			return colors[lastChar%len(colors)]
+		}
+	}
+
+	return ""
 }
 
 func NewHumanReadableFormatter() LogFormatter {

@@ -12,48 +12,11 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
-
-// the storage mock should be moved to its own file, but i have a weird goland bug where it will not identify it and its driving me mad, putting this here for now
-type blockSyncStorageMock struct {
-	mock.Mock
-}
-
-func (s *blockSyncStorageMock) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
-	ret := s.Called(ctx, input)
-	if out := ret.Get(0); out != nil {
-		return out.(*services.GetLastCommittedBlockHeightOutput), ret.Error(1)
-	} else {
-		return nil, ret.Error(1)
-	}
-}
-
-func (s *blockSyncStorageMock) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
-	ret := s.Called(ctx, input)
-	if out := ret.Get(0); out != nil {
-		return out.(*services.CommitBlockOutput), ret.Error(1)
-	} else {
-		return nil, ret.Error(1)
-	}
-}
-
-func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-	ret := s.Called(ctx, input)
-	if out := ret.Get(0); out != nil {
-		return out.(*services.ValidateBlockForCommitOutput), ret.Error(1)
-	} else {
-		return nil, ret.Error(1)
-	}
-}
-
-func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
-	s.Called(ctx)
-}
-
-// end of storage mock
 
 type blockSyncConfigForTests struct {
 	pk               primitives.Ed25519PublicKey
@@ -167,10 +130,9 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 	return h
 }
 
-func (h *blockSyncHarness) expectingSyncOnStart() {
-	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
-	h.expectLastCommittedBlockHeight(primitives.BlockHeight(10))
-	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+func (h *blockSyncHarness) expectSyncOnStart() {
+	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
+	h.expectBroadcastOfBlockAvailabilityRequest()
 }
 
 func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
@@ -189,7 +151,7 @@ func (h *blockSyncHarness) verifyMocks(t *testing.T) {
 	require.True(t, ok)
 }
 
-func (h *blockSyncHarness) processStateAndWaitUntilFinished(ctx context.Context, state syncState, whileStateIsProcessing func()) syncState {
+func (h *blockSyncHarness) processStateInBackgroundAndWaitUntilFinished(ctx context.Context, state syncState, whileStateIsProcessing func()) syncState {
 	var nextState syncState
 	stateProcessingFinished := make(chan bool)
 	go func() {
@@ -201,10 +163,62 @@ func (h *blockSyncHarness) processStateAndWaitUntilFinished(ctx context.Context,
 	return nextState
 }
 
-func (h *blockSyncHarness) expectLastCommittedBlockHeight(expectedHeight primitives.BlockHeight) {
+func (h *blockSyncHarness) expectLastCommittedBlockHeightQueryFromStorage(expectedHeight int) {
 	out := &services.GetLastCommittedBlockHeightOutput{
-		LastCommittedBlockHeight:    expectedHeight,
+		LastCommittedBlockHeight:    primitives.BlockHeight(expectedHeight),
 		LastCommittedBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 	}
 	h.storage.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(out, nil).Times(1)
+}
+
+func (h *blockSyncHarness) expectPreSynchronizationUpdateOfConsensusAlgos(expectedHeight int) {
+	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
+	h.expectLastCommittedBlockHeightQueryFromStorage(expectedHeight)
+}
+
+func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequestToFail() {
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
+}
+
+func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequest() {
+	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+}
+
+func (h *blockSyncHarness) verifyBroadcastOfBlockAvailabilityRequest(t *testing.T) {
+	require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast should be sent")
+}
+
+func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBlocks int) {
+	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(numExpectedBlocks)
+}
+
+func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
+	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
+		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
+			return nil, errors.Errorf("failed to validate block #%d", numExpectedBlocks)
+		}
+		return nil, nil
+	}).Times(numExpectedBlocks)
+}
+
+func (h *blockSyncHarness) expectBlockCommitsToStorage(numExpectedBlocks int) {
+	outCommit := &services.CommitBlockOutput{}
+	h.storage.When("CommitBlock", mock.Any, mock.Any).Return(outCommit, nil).Times(numExpectedBlocks)
+}
+
+func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
+	h.storage.When("CommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
+			return nil, errors.Errorf("failed to commit block #%d", numExpectedBlocks)
+		}
+		return nil, nil
+	}).Times(numExpectedBlocks)
+}
+
+func (h *blockSyncHarness) expectSendingOfBlockSyncRequest() {
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+}
+
+func (h *blockSyncHarness) expectSendingOfBlockSyncRequestToFail() {
+	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 }

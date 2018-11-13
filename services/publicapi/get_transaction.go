@@ -18,7 +18,7 @@ func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetT
 		return nil, err
 	}
 
-	s.logger.Info("get transaction status request received", log.String("flow", "checkpoint"), log.Stringable("txHash", input.ClientRequest.Txhash()))
+	s.logger.Info("get transaction status request received", log.String("flow", "checkpoint"), log.Transaction(input.ClientRequest.Txhash()))
 	txHash := input.ClientRequest.Txhash()
 	timestamp := input.ClientRequest.TransactionTimestamp()
 
@@ -42,7 +42,7 @@ func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, t
 		TransactionTimestamp: timestamp,
 	})
 	if err != nil {
-		s.logger.Info("get transaction status failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		s.logger.Info("get transaction status failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
 		return txStatusToTxResponse(txReceipt), err, true
 	}
 	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
@@ -66,7 +66,7 @@ func (s *service) getFromBlockStorage(ctx context.Context, txHash primitives.Sha
 		TransactionTimestamp: timestamp,
 	})
 	if err != nil {
-		s.logger.Info("get transaction status failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		s.logger.Info("get transaction status failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
 		return nil, err
 	}
 	return blockToTxResponse(txReceipt), nil

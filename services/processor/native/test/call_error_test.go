@@ -30,7 +30,7 @@ func TestProcessCall_Errors(t *testing.T) {
 			input:          processCallInput().WithMethod("BenchmarkContract", "panic").Build(),
 			expectedError:  true,
 			expectedResult: protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
-			expectedOutput: builders.MethodArgumentsArray("example panic thrown by contract"),
+			expectedOutput: builders.MethodArgumentsArray("contract panic: example panic thrown by contract"),
 		},
 	}
 	for _, tt := range tests {

@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -72,8 +73,10 @@ func NewPublicApi(
 }
 
 func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.String("flow", "checkpoint"))
+
 	for _, txReceipt := range input.TransactionReceipts {
-		s.logger.Info("transaction reported as committed", log.String("flow", "checkpoint"), log.Stringable("txHash", txReceipt.Txhash()))
+		logger.Info("transaction reported as committed", log.Transaction(txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
 			&txResponse{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
@@ -86,7 +89,9 @@ func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.
 }
 
 func (s *service) HandleTransactionError(ctx context.Context, input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
-	s.logger.Info("transaction reported as errored", log.String("flow", "checkpoint"), log.Stringable("txHash", input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.String("flow", "checkpoint"))
+
+	logger.Info("transaction reported as errored", log.Transaction(input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
 	s.waiter.complete(input.Txhash.KeyForMap(),
 		&txResponse{
 			transactionStatus:  input.TransactionStatus,
