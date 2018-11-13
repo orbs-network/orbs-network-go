@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
@@ -27,11 +28,12 @@ func (s *idleState) String() string {
 func (s *idleState) processState(ctx context.Context) syncState {
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	noCommitTimer := s.createTimer()
 	select {
 	case <-noCommitTimer.C:
-		s.logger.Info("starting sync after no-commit timer expired")
+		logger.Info("starting sync after no-commit timer expired")
 		s.metrics.timesExpired.Inc()
 		return s.factory.CreateCollectingAvailabilityResponseState()
 	case <-s.conduit.idleReset:
@@ -43,11 +45,13 @@ func (s *idleState) processState(ctx context.Context) syncState {
 }
 
 func (s *idleState) blockCommitted(ctx context.Context) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	select {
 	case s.conduit.idleReset <- struct{}{}:
-		s.logger.Info("sync got new block commit")
+		logger.Info("sync got new block commit")
 	case <-ctx.Done():
-		s.logger.Info("terminated on writing new block notification", log.String("context-message", ctx.Err().Error()))
+		logger.Info("terminated on writing new block notification", log.String("context-message", ctx.Err().Error()))
 	}
 }
 

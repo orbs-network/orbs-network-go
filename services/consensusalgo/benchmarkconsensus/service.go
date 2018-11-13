@@ -72,16 +72,18 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	logger log.BasicLogger,
+	parentLogger log.BasicLogger,
 	config Config,
 	metricFactory metric.Factory,
 ) services.ConsensusAlgoBenchmark {
+
+	logger := parentLogger.WithTags(LogTag)
 
 	s := &service{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		logger:           logger.WithTags(LogTag),
+		logger:           logger,
 		config:           config,
 
 		isLeader:                   config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
@@ -120,7 +122,7 @@ func (s *service) HandleBenchmarkConsensusCommit(ctx context.Context, input *gos
 
 func (s *service) HandleBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
 	if s.isLeader {
-		return nil, s.leaderHandleCommittedVote(input.Message.Sender, input.Message.Status)
+		return nil, s.leaderHandleCommittedVote(ctx, input.Message.Sender, input.Message.Status)
 	}
 	return nil, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -39,6 +40,8 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 }
 
 func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
 		panic("CommitStateDiff received corrupt args")
 	}
@@ -49,7 +52,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
+	logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
 	currentHeight := s.revisions.getCurrentHeight()
 	if currentHeight+1 != commitBlockHeight {

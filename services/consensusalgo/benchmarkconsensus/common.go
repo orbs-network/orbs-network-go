@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -45,10 +46,12 @@ func (s *service) requiredQuorumSize() int {
 }
 
 func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return nil
 	}
-	s.logger.Info("saving block to storage", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	logger.Info("saving block to storage", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPair,
 	})

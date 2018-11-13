@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -11,6 +12,7 @@ import (
 
 func TestBlockSync(t *testing.T) {
 	harness.Network(t).
+		WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
 			"intra-node sync to consensus algo failed",            //TODO investigate and explain, or fix and remove expected error
