@@ -88,6 +88,7 @@ func ForAcceptanceTestNetwork(
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	maxTxPerBlock uint32,
+	requiredQuorumPercentage uint32,
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 	cfg.SetFederationNodes(federationNodes)
@@ -95,7 +96,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 10*time.Millisecond)
-	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
+	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 50*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 300*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK, 1)

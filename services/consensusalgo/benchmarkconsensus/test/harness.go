@@ -64,6 +64,7 @@ func newHarness(
 		leaderKeyPair().PublicKey(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		1,
+		100,
 	)
 
 	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
