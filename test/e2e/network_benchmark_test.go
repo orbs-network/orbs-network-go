@@ -2,9 +2,9 @@ package e2e
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 	"math/rand"
@@ -33,11 +33,11 @@ func TestE2EStress(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				signerKeyPair := keys.Ed25519KeyPairForTests(5)
-				targetAddress := builders.AddressForEd25519SignerForTests(6)
+				targetKey, _ := keys.GenerateEd25519Key()
+				targetAddress := builders.AddressFor(targetKey)
 				amount := uint64(rand.Intn(10))
 
-				transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
+				transfer := builders.TransferTransaction().WithEd25519Signer(OwnerOfAllSupply).WithAmountAndTargetAddress(amount, targetAddress).Builder()
 				_, err2 := h.sendTransaction(transfer)
 
 				if err2 != nil {
