@@ -10,7 +10,8 @@ func TestMain(m *testing.M) {
 
 	n := newInProcessE2ENetwork()
 
-	exitCode := m.Run()
+	m.Run()
+	exitCode := m.Run() // run twice so that any test assuming a clean slate will fail; e2es shouldn't assume anything about system state
 
 	n.gracefulShutdown()
 

@@ -1,9 +1,9 @@
 package e2e
 
 import (
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -21,12 +21,13 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 	h := newHarness()
 	printTestTime(t, "new harness", &lt) // slow do to warm up compilation
 
+	transferTo, _ := keys.GenerateEd25519Key()
+	targetAddress := builders.AddressFor(transferTo)
+
 	// send 3 transactions with total of 70
 	amounts := []uint64{15, 22, 33}
 	for _, amount := range amounts {
-		signerKeyPair := keys.Ed25519KeyPairForTests(5)
-		targetAddress := builders.AddressForEd25519SignerForTests(6)
-		transfer := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithAmountAndTargetAddress(amount, targetAddress).Builder()
+		transfer := builders.TransferTransaction().WithEd25519Signer(OwnerOfAllSupply).WithAmountAndTargetAddress(amount, targetAddress).Builder()
 
 		printTestTime(t, "send transaction - start", &lt)
 		response, err := h.sendTransaction(transfer)
@@ -39,9 +40,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 	// check balance
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		signerKeyPair := keys.Ed25519KeyPairForTests(6)
-		targetAddress := builders.AddressForEd25519SignerForTests(6)
-		getBalance := builders.GetBalanceTransaction().WithEd25519Signer(signerKeyPair).WithTargetAddress(targetAddress).Builder().Transaction
+		getBalance := builders.GetBalanceTransaction().WithEd25519Signer(transferTo).WithTargetAddress(targetAddress).Builder().Transaction
 
 		printTestTime(t, "call method - start", &lt)
 		response, err := h.callMethod(getBalance)

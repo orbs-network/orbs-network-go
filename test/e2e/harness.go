@@ -6,21 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -79,71 +73,20 @@ func getConfig() E2EConfig {
 	}
 }
 
-type inProcessE2ENetwork struct {
-	nodes []bootstrap.Node
-}
-
-func (h *inProcessE2ENetwork) gracefulShutdown() {
-	if getConfig().bootstrap {
-		for _, node := range h.nodes {
-			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
-		}
-	}
-}
-
-func newInProcessE2ENetwork() *inProcessE2ENetwork {
-	return &inProcessE2ENetwork{bootstrapNetwork()}
-}
-
 type harness struct {}
+
+func (h *harness) deployNativeContract(name string, code []byte) (*client.SendTransactionResponse, error) {
+	return h.sendTransaction(builders.Transaction().
+		WithMethod("_Deployments", "deployService").
+		WithArgs(
+			name,
+			uint32(protocol.PROCESSOR_TYPE_NATIVE),
+			code,
+		).Builder())
+}
 
 func newHarness() *harness {
 	return &harness{}
-}
-
-func bootstrapNetwork() (nodes []bootstrap.Node) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	firstRandomPort := 20000 + r.Intn(40000)
-	federationNodes := make(map[string]config.FederationNode)
-	gossipPeers := make(map[string]config.GossipPeer)
-	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
-	}
-	os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
-	logger := log.GetLogger().WithTags(
-		log.String("_test", "e2e"),
-		log.String("_branch", os.Getenv("GIT_BRANCH")),
-		log.String("_commit", os.Getenv("GIT_COMMIT"))).
-		WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
-	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
-		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
-
-		logFile, err := os.OpenFile(fmt.Sprintf("%s/_logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic(err)
-		}
-
-		nodeLogger := logger.WithOutput(log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
-		processorArtifactPath, _ := getProcessorArtifactPath()
-
-		cfg := config.ForE2E(processorArtifactPath)
-		cfg.OverrideNodeSpecificValues(
-			federationNodes,
-			gossipPeers,
-			uint16(firstRandomPort+i),
-			nodeKeyPair.PublicKey(),
-			nodeKeyPair.PrivateKey(),
-			leaderKeyPair.PublicKey(),
-			consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
-
-		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
-
-		nodes = append(nodes, node)
-	}
-	return nodes
 }
 
 func (h *harness) sendTransaction(txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
@@ -205,11 +148,6 @@ func (h *harness) absoluteUrlFor(endpoint string) string {
 
 func (h *harness) apiUrlFor(endpoint string) string {
 	return getConfig().apiEndpoint + endpoint
-}
-
-func getProcessorArtifactPath() (string, string) {
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	return filepath.Join(dir, "processor-artifacts"), dir
 }
 
 type metrics map[string]map[string]interface{}
