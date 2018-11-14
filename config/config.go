@@ -86,13 +86,9 @@ type mutableNodeConfig interface {
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
 	OverrideNodeSpecificValues(
-		federationNodes map[string]FederationNode,
-		gossipPeers map[string]GossipPeer,
 		gossipListenPort uint16,
 		nodePublicKey primitives.Ed25519PublicKey,
-		nodePrivateKey primitives.Ed25519PrivateKey,
-		constantConsensusLeader primitives.Ed25519PublicKey,
-		activeConsensusAlgo consensus.ConsensusAlgoType)
+		nodePrivateKey primitives.Ed25519PrivateKey)
 }
 
 type BlockStorageConfig interface {

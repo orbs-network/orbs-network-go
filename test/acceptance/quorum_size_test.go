@@ -13,8 +13,9 @@ import (
 func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks(t *testing.T) {
 	harness.Network(t).
 		WithNumNodes(6).
+		WithNumRunningNodes(4).
 		WithLogFilters(log.ExcludeEntryPoint("BlockSync")).
-		StartPartial(4, func(parent context.Context, network harness.TestNetworkDriver) {
+		Start(func(parent context.Context, network harness.TestNetworkDriver) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 

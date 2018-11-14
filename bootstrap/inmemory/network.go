@@ -97,6 +97,9 @@ func (n *Node) WaitForTransactionInState(ctx context.Context, txhash primitives.
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
 }
+func (n *Node) Started() bool {
+	return n.nodeLogic != nil
+}
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
 	return n.Nodes[nodeIndex].nodeLogic.PublicApi()
@@ -167,6 +170,8 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 
 func (n *Network) WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256) {
 	for _, node := range n.Nodes {
-		node.WaitForTransactionInState(ctx, txhash)
+		if node.Started() {
+			node.WaitForTransactionInState(ctx, txhash)
+		}
 	}
 }

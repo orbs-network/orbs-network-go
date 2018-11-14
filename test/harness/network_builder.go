@@ -20,14 +20,15 @@ type canFail interface {
 }
 
 type acceptanceTestNetworkBuilder struct {
-	f              canFail
-	numNodes       int
-	consensusAlgos []consensus.ConsensusAlgoType
-	testId         string
-	setupFunc      func(ctx context.Context, network TestNetworkDriver)
-	logFilters     []log.Filter
-	maxTxPerBlock  uint32
-	allowedErrors  []string
+	f                 canFail
+	numNodes          int
+	consensusAlgos    []consensus.ConsensusAlgoType
+	testId            string
+	setupFunc         func(ctx context.Context, network TestNetworkDriver)
+	logFilters        []log.Filter
+	maxTxPerBlock     uint32
+	allowedErrors     []string
+	numOfNodesToStart int
 }
 
 func Network(f canFail) *acceptanceTestNetworkBuilder {
@@ -76,9 +77,10 @@ func (b *acceptanceTestNetworkBuilder) AllowingErrors(allowedErrors ...string) *
 }
 
 func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network TestNetworkDriver)) {
-	b.StartPartial(b.numNodes, f)
-}
-func (b *acceptanceTestNetworkBuilder) StartPartial(numOfNodesToStart int, f func(ctx context.Context, network TestNetworkDriver)) {
+	if b.numOfNodesToStart == 0 {
+		b.numOfNodesToStart = b.numNodes
+	}
+
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
@@ -95,7 +97,7 @@ func (b *acceptanceTestNetworkBuilder) StartPartial(numOfNodesToStart int, f fun
 				b.setupFunc(ctx, network)
 			}
 
-			network.Start(ctx, numOfNodesToStart)
+			network.Start(ctx, b.numOfNodesToStart)
 
 			f(ctx, network)
 		})
@@ -117,6 +119,11 @@ func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogge
 		//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
 	return logger, errorRecorder
+}
+
+func (b *acceptanceTestNetworkBuilder) WithNumRunningNodes(numNodes int) *acceptanceTestNetworkBuilder {
+	b.numOfNodesToStart = numNodes
+	return b
 }
 
 func makeFormattingOutput(testId string) log.Output {

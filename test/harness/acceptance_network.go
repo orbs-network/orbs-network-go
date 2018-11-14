@@ -37,11 +37,9 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.
 	leaderKeyPair := testKeys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
-	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < int(numNodes); i++ {
 		publicKey := testKeys.Ed25519KeyPairForTests(i).PublicKey()
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
 	sharedTamperingTransport := testGossipAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
@@ -54,15 +52,13 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.
 
 	for i := 0; i < numNodes; i++ {
 		keyPair := testKeys.Ed25519KeyPairForTests(i)
-		cfg := config.ForAcceptanceTests(
+		cfg := config.ForAcceptanceTestNetwork(
 			federationNodes,
-			gossipPeers,
-			keyPair.PublicKey(),
-			keyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
 			maxTxPerBlock,
 		)
+		cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
 
 		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewFakeCompiler())
 	}
