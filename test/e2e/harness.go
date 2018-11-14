@@ -121,7 +121,7 @@ func newHarness() *harness {
 			cfg.OverrideNodeSpecificValues(
 				federationNodes,
 				gossipPeers,
-				uint16(firstRandomPort+i),
+				firstRandomPort+i,
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey(),
 				leaderKeyPair.PublicKey(),
