@@ -101,11 +101,12 @@ func newHarness() *harness {
 
 		os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
 
+		console := log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())
 		logger := log.GetLogger().WithTags(
 			log.String("_test", "e2e"),
 			log.String("_branch", os.Getenv("GIT_BRANCH")),
 			log.String("_commit", os.Getenv("GIT_COMMIT"))).
-			WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+			WithOutput(console)
 
 		leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 		for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
@@ -116,7 +117,7 @@ func newHarness() *harness {
 				panic(err)
 			}
 
-			nodeLogger := logger.WithOutput(log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
+			nodeLogger := logger.WithOutput(console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
 			processorArtifactPath, _ := getProcessorArtifactPath()
 
 			cfg := config.ForE2E(processorArtifactPath)
