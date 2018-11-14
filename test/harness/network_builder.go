@@ -76,6 +76,9 @@ func (b *acceptanceTestNetworkBuilder) AllowingErrors(allowedErrors ...string) *
 }
 
 func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network TestNetworkDriver)) {
+	b.StartPartial(b.numNodes, f)
+}
+func (b *acceptanceTestNetworkBuilder) StartPartial(numOfNodesToStart int, f func(ctx context.Context, network TestNetworkDriver)) {
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
@@ -92,7 +95,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 				b.setupFunc(ctx, network)
 			}
 
-			network.Start(ctx)
+			network.Start(ctx, numOfNodesToStart)
 
 			f(ctx, network)
 		})

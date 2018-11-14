@@ -47,7 +47,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger))
 	}
 
-	network.CreateAndStartNodes(ctx) // must call network.Start(ctx) to actually start the nodes in the network
+	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network
 
 	return network
 }

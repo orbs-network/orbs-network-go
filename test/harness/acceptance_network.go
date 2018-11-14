@@ -79,8 +79,8 @@ type acceptanceNetwork struct {
 	description        string
 }
 
-func (n *acceptanceNetwork) Start(ctx context.Context) {
-	n.CreateAndStartNodes(ctx) // needs to start first so that nodes can register their listeners to it
+func (n *acceptanceNetwork) Start(ctx context.Context, numOfNodesToStart int) {
+	n.CreateAndStartNodes(ctx, numOfNodesToStart) // needs to start first so that nodes can register their listeners to it
 }
 
 func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int, ) {

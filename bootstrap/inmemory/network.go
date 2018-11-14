@@ -62,8 +62,12 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	n.Nodes = append(n.Nodes, node)
 }
 
-func (n *Network) CreateAndStartNodes(ctx context.Context) {
-	for _, node := range n.Nodes {
+func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) {
+	for i, node := range n.Nodes {
+		if i >= numOfNodesToStart {
+			return
+		}
+
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			n.Transport,
