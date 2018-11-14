@@ -22,7 +22,6 @@ type bulkOutput struct {
 	writer    io.Writer
 
 	bulkSize int
-	delay    time.Duration
 
 	lock *sync.Mutex
 	logs []*row
