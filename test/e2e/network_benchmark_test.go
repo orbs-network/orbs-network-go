@@ -15,7 +15,6 @@ import (
 
 func TestE2EStress(t *testing.T) {
 	h := newHarness()
-	defer h.gracefulShutdown()
 
 	config := getConfig().stressTest
 

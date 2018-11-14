@@ -22,7 +22,6 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	printTestTime(t, "started", &lt)
 
 	h := newHarness()
-	defer h.gracefulShutdown()
 	printTestTime(t, "new harness", &lt) // slow do to warm up compilation
 
 	counterStart := uint64(100 * rand.Intn(1000))

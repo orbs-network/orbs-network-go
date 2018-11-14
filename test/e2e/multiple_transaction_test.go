@@ -19,7 +19,6 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 	printTestTime(t, "started", &lt)
 
 	h := newHarness()
-	defer h.gracefulShutdown()
 	printTestTime(t, "new harness", &lt) // slow do to warm up compilation
 
 	// send 3 transactions with total of 70

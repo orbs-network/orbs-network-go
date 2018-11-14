@@ -8,7 +8,11 @@ import (
 func TestMain(m *testing.M) {
 	cleanNativeProcessorCache()
 
+	n := newInProcessE2ENetwork()
+
 	exitCode := m.Run()
+
+	n.gracefulShutdown()
 
 	cleanNativeProcessorCache()
 	os.Exit(exitCode)
