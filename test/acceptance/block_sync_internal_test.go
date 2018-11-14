@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestInternalBlockSync_TransactionPool(t *testing.T) {
@@ -41,7 +40,6 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 		network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, blockCount)
 
 		// Resend an already committed transaction to Leader
-		ctx, _ = context.WithTimeout(ctx, 1*time.Second)
 		leaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus())
 
@@ -65,8 +63,6 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
 		Start(func(ctx context.Context, builderNetwork harness.TestNetworkDriver) {
-
-			ctx, _ = context.WithTimeout(ctx, 1*time.Second)
 
 			contract := builderNetwork.GetBenchmarkTokenContract()
 			var topBlock primitives.BlockHeight
@@ -97,11 +93,14 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 				network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, topBlock)
 
 				contract = network.GetBenchmarkTokenContract()
-				leaderBalance := <- contract.CallGetBalance(ctx,0, 1)
-				nonLeaderBalance := <- contract.CallGetBalance(ctx,1, 1)
 
-				require.EqualValues(t, totalAmount, nonLeaderBalance, "expected transfers to reflect in non leader state")
+				// Read state entry from leader node
+				leaderBalance := <- contract.CallGetBalance(ctx,0, 1)
 				require.EqualValues(t, totalAmount, leaderBalance, "expected transfers to reflect in leader state")
+
+				// Read state entry from non leader node
+				nonLeaderBalance := <- contract.CallGetBalance(ctx,1, 1)
+				require.EqualValues(t, totalAmount, nonLeaderBalance, "expected transfers to reflect in non leader state")
 			})
 		})
 }
