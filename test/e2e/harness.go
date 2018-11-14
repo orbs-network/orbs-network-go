@@ -10,13 +10,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -86,10 +86,8 @@ type harness struct {
 func newHarness() *harness {
 	var nodes []bootstrap.Node
 
-	// TODO: kill me - why do we need this override?
 	if getConfig().bootstrap {
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		firstRandomPort := 20000 + r.Intn(40000)
+		firstRandomPort := test.RandomPort()
 
 		federationNodes := make(map[string]config.FederationNode)
 		gossipPeers := make(map[string]config.GossipPeer)

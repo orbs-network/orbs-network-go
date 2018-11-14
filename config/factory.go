@@ -13,7 +13,7 @@ func emptyConfig() mutableNodeConfig {
 func (c *config) OverrideNodeSpecificValues(
 	federationNodes map[string]FederationNode,
 	gossipPeers map[string]GossipPeer,
-	gossipListenPort uint16,
+	gossipListenPort int,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,

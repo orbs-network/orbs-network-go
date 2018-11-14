@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -82,10 +81,7 @@ func aChannelTransport(ctx context.Context) *transportContractContext {
 func aDirectTransport(ctx context.Context) *transportContractContext {
 	res := &transportContractContext{}
 
-	// randomize listen port between tests to reduce flakiness and chances of listening clashes
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	firstRandomPort := 20000 + r.Intn(40000)
-
+	firstRandomPort := test.RandomPort()
 	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < 4; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
@@ -94,10 +90,10 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 	}
 
 	configs := []config.GossipTransportConfig{
-		config.ForGossipAdapterTests(res.publicKeys[0], uint16(firstRandomPort+0), gossipPeers),
-		config.ForGossipAdapterTests(res.publicKeys[1], uint16(firstRandomPort+1), gossipPeers),
-		config.ForGossipAdapterTests(res.publicKeys[2], uint16(firstRandomPort+2), gossipPeers),
-		config.ForGossipAdapterTests(res.publicKeys[3], uint16(firstRandomPort+3), gossipPeers),
+		config.ForGossipAdapterTests(res.publicKeys[0], firstRandomPort+0, gossipPeers),
+		config.ForGossipAdapterTests(res.publicKeys[1], firstRandomPort+1, gossipPeers),
+		config.ForGossipAdapterTests(res.publicKeys[2], firstRandomPort+2, gossipPeers),
+		config.ForGossipAdapterTests(res.publicKeys[3], firstRandomPort+3, gossipPeers),
 	}
 
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))

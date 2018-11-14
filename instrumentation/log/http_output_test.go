@@ -3,9 +3,9 @@ package log
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"net/http"
 	"strings"
@@ -15,15 +15,14 @@ import (
 )
 
 type httpOutputHarness struct {
-	port     uint16
+	port     int
 	listener net.Listener
 	router   *http.ServeMux
 	server   *http.Server
 }
 
 func newHttpHarness(handler http.Handler) *httpOutputHarness {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	port := uint16(20000 + r.Intn(40000))
+	port := test.RandomPort()
 
 	router := http.NewServeMux()
 	router.Handle("/submit-logs", handler)
