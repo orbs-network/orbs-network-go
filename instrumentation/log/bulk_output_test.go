@@ -89,7 +89,7 @@ func TestHttpWriter_Write(t *testing.T) {
 	wg.Wait()
 }
 
-func TestHttpOutput_Append(t *testing.T) {
+func TestBulkOutput_Append(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
