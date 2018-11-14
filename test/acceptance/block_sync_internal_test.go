@@ -53,9 +53,6 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 
 func TestInternalBlockSync_StateStorage(t *testing.T) {
 
-	blockCount := primitives.BlockHeight(10)
-	transferSum := uint64(3)
-	targetAddress := builders.AddressForEd25519SignerForTests(6)
 
 	harness.Network(t).
 		AllowingErrors(
@@ -64,34 +61,31 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
-		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
-			for i := primitives.BlockHeight(1); i <= blockCount; i++ {
-				txBuilder := builders.TransferTransaction().WithAmountAndTargetAddress(transferSum, targetAddress)
-				blockPair := builders.BenchmarkConsensusBlockPair().
-					WithTransaction(txBuilder.Build()).
-					WithHeight(i).
-					Build()
-				network.BlockPersistence(0).WriteNextBlock(blockPair)
-			}
-		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
+			ctx, _ = context.WithTimeout(ctx, 1*time.Second)
 
-		// Wait for state storage to sync both nodes to block height 10
-		network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, blockCount + 1)
-		network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, blockCount + 1)
+			contract := network.GetBenchmarkTokenContract()
+			txRes1 := <- contract.SendTransfer(ctx,0, 10, 0,1 )
+			txRes2 := <- contract.SendTransfer(ctx,0, 10, 0,1 )
 
-		// TODO when auto deployment is not triggered by a tx anymore remove these lines - here only to force contract deployment
-		otherAddress := builders.AddressForEd25519SignerForTests(5)
-		_, ok := <- network.SendTransaction(ctx, builders.TransferTransaction().WithAmountAndTargetAddress(transferSum, otherAddress).Builder(), 0)
-		require.True(t, ok)
+			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes1.TransactionStatus())
+			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes2.TransactionStatus())
 
-		expectedBalance := uint64(blockCount) * transferSum
+			targetBlockHeight := txRes2.BlockHeight()
 
-		ctx, _ = context.WithTimeout(ctx, 1*time.Second)
-		balance0 := <- network.CallMethod(ctx, builders.GetBalanceTransaction().WithTargetAddress(targetAddress).Builder().Transaction, 0)
-		balance1 := <- network.CallMethod(ctx, builders.GetBalanceTransaction().WithTargetAddress(targetAddress).Builder().Transaction, 1)
+			network.Restart()
 
-		require.EqualValues(t, expectedBalance, balance1, "expected transfers to reflect in non leader state")
-		require.EqualValues(t, expectedBalance, balance0, "expected transfers to reflect in leader state")
-	})
+			// Wait for state storage to sync both nodes to block height 10
+			network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
+			network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
+
+			contract = network.GetBenchmarkTokenContract()
+			leaderBalance := <- contract.CallGetBalance(ctx,0, 1)
+			nonLeaderBalance := <- contract.CallGetBalance(ctx,1, 1)
+
+			require.EqualValues(t, 20, nonLeaderBalance, "expected transfers to reflect in non leader state")
+			require.EqualValues(t, 20, leaderBalance, "expected transfers to reflect in leader state")
+		})
+
 }
