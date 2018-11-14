@@ -19,7 +19,12 @@ type ethereumSdk struct {
 const SDK_OPERATION_NAME_ETHEREUM = "Sdk.Ethereum"
 
 func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress string, jsonAbi string, methodName string, out interface{}, args ...interface{}) error {
-	packedInput, err := ethereumPackInputArguments(jsonAbi, methodName, args)
+	parsedABI, err := abi.JSON(strings.NewReader(jsonAbi))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	packedInput, err := ethereumPackInputArguments(parsedABI, methodName, args)
 	if err != nil {
 		return err
 	}
@@ -59,18 +64,13 @@ func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress
 		return errors.Errorf("callMethod Sdk.Ethereum returned corrupt output value")
 	}
 
-	return ethereumUnpackOutput(out, output.OutputArguments[0].BytesValue())
+	return ethereumUnpackOutput(parsedABI, out, methodName, output.OutputArguments[0].BytesValue())
 }
 
-func ethereumPackInputArguments(jsonAbi string, method string, args []interface{}) ([]byte, error) {
-	if parsedABI, err := abi.JSON(strings.NewReader(jsonAbi)); err != nil {
-		return nil, errors.WithStack(err)
-	} else {
-		return parsedABI.Pack(method, args...)
-	}
+func ethereumPackInputArguments(abi abi.ABI, method string, args []interface{}) ([]byte, error) {
+	return abi.Pack(method, args...)
 }
 
-// TODO: @jlevison add
-func ethereumUnpackOutput(out interface{}, packedOutput []byte) error {
-	return nil
+func ethereumUnpackOutput(abi abi.ABI, out interface{}, method string, packedOutput []byte) error {
+	return abi.Unpack(out, method, packedOutput)
 }

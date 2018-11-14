@@ -49,6 +49,6 @@ func TestCallContractWithoutArgs(t *testing.T) {
 		ethereumUnpackOutput(output.EthereumPackedOutput, methodToCall, ret)
 
 		require.Equal(t, initNum, ret.IntValue.Int64(), "number part from eth")
-		require.Equal(t, initText, ret.StringValue, "text")
+		require.Equal(t, initText, ret.StringValue, "text part from eth")
 	})
 }

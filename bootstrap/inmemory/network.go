@@ -41,7 +41,7 @@ type Node struct {
 	config            config.NodeConfig
 	blockPersistence  blockStorageAdapter.InMemoryBlockPersistence
 	statePersistence  stateStorageAdapter.TamperingStatePersistence
-	ethereumConnector ethereumConnectorAdapter.EthereumNodeConnector
+	ethereumConnector ethereumConnectorAdapter.EthereumConnection
 	nativeCompiler    nativeProcessorAdapter.Compiler
 	nodeLogic         bootstrap.NodeLogic
 	metricRegistry    metric.Registry
@@ -58,6 +58,7 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
+	node.ethereumConnector = ethereumConnectorAdapter.NewEthereumSimulatorConnector()
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 
