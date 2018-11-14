@@ -116,9 +116,8 @@ func ForGamma(
 	nodePrivateKey primitives.Ed25519PrivateKey,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-) mutableNodeConfig {
+) NodeConfig {
 	cfg := defaultProductionConfig()
-	cfg.OverrideNodeSpecificValues(0, nodePublicKey, nodePrivateKey)
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetConstantConsensusLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
@@ -135,5 +134,5 @@ func ForGamma(
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 2500*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
-	return cfg
+	return cfg.OverrideNodeSpecificValues(0, nodePublicKey, nodePrivateKey)
 }

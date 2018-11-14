@@ -50,17 +50,19 @@ func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.
 		description:        description,
 	}
 
+	cfg := config.ForAcceptanceTestNetwork(
+		federationNodes,
+		leaderKeyPair.PublicKey(),
+		consensusAlgo,
+		maxTxPerBlock,
+	)
+
 	for i := 0; i < numNodes; i++ {
 		keyPair := testKeys.Ed25519KeyPairForTests(i)
-		cfg := config.ForAcceptanceTestNetwork(
-			federationNodes,
-			leaderKeyPair.PublicKey(),
-			consensusAlgo,
-			maxTxPerBlock,
-		)
-		cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
 
-		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewFakeCompiler())
+		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
+
+		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler())
 	}
 
 	return network
