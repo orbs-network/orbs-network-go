@@ -53,6 +53,9 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 
 func TestInternalBlockSync_StateStorage(t *testing.T) {
 
+	const transferAmount = 10
+	const transfers = 10
+	const totalAmount = transfers * transferAmount
 
 	harness.Network(t).
 		AllowingErrors(
@@ -66,13 +69,12 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			ctx, _ = context.WithTimeout(ctx, 1*time.Second)
 
 			contract := builderNetwork.GetBenchmarkTokenContract()
-			txRes1 := <- contract.SendTransfer(ctx,0, 10, 0,1 )
-			txRes2 := <- contract.SendTransfer(ctx,0, 10, 0,1 )
-
-			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes1.TransactionStatus())
-			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes2.TransactionStatus())
-
-			targetBlockHeight := txRes2.BlockHeight()
+			var topBlock primitives.BlockHeight
+			for i := 0; i < transfers; i++ {
+				txRes := <- contract.SendTransfer(ctx,0, transferAmount, 0,1 )
+				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes.TransactionStatus())
+				topBlock = txRes.BlockHeight()
+			}
 
 			harness.Network(t).
 				AllowingErrors(
@@ -82,7 +84,7 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 					"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 				).
 				WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
-					containers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(0, targetBlockHeight)
+					containers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(0, topBlock)
 					require.NoError(t, err)
 					for _, bpc := range containers {
 						err := network.BlockPersistence(0).WriteNextBlock(bpc)
@@ -91,15 +93,15 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 				}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 				// Wait for state storage to sync both nodes to block height 10
-				network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
-				network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
+				network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, topBlock)
+				network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, topBlock)
 
 				contract = network.GetBenchmarkTokenContract()
 				leaderBalance := <- contract.CallGetBalance(ctx,0, 1)
 				nonLeaderBalance := <- contract.CallGetBalance(ctx,1, 1)
 
-				require.EqualValues(t, 20, nonLeaderBalance, "expected transfers to reflect in non leader state")
-				require.EqualValues(t, 20, leaderBalance, "expected transfers to reflect in leader state")
+				require.EqualValues(t, totalAmount, nonLeaderBalance, "expected transfers to reflect in non leader state")
+				require.EqualValues(t, totalAmount, leaderBalance, "expected transfers to reflect in leader state")
 			})
 		})
 }
