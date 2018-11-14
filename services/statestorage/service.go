@@ -119,7 +119,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 		}
 	}
 
-	s.metrics.writeKeys.Measure(int64(len(input.Keys)))
+	s.metrics.readKeys.Measure(int64(len(input.Keys)))
 
 	output := &services.ReadKeysOutput{StateRecords: records}
 	if len(output.StateRecords) == 0 {
