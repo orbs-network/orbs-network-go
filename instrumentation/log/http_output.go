@@ -17,7 +17,7 @@ type row struct {
 	fields    []*Field
 }
 
-type httpOutput struct {
+type bulkOutput struct {
 	formatter LogFormatter
 	writer    io.Writer
 
@@ -28,17 +28,17 @@ type httpOutput struct {
 	logs []*row
 }
 
-func (out *httpOutput) Append(level string, message string, fields ...*Field) {
+func (out *bulkOutput) Append(level string, message string, fields ...*Field) {
 	row := &row{level, time.Now(), message, fields}
 
 	out.lock.Lock()
 	out.logs = append(out.logs, row)
 	out.lock.Unlock()
 
-	out.flush()
+	out.flushIfNeeded()
 }
 
-func (out *httpOutput) flush() {
+func (out *bulkOutput) flushIfNeeded() {
 	out.lock.Lock()
 	defer out.lock.Unlock()
 
@@ -60,8 +60,8 @@ func (out *httpOutput) flush() {
 	}
 }
 
-func NewHttpOutput(writer io.Writer, formatter LogFormatter, bulkSize int) Output {
-	return &httpOutput{
+func NewBulkOutput(writer io.Writer, formatter LogFormatter, bulkSize int) Output {
+	return &bulkOutput{
 		formatter: formatter,
 		writer:    writer,
 		bulkSize:  bulkSize,

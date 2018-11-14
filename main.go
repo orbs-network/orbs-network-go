@@ -31,7 +31,7 @@ func getLogger(path string, silent bool, httpLogEndpoint string) log.BasicLogger
 
 	if httpLogEndpoint != "" {
 		customJSONFormatter := log.NewJsonFormatter().WithTimestampColumn("@timestamp")
-		outputs = append(outputs, log.NewHttpOutput(log.NewHttpWriter(httpLogEndpoint), customJSONFormatter, 100))
+		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(httpLogEndpoint), customJSONFormatter, 100))
 	}
 
 	return log.GetLogger().WithTags(

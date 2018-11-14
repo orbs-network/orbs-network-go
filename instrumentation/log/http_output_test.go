@@ -108,7 +108,7 @@ func TestHttpOutput_Append(t *testing.T) {
 	defer h.stop(t)
 
 	logger := GetLogger().WithOutput(
-		NewHttpOutput(
+		NewBulkOutput(
 			NewHttpWriter(h.endpointUrl()),
 			NewJsonFormatter(),
 			3))
