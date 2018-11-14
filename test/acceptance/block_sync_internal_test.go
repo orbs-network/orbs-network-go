@@ -61,11 +61,11 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, builderNetwork harness.TestNetworkDriver) {
 
 			ctx, _ = context.WithTimeout(ctx, 1*time.Second)
 
-			contract := network.GetBenchmarkTokenContract()
+			contract := builderNetwork.GetBenchmarkTokenContract()
 			txRes1 := <- contract.SendTransfer(ctx,0, 10, 0,1 )
 			txRes2 := <- contract.SendTransfer(ctx,0, 10, 0,1 )
 
@@ -74,18 +74,32 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 
 			targetBlockHeight := txRes2.BlockHeight()
 
-			network.Restart()
+			harness.Network(t).
+				AllowingErrors(
+					"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
+					"internal-node sync to consensus algo failed",         //TODO Remove this once internal node sync is implemented
+					"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+					"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+				).
+				WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
+					containers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(0, targetBlockHeight)
+					require.NoError(t, err)
+					for _, bpc := range containers {
+						err := network.BlockPersistence(0).WriteNextBlock(bpc)
+						require.NoError(t, err)
+					}
+				}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-			// Wait for state storage to sync both nodes to block height 10
-			network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
-			network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
+				// Wait for state storage to sync both nodes to block height 10
+				network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
+				network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, targetBlockHeight)
 
-			contract = network.GetBenchmarkTokenContract()
-			leaderBalance := <- contract.CallGetBalance(ctx,0, 1)
-			nonLeaderBalance := <- contract.CallGetBalance(ctx,1, 1)
+				contract = network.GetBenchmarkTokenContract()
+				leaderBalance := <- contract.CallGetBalance(ctx,0, 1)
+				nonLeaderBalance := <- contract.CallGetBalance(ctx,1, 1)
 
-			require.EqualValues(t, 20, nonLeaderBalance, "expected transfers to reflect in non leader state")
-			require.EqualValues(t, 20, leaderBalance, "expected transfers to reflect in leader state")
+				require.EqualValues(t, 20, nonLeaderBalance, "expected transfers to reflect in non leader state")
+				require.EqualValues(t, 20, leaderBalance, "expected transfers to reflect in leader state")
+			})
 		})
-
 }
