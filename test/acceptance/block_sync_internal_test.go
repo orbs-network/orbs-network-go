@@ -71,6 +71,8 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes.TransactionStatus())
 				topBlock = txRes.BlockHeight()
 			}
+			blockPairContainers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(0, topBlock)
+			require.NoError(t, err)
 
 			harness.Network(t).
 				AllowingErrors(
@@ -80,9 +82,7 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 					"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 				).
 				WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
-					containers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(0, topBlock)
-					require.NoError(t, err)
-					for _, bpc := range containers {
+					for _, bpc := range blockPairContainers {
 						err := network.BlockPersistence(0).WriteNextBlock(bpc)
 						require.NoError(t, err)
 					}
