@@ -9,25 +9,37 @@ import (
 	"math/big"
 )
 
-type EthereumSimulator struct{}
+type EthereumSimulator struct {
+	auth      *bind.TransactOpts
+	simClient bind.ContractBackend
+}
 
 func NewEthereumSimulatorConnector() EthereumConnection {
 	return &EthereumSimulator{}
 }
 
-func (es *EthereumSimulator) Dial(endpoint string) (bind.ContractBackend, error) {
+func (es *EthereumSimulator) Dial(endpoint string) error {
 	// Generate a new random account and a funded simulator
 	key, err := crypto.GenerateKey()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	auth := bind.NewKeyedTransactor(key)
+	es.auth = bind.NewKeyedTransactor(key)
 
 	genesisAllocation := map[common.Address]core.GenesisAccount{
-		auth.From: {Balance: big.NewInt(10000000000)},
+		es.auth.From: {Balance: big.NewInt(10000000000)},
 	}
 
 	sim := backends.NewSimulatedBackend(genesisAllocation, 900000000000)
+	es.simClient = sim
 
-	return sim, nil
+	return nil
+}
+
+func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
+	return es.auth
+}
+
+func (es *EthereumSimulator) GetClient() bind.ContractBackend {
+	return es.simClient
 }

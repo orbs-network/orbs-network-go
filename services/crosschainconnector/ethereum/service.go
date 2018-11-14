@@ -18,14 +18,15 @@ type ethereumConnectorConfig interface {
 type service struct {
 	connector adapter.EthereumConnection
 	logger    log.BasicLogger
-	client    bind.ContractBackend
 	config    ethereumConnectorConfig
 }
 
-func NewEthereumCrosschainConnector(ctx context.Context, config ethereumConnectorConfig, connector adapter.EthereumConnection, logger log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnector(ctx context.Context, // TODO: why don't we use context here?
+	config ethereumConnectorConfig,
+	connector adapter.EthereumConnection,
+	logger log.BasicLogger) services.CrosschainConnector {
 	s := &service{
 		connector: connector,
-		client:    nil,
 		logger:    logger,
 		config:    config,
 	}
@@ -33,36 +34,34 @@ func NewEthereumCrosschainConnector(ctx context.Context, config ethereumConnecto
 	return s
 }
 
-func (s *service) Connect() error {
-	client, err := s.connector.Dial(s.config.EthereumEndpoint())
-	if err != nil {
-		return err
+func (s *service) setupClient() error {
+	if s.connector.GetClient() == nil {
+		s.logger.Info("connecting to ethereum", log.String("endpoint", s.config.EthereumEndpoint()))
+		if err := s.connector.Dial(s.config.EthereumEndpoint()); err != nil {
+			return err
+		}
 	}
-	s.client = client
 	return nil
 }
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
-	panic("Not implemented")
-	opts := new(bind.CallOpts)
+	if err := s.setupClient(); err != nil { // lazy setup - if the eth node is down it will retry setup on next call
+		return nil, err
+	}
+	s.logger.Info("calling contract at", log.String("address", input.EthereumContractAddress))
 	address, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
 		return nil, err
 	}
-
 	contractAddress := common.BytesToAddress(address)
 
-	var (
-		msg    = ethereum.CallMsg{From: opts.From, To: &contractAddress, Data: input.EthereumPackedInputArguments}
-		code   []byte
-		output []byte
-	)
-
-	// we do not support pending calls
-	output, err = s.client.CallContract(ctx, msg, nil)
+	// we do not support pending calls, opts is always empty
+	opts := new(bind.CallOpts)
+	msg := ethereum.CallMsg{From: opts.From, To: &contractAddress, Data: input.EthereumPackedInputArguments}
+	output, err := s.connector.GetClient().CallContract(ctx, msg, nil)
 	if err == nil && len(output) == 0 {
 		// Make sure we have a contract to operate on, and bail out otherwise.
-		if code, err = s.client.CodeAt(ctx, contractAddress, nil); err != nil {
+		if code, err := s.connector.GetClient().CodeAt(ctx, contractAddress, nil); err != nil {
 			return nil, err
 		} else if len(code) == 0 {
 			return nil, bind.ErrNoCode

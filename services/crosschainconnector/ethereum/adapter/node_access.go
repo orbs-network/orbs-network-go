@@ -5,13 +5,24 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type EthereumNodeConnector struct{}
+type EthereumNodeConnector struct {
+	client bind.ContractBackend
+}
 
 func NewEthereumConnection() EthereumConnection {
 	return &EthereumNodeConnector{}
 }
 
-func (nc EthereumNodeConnector) Dial(endpoint string) (bind.ContractBackend, error) {
+func (nc *EthereumNodeConnector) Dial(endpoint string) error {
 	client, err := ethclient.Dial(endpoint)
-	return client, err
+	nc.client = client
+	return err
+}
+
+func (nc *EthereumNodeConnector) GetAuth() *bind.TransactOpts {
+	return nil
+}
+
+func (nc *EthereumNodeConnector) GetClient() bind.ContractBackend {
+	return nc.client
 }

@@ -5,5 +5,7 @@ import (
 )
 
 type EthereumConnection interface {
-	Dial(endpoint string) (bind.ContractBackend, error)
+	Dial(endpoint string) error
+	GetAuth() *bind.TransactOpts // for simulation usage only
+	GetClient() bind.ContractBackend
 }
