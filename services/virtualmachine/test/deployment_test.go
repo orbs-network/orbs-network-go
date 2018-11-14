@@ -34,7 +34,7 @@ func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
 	})
 }
 
-func TestProcessTransactionSet_WhenContractNotDeployedAndNotNativeContract(t *testing.T) {
+func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -59,7 +59,58 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndNotNativeContract(t *te
 	})
 }
 
-func TestSdkService_CallMethodWhenContractNotDeployedAndNotNativeContract(t *testing.T) {
+func TestProcessTransactionSet_WhenContractNotDeployedAndIsPreBuiltNativeContract_NoDoubleDeploy(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness()
+
+		deploymentContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
+		deploymentGetInfoMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_INFO.Name)
+		deploymentDeployMethodName := primitives.MethodName(deployments_systemcontract.METHOD_DEPLOY_SERVICE.Name)
+
+		// deploy on first transaction
+		h.expectNativeContractMethodCalled(deploymentContractName, deploymentGetInfoMethodName, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+			return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.MethodArgumentsArray(), errors.New("not deployed")
+		})
+		h.expectNativeContractInfoRequested("Contract1", nil)
+		h.expectNativeContractMethodCalled(deploymentContractName, deploymentDeployMethodName, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+			t.Log("Transaction 1: first deploy should change in transient state")
+			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02})
+			require.NoError(t, err, "handleSdkCall should succeed")
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil
+		})
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+		})
+
+		// make sure it's already deployed on second transaction and doesn't deploy a second time
+		h.expectNativeContractMethodCalled(deploymentContractName, deploymentGetInfoMethodName, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+			t.Log("Transaction 2: read should return the transient state")
+			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
+			require.NoError(t, err, "handleSdkCall should not fail")
+			require.Equal(t, []byte{0x02}, res[0].BytesValue(), "handleSdkCall result should be equal")
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil
+		})
+		h.expectStateStorageNotRead()
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+		})
+
+		results, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+			{"Contract1", "method1"},
+			{"Contract1", "method1"},
+		}, deploymentContractName)
+		require.Equal(t, results, []protocol.ExecutionResult{
+			protocol.EXECUTION_RESULT_SUCCESS,
+			protocol.EXECUTION_RESULT_SUCCESS,
+		}, "processTransactionSet returned receipts should match")
+
+		h.verifyNativeContractMethodCalled(t)
+		h.verifyNativeContractInfoRequested(t)
+		h.verifyStateStorageRead(t)
+	})
+}
+
+func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -85,7 +136,7 @@ func TestSdkService_CallMethodWhenContractNotDeployedAndNotNativeContract(t *tes
 	})
 }
 
-func TestAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
+func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -113,7 +164,7 @@ func TestAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
 	})
 }
 
-func TestFailingAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
+func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
