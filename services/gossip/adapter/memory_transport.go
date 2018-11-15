@@ -72,7 +72,7 @@ func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
 }
 
 func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket: make(chan message), listener: make(chan TransportListener)}
+	p := &peer{socket: make(chan message, 1000), listener: make(chan TransportListener)} // channel is buffered on purpose, otherwise the whole network is synced on transport
 
 	supervised.GoForever(bgCtx, logger, func() {
 		// wait till we have a listener attached

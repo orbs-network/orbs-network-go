@@ -73,6 +73,8 @@ func NewNodeLogic(
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
 
+	logger.Info("Node started")
+
 	return &nodeLogic{
 		publicApi:       publicApiService,
 		consensusAlgos:  consensusAlgos,

@@ -19,11 +19,11 @@ type BenchmarkTokenClient interface {
 }
 
 func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int) {
-	tx := <-c.SendTransfer(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
+	txHash := c.SendTransferInBackground(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	c.API.WaitForTransactionInState(timeoutCtx, tx.TransactionReceipt().Txhash())
+	c.API.WaitForTransactionInState(timeoutCtx, txHash)
 }
 
 func (c *contractClient) SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) chan *client.SendTransactionResponse {

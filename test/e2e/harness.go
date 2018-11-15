@@ -120,15 +120,11 @@ func newHarness() *harness {
 			nodeLogger := logger.WithOutput(console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
 			processorArtifactPath, _ := getProcessorArtifactPath()
 
-			cfg := config.ForE2E(processorArtifactPath)
-			cfg.OverrideNodeSpecificValues(
-				federationNodes,
-				gossipPeers,
-				uint16(firstRandomPort+i),
-				nodeKeyPair.PublicKey(),
-				nodeKeyPair.PrivateKey(),
-				leaderKeyPair.PublicKey(),
-				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+			cfg := config.ForE2E(processorArtifactPath, federationNodes, gossipPeers, leaderKeyPair.PublicKey(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
+				OverrideNodeSpecificValues(
+					uint16(firstRandomPort+i),
+					nodeKeyPair.PublicKey(),
+					nodeKeyPair.PrivateKey())
 
 			node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
 
