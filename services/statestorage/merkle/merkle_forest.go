@@ -240,63 +240,89 @@ func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs MerkleDiffs) (
 func (f *Forest) travelUpdateAndMark(parent *node, arc byte, current *node, path []byte, valueHash primitives.Sha256, sandbox dirtyNodes) *node {
 	current = f.getOrClone(current, parent, arc, sandbox)
 
-	if bytes.Equal(current.path, path) { // path reached exactly
+	if f.samePath(current, path) {
 		current.value = valueHash
 		return current
 	}
 
-	if bytes.HasPrefix(path, current.path) { // current is next part of path
-		if !current.hasValue() && current.isLeaf { // replace it
-			current.path = path
-			current.value = valueHash
-		} else {
-			childArc := path[len(current.path)]
-			//fmt.Printf("ch %d\n", childArc)
-			childPath := path[len(current.path)+1:]
-			if childNode := current.branches[childArc]; childNode != nil {
-				current.branches[childArc] = f.travelUpdateAndMark(current, childArc, childNode, childPath, valueHash, sandbox)
-			} else if valueHash.Equal(zeroValueHash) {
-				// set to empty value cannot create new children, do nothing
-			} else {
-				newChild := createNode(childPath, valueHash, true)
-				current.branches[childArc] = newChild
-				current.isLeaf = false
-				sandbox.set(current, childArc)
-			}
-		}
-		return current
+	if f.newValueShouldBeAddedAfter(path, current) {
+		return f.updateCurrentOrAppendChild(current, path, valueHash, sandbox)
 	}
 
-	if bytes.HasPrefix(current.path, path) { // "insert" a valued node along the path
-		childArc := current.path[len(path)]
-
-		newParent := createNode(path, valueHash, false)
-		newParent.branches[childArc] = current
-		sandbox.set(newParent, childArc)
-
-		current.path = current.path[len(path)+1:]
-		return newParent
+	if f.newValueShouldBeAddedBefore(current, path) {
+		return f.addParentAbove(current, path, valueHash, sandbox)
 	}
 
-	// new node is a brother of mine so i create a common parent too
-	i := 0
-	for i = 0; i < len(current.path) && i < len(path) && current.path[i] == path[i]; i++ {
-	}
-	newCommonPath := path[:i]
+	return f.addNewValueAsSiblingUnderNewParent(current, path, valueHash, sandbox)
+}
+
+func (f *Forest) newValueShouldBeAddedBefore(current *node, path []byte) bool {
+	return bytes.HasPrefix(current.path, path)
+}
+
+func (f *Forest) newValueShouldBeAddedAfter(path []byte, current *node) bool {
+	return bytes.HasPrefix(path, current.path)
+}
+
+func (f *Forest) samePath(current *node, path []byte) bool {
+	return bytes.Equal(current.path, path)
+}
+
+func (f *Forest) addNewValueAsSiblingUnderNewParent(current *node, path []byte, valueHash primitives.Sha256, sandbox dirtyNodes) *node {
+	prefixLastIndex := f.lastCommonPathIndex(current, path)
+	newCommonPath := path[:prefixLastIndex]
 
 	newParent := createNode(newCommonPath, zeroValueHash, false)
-	newCurrentArc := current.path[i]
+	newCurrentArc := current.path[prefixLastIndex]
 	newParent.branches[newCurrentArc] = current
 	sandbox.set(newParent, newCurrentArc)
 
-	current.path = current.path[i+1:]
+	current.path = current.path[prefixLastIndex+1:]
 
-	newChild := createNode(path[i+1:], valueHash, true)
-	newChildArc := path[i]
+	newChild := createNode(path[prefixLastIndex+1:], valueHash, true)
+	newChildArc := path[prefixLastIndex]
 	newParent.branches[newChildArc] = newChild
 	sandbox.set(newParent, newChildArc)
 
 	return newParent
+}
+
+func (f *Forest) lastCommonPathIndex(current *node, path []byte) (i int) {
+	for i = 0; i < len(current.path) && i < len(path) && current.path[i] == path[i]; i++ {
+	}
+	return
+}
+
+func (f *Forest) addParentAbove(current *node, path []byte, valueHash primitives.Sha256, sandbox dirtyNodes) *node {
+	childArc := current.path[len(path)]
+
+	newParent := createNode(path, valueHash, false)
+	newParent.branches[childArc] = current
+	sandbox.set(newParent, childArc)
+
+	current.path = current.path[len(path)+1:]
+	return newParent
+}
+
+func (f *Forest) updateCurrentOrAppendChild(current *node, path []byte, valueHash primitives.Sha256, sandbox dirtyNodes) *node {
+	if !current.hasValue() && current.isLeaf { // replace it
+		current.path = path
+		current.value = valueHash
+	} else {
+		childArc := path[len(current.path)]
+		childPath := path[len(current.path)+1:]
+		if childNode := current.branches[childArc]; childNode != nil {
+			current.branches[childArc] = f.travelUpdateAndMark(current, childArc, childNode, childPath, valueHash, sandbox)
+		} else if valueHash.Equal(zeroValueHash) {
+			// set to empty value cannot create new children, do nothing
+		} else {
+			newChild := createNode(childPath, valueHash, true)
+			current.branches[childArc] = newChild
+			current.isLeaf = false
+			sandbox.set(current, childArc)
+		}
+	}
+	return current
 }
 
 func (f *Forest) getOrClone(current *node, parent *node, arc byte, sandbox dirtyNodes) *node {
