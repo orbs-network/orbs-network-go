@@ -60,6 +60,10 @@ func (out *bulkOutput) flushIfNeeded() {
 }
 
 func NewBulkOutput(writer io.Writer, formatter LogFormatter, bulkSize int) Output {
+	if bulkSize > 1000 {
+		panic(fmt.Sprintf("bulk size can't be greater than 1000, please refer to this issue for explanation: https://github.com/orbs-network/orbs-network-go/issues/501"))
+	}
+
 	return &bulkOutput{
 		formatter: formatter,
 		writer:    writer,
