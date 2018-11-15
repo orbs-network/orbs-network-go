@@ -1,6 +1,8 @@
 package codec
 
-import "reflect"
+import (
+	"reflect"
+)
 
 func emptyPayloads(num int) [][]byte {
 	res := [][]byte{}
@@ -14,7 +16,7 @@ func containsNil(obj interface{}) bool {
 	if obj == nil {
 		return true
 	}
-	return valueContainsNil(reflect.ValueOf(obj))
+	return valueContainsNil(reflect.ValueOf(obj).Elem())
 }
 
 func valueContainsNil(v reflect.Value) bool {
@@ -26,8 +28,10 @@ func valueContainsNil(v reflect.Value) bool {
 		return v.IsNil()
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
-			if valueContainsNil(v.Field(i)) {
-				return true
+			if v.Field(i).CanSet() { // this is the only "elegant" way you can find if a field is exported when using reflection
+				if valueContainsNil(v.Field(i)) {
+					return true
+				}
 			}
 		}
 	}

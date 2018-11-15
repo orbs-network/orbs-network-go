@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/pkg/errors"
 )
 
 func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.BenchmarkConsensusHandler) {
@@ -71,11 +70,10 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
-
-	if input.Message.Status == nil {
-		return nil, errors.Errorf("cannot encode BenchmarkConsensusCommittedMessage: %s", input.Message.String())
+	payloads, err := codec.EncodeBenchmarkConsensusCommitted(header, input.Message)
+	if err != nil {
+		return nil, err
 	}
-	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), input.Message.Sender.Raw()}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
@@ -86,19 +84,13 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 }
 
 func (s *service) receivedBenchmarkConsensusCommitted(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 2 {
+	message, err := codec.DecodeBenchmarkConsensusCommitted(payloads)
+	if err != nil {
 		return
 	}
-	status := gossipmessages.BenchmarkConsensusStatusReader(payloads[0])
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		_, err := l.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
-			Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
-				Status: status,
-				Sender: senderSignature,
-			},
-		})
+		_, err := l.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBenchmarkConsensusCommitted failed", log.Error(err))
 		}

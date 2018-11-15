@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/pkg/errors"
 )
 
 func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler) {
@@ -15,26 +14,13 @@ func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler
 }
 
 func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-
-	if len(payloads) < 2 {
-		return
-	}
-
-	messageType := header.LeanHelix()
-	content := payloads[1]
-	blockPair, err := codec.DecodeBlockPair(payloads[2:])
+	message, err := codec.DecodeLeanHelixMessage(header, payloads)
 	if err != nil {
 		return
 	}
 
 	for _, l := range s.leanHelixHandlers {
-		_, err := l.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{
-			Message: &gossipmessages.LeanHelixMessage{
-				MessageType: messageType,
-				Content:     content,
-				BlockPair:   blockPair,
-			},
-		})
+		_, err := l.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleLeanHelixMessage failed", log.Error(err))
 		}
@@ -47,15 +33,10 @@ func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.
 		LeanHelix:     input.Message.MessageType,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
-
-	blockPairPayloads, err := codec.EncodeBlockPair(input.Message.BlockPair)
+	payloads, err := codec.EncodeLeanHelixMessage(header, input.Message)
 	if err != nil {
 		return nil, err
 	}
-	if input.Message.Content == nil {
-		return nil, errors.Errorf("cannot encode LeanHelixMessage: %s", input.Message.String())
-	}
-	payloads := append([][]byte{header.Raw(), input.Message.Content}, blockPairPayloads...)
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
