@@ -16,6 +16,26 @@ import (
 	"github.com/pkg/errors"
 )
 
+type BlockPairWrapper struct {
+	blockPair *protocol.BlockPairContainer
+}
+
+func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
+	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
+}
+
+func (b *BlockPairWrapper) BlockHash() lhprimitives.Uint256 {
+	// TODO This is surely incorrect, fix to use the right hash
+	return lhprimitives.Uint256(b.blockPair.TransactionsBlock.Header.MetadataHash())
+}
+
+func NewBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapper {
+	return &BlockPairWrapper{
+		blockPair: blockPair,
+	}
+}
+
+// This calls ValidateBlockConsensus
 func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 
 	blockType := input.BlockType
@@ -88,7 +108,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	//if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
 	//	return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
 	//}
-	//signedData := s.signedDataForBlockProof(blockPair)
+	//signedData := s.dataToSignFrom(blockPair)
 	//if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
 	//	return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
 	//}
@@ -153,8 +173,8 @@ func (s *service) signBlockProposal(transactionsBlock *protocol.TransactionsBloc
 	}
 
 	// prepare signature over the block headers
-	signedData := s.signedDataForBlockProof(blockPair)
-	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	blockPairDataToSign := s.dataToSignFrom(blockPair)
+	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), blockPairDataToSign)
 	if err != nil {
 		return nil, err
 	}
@@ -185,15 +205,11 @@ func (s *service) hash(txBlock *protocol.TransactionsBlockContainer, rxBlock *pr
 	return xorHash
 }
 
-func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
+func (s *service) dataToSignFrom(blockPair *protocol.BlockPairContainer) []byte {
 	return s.hash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 }
 
-func (s *service) signedDataForBlockProofWrapper(blockPairWrapper *BlockPairWrapper) []byte {
-	return s.hash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
-}
-
 func (s *service) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
-
-	return s.signedDataForBlockProofWrapper(block.(*BlockPairWrapper))
+	blockPairWrapper := block.(*BlockPairWrapper)
+	return s.hash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
 }

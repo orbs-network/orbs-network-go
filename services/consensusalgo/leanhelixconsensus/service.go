@@ -3,7 +3,6 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
-	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -58,25 +57,6 @@ func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
 	}
 }
 
-type BlockPairWrapper struct {
-	blockPair *protocol.BlockPairContainer
-}
-
-func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
-	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
-}
-
-func (b *BlockPairWrapper) BlockHash() lhprimitives.Uint256 {
-	// TODO This is surely incorrect, fix to use the right hash
-	return lhprimitives.Uint256(b.blockPair.TransactionsBlock.Header.MetadataHash())
-}
-
-func NewBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapper {
-	return &BlockPairWrapper{
-		blockPair: blockPair,
-	}
-}
-
 func NewLeanHelixConsensusAlgo(
 	ctx context.Context,
 	gossip gossiptopics.LeanHelix,
@@ -105,7 +85,7 @@ func NewLeanHelixConsensusAlgo(
 	leanHelixConfig := &leanhelix.Config{
 		NetworkCommunication: s,
 		BlockUtils:           s,
-		KeyManager:           s,
+		KeyManager:           NewKeyManager(config.NodePublicKey(), config.NodePrivateKey()),
 		ElectionTrigger:      electionTrigger,
 	}
 
