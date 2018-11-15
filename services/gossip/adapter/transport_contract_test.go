@@ -85,7 +85,7 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < 4; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(firstRandomPort+i, "127.0.0.1")
 		res.publicKeys = append(res.publicKeys, publicKey)
 	}
 
