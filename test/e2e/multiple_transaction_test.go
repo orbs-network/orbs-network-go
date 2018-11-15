@@ -34,8 +34,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		printTestTime(t, "send transaction - end", &lt)
 
 		require.NoError(t, err, "transaction for amount %d should not return error", amount)
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "transaction for amount %d should be successfully committed", amount)
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "transaction for amount %d should execute successfully", amount)
+		test.RequireSuccess(t, response, "transaction for amount %d should be successfully committed and executed", amount)
 	}
 
 	// check balance

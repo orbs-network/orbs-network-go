@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -20,7 +21,7 @@ type TestStatePersistence struct {
 
 func NewTamperingStatePersistence() TamperingStatePersistence {
 	return &TestStatePersistence{
-		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(),
+		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(metric.NewRegistry()),
 		blockTrackerForTests:     synchronization.NewBlockTracker(0, 64000),
 	}
 }

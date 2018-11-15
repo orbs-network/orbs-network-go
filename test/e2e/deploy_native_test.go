@@ -31,8 +31,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	printTestTime(t, "send deploy - end", &lt)
 
 	require.NoError(t, err, "deploy transaction should not return error")
-	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "deploy transaction should be successfully committed")
-	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "deploy transaction should execute successfully")
+	test.RequireSuccess(t, response, "deploy transaction should be successfully committed and executed")
 
 	// check counter
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
@@ -65,8 +64,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	printTestTime(t, "send transaction - end", &lt)
 
 	require.NoError(t, err, "add transaction should not return error")
-	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "add transaction should be successfully committed")
-	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "add transaction should execute successfully")
+	test.RequireSuccess(t, response, "add transaction should be successfully committed and executed")
 
 	// check counter
 	ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
