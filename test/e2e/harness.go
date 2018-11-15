@@ -73,7 +73,7 @@ func getConfig() E2EConfig {
 	}
 }
 
-type harness struct {}
+type harness struct{}
 
 func (h *harness) deployNativeContract(name string, code []byte) (*client.SendTransactionResponse, error) {
 	return h.sendTransaction(builders.Transaction().

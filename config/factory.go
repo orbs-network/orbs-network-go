@@ -10,7 +10,7 @@ func emptyConfig() mutableNodeConfig {
 	}
 }
 func (c *config) OverrideNodeSpecificValues(
-	gossipListenPort uint16,
+	gossipListenPort int,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey) NodeConfig {
 	cloned := c.Clone()

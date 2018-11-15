@@ -339,8 +339,6 @@ func calcPaddingSize(size uint32) uint32 {
 }
 
 func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
-	t.logger.Info("sending keepalive", log.String("peer", conn.RemoteAddr().String()))
-
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 

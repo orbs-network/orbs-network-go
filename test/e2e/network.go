@@ -5,9 +5,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -32,14 +32,14 @@ func (h *inProcessE2ENetwork) gracefulShutdown() {
 }
 
 func bootstrapNetwork() (nodes []bootstrap.Node) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	firstRandomPort := 20000 + r.Intn(40000)
+	firstRandomPort := test.RandomPort()
+
 	federationNodes := make(map[string]config.FederationNode)
 	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(firstRandomPort+i), "127.0.0.1")
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(firstRandomPort+i, "127.0.0.1")
 	}
 
 	os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
@@ -64,7 +64,7 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 
 		cfg := config.ForE2E(processorArtifactPath, federationNodes, gossipPeers, leaderKeyPair.PublicKey(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 			OverrideNodeSpecificValues(
-				uint16(firstRandomPort+i),
+				firstRandomPort+i,
 				nodeKeyPair.PublicKey(),
 				nodeKeyPair.PrivateKey())
 
@@ -79,4 +79,3 @@ func getProcessorArtifactPath() (string, string) {
 	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
 	return filepath.Join(dir, "processor-artifacts"), dir
 }
-

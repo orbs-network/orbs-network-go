@@ -75,7 +75,7 @@ type NodeConfig interface {
 type OverridableConfig interface {
 	NodeConfig
 	OverrideNodeSpecificValues(
-		gossipListenPort uint16,
+		gossipListenPort int,
 		nodePublicKey primitives.Ed25519PublicKey,
 		nodePrivateKey primitives.Ed25519PrivateKey) NodeConfig
 }
@@ -156,6 +156,6 @@ type FederationNode interface {
 }
 
 type GossipPeer interface {
-	GossipPort() uint16
+	GossipPort() int
 	GossipEndpoint() string
 }

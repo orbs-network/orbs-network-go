@@ -10,19 +10,21 @@ import (
 )
 
 type LogFormatter interface {
-	FormatRow(level string, message string, params ...*Field) (formattedRow string)
+	FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string)
 }
 
 type jsonFormatter struct {
+	timestampColumn string
 }
 
+const DEFAULT_TIMESTAMP_COLUMN = "timestamp"
 const TIMESTAMP_FORMAT = "2006-01-02T15:04:05.999999999Z"
 
-func (j *jsonFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
+func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
 	logLine := make(map[string]interface{})
 
 	logLine["level"] = level
-	logLine["timestamp"] = time.Now().UTC().Format(TIMESTAMP_FORMAT)
+	logLine[j.timestampColumn] = timestamp.UTC().Format(TIMESTAMP_FORMAT)
 	logLine["message"] = message
 
 	logFields(params, logLine)
@@ -38,8 +40,15 @@ func logFields(params []*Field, logLine map[string]interface{}) {
 	}
 }
 
-func NewJsonFormatter() LogFormatter {
-	return &jsonFormatter{}
+func NewJsonFormatter() *jsonFormatter {
+	return &jsonFormatter{
+		timestampColumn: DEFAULT_TIMESTAMP_COLUMN,
+	}
+}
+
+func (j *jsonFormatter) WithTimestampColumn(column string) *jsonFormatter {
+	j.timestampColumn = column
+	return j
 }
 
 type humanReadableFormatter struct {
@@ -149,17 +158,17 @@ func extractParamByConditionAndRemove(params []*Field, condition func(param *Fie
 	return results, newParams
 }
 
-func (j *humanReadableFormatter) FormatRow(level string, message string, params ...*Field) (formattedRow string) {
+func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
 	builder := strings.Builder{}
 	var mutableParams = make([]*Field, len(params)) // this is needed because extractParamByTypePrintAndRemove mutates the array
 	copy(mutableParams, params)
 
-	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000000Z07:00")
+	ts := timestamp.UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
 	builder.WriteString(colorize(mutableParams))
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
-	builder.WriteString(timestamp)
+	builder.WriteString(ts)
 	builder.WriteString(SPACE)
 
 	builder.WriteString(message)
@@ -191,8 +200,8 @@ func colorize(fields []*Field) string {
 	colors := []string{ansi.Cyan, ansi.Yellow, ansi.LightBlue, ansi.Magenta, ansi.LightYellow, ansi.LightRed, ansi.LightGreen, ansi.LightMagenta, ansi.Green}
 	for _, f := range fields {
 		if f.Key == "request-id" {
-			lastChar := int(f.StringVal[len(f.StringVal) - 1])
-			return colors[lastChar % len(colors)]
+			lastChar := int(f.StringVal[len(f.StringVal)-1])
+			return colors[lastChar%len(colors)]
 		}
 	}
 
