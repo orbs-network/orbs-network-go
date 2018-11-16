@@ -58,7 +58,7 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 				if i, err := parseUint32(kv["Port"].(float64)); err != nil {
 					return nodes, peers, err
 				} else {
-					gossipPort := uint16(i)
+					gossipPort := int(i)
 
 					nodes[nodePublicKey.KeyForMap()] = &hardCodedFederationNode{
 						nodePublicKey: nodePublicKey,
@@ -76,7 +76,7 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 	return nodes, peers, nil
 }
 
-func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) (error) {
+func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 	for key, value := range data {
 		var duration time.Duration
 		var numericValue uint32

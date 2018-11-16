@@ -51,14 +51,18 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
-	t.Skip("this test causes the system to hang, seems like consensus algo stops")
-	harness.Network(t).WithNumNodes(3).Start(func(parent context.Context, network harness.TestNetworkDriver) {
-		ctx, cancel := context.WithTimeout(parent, 2*time.Second)
-		defer cancel()
+	harness.Network(t).WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		t.Skip("this test causes the system to hang, seems like consensus algo stops")
 
-		network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
+		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 90)
+
+		tamper.Release(ctx)
+
+		// assert that the system recovered properly
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 10)
+
 	})
 }
 

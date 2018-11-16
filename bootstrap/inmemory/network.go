@@ -62,8 +62,12 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	n.Nodes = append(n.Nodes, node)
 }
 
-func (n *Network) CreateAndStartNodes(ctx context.Context) {
-	for _, node := range n.Nodes {
+func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) {
+	for i, node := range n.Nodes {
+		if i >= numOfNodesToStart {
+			return
+		}
+
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			n.Transport,
@@ -92,6 +96,9 @@ func (n *Node) WaitForTransactionInState(ctx context.Context, txhash primitives.
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
+}
+func (n *Node) Started() bool {
+	return n.nodeLogic != nil
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
@@ -167,6 +174,8 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 
 func (n *Network) WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256) {
 	for _, node := range n.Nodes {
-		node.WaitForTransactionInState(ctx, txhash)
+		if node.Started() {
+			node.WaitForTransactionInState(ctx, txhash)
+		}
 	}
 }

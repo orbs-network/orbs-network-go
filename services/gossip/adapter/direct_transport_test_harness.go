@@ -83,11 +83,13 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 
 	for i := 0; i < NETWORK_SIZE-1; i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i + 1).PublicKey()
-		conn, err := net.Listen("tcp", ":0")
+		randomPort := test.RandomPort()
+
+		conn, err := net.Listen("tcp", fmt.Sprintf("127.0.0.01:%d", randomPort))
 		require.NoError(t, err, "test peer server could not listen")
 
 		peersListeners[i] = conn
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(uint16(conn.Addr().(*net.TCPAddr).Port), "127.0.0.1")
+		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(randomPort, "127.0.0.1")
 	}
 	return gossipPeers, peersListeners
 }
@@ -128,7 +130,7 @@ func (h *directHarness) publicKeyForPeer(index int) primitives.Ed25519PublicKey 
 	return keys.Ed25519KeyPairForTests(index + 1).PublicKey()
 }
 
-func (h *directHarness) portForPeer(index int) uint16 {
+func (h *directHarness) portForPeer(index int) int {
 	peerPublicKey := h.publicKeyForPeer(index)
 	return h.config.GossipPeers(0)[peerPublicKey.KeyForMap()].GossipPort()
 }

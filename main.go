@@ -7,12 +7,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/pkg/errors"
-	"io"
 	"io/ioutil"
 	"os"
 )
 
-func getLogger(path string, silent bool) log.BasicLogger {
+func getLogger(path string, silent bool, httpLogEndpoint string) log.BasicLogger {
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -22,19 +21,24 @@ func getLogger(path string, silent bool) log.BasicLogger {
 		panic(err)
 	}
 
-	var stdout io.Writer = os.Stdout
-	if silent {
-		stdout = ioutil.Discard
+	outputs := []log.Output{
+		log.NewFormattingOutput(logFile, log.NewJsonFormatter()),
 	}
 
-	stdoutOutput := log.NewFormattingOutput(stdout, log.NewHumanReadableFormatter())
-	fileOutput := log.NewFormattingOutput(logFile, log.NewJsonFormatter())
+	if !silent {
+		outputs = append(outputs, log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	}
+
+	if httpLogEndpoint != "" {
+		customJSONFormatter := log.NewJsonFormatter().WithTimestampColumn("@timestamp")
+		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(httpLogEndpoint), customJSONFormatter, 100))
+	}
 
 	return log.GetLogger().WithTags(
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test", os.Getenv("TEST_NAME")),
-	).WithOutput(stdoutOutput, fileOutput)
+	).WithOutput(outputs...)
 }
 
 func getConfig(configFiles config.ArrayFlags) (config.NodeConfig, error) {
@@ -65,6 +69,7 @@ func getConfig(configFiles config.ArrayFlags) (config.NodeConfig, error) {
 func main() {
 	httpAddress := flag.String("listen", ":8080", "ip address and port for http server")
 	silentLog := flag.Bool("silent", false, "disable output to stdout")
+	httpLogEndpoint := flag.String("http-log-endpoint", "", "report logs to http/https endpoint (i.e. logz.io)")
 	pathToLog := flag.String("log", "", "path/to/node.log")
 
 	var configFiles config.ArrayFlags
@@ -78,7 +83,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := getLogger(*pathToLog, *silentLog)
+	logger := getLogger(*pathToLog, *silentLog, *httpLogEndpoint)
 
 	bootstrap.NewNode(
 		cfg,

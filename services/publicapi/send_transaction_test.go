@@ -24,7 +24,7 @@ func TestPublicApiSendTx_PrepareResponse(t *testing.T) {
 	test.RequireCmpEqual(t, receipt, response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
 	require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	test.RequireStatus(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response.ClientResponse, "status response is wrong")
 }
 
 func TestPublicApiSendTx_PrepareResponseNilReceipt(t *testing.T) {
@@ -41,5 +41,5 @@ func TestPublicApiSendTx_PrepareResponseNilReceipt(t *testing.T) {
 	require.Equal(t, 0, len(response.ClientResponse.TransactionReceipt().Raw()), "Transaction receipt is not equal") // different way
 	require.EqualValues(t, 8, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_REJECTED_CONGESTION, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	test.RequireStatus(t, protocol.TRANSACTION_STATUS_REJECTED_CONGESTION, response.ClientResponse, "status response is wrong")
 }
