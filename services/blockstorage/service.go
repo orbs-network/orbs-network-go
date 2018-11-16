@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	extSync "github.com/orbs-network/orbs-network-go/services/blockstorage/externalsync"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internalsync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -70,6 +71,9 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	gossip.RegisterBlockSyncHandler(s)
 	s.extSync = extSync.NewExtBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
+	internalsync.StartSupervised(ctx, logger, persistence, s.syncBlockToStateStorage)
+	internalsync.StartSupervised(ctx, logger, persistence, s.syncBlockToTxPool)
+
 	return s
 }
 
@@ -119,16 +123,6 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 	s.extSync.HandleBlockCommitted(ctx)
 
 	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
-
-	if err := s.syncBlockToStateStorage(ctx, input.BlockPair); err != nil {
-		// TODO: since the internal-node sync flow is self healing, we should not fail the entire commit if state storage is slow to sync
-		s.logger.Error("internal-node sync to state storage failed", log.Error(err))
-	}
-
-	if err := s.syncBlockToTxPool(ctx, input.BlockPair); err != nil {
-		// TODO: since the internal-node sync flow is self healing, should we fail if pool fails ?
-		s.logger.Error("internal-node sync to tx pool failed", log.Error(err))
-	}
 
 	return nil, nil
 }
@@ -400,23 +394,22 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-// TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
-func (s *service) syncBlockToStateStorage(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) error {
-	_, err := s.stateStorage.CommitStateDiff(ctx, &services.CommitStateDiffInput{
+func (s *service) syncBlockToStateStorage(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+	s.logger.Info(fmt.Sprintf("syncBlockToStateStorage %#v", committedBlockPair))
+	out, err := s.stateStorage.CommitStateDiff(ctx, &services.CommitStateDiffInput{
 		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
 		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
 	})
-	return err
+	return out.NextDesiredBlockHeight, err
 }
 
-// TODO: this should not be called directly from CommitBlock, it should be called from a long living goroutine that continuously syncs the state storage
-func (s *service) syncBlockToTxPool(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) error {
-	_, err := s.txPool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
+func (s *service) syncBlockToTxPool(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+	out, err := s.txPool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 		ResultsBlockHeader:       committedBlockPair.ResultsBlock.Header,
 		TransactionReceipts:      committedBlockPair.ResultsBlock.TransactionReceipts,
 		LastCommittedBlockHeight: committedBlockPair.ResultsBlock.Header.BlockHeight(),
 	})
-	return err
+	return out.NextDesiredBlockHeight, err
 }
 
 func (s *service) validateWithConsensusAlgos(

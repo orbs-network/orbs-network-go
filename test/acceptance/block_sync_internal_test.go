@@ -40,11 +40,13 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 		network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, blockCount)
 
 		// Resend an already committed transaction to Leader
-		leaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+		leaderTxResponse, ok := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+		require.True(t, ok)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus())
 
 		// Resend an already committed transaction to Non-Leader
-		nonLeaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+		nonLeaderTxResponse, ok := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+		require.True(t, ok)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, nonLeaderTxResponse.TransactionStatus())
 	})
 }

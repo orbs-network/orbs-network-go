@@ -43,6 +43,7 @@ func syncOnce(ctx context.Context, source blockSource, callback blockSyncFunc) (
 
 func StartSupervised(ctx context.Context, logger supervised.Errorer, source blockSource, callback blockSyncFunc) {
 	supervised.GoForever(ctx, logger, func() {
+		source.GetBlockTracker().WaitForBlock(ctx, 1) // TODO - handle differently when Genesis block is addressed
 		height, err := syncOnce(ctx, source, callback)
 		for err == nil {
 			err = source.GetBlockTracker().WaitForBlock(ctx, height + 1)
