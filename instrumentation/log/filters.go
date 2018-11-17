@@ -1,9 +1,15 @@
 package log
 
-import "regexp"
+import (
+	"regexp"
+)
 
 type Filter interface {
 	Allows(level string, message string, fields []*Field) bool
+}
+
+func ExcludeEntryPoint(name string) Filter {
+	return ExcludeField(String("entry-point", name))
 }
 
 func ExcludeField(field *Field) Filter {
@@ -110,9 +116,13 @@ type excludeField struct {
 
 func (f *excludeField) Allows(level string, message string, fields []*Field) bool {
 	for _, p := range fields {
+		if p.IsNested() {
+			return f.Allows(level, message, p.Nested.NestedFields())
+		}
 		if p.Equal(f.field) {
 			return false
 		}
+
 	}
 
 	return true

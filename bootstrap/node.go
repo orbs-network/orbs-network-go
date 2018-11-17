@@ -34,7 +34,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress s
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
-	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence()
+	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nativeCompiler, nodeLogger, metricRegistry, nodeConfig)
 	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi(), metricRegistry)

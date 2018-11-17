@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"io"
+	"time"
 )
 
 type Output interface {
@@ -15,12 +16,10 @@ type basicOutput struct {
 }
 
 func (out *basicOutput) Append(level string, message string, fields ...*Field) {
-	logLine := out.formatter.FormatRow(level, message, fields...)
+	logLine := out.formatter.FormatRow(time.Now(), level, message, fields...)
 	fmt.Fprintln(out.writer, logLine)
 }
 
 func NewFormattingOutput(writer io.Writer, formatter LogFormatter) Output {
 	return &basicOutput{formatter, writer}
 }
-
-

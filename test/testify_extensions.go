@@ -3,7 +3,9 @@ package test
 import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 )
@@ -38,4 +40,20 @@ func RequireNoUnexpectedErrors(f Fataler, errorTracker ErrorTracker) {
 	if errorTracker.HasErrors() {
 		f.Fatal("Encountered unexpected errors:\n\t", strings.Join(errorTracker.GetUnexpectedErrors(), "\n\t"))
 	}
+}
+
+type transactionStatuser interface {
+	TransactionStatus() protocol.TransactionStatus
+    TransactionReceipt() *protocol.TransactionReceipt
+}
+
+func RequireSuccess(t *testing.T, tx transactionStatuser, msg string, args... interface{}) {
+	message := fmt.Sprintf(msg, args...)
+	RequireStatus(t, protocol.TRANSACTION_STATUS_COMMITTED, tx, message)
+	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, tx.TransactionReceipt().ExecutionResult(), message)
+
+}
+
+func RequireStatus(t *testing.T, status protocol.TransactionStatus, tx transactionStatuser, msg string) {
+	require.EqualValues(t, status, tx.TransactionStatus(), msg)
 }

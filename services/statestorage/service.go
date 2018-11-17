@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -16,22 +18,35 @@ import (
 
 var LogTag = log.Service("state-storage")
 
+type metrics struct {
+	readKeys  *metric.Rate
+	writeKeys *metric.Rate
+}
+
+func newMetrics(m metric.Factory) *metrics {
+	return &metrics{
+		readKeys:  m.NewRate("StateStorage.ReadRequestedKeysPerSecond"),
+		writeKeys: m.NewRate("StateStorage.WriteRequestedKeysPerSecond"),
+	}
+}
+
 type service struct {
 	config       config.StateStorageConfig
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
+	metrics      *metrics
 
 	mutex     sync.RWMutex
 	revisions *rollingRevisions
 }
 
-func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger) services.StateStorage {
-
+func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
 	forest, _ := merkle.NewForest()
 	return &service{
 		config:       config,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
 		logger:       logger.WithTags(LogTag),
+		metrics:      newMetrics(metricFactory),
 
 		mutex:     sync.RWMutex{},
 		revisions: newRollingRevisions(persistence, int(config.StateStorageHistorySnapshotNum()), forest),
@@ -39,6 +54,8 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 }
 
 func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
 		panic("CommitStateDiff received corrupt args")
 	}
@@ -49,7 +66,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
+	logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
 	currentHeight := s.revisions.getCurrentHeight()
 	if currentHeight+1 != commitBlockHeight {
@@ -62,6 +79,8 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}
+
+	s.metrics.writeKeys.Measure(int64(len(input.ContractStateDiffs)))
 
 	s.blockTracker.IncrementHeight()
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
@@ -99,6 +118,8 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: newZeroValue()}).Build())
 		}
 	}
+
+	s.metrics.readKeys.Measure(int64(len(input.Keys)))
 
 	output := &services.ReadKeysOutput{StateRecords: records}
 	if len(output.StateRecords) == 0 {

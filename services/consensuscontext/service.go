@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
@@ -60,9 +61,19 @@ func NewConsensusContext(
 }
 
 func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	txBlock, err := s.createTransactionsBlock(ctx, input.BlockHeight, input.PrevBlockHash)
 	if err != nil {
 		return nil, err
+	}
+
+	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
+
+	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
+
+	for _, tx := range txBlock.SignedTransactions {
+		txHash := digest.CalcTxHash(tx.Transaction())
+		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Transaction(txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
 	}
 
 	return &services.RequestNewTransactionsBlockOutput{
@@ -78,12 +89,14 @@ func (s *service) printTxHash(txBlock *protocol.TransactionsBlockContainer) {
 }
 
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	rxBlock, err := s.createResultsBlock(ctx, input.BlockHeight, input.PrevBlockHash, input.TransactionsBlock)
 	if err != nil {
 		return nil, err
 	}
 
-	s.logger.Info("created Results block", log.Stringable("results-block", rxBlock))
+	logger.Info("created Results block", log.Stringable("results-block", rxBlock))
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,
