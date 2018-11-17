@@ -8,9 +8,6 @@ import (
 )
 
 var EXPORTS = sdk.Export()
-
-func _init() {
-}
 `
 
 func SourceCodeForNop() []byte {

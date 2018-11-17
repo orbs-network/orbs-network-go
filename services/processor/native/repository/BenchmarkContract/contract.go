@@ -8,6 +8,7 @@ import (
 var EXPORTS = sdk.Export(add, set, get, argTypes, throw)
 
 func _init() {
+	state.WriteUint64ByKey("initialized", 1)
 }
 
 func nop() {

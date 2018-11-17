@@ -8,9 +8,6 @@ import (
 
 var EXPORTS = sdk.Export(getInfo, getCode, deployService)
 
-func _init() {
-}
-
 func getInfo(serviceName string) uint32 {
 	if serviceName == "_Deployments" { // getInfo on self
 		return uint32(sdk.PROCESSOR_TYPE_NATIVE)

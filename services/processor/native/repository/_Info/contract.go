@@ -7,9 +7,6 @@ import (
 
 var EXPORTS = sdk.Export(getSignerAddress)
 
-func _init() {
-}
-
 func getSignerAddress() []byte {
 	return address.GetSignerAddress()
 }
