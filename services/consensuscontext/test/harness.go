@@ -105,10 +105,10 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	// TODO: How to print err if it's sometimes nil
 	require.True(t, ok)
 }
-func (h *harness) expectStateHash() {
+func (h *harness) expectStateHashToReturn(hash []byte) {
 
 	stateHashOutput := &services.GetStateHashOutput{
-		StateRootHash: []byte{1, 2, 3, 4, 5},
+		StateRootHash: hash,
 	}
 	h.stateStorage.When("GetStateHash", mock.Any, mock.Any).Return(stateHashOutput, nil)
 

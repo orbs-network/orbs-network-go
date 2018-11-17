@@ -58,8 +58,7 @@ func TestCreateResultsBlock(t *testing.T) {
 		txCount := h.config.ConsensusContextMinimumTransactionsInBlock() + 1
 
 		h.expectTxPoolToReturnXTransactions(txCount)
-
-		h.expectStateHash()
+		h.expectStateHashToReturn([]byte{1, 2, 3, 4, 5})
 
 		txBlock, err := h.requestTransactionsBlock(ctx)
 		if err != nil {
