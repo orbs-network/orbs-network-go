@@ -11,33 +11,33 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-type ethereumConnectorConfig interface {
+type ethereumAdapterConfig interface {
 	EthereumEndpoint() string
 }
 
 type service struct {
-	connector adapter.EthereumConnection
-	logger    log.BasicLogger
-	config    ethereumConnectorConfig
+	connection adapter.EthereumConnection
+	logger     log.BasicLogger
+	config     ethereumAdapterConfig
 }
 
 func NewEthereumCrosschainConnector(ctx context.Context, // TODO: why don't we use context here?
-	config ethereumConnectorConfig,
-	connector adapter.EthereumConnection,
+	config ethereumAdapterConfig,
+	connection adapter.EthereumConnection,
 	logger log.BasicLogger) services.CrosschainConnector {
 	s := &service{
-		connector: connector,
-		logger:    logger,
-		config:    config,
+		connection: connection,
+		logger:     logger,
+		config:     config,
 	}
 
 	return s
 }
 
 func (s *service) setupClient() error {
-	if s.connector.GetClient() == nil {
+	if s.connection.GetClient() == nil {
 		s.logger.Info("connecting to ethereum", log.String("endpoint", s.config.EthereumEndpoint()))
-		if err := s.connector.Dial(s.config.EthereumEndpoint()); err != nil {
+		if err := s.connection.Dial(s.config.EthereumEndpoint()); err != nil {
 			return err
 		}
 	}
@@ -58,10 +58,10 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 	// we do not support pending calls, opts is always empty
 	opts := new(bind.CallOpts)
 	msg := ethereum.CallMsg{From: opts.From, To: &contractAddress, Data: input.EthereumPackedInputArguments}
-	output, err := s.connector.GetClient().CallContract(ctx, msg, nil)
+	output, err := s.connection.GetClient().CallContract(ctx, msg, nil)
 	if err == nil && len(output) == 0 {
 		// Make sure we have a contract to operate on, and bail out otherwise.
-		if code, err := s.connector.GetClient().CodeAt(ctx, contractAddress, nil); err != nil {
+		if code, err := s.connection.GetClient().CodeAt(ctx, contractAddress, nil); err != nil {
 			return nil, err
 		} else if len(code) == 0 {
 			return nil, bind.ErrNoCode

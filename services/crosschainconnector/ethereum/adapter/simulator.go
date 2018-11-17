@@ -7,11 +7,13 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
+	"sync"
 )
 
 type EthereumSimulator struct {
 	auth      *bind.TransactOpts
 	simClient bind.ContractBackend
+	mu        sync.Mutex
 }
 
 func NewEthereumSimulatorConnector() EthereumConnection {
@@ -19,20 +21,23 @@ func NewEthereumSimulatorConnector() EthereumConnection {
 }
 
 func (es *EthereumSimulator) Dial(endpoint string) error {
-	// Generate a new random account and a funded simulator
-	key, err := crypto.GenerateKey()
-	if err != nil {
-		return err
+	es.mu.Lock()
+	defer es.mu.Unlock()
+	if es.simClient == nil {
+		// Generate a new random account and a funded simulator
+		key, err := crypto.GenerateKey()
+		if err != nil {
+			return err
+		}
+		es.auth = bind.NewKeyedTransactor(key)
+
+		genesisAllocation := map[common.Address]core.GenesisAccount{
+			es.auth.From: {Balance: big.NewInt(10000000000)},
+		}
+
+		sim := backends.NewSimulatedBackend(genesisAllocation, 900000000000)
+		es.simClient = sim
 	}
-	es.auth = bind.NewKeyedTransactor(key)
-
-	genesisAllocation := map[common.Address]core.GenesisAccount{
-		es.auth.From: {Balance: big.NewInt(10000000000)},
-	}
-
-	sim := backends.NewSimulatedBackend(genesisAllocation, 900000000000)
-	es.simClient = sim
-
 	return nil
 }
 

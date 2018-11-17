@@ -3,26 +3,35 @@ package adapter
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"sync"
 )
 
-type EthereumNodeConnector struct {
+type EthereumNodeAdapter struct {
 	client bind.ContractBackend
+	mu     sync.Mutex
 }
 
 func NewEthereumConnection() EthereumConnection {
-	return &EthereumNodeConnector{}
+	return &EthereumNodeAdapter{}
 }
 
-func (nc *EthereumNodeConnector) Dial(endpoint string) error {
-	client, err := ethclient.Dial(endpoint)
-	nc.client = client
-	return err
-}
-
-func (nc *EthereumNodeConnector) GetAuth() *bind.TransactOpts {
+func (nc *EthereumNodeAdapter) Dial(endpoint string) error {
+	nc.mu.Lock()
+	defer nc.mu.Unlock()
+	if nc.client == nil {
+		if client, err := ethclient.Dial(endpoint); err != nil {
+			return err
+		} else {
+			nc.client = client
+		}
+	}
 	return nil
 }
 
-func (nc *EthereumNodeConnector) GetClient() bind.ContractBackend {
+func (nc *EthereumNodeAdapter) GetAuth() *bind.TransactOpts {
+	return nil
+}
+
+func (nc *EthereumNodeAdapter) GetClient() bind.ContractBackend {
 	return nc.client
 }
