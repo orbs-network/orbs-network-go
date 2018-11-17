@@ -2,12 +2,8 @@ package adapter
 
 import (
 	"fmt"
-	"github.com/orbs-network/lean-helix-go"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"testing"
 )
 
 func ExampleMessagePredicate_sender() {

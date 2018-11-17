@@ -2,9 +2,9 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/lean-helix-go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
-	"github.com/orbs-network/lean-helix-go"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
