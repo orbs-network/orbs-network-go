@@ -25,26 +25,38 @@ type blockPair struct {
 
 func BlockPair() *blockPair {
 	createdDate := time.Now()
+	transactions := []*protocol.SignedTransaction{
+		(TransferTransaction().WithAmountAndTargetAddress(10, AddressForEd25519SignerForTests(6))).Build(),
+	}
+
 	b := &blockPair{
 		txHeader: &protocol.TransactionsBlockHeaderBuilder{
-			BlockHeight:           1,
-			Timestamp:             primitives.TimestampNano(createdDate.UnixNano()),
 			ProtocolVersion:       DEFAULT_TEST_PROTOCOL_VERSION,
 			VirtualChainId:        DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+			BlockHeight:           1,
+			PrevBlockHashPtr:      nil,
+			Timestamp:             primitives.TimestampNano(createdDate.UnixNano()),
+			TransactionsRootHash:  nil,
+			MetadataHash:          nil,
 			NumSignedTransactions: 1,
 		},
-		txMetadata: &protocol.TransactionsBlockMetadataBuilder{},
-		transactions: []*protocol.SignedTransaction{
-			(TransferTransaction().WithAmountAndTargetAddress(10, AddressForEd25519SignerForTests(6))).Build(),
-		},
-		txProof: nil,
+		txMetadata:   &protocol.TransactionsBlockMetadataBuilder{},
+		transactions: transactions,
+		txProof:      nil,
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
-			BlockHeight:            1,
-			Timestamp:              primitives.TimestampNano(createdDate.UnixNano()),
-			ProtocolVersion:        DEFAULT_TEST_PROTOCOL_VERSION,
-			VirtualChainId:         DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-			NumContractStateDiffs:  1,
-			NumTransactionReceipts: 1,
+			ProtocolVersion:           DEFAULT_TEST_PROTOCOL_VERSION,
+			VirtualChainId:            DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+			BlockHeight:               1,
+			PrevBlockHashPtr:          nil,
+			Timestamp:                 primitives.TimestampNano(createdDate.UnixNano()),
+			ReceiptsRootHash:          nil,
+			StateDiffHash:             nil,
+			TransactionsBlockHashPtr:  nil,
+			PreExecutionStateRootHash: nil,
+			TxhashBloomFilter:         nil,
+			TimestampBloomFilter:      nil,
+			NumContractStateDiffs:     1,
+			NumTransactionReceipts:    1,
 		},
 		receipts: []*protocol.TransactionReceipt{
 			(TransactionReceipt().Build()),
@@ -87,11 +99,17 @@ func (b *blockPair) WithHeight(blockHeight primitives.BlockHeight) *blockPair {
 	return b
 }
 
-func (b *blockPair) WithPrevBlockHash(prevBlock *protocol.BlockPairContainer) *blockPair {
+func (b *blockPair) WithPrevBlock(prevBlock *protocol.BlockPairContainer) *blockPair {
 	if prevBlock != nil {
 		b.txHeader.PrevBlockHashPtr = digest.CalcTransactionsBlockHash(prevBlock.TransactionsBlock)
 		b.rxHeader.PrevBlockHashPtr = digest.CalcResultsBlockHash(prevBlock.ResultsBlock)
 	}
+	return b
+}
+
+func (b *blockPair) WithPrevBlockHash(hash primitives.Sha256) *blockPair {
+	b.txHeader.PrevBlockHashPtr = hash
+	b.rxHeader.PrevBlockHashPtr = hash
 	return b
 }
 
@@ -110,6 +128,11 @@ func (b *blockPair) WithProtocolVersion(version primitives.ProtocolVersion) *blo
 func (b *blockPair) WithVirtualChainId(virtualChainId primitives.VirtualChainId) *blockPair {
 	b.txHeader.VirtualChainId = virtualChainId
 	b.rxHeader.VirtualChainId = virtualChainId
+	return b
+}
+
+func (b *blockPair) WithTransactionsRootHash(txRootHash []byte) *blockPair {
+	b.txHeader.TransactionsRootHash = txRootHash
 	return b
 }
 
