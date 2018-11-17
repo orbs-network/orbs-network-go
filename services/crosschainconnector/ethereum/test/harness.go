@@ -39,15 +39,15 @@ func newDefaultEthereumConnectorConfigForTests() *ethereumConnectorConfigForTest
 
 func (h *harness) withInvalidEndpoint() *harness {
 	// mess up the config and use a real connector to see how it later behaves
-	conn := adapter.NewEthereumConnection()
-	ctx := context.Background()
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	config := newDefaultEthereumConnectorConfigForTests()
+	conn := adapter.NewEthereumConnection(config, logger)
+	ctx := context.Background()
 	config.endpoint = "all your base"
 
 	return &harness{
 		adapter:   conn,
-		connector: ethereum.NewEthereumCrosschainConnector(ctx, config, conn, logger),
+		connector: ethereum.NewEthereumCrosschainConnector(ctx, conn, logger),
 	}
 }
 
@@ -55,13 +55,16 @@ func (h *harness) deployStorageContract(ctx context.Context, number int64, text 
 	if err := h.adapter.Dial(""); err != nil { // create the client so we can deploy
 		return err
 	}
-
-	address, _, _, err := DeploySimpleStorage(h.adapter.GetAuth(), h.adapter.GetClient(), big.NewInt(number), text)
+	client, err := h.adapter.GetClient()
+	if err != nil {
+		return err
+	}
+	address, _, _, err := DeploySimpleStorage(h.adapter.GetAuth(), client, big.NewInt(number), text)
 	if err != nil {
 		return err
 	}
 	h.address = address
-	h.adapter.GetClient().(*backends.SimulatedBackend).Commit() // assuming simulation, this will commit the pending transactions
+	client.(*backends.SimulatedBackend).Commit() // assuming simulation, this will commit the pending transactions
 	return nil
 }
 
@@ -70,16 +73,16 @@ func (h *harness) getAddress() string {
 }
 
 func newEthereumConnectorHarness() *harness {
-	conn := adapter.NewEthereumSimulatorConnector()
-	ctx := context.Background()
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	config := newDefaultEthereumConnectorConfigForTests()
+	conn := adapter.NewEthereumSimulatorConnector(config, logger)
+	ctx := context.Background()
 
 	return &harness{
 		adapter:   conn,
 		config:    config,
 		logger:    logger,
-		connector: ethereum.NewEthereumCrosschainConnector(ctx, config, conn, logger),
+		connector: ethereum.NewEthereumCrosschainConnector(ctx, conn, logger),
 	}
 }
 

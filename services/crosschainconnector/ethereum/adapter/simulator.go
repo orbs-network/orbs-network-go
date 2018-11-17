@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"math/big"
 	"sync"
 )
@@ -13,11 +14,16 @@ import (
 type EthereumSimulator struct {
 	auth      *bind.TransactOpts
 	simClient bind.ContractBackend
+	config    ethereumAdapterConfig
+	logger    log.BasicLogger
 	mu        sync.Mutex
 }
 
-func NewEthereumSimulatorConnector() EthereumConnection {
-	return &EthereumSimulator{}
+func NewEthereumSimulatorConnector(config ethereumAdapterConfig, logger log.BasicLogger) EthereumConnection {
+	return &EthereumSimulator{
+		config: config,
+		logger: logger,
+	}
 }
 
 func (es *EthereumSimulator) Dial(endpoint string) error {
@@ -42,9 +48,16 @@ func (es *EthereumSimulator) Dial(endpoint string) error {
 }
 
 func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
+	// this is used for test code, not protecting this
 	return es.auth
 }
 
-func (es *EthereumSimulator) GetClient() bind.ContractBackend {
-	return es.simClient
+func (es *EthereumSimulator) GetClient() (bind.ContractBackend, error) {
+	if es.simClient == nil {
+		es.logger.Info("connecting to ethereum simulator", log.String("endpoint", es.config.EthereumEndpoint()))
+		if err := es.Dial(es.config.EthereumEndpoint()); err != nil {
+			return nil, err
+		}
+	}
+	return es.simClient, nil
 }

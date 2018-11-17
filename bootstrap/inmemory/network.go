@@ -51,14 +51,14 @@ func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
 	return Network{Logger: logger, Transport: transport}
 }
 
-func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler) {
+func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, logger log.BasicLogger) {
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
-	node.ethereumConnector = ethereumConnectorAdapter.NewEthereumSimulatorConnector()
+	node.ethereumConnector = ethereumConnectorAdapter.NewEthereumSimulatorConnector(cfg, logger)
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 
