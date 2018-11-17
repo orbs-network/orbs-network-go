@@ -118,10 +118,10 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 	blockVirtualChainId := header.VirtualChainId()
 
 	if blockProtocolVersion != requiredProtocolVersion {
-		return nil, errors.New(fmt.Sprintf("Incorrect protocol version: needed %v but received %v", requiredProtocolVersion, blockProtocolVersion))
+		return nil, fmt.Errorf("incorrect protocol version: needed %v but received %v", requiredProtocolVersion, blockProtocolVersion)
 	}
 	if blockVirtualChainId != requiredVirtualChainId {
-		return nil, errors.New(fmt.Sprintf("Incorrect virtual chain ID: needed %v but received %v", requiredVirtualChainId, blockVirtualChainId))
+		return nil, fmt.Errorf("incorrect virtual chain ID: needed %v but received %v", requiredVirtualChainId, blockVirtualChainId)
 	}
 	calculatedTxRoot, err := CalculateTransactionsRootHash(txs)
 	if err != nil {
@@ -130,10 +130,10 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 
 	calculatedPrevBlockHashPtr := CalculatePrevBlockHashPtr(input.TransactionsBlock)
 
-	if bytes.Compare(blockTxRoot, calculatedTxRoot) != 0 {
+	if !bytes.Equal(blockTxRoot, calculatedTxRoot) {
 		return nil, errors.New("incorrect transactions root hash")
 	}
-	if bytes.Compare(prevBlockHashPtr, calculatedPrevBlockHashPtr) != 0 {
+	if !bytes.Equal(prevBlockHashPtr, calculatedPrevBlockHashPtr) {
 		return nil, errors.New("incorrect previous block hash")
 	}
 
