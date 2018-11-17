@@ -9,7 +9,7 @@ import (
 
 var EXPORTS = sdk.Export(transfer, getBalance)
 
-const TOTAL_SUPPLY = 10000
+const TOTAL_SUPPLY = 1000000
 
 func _init() {
 	ownerAddress := address.GetSignerAddress()
