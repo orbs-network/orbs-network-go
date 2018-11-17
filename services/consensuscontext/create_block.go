@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -21,14 +22,15 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 		return nil, err
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
-	merkleTransactionsRoot, err := calculateTransactionsRootHash(proposedTransactions.SignedTransactions)
+
+	merkleTransactionsRoot, err := CalculateTransactionsRootHash(proposedTransactions.SignedTransactions)
 	if err != nil {
 		return nil, err
 	}
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:       primitives.ProtocolVersion(1),
+			ProtocolVersion:       primitives.ProtocolVersion(s.config.ProtocolVersion()),
 			VirtualChainId:        s.config.VirtualChainId(),
 			BlockHeight:           blockHeight,
 			PrevBlockHashPtr:      prevBlockHash,
@@ -41,10 +43,15 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 		SignedTransactions: proposedTransactions.SignedTransactions,
 		BlockProof:         nil,
 	}
+
+	s.logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
+	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
+	s.printTxHash(txBlock)
+
 	return txBlock, nil
 }
 
-func calculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.MerkleSha256, error) {
+func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.MerkleSha256, error) {
 	forest, root := merkle.NewForest()
 	diffs := make([]*merkle.MerkleDiff, len(txs))
 	for i := 0; i < len(txs); i++ {
@@ -55,6 +62,10 @@ func calculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitive
 		}
 	}
 	return forest.Update(root, diffs)
+}
+
+func CalculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
+	return digest.CalcTransactionsBlockHash(txBlock)
 }
 
 func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
@@ -85,7 +96,7 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 
 	rxBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:           primitives.ProtocolVersion(1),
+			ProtocolVersion:           primitives.ProtocolVersion(s.config.ProtocolVersion()),
 			VirtualChainId:            s.config.VirtualChainId(),
 			BlockHeight:               blockHeight,
 			PrevBlockHashPtr:          prevBlockHash,

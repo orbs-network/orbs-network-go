@@ -1,6 +1,7 @@
 package consensuscontext
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
@@ -63,18 +65,16 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 		return nil, err
 	}
 
-	s.logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
+	return &services.RequestNewTransactionsBlockOutput{
+		TransactionsBlock: txBlock,
+	}, nil
+}
 
-	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
-
+func (s *service) printTxHash(txBlock *protocol.TransactionsBlockContainer) {
 	for _, tx := range txBlock.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
 		s.logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
 	}
-
-	return &services.RequestNewTransactionsBlockOutput{
-		TransactionsBlock: txBlock,
-	}, nil
 }
 
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
@@ -97,6 +97,10 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 	requiredVirtualChainId := s.config.VirtualChainId()
 
 	header := input.TransactionsBlock.Header
+	txs := input.TransactionsBlock.SignedTransactions
+	blockTxRoot := input.TransactionsBlock.Header.TransactionsRootHash()
+	prevBlockHashPtr := input.TransactionsBlock.Header.PrevBlockHashPtr()
+
 	blockProtocolVersion := header.ProtocolVersion()
 	blockVirtualChainId := header.VirtualChainId()
 
@@ -105,6 +109,19 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 	}
 	if blockVirtualChainId != requiredVirtualChainId {
 		return nil, errors.New(fmt.Sprintf("Incorrect virtual chain ID: needed %v but received %v", requiredVirtualChainId, blockVirtualChainId))
+	}
+	calculatedTxRoot, err := CalculateTransactionsRootHash(txs)
+	if err != nil {
+		return nil, err
+	}
+
+	calculatedPrevBlockHashPtr := CalculatePrevBlockHashPtr(input.TransactionsBlock)
+
+	if bytes.Compare(blockTxRoot, calculatedTxRoot) != 0 {
+		return nil, errors.New("incorrect transactions root hash")
+	}
+	if bytes.Compare(prevBlockHashPtr, calculatedPrevBlockHashPtr) != 0 {
+		return nil, errors.New("incorrect previous block hash")
 	}
 
 	return &services.ValidateTransactionsBlockOutput{}, nil
