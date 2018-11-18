@@ -5,17 +5,35 @@ import (
 	"testing"
 )
 
+func runOnce(m *testing.M) int {
+	return m.Run()
+}
+
+func runTwice(m *testing.M) int {
+	if exitCode := runOnce(m); exitCode != 0 {
+		return exitCode
+	}
+
+	return runOnce(m)
+}
+
 func TestMain(m *testing.M) {
-	cleanNativeProcessorCache()
+	exitCode := 0
 
-	n := newInProcessE2ENetwork()
+	bootstrap := getConfig().bootstrap
 
-	m.Run()
-	exitCode := m.Run() // run twice so that any test assuming a clean slate will fail; e2es shouldn't assume anything about system state
+	if bootstrap {
+		cleanNativeProcessorCache()
+		n := newInProcessE2ENetwork()
 
-	n.gracefulShutdown()
+		exitCode = runTwice(m)
+		n.gracefulShutdown()
 
-	cleanNativeProcessorCache()
+		cleanNativeProcessorCache()
+	} else {
+		exitCode = runOnce(m)
+	}
+
 	os.Exit(exitCode)
 }
 
