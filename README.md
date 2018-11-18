@@ -161,6 +161,15 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
 
 * If the E2E test gets stuck or `docker-compose` stops working properly, try to **remove all containers** with this handy command: `docker rm -f $(docker ps -aq)`. But remember that **ALL YOUR LOCAL CONTAINERS WILL BE GONE** (even from other projects).
 
+* Debugging the acceptance suite is problematic out of the box, since the debugger (Delve) doesn't support any code importing the `plugin` package. Luckily, the acceptance suite relies on a fake compiler; to enable debugging:
+  * in Goland
+    1. Go to Preferences -> Go -> Vendoring & Build Tags
+    1. Add the tag `nonativecompiler` under 'custom tags'
+    1. Create a run configuration for the desired test (by clicking the "play" icon to the left of the test name)
+    1. Run it once (to create the run config)
+    1. Edit the run config and check "use all custom build tags"
+    1. Debug your test
+
 ### IDE
 
 * We recommend working on the project with [GoLand](https://www.jetbrains.com/go/) IDE. Recommended settings:
