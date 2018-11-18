@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestBlockSync(t *testing.T) {
@@ -38,9 +37,7 @@ func TestBlockSync(t *testing.T) {
 			numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
-		}).Start(func(parent context.Context, network harness.TestNetworkDriver) {
-		ctx, cancel := context.WithTimeout(parent, 3*time.Second)
-		defer cancel()
+		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}
