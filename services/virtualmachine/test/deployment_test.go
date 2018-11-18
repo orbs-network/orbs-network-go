@@ -34,7 +34,7 @@ func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
 	})
 }
 
-func TestProcessTransactionSet_WhenContractNotDeployedAndNotNativeContract(t *testing.T) {
+func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -59,7 +59,7 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndNotNativeContract(t *te
 	})
 }
 
-func TestSdkService_CallMethodWhenContractNotDeployedAndNotNativeContract(t *testing.T) {
+func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -85,7 +85,7 @@ func TestSdkService_CallMethodWhenContractNotDeployedAndNotNativeContract(t *tes
 	})
 }
 
-func TestAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
+func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -113,7 +113,7 @@ func TestAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
 	})
 }
 
-func TestFailingAutoDeployNativeContractDuringProcessTransactionSet(t *testing.T) {
+func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 

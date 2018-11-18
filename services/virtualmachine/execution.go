@@ -21,6 +21,7 @@ func (s *service) runMethod(
 	// create execution context
 	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, accessScope, transaction)
 	defer s.contexts.destroyExecutionContext(executionContextId)
+	executionContext.batchTransientState = batchTransientState
 
 	// get deployment info
 	processor, err := s.getServiceDeployment(ctx, executionContext, transaction.ContractName())
@@ -32,7 +33,6 @@ func (s *service) runMethod(
 	// modify execution context
 	executionContext.serviceStackPush(transaction.ContractName())
 	defer executionContext.serviceStackPop()
-	executionContext.batchTransientState = batchTransientState
 
 	// execute the call
 	inputArgs := protocol.MethodArgumentArrayReader(transaction.RawInputArgumentArrayWithHeader())

@@ -114,7 +114,7 @@ type contractAndMethod struct {
 	methodName   primitives.MethodName
 }
 
-func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair) {
+func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
@@ -122,6 +122,9 @@ func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods 
 		resultKeyValuePairsPerContract[contractAndMethod.contractName] = []*keyValuePair{}
 		tx := builders.Transaction().WithMethod(contractAndMethod.contractName, contractAndMethod.methodName).Build()
 		transactions = append(transactions, tx)
+	}
+	for _, contractName := range additionalExpectedStateDiffContracts {
+		resultKeyValuePairsPerContract[contractName] = []*keyValuePair{}
 	}
 
 	output, _ := h.service.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
