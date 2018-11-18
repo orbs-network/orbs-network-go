@@ -22,10 +22,10 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
 
-	//merkleTransactionsRoot, err := CalculateTransactionsRootHash(proposedTransactions.SignedTransactions)
-	//if err != nil {
-	//	return nil, err
-	//}
+	merkleTransactionsRoot, err := CalculateTransactionsRootHash(proposedTransactions.SignedTransactions)
+	if err != nil {
+		return nil, err
+	}
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
@@ -34,7 +34,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 			BlockHeight:           blockHeight,
 			PrevBlockHashPtr:      prevBlockHash,
 			Timestamp:             primitives.TimestampNano(time.Now().UnixNano()),
-			TransactionsRootHash:  nil,
+			TransactionsRootHash:  merkleTransactionsRoot,
 			MetadataHash:          nil,
 			NumSignedTransactions: uint32(txCount),
 		}).Build(),
@@ -79,9 +79,12 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 	if err != nil {
 		return nil, err
 	}
-	preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-		BlockHeight: blockHeight - 1,
-	})
+
+	// TODO Waiting for state-storage fix: internal sync does not yet update the state storage when committing blocks
+	//preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
+	//	BlockHeight: blockHeight - 1,
+	//})
+
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +103,7 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 			ReceiptsRootHash:          merkleReceiptsRoot,
 			StateDiffHash:             stateDiffHash,
 			TransactionsBlockHashPtr:  digest.CalcTransactionsBlockHash(transactionsBlock),
-			PreExecutionStateRootHash: preExecutionStateRootHash.StateRootHash,
+			PreExecutionStateRootHash: nil,
 			TxhashBloomFilter:         nil, // TODO ODEDW to decide
 			TimestampBloomFilter:      nil, // TODO ODEDW to decide
 			NumTransactionReceipts:    uint32(len(output.TransactionReceipts)),

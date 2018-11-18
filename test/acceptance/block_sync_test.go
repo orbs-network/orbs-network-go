@@ -2,12 +2,12 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestBlockSync(t *testing.T) {
@@ -18,7 +18,7 @@ func TestBlockSync(t *testing.T) {
 	//t.Skip()
 
 	harness.Network(t).
-		WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
+		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
 			"intra-node sync to consensus algo failed",            //TODO investigate and explain, or fix and remove expected error
@@ -38,7 +38,9 @@ func TestBlockSync(t *testing.T) {
 			numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
-		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		}).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+		ctx, cancel := context.WithTimeout(parent, 3*time.Second)
+		defer cancel()
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}
