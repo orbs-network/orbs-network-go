@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -23,10 +22,10 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
 
-	merkleTransactionsRoot, err := CalculateTransactionsRootHash(proposedTransactions.SignedTransactions)
-	if err != nil {
-		return nil, err
-	}
+	//merkleTransactionsRoot, err := CalculateTransactionsRootHash(proposedTransactions.SignedTransactions)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
@@ -35,7 +34,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 			BlockHeight:           blockHeight,
 			PrevBlockHashPtr:      prevBlockHash,
 			Timestamp:             primitives.TimestampNano(time.Now().UnixNano()),
-			TransactionsRootHash:  merkleTransactionsRoot,
+			TransactionsRootHash:  nil,
 			MetadataHash:          nil,
 			NumSignedTransactions: uint32(txCount),
 		}).Build(),
@@ -44,10 +43,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 		BlockProof:         nil,
 	}
 
-	s.logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
-	s.printTxHash(txBlock)
-
 	return txBlock, nil
 }
 

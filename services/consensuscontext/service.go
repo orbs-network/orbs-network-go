@@ -62,29 +62,25 @@ func NewConsensusContext(
 
 func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger.Info("starting to create transactions block")
 	txBlock, err := s.createTransactionsBlock(ctx, input.BlockHeight, input.PrevBlockHash)
 	if err != nil {
+		logger.Info("failed to create transactions block", log.Error(err))
 		return nil, err
 	}
 
-	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
-
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
-
-	for _, tx := range txBlock.SignedTransactions {
-		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Transaction(txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
-	}
-
+	logger.Info("created transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
+	s.printTxHash(logger, txBlock)
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
 	}, nil
 }
 
-func (s *service) printTxHash(txBlock *protocol.TransactionsBlockContainer) {
+func (s *service) printTxHash(logger log.BasicLogger, txBlock *protocol.TransactionsBlockContainer) {
 	for _, tx := range txBlock.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		s.logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
+		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
 	}
 }
 
