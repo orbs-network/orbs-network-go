@@ -7,7 +7,14 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
 )
 
-var EXPORTS = sdk.Export(transfer, getBalance)
+// helpers for avoiding reliance on strings throughout the system
+const CONTRACT_NAME = "BenchmarkToken"
+
+/////////////////////////////////////////////////////////////////
+// contract starts here
+
+var PUBLIC = sdk.Export(transfer, getBalance)
+var SYSTEM = sdk.Export(_init)
 
 const TOTAL_SUPPLY = 1000000
 

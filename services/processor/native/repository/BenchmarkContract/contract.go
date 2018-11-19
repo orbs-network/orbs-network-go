@@ -5,7 +5,14 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
 )
 
-var EXPORTS = sdk.Export(add, set, get, argTypes, throw)
+// helpers for avoiding reliance on strings throughout the system
+const CONTRACT_NAME = "BenchmarkContract"
+
+/////////////////////////////////////////////////////////////////
+// contract starts here
+
+var PUBLIC = sdk.Export(add, set, get, argTypes, throw)
+var SYSTEM = sdk.Export(_init)
 
 func _init() {
 	state.WriteUint64ByKey("initialized", 1)

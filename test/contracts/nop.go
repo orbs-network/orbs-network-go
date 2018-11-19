@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 )
 
-var EXPORTS = sdk.Export()
+var PUBLIC = sdk.Export()
 `
 
 func SourceCodeForNop() []byte {

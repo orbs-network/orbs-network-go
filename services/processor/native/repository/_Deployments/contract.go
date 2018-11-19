@@ -4,13 +4,21 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-var EXPORTS = sdk.Export(getInfo, getCode, deployService)
+// helpers for avoiding reliance on strings throughout the system
+const CONTRACT_NAME = "_Deployments"
+const METHOD_GET_CODE = "getCode"
+
+/////////////////////////////////////////////////////////////////
+// contract starts here
+
+var PUBLIC = sdk.Export(getInfo, getCode, deployService)
 
 func getInfo(serviceName string) uint32 {
-	if serviceName == "_Deployments" { // getInfo on self
-		return uint32(sdk.PROCESSOR_TYPE_NATIVE)
+	if serviceName == CONTRACT_NAME { // getInfo on self
+		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
 	}
 	processorType := state.ReadUint32ByKey(serviceName + ".Processor")
 	if processorType == 0 {

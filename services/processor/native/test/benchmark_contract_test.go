@@ -31,7 +31,7 @@ func TestBenchmarkContract_SetGetMethods(t *testing.T) {
 
 		t.Log("Runs BenchmarkContract.set to save a value in state")
 
-		call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(value).WithWriteAccess().Build()
+		call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(value).Build()
 		h.expectSdkCallMadeWithStateWrite(nil, nil)
 
 		output, err := h.service.ProcessCall(ctx, call)

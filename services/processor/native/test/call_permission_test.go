@@ -21,35 +21,24 @@ func TestProcessCall_Permissions(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			name:          "ExternalMethodFromAnotherServiceSucceeds",
-			input:         processCallInput().WithExternalMethod().WithDifferentCallingService().Build(),
+			name:          "PublicMethodSucceeds",
+			input:         processCallInput().WithPublicMethod().Build(),
 			expectedError: false,
 		},
 		{
-			name:          "InternalMethodFromSameServiceSucceeds",
-			input:         processCallInput().WithInternalMethod().WithSameCallingService().Build(),
-			expectedError: false,
-		},
-		{
-			name:          "InternalMethodFromAnotherServiceFails",
-			input:         processCallInput().WithInternalMethod().WithDifferentCallingService().Build(),
+			name:          "InternalMethodFails",
+			input:         processCallInput().WithInternalMethod().Build(),
 			expectedError: true,
 		},
 		{
-			name:          "InternalMethodFromAnotherServiceUnderSystemPermissionsSucceeds",
-			input:         processCallInput().WithInternalMethod().WithDifferentCallingService().WithSystemPermissions().Build(),
-			expectedError: false,
-		},
-		{
-			name:             "WriteMethodWithWriteAccessSucceeds",
-			input:            processCallInput().WithExternalWriteMethod().WithWriteAccess().Build(),
-			expectedError:    false,
-			expectedSdkWrite: true,
-		},
-		{
-			name:          "WriteMethodWithoutWriteAccessFails",
-			input:         processCallInput().WithExternalWriteMethod().Build(),
+			name:          "SystemMethodFails",
+			input:         processCallInput().WithSystemMethod().Build(),
 			expectedError: true,
+		},
+		{
+			name:          "SystemMethodUnderSystemPermissionsSucceeds",
+			input:         processCallInput().WithSystemMethod().WithSystemPermissions().Build(),
+			expectedError: false,
 		},
 	}
 	for _, tt := range tests {

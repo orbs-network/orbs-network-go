@@ -16,7 +16,8 @@ import (
 
 const COUNTER_CONTRACT_START_FROM = uint64(%d)
 
-var EXPORTS = sdk.Export(add, get, start)
+var PUBLIC = sdk.Export(add, get, start)
+var SYSTEM = sdk.Export(_init)
 
 func _init() {
 	state.WriteUint64ByKey("count", COUNTER_CONTRACT_START_FROM)
