@@ -2,13 +2,15 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestInternalBlockSync_TransactionPool(t *testing.T) {
@@ -37,11 +39,9 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 			}
 		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-		// Wait for state storage to sync both nodes to block height 10
-		network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, blockCount)
-		network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, blockCount)
-
-		time.Sleep(30 * time.Millisecond)
+		lastTx := txBuilders[len(txBuilders)-1].Build().Transaction()
+		waitForTransactionStatusCommitted(network, ctx, lastTx, 0)
+		waitForTransactionStatusCommitted(network, ctx, lastTx, 1)
 
 		// Resend an already committed transaction to Leader
 		leaderTxResponse, ok := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
@@ -53,6 +53,18 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, nonLeaderTxResponse.TransactionStatus())
 	})
+}
+
+func waitForTransactionStatusCommitted(network harness.TestNetworkDriver, ctx context.Context, lastTx *protocol.Transaction, nodeIndex int) {
+	var txStatusOut *services.GetTransactionStatusOutput
+	for txStatusOut == nil || txStatusOut.ClientResponse.TransactionStatus() != protocol.TRANSACTION_STATUS_COMMITTED {
+		txStatusOut, _ = network.PublicApi(nodeIndex).GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
+			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
+				TransactionTimestamp: 0,
+				Txhash:               digest.CalcTxHash(lastTx),
+			}).Build(),
+		})
+	}
 }
 
 func TestInternalBlockSync_StateStorage(t *testing.T) {
@@ -89,32 +101,26 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 					"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 				).
 				WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
+					// inject blocks from builder network
 					for _, bpc := range blockPairContainers {
 						err := network.BlockPersistence(0).WriteNextBlock(bpc)
 						require.NoError(t, err)
 					}
 				}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-				// Wait for state storage to sync both nodes to block height 10
-				network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, topBlock)
-				network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, topBlock)
-
-				numBlocks, _ := network.BlockPersistence(0).GetNumBlocks()
-				require.EqualValues(t, numBlocks, topBlock)
-				lastBlock, _ := network.BlockPersistence(0).GetLastBlock()
-				require.EqualValues(t, topBlock, lastBlock.ResultsBlock.Header.BlockHeight())
-
-				time.Sleep(100 * time.Millisecond)
+				// wait for top block to propagate to state in both nodes
+				lastBlockTxHash := blockPairContainers[len(blockPairContainers)-1].ResultsBlock.TransactionReceipts[0].Txhash()
+				network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 0)
+				network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 1)
 
 				contract = network.GetBenchmarkTokenContract()
 
-				// Read state entry from leader node
-				leaderBalance := <- contract.CallGetBalance(ctx,0, 1)
-				require.EqualValues(t, totalAmount, leaderBalance, "expected transfers to reflect in leader state")
+				// verify state in both nodes
+				balanceNode0 := <- contract.CallGetBalance(ctx,0, 1)
+				balanceNode1 := <- contract.CallGetBalance(ctx,1, 1)
 
-				// Read state entry from non leader node
-				nonLeaderBalance := <- contract.CallGetBalance(ctx,1, 1)
-				require.EqualValues(t, totalAmount, nonLeaderBalance, "expected transfers to reflect in non leader state")
+				require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
+				require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")
 			})
 		})
 }
