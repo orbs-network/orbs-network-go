@@ -3,6 +3,8 @@ package internalsync
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -14,43 +16,59 @@ type blockSyncFunc func (ctx context.Context, committedBlockPair *protocol.Block
 type blockSource interface {
 	GetBlockTracker() *synchronization.BlockTracker
 	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error)
-	GetNumBlocks() (primitives.BlockHeight, error)
+	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 
-func syncOnce(ctx context.Context, source blockSource, callback blockSyncFunc) (primitives.BlockHeight, error) {
-	sourceTopHeight, err := source.GetNumBlocks()
+func syncOnce(ctx context.Context, source blockSource, callback blockSyncFunc, logger log.BasicLogger) (primitives.BlockHeight, error) {
+	topBlock, err := source.GetLastBlock()
 	if err != nil {
 		return 0, err
 	}
+	topBlockHeight := topBlock.ResultsBlock.Header.BlockHeight()
 
-	for i := sourceTopHeight; i <= sourceTopHeight; {
-		singleBlockArr, _, _, err := source.GetBlocks(i, i)
+	for i := topBlockHeight; i <= topBlockHeight; {
+		singleBlockArr, _, _, err := source.GetBlocks(i, i+1) // GetBlocks is 1 based for some strange reason
 		if err != nil {
 			return 0, err
 		}
-		nextHeight, err := callback(ctx, singleBlockArr[0])
+		bp := singleBlockArr[0]
+
+		// Log each transaction being synced TODO - move this from here into the callback func
+		h := bp.ResultsBlock.Header.BlockHeight()
+		for _, tx := range bp.ResultsBlock.TransactionReceipts {
+			logger.Info("attempt service sync for block", log.BlockHeight(h), log.Transaction(tx.Txhash()))
+		}
+
+		// notify the receiving service of the new block
+		nextHeight, err := callback(ctx, bp)
 		if err != nil {
 			return 0, err
 		}
-		if nextHeight == i {
+
+		// if receiving service keep requesting the current height we are stuck
+		if i == nextHeight {
 			return 0, fmt.Errorf("failed to sync block at height %d", i)
 		}
 		i = nextHeight
 	}
 
-	return sourceTopHeight, nil
+	return topBlockHeight, nil
 }
 
-func StartSupervised(ctx context.Context, logger supervised.Errorer, source blockSource, callback blockSyncFunc) {
+func StartSupervised(ctx context.Context, logger log.BasicLogger, name string, source blockSource, callback blockSyncFunc) {
+	ctx = trace.NewContext(ctx, name)
+	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	supervised.GoForever(ctx, logger, func() {
-		source.GetBlockTracker().WaitForBlock(ctx, 1) // TODO - handle differently when Genesis block is addressed
-		height, err := syncOnce(ctx, source, callback)
-		for err == nil {
+
+		var height primitives.BlockHeight
+		var err error
+		for  err == nil {
 			err = source.GetBlockTracker().WaitForBlock(ctx, height + 1)
 			if err != nil {
+				logger.Info("failed waiting for block", log.Error(err))
 				return
 			}
-			height, err = syncOnce(ctx, source, callback)
+			height, err = syncOnce(ctx, source, callback, logger)
 		}
 	})
 }

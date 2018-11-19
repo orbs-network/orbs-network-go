@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestInternalBlockSync_TransactionPool(t *testing.T) {
@@ -15,7 +16,7 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 	blockCount := primitives.BlockHeight(10)
 	txBuilders := make([]*builders.TransactionBuilder, blockCount)
 	for i := 0; i < int(blockCount); i++ {
-		txBuilders[i] = builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i)*10, builders.AddressForEd25519SignerForTests(6))
+		txBuilders[i] = builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, builders.AddressForEd25519SignerForTests(6))
 	}
 
 	harness.Network(t).
@@ -29,6 +30,7 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 			for i := primitives.BlockHeight(1); i <= blockCount; i++ {
 				blockPair := builders.BenchmarkConsensusBlockPair().
 					WithTransaction(txBuilders[i-1].Build()).
+					WithReceiptsForTransactions().
 					WithHeight(i).
 					Build()
 				network.BlockPersistence(0).WriteNextBlock(blockPair)
@@ -38,6 +40,8 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 		// Wait for state storage to sync both nodes to block height 10
 		network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, blockCount)
 		network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, blockCount)
+
+		time.Sleep(30 * time.Millisecond)
 
 		// Resend an already committed transaction to Leader
 		leaderTxResponse, ok := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
@@ -73,7 +77,8 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes.TransactionStatus())
 				topBlock = txRes.BlockHeight()
 			}
-			blockPairContainers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(0, topBlock)
+			blockPairContainers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(1, topBlock+1)
+			require.True(t, len(blockPairContainers) >= transfers)
 			require.NoError(t, err)
 
 			harness.Network(t).
@@ -93,6 +98,13 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 				// Wait for state storage to sync both nodes to block height 10
 				network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, topBlock)
 				network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, topBlock)
+
+				numBlocks, _ := network.BlockPersistence(0).GetNumBlocks()
+				require.EqualValues(t, numBlocks, topBlock)
+				lastBlock, _ := network.BlockPersistence(0).GetLastBlock()
+				require.EqualValues(t, topBlock, lastBlock.ResultsBlock.Header.BlockHeight())
+
+				time.Sleep(100 * time.Millisecond)
 
 				contract = network.GetBenchmarkTokenContract()
 

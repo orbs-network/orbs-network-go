@@ -71,8 +71,8 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	gossip.RegisterBlockSyncHandler(s)
 	s.extSync = extSync.NewExtBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
-	internalsync.StartSupervised(ctx, logger, persistence, s.syncBlockToStateStorage)
-	internalsync.StartSupervised(ctx, logger, persistence, s.syncBlockToTxPool)
+	internalsync.StartSupervised(ctx, logger, "state-storage-sync", persistence, s.syncBlockToStateStorage)
+	internalsync.StartSupervised(ctx, logger, "tx-pool-sync", persistence, s.syncBlockToTxPool)
 
 	return s
 }
@@ -395,7 +395,6 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 }
 
 func (s *service) syncBlockToStateStorage(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
-	s.logger.Info(fmt.Sprintf("syncBlockToStateStorage %#v", committedBlockPair))
 	out, err := s.stateStorage.CommitStateDiff(ctx, &services.CommitStateDiffInput{
 		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
 		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,

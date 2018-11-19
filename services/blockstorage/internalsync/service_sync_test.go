@@ -3,6 +3,7 @@ package internalsync
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -15,17 +16,9 @@ func TestSyncLoop(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
 		// Set up block source mock
-		sourceMock := &blockSourceMock{}
-		sourceMock.When("GetNumBlocks").Return(primitives.BlockHeight(2), nil).Times(1)
-		sourceMock.When("GetBlocks", mock.Any, mock.Any).Call(func(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-			result := make ([]*protocol.BlockPairContainer, last - first + 1)
-			for i := range result {
-				result[i] = &protocol.BlockPairContainer{
-					TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
-				}
-			}
-			return result, first, last, nil
-		}).Times(3)
+		sourceMock := newBlockSourceMock(4)
+		sourceMock.When("GetLastBlock").Times(1)
+		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
 
 		// Set up target mock
 		targetMock := &syncTargetMock{}
@@ -35,10 +28,10 @@ func TestSyncLoop(t *testing.T) {
 				currentHeight++
 			}
 			return currentHeight + 1, nil
-		}).Times(3)
+		}).Times(5)
 
 		// run sync loop
-		reportedHeight, err := syncOnce(ctx, sourceMock, targetMock.callback)
+		reportedHeight, err := syncOnce(ctx, sourceMock, targetMock.callback, log.GetLogger())
 		require.NoError(t, err)
 		require.True(t, currentHeight == reportedHeight)
 
@@ -48,7 +41,7 @@ func TestSyncLoop(t *testing.T) {
 		_, err = targetMock.Verify()
 		require.NoError(t, err)
 
-		require.EqualValues(t, 2, currentHeight)
+		require.EqualValues(t, 4, currentHeight)
 	})
 }
 
@@ -56,20 +49,11 @@ func TestSyncInitialState(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		// Set up block source mock
-		sourceTracker := synchronization.NewBlockTracker(2, 10)
-		sourceCurrentHeight := primitives.BlockHeight(2)
-		sourceMock := &blockSourceMock{}
-		sourceMock.When("GetNumBlocks").Call(func () (primitives.BlockHeight, error) {return sourceCurrentHeight, nil}).Times(2)
+		sourceTracker := synchronization.NewBlockTracker(3, 10)
+		sourceMock := newBlockSourceMock(3)
+		sourceMock.When("GetLastBlock").Times(2)
 		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil).AtLeast(0)
-		sourceMock.When("GetBlocks", mock.Any, mock.Any).Call(func(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-			result := make ([]*protocol.BlockPairContainer, last - first + 1)
-			for i := range result {
-				result[i] = &protocol.BlockPairContainer{
-					TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
-				}
-			}
-			return result, first, last, nil
-		}).Times(4)
+		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
 
 		// Set up target mock
 		targetMock := &syncTargetMock{}
@@ -81,20 +65,20 @@ func TestSyncInitialState(t *testing.T) {
 				targetCurrentHeight++
 			}
 			return targetCurrentHeight + 1, nil
-		}).Times(4)
+		}).Times(5)
 
-		StartSupervised(ctx, nil, sourceMock, targetMock.callback)
+		StartSupervised(ctx, log.GetLogger(), t.Name(), sourceMock, targetMock.callback)
 
 		// Wait for first sync
 		err := targetTracker.WaitForBlock(ctx, 2)
 		require.NoError(t, err)
 
 		// push another block
-		sourceCurrentHeight++
+		sourceMock.setLastBlockHeight(4)
 		sourceTracker.IncrementHeight()
 
 		// Wait for second sync
-		err = targetTracker.WaitForBlock(ctx, 3)
+		err = targetTracker.WaitForBlock(ctx, 4)
 		require.NoError(t, err)
 
 		_, err = sourceMock.Verify()
@@ -103,24 +87,52 @@ func TestSyncInitialState(t *testing.T) {
 		_, err = targetMock.Verify()
 		require.NoError(t, err)
 
-		require.EqualValues(t, 3, targetCurrentHeight)
+		require.EqualValues(t, 4, targetCurrentHeight)
 	})
 }
 
 type blockSourceMock struct {
 	mock.Mock
+	lastBlock *protocol.BlockPairContainer
 }
+
+func newBlockSourceMock(height primitives.BlockHeight) *blockSourceMock {
+	res := &blockSourceMock{}
+	res.setLastBlockHeight(height)
+	return res
+
+}
+
+func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
+	bsf.lastBlock = &protocol.BlockPairContainer{
+		TransactionsBlock: &protocol.TransactionsBlockContainer{
+			Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: height}).Build(),
+		},
+		ResultsBlock:      &protocol.ResultsBlockContainer{
+			Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: height}).Build(),
+		},
+	}
+}
+
+// TODO - this fake implementation assumes there is no genesis block, Fix once addressing genesis
 func (bsf *blockSourceMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-	ret := bsf.Called(first, last)
-	return ret.Get(0).([]*protocol.BlockPairContainer), ret.Get(1).(primitives.BlockHeight), ret.Get(2).(primitives.BlockHeight), ret.Error(3)
+	bsf.Called(first, last)
+	result := make ([]*protocol.BlockPairContainer, last - first)
+	for i := range result {
+		result[i] = &protocol.BlockPairContainer{
+			TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
+			ResultsBlock: &protocol.ResultsBlockContainer{Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
+		}
+	}
+	return result, first, last, nil
 }
 
 func (bsf *blockSourceMock) GetBlockTracker() *synchronization.BlockTracker {
 	return bsf.Called().Get(0).(*synchronization.BlockTracker)
 }
-func (bsf *blockSourceMock) GetNumBlocks() (primitives.BlockHeight, error) {
-	ret := bsf.Called()
-	return ret.Get(0).(primitives.BlockHeight), ret.Error(1)
+func (bsf *blockSourceMock) GetLastBlock() (*protocol.BlockPairContainer, error) {
+	bsf.Called()
+	return bsf.lastBlock, nil
 }
 
 type syncTargetMock struct {
