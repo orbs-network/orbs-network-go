@@ -30,7 +30,9 @@ func TestWriteReadBytesByAddress(t *testing.T) {
 }
 
 func createStateSdk() *service {
-	return &service{sdkHandler: &contractSdkStateCallHandlerStub{}}
+	return &service{sdkHandler: &contractSdkStateCallHandlerStub{
+		store: make(map[string]*protocol.MethodArgument),
+	}}
 }
 
 type contractSdkStateCallHandlerStub struct {
