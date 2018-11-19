@@ -25,6 +25,21 @@ func makeServer(papiMock *services.MockPublicApi) HttpServer {
 	return NewHttpServer("", logger, papiMock, metric.NewRegistry())
 }
 
+func TestHttpServer_Robots(t *testing.T) {
+	s := makeServer(nil)
+
+	req, _ := http.NewRequest("Get", "/robots.txt", nil)
+	rec := httptest.NewRecorder()
+	s.(*server).robots(rec, req)
+
+	expectedResponse := `User-agent: *
+Disallow: /`
+
+	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
+	require.Equal(t, "text/plain", rec.Header().Get("Content-Type"), "should have our content type")
+	require.Equal(t, expectedResponse, rec.Body.String(), "should have text value")
+}
+
 func TestHttpServerSendTxHandler_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.SendTransactionResponseBuilder{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	. "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -105,7 +106,9 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.Tes
 
 	for i := 0; i < network.Size(); i++ {
 		actualSum := <-contract.CallGetBalance(ctx, i, toAddress)
+		require.EqualValuesf(t, expectedSum, actualSum, "recipient balance did not equal expected balance in node %d", i)
 
-		require.EqualValuesf(t, expectedSum, actualSum, "balance did not equal expected balance in node %d", i)
+		actualRemainder := <-contract.CallGetBalance(ctx, i, fromAddress)
+		require.EqualValuesf(t, benchmarktoken.TOTAL_SUPPLY-expectedSum, actualRemainder, "sender balance did not equal expected balance in node %d", i)
 	}
 }

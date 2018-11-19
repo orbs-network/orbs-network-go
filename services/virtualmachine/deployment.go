@@ -13,9 +13,9 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 	// call the system contract to identify the processor
 	processorType, err := s.callGetInfoOfDeploymentSystemContract(ctx, executionContext, serviceName)
 
-	// on failure (contract not deployed), attempt to auto deploy native contract
+	// on failure (contract not deployed), attempt to auto deploy pre-built (in repository) native contract
 	if err != nil {
-		processorType, err = s.attemptToAutoDeployNativeContract(ctx, executionContext, serviceName)
+		processorType, err = s.attemptToAutoDeployPreBuiltNativeContract(ctx, executionContext, serviceName)
 		if err != nil {
 			return nil, err
 		}
@@ -30,7 +30,7 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 	}
 }
 
-func (s *service) attemptToAutoDeployNativeContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
+func (s *service) attemptToAutoDeployPreBuiltNativeContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
 	// make sure we have a write context (needed for deployment)
 	if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
 		return 0, errors.Errorf("context accessScope is %s instead of read-write needed for auto deployment", executionContext.accessScope)

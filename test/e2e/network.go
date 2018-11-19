@@ -24,10 +24,8 @@ func newInProcessE2ENetwork() *inProcessE2ENetwork {
 }
 
 func (h *inProcessE2ENetwork) gracefulShutdown() {
-	if getConfig().bootstrap {
-		for _, node := range h.nodes {
-			node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
-		}
+	for _, node := range h.nodes {
+		node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 	}
 }
 

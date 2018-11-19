@@ -153,9 +153,16 @@ func (h *harness) expectStateStorageRead(expectedHeight primitives.BlockHeight, 
 
 func (h *harness) verifyStateStorageRead(t *testing.T) {
 	ok, err := h.stateStorage.Verify()
-	require.True(t, ok, "did not read from state storage: %v", err)
+	require.True(t, ok, "state storage read was not expected: %v", err)
 }
 
 func (h *harness) expectStateStorageNotRead() {
-	h.stateStorage.When("ReadKeys", mock.Any, mock.Any).Return(&services.ReadKeysOutput{}, nil).Times(0)
+	h.stateStorage.When("ReadKeys", mock.Any, mock.Any).Return(&services.ReadKeysOutput{
+		StateRecords: []*protocol.StateRecord{
+			(&protocol.StateRecordBuilder{
+				Key:   []byte{0x01},
+				Value: []byte{0x02},
+			}).Build(),
+		},
+	}, nil).Times(0)
 }
