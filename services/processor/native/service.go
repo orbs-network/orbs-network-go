@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -23,7 +24,7 @@ type service struct {
 
 	contracts struct {
 		sync.RWMutex
-		instances     map[string]*contractInstance
+		instances     map[string]*types.ContractInstance
 		deployedCache map[string]*sdkContext.ContractInfo
 	}
 
@@ -136,14 +137,14 @@ func (s *service) GetContractInfo(ctx context.Context, input *services.GetContra
 	}, nil
 }
 
-func (s *service) getContractInstance(contractName string) *contractInstance {
+func (s *service) getContractInstance(contractName string) *types.ContractInstance {
 	s.contracts.RLock()
 	defer s.contracts.RUnlock()
 
 	return s.contracts.instances[contractName]
 }
 
-func (s *service) addContractInstance(contractName string, instance *contractInstance) {
+func (s *service) addContractInstance(contractName string, instance *types.ContractInstance) {
 	s.contracts.Lock()
 	defer s.contracts.Unlock()
 

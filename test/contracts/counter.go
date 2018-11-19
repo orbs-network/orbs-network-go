@@ -2,7 +2,7 @@ package contracts
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
 )
 
@@ -70,8 +70,12 @@ func JavaScriptSourceCodeForCounter(startFrom uint64) []byte {
 	return []byte(fmt.Sprintf(COUNTER_JAVASCRIPT_SOURCE_CODE, startFrom, startFrom, startFrom))
 }
 
-func MockForCounter() *sdk.ContractInfo {
-	return &counter_mock.CONTRACT
+func MockForCounter() *sdkContext.ContractInfo {
+	return &sdkContext.ContractInfo{
+		PublicMethods: counter_mock.PUBLIC,
+		SystemMethods: counter_mock.SYSTEM,
+		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE,
+	}
 }
 
 const MOCK_COUNTER_CONTRACT_START_FROM = counter_mock.COUNTER_CONTRACT_START_FROM

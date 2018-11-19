@@ -7,58 +7,18 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
-	"reflect"
-	"runtime"
-	"strings"
 	"time"
 )
 
-type contractInstance struct {
-	publicMethods map[string]interface{}
-	systemMethods map[string]interface{}
-}
-
-func extractMethodName(fullPackageName string) string {
-	parts := strings.Split(fullPackageName, ".")
-	if len(parts) == 0 {
-		return ""
-	} else {
-		return parts[len(parts)-1]
-	}
-}
-
-func initializeContractInstance(contractInfo *sdkContext.ContractInfo) (*contractInstance, error) {
-	res := &contractInstance{
-		publicMethods: make(map[string]interface{}),
-		systemMethods: make(map[string]interface{}),
-	}
-	for _, method := range contractInfo.PublicMethods {
-		v := reflect.ValueOf(method)
-		if v.Kind() != reflect.Func {
-			return nil, errors.New("public method is not a valid func")
-		}
-		name := extractMethodName(runtime.FuncForPC(v.Pointer()).Name())
-		res.publicMethods[name] = method
-	}
-	for _, method := range contractInfo.SystemMethods {
-		v := reflect.ValueOf(method)
-		if v.Kind() != reflect.Func {
-			return nil, errors.New("system method is not a valid func")
-		}
-		name := extractMethodName(runtime.FuncForPC(v.Pointer()).Name())
-		res.systemMethods[name] = method
-	}
-	return res, nil
-}
-
-func initializePreBuiltContractInstances() map[string]*contractInstance {
-	res := make(map[string]*contractInstance)
+func initializePreBuiltContractInstances() map[string]*types.ContractInstance {
+	res := make(map[string]*types.ContractInstance)
 	for contractName, contractInfo := range repository.PreBuiltContracts {
-		instance, err := initializeContractInstance(contractInfo)
+		instance, err := types.NewContractInstance(contractInfo)
 		if err == nil {
 			res[contractName] = instance
 		}
@@ -108,7 +68,7 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 		return nil, errors.Errorf("compilation and load of deployable contract '%s' did not return a valid symbol", contractName)
 	}
 
-	instance, err := initializeContractInstance(newContractInfo)
+	instance, err := types.NewContractInstance(newContractInfo)
 	if err != nil {
 		return nil, errors.Errorf("instance initialization of deployable contract '%s' failed", contractName)
 	}

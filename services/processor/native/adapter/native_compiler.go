@@ -134,28 +134,32 @@ func loadSharedObject(soFilePath string) (*sdkContext.ContractInfo, error) {
 		return nil, err
 	}
 
-	var publicMethods *[]interface{}
+	publicMethods := []interface{}{}
+	var publicMethodsPtr *[]interface{}
 	publicMethodsSymbol, err := loadedPlugin.Lookup("PUBLIC")
 	if err != nil {
 		return nil, err
 	}
-	publicMethods, ok := publicMethodsSymbol.(*[]interface{})
+	publicMethodsPtr, ok := publicMethodsSymbol.(*[]interface{})
 	if !ok {
 		return nil, errors.New("PUBLIC methods export has incorrect type")
 	}
+	publicMethods = *publicMethodsPtr
 
-	var systemMethods *[]interface{}
+	systemMethods := []interface{}{}
+	var systemMethodsPtr *[]interface{}
 	systemMethodsSymbol, err := loadedPlugin.Lookup("SYSTEM")
 	if err == nil {
-		systemMethods, ok = systemMethodsSymbol.(*[]interface{})
+		systemMethodsPtr, ok = systemMethodsSymbol.(*[]interface{})
 		if !ok {
 			return nil, errors.New("SYSTEM methods export has incorrect type")
 		}
+		systemMethods = *systemMethodsPtr
 	}
 
 	return &sdkContext.ContractInfo{
-		PublicMethods: *publicMethods,
-		SystemMethods: *systemMethods,
+		PublicMethods: publicMethods,
+		SystemMethods: systemMethods,
 		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE, // we don't support compiling system contracts on the fly
 	}, nil
 }

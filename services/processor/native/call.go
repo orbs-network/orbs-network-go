@@ -1,24 +1,25 @@
 package native
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"reflect"
 )
 
-func (s *service) retrieveContractAndMethodInstances(contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (contractInstance *contractInstance, methodInstance interface{}, err error) {
+func (s *service) retrieveContractAndMethodInstances(contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (contractInstance *types.ContractInstance, methodInstance types.MethodInstance, err error) {
 	contractInstance = s.getContractInstance(contractName)
 	if contractInstance == nil {
 		return nil, nil, errors.Errorf("contract instance not found for contract '%s'", contractName)
 	}
 
-	methodInstance, found := contractInstance.publicMethods[methodName]
+	methodInstance, found := contractInstance.PublicMethods[methodName]
 	if found {
 		return contractInstance, methodInstance, nil
 	}
 
-	methodInstance, found = contractInstance.systemMethods[methodName]
+	methodInstance, found = contractInstance.SystemMethods[methodName]
 	if found {
 		if permissionScope == protocol.PERMISSION_SCOPE_SYSTEM {
 			return contractInstance, methodInstance, nil
@@ -30,7 +31,7 @@ func (s *service) retrieveContractAndMethodInstances(contractName string, method
 	return nil, nil, errors.Errorf("method '%s' not found on contract '%s'", methodName, contractName)
 }
 
-func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *contractInstance, methodInstance interface{}, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
+func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -58,7 +59,7 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(executionContextId primitives.ExecutionContextId, methodInstance interface{}, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
+func (s *service) prepareMethodInputArgsForCall(executionContextId primitives.ExecutionContextId, methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(methodInstance).Type()
 
@@ -112,7 +113,7 @@ func (s *service) prepareMethodInputArgsForCall(executionContextId primitives.Ex
 	return res, nil
 }
 
-func (s *service) createMethodOutputArgs(methodInstance interface{}, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
+func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
 	res := []*protocol.MethodArgumentBuilder{}
 	for i, arg := range args {
 		switch arg.Kind() {
