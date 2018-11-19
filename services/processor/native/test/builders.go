@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -31,6 +32,11 @@ func processCallInput() *processCall {
 
 func (p *processCall) Build() *services.ProcessCallInput {
 	return p.input
+}
+
+func (p *processCall) WithContextId(contextId sdkContext.ContextId) *processCall {
+	p.input.ContextId = primitives.ExecutionContextId(contextId)
+	return p
 }
 
 func (p *processCall) WithUnknownContract() *processCall {
