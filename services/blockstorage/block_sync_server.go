@@ -11,6 +11,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (s *service) HandleBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+	err := s.sourceHandleBlockAvailabilityRequest(ctx, input.Message)
+	return nil, err
+}
+
+func (s *service) HandleBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+	err := s.sourceHandleBlockSyncRequest(ctx, input.Message)
+	return nil, err
+}
+
 func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, message *gossipmessages.BlockAvailabilityRequestMessage) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
