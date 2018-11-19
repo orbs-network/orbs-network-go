@@ -35,7 +35,7 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 
 	defer func() {
 		if r := recover(); r != nil {
-			contractOutputErr = errors.Errorf("contract error: %s", r)
+			contractOutputErr = errors.Errorf("%s", r)
 			contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()

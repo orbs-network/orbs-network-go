@@ -8,17 +8,17 @@ import (
 	"strings"
 )
 
-type ContractInstance struct {
-	PublicMethods map[string]interface{}
-	SystemMethods map[string]interface{}
-}
-
 type MethodInstance interface{}
+
+type ContractInstance struct {
+	PublicMethods map[string]MethodInstance
+	SystemMethods map[string]MethodInstance
+}
 
 func NewContractInstance(contractInfo *context.ContractInfo) (*ContractInstance, error) {
 	res := &ContractInstance{
-		PublicMethods: make(map[string]interface{}),
-		SystemMethods: make(map[string]interface{}),
+		PublicMethods: make(map[string]MethodInstance),
+		SystemMethods: make(map[string]MethodInstance),
 	}
 	for _, method := range contractInfo.PublicMethods {
 		v := reflect.ValueOf(method)

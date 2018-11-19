@@ -36,9 +36,10 @@ func TestProcessCall_Permissions(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			name:          "SystemMethodUnderSystemPermissionsSucceeds",
-			input:         processCallInput().WithSystemMethod().WithSystemPermissions().Build(),
-			expectedError: false,
+			name:             "SystemMethodUnderSystemPermissionsSucceeds",
+			input:            processCallInput().WithSystemMethod().WithSystemPermissions().Build(),
+			expectedError:    false,
+			expectedSdkWrite: true,
 		},
 	}
 	for _, tt := range tests {
