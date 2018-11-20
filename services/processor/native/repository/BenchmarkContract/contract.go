@@ -13,6 +13,7 @@ const CONTRACT_NAME = "BenchmarkContract"
 
 var PUBLIC = sdk.Export(add, set, get, argTypes, throw)
 var SYSTEM = sdk.Export(_init)
+var PRIVATE = sdk.Export(nop) // needed to avoid lint error since this private function is not used by anyone (it's for a test)
 
 func _init() {
 	state.WriteUint64ByKey("initialized", 1)
