@@ -9,7 +9,9 @@ import (
 
 // helpers for avoiding reliance on strings throughout the system
 const CONTRACT_NAME = "_Deployments"
+const METHOD_GET_INFO = "getInfo"
 const METHOD_GET_CODE = "getCode"
+const METHOD_DEPLOY_SERVICE = "deployService"
 
 /////////////////////////////////////////////////////////////////
 // contract starts here
@@ -20,7 +22,7 @@ func getInfo(serviceName string) uint32 {
 	if serviceName == CONTRACT_NAME { // getInfo on self
 		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
 	}
-	processorType := state.ReadUint32ByKey(serviceName + ".Processor")
+	processorType := _readProcessor(serviceName)
 	if processorType == 0 {
 		panic("contract not deployed")
 	}
@@ -28,7 +30,7 @@ func getInfo(serviceName string) uint32 {
 }
 
 func getCode(serviceName string) []byte {
-	code := state.ReadBytesByKey(serviceName + ".Code")
+	code := _readCode(serviceName)
 	if len(code) == 0 {
 		panic("contract code not available")
 	}
@@ -36,15 +38,34 @@ func getCode(serviceName string) []byte {
 }
 
 func deployService(serviceName string, processorType uint32, code []byte) {
-	getInfo(serviceName) // will panic if already deployed
-
 	// TODO: sanitize serviceName
 
-	state.WriteUint32ByKey(serviceName+".Processor", processorType)
+	existingProcessorType := _readProcessor(serviceName)
+	if existingProcessorType != 0 {
+		panic("contract already deployed")
+	}
+
+	_writeProcessor(serviceName, processorType)
 
 	if len(code) != 0 {
-		state.WriteBytesByKey(serviceName+".Code", code)
+		_writeCode(serviceName, code)
 	}
 
 	service.CallMethod(serviceName, "_init")
+}
+
+func _readProcessor(serviceName string) uint32 {
+	return state.ReadUint32ByKey(serviceName + ".Processor")
+}
+
+func _writeProcessor(serviceName string, processorType uint32) {
+	state.WriteUint32ByKey(serviceName+".Processor", processorType)
+}
+
+func _readCode(serviceName string) []byte {
+	return state.ReadBytesByKey(serviceName + ".Code")
+}
+
+func _writeCode(serviceName string, code []byte) {
+	state.WriteBytesByKey(serviceName+".Code", code)
 }

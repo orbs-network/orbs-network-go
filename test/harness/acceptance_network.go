@@ -3,13 +3,13 @@ package harness
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
@@ -24,8 +24,8 @@ type TestNetworkDriver interface {
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
-	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int,)
-	MockContract(fakeContractInfo *sdk.ContractInfo, code string)
+	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int)
+	MockContract(fakeContractInfo *sdkContext.ContractInfo, code string)
 }
 
 func NewAcceptanceTestNetwork(ctx context.Context, numNodes int, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, maxTxPerBlock uint32) *acceptanceNetwork {
@@ -83,7 +83,7 @@ func (n *acceptanceNetwork) Start(ctx context.Context) {
 	n.CreateAndStartNodes(ctx) // needs to start first so that nodes can register their listeners to it
 }
 
-func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int, ) {
+func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int) {
 	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
 }
 
@@ -109,7 +109,7 @@ func (n *acceptanceNetwork) DumpState() {
 	}
 }
 
-func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdk.ContractInfo, code string) {
+func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
 
 	// if needed, provide a fake implementation of this contract to all nodes
 	for _, node := range n.Nodes {
@@ -118,6 +118,3 @@ func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdk.ContractInfo, cod
 		}
 	}
 }
-
-
-
