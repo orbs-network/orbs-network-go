@@ -39,7 +39,7 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 			test.WithContext(func(ctx context.Context) {
 				h := newHarness()
 
-				h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, nil)
+				h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, nil)
 
 				results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tt.tx})
 				if tt.status == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
@@ -59,7 +59,7 @@ func TestPreOrder_GlobalSubscriptionContractNotApproved(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT.Name, globalpreorder_systemcontract.METHOD_APPROVE.Name, errors.New("contract not approved"))
+		h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, errors.New("contract not approved"))
 
 		tx := builders.Transaction().Build()
 		results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tx})

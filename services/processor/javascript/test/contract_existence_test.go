@@ -17,7 +17,7 @@ func TestProcessCall_WithUnknownContractFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		input := processCallInput().WithUnknownContract().Build()
-		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_CODE.Name, builders.MethodArgumentsArray(string(input.ContractName)), nil, errors.New("code not found error"))
+		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.MethodArgumentsArray(string(input.ContractName)), nil, errors.New("code not found error"))
 
 		_, err := h.service.ProcessCall(ctx, input)
 		require.Error(t, err, "call should fail")
@@ -31,7 +31,7 @@ func TestProcessCall_WithDeployableContractSucceeds(t *testing.T) {
 		h := newHarness()
 		input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
 		codeOutput := builders.MethodArgumentsArray([]byte(contracts.JavaScriptSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
-		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_CODE.Name, builders.MethodArgumentsArray(string(input.ContractName)), codeOutput, nil)
+		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.MethodArgumentsArray(string(input.ContractName)), codeOutput, nil)
 
 		output, err := h.service.ProcessCall(ctx, input)
 		require.NoError(t, err, "call should succeed")

@@ -19,13 +19,6 @@ func TestProcessCall_Arguments(t *testing.T) {
 		expectedOutput *protocol.MethodArgumentArray
 	}{
 		{
-			name:           "WithNoArgsAndNoReturn",
-			input:          processCallInput().WithMethod("BenchmarkContract", "nop").Build(),
-			expectedError:  false,
-			expectedResult: protocol.EXECUTION_RESULT_SUCCESS,
-			expectedOutput: builders.MethodArgumentsArray(),
-		},
-		{
 			name:           "WithAllArgTypes",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}).Build(),
 			expectedError:  false,
@@ -59,18 +52,6 @@ func TestProcessCall_Arguments(t *testing.T) {
 		{
 			name:           "WithUnknownArgTypeFails",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(float32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}).Build(),
-			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
-		},
-		{
-			name:           "WithInvalidMethodMissingErrorFails",
-			input:          processCallInput().WithMethod("BenchmarkContract", "invalidNoError").Build(),
-			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
-		},
-		{
-			name:           "WithInvalidMethodMissingContextFails",
-			input:          processCallInput().WithMethod("BenchmarkContract", "invalidNoContext").Build(),
 			expectedError:  true,
 			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		},

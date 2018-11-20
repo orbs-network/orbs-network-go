@@ -55,8 +55,8 @@ func (s *service) attemptToAutoDeployPreBuiltNativeContract(ctx context.Context,
 }
 
 func (s *service) callGetInfoOfDeploymentSystemContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
-	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
-	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_INFO.Name)
+	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
+	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_INFO)
 
 	// modify execution context
 	executionContext.serviceStackPush(systemContractName)
@@ -96,8 +96,8 @@ func (s *service) callGetInfoOfDeploymentSystemContract(ctx context.Context, exe
 }
 
 func (s *service) callDeployServiceOfDeploymentSystemContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) error {
-	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
-	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_DEPLOY_SERVICE.Name)
+	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
+	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_DEPLOY_SERVICE)
 
 	// modify execution context
 	executionContext.serviceStackPush(systemContractName)

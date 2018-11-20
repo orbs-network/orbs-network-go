@@ -2,9 +2,9 @@ package adapter
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 )
 
 type Compiler interface {
-	Compile(ctx context.Context, code string) (*sdk.ContractInfo, error)
+	Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error)
 }

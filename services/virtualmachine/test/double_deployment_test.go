@@ -46,9 +46,9 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndIsPreBuiltNativeContrac
 	})
 }
 
-var DEPLOYMENT_CONTRACT = primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
-var DEPLOYMENT_GET_INFO_METHOD = primitives.MethodName(deployments_systemcontract.METHOD_GET_INFO.Name)
-var DEPLOYMENT_DEPLOY_METHOD = primitives.MethodName(deployments_systemcontract.METHOD_DEPLOY_SERVICE.Name)
+var DEPLOYMENT_CONTRACT = primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
+var DEPLOYMENT_GET_INFO_METHOD = primitives.MethodName(deployments_systemcontract.METHOD_GET_INFO)
+var DEPLOYMENT_DEPLOY_METHOD = primitives.MethodName(deployments_systemcontract.METHOD_DEPLOY_SERVICE)
 var DEPLOYMENT_DATA_STATE_KEY_NAME = []byte{0x01}  // some value to represent it
 var DEPLOYMENT_DATA_STATE_KEY_VALUE = []byte{0x02} // some value to represent it
 

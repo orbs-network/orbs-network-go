@@ -4,9 +4,9 @@ package adapter
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
@@ -72,7 +72,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	contractInfo, err := loadSharedObject(soFilePath)
 	require.NoError(t, err, "load should succeed")
 	require.NotNil(t, contractInfo, "loaded object should not be nil")
-	require.Equal(t, fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
+	require.Equal(t, len(counter_mock.PUBLIC), len(contractInfo.PublicMethods), "loaded object should be valid")
 
 	t.Log("Try to rebuild already loaded artifact")
 
@@ -87,7 +87,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	contractInfo, err = loadSharedObject(soFilePath)
 	require.NoError(t, err, "load should succeed")
 	require.NotNil(t, contractInfo, "loaded object should not be nil")
-	require.Equal(t, fmt.Sprintf("CounterFrom%d", COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
+	require.Equal(t, len(counter_mock.PUBLIC), len(contractInfo.PublicMethods), "loaded object should be valid")
 }
 
 func getFileSize(filePath string) int64 {

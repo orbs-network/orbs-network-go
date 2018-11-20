@@ -2,7 +2,7 @@ package harness
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
@@ -19,8 +19,8 @@ type TestNetworkDriver interface {
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
-	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int,)
-	MockContract(fakeContractInfo *sdk.ContractInfo, code string)
+	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int)
+	MockContract(fakeContractInfo *sdkContext.ContractInfo, code string)
 }
 
 type acceptanceNetwork struct {
@@ -34,7 +34,7 @@ func (n *acceptanceNetwork) Start(ctx context.Context, numOfNodesToStart int) {
 	n.CreateAndStartNodes(ctx, numOfNodesToStart) // needs to start first so that nodes can register their listeners to it
 }
 
-func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int, ) {
+func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int) {
 	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
 }
 
@@ -60,8 +60,7 @@ func (n *acceptanceNetwork) DumpState() {
 	}
 }
 
-func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdk.ContractInfo, code string) {
-
+func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
 	// if needed, provide a fake implementation of this contract to all nodes
 	for _, node := range n.Nodes {
 		if fakeCompiler, ok := node.GetCompiler().(nativeProcessorAdapter.FakeCompiler); ok {
@@ -69,6 +68,3 @@ func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdk.ContractInfo, cod
 		}
 	}
 }
-
-
-
