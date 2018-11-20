@@ -188,6 +188,7 @@ func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *
 }
 
 func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
+	s.logger.Info("Got committed message", trace.LogFieldFrom(ctx))
 	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
 	// validate the vote
@@ -206,6 +207,7 @@ func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipm
 	if enoughVotesReceived {
 		select {
 		case s.successfullyVotedBlocks <- lastCommittedBlockHeight:
+			s.logger.Info("Block has reached consensus", log.BlockHeight(lastCommittedBlockHeight), trace.LogFieldFrom(ctx))
 		case <-ctx.Done():
 			return ctx.Err()
 		}

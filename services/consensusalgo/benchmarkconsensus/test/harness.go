@@ -58,14 +58,13 @@ func newHarness(
 		nodeKeyPair = nonLeaderKeyPair()
 	}
 
-	cfg := config.ForAcceptanceTests(
+	//TODO don't use acceptance tests config! use a per-service config
+	cfg := config.ForAcceptanceTestNetwork(
 		federationNodes,
-		make(map[string]config.GossipPeer),
-		nodeKeyPair.PublicKey(),
-		nodeKeyPair.PrivateKey(),
 		leaderKeyPair().PublicKey(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		1,
+		100,
 	)
 
 	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
@@ -86,7 +85,7 @@ func newHarness(
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
 		reporting:        log,
-		config:           cfg,
+		config:           cfg.OverrideNodeSpecificValues(0, nodeKeyPair.PublicKey(), nodeKeyPair.PrivateKey()),
 		service:          nil,
 		registry:         metric.NewRegistry(),
 	}
