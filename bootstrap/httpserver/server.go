@@ -51,7 +51,7 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = tc.SetKeepAlivePeriod(3 * time.Minute)
+	err = tc.SetKeepAlivePeriod(35 * time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,17 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/call-method", http.HandlerFunc(s.callMethodHandler))
 	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(s.getTransactionStatusHandler))
 	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
+	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
 	return router
+}
+
+func (s *server) robots(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	_, err := w.Write([]byte(`User-agent: *
+Disallow: /`))
+	if err != nil {
+		s.logger.Info("error writing robots.txt response", log.Error(err))
+	}
 }
 
 func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {

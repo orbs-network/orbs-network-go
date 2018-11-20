@@ -3,6 +3,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -11,6 +12,8 @@ import (
 )
 
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	bh, _ := s.currentBlockHeightAndTime()
 	if input.LastCommittedBlockHeight != bh+1 {
 		return &services.CommitTransactionReceiptsOutput{
@@ -29,7 +32,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 		s.committedPool.add(receipt, timestampOrNow(removedTx))
 
-		s.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Stringable("txHash", receipt.Txhash()))
+		logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
 
 	}
 
@@ -45,12 +48,12 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 				TransactionReceipts: myReceipts,
 			})
 			if err != nil {
-				s.logger.Info("notify tx result failed", log.Error(err))
+				logger.Info("notify tx result failed", log.Error(err))
 			}
 		}
 	}
 
-	s.logger.Info("committed transaction receipts for block height", log.BlockHeight(bh))
+	logger.Info("committed transaction receipts for block height", log.BlockHeight(bh))
 
 	return &services.CommitTransactionReceiptsOutput{
 		NextDesiredBlockHeight:   bh + 1,
@@ -59,6 +62,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 }
 
 func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) primitives.BlockHeight {
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.mu.lastCommittedBlockHeight = header.BlockHeight()

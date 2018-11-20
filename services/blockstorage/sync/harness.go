@@ -56,6 +56,16 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	}
 }
 
+func newBlockSyncConfigForTestsWithInfiniteTimeouts() *blockSyncConfigForTests {
+	return &blockSyncConfigForTests{
+		pk:               keys.Ed25519KeyPairForTests(1).PublicKey(),
+		batchSize:        10,
+		noCommit:         3 * time.Hour,
+		collectResponses: 3 * time.Hour,
+		collectChunks:    3 * time.Hour,
+	}
+}
+
 type blockSyncHarness struct {
 	factory       *stateFactory
 	config        *blockSyncConfigForTests

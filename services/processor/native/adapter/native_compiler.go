@@ -1,9 +1,11 @@
+//+build !nonativecompiler
+
 package adapter
 
 import (
 	"context"
 	"encoding/hex"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -14,20 +16,9 @@ import (
 	"path/filepath"
 	"plugin"
 	"strings"
-	"time"
 )
 
-const SOURCE_CODE_PATH = "native-src"
-const SHARED_OBJECT_PATH = "native-bin"
-const GC_CACHE_PATH = "native-cache"
-const MAX_COMPILATION_TIME = 5 * time.Second          // TODO: maybe move to config or maybe have caller provide via context
-const MAX_WARM_UP_COMPILATION_TIME = 15 * time.Second // TODO: maybe move to config or maybe have caller provide via context
-
 var LogTag = log.String("adapter", "processor-native")
-
-type Config interface {
-	ProcessorArtifactPath() string
-}
 
 type nativeCompiler struct {
 	config Config
@@ -55,7 +46,7 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 	}
 }
 
-func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdk.ContractInfo, error) {
+func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
 	artifactsPath := c.config.ProcessorArtifactPath()
 	hashOfCode := getHashOfCode(code)
 
@@ -128,18 +119,40 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	return soFilePath, nil
 }
 
-func loadSharedObject(soFilePath string) (*sdk.ContractInfo, error) {
+func loadSharedObject(soFilePath string) (*sdkContext.ContractInfo, error) {
 	loadedPlugin, err := plugin.Open(soFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	contractSymbol, err := loadedPlugin.Lookup("CONTRACT")
+	publicMethods := []interface{}{}
+	var publicMethodsPtr *[]interface{}
+	publicMethodsSymbol, err := loadedPlugin.Lookup("PUBLIC")
 	if err != nil {
 		return nil, err
 	}
+	publicMethodsPtr, ok := publicMethodsSymbol.(*[]interface{})
+	if !ok {
+		return nil, errors.New("PUBLIC methods export has incorrect type")
+	}
+	publicMethods = *publicMethodsPtr
 
-	return contractSymbol.(*sdk.ContractInfo), nil
+	systemMethods := []interface{}{}
+	var systemMethodsPtr *[]interface{}
+	systemMethodsSymbol, err := loadedPlugin.Lookup("SYSTEM")
+	if err == nil {
+		systemMethodsPtr, ok = systemMethodsSymbol.(*[]interface{})
+		if !ok {
+			return nil, errors.New("SYSTEM methods export has incorrect type")
+		}
+		systemMethods = *systemMethodsPtr
+	}
+
+	return &sdkContext.ContractInfo{
+		PublicMethods: publicMethods,
+		SystemMethods: systemMethods,
+		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE, // we don't support compiling system contracts on the fly
+	}, nil
 }
 
 func getGOPATH() string {

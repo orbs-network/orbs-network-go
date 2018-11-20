@@ -17,7 +17,7 @@ func ForDirectTransportTests(gossipPeers map[string]GossipPeer) GossipTransportC
 	return cfg
 }
 
-func ForGossipAdapterTests(publicKey primitives.Ed25519PublicKey, gossipListenPort uint16, gossipPeers map[string]GossipPeer) GossipTransportConfig {
+func ForGossipAdapterTests(publicKey primitives.Ed25519PublicKey, gossipListenPort int, gossipPeers map[string]GossipPeer) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodePublicKey(publicKey)
 	cfg.SetGossipPeers(gossipPeers)

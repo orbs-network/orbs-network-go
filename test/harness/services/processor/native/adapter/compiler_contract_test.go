@@ -2,10 +2,9 @@ package adapter
 
 import (
 	"context"
-	"fmt"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/stretchr/testify/require"
@@ -43,11 +42,11 @@ func compileTest(newHarness func(t *testing.T) *compilerContractHarness) func(*t
 
 		require.NoError(t, err, "compile should succeed")
 		require.NotNil(t, contractInfo, "loaded object should not be nil")
-		require.Equal(t, fmt.Sprintf("CounterFrom%d", contracts.MOCK_COUNTER_CONTRACT_START_FROM), contractInfo.Name, "loaded object should be valid")
 
 		// instantiate the "start()" function of the contract and call it
-		ci := contractInfo.InitSingleton(nil)
-		res := reflect.ValueOf(contractInfo.Methods["start"].Implementation).Call([]reflect.Value{reflect.ValueOf(ci), reflect.ValueOf(sdk.Context(0))})
+		contractInstance, err := types.NewContractInstance(contractInfo)
+		require.NoError(t, err, "create contract instance should succeed")
+		res := reflect.ValueOf(contractInstance.PublicMethods["start"]).Call([]reflect.Value{})
 		require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, res[0].Interface().(uint64), "result of calling start() should match")
 
 		t.Log("Compiling an invalid contract")

@@ -11,7 +11,7 @@ type hardCodedFederationNode struct {
 }
 
 type hardCodedGossipPeer struct {
-	gossipPort     uint16
+	gossipPort     int
 	gossipEndpoint string
 }
 
@@ -83,7 +83,7 @@ func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) Feder
 	}
 }
 
-func NewHardCodedGossipPeer(gossipPort uint16, gossipEndpoint string) GossipPeer {
+func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string) GossipPeer {
 	return &hardCodedGossipPeer{
 		gossipPort:     gossipPort,
 		gossipEndpoint: gossipEndpoint,
@@ -144,7 +144,7 @@ func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
 }
 
-func (c *hardCodedGossipPeer) GossipPort() uint16 {
+func (c *hardCodedGossipPeer) GossipPort() int {
 	return c.gossipPort
 }
 

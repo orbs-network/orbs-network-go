@@ -54,7 +54,7 @@ func NewNodeLogic(
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector(ctx, ethereumConnection, logger)
 
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
-	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger)
+	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, metricRegistry)
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, stateStorageService, gossipService, transactionPoolService, logger, metricRegistry)
@@ -74,6 +74,8 @@ func NewNodeLogic(
 
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
+
+	logger.Info("Node started")
 
 	return &nodeLogic{
 		publicApi:       publicApiService,

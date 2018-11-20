@@ -37,7 +37,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 
 		t.Log("Runs BenchmarkToken.transfer")
 
-		call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).WithWriteAccess().Build()
+		call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).Build()
 		h.expectSdkCallMadeWithAddressGetCaller(callerAddress)
 		h.expectSdkCallMadeWithStateRead(callerAddress, uint64ToBytes(callerBalance))
 		h.expectSdkCallMadeWithStateWrite(callerAddress, uint64ToBytes(callerBalance-amount))
@@ -72,7 +72,7 @@ func TestBenchmarkToken_TransferLargerThanAvailableFails(t *testing.T) {
 
 		t.Log("Runs BenchmarkToken.transfer large amount")
 
-		call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).WithWriteAccess().Build()
+		call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).Build()
 		h.expectSdkCallMadeWithAddressGetCaller(callerAddress)
 		h.expectSdkCallMadeWithStateRead(callerAddress, uint64ToBytes(callerBalance))
 

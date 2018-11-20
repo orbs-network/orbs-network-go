@@ -75,8 +75,16 @@ type NodeConfig interface {
 	EthereumEndpoint() string
 }
 
-type mutableNodeConfig interface {
+type OverridableConfig interface {
 	NodeConfig
+	OverrideNodeSpecificValues(
+		gossipListenPort int,
+		nodePublicKey primitives.Ed25519PublicKey,
+		nodePrivateKey primitives.Ed25519PrivateKey) NodeConfig
+}
+
+type mutableNodeConfig interface {
+	OverridableConfig
 	Set(key string, value NodeConfigValue) mutableNodeConfig
 	SetDuration(key string, value time.Duration) mutableNodeConfig
 	SetUint32(key string, value uint32) mutableNodeConfig
@@ -88,14 +96,7 @@ type mutableNodeConfig interface {
 	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
-	OverrideNodeSpecificValues(
-		federationNodes map[string]FederationNode,
-		gossipPeers map[string]GossipPeer,
-		gossipListenPort uint16,
-		nodePublicKey primitives.Ed25519PublicKey,
-		nodePrivateKey primitives.Ed25519PrivateKey,
-		constantConsensusLeader primitives.Ed25519PublicKey,
-		activeConsensusAlgo consensus.ConsensusAlgoType)
+	Clone() mutableNodeConfig
 }
 
 type BlockStorageConfig interface {
@@ -158,6 +159,6 @@ type FederationNode interface {
 }
 
 type GossipPeer interface {
-	GossipPort() uint16
+	GossipPort() int
 	GossipEndpoint() string
 }

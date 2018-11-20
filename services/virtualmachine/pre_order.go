@@ -8,12 +8,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-func (s *service) callGlobalPreOrderSystemContract(ctx context.Context, blockHeight primitives.BlockHeight, blockTimestamp primitives.TimestampNano) error {
-	systemContractName := primitives.ContractName(globalpreorder_systemcontract.CONTRACT.Name)
-	systemMethodName := primitives.MethodName(globalpreorder_systemcontract.METHOD_APPROVE.Name)
+func (s *service) callGlobalPreOrderSystemContract(ctx context.Context, blockHeight primitives.BlockHeight) error {
+	systemContractName := primitives.ContractName(globalpreorder_systemcontract.CONTRACT_NAME)
+	systemMethodName := primitives.MethodName(globalpreorder_systemcontract.METHOD_APPROVE)
 
 	// create execution context
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockTimestamp, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 
 	// modify execution context
