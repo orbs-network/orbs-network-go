@@ -7,13 +7,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type BlockPairWrapper struct {
@@ -33,6 +33,83 @@ func NewBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapp
 	return &BlockPairWrapper{
 		blockPair: blockPair,
 	}
+}
+
+// TODO This should be updated on commit!!!
+// Currently put the state of the last committed block here, but it might not be the right place for it.
+// See https://tree.taiga.io/project/orbs-network/us/404
+type blockProvider struct {
+	consensusContext              services.ConsensusContext
+	consensusRoundTimeoutInterval time.Duration
+	nodePublicKey                 primitives.Ed25519PublicKey
+	nodePrivateKey                primitives.Ed25519PrivateKey
+	lastCommittedBlock            *protocol.BlockPairContainer
+	lastCommittedBlockHeight      primitives.BlockHeight
+}
+
+func NewBlockProvider(consensusRoundTimeoutInterval time.Duration, nodePublicKey primitives.Ed25519PublicKey, nodePrivateKey primitives.Ed25519PrivateKey) *blockProvider {
+
+	return &blockProvider{
+		consensusRoundTimeoutInterval: consensusRoundTimeoutInterval,
+		nodePublicKey:                 nodePublicKey,
+		nodePrivateKey:                nodePrivateKey,
+	}
+
+}
+
+func (p *blockProvider) RequestNewBlock(ctx context.Context, blockHeight lhprimitives.BlockHeight) leanhelix.Block {
+	// TODO Is this the right timeout here - probably should be a little smaller
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, p.consensusRoundTimeoutInterval)
+	defer cancel()
+
+	//lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
+	//logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
+
+	// get tx
+	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctxWithTimeout, &services.RequestNewTransactionsBlockInput{
+		BlockHeight:   p.lastCommittedBlockHeight + 1,
+		PrevBlockHash: digest.CalcTransactionsBlockHash(p.lastCommittedBlock.TransactionsBlock),
+	})
+	if err != nil {
+		return nil
+	}
+
+	// get rx
+	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctxWithTimeout, &services.RequestNewResultsBlockInput{
+		BlockHeight:       p.lastCommittedBlockHeight + 1,
+		PrevBlockHash:     digest.CalcResultsBlockHash(p.lastCommittedBlock.ResultsBlock),
+		TransactionsBlock: txOutput.TransactionsBlock,
+	})
+	if err != nil {
+		return nil
+	}
+
+	// generate signed block
+	// TODO what to do in case of error - similar to handling timeout
+	pair, _ := p.signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
+	blockPairWrapper := NewBlockPairWrapper(&protocol.BlockPairContainer{
+		TransactionsBlock: pair.TransactionsBlock,
+		ResultsBlock:      pair.ResultsBlock,
+	})
+
+	return blockPairWrapper
+
+}
+
+func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
+	blockPairWrapper := block.(*BlockPairWrapper)
+	return p.hash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
+}
+
+func (p *blockProvider) hash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.ResultsBlockContainer) []byte {
+	txHash := digest.CalcTransactionsBlockHash(txBlock)
+	rxHash := digest.CalcResultsBlockHash(rxBlock)
+	xorHash := logic.CalcXor(txHash, rxHash)
+	return xorHash
+}
+
+func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
+	panic("implement me")
 }
 
 // This calls ValidateBlockConsensus
@@ -126,55 +203,15 @@ func (s *service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.Blo
 	return s.lastCommittedBlock.block.TransactionsBlock.Header.BlockHeight(), s.lastCommittedBlock.block
 }
 
-func (s *service) RequestNewBlock(parentCtx context.Context, blockHeight lhprimitives.BlockHeight) leanhelix.Block {
-
-	// TODO Is this the right timeout here - probably should be a little smaller
-	ctxWithTimeout, cancel := context.WithTimeout(parentCtx, s.config.LeanHelixConsensusRoundTimeoutInterval())
-	defer cancel()
-
-	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
-	s.logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
-
-	// get tx
-	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctxWithTimeout, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   lastCommittedBlockHeight + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
-	})
-	if err != nil {
-		return nil
-	}
-
-	// get rx
-	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctxWithTimeout, &services.RequestNewResultsBlockInput{
-		BlockHeight:       lastCommittedBlockHeight + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
-		TransactionsBlock: txOutput.TransactionsBlock,
-	})
-	if err != nil {
-		return nil
-	}
-
-	// generate signed block
-	// TODO what to do in case of error - similar to handling timeout
-	pair, _ := s.signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
-	blockPairWrapper := NewBlockPairWrapper(&protocol.BlockPairContainer{
-		TransactionsBlock: pair.TransactionsBlock,
-		ResultsBlock:      pair.ResultsBlock,
-	})
-
-	return blockPairWrapper
-
-}
-
-func (s *service) signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
+func (p *blockProvider) signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
 		ResultsBlock:      resultsBlock,
 	}
 
 	// prepare signature over the block headers
-	blockPairDataToSign := s.dataToSignFrom(blockPair)
-	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), blockPairDataToSign)
+	blockPairDataToSign := p.dataToSignFrom(blockPair)
+	sig, err := signature.SignEd25519(p.nodePrivateKey, blockPairDataToSign)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +227,7 @@ func (s *service) signBlockProposal(transactionsBlock *protocol.TransactionsBloc
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
 			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
+				SenderPublicKey: p.nodePublicKey,
 				Signature:       sig,
 			},
 		},
@@ -198,18 +235,6 @@ func (s *service) signBlockProposal(transactionsBlock *protocol.TransactionsBloc
 	return blockPair, nil
 }
 
-func (s *service) hash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.ResultsBlockContainer) []byte {
-	txHash := digest.CalcTransactionsBlockHash(txBlock)
-	rxHash := digest.CalcResultsBlockHash(rxBlock)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	return xorHash
-}
-
-func (s *service) dataToSignFrom(blockPair *protocol.BlockPairContainer) []byte {
-	return s.hash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
-}
-
-func (s *service) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
-	blockPairWrapper := block.(*BlockPairWrapper)
-	return s.hash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
+func (p *blockProvider) dataToSignFrom(blockPair *protocol.BlockPairContainer) []byte {
+	return p.hash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 }

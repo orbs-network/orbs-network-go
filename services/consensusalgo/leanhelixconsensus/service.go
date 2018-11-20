@@ -22,16 +22,18 @@ type lastCommittedBlock struct {
 }
 
 type service struct {
-	gossip           gossiptopics.LeanHelix
 	blockStorage     services.BlockStorage
+	comm             *networkCommunication
 	consensusContext services.ConsensusContext
 	logger           log.BasicLogger
 	config           Config
 	metrics          *metrics
 	leanHelix        leanhelix.LeanHelix
 	*lastCommittedBlock
-	messageReceivers        map[int]func(ctx context.Context, message leanhelix.ConsensusRawMessage)
-	messageReceiversCounter int
+}
+
+func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
+	return s.comm.HandleLeanHelixMessage(ctx, input)
 }
 
 type metrics struct {
@@ -61,6 +63,7 @@ func NewLeanHelixConsensusAlgo(
 	ctx context.Context,
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
+
 	consensusContext services.ConsensusContext,
 	logger log.BasicLogger,
 	config Config,
@@ -68,24 +71,25 @@ func NewLeanHelixConsensusAlgo(
 
 ) services.ConsensusAlgoLeanHelix {
 
+	comm := NewNetworkCommunication(gossip)
+	mgr := NewKeyManager(config.NodePublicKey(), config.NodePrivateKey())
+	provider := NewBlockProvider(config.LeanHelixConsensusRoundTimeoutInterval(), config.NodePublicKey(), config.NodePrivateKey())
 	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
 
 	s := &service{
-		gossip:                  gossip,
-		blockStorage:            blockStorage,
-		consensusContext:        consensusContext,
-		logger:                  logger.WithTags(LogTag),
-		config:                  config,
-		metrics:                 newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
-		leanHelix:               nil,
-		messageReceivers:        make(map[int]func(ctx context.Context, message leanhelix.ConsensusRawMessage)),
-		messageReceiversCounter: 0,
+		blockStorage:     blockStorage,
+		comm:             comm,
+		consensusContext: consensusContext,
+		logger:           logger.WithTags(LogTag),
+		config:           config,
+		metrics:          newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
+		leanHelix:        nil,
 	}
 
 	leanHelixConfig := &leanhelix.Config{
-		NetworkCommunication: s,
-		BlockUtils:           s,
-		KeyManager:           NewKeyManager(config.NodePublicKey(), config.NodePrivateKey()),
+		NetworkCommunication: comm,
+		BlockUtils:           provider,
+		KeyManager:           mgr,
 		ElectionTrigger:      electionTrigger,
 	}
 
@@ -93,7 +97,7 @@ func NewLeanHelixConsensusAlgo(
 
 	s.leanHelix = leanHelix
 
-	gossip.RegisterLeanHelixHandler(s)
+	gossip.RegisterLeanHelixHandler(comm)
 
 	// TODO uncomment after BlockStorage mutex issues (s.lastBlockLock) are fixed
 	//blockStorage.RegisterConsensusBlocksHandler(s)
