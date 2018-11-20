@@ -11,7 +11,9 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-type blockSyncFunc func (ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error)
+type BlockPairCommitter interface {
+	blockSyncFunc (ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error)
+}
 
 type blockSource interface {
 	GetBlockTracker() *synchronization.BlockTracker
@@ -19,7 +21,7 @@ type blockSource interface {
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 
-func syncOnce(ctx context.Context, source blockSource, callback blockSyncFunc, logger log.BasicLogger) (primitives.BlockHeight, error) {
+func syncOnce(ctx context.Context, source blockSource, committer BlockPairCommitter, logger log.BasicLogger) (primitives.BlockHeight, error) {
 	topBlock, err := source.GetLastBlock()
 	if err != nil {
 		return 0, err
@@ -40,7 +42,7 @@ func syncOnce(ctx context.Context, source blockSource, callback blockSyncFunc, l
 		}
 
 		// notify the receiving service of the new block
-		nextHeight, err := callback(ctx, bp)
+		nextHeight, err := committer.blockSyncFunc(ctx, bp)
 		if err != nil {
 			return 0, err
 		}
@@ -55,7 +57,7 @@ func syncOnce(ctx context.Context, source blockSource, callback blockSyncFunc, l
 	return topBlockHeight, nil
 }
 
-func StartSupervised(ctx context.Context, logger log.BasicLogger, name string, source blockSource, callback blockSyncFunc) {
+func NewInternalBlockSync(ctx context.Context, logger log.BasicLogger, name string, source blockSource, committer BlockPairCommitter) {
 	ctx = trace.NewContext(ctx, name)
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	supervised.GoForever(ctx, logger, func() {
@@ -68,7 +70,7 @@ func StartSupervised(ctx context.Context, logger log.BasicLogger, name string, s
 				logger.Info("failed waiting for block", log.Error(err))
 				return
 			}
-			height, err = syncOnce(ctx, source, callback, logger)
+			height, err = syncOnce(ctx, source, committer, logger)
 		}
 	})
 }

@@ -4,8 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -46,21 +44,4 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 
 	return nil, nil
-}
-
-func (s *service) syncBlockToStateStorage(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
-	out, err := s.stateStorage.CommitStateDiff(ctx, &services.CommitStateDiffInput{
-		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
-		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
-	})
-	return out.NextDesiredBlockHeight, err
-}
-
-func (s *service) syncBlockToTxPool(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
-	out, err := s.txPool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
-		ResultsBlockHeader:       committedBlockPair.ResultsBlock.Header,
-		TransactionReceipts:      committedBlockPair.ResultsBlock.TransactionReceipts,
-		LastCommittedBlockHeight: committedBlockPair.ResultsBlock.Header.BlockHeight(),
-	})
-	return out.NextDesiredBlockHeight, err
 }

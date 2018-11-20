@@ -21,9 +21,9 @@ func TestSyncLoop(t *testing.T) {
 		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
 
 		// Set up target mock
-		targetMock := &syncTargetMock{}
+		committerMock := &blockPairCommitterMock{}
 		currentHeight := primitives.BlockHeight(0)
-		targetMock.When("callback", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+		committerMock.When("blockSyncFunc", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == currentHeight + 1 {
 				currentHeight++
 			}
@@ -31,14 +31,14 @@ func TestSyncLoop(t *testing.T) {
 		}).Times(5)
 
 		// run sync loop
-		reportedHeight, err := syncOnce(ctx, sourceMock, targetMock.callback, log.GetLogger())
+		reportedHeight, err := syncOnce(ctx, sourceMock, committerMock, log.GetLogger())
 		require.NoError(t, err)
 		require.True(t, currentHeight == reportedHeight)
 
 		_, err = sourceMock.Verify()
 		require.NoError(t, err)
 
-		_, err = targetMock.Verify()
+		_, err = committerMock.Verify()
 		require.NoError(t, err)
 
 		require.EqualValues(t, 4, currentHeight)
@@ -56,10 +56,10 @@ func TestSyncInitialState(t *testing.T) {
 		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
 
 		// Set up target mock
-		targetMock := &syncTargetMock{}
+		committerMock := &blockPairCommitterMock{}
 		targetCurrentHeight := primitives.BlockHeight(0)
 		targetTracker := synchronization.NewBlockTracker(0, 10)
-		targetMock.When("callback", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+		committerMock.When("blockSyncFunc", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+ 1 {
 				targetTracker.IncrementHeight()
 				targetCurrentHeight++
@@ -67,7 +67,7 @@ func TestSyncInitialState(t *testing.T) {
 			return targetCurrentHeight + 1, nil
 		}).Times(5)
 
-		StartSupervised(ctx, log.GetLogger(), t.Name(), sourceMock, targetMock.callback)
+		NewInternalBlockSync(ctx, log.GetLogger(), t.Name(), sourceMock, committerMock)
 
 		// Wait for first sync
 		err := targetTracker.WaitForBlock(ctx, 2)
@@ -84,7 +84,7 @@ func TestSyncInitialState(t *testing.T) {
 		_, err = sourceMock.Verify()
 		require.NoError(t, err)
 
-		_, err = targetMock.Verify()
+		_, err = committerMock.Verify()
 		require.NoError(t, err)
 
 		require.EqualValues(t, 4, targetCurrentHeight)
@@ -135,11 +135,11 @@ func (bsf *blockSourceMock) GetLastBlock() (*protocol.BlockPairContainer, error)
 	return bsf.lastBlock, nil
 }
 
-type syncTargetMock struct {
+type blockPairCommitterMock struct {
 	mock.Mock
 }
 
-func (stm *syncTargetMock) callback(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+func (stm *blockPairCommitterMock) blockSyncFunc(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 	ret := stm.Mock.Called(ctx, committedBlockPair)
 	return ret.Get(0).(primitives.BlockHeight), ret.Error(1)
 }

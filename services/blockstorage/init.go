@@ -51,7 +51,7 @@ func newMetrics(m metric.Factory) *metrics {
 }
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
-	txPool services.TransactionPool, parentLogger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
+	txPool services.TransactionPool, parentLogger log.BasicLogger, metricFactory metric.Factory, blockPairReceivers []internalsync.BlockPairCommitter) services.BlockStorage {
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &service{
@@ -67,8 +67,9 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	gossip.RegisterBlockSyncHandler(s)
 	s.extSync = extSync.NewExtBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
-	internalsync.StartSupervised(ctx, logger, "state-storage-sync", persistence, s.syncBlockToStateStorage)
-	internalsync.StartSupervised(ctx, logger, "tx-pool-sync", persistence, s.syncBlockToTxPool)
+	for _, bpr := range blockPairReceivers {
+		internalsync.NewInternalBlockSync(ctx, logger, "tx-pool-sync", persistence, bpr)
+	}
 
 	return s
 }
