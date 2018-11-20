@@ -60,10 +60,24 @@ func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitive
 	return forest.Update(root, diffs)
 }
 
+func CalculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.MerkleSha256, error) {
+	forest, root := merkle.NewForest()
+	diffs := make([]*merkle.MerkleDiff, len(receipts))
+	for i := 0; i < len(receipts); i++ {
+		txHash := digest.CalcReceiptHash(receipts[i])
+		diffs[i] = &merkle.MerkleDiff{
+			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
+			Value: txHash,
+		}
+	}
+	return forest.Update(root, diffs)
+}
+
 func CalculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
 	return digest.CalcTransactionsBlockHash(txBlock)
 }
 
+// TODO This flow is not final
 func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
 	start := time.Now()
 	defer s.metrics.createResultsBlockTime.RecordSince(start)
@@ -81,6 +95,7 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 	}
 
 	// TODO Waiting for state-storage fix: internal sync does not yet update the state storage when committing blocks
+	// See https://tree.taiga.io/project/orbs-network/us/383
 	//preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
 	//	BlockHeight: blockHeight - 1,
 	//})

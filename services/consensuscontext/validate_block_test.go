@@ -38,7 +38,8 @@ func TestValidateTransactionBlock(t *testing.T) {
 		metricFactory)
 
 	t.Run("should return ok for valid block", func(t *testing.T) {
-		t.Skipf("Skipped till previous block hash code can be fixed")
+		t.Skipf("Skipped till previous block hash code can be fixed, or maybe this whole test is wrong because it injects WithPrevBlockHash() instead of letting the code calculate it")
+		prev1Hash := digest.CalcTransactionsBlockHash(prevBlock1.TransactionsBlock)
 
 		validBlock := builders.
 			BlockPair().
@@ -47,6 +48,7 @@ func TestValidateTransactionBlock(t *testing.T) {
 			WithTransactions(0).
 			WithTransaction(transaction).
 			WithPrevBlock(prevBlock1).
+			WithPrevBlockHash(prev1Hash).
 			WithTransactionsRootHash(txRootHashForValidBlock).
 			Build()
 		//if err != nil {
