@@ -52,15 +52,15 @@ func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTrac
 	return bp.tracker
 }
 
-func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight {
-	ch := bp.getChanFor(txhash)
+func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
+	ch := bp.getChanFor(txHash)
 
 	select {
 	case h := <-ch:
 		return h
 	case <-ctx.Done():
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
-		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txhash))
+		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
 	}
 }
 
@@ -172,14 +172,14 @@ func (bp *inMemoryBlockPersistence) FailNextBlocks() {
 }
 
 // Is covered by the mutex in WriteNextBlock
-func (bp *inMemoryBlockPersistence) getChanFor(txhash primitives.Sha256) blockHeightChan {
+func (bp *inMemoryBlockPersistence) getChanFor(txHash primitives.Sha256) blockHeightChan {
 	bp.blockHeightsPerTxHash.Lock()
 	defer bp.blockHeightsPerTxHash.Unlock()
 
-	ch, ok := bp.blockHeightsPerTxHash.channels[txhash.KeyForMap()]
+	ch, ok := bp.blockHeightsPerTxHash.channels[txHash.KeyForMap()]
 	if !ok {
 		ch = make(blockHeightChan, 1)
-		bp.blockHeightsPerTxHash.channels[txhash.KeyForMap()] = ch
+		bp.blockHeightsPerTxHash.channels[txHash.KeyForMap()] = ch
 	}
 
 	return ch
@@ -187,13 +187,10 @@ func (bp *inMemoryBlockPersistence) getChanFor(txhash primitives.Sha256) blockHe
 
 func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
 	for _, tx := range block.SignedTransactions {
-		ch := bp.getChanFor(digest.CalcTxHash(tx.Transaction()))
-		select {
-		case ch <- block.Header.BlockHeight():
-		default:
-			// FIXME: this happens when two txid are in different blocks (or same block), this should never happen and we do not log it here (too low) and we also do not want to stop the loop (break/return error)
-			continue
-		}
+		txHash := digest.CalcTxHash(tx.Transaction())
+		ch := bp.getChanFor(txHash)
+		ch <- block.Header.BlockHeight() // this will panic with "send on closed channel" if the same tx is added twice to blocks (duplicate tx hash!!)
+		close(ch)
 	}
 }
 

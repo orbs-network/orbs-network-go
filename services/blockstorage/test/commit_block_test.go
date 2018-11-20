@@ -149,7 +149,7 @@ func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 	})
 }
 
-func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
+func TestCommitBlockWithSameTransactionTwicePanics(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
 
@@ -164,8 +164,9 @@ func TestCommitBlockWithSameTransactionTwice(t *testing.T) {
 		_, err := harness.commitBlock(ctx, block0)
 		require.NoError(t, err)
 
-		_, err = harness.commitBlock(ctx, block1)
-		require.NoError(t, err)
+		require.Panics(t, func() {
+			harness.commitBlock(ctx, block1)
+		})
 
 		blockHeight := harness.storageAdapter.WaitForTransaction(ctx, txHash)
 		require.EqualValues(t, 1, blockHeight)
