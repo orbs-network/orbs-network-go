@@ -3,33 +3,27 @@ package native
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/pkg/errors"
 	"strings"
 )
 
-type ethereumSdk struct {
-	handler         handlers.ContractSdkCallHandler
-	permissionScope protocol.ExecutionPermissionScope
-}
-
 const SDK_OPERATION_NAME_ETHEREUM = "Sdk.Ethereum"
 
-func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress string, jsonAbi string, methodName string, out interface{}, args ...interface{}) error {
+func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, contractAddress string, jsonAbi string, methodName string, out interface{}, args ...interface{}) {
 	parsedABI, err := abi.JSON(strings.NewReader(jsonAbi))
 	if err != nil {
-		return errors.WithStack(err)
+		panic(err.Error())
 	}
 
 	packedInput, err := ethereumPackInputArguments(parsedABI, methodName, args)
 	if err != nil {
-		return err
+		panic(err.Error())
 	}
 
-	output, err := s.handler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_ETHEREUM,
 		MethodName:    "callMethod",
@@ -55,16 +49,19 @@ func (s *ethereumSdk) CallMethod(executionContextId sdk.Context, contractAddress
 				BytesValue: packedInput,
 			}).Build(),
 		},
-		PermissionScope: s.permissionScope,
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		return err
+		panic(err.Error())
 	}
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		return errors.Errorf("callMethod Sdk.Ethereum returned corrupt output value")
+		panic("callMethod Sdk.Ethereum returned corrupt output value")
 	}
 
-	return ethereumUnpackOutput(parsedABI, out, methodName, output.OutputArguments[0].BytesValue())
+	err = ethereumUnpackOutput(parsedABI, out, methodName, output.OutputArguments[0].BytesValue())
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 func ethereumPackInputArguments(abi abi.ABI, method string, args []interface{}) ([]byte, error) {

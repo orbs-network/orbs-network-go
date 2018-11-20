@@ -71,7 +71,7 @@ type NodeConfig interface {
 	// metrics
 	MetricsReportInterval() time.Duration
 
-	// ethereum connector (sidechain)
+	// ethereum connector (crosschain)
 	EthereumEndpoint() string
 }
 

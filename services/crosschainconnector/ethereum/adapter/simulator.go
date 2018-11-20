@@ -19,7 +19,7 @@ type EthereumSimulator struct {
 	mu        sync.Mutex
 }
 
-func NewEthereumSimulatorConnector(config ethereumAdapterConfig, logger log.BasicLogger) EthereumConnection {
+func NewEthereumSimulatorConnection(config ethereumAdapterConfig, logger log.BasicLogger) EthereumConnection {
 	return &EthereumSimulator{
 		config: config,
 		logger: logger,

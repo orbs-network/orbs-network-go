@@ -75,7 +75,7 @@ func (h *harness) getAddress() string {
 func newEthereumConnectorHarness() *harness {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	config := newDefaultEthereumConnectorConfigForTests()
-	conn := adapter.NewEthereumSimulatorConnector(config, logger)
+	conn := adapter.NewEthereumSimulatorConnection(config, logger)
 	ctx := context.Background()
 
 	return &harness{

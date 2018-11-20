@@ -3,6 +3,7 @@ package native
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -21,19 +22,14 @@ func TestEthereumSdk_CallMethod(t *testing.T) {
 
 	var out string
 	sampleABI := "[{\"inputs\":[],\"name\":\"say\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"type\":\"function\"}]"
-	err := s.CallMethod(EXAMPLE_CONTEXT, "ExampleAddress", sampleABI, "say", &out)
-	require.NoError(t, err, "callMethod should succeed")
+	s.SdkEthereumCallMethod(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "ExampleAddress", sampleABI, "say", &out)
 }
 
-func createEthereumSdk() *ethereumSdk {
-	return &ethereumSdk{
-		handler:         &contractSdkEthereumCallHandlerStub{},
-		permissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
-	}
+func createEthereumSdk() *service {
+	return &service{sdkHandler: &contractSdkEthereumCallHandlerStub{}}
 }
 
-type contractSdkEthereumCallHandlerStub struct {
-}
+type contractSdkEthereumCallHandlerStub struct{}
 
 func (c *contractSdkEthereumCallHandlerStub) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
 	if input.PermissionScope != protocol.PERMISSION_SCOPE_SYSTEM {

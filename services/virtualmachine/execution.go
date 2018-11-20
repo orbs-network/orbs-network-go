@@ -13,13 +13,14 @@ import (
 func (s *service) runMethod(
 	ctx context.Context,
 	blockHeight primitives.BlockHeight,
+	blockTimestamp primitives.TimestampNano,
 	transaction *protocol.Transaction,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
 ) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 
 	// create execution context
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, accessScope, transaction)
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockTimestamp, accessScope, transaction)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 	executionContext.batchTransientState = batchTransientState
 
@@ -59,6 +60,7 @@ func (s *service) runMethod(
 func (s *service) processTransactionSet(
 	ctx context.Context,
 	blockHeight primitives.BlockHeight,
+	blockTimestamp primitives.TimestampNano,
 	signedTransactions []*protocol.SignedTransaction,
 ) ([]*protocol.TransactionReceipt, []*protocol.ContractStateDiff) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
@@ -72,7 +74,7 @@ func (s *service) processTransactionSet(
 	for _, signedTransaction := range signedTransactions {
 
 		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(blockHeight))
-		callResult, outputArgs, _ := s.runMethod(ctx, blockHeight, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
+		callResult, outputArgs, _ := s.runMethod(ctx, blockHeight, blockTimestamp, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
 			outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
 		}

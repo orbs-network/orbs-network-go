@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	ethereumConnectorAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
+	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -36,15 +36,15 @@ type Network struct {
 }
 
 type Node struct {
-	index             int
-	name              string
-	config            config.NodeConfig
-	blockPersistence  blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence  stateStorageAdapter.TamperingStatePersistence
-	ethereumConnector ethereumConnectorAdapter.EthereumConnection
-	nativeCompiler    nativeProcessorAdapter.Compiler
-	nodeLogic         bootstrap.NodeLogic
-	metricRegistry    metric.Registry
+	index              int
+	name               string
+	config             config.NodeConfig
+	blockPersistence   blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence   stateStorageAdapter.TamperingStatePersistence
+	ethereumConnection ethereumAdapter.EthereumConnection
+	nativeCompiler     nativeProcessorAdapter.Compiler
+	nodeLogic          bootstrap.NodeLogic
+	metricRegistry     metric.Registry
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
@@ -58,7 +58,7 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
-	node.ethereumConnector = ethereumConnectorAdapter.NewEthereumSimulatorConnector(cfg, logger)
+	node.ethereumConnection = ethereumAdapter.NewEthereumSimulatorConnection(cfg, logger)
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 
@@ -80,7 +80,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
 			node.config,
-			node.ethereumConnector,
+			node.ethereumConnection,
 		)
 	}
 }
