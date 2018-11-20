@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"testing"
 	"time"
 )
@@ -24,7 +23,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	h := newHarness()
 	printTestTime(t, "new harness", &lt) // slow do to warm up compilation
 
-	counterStart := uint64(100 * rand.Intn(1000))
+	counterStart := uint64(time.Now().UnixNano())
 
 	printTestTime(t, "send deploy - start", &lt)
 	response, err := h.deployNativeContract(fmt.Sprintf("CounterFrom%d", counterStart), []byte(contracts.NativeSourceCodeForCounter(counterStart)))
