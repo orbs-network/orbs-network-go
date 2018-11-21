@@ -65,8 +65,8 @@ func NewServiceBlockSync(ctx context.Context, logger log.BasicLogger, source blo
 
 		var height primitives.BlockHeight
 		var err error
-		for  err == nil {
-			err = source.GetBlockTracker().WaitForBlock(ctx, height + 1)
+		for err == nil {
+			err = source.GetBlockTracker().WaitForBlock(ctx, height+1)
 			if err != nil {
 				logger.Info("failed waiting for block", log.Error(err))
 				return

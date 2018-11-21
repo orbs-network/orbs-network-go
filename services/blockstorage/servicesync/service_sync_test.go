@@ -24,7 +24,7 @@ func TestSyncLoop(t *testing.T) {
 		committerMock := &blockPairCommitterMock{}
 		currentHeight := primitives.BlockHeight(0)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
-			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == currentHeight + 1 {
+			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == currentHeight+1 {
 				currentHeight++
 			}
 			return currentHeight + 1, nil
@@ -60,7 +60,7 @@ func TestSyncInitialState(t *testing.T) {
 		targetCurrentHeight := primitives.BlockHeight(0)
 		targetTracker := synchronization.NewBlockTracker(0, 10)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
-			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+ 1 {
+			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+1 {
 				targetTracker.IncrementHeight()
 				targetCurrentHeight++
 			}
@@ -106,10 +106,10 @@ func newBlockSourceMock(height primitives.BlockHeight) *blockSourceMock {
 func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 	bsf.lastBlock = &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: height}).Build(),
+			Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: height}).Build(),
 		},
-		ResultsBlock:      &protocol.ResultsBlockContainer{
-			Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: height}).Build(),
+		ResultsBlock: &protocol.ResultsBlockContainer{
+			Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: height}).Build(),
 		},
 	}
 }
@@ -117,11 +117,11 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 // TODO - this fake implementation assumes there is no genesis block, Fix once addressing genesis
 func (bsf *blockSourceMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
 	bsf.Called(first, last)
-	result := make ([]*protocol.BlockPairContainer, last - first)
+	result := make([]*protocol.BlockPairContainer, last-first)
 	for i := range result {
 		result[i] = &protocol.BlockPairContainer{
 			TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
-			ResultsBlock: &protocol.ResultsBlockContainer{Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
+			ResultsBlock:      &protocol.ResultsBlockContainer{Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
 		}
 	}
 	return result, first, last, nil
