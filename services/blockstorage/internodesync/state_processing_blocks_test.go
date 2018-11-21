@@ -1,4 +1,4 @@
-package externalsync
+package internodesync
 
 import (
 	"context"

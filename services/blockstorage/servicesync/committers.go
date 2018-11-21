@@ -1,4 +1,4 @@
-package internalsync
+package servicesync
 
 import (
 	"context"
@@ -7,23 +7,28 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+type serviceDesc struct {
+	name string
+}
 type stateStorageCommitter struct {
+	serviceDesc
 	service services.StateStorage
 }
 
 type transactionPoolCommitter struct {
+	serviceDesc
 	service services.TransactionPool
 }
 
 func NewTxPoolCommitter(txPool services.TransactionPool) *transactionPoolCommitter {
-	return &transactionPoolCommitter{service: txPool}
+	return &transactionPoolCommitter{service: txPool, serviceDesc: serviceDesc{"tx-pool-sync"}}
 }
 
 func NewStateStorageCommitter(stateStorage services.StateStorage) *stateStorageCommitter {
-	return &stateStorageCommitter{service: stateStorage}
+	return &stateStorageCommitter{service: stateStorage, serviceDesc: serviceDesc{"state-storage-sync"}}
 }
 
-func (ssc *stateStorageCommitter) blockSyncFunc(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+func (ssc *stateStorageCommitter) commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 	out, err := ssc.service.CommitStateDiff(ctx, &services.CommitStateDiffInput{
 		ResultsBlockHeader: committedBlockPair.ResultsBlock.Header,
 		ContractStateDiffs: committedBlockPair.ResultsBlock.ContractStateDiffs,
@@ -31,11 +36,15 @@ func (ssc *stateStorageCommitter) blockSyncFunc(ctx context.Context, committedBl
 	return out.NextDesiredBlockHeight, err
 }
 
-func (tpc transactionPoolCommitter) blockSyncFunc(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+func (tpc *transactionPoolCommitter) commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 	out, err := tpc.service.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 		ResultsBlockHeader:       committedBlockPair.ResultsBlock.Header,
 		TransactionReceipts:      committedBlockPair.ResultsBlock.TransactionReceipts,
 		LastCommittedBlockHeight: committedBlockPair.ResultsBlock.Header.BlockHeight(),
 	})
 	return out.NextDesiredBlockHeight, err
+}
+
+func (sd *serviceDesc) getServiceName() string {
+	return sd.name
 }

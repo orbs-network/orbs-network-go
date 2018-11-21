@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/internalsync"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/servicesync"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
@@ -56,7 +56,7 @@ func NewNodeLogic(
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, metricRegistry)
-	serviceSyncCommitters := []internalsync.BlockPairCommitter{internalsync.NewStateStorageCommitter(stateStorageService), internalsync.NewTxPoolCommitter(transactionPoolService)}
+	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, gossipService, logger, metricRegistry, serviceSyncCommitters)
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, nil, nodeConfig, logger, metricRegistry)

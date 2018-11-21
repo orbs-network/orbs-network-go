@@ -1,4 +1,4 @@
-package internalsync
+package servicesync
 
 import (
 	"context"
@@ -12,7 +12,8 @@ import (
 )
 
 type BlockPairCommitter interface {
-	blockSyncFunc (ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error)
+	commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error)
+	getServiceName() string
 }
 
 type blockSource interface {
@@ -35,14 +36,14 @@ func syncOnce(ctx context.Context, source blockSource, committer BlockPairCommit
 		}
 		bp := singleBlockArr[0]
 
-		// Log each transaction being synced TODO - move this from here into the callback func
+		// Log each transaction being synced TODO - move this from here into the callback func or just relax logging / write under debug level when available
 		h := bp.ResultsBlock.Header.BlockHeight()
 		for _, tx := range bp.ResultsBlock.TransactionReceipts {
 			logger.Info("attempt service sync for block", log.BlockHeight(h), log.Transaction(tx.Txhash()))
 		}
 
 		// notify the receiving service of the new block
-		nextHeight, err := committer.blockSyncFunc(ctx, bp)
+		nextHeight, err := committer.commitBlockPair(ctx, bp)
 		if err != nil {
 			return 0, err
 		}
@@ -57,8 +58,8 @@ func syncOnce(ctx context.Context, source blockSource, committer BlockPairCommit
 	return topBlockHeight, nil
 }
 
-func NewInternalBlockSync(ctx context.Context, logger log.BasicLogger, name string, source blockSource, committer BlockPairCommitter) {
-	ctx = trace.NewContext(ctx, name)
+func NewServiceBlockSync(ctx context.Context, logger log.BasicLogger, source blockSource, committer BlockPairCommitter) {
+	ctx = trace.NewContext(ctx, committer.getServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	supervised.GoForever(ctx, logger, func() {
 

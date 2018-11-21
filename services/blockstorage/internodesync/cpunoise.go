@@ -1,6 +1,6 @@
 // +build cpunoise
 
-package externalsync
+package internodesync
 
 import "github.com/orbs-network/orbs-network-go/test"
 

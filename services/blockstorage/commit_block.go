@@ -39,7 +39,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 
-	s.extSync.HandleBlockCommitted(ctx)
+	s.nodeSync.HandleBlockCommitted(ctx)
 
 	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
 

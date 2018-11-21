@@ -1,4 +1,4 @@
-package externalsync
+package internodesync
 
 import (
 	"context"
@@ -97,7 +97,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 	return bs
 }
 
-func NewExtBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
 	logger := parentLogger.WithTags(LogTag)
 
 	conduit := &blockSyncConduit{

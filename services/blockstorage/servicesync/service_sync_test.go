@@ -1,4 +1,4 @@
-package internalsync
+package servicesync
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func TestSyncLoop(t *testing.T) {
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
 		currentHeight := primitives.BlockHeight(0)
-		committerMock.When("blockSyncFunc", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == currentHeight + 1 {
 				currentHeight++
 			}
@@ -59,7 +59,7 @@ func TestSyncInitialState(t *testing.T) {
 		committerMock := &blockPairCommitterMock{}
 		targetCurrentHeight := primitives.BlockHeight(0)
 		targetTracker := synchronization.NewBlockTracker(0, 10)
-		committerMock.When("blockSyncFunc", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+ 1 {
 				targetTracker.IncrementHeight()
 				targetCurrentHeight++
@@ -67,7 +67,7 @@ func TestSyncInitialState(t *testing.T) {
 			return targetCurrentHeight + 1, nil
 		}).Times(5)
 
-		NewInternalBlockSync(ctx, log.GetLogger(), t.Name(), sourceMock, committerMock)
+		NewServiceBlockSync(ctx, log.GetLogger(), sourceMock, committerMock)
 
 		// Wait for first sync
 		err := targetTracker.WaitForBlock(ctx, 2)
@@ -139,7 +139,11 @@ type blockPairCommitterMock struct {
 	mock.Mock
 }
 
-func (stm *blockPairCommitterMock) blockSyncFunc(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+func (stm *blockPairCommitterMock) commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 	ret := stm.Mock.Called(ctx, committedBlockPair)
 	return ret.Get(0).(primitives.BlockHeight), ret.Error(1)
+}
+
+func (stm *blockPairCommitterMock) getServiceName() string {
+	return "mock-committer"
 }
