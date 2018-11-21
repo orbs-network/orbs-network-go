@@ -129,14 +129,14 @@ func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, e
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("got http status code %s calling %s", res.StatusCode, endpoint)
-	}
-
 	readBytes, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
 		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got http status code %s calling %s: %s", res.StatusCode, endpoint, string(readBytes))
 	}
 
 	return readBytes, nil
