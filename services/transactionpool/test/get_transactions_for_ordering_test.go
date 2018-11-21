@@ -152,7 +152,8 @@ func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing
 
 		h.expectTransactionErrorCallbackFor(expiredTx, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME)
 
-		txSet, _ := h.getTransactionsForOrdering(ctx, 1)
+		txSet, err := h.getTransactionsForOrdering(ctx, 1)
+		require.NoError(t, err)
 		require.Empty(t, txSet.SignedTransactions, "got an invalid transaction")
 
 		txSet, _ = h.getTransactionsForOrdering(ctx, 1)

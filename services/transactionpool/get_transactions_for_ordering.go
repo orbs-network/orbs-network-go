@@ -10,10 +10,13 @@ import (
 
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 
+	//TODO fail if requested block height is in the past
+	s.logger.Info("GetTransactionsForOrdering called for block height", log.BlockHeight(input.BlockHeight))
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
-	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight - 1); err != nil {
 		return nil, err
 	}
 

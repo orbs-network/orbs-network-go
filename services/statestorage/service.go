@@ -40,12 +40,13 @@ type service struct {
 	revisions *rollingRevisions
 }
 
-func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
+func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, parent log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
 	forest, _ := merkle.NewForest()
+	logger := parent.WithTags(LogTag)
 	return &service{
 		config:       config,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
-		logger:       logger.WithTags(LogTag),
+		logger:       logger,
 		metrics:      newMetrics(metricFactory),
 
 		mutex:     sync.RWMutex{},

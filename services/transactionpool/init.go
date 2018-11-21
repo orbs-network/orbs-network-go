@@ -18,11 +18,13 @@ func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	config config.TransactionPoolConfig,
-	logger log.BasicLogger,
+	parent log.BasicLogger,
 	metricFactory metric.Factory) services.TransactionPool {
 
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory)
 	committedPool := NewCommittedPool(metricFactory)
+
+	logger := parent.WithTags(LogTag)
 
 	txForwarder := NewTransactionForwarder(ctx, logger, config, gossip)
 
@@ -30,7 +32,7 @@ func NewTransactionPool(ctx context.Context,
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
 		config:         config,
-		logger:         logger.WithTags(LogTag),
+		logger:         logger,
 
 		pendingPool:          pendingPool,
 		committedPool:        committedPool,

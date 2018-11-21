@@ -55,7 +55,7 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
-	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
+	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(n.Logger)
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 

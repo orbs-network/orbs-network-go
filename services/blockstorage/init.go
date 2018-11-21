@@ -50,15 +50,13 @@ func newMetrics(m metric.Factory) *metrics {
 	}
 }
 
-func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
-	txPool services.TransactionPool, parentLogger log.BasicLogger, metricFactory metric.Factory, blockPairReceivers []internalsync.BlockPairCommitter) services.BlockStorage {
+func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, gossip gossiptopics.BlockSync,
+	parentLogger log.BasicLogger, metricFactory metric.Factory, blockPairReceivers []internalsync.BlockPairCommitter) services.BlockStorage {
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &service{
 		persistence:  persistence,
-		stateStorage: stateStorage,
 		gossip:       gossip,
-		txPool:       txPool,
 		logger:       logger,
 		config:       config,
 		metrics:      newMetrics(metricFactory),

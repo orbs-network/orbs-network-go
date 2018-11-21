@@ -217,7 +217,7 @@ func newBlockStorageHarness() *harness {
 
 	d := &harness{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}
-	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
+	d.storageAdapter = adapter.NewInMemoryBlockPersistence(logger)
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
@@ -243,7 +243,7 @@ func newBlockStorageHarness() *harness {
 func (d *harness) start(ctx context.Context) *harness {
 	registry := metric.NewRegistry()
 
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, d.logger, registry, nil)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.logger, registry, nil)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	return d

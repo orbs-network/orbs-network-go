@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -30,6 +31,7 @@ type inMemoryBlockPersistence struct {
 
 	failNextBlocks bool
 	tracker        *synchronization.BlockTracker
+	logger         log.BasicLogger
 
 	blockHeightsPerTxHash struct {
 		sync.Mutex
@@ -37,9 +39,11 @@ type inMemoryBlockPersistence struct {
 	}
 }
 
-func NewInMemoryBlockPersistence() InMemoryBlockPersistence {
+func NewInMemoryBlockPersistence(parent log.BasicLogger) InMemoryBlockPersistence {
+	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
+		logger:         logger,
 		tracker:        synchronization.NewBlockTracker(0, 5),
 	}
 
@@ -188,6 +192,7 @@ func (bp *inMemoryBlockPersistence) getChanFor(txHash primitives.Sha256) blockHe
 func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
 	for _, tx := range block.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
+		bp.logger.Info("advertising transaction completion", log.Transaction(txHash), log.BlockHeight(block.Header.BlockHeight()))
 		ch := bp.getChanFor(txHash)
 		ch <- block.Header.BlockHeight() // this will panic with "send on closed channel" if the same tx is added twice to blocks (duplicate tx hash!!)
 		close(ch)
