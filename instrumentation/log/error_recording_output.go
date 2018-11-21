@@ -2,13 +2,14 @@ package log
 
 import (
 	"fmt"
+	"regexp"
 	"sync"
 )
 
 type ErrorRecordingOutput struct {
-	allowedErrors []string
-
-	errorRecorder *errorRecorder
+	allowedErrors       []string
+	allowedErrorsRegExp []string
+	errorRecorder       *errorRecorder
 }
 
 type errorRecorder struct {
@@ -25,14 +26,19 @@ func (e *unexpectedError) String() string {
 	return fmt.Sprintf("%s (passed Error object: %v)", e.message, e.err)
 }
 
-func NewErrorRecordingOutput(allowedErrors []string) *ErrorRecordingOutput {
-	return &ErrorRecordingOutput{allowedErrors: allowedErrors, errorRecorder: &errorRecorder{}}
+func NewErrorRecordingOutput(allowedErrors []string, allowedErrorsRegExp []string) *ErrorRecordingOutput {
+	return &ErrorRecordingOutput{allowedErrors: allowedErrors, allowedErrorsRegExp: allowedErrorsRegExp, errorRecorder: &errorRecorder{}}
 }
 
 func (o *ErrorRecordingOutput) Append(level string, message string, params ...*Field) {
 	if level == "error" {
 		for _, allowedMessage := range o.allowedErrors {
 			if allowedMessage == message {
+				return
+			}
+		}
+		for _, allowedMessageRegExp := range o.allowedErrorsRegExp {
+			if matched, _ := regexp.MatchString(allowedMessageRegExp, message); matched {
 				return
 			}
 		}

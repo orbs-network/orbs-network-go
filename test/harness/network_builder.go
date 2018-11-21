@@ -33,6 +33,7 @@ type acceptanceTestNetworkBuilder struct {
 	logFilters               []log.Filter
 	maxTxPerBlock            uint32
 	allowedErrors            []string
+	allowedErrorsRegExp		 []string
 	numOfNodesToStart        int
 	requiredQuorumPercentage uint32
 }
@@ -82,6 +83,11 @@ func (b *acceptanceTestNetworkBuilder) AllowingErrors(allowedErrors ...string) *
 	return b
 }
 
+func (b *acceptanceTestNetworkBuilder) AllowingErrorsRegExp(allowedErrorsRegExp ...string) *acceptanceTestNetworkBuilder {
+	b.allowedErrorsRegExp = append(b.allowedErrorsRegExp, allowedErrorsRegExp...)
+	return b
+}
+
 func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network TestNetworkDriver)) {
 	if b.numOfNodesToStart == 0 {
 		b.numOfNodesToStart = b.numNodes
@@ -114,7 +120,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 }
 
 func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
-	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
+	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors, b.allowedErrorsRegExp)
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
