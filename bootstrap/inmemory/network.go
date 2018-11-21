@@ -164,7 +164,6 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		})
 		if err != nil {
 			panic(fmt.Sprintf("error calling method: %v", err)) // TODO: improve
-			return
 		}
 		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
 		select {
