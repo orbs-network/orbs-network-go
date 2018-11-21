@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -30,10 +31,12 @@ func processCallInput() *processCall {
 }
 
 func (p *processCall) Build() *services.ProcessCallInput {
-	if p.input.CallingService == "" {
-		p.WithSameCallingService()
-	}
 	return p.input
+}
+
+func (p *processCall) WithContextId(contextId sdkContext.ContextId) *processCall {
+	p.input.ContextId = primitives.ExecutionContextId(contextId)
+	return p
 }
 
 func (p *processCall) WithUnknownContract() *processCall {
@@ -66,35 +69,20 @@ func (p *processCall) WithInternalMethod() *processCall {
 	return p
 }
 
-func (p *processCall) WithExternalMethod() *processCall {
+func (p *processCall) WithPublicMethod() *processCall {
 	p.input.ContractName = "BenchmarkContract"
 	p.input.MethodName = "add"
 	return p.WithArgs(uint64(1), uint64(2))
 }
 
-func (p *processCall) WithExternalWriteMethod() *processCall {
+func (p *processCall) WithSystemMethod() *processCall {
 	p.input.ContractName = "BenchmarkContract"
-	p.input.MethodName = "set"
-	return p.WithArgs(uint64(3))
-}
-
-func (p *processCall) WithSameCallingService() *processCall {
-	p.input.CallingService = p.input.ContractName
-	return p
-}
-
-func (p *processCall) WithDifferentCallingService() *processCall {
-	p.input.CallingService = "DifferentFrom" + p.input.ContractName
-	return p
+	p.input.MethodName = "_init"
+	return p.WithArgs()
 }
 
 func (p *processCall) WithSystemPermissions() *processCall {
 	p.input.CallingPermissionScope = protocol.PERMISSION_SCOPE_SYSTEM
-	return p
-}
-
-func (p *processCall) WithWriteAccess() *processCall {
-	p.input.AccessScope = protocol.ACCESS_SCOPE_READ_WRITE
 	return p
 }
 

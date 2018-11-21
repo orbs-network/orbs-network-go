@@ -26,7 +26,7 @@ func TestSdkAddress_GetSignerAddressWithoutContext(t *testing.T) {
 func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
@@ -48,7 +48,7 @@ func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		var signerAddressRes []byte
 
@@ -87,7 +87,7 @@ func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T)
 func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
@@ -109,7 +109,7 @@ func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		var initialCallerAddress []byte
 		var firstCallerAddress []byte

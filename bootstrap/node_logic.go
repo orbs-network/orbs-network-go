@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
+	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
@@ -44,13 +45,14 @@ func NewNodeLogic(
 	logger log.BasicLogger,
 	metricRegistry metric.Registry,
 	nodeConfig config.NodeConfig,
+	ethereumConnection ethereumAdapter.EthereumConnection,
 ) NodeLogic {
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, logger, metricRegistry)
 
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
-	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector()
+	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector(ctx, ethereumConnection, logger)
 
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger, metricRegistry)

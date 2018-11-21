@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/orbs-network/go-mock"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -119,4 +121,14 @@ func uint64ToBytes(num uint64) []byte {
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, num)
 	return res
+}
+
+func (h *harness) expectSdkCallMadeWithExecutionContextId(expectedContextId sdkContext.ContextId) {
+	contextIdCallMatcher := func(i interface{}) bool {
+		input, ok := i.(*handlers.HandleSdkCallInput)
+		return ok &&
+			input.ContextId == primitives.ExecutionContextId(expectedContextId)
+	}
+
+	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Execution context id matches", contextIdCallMatcher)).Return(nil, nil).Times(1)
 }

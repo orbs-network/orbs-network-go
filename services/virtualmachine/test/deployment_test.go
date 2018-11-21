@@ -17,7 +17,7 @@ func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 
 		h.expectStateStorageBlockHeightRequested(12)
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
@@ -38,7 +38,7 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContra
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract1", errors.New("not found"))
 
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
@@ -63,8 +63,8 @@ func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContrac
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract2", errors.New("not found"))
 
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
@@ -89,10 +89,10 @@ func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract1", nil)
 
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_DEPLOY_SERVICE.Name, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_DEPLOY_SERVICE, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 		})
@@ -117,10 +117,10 @@ func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *t
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_GET_INFO.Name, errors.New("not deployed"), uint32(0))
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract1", nil)
 
-		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT.Name, deployments_systemcontract.METHOD_DEPLOY_SERVICE.Name, errors.New("deploy error"), uint32(0))
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_DEPLOY_SERVICE, errors.New("deploy error"), uint32(0))
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
 		results, outputArgs, _ := h.processTransactionSet(ctx, []*contractAndMethod{

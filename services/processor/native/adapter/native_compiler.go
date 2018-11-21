@@ -5,7 +5,7 @@ package adapter
 import (
 	"context"
 	"encoding/hex"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -46,7 +46,7 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 	}
 }
 
-func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdk.ContractInfo, error) {
+func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
 	artifactsPath := c.config.ProcessorArtifactPath()
 	hashOfCode := getHashOfCode(code)
 
@@ -119,18 +119,40 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	return soFilePath, nil
 }
 
-func loadSharedObject(soFilePath string) (*sdk.ContractInfo, error) {
+func loadSharedObject(soFilePath string) (*sdkContext.ContractInfo, error) {
 	loadedPlugin, err := plugin.Open(soFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	contractSymbol, err := loadedPlugin.Lookup("CONTRACT")
+	publicMethods := []interface{}{}
+	var publicMethodsPtr *[]interface{}
+	publicMethodsSymbol, err := loadedPlugin.Lookup("PUBLIC")
 	if err != nil {
 		return nil, err
 	}
+	publicMethodsPtr, ok := publicMethodsSymbol.(*[]interface{})
+	if !ok {
+		return nil, errors.New("PUBLIC methods export has incorrect type")
+	}
+	publicMethods = *publicMethodsPtr
 
-	return contractSymbol.(*sdk.ContractInfo), nil
+	systemMethods := []interface{}{}
+	var systemMethodsPtr *[]interface{}
+	systemMethodsSymbol, err := loadedPlugin.Lookup("SYSTEM")
+	if err == nil {
+		systemMethodsPtr, ok = systemMethodsSymbol.(*[]interface{})
+		if !ok {
+			return nil, errors.New("SYSTEM methods export has incorrect type")
+		}
+		systemMethods = *systemMethodsPtr
+	}
+
+	return &sdkContext.ContractInfo{
+		PublicMethods: publicMethods,
+		SystemMethods: systemMethods,
+		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE, // we don't support compiling system contracts on the fly
+	}, nil
 }
 
 func getGOPATH() string {

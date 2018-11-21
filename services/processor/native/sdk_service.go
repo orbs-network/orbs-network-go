@@ -2,22 +2,16 @@ package native
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/pkg/errors"
 )
-
-type serviceSdk struct {
-	handler         handlers.ContractSdkCallHandler
-	permissionScope protocol.ExecutionPermissionScope
-}
 
 const SDK_OPERATION_NAME_SERVICE = "Sdk.Service"
 
-func (s *serviceSdk) CallMethod(executionContextId sdk.Context, serviceName string, methodName string, args ...interface{}) ([]interface{}, error) {
-	output, err := s.handler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+func (s *service) SdkServiceCallMethod(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, serviceName string, methodName string, args ...interface{}) []interface{} {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
@@ -38,16 +32,16 @@ func (s *serviceSdk) CallMethod(executionContextId sdk.Context, serviceName stri
 				BytesValue: argsToMethodArgumentArray(args...).Raw(),
 			}).Build(),
 		},
-		PermissionScope: s.permissionScope,
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		return nil, err
+		panic(err.Error())
 	}
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		return nil, errors.Errorf("callMethod Sdk.Service returned corrupt output value")
+		panic("callMethod Sdk.Service returned corrupt output value")
 	}
 	methodArgumentArray := protocol.MethodArgumentArrayReader(output.OutputArguments[0].BytesValue())
-	return methodArgumentArrayToArgs(methodArgumentArray), nil
+	return methodArgumentArrayToArgs(methodArgumentArray)
 }
 
 func argsToMethodArgumentArray(args ...interface{}) *protocol.MethodArgumentArray {
