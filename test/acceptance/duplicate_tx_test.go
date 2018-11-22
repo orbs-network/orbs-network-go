@@ -31,7 +31,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response0.TransactionStatus(), "second transaction should be accepted into the pool and committed by the internode sync")
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response1.TransactionStatus(), "third transaction should be rejected as a duplicate")
 
-		require.True(t, response0.BlockHeight() <= response1.BlockHeight(), "both responses should indicate the same block height")
+		require.True(t, response0.BlockHeight() <= response1.BlockHeight(), "second response must reference a later block height than first")
 
 		requireTxCommittedOnce( ctx, t, response1.BlockHeight() + 5, network, response0.TransactionReceipt().Txhash())
 
