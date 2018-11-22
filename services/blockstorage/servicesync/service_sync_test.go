@@ -22,26 +22,25 @@ func TestSyncLoop(t *testing.T) {
 
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
-		currentHeight := primitives.BlockHeight(0)
+		committerHeight := primitives.BlockHeight(0)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
-			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == currentHeight+1 {
-				currentHeight++
+			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == committerHeight+1 {
+				committerHeight++
 			}
-			return currentHeight + 1, nil
+			return committerHeight + 1, nil
 		}).Times(5)
 
 		// run sync loop
-		reportedHeight, err := syncOnce(ctx, sourceMock, committerMock, log.GetLogger())
-		require.NoError(t, err)
-		require.True(t, currentHeight == reportedHeight)
+		syncedHeight, err := syncOnce(ctx, sourceMock, committerMock, log.GetLogger())
+		require.NoError(t, err, "expected syncOnce to execute without error")
+		require.EqualValues(t, 4, committerHeight, "expected syncOnce to advance committer to source height")
+		require.True(t, committerHeight == syncedHeight, "expected syncOnce to return the current block height")
 
 		_, err = sourceMock.Verify()
 		require.NoError(t, err)
 
 		_, err = committerMock.Verify()
 		require.NoError(t, err)
-
-		require.EqualValues(t, 4, currentHeight)
 	})
 }
 
@@ -70,8 +69,8 @@ func TestSyncInitialState(t *testing.T) {
 		NewServiceBlockSync(ctx, log.GetLogger(), sourceMock, committerMock)
 
 		// Wait for first sync
-		err := targetTracker.WaitForBlock(ctx, 2)
-		require.NoError(t, err)
+		err := targetTracker.WaitForBlock(ctx, 3)
+		require.NoError(t, err, "expected block committer to be synced to block height 3")
 
 		// push another block
 		sourceMock.setLastBlockHeight(4)
@@ -79,15 +78,14 @@ func TestSyncInitialState(t *testing.T) {
 
 		// Wait for second sync
 		err = targetTracker.WaitForBlock(ctx, 4)
-		require.NoError(t, err)
+		require.NoError(t, err, "expected block committer to be synced to block height 4")
+		require.EqualValues(t, 4, targetCurrentHeight, "expected block committer to be synced to block height 4")
 
 		_, err = sourceMock.Verify()
-		require.NoError(t, err)
+		require.NoError(t, err, "blockSource object should be called as expected")
 
 		_, err = committerMock.Verify()
-		require.NoError(t, err)
-
-		require.EqualValues(t, 4, targetCurrentHeight)
+		require.NoError(t, err, "blockPairCommitter should be called as expected")
 	})
 }
 

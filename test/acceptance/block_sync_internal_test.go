@@ -3,6 +3,7 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -11,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestInternalBlockSync_TransactionPool(t *testing.T) {
@@ -40,8 +42,10 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		lastTx := txBuilders[len(txBuilders)-1].Build().Transaction()
-		waitForTransactionStatusCommitted(network, ctx, lastTx, 0)
-		waitForTransactionStatusCommitted(network, ctx, lastTx, 1)
+		require.True(t, waitForTransactionStatusCommitted(ctx, network, digest.CalcTxHash(lastTx), 0),
+			"expected tx to be committed to leader tx pool")
+		require.True(t, waitForTransactionStatusCommitted(ctx, network, digest.CalcTxHash(lastTx), 1),
+			"expected tx to be committed to non leader tx pool")
 
 		// Resend an already committed transaction to Leader
 		leaderTxResponse, ok := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
@@ -55,16 +59,19 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 	})
 }
 
-func waitForTransactionStatusCommitted(network harness.TestNetworkDriver, ctx context.Context, lastTx *protocol.Transaction, nodeIndex int) {
-	var txStatusOut *services.GetTransactionStatusOutput
-	for txStatusOut == nil || txStatusOut.ClientResponse.TransactionStatus() != protocol.TRANSACTION_STATUS_COMMITTED {
-		txStatusOut, _ = network.PublicApi(nodeIndex).GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
+func waitForTransactionStatusCommitted(ctx context.Context, network harness.TestNetworkDriver, txHash primitives.Sha256, nodeIndex int) bool {
+	return test.Eventually(3*time.Second, func() bool {
+		txStatusOut, err := network.PublicApi(nodeIndex).GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
 				TransactionTimestamp: 0,
-				Txhash:               digest.CalcTxHash(lastTx),
+				Txhash:               txHash,
 			}).Build(),
 		})
-	}
+		if err != nil {
+			return false
+		}
+		return txStatusOut.ClientResponse.TransactionStatus() == protocol.TRANSACTION_STATUS_COMMITTED
+	})
 }
 
 func TestInternalBlockSync_StateStorage(t *testing.T) {

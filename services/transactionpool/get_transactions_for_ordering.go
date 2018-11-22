@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -11,11 +12,13 @@ import (
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 
 	//TODO fail if requested block height is in the past
-	s.logger.Info("GetTransactionsForOrdering called for block height", log.BlockHeight(input.BlockHeight))
+	s.logger.Info("GetTransactionsForOrdering called for block height", trace.LogFieldFrom(ctx), log.BlockHeight(input.BlockHeight))
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
+	// we're collecting transactions for a new proposed block at input.BlockHeight.
+	// wait for previous block height to be synced to avoid processing any tx that was already committed a second time.
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight - 1); err != nil {
 		return nil, err
 	}
