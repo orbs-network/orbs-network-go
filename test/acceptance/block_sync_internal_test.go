@@ -112,9 +112,14 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 			// wait for top block to propagate to state in both nodes
-			lastBlockTxHash := blockPairContainers[len(blockPairContainers)-1].ResultsBlock.TransactionReceipts[0].Txhash()
-			network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 0)
-			network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 1)
+			var topTxHash primitives.Sha256
+			for _, bpc := range blockPairContainers {
+				if len(bpc.ResultsBlock.TransactionReceipts) > 0 {
+					topTxHash = bpc.ResultsBlock.TransactionReceipts[0].Txhash()
+				}
+			}
+			network.WaitForTransactionInNodeState(ctx, topTxHash, 0)
+			network.WaitForTransactionInNodeState(ctx, topTxHash, 1)
 
 			contract := network.GetBenchmarkTokenContract()
 

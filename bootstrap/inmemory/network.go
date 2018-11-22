@@ -132,6 +132,10 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		if err != nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
 		}
+
+		// wait for transaction to reach state storage
+		n.WaitForTransactionInState(ctx, output.ClientResponse.TransactionReceipt().Txhash())
+
 		select {
 		case ch <- output.ClientResponse:
 		case <-ctx.Done():
