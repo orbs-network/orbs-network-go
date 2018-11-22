@@ -8,6 +8,7 @@ import (
 
 type NodeConfig interface {
 	// shared
+	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
@@ -47,6 +48,7 @@ type NodeConfig interface {
 	ConsensusContextMinimalBlockTime() time.Duration
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMaximumTransactionsInBlock() uint32
+	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
@@ -118,14 +120,16 @@ type GossipTransportConfig interface {
 	GossipNetworkTimeout() time.Duration
 }
 
-// TODO See if more config props needed here, based on:
-// https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
+// Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
+	ProtocolVersion() primitives.ProtocolVersion
+	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMinimalBlockTime() time.Duration
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	ConsensusMinimumCommitteeSize() uint32
+	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 }
 
 type PublicApiConfig interface {

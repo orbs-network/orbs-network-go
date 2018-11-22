@@ -11,6 +11,7 @@ import (
 func defaultProductionConfig() mutableNodeConfig {
 	cfg := emptyConfig()
 
+	cfg.SetUint32(PROTOCOL_VERSION, 1)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
@@ -19,6 +20,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK, 10)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 100)
+	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
 	cfg.SetUint32(CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 3)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
