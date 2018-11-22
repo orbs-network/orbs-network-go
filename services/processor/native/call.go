@@ -1,149 +1,119 @@
 package native
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"reflect"
 )
 
-func (s *service) verifyMethodPermissions(contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope, accessScope protocol.ExecutionAccessScope) error {
-	// allow external but protect internal
-	if !methodInfo.External {
-		err := s.verifyInternalMethodCall(contractInfo, methodInfo, callingService, permissionScope)
-		if err != nil {
-			return err
+func (s *service) retrieveContractAndMethodInstances(contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (contractInstance *types.ContractInstance, methodInstance types.MethodInstance, err error) {
+	contractInstance = s.getContractInstance(contractName)
+	if contractInstance == nil {
+		return nil, nil, errors.Errorf("contract instance not found for contract '%s'", contractName)
+	}
+
+	methodInstance, found := contractInstance.PublicMethods[methodName]
+	if found {
+		return contractInstance, methodInstance, nil
+	}
+
+	methodInstance, found = contractInstance.SystemMethods[methodName]
+	if found {
+		if permissionScope == protocol.PERMISSION_SCOPE_SYSTEM {
+			return contractInstance, methodInstance, nil
+		} else {
+			return nil, nil, errors.Errorf("only system contracts can run method '%s'", methodName)
 		}
 	}
 
-	// allow read but protect write
-	if methodInfo.Access == sdk.ACCESS_SCOPE_READ_WRITE {
-		if accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
-			return errors.Errorf("write method '%s' called without write access", methodInfo.Name)
-		}
-	}
-
-	return nil
+	return nil, nil, errors.Errorf("method '%s' not found on contract '%s'", methodName, contractName)
 }
 
-func (s *service) verifyInternalMethodCall(contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, callingService primitives.ContractName, permissionScope protocol.ExecutionPermissionScope) error {
-	if callingService.Equal(primitives.ContractName(contractInfo.Name)) {
-		return nil
-	}
-	if permissionScope == protocol.PERMISSION_SCOPE_SYSTEM {
-		return nil
-	}
-	return errors.Errorf("internal method '%s' called from different service '%s' without system permissions", methodInfo.Name, callingService)
-}
-
-func (s *service) processMethodCall(executionContextId sdk.Context, contractInfo *sdk.ContractInfo, methodInfo *sdk.MethodInfo, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
+func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			contractOutputErr = errors.Errorf("contract panic: %s", r)
+			contractOutputErr = errors.Errorf("%s", r)
 			contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()
 
 	// verify input args
-	argValues, err := s.prepareMethodInputArgsForCall(executionContextId, methodInfo, methodInfo.Implementation, args)
+	inValues, err := s.prepareMethodInputArgsForCall(executionContextId, methodInstance, args)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// execute the call
-	contractInstance := s.getContractInstanceFromRepository(contractInfo.Name)
-	if contractInstance == nil {
-		return nil, nil, errors.New("contract repository is not initialized yet")
-	}
-	contractValue := reflect.ValueOf(contractInstance)
-	contextValue := reflect.ValueOf(executionContextId)
-	inValues := append([]reflect.Value{contractValue, contextValue}, argValues...)
-	outValues := reflect.ValueOf(methodInfo.Implementation).Call(inValues)
-	if len(outValues) == 0 {
-		return nil, nil, errors.Errorf("call method '%s' returned zero args although error is mandatory", methodInfo.Name)
-	}
+	outValues := reflect.ValueOf(methodInstance).Call(inValues)
 
 	// create output args
-	contractOutputArgs = nil
-	if len(outValues) > 1 {
-		contractOutputArgs, err = s.createMethodOutputArgs(methodInfo, outValues[:len(outValues)-1])
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	// create contract output error
-	contractOutputErr, err = s.createContractOutputError(methodInfo, outValues[len(outValues)-1])
-	if contractOutputErr != nil {
-		contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
+	contractOutputArgs, err = s.createMethodOutputArgs(methodInstance, outValues)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// done
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(executionContextId sdk.Context, methodInfo *sdk.MethodInfo, implementation interface{}, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
-	const NUM_ARGS_RECEIVER_AND_CONTEXT = 2
-
+func (s *service) prepareMethodInputArgsForCall(executionContextId primitives.ExecutionContextId, methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
 	res := []reflect.Value{}
-	methodType := reflect.ValueOf(implementation).Type()
-	if methodType.NumIn() < NUM_ARGS_RECEIVER_AND_CONTEXT || methodType.In(1) != reflect.TypeOf(executionContextId) {
-		return nil, errors.Errorf("method '%s' first arg is not Context", methodInfo.Name)
-	}
+	methodType := reflect.ValueOf(methodInstance).Type()
 
 	var arg *protocol.MethodArgument
 	argsIterator := args.ArgumentsIterator()
-	for i := 0; i < methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT; i++ {
+	for i := 0; i < methodType.NumIn(); i++ {
 
 		// get the next arg from the transaction
 		if argsIterator.HasNext() {
 			arg = argsIterator.NextArguments()
 		} else {
-			return nil, errors.Errorf("method '%s' takes %d args but received %d", methodInfo.Name, methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT, i)
+			return nil, errors.Errorf("method takes %d args but received %d", methodType.NumIn(), i)
 		}
 
 		// translate argument type
-		switch methodType.In(i + NUM_ARGS_RECEIVER_AND_CONTEXT).Kind() {
+		switch methodType.In(i).Kind() {
 		case reflect.Uint32:
 			if !arg.IsTypeUint32Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", methodInfo.Name, i, arg.StringType())
+				return nil, errors.Errorf("method expects arg %d to be uint32 but it has %s", i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.Uint32Value()))
 		case reflect.Uint64:
 			if !arg.IsTypeUint64Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", methodInfo.Name, i, arg.StringType())
+				return nil, errors.Errorf("method expects arg %d to be uint64 but it has %s", i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.Uint64Value()))
 		case reflect.String:
 			if !arg.IsTypeStringValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", methodInfo.Name, i, arg.StringType())
+				return nil, errors.Errorf("method expects arg %d to be string but it has %s", i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.StringValue()))
 		case reflect.Slice:
-			if methodType.In(i+NUM_ARGS_RECEIVER_AND_CONTEXT).Elem().Kind() != reflect.Uint8 {
-				return nil, errors.Errorf("method '%s' arg %d slice type is not byte", methodInfo.Name, i)
+			if methodType.In(i).Elem().Kind() != reflect.Uint8 {
+				return nil, errors.Errorf("method arg %d slice type is not byte", i)
 			}
 			if !arg.IsTypeBytesValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", methodInfo.Name, i, arg.StringType())
+				return nil, errors.Errorf("method expects arg %d to be bytes but it has %s", i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.BytesValue()))
 		default:
-			return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", methodInfo.Name, i, arg.StringType())
+			return nil, errors.Errorf("method expects arg %d to be a known type but it has %s", i, arg.StringType())
 		}
 
 	}
 
 	// make sure transaction doesn't have any more args left
 	if argsIterator.HasNext() {
-		return nil, errors.Errorf("method '%s' takes %d args but received more", methodInfo.Name, methodType.NumIn()-NUM_ARGS_RECEIVER_AND_CONTEXT)
+		return nil, errors.Errorf("method takes %d args but received more", methodType.NumIn())
 	}
 
 	return res, nil
 }
 
-func (s *service) createMethodOutputArgs(methodInfo *sdk.MethodInfo, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
+func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
 	res := []*protocol.MethodArgumentBuilder{}
 	for i, arg := range args {
 		switch arg.Kind() {
@@ -155,28 +125,16 @@ func (s *service) createMethodOutputArgs(methodInfo *sdk.MethodInfo, args []refl
 			res = append(res, &protocol.MethodArgumentBuilder{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Interface().(string)})
 		case reflect.Slice:
 			if arg.Type().Elem().Kind() != reflect.Uint8 {
-				return nil, errors.Errorf("call method '%s' output arg %d slice type is not byte", methodInfo.Name, i)
+				return nil, errors.Errorf("method output arg %d slice type is not byte", i)
 			}
 			res = append(res, &protocol.MethodArgumentBuilder{Name: "bytes", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.Interface().([]byte)})
 		default:
-			return nil, errors.Errorf("call method '%s' output arg %d is of unknown type", methodInfo.Name, i)
+			return nil, errors.Errorf("method output arg %d is of unknown type", i)
 		}
 	}
 	return (&protocol.MethodArgumentArrayBuilder{
 		Arguments: res,
 	}).Build(), nil
-}
-
-func (s *service) createContractOutputError(methodInfo *sdk.MethodInfo, value reflect.Value) (outErr error, err error) {
-	if value.Interface() != nil {
-		var ok bool
-		outErr, ok = value.Interface().(error)
-		if !ok {
-			return nil, errors.Errorf("call method '%s' last arg returned is not a valid error", methodInfo.Name)
-		}
-		return outErr, nil
-	}
-	return nil, nil
 }
 
 func (s *service) createMethodOutputArgsWithString(str string) *protocol.MethodArgumentArray {

@@ -44,10 +44,10 @@ func RequireNoUnexpectedErrors(f Fataler, errorTracker ErrorTracker) {
 
 type transactionStatuser interface {
 	TransactionStatus() protocol.TransactionStatus
-    TransactionReceipt() *protocol.TransactionReceipt
+	TransactionReceipt() *protocol.TransactionReceipt
 }
 
-func RequireSuccess(t *testing.T, tx transactionStatuser, msg string, args... interface{}) {
+func RequireSuccess(t *testing.T, tx transactionStatuser, msg string, args ...interface{}) {
 	message := fmt.Sprintf(msg, args...)
 	RequireStatus(t, protocol.TRANSACTION_STATUS_COMMITTED, tx, message)
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, tx.TransactionReceipt().ExecutionResult(), message)

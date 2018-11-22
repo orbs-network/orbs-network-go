@@ -75,6 +75,8 @@ const (
 	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
 
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
+
+	ETHEREUM_ENDPOINT = "ETHEREUM_ENDPOINT"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -310,4 +312,8 @@ func (c *config) ConsensusRequiredQuorumPercentage() uint32 {
 
 func (c *config) ConsensusMinimumCommitteeSize() uint32 {
 	return c.kv[CONSENSUS_MINIMUM_COMMITTEE_SIZE].Uint32Value
+}
+
+func (c *config) EthereumEndpoint() string {
+	return c.kv[ETHEREUM_ENDPOINT].StringValue
 }

@@ -172,7 +172,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 
 		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
 
-		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler())
+		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), testLogger)
 	}
 
 	return network
@@ -206,7 +206,6 @@ func dumpStateOnFailure(f canFail, network TestNetworkDriver) {
 		network.DumpState()
 	}
 }
-
 
 func getCallerFuncName() string {
 	pc, _, _, _ := runtime.Caller(2)

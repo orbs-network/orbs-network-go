@@ -72,6 +72,9 @@ type NodeConfig interface {
 
 	// metrics
 	MetricsReportInterval() time.Duration
+
+	// ethereum connector (crosschain)
+	EthereumEndpoint() string
 }
 
 type OverridableConfig interface {

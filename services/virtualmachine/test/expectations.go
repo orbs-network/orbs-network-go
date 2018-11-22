@@ -117,6 +117,26 @@ func (h *harness) verifyNativeContractInfoRequested(t *testing.T) {
 	require.True(t, ok, "did not request info for native contract: %v", err)
 }
 
+func (h *harness) expectEthereumConnectorMethodCalled(expectedContractAddress string, expectedMethodName string, returnError error, returnOutput []byte) {
+	contractMatcher := func(i interface{}) bool {
+		input, ok := i.(*services.EthereumCallContractInput)
+		return ok &&
+			input.EthereumContractAddress == expectedContractAddress &&
+			input.EthereumFunctionName == expectedMethodName
+	}
+
+	outputToReturn := &services.EthereumCallContractOutput{
+		EthereumPackedOutput: returnOutput,
+	}
+
+	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumCallContract", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s and method equals %s", expectedContractAddress, expectedMethodName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
+}
+
+func (h *harness) verifyEthereumConnectorMethodCalled(t *testing.T) {
+	ok, err := h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].Verify()
+	require.True(t, ok, "did not call ethereum connector: %v", err)
+}
+
 func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.BlockHeight) {
 	outputToReturn := &services.GetStateStorageBlockHeightOutput{
 		LastCommittedBlockHeight:    returnValue,

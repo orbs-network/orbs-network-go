@@ -2,7 +2,7 @@ package adapter
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/pkg/errors"
 	"sync"
@@ -10,29 +10,29 @@ import (
 
 type FakeCompiler interface {
 	adapter.Compiler
-	ProvideFakeContract(fakeContractInfo *sdk.ContractInfo, code string)
+	ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code string)
 }
 
 type fakeCompiler struct {
 	mutex    *sync.RWMutex
-	provided map[string]*sdk.ContractInfo
+	provided map[string]*sdkContext.ContractInfo
 }
 
 func NewFakeCompiler() FakeCompiler {
 	return &fakeCompiler{
 		mutex:    &sync.RWMutex{},
-		provided: make(map[string]*sdk.ContractInfo),
+		provided: make(map[string]*sdkContext.ContractInfo),
 	}
 }
 
-func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdk.ContractInfo, code string) {
+func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	c.provided[code] = fakeContractInfo
 }
 
-func (c *fakeCompiler) Compile(ctx context.Context, code string) (*sdk.ContractInfo, error) {
+func (c *fakeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
