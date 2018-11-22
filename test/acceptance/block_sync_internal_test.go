@@ -73,6 +73,7 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 	const transfers = 10
 	const totalAmount = transfers * transferAmount
 
+	var blockPairContainers []*protocol.BlockPairContainer
 	harness.Network(t).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
@@ -85,42 +86,44 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			contract := builderNetwork.GetBenchmarkTokenContract()
 			var topBlock primitives.BlockHeight
 			for i := 0; i < transfers; i++ {
-				txRes := <- contract.SendTransfer(ctx,0, transferAmount, 0,1 )
+				txRes := <-contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
 				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes.TransactionStatus())
 				topBlock = txRes.BlockHeight()
 			}
-			blockPairContainers, _,_,err := builderNetwork.BlockPersistence(0).GetBlocks(1, topBlock+1)
-			require.True(t, len(blockPairContainers) >= transfers)
+			bpcs, _, _, err := builderNetwork.BlockPersistence(0).GetBlocks(1, topBlock+1)
+			require.True(t, len(bpcs) >= transfers)
 			require.NoError(t, err)
-
-			harness.Network(t).
-				AllowingErrors(
-					"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-					"internal-node sync to consensus algo failed",         //TODO Remove this once internal node sync is implemented
-					"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-					"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-				).
-				WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
-					// inject blocks from builder network
-					for _, bpc := range blockPairContainers {
-						err := network.BlockPersistence(0).WriteNextBlock(bpc)
-						require.NoError(t, err)
-					}
-				}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-
-				// wait for top block to propagate to state in both nodes
-				lastBlockTxHash := blockPairContainers[len(blockPairContainers)-1].ResultsBlock.TransactionReceipts[0].Txhash()
-				network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 0)
-				network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 1)
-
-				contract = network.GetBenchmarkTokenContract()
-
-				// verify state in both nodes
-				balanceNode0 := <- contract.CallGetBalance(ctx,0, 1)
-				balanceNode1 := <- contract.CallGetBalance(ctx,1, 1)
-
-				require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
-				require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")
-			})
+			blockPairContainers = bpcs
 		})
+
+		harness.Network(t).
+			AllowingErrors(
+				"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
+				"internal-node sync to consensus algo failed",         //TODO Remove this once internal node sync is implemented
+				"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+				"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+			).
+			WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
+				// inject blocks from builder network
+				for _, bpc := range blockPairContainers {
+					err := network.BlockPersistence(0).WriteNextBlock(bpc)
+					require.NoError(t, err)
+				}
+			}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+
+			// wait for top block to propagate to state in both nodes
+			lastBlockTxHash := blockPairContainers[len(blockPairContainers)-1].ResultsBlock.TransactionReceipts[0].Txhash()
+			network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 0)
+			network.WaitForTransactionInNodeState(ctx, lastBlockTxHash, 1)
+
+			contract := network.GetBenchmarkTokenContract()
+
+			// verify state in both nodes
+			balanceNode0 := <- contract.CallGetBalance(ctx,0, 1)
+			balanceNode1 := <- contract.CallGetBalance(ctx,1, 1)
+
+			require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
+			require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")
+		})
+
 }
