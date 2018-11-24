@@ -70,7 +70,7 @@ func (w *waiter) wait(ctx context.Context, wc *waiterChannel) (interface{}, erro
 	select {
 	case <-ctx.Done():
 		w.deleteByChannel(wc)
-		return nil, errors.Errorf("waiting aborted due to context termination for key %s", hex.EncodeToString([]byte(wc.k)))
+		return nil, errors.Wrapf(ctx.Err(),"waiting aborted due to context termination for key %s", hex.EncodeToString([]byte(wc.k)))
 	case response, open := <-wc.c: // intentional not close channel here
 		if !open {
 			return nil, errors.Errorf("waiting aborted")

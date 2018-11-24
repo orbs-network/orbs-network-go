@@ -135,7 +135,7 @@ func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, e
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusAccepted {
 		return nil, errors.Errorf("got http status code %s calling %s: %s", res.StatusCode, endpoint, string(readBytes))
 	}
 

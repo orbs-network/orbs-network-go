@@ -13,7 +13,7 @@ type BlockSearchRules struct {
 }
 
 type BlockPersistence interface {
-	WriteNextBlock(blockPairs *protocol.BlockPairContainer) error
+	WriteNextBlock(blockPairs *protocol.BlockPairContainer) (bool, error)
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 
 	// TODO: this function has a hideous interface

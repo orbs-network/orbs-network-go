@@ -33,7 +33,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, err
 	}
 
-	if err := s.persistence.WriteNextBlock(input.BlockPair); err != nil {
+	if added, err := s.persistence.WriteNextBlock(input.BlockPair); err != nil || !added {
 		return nil, err
 	}
 

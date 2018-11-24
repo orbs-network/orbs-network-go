@@ -87,33 +87,37 @@ func (bp *inMemoryBlockPersistence) GetNumBlocks() (primitives.BlockHeight, erro
 	return primitives.BlockHeight(len(bp.blockChain.blocks)), nil
 }
 
-func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
+func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
 	if bp.failNextBlocks {
-		return errors.New("could not write a block")
+		return false, errors.New("could not write a block")
 	}
 
-	err := bp.validateAndAddNextBlock(blockPair)
-	if err != nil {
-		return err
+	added, err := bp.validateAndAddNextBlock(blockPair)
+	if err != nil || !added {
+		return false, err
 	}
 
 	bp.tracker.IncrementHeight()
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
 
-	return nil
+	return true, nil
 }
 
-func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) error {
+func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
 	bp.blockChain.Lock()
 	defer bp.blockChain.Unlock()
 
-	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 != blockPair.TransactionsBlock.Header.BlockHeight() {
-		return errors.Errorf("block persistence tried to write next block with height %d when %d exist", blockPair.TransactionsBlock.Header.BlockHeight(), len(bp.blockChain.blocks))
+	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 < blockPair.TransactionsBlock.Header.BlockHeight() {
+		return false, errors.Errorf("block persistence tried to write next block with height %d when %d exist", blockPair.TransactionsBlock.Header.BlockHeight(), len(bp.blockChain.blocks))
 	}
 
+	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 > blockPair.TransactionsBlock.Header.BlockHeight() {
+		bp.logger.Info("block persistence ignoring write next block with height %d when %d exist", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
+		return false, nil
+	}
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
-	return nil
+	return true, nil
 }
 
 func (bp *inMemoryBlockPersistence) GetBlocksRelevantToTxTimestamp(txTimeStamp primitives.TimestampNano, rules adapter.BlockSearchRules) []*protocol.BlockPairContainer {
