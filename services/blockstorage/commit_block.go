@@ -25,6 +25,8 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, err
 	}
 
+	// TODO the logic here aborting commits for already committed blocks is duplicated in the adapter because this is not under lock. synchronize to avoid duplicating logic in adapter
+	// see https://github.com/orbs-network/orbs-network-go/issues/524
 	if ok, err := s.validateBlockDoesNotExist(ctx, txBlockHeader, rsBlockHeader, lastCommittedBlock); err != nil || !ok {
 		return nil, err
 	}
