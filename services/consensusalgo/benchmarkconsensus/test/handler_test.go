@@ -16,7 +16,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
 
 		b1001 := aBlockFromLeader.WithHeight(1001).Build()
-		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
+		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlock(b1001).Build()
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(1002, h.config.NodePublicKey())
 
@@ -57,7 +57,7 @@ func TestHandlerOfLeaderIgnoresFutureValidBlockWithModeVerifyOnly(t *testing.T) 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
 
 		b1001 := aBlockFromLeader.WithHeight(1001).Build()
-		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
+		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlock(b1001).Build()
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitNotSent()
 
@@ -78,7 +78,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
 
 		b1001 := aBlockFromLeader.WithHeight(1001).Build()
-		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlockHash(b1001).Build()
+		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlock(b1001).Build()
 
 		err := h.handleBlockConsensus(ctx, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b1002, b1001)
 		if err != nil {
@@ -87,7 +87,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 
 		t.Log("Leader commits height 1003, confirm height 1003")
 
-		b1003 := aBlockFromLeader.WithHeight(1003).WithPrevBlockHash(b1002).Build()
+		b1003 := aBlockFromLeader.WithHeight(1003).WithPrevBlock(b1002).Build()
 		h.expectCommitSaveAndReply(b1003, 1003, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
 		h.receivedCommitViaGossip(ctx, b1003)
@@ -103,7 +103,7 @@ func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 		t.Log("Handle block consensus (ie due to block sync) of height 2 without hash pointer")
 
 		b1 := aBlockFromLeader.WithHeight(1).Build()
-		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(nil).Build()
+		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlock(nil).Build()
 
 		err := h.handleBlockConsensus(ctx, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b2, b1)
 		if err == nil {
@@ -122,7 +122,7 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 		b1 := aBlockFromLeader.WithHeight(1).Build()
 		b2 := builders.BlockPair().
 			WithHeight(2).
-			WithPrevBlockHash(b1).
+			WithPrevBlock(b1).
 			WithInvalidBenchmarkConsensusBlockProof(leaderKeyPair()).
 			Build()
 
@@ -141,7 +141,7 @@ func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
 		t.Log("Handle block consensus (ie due to block sync) of height 2 from non leader")
 
 		b1 := aBlockFromNonLeader.WithHeight(1).Build()
-		b2 := aBlockFromNonLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
+		b2 := aBlockFromNonLeader.WithHeight(2).WithPrevBlock(b1).Build()
 
 		err := h.handleBlockConsensus(ctx, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b2, b1)
 		if err == nil {

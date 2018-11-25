@@ -7,16 +7,28 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-func (s *service) Sign(content []byte) []byte {
-	sig, _ := signature.SignEd25519(s.config.NodePrivateKey(), content)
+type keyManager struct {
+	publicKey  primitives.Ed25519PublicKey
+	privateKey primitives.Ed25519PrivateKey
+}
+
+func NewKeyManager(publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *keyManager {
+	return &keyManager{
+		publicKey:  publicKey,
+		privateKey: privateKey,
+	}
+}
+
+func (k *keyManager) Sign(content []byte) []byte {
+	sig, _ := signature.SignEd25519(k.privateKey, content)
 	return sig
 }
 
-func (s *service) Verify(content []byte, sender *leanhelix.SenderSignature) bool {
+func (k *keyManager) Verify(content []byte, sender *leanhelix.SenderSignature) bool {
 
 	return signature.VerifyEd25519(primitives.Ed25519PublicKey(sender.SenderPublicKey()), content, primitives.Ed25519Sig(sender.Signature()))
 }
 
-func (s *service) MyPublicKey() lhprimitives.Ed25519PublicKey {
-	return lhprimitives.Ed25519PublicKey(s.config.NodePublicKey())
+func (k *keyManager) MyPublicKey() lhprimitives.Ed25519PublicKey {
+	return lhprimitives.Ed25519PublicKey(k.publicKey)
 }

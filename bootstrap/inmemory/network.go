@@ -57,7 +57,7 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
-	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
+	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(n.Logger)
 	node.ethereumConnection = ethereumAdapter.NewEthereumSimulatorConnection(cfg, logger)
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
@@ -124,6 +124,7 @@ func (n *Network) Size() int {
 func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse {
 	ch := make(chan *client.SendTransactionResponse)
 	supervised.GoOnce(n.Logger, func() {
+		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
@@ -131,6 +132,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		if err != nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
 		}
+
 		select {
 		case ch <- output.ClientResponse:
 		case <-ctx.Done():
@@ -156,6 +158,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 
 	ch := make(chan uint64)
 	supervised.GoOnce(n.Logger, func() {
+		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: (&client.CallMethodRequestBuilder{Transaction: tx}).Build(),

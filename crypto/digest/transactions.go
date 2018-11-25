@@ -16,6 +16,10 @@ func CalcTxHash(transaction *protocol.Transaction) primitives.Sha256 {
 	return hash.CalcSha256(transaction.Raw())
 }
 
+func CalcReceiptHash(receipt *protocol.TransactionReceipt) primitives.Sha256 {
+	return hash.CalcSha256(receipt.Raw())
+}
+
 func CalcTxId(transaction *protocol.Transaction) []byte {
 	return GenerateTxId(CalcTxHash(transaction), transaction.Timestamp())
 }

@@ -61,7 +61,7 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 
 		t.Log("Leader commits height 2, confirm height 2")
 
-		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
+		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlock(b1).Build()
 		h.expectCommitSaveAndReply(b2, 2, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
 		h.receivedCommitViaGossip(ctx, b2)
@@ -84,7 +84,7 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 
 		t.Log("Leader commits height 2, confirm height 2")
 
-		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(b1).Build()
+		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlock(b1).Build()
 		h.expectCommitSaveAndReply(b2, 2, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
 
 		h.receivedCommitViaGossip(ctx, b2)
@@ -129,7 +129,7 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 
 		t.Log("Leader commits height 2 without hash pointer, don't confirm")
 
-		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlockHash(nil).Build()
+		b2 := aBlockFromLeader.WithHeight(2).WithPrevBlock(nil).Build()
 		h.expectCommitIgnored()
 
 		h.receivedCommitViaGossip(ctx, b2)

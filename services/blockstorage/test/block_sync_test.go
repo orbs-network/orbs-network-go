@@ -18,7 +18,7 @@ import (
 // TODO move to unit tests
 func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(4).start(ctx)
+		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
 
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -82,7 +82,6 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
 			withSyncBroadcast(1).
-			withCommitStateDiff(4).
 			withValidateConsensusAlgos(4).
 			start(ctx)
 

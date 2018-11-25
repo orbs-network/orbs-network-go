@@ -2,15 +2,17 @@ package consensuscontext
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
 
-func (s *service) fetchTransactions(ctx context.Context, maxNumberOfTransactions uint32,
+func (s *service) fetchTransactions(ctx context.Context, blockHeight primitives.BlockHeight, maxNumberOfTransactions uint32,
 	minimumTransactionsInBlock uint32, minimalBlockDelay time.Duration) (*services.GetTransactionsForOrderingOutput, error) {
 
 	input := &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumberOfTransactions,
+		BlockHeight: blockHeight,
 	}
 
 	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(ctx, input)
