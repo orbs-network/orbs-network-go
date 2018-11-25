@@ -16,9 +16,10 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 
 	var bs *BlockSync
 	test.WithContext(func(ctx context.Context) {
-		h.expectingSyncOnStart()
+		h.expectSyncOnStart()
 
-		bs = newBlockSyncWithFactory(ctx, h.factory, h.config, h.gossip, h.storage, h.logger, h.metricFactory)
+		cfg := newBlockSyncConfigForTestsWithInfiniteTimeouts() // don't want timeouts since manual timer
+		bs = newBlockSyncWithFactory(ctx, h.factory, cfg, h.gossip, h.storage, h.logger, h.metricFactory)
 
 		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	})
@@ -37,9 +38,10 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 	var bs *BlockSync
 	test.WithContext(func(ctx context.Context) {
-		h.expectingSyncOnStart()
+		h.expectSyncOnStart()
 
-		bs = newBlockSyncWithFactory(ctx, h.factory, h.config, h.gossip, h.storage, h.logger, h.metricFactory)
+		cfg := newBlockSyncConfigForTestsWithInfiniteTimeouts() // don't want timeouts since manual timer
+		bs = newBlockSyncWithFactory(ctx, h.factory, cfg, h.gossip, h.storage, h.logger, h.metricFactory)
 
 		ok := test.Eventually(50*time.Millisecond, func() bool {
 			if len(manualNoCommitTimers) > 0 {

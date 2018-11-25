@@ -3,6 +3,7 @@ package gossip
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -44,16 +45,17 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 }
 
 func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	message, err := codec.DecodeBenchmarkConsensusCommitMessage(payloads)
 	if err != nil {
-		s.logger.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
+		logger.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
 		return
 	}
 
 	for _, l := range s.benchmarkConsensusHandlers {
 		_, err := l.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{Message: message})
 		if err != nil {
-			s.logger.Info("HandleBenchmarkConsensusCommit failed", log.Error(err))
+			logger.Info("HandleBenchmarkConsensusCommit failed", log.Error(err))
 		}
 	}
 }

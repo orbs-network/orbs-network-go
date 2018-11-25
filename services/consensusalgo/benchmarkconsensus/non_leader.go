@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -52,6 +53,8 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer,
 }
 
 func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protocol.BlockPairContainer, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) error {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	// save the block to block storage
 	err := s.saveToBlockStorage(ctx, blockPair)
 	if err != nil {
@@ -90,7 +93,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
-	s.logger.Info("replying committed with last committed height", log.BlockHeight(lastCommittedBlockHeight), log.Stringable("signed-data", signedData))
+	logger.Info("replying committed with last committed height", log.BlockHeight(lastCommittedBlockHeight), log.Stringable("signed-data", signedData))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientPublicKey: recipient,
 		Message:            message,

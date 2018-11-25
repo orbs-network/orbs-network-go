@@ -22,7 +22,6 @@
 [submodule "vendor/github.com/stretchr/testify"]
 	path = vendor/github.com/stretchr/testify
 	url = https://github.com/stretchr/testify.git
-
 [submodule "vendor/github.com/orbs-network/lean-helix-go"]
 	path = vendor/github.com/orbs-network/lean-helix-go
 	url = https://github.com/orbs-network/lean-helix-go
@@ -35,3 +34,9 @@
 [submodule "vendor/github.com/VividCortex/ewma"]
 	path = vendor/github.com/VividCortex/ewma
 	url = https://github.com/VividCortex/ewma
+[submodule "vendor/github.com/ethereum/go-ethereum"]
+	path = vendor/github.com/ethereum/go-ethereum
+	url = https://github.com/ethereum/go-ethereum
+[submodule "vendor/github.com/go-playground/ansi"]
+	path = vendor/github.com/go-playground/ansi
+	url = https://github.com/go-playground/ansi

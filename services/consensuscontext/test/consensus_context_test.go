@@ -8,18 +8,6 @@ import (
 	"testing"
 )
 
-/*
-
-Questions:
-
-1. What is weighted random sorting algo, and do we use reputation here
-2. "minimal-block-delay-sec" - max wait time for tx? so should be called "max..."
-3. metadata placeholder
-4.
-
-
-*/
-
 func TestRequestOrderingCommittee(t *testing.T) {
 	h := newHarness()
 	blockHeight := primitives.BlockHeight(1)
@@ -51,4 +39,8 @@ func TestRequestOrderingCommittee(t *testing.T) {
 		actualFederationSize := len(output.NodePublicKeys)
 		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
 	})
+}
+
+func TestCreateAndValidateTransactionsBlock(t *testing.T) {
+
 }

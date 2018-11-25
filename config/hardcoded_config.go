@@ -11,7 +11,7 @@ type hardCodedFederationNode struct {
 }
 
 type hardCodedGossipPeer struct {
-	gossipPort     uint16
+	gossipPort     int
 	gossipEndpoint string
 }
 
@@ -32,6 +32,7 @@ type config struct {
 }
 
 const (
+	PROTOCOL_VERSION                     = "PROTOCOL_VERSION"
 	VIRTUAL_CHAIN_ID                     = "VIRTUAL_CHAIN_ID"
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL   = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	LEAN_HELIX_CONSENSUS_RETRY_INTERVAL  = "LEAN_HELIX_CONSENSUS_RETRY_INTERVAL"
@@ -47,9 +48,10 @@ const (
 	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
 	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
 
-	CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME            = "CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME"
-	CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK = "CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK"
-	CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK = "CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK"
+	CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME              = "CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME"
+	CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK"
+	CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK"
+	CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER = "CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER"
 
 	STATE_STORAGE_HISTORY_SNAPSHOT_NUM = "STATE_STORAGE_HISTORY_SNAPSHOT_NUM"
 
@@ -73,6 +75,8 @@ const (
 	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
 
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
+
+	ETHEREUM_ENDPOINT = "ETHEREUM_ENDPOINT"
 )
 
 func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
@@ -81,7 +85,7 @@ func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) Feder
 	}
 }
 
-func NewHardCodedGossipPeer(gossipPort uint16, gossipEndpoint string) GossipPeer {
+func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string) GossipPeer {
 	return &hardCodedGossipPeer{
 		gossipPort:     gossipPort,
 		gossipEndpoint: gossipEndpoint,
@@ -142,7 +146,7 @@ func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
 	return c.nodePublicKey
 }
 
-func (c *hardCodedGossipPeer) GossipPort() uint16 {
+func (c *hardCodedGossipPeer) GossipPort() int {
 	return c.gossipPort
 }
 
@@ -156,6 +160,10 @@ func (c *config) NodePublicKey() primitives.Ed25519PublicKey {
 
 func (c *config) NodePrivateKey() primitives.Ed25519PrivateKey {
 	return c.nodePrivateKey
+}
+
+func (c *config) ProtocolVersion() primitives.ProtocolVersion {
+	return primitives.ProtocolVersion(c.kv[PROTOCOL_VERSION].Uint32Value)
 }
 
 func (c *config) VirtualChainId() primitives.VirtualChainId {
@@ -224,6 +232,10 @@ func (c *config) ConsensusContextMinimumTransactionsInBlock() uint32 {
 
 func (c *config) ConsensusContextMaximumTransactionsInBlock() uint32 {
 	return c.kv[CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK].Uint32Value
+}
+
+func (c *config) ConsensusContextSystemTimestampAllowedJitter() time.Duration {
+	return c.kv[CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER].DurationValue
 }
 
 func (c *config) StateStorageHistorySnapshotNum() uint32 {
@@ -300,4 +312,8 @@ func (c *config) ConsensusRequiredQuorumPercentage() uint32 {
 
 func (c *config) ConsensusMinimumCommitteeSize() uint32 {
 	return c.kv[CONSENSUS_MINIMUM_COMMITTEE_SIZE].Uint32Value
+}
+
+func (c *config) EthereumEndpoint() string {
+	return c.kv[ETHEREUM_ENDPOINT].StringValue
 }

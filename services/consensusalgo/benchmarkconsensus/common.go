@@ -1,19 +1,18 @@
 package benchmarkconsensus
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 	"math"
-
-	//"math"
-	"context"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 func (s *service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.BlockPairContainer) {
@@ -41,14 +40,16 @@ func (s *service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, 
 }
 
 func (s *service) requiredQuorumSize() int {
-	return int(math.Ceil(float64(s.config.NetworkSize(0)) * float64(s.config.ConsensusRequiredQuorumPercentage()/100)))
+	return int(math.Ceil(float64(s.config.NetworkSize(0)) * float64(s.config.ConsensusRequiredQuorumPercentage()) / 100))
 }
 
 func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return nil
 	}
-	s.logger.Info("saving block to storage", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	logger.Info("saving block to storage", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPair,
 	})
@@ -58,10 +59,10 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("incorrect block proof type: %s", blockPair.TransactionsBlock.BlockProof.Type())
+		return errors.Errorf("incorrect block proof type: %v", blockPair.TransactionsBlock.BlockProof.Type())
 	}
 	if !blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("incorrect block proof type: %s", blockPair.ResultsBlock.BlockProof.Type())
+		return errors.Errorf("incorrect block proof type: %v", blockPair.ResultsBlock.BlockProof.Type())
 	}
 
 	// prev block hash ptr (if given)

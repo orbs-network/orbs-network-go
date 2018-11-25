@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -12,22 +13,25 @@ import (
 	"time"
 )
 
-func (s *service) SendTransaction(ctx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
+func (s *service) SendTransaction(parentCtx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
 	if input.ClientRequest == nil {
 		err := errors.Errorf("error missing input (client request is nil)")
 		s.logger.Info("send transaction received missing input", log.Error(err))
 		return nil, err
 	}
 
+	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
 	tx := input.ClientRequest.SignedTransaction()
+	txHash := digest.CalcTxHash(tx.Transaction())
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
+
 	if txStatus := isTransactionRequestValid(s.config, tx.Transaction()); txStatus != protocol.TRANSACTION_STATUS_RESERVED {
 		err := errors.Errorf("error input %s", txStatus.String())
-		s.logger.Info("send transaction received input failed", log.Error(err))
+		logger.Info("send transaction received input failed", log.Error(err))
 		return toSendTxOutput(&txResponse{transactionStatus: txStatus}), err
 	}
 
-	txHash := digest.CalcTxHash(tx.Transaction())
-	s.logger.Info("send transaction request received", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+	logger.Info("send transaction request received")
 
 	start := time.Now()
 	defer s.metrics.sendTransactionTime.RecordSince(start)
@@ -37,7 +41,7 @@ func (s *service) SendTransaction(ctx context.Context, input *services.SendTrans
 	addResp, err := s.transactionPool.AddNewTransaction(ctx, &services.AddNewTransactionInput{SignedTransaction: tx})
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
-		s.logger.Info("adding transaction to TransactionPool failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		logger.Info("adding transaction to TransactionPool failed", log.Error(err))
 		return toSendTxOutput(toTxResponse(addResp)), errors.Wrap(err, fmt.Sprintf("error '%s' for transaction result", addResp))
 	}
 
@@ -56,7 +60,7 @@ func (s *service) SendTransaction(ctx context.Context, input *services.SendTrans
 
 	obj, err := s.waiter.wait(ctx, waitResult)
 	if err != nil {
-		s.logger.Info("waiting for transaction to be processed failed", log.Error(err), log.String("flow", "checkpoint"), log.Stringable("txHash", txHash))
+		logger.Info("waiting for transaction to be processed failed")
 		return toSendTxOutput(toTxResponse(addResp)), err
 	}
 	return toSendTxOutput(obj.(*txResponse)), nil

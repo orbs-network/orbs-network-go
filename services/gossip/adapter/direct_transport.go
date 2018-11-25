@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -128,8 +129,8 @@ func (t *directTransport) isServerListening() bool {
 	return t.serverListeningUnderMutex
 }
 
-func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16) {
-	listener, err := t.serverListenForIncomingConnections(ctx, listenPort)
+func (t *directTransport) serverMainLoop(parentCtx context.Context, listenPort uint16) {
+	listener, err := t.serverListenForIncomingConnections(parentCtx, listenPort)
 	if err != nil {
 		err = errors.Wrapf(err, "gossip transport cannot listen on port %d", listenPort)
 		t.logger.Error(err.Error())
@@ -140,17 +141,19 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.serverPort)))
 
 	for {
-		if ctx.Err() != nil {
+		if parentCtx.Err() != nil {
 			t.logger.Info("ending server main loop (system shutting down)")
 		}
+
+		ctx := trace.NewContext(parentCtx, "Gossip.Transport.TCP.Server")
 
 		conn, err := listener.Accept()
 		if err != nil {
 			if !t.isServerListening() {
-				t.logger.Info("incoming connection accept stopped since server is shutting down")
+				t.logger.Info("incoming connection accept stopped since server is shutting down", trace.LogFieldFrom(ctx))
 				return
 			}
-			t.logger.Info("incoming connection accept error", log.Error(err))
+			t.logger.Info("incoming connection accept error", log.Error(err), trace.LogFieldFrom(ctx))
 			continue
 		}
 		go t.serverHandleIncomingConnection(ctx, conn)
@@ -158,14 +161,14 @@ func (t *directTransport) serverMainLoop(ctx context.Context, listenPort uint16)
 }
 
 func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, conn net.Conn) {
-	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 	// TODO: add a white list for IPs we're willing to accept connections from
 	// TODO: make sure each IP from the white list connects only once
 
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
 		if err != nil {
-			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
+			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 			conn.Close()
 			return
 		}
@@ -178,7 +181,7 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 }
 
 func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
-	t.logger.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
 	// TODO: think about timeout policy on receive, we might not want it
 	timeout := t.config.GossipNetworkTimeout()
@@ -242,13 +245,14 @@ func (t *directTransport) getListener() TransportListener {
 	return t.transportListenerUnderMutex
 }
 
-func (t *directTransport) clientMainLoop(ctx context.Context, address string, msgs chan *TransportData) {
+func (t *directTransport) clientMainLoop(parent context.Context, address string, msgs chan *TransportData) {
 	for {
-		t.logger.Info("attempting outgoing transport connection", log.String("server", address))
+		ctx := trace.NewContext(parent, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", address))
+		t.logger.Info("attempting outgoing transport connection", log.String("server", address), trace.LogFieldFrom(ctx))
 		conn, err := net.Dial("tcp", address)
 
 		if err != nil {
-			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", address), log.Error(err))
+			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", address), trace.LogFieldFrom(ctx))
 			time.Sleep(t.config.GossipConnectionKeepAliveInterval())
 			continue
 		}
@@ -261,26 +265,26 @@ func (t *directTransport) clientMainLoop(ctx context.Context, address string, ms
 
 // returns true if should attempt reconnect on error
 func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, msgs chan *TransportData) bool {
-	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
 	for {
 		select {
 		case data := <-msgs:
 			err := t.sendTransportData(ctx, conn, data)
 			if err != nil {
-				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
+				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 				conn.Close()
 				return true
 			}
 		case <-time.After(t.config.GossipConnectionKeepAliveInterval()):
 			err := t.sendKeepAlive(ctx, conn)
 			if err != nil {
-				t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()))
+				t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 				conn.Close()
 				return true
 			}
 		case <-ctx.Done():
-			t.logger.Info("client loop stopped since server is shutting down")
+			t.logger.Info("client loop stopped since server is shutting down", trace.LogFieldFrom(ctx))
 			conn.Close()
 			return false
 		}
@@ -288,7 +292,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 }
 
 func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *TransportData) error {
-	t.logger.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()))
+	t.logger.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
@@ -335,8 +339,6 @@ func calcPaddingSize(size uint32) uint32 {
 }
 
 func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
-	t.logger.Info("sending keepalive", log.String("peer", conn.RemoteAddr().String()))
-
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 

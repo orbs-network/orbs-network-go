@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -12,14 +13,16 @@ import (
 func (s *service) runMethod(
 	ctx context.Context,
 	blockHeight primitives.BlockHeight,
+	blockTimestamp primitives.TimestampNano,
 	transaction *protocol.Transaction,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
 ) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 
 	// create execution context
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, accessScope, transaction)
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockTimestamp, accessScope, transaction)
 	defer s.contexts.destroyExecutionContext(executionContextId)
+	executionContext.batchTransientState = batchTransientState
 
 	// get deployment info
 	processor, err := s.getServiceDeployment(ctx, executionContext, transaction.ContractName())
@@ -31,7 +34,6 @@ func (s *service) runMethod(
 	// modify execution context
 	executionContext.serviceStackPush(transaction.ContractName())
 	defer executionContext.serviceStackPop()
-	executionContext.batchTransientState = batchTransientState
 
 	// execute the call
 	inputArgs := protocol.MethodArgumentArrayReader(transaction.RawInputArgumentArrayWithHeader())
@@ -58,8 +60,10 @@ func (s *service) runMethod(
 func (s *service) processTransactionSet(
 	ctx context.Context,
 	blockHeight primitives.BlockHeight,
+	blockTimestamp primitives.TimestampNano,
 	signedTransactions []*protocol.SignedTransaction,
 ) ([]*protocol.TransactionReceipt, []*protocol.ContractStateDiff) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	// create batch transient state
 	batchTransientState := newTransientState()
@@ -69,8 +73,8 @@ func (s *service) processTransactionSet(
 
 	for _, signedTransaction := range signedTransactions {
 
-		s.logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(blockHeight))
-		callResult, outputArgs, _ := s.runMethod(ctx, blockHeight, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
+		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(blockHeight))
+		callResult, outputArgs, _ := s.runMethod(ctx, blockHeight, blockTimestamp, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
 			outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
 		}

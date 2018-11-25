@@ -3,6 +3,7 @@ package gossip
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -21,7 +22,7 @@ func (s *service) receivedTransactionRelayMessage(ctx context.Context, header *g
 }
 
 func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
-	s.logger.Info("broadcasting forwarded transactions", log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
+	s.logger.Info("broadcasting forwarded transactions", trace.LogFieldFrom(ctx), log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
 
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
@@ -39,16 +40,17 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 }
 
 func (s *service) receivedForwardedTransactions(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	message, err := codec.DecodeForwardedTransactions(payloads)
 	if err != nil {
 		return
 	}
-	s.logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", message.SignedTransactions))
+	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", message.SignedTransactions))
 
 	for _, l := range s.transactionHandlers {
 		_, err := l.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{Message: message})
 		if err != nil {
-			s.logger.Info("HandleForwardedTransactions failed", log.Error(err))
+			logger.Info("HandleForwardedTransactions failed", log.Error(err))
 		}
 	}
 }

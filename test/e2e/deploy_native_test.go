@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"testing"
 	"time"
 )
@@ -22,27 +21,16 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	printTestTime(t, "started", &lt)
 
 	h := newHarness()
-	defer h.gracefulShutdown()
 	printTestTime(t, "new harness", &lt) // slow do to warm up compilation
 
-	counterStart := uint64(100 * rand.Intn(1000))
-
-	// transaction to deploy the contract
-	deploy := builders.Transaction().
-		WithMethod("_Deployments", "deployService").
-		WithArgs(
-			fmt.Sprintf("CounterFrom%d", counterStart),
-			uint32(protocol.PROCESSOR_TYPE_NATIVE),
-			[]byte(contracts.NativeSourceCodeForCounter(counterStart)),
-		).Builder()
+	counterStart := uint64(time.Now().UnixNano())
 
 	printTestTime(t, "send deploy - start", &lt)
-	response, err := h.sendTransaction(deploy)
+	response, err := h.deployNativeContract(fmt.Sprintf("CounterFrom%d", counterStart), []byte(contracts.NativeSourceCodeForCounter(counterStart)))
 	printTestTime(t, "send deploy - end", &lt)
 
 	require.NoError(t, err, "deploy transaction should not return error")
-	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "deploy transaction should be successfully committed")
-	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "deploy transaction should execute successfully")
+	test.RequireSuccess(t, response, "deploy transaction should be successfully committed and executed")
 
 	// check counter
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
@@ -75,8 +63,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 	printTestTime(t, "send transaction - end", &lt)
 
 	require.NoError(t, err, "add transaction should not return error")
-	require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus(), "add transaction should be successfully committed")
-	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, response.TransactionReceipt().ExecutionResult(), "add transaction should execute successfully")
+	test.RequireSuccess(t, response, "add transaction should be successfully committed and executed")
 
 	// check counter
 	ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {

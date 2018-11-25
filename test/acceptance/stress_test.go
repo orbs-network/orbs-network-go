@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	. "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -51,14 +52,18 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
-	t.Skip("this test causes the system to hang, seems like consensus algo stops")
-	harness.Network(t).WithNumNodes(3).Start(func(parent context.Context, network harness.TestNetworkDriver) {
-		ctx, cancel := context.WithTimeout(parent, 2*time.Second)
-		defer cancel()
+	harness.Network(t).WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		t.Skip("this test causes the system to hang, seems like consensus algo stops")
 
-		network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
+		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
 
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 90)
+
+		tamper.Release(ctx)
+
+		// assert that the system recovered properly
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 10)
+
 	})
 }
 
@@ -101,7 +106,9 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.Tes
 
 	for i := 0; i < network.Size(); i++ {
 		actualSum := <-contract.CallGetBalance(ctx, i, toAddress)
+		require.EqualValuesf(t, expectedSum, actualSum, "recipient balance did not equal expected balance in node %d", i)
 
-		require.EqualValuesf(t, expectedSum, actualSum, "balance did not equal expected balance in node %d", i)
+		actualRemainder := <-contract.CallGetBalance(ctx, i, fromAddress)
+		require.EqualValuesf(t, benchmarktoken.TOTAL_SUPPLY-expectedSum, actualRemainder, "sender balance did not equal expected balance in node %d", i)
 	}
 }

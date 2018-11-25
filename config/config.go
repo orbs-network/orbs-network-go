@@ -8,6 +8,7 @@ import (
 
 type NodeConfig interface {
 	// shared
+	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	NodePublicKey() primitives.Ed25519PublicKey
 	NodePrivateKey() primitives.Ed25519PrivateKey
@@ -47,6 +48,7 @@ type NodeConfig interface {
 	ConsensusContextMinimalBlockTime() time.Duration
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMaximumTransactionsInBlock() uint32
+	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
@@ -70,10 +72,21 @@ type NodeConfig interface {
 
 	// metrics
 	MetricsReportInterval() time.Duration
+
+	// ethereum connector (crosschain)
+	EthereumEndpoint() string
+}
+
+type OverridableConfig interface {
+	NodeConfig
+	OverrideNodeSpecificValues(
+		gossipListenPort int,
+		nodePublicKey primitives.Ed25519PublicKey,
+		nodePrivateKey primitives.Ed25519PrivateKey) NodeConfig
 }
 
 type mutableNodeConfig interface {
-	NodeConfig
+	OverridableConfig
 	Set(key string, value NodeConfigValue) mutableNodeConfig
 	SetDuration(key string, value time.Duration) mutableNodeConfig
 	SetUint32(key string, value uint32) mutableNodeConfig
@@ -85,14 +98,7 @@ type mutableNodeConfig interface {
 	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
-	OverrideNodeSpecificValues(
-		federationNodes map[string]FederationNode,
-		gossipPeers map[string]GossipPeer,
-		gossipListenPort uint16,
-		nodePublicKey primitives.Ed25519PublicKey,
-		nodePrivateKey primitives.Ed25519PrivateKey,
-		constantConsensusLeader primitives.Ed25519PublicKey,
-		activeConsensusAlgo consensus.ConsensusAlgoType)
+	Clone() mutableNodeConfig
 }
 
 type BlockStorageConfig interface {
@@ -114,14 +120,16 @@ type GossipTransportConfig interface {
 	GossipNetworkTimeout() time.Duration
 }
 
-// TODO See if more config props needed here, based on:
-// https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
+// Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
+	ProtocolVersion() primitives.ProtocolVersion
+	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMinimalBlockTime() time.Duration
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	ConsensusMinimumCommitteeSize() uint32
+	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 }
 
 type PublicApiConfig interface {
@@ -155,6 +163,6 @@ type FederationNode interface {
 }
 
 type GossipPeer interface {
-	GossipPort() uint16
+	GossipPort() int
 	GossipEndpoint() string
 }

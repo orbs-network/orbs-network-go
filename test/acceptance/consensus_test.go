@@ -2,6 +2,9 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/lean-helix-go"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -11,39 +14,58 @@ import (
 	"time"
 )
 
+// TODO Make sure the test is correct for LH
+// Add more nodes for consensus to work (min 4)
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
-	t.Skip("putting lean helix on hold until external library is integrated")
-	harness.Network(t).WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	t.Skipf("Change this - Orbs is not supposed to know LH message types")
+	harness.
+		Network(t).
+		WithNumNodes(4).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
+		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-		contract := network.GetBenchmarkTokenContract()
-		contract.DeployBenchmarkToken(ctx, 5)
+			contract := network.GetBenchmarkTokenContract()
 
-		prePrepareLatch := network.TransportTamperer().LatchOn(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
-		prePrepareTamper := network.TransportTamperer().Fail(adapter.LeanHelixMessage(consensus.LEAN_HELIX_PRE_PREPARE))
-		<-contract.SendTransfer(ctx, 0, 17, 5, 6)
+			amount := uint64(17)
+			fromAddress := 5
+			toAddress := 6
+			leaderIndex := 0
+			validatorIndex := 1
 
-		prePrepareLatch.Wait()
-		require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, 0, 6), "initial getBalance result on leader")
-		require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, 1, 6), "initial getBalance result on non leader")
+			contract.DeployBenchmarkToken(ctx, fromAddress)
 
-		prePrepareTamper.Release(ctx)
-		prePrepareLatch.Remove()
+			// these get preds
+			// reimpl this, it is supposed to know the ppm but
 
-		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
-			t.Errorf("waiting for block on node 0 failed: %s", err)
-		}
-		require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 0, 6), "eventual getBalance result on leader")
+			prePrepareLatch := network.TransportTamperer().LatchOn(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
+			prePrepareTamper := network.TransportTamperer().Fail(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
 
-		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
-			t.Errorf("waiting for block on node 1 failed: %s", err)
-		}
-		require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
+			<-contract.SendTransfer(ctx, leaderIndex, amount, fromAddress, toAddress)
 
-	})
+			prePrepareLatch.Wait() // blocking
+			require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, leaderIndex, toAddress), "initial getBalance result on leader")
+			require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, validatorIndex, toAddress), "initial getBalance result on non leader")
+
+			prePrepareTamper.Release(ctx)
+			prePrepareLatch.Remove()
+
+			if err := network.BlockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
+				t.Errorf("waiting for block on node 0 failed: %s", err)
+			}
+			require.EqualValues(t, amount, <-contract.CallGetBalance(ctx, leaderIndex, toAddress), "eventual getBalance result on leader")
+
+			if err := network.BlockPersistence(validatorIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
+				t.Errorf("waiting for block on node 1 failed: %s", err)
+			}
+			require.EqualValues(t, amount, <-contract.CallGetBalance(ctx, validatorIndex, toAddress), "eventual getBalance result on non leader")
+
+		})
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	harness.Network(t).WithMaxTxPerBlock(1).
+	harness.Network(t).
+		WithLogFilters(log.ExcludeField(sync.LogTag), log.ExcludeEntryPoint("BlockSync")).
+		WithMaxTxPerBlock(1).
 		Start(func(parent context.Context, network harness.TestNetworkDriver) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()

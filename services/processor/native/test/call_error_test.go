@@ -25,13 +25,6 @@ func TestProcessCall_Errors(t *testing.T) {
 			expectedResult: protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
 			expectedOutput: builders.MethodArgumentsArray("example error returned by contract"),
 		},
-		{
-			name:           "ThatPanics",
-			input:          processCallInput().WithMethod("BenchmarkContract", "panic").Build(),
-			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
-			expectedOutput: builders.MethodArgumentsArray("example panic thrown by contract"),
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

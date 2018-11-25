@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"math/rand"
 	"time"
@@ -25,6 +26,8 @@ func (s *finishedCARState) String() string {
 }
 
 func (s *finishedCARState) processState(ctx context.Context) syncState {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
@@ -34,12 +37,12 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 
 	c := len(s.responses)
 	if c == 0 {
-		s.logger.Info("no responses received")
+		logger.Info("no responses received")
 		s.metrics.timesNoResponses.Inc()
 		return s.factory.CreateIdleState()
 	}
 	s.metrics.timesWithResponses.Inc()
-	s.logger.Info("selecting from received sources", log.Int("sources-count", c))
+	logger.Info("selecting from received sources", log.Int("sources-count", c))
 	syncSource := s.responses[rand.Intn(c)]
 	syncSourceKey := syncSource.Sender.SenderPublicKey()
 

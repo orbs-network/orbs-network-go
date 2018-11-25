@@ -19,11 +19,9 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
-	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < int(numNodes); i++ {
 		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(0, "")
 	}
 
 	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
@@ -37,17 +35,16 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 		keyPair := keys.Ed25519KeyPairForTests(i)
 		cfg := config.ForGamma(
 			federationNodes,
-			gossipPeers,
 			keyPair.PublicKey(),
 			keyPair.PrivateKey(),
 			leaderKeyPair.PublicKey(),
 			consensusAlgo,
 		)
 
-		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger))
+		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger), logger)
 	}
 
-	network.CreateAndStartNodes(ctx) // must call network.Start(ctx) to actually start the nodes in the network
+	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network
 
 	return network
 }

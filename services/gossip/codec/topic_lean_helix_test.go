@@ -3,7 +3,6 @@ package codec
 import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -12,14 +11,12 @@ import (
 func TestLeanHelix_LeanHelixMessage(t *testing.T) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
 	message := &gossipmessages.LeanHelixMessage{
-		MessageType: consensus.LEAN_HELIX_PREPARE,
-		Content:     []byte{},
-		BlockPair:   builders.BlockPair().WithTransactions(5).Build(),
+		Content:   []byte{},
+		BlockPair: builders.BlockPair().WithTransactions(5).Build(),
 	}
 
 	payloads, err := EncodeLeanHelixMessage(header, message)
@@ -32,7 +29,6 @@ func TestLeanHelix_LeanHelixMessage(t *testing.T) {
 func TestLeanHelix_EmptyLeanHelixMessage(t *testing.T) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
@@ -44,14 +40,12 @@ func TestLeanHelix_EmptyLeanHelixMessage(t *testing.T) {
 func TestLeanHelix_LeanHelixMessageWithCorruptedBlockPair(t *testing.T) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
 	message := &gossipmessages.LeanHelixMessage{
-		MessageType: consensus.LEAN_HELIX_PREPARE,
-		Content:     []byte{},
-		BlockPair:   builders.CorruptBlockPair().Build(),
+		Content:   []byte{},
+		BlockPair: builders.CorruptBlockPair().Build(),
 	}
 
 	_, err := EncodeLeanHelixMessage(header, message)
@@ -61,14 +55,12 @@ func TestLeanHelix_LeanHelixMessageWithCorruptedBlockPair(t *testing.T) {
 func TestLeanHelix_LeanHelixMessageWithCorruptNumTransactions(t *testing.T) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
 	message := &gossipmessages.LeanHelixMessage{
-		MessageType: consensus.LEAN_HELIX_PREPARE,
-		Content:     []byte{},
-		BlockPair:   builders.BlockPair().WithCorruptNumTransactions(3).Build(),
+		Content:   []byte{},
+		BlockPair: builders.BlockPair().WithCorruptNumTransactions(3).Build(),
 	}
 
 	payloads, err := EncodeLeanHelixMessage(header, message)

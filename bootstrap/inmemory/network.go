@@ -6,14 +6,15 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -35,35 +36,41 @@ type Network struct {
 }
 
 type Node struct {
-	index            int
-	name             string
-	config           config.NodeConfig
-	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence stateStorageAdapter.TamperingStatePersistence
-	nativeCompiler   nativeProcessorAdapter.Compiler
-	nodeLogic        bootstrap.NodeLogic
-	metricRegistry   metric.Registry
+	index              int
+	name               string
+	config             config.NodeConfig
+	blockPersistence   blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence   stateStorageAdapter.TamperingStatePersistence
+	ethereumConnection ethereumAdapter.EthereumConnection
+	nativeCompiler     nativeProcessorAdapter.Compiler
+	nodeLogic          bootstrap.NodeLogic
+	metricRegistry     metric.Registry
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
 	return Network{Logger: logger, Transport: transport}
 }
 
-func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler) {
+func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, logger log.BasicLogger) {
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
+	node.ethereumConnection = ethereumAdapter.NewEthereumSimulatorConnection(cfg, logger)
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 
 	n.Nodes = append(n.Nodes, node)
 }
 
-func (n *Network) CreateAndStartNodes(ctx context.Context) {
-	for _, node := range n.Nodes {
+func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) {
+	for i, node := range n.Nodes {
+		if i >= numOfNodesToStart {
+			return
+		}
+
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			n.Transport,
@@ -73,6 +80,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context) {
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
 			node.config,
+			node.ethereumConnection,
 		)
 	}
 }
@@ -92,6 +100,9 @@ func (n *Node) WaitForTransactionInState(ctx context.Context, txhash primitives.
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
+}
+func (n *Node) Started() bool {
+	return n.nodeLogic != nil
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
@@ -132,7 +143,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 	supervised.GoOnce(n.Logger, func() {
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		_, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
+			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
 			ReturnImmediately: 1,
 		})
 		if err != nil {
@@ -163,6 +174,8 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 
 func (n *Network) WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256) {
 	for _, node := range n.Nodes {
-		node.WaitForTransactionInState(ctx, txhash)
+		if node.Started() {
+			node.WaitForTransactionInState(ctx, txhash)
+		}
 	}
 }

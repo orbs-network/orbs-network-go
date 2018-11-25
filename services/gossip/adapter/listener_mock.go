@@ -10,8 +10,8 @@ type MockTransportListener struct {
 	mock.Mock
 }
 
-func (m *MockTransportListener) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
-	m.Called(ctx, payloads)
+func (l *MockTransportListener) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
+	l.Called(ctx, payloads)
 }
 
 func listenTo(transport Transport, publicKey primitives.Ed25519PublicKey) *MockTransportListener {
@@ -20,14 +20,14 @@ func listenTo(transport Transport, publicKey primitives.Ed25519PublicKey) *MockT
 	return l
 }
 
-func (m *MockTransportListener) ExpectReceive(payloads [][]byte) {
-	m.WhenOnTransportMessageReceived(payloads).Return().Times(1)
+func (l *MockTransportListener) ExpectReceive(payloads [][]byte) {
+	l.WhenOnTransportMessageReceived(payloads).Return().Times(1)
 }
 
-func (m *MockTransportListener) ExpectNotReceive() {
-	m.Never("OnTransportMessageReceived", mock.Any, mock.Any)
+func (l *MockTransportListener) ExpectNotReceive() {
+	l.Never("OnTransportMessageReceived", mock.Any, mock.Any)
 }
 
-func (m *MockTransportListener) WhenOnTransportMessageReceived(arg interface{}) *mock.MockFunction {
-	return m.When("OnTransportMessageReceived", mock.Any, arg)
+func (l *MockTransportListener) WhenOnTransportMessageReceived(arg interface{}) *mock.MockFunction {
+	return l.When("OnTransportMessageReceived", mock.Any, arg)
 }

@@ -37,8 +37,8 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 		return nil, errors.New("ContractSdkCallHandler has not registered yet")
 	}
 
-	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT.Name)
-	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE.Name)
+	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
+	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE)
 
 	output, err := handler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),

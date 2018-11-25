@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -8,7 +9,7 @@ import (
 )
 
 func TestReadStateWithNonExistingContractName(t *testing.T) {
-	d := NewInMemoryStatePersistence()
+	d := NewInMemoryStatePersistence(metric.NewRegistry())
 	_, _, err := d.Read("foo", "")
 	require.NoError(t, err, "unexpected error")
 }
@@ -37,7 +38,7 @@ type driver struct {
 
 func newDriver() *driver {
 	return &driver{
-		NewInMemoryStatePersistence(),
+		NewInMemoryStatePersistence(metric.NewRegistry()),
 	}
 }
 
