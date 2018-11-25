@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"testing"
 )
 
 func ExampleMessagePredicate_sender() {
@@ -58,28 +55,4 @@ func ExampleMessagePredicate_payloadSize() {
 	printMessage([][]byte{make([]byte, 1000)})
 	// Output: got message smaller than 100 bytes
 	// got message larger than 100 bytes
-}
-
-func TestExampleLeanHelixMessage(t *testing.T) {
-	t.Skipf("Skipping Lean Helix tests until lean-helix-go submodule is integrated")
-	pred := LeanHelixMessage(consensus.LEAN_HELIX_COMMIT)
-
-	printMessage := func(msgType consensus.LeanHelixMessageType) {
-
-		header := gossipmessages.HeaderBuilder{
-			Topic:     gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-			LeanHelix: msgType,
-		}
-
-		if pred(&adapter.TransportData{Payloads: [][]byte{header.Build().Raw()}}) {
-			fmt.Println("got commit message")
-		} else {
-			fmt.Println("got message of unexpected type")
-		}
-	}
-
-	printMessage(consensus.LEAN_HELIX_COMMIT)
-	printMessage(consensus.LEAN_HELIX_PRE_PREPARE)
-	// Output: got commit message
-	// got message of unexpected type
 }

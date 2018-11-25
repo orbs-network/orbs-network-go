@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"github.com/orbs-network/lean-helix-go"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -31,9 +32,9 @@ func Not(predicate MessagePredicate) MessagePredicate {
 }
 
 // a MessagePredicate for capturing Lean Helix Consensus Algorithm gossip messages of the given type
-func LeanHelixMessage(messageType consensus.LeanHelixMessageType) MessagePredicate {
+func LeanHelixMessage(messageType leanhelix.MessageType) MessagePredicate {
 	return HasHeader(func(header *gossipmessages.Header) bool {
-		return header.IsTopicLeanHelix() && header.LeanHelix() == messageType
+		return header.IsTopicLeanHelix() && header.LeanHelix() == consensus.LeanHelixMessageType(messageType)
 	})
 }
 

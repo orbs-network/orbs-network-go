@@ -144,7 +144,7 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
-		return nil, errors.Wrapf(err, "unsupported block height: block %d is not yet committed", input.BlockHeight)
+		return nil, errors.Wrapf(err, "GetStateHash(): unsupported block height: block %d is not yet committed", input.BlockHeight)
 	}
 
 	s.mutex.RLock()

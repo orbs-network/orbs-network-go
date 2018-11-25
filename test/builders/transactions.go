@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+const DEFAULT_TEST_PROTOCOL_VERSION = primitives.ProtocolVersion(1)
 const DEFAULT_TEST_VIRTUAL_CHAIN_ID = primitives.VirtualChainId(42)
 
 type TransactionBuilder struct {
@@ -23,7 +24,7 @@ func TransferTransaction() *TransactionBuilder {
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: 1,
+				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    "BenchmarkToken",
 				MethodName:      "transfer",
@@ -48,7 +49,7 @@ func GetBalanceTransaction() *TransactionBuilder {
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: 1,
+				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    "BenchmarkToken",
 				MethodName:      "getBalance",
@@ -177,7 +178,7 @@ func NonSignedTransaction() *NonSignedTransactionBuilder {
 	keyPair := testKeys.Ed25519KeyPairForTests(1)
 	return &NonSignedTransactionBuilder{
 		&protocol.TransactionBuilder{
-			ProtocolVersion: 1,
+			ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
 			VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			ContractName:    "BenchmarkToken",
 			MethodName:      "transfer",
