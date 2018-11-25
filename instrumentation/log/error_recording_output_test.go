@@ -7,14 +7,14 @@ import (
 )
 
 func TestErrorRecordingOutput_IgnoresNonError(t *testing.T) {
-	o := NewErrorRecordingOutput([]string{}, []string{})
+	o := NewErrorRecordingOutput([]string{})
 	o.Append("info", "foo")
 
 	require.False(t, o.HasErrors(), "info was recorded")
 }
 
 func TestErrorRecordingOutput_IgnoresAllowedError(t *testing.T) {
-	o := NewErrorRecordingOutput([]string{"foo"}, []string{"bar.*baz"})
+	o := NewErrorRecordingOutput([]string{"foo", "bar.*baz"})
 	o.Append("error", "foo")
 	o.Append("error", "bar-- free as a bird --baz")
 
@@ -22,7 +22,7 @@ func TestErrorRecordingOutput_IgnoresAllowedError(t *testing.T) {
 }
 
 func TestErrorRecordingOutput_RecordsDisallowedError(t *testing.T) {
-	o := NewErrorRecordingOutput([]string{"foo"}, []string{"bar.*baz"})
+	o := NewErrorRecordingOutput([]string{"foo", "bar.*baz"})
 	e := errors.Errorf("foo error")
 	o.Append("error", "bar", Error(e))
 

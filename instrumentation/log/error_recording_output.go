@@ -7,9 +7,8 @@ import (
 )
 
 type ErrorRecordingOutput struct {
-	allowedErrors       []string
-	allowedErrorsRegExp []string
-	errorRecorder       *errorRecorder
+	allowedErrors []string
+	errorRecorder *errorRecorder
 }
 
 type errorRecorder struct {
@@ -26,23 +25,24 @@ func (e *unexpectedError) String() string {
 	return fmt.Sprintf("%s (passed Error object: %v)", e.message, e.err)
 }
 
-func NewErrorRecordingOutput(allowedErrors []string, allowedErrorsRegExp []string) *ErrorRecordingOutput {
-	return &ErrorRecordingOutput{allowedErrors: allowedErrors, allowedErrorsRegExp: allowedErrorsRegExp, errorRecorder: &errorRecorder{}}
+func NewErrorRecordingOutput(allowedErrors []string) *ErrorRecordingOutput {
+	return &ErrorRecordingOutput{allowedErrors: allowedErrors, errorRecorder: &errorRecorder{}}
 }
 
 func (o *ErrorRecordingOutput) Append(level string, message string, params ...*Field) {
 	if level == "error" {
 		for _, allowedMessage := range o.allowedErrors {
-			if allowedMessage == message {
+			if matched, _ := regexp.MatchString(allowedMessage, message); matched {
 				return
 			}
-		}
-		for _, allowedMessageRegExp := range o.allowedErrorsRegExp {
-			if matched, _ := regexp.MatchString(allowedMessageRegExp, message); matched {
-				return
+			for _, f := range params {
+				if f.Key == "error" {
+					if matched, _ := regexp.MatchString(allowedMessage, f.String()); matched {
+						return
+					}
+				}
 			}
 		}
-
 		o.recordUnexpectedError(message, params)
 	}
 }

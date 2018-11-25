@@ -25,15 +25,15 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 
 		// send three identical transactions to two nodes
 		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
-		response0 := <- network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
-		response1 := <- network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		response0 := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		response1 := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
 
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response0.TransactionStatus(), "second transaction should be accepted into the pool and committed by the internode sync")
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response1.TransactionStatus(), "third transaction should be rejected as a duplicate")
 
 		require.True(t, response0.BlockHeight() <= response1.BlockHeight(), "second response must reference a later block height than first")
 
-		requireTxCommittedOnce( ctx, t, response1.BlockHeight() + 5, network, response0.TransactionReceipt().Txhash())
+		requireTxCommittedOnce(ctx, t, response1.BlockHeight()+5, network, response0.TransactionReceipt().Txhash())
 
 	})
 }
@@ -55,14 +55,12 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, height primitives
 	require.Equal(t, 1, receiptCount, "blocks should include tx exactly once")
 }
 
-// TODO enable this test once we find a way to allow the error that is thrown when TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING happens
 func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
-	t.Skip("disabled due to harness issue")
-
 	harness.Network(t).AllowingErrors(
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
+		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
 	).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		ts := time.Now()
@@ -70,7 +68,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		contract.DeployBenchmarkToken(ctx, 1)
 
 		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
-		secondAttemptResponse := <- network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
+		secondAttemptResponse := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
 
 		// A race condition here makes three possible outcomes:
 		// - secondAttemptResponse is nil, which means an error was returned // TODO understand under what circumstances an error here is ok
@@ -79,9 +77,8 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		if secondAttemptResponse != nil {
 			require.True(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING == secondAttemptResponse.TransactionStatus() ||
 				protocol.TRANSACTION_STATUS_COMMITTED == secondAttemptResponse.TransactionStatus(), "second attempt must ")
+
+			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, secondAttemptResponse.TransactionReceipt().Txhash())
 		}
-
-		requireTxCommittedOnce( ctx, t, secondAttemptResponse.BlockHeight() + 5, network, secondAttemptResponse.TransactionReceipt().Txhash())
-
 	})
 }
