@@ -40,12 +40,13 @@ type service struct {
 	revisions *rollingRevisions
 }
 
-func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, logger log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
+func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, parent log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
 	forest, _ := merkle.NewForest()
+	logger := parent.WithTags(LogTag)
 	return &service{
 		config:       config,
 		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
-		logger:       logger.WithTags(LogTag),
+		logger:       logger,
 		metrics:      newMetrics(metricFactory),
 
 		mutex:     sync.RWMutex{},
@@ -95,7 +96,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 	defer cancel()
 
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
-		return nil, errors.Wrapf(err, "unsupported block height: block %v is not yet committed", input.BlockHeight)
+		return nil, errors.Wrapf(err, "unsupported block height: block %d is not yet committed", input.BlockHeight)
 	}
 
 	s.mutex.RLock()
@@ -143,7 +144,7 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
-		return nil, errors.Wrapf(err, "GetStateHash(): unsupported block height: block %v is not yet committed", input.BlockHeight)
+		return nil, errors.Wrapf(err, "GetStateHash(): unsupported block height: block %d is not yet committed", input.BlockHeight)
 	}
 
 	s.mutex.RLock()

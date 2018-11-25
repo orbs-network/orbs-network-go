@@ -129,7 +129,8 @@ func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, e
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
+	// TODO - see issue https://github.com/orbs-network/orbs-network-go/issues/523
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusAccepted {
 		return nil, errors.Errorf("got http status code %v calling %s", res.StatusCode, endpoint)
 	}
 

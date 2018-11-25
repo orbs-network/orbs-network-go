@@ -6,7 +6,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	blockSync "github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/servicesync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -34,7 +35,7 @@ type service struct {
 
 	// lastCommittedBlock state variable is inside adapter.BlockPersistence (GetLastBlock)
 
-	blockSync *blockSync.BlockSync
+	nodeSync *internodesync.BlockSync
 
 	metrics *metrics
 }
@@ -49,22 +50,24 @@ func newMetrics(m metric.Factory) *metrics {
 	}
 }
 
-func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, stateStorage services.StateStorage, gossip gossiptopics.BlockSync,
-	txPool services.TransactionPool, parentLogger log.BasicLogger, metricFactory metric.Factory) services.BlockStorage {
+func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, gossip gossiptopics.BlockSync,
+	parentLogger log.BasicLogger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) services.BlockStorage {
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &service{
 		persistence:  persistence,
-		stateStorage: stateStorage,
 		gossip:       gossip,
-		txPool:       txPool,
 		logger:       logger,
 		config:       config,
 		metrics:      newMetrics(metricFactory),
 	}
 
 	gossip.RegisterBlockSyncHandler(s)
-	s.blockSync = blockSync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
+	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
+
+	for _, bpr := range blockPairReceivers {
+		servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr)
+	}
 
 	return s
 }

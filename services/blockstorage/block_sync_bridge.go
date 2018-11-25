@@ -25,15 +25,15 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Cont
 }
 
 func (s *service) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.blockSync != nil {
-		s.blockSync.HandleBlockAvailabilityResponse(ctx, input)
+	if s.nodeSync != nil {
+		s.nodeSync.HandleBlockAvailabilityResponse(ctx, input)
 	}
 	return nil, nil
 }
 
 func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.blockSync != nil {
-		s.blockSync.HandleBlockSyncResponse(ctx, input)
+	if s.nodeSync != nil {
+		s.nodeSync.HandleBlockSyncResponse(ctx, input)
 	}
 	return nil, nil
 }

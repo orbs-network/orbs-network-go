@@ -35,7 +35,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress s
 	metricRegistry := metric.NewRegistry()
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
-	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence()
+	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence(nodeLogger)
 	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumConnection(nodeConfig, logger)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)

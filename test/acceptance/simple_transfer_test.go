@@ -73,3 +73,33 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 
 	})
 }
+
+func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
+	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+		defer cancel()
+
+		contract := network.GetBenchmarkTokenContract()
+		contract.DeployBenchmarkToken(ctx, 5)
+
+		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+
+		txHash1 := contract.SendTransferInBackground(ctx, 0, 17, 5, 6)
+		txHash2 := contract.SendTransferInBackground(ctx, 0, 22, 5, 6)
+
+		t.Log("waiting for leader blocks")
+
+		network.WaitForTransactionInNodeState(ctx, txHash1, 0)
+		network.WaitForTransactionInNodeState(ctx, txHash2, 0)
+		require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, <-contract.CallGetBalance(ctx, 0, 5), "getBalance result on leader")
+		require.EqualValues(t, 39, <-contract.CallGetBalance(ctx, 0, 6), "getBalance result on leader")
+
+		t.Log("waiting for non leader blocks")
+
+		network.WaitForTransactionInNodeState(ctx, txHash1, 1)
+		network.WaitForTransactionInNodeState(ctx, txHash2, 1)
+		require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, <-contract.CallGetBalance(ctx, 1, 5), "getBalance result on non leader")
+		require.EqualValues(t, 39, <-contract.CallGetBalance(ctx, 1, 6), "getBalance result on non leader")
+	})
+}
+
