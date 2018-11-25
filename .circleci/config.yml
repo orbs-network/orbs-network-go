@@ -57,11 +57,25 @@ jobs:
       - run: ./docker/build/build.sh
       - run: ./.circleci/e2e-testnet.sh
 
+  release_gamma:
+    machine: true
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: ./docker/build/build.sh
+      - run: docker tag orbs:gamma-server orbsnetwork/gamma:$CIRCLE_TAG
+      - run: docker login -u $DOCKER_HUB_LOGIN -p $DOCKER_HUB_PASSWORD
+      - run: docker push orbsnetwork/gamma:$CIRCLE_TAG
+
 workflows:
   version: 2
   build:
     jobs:
-      - build
+      - build:
+          filters:
+            tags:
+              only:
+                /^v.*/
       - flakiness
       - notify_github_about_dashboard
       - success:
@@ -82,3 +96,9 @@ workflows:
             branches:
               only:
                 - master
+      - release_gamma:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
