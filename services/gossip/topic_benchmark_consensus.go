@@ -31,11 +31,10 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 		RecipientMode:      gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	blockPairPayloads, err := codec.EncodeBlockPair(input.Message.BlockPair)
+	payloads, err := codec.EncodeBenchmarkConsensusCommitMessage(header, input.Message)
 	if err != nil {
 		return nil, err
 	}
-	payloads := append([][]byte{header.Raw()}, blockPairPayloads...)
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
@@ -45,18 +44,14 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 }
 
 func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	blockPair, err := codec.DecodeBlockPair(payloads)
+	message, err := codec.DecodeBenchmarkConsensusCommitMessage(payloads)
 	if err != nil {
 		s.logger.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
 		return
 	}
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		_, err := l.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{
-			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
-				BlockPair: blockPair,
-			},
-		})
+		_, err := l.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBenchmarkConsensusCommit failed", log.Error(err))
 		}
@@ -70,7 +65,7 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
-	payloads, err := codec.EncodeBenchmarkConsensusCommitted(header, input.Message)
+	payloads, err := codec.EncodeBenchmarkConsensusCommittedMessage(header, input.Message)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +79,7 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 }
 
 func (s *service) receivedBenchmarkConsensusCommitted(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	message, err := codec.DecodeBenchmarkConsensusCommitted(payloads)
+	message, err := codec.DecodeBenchmarkConsensusCommittedMessage(payloads)
 	if err != nil {
 		return
 	}

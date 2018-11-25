@@ -19,13 +19,13 @@ func EncodeLeanHelixMessage(header *gossipmessages.Header, message *gossipmessag
 }
 
 func DecodeLeanHelixMessage(header *gossipmessages.Header, payloads [][]byte) (*gossipmessages.LeanHelixMessage, error) {
-	if len(payloads) < 3 {
+	if len(payloads) < 1+NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
 		return nil, errors.New("wrong num of payloads")
 	}
 
 	messageType := header.LeanHelix()
-	content := payloads[1]
-	blockPair, err := DecodeBlockPair(payloads[2:])
+	content := payloads[0]
+	blockPair, err := DecodeBlockPair(payloads[1:])
 	if err != nil {
 		return nil, err
 	}

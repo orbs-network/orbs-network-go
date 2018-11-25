@@ -16,8 +16,15 @@ func DecodeBlockAvailabilityRequest(payloads [][]byte) (*gossipmessages.BlockAva
 	if len(payloads) != 2 {
 		return nil, errors.New("wrong num of payloads")
 	}
+
 	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
+	if !batchRange.IsValid() {
+		return nil, errors.New("SignedBatchRange is corrupted and cannot be decoded")
+	}
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
+	if !senderSignature.IsValid() {
+		return nil, errors.New("SenderSignature is corrupted and cannot be decoded")
+	}
 
 	return &gossipmessages.BlockAvailabilityRequestMessage{
 		SignedBatchRange: batchRange,
@@ -36,8 +43,15 @@ func DecodeBlockAvailabilityResponse(payloads [][]byte) (*gossipmessages.BlockAv
 	if len(payloads) != 2 {
 		return nil, errors.New("wrong num of payloads")
 	}
+
 	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
+	if !batchRange.IsValid() {
+		return nil, errors.New("SignedBatchRange is corrupted and cannot be decoded")
+	}
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
+	if !senderSignature.IsValid() {
+		return nil, errors.New("SenderSignature is corrupted and cannot be decoded")
+	}
 
 	return &gossipmessages.BlockAvailabilityResponseMessage{
 		SignedBatchRange: batchRange,
@@ -56,8 +70,15 @@ func DecodeBlockSyncRequest(payloads [][]byte) (*gossipmessages.BlockSyncRequest
 	if len(payloads) != 2 {
 		return nil, errors.New("wrong num of payloads")
 	}
+
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
+	if !chunkRange.IsValid() {
+		return nil, errors.New("SignedChunkRange is corrupted and cannot be decoded")
+	}
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
+	if !senderSignature.IsValid() {
+		return nil, errors.New("SenderSignature is corrupted and cannot be decoded")
+	}
 
 	return &gossipmessages.BlockSyncRequestMessage{
 		SignedChunkRange: chunkRange,
@@ -79,11 +100,17 @@ func EncodeBlockSyncResponse(header *gossipmessages.Header, message *gossipmessa
 }
 
 func DecodeBlockSyncResponse(payloads [][]byte) (*gossipmessages.BlockSyncResponseMessage, error) {
-	if len(payloads) < 3 {
+	if len(payloads) < 2+NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
 		return nil, errors.New("wrong num of payloads")
 	}
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
+	if !chunkRange.IsValid() {
+		return nil, errors.New("SignedChunkRange is corrupted and cannot be decoded")
+	}
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
+	if !senderSignature.IsValid() {
+		return nil, errors.New("SenderSignature is corrupted and cannot be decoded")
+	}
 
 	blocks, err := DecodeBlockPairs(payloads[2:])
 	if err != nil {

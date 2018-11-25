@@ -1,0 +1,78 @@
+package codec
+
+import (
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/stretchr/testify/require"
+	"testing"
+)
+
+func TestLeanHelix_LeanHelixMessage(t *testing.T) {
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+	}).Build()
+
+	message := &gossipmessages.LeanHelixMessage{
+		MessageType: consensus.LEAN_HELIX_PREPARE,
+		Content:     []byte{},
+		BlockPair:   builders.BlockPair().WithTransactions(5).Build(),
+	}
+
+	payloads, err := EncodeLeanHelixMessage(header, message)
+	require.NoError(t, err, "encode should not fail")
+	decoded, err := DecodeLeanHelixMessage(header, payloads[1:])
+	require.NoError(t, err, "decode should not fail")
+	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
+}
+
+func TestLeanHelix_EmptyLeanHelixMessage(t *testing.T) {
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+	}).Build()
+
+	decoded, err := DecodeLeanHelixMessage(header, emptyPayloads(6))
+	require.NoError(t, err, "decode should not fail")
+	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
+}
+
+func TestLeanHelix_LeanHelixMessageWithCorruptedBlockPair(t *testing.T) {
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+	}).Build()
+
+	message := &gossipmessages.LeanHelixMessage{
+		MessageType: consensus.LEAN_HELIX_PREPARE,
+		Content:     []byte{},
+		BlockPair:   builders.CorruptBlockPair().Build(),
+	}
+
+	_, err := EncodeLeanHelixMessage(header, message)
+	require.Error(t, err, "encode should fail and return error")
+}
+
+func TestLeanHelix_LeanHelixMessageWithCorruptNumTransactions(t *testing.T) {
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		LeanHelix:     consensus.LEAN_HELIX_PREPARE,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+	}).Build()
+
+	message := &gossipmessages.LeanHelixMessage{
+		MessageType: consensus.LEAN_HELIX_PREPARE,
+		Content:     []byte{},
+		BlockPair:   builders.BlockPair().WithCorruptNumTransactions(3).Build(),
+	}
+
+	payloads, err := EncodeLeanHelixMessage(header, message)
+	require.NoError(t, err, "encode should not fail")
+	_, err = DecodeLeanHelixMessage(header, payloads[1:])
+	require.Error(t, err, "decode should fail and return error")
+}
