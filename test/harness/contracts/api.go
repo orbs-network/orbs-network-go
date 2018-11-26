@@ -11,7 +11,7 @@ type ContractAPI interface {
 	WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256)
 	SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse
 	SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int)
-	CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan uint64
+	CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse
 }
 
 type contractClient struct {

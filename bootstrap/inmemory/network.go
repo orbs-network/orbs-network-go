@@ -13,7 +13,6 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
@@ -154,9 +153,9 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 	})
 }
 
-func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan uint64 {
+func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse {
 
-	ch := make(chan uint64)
+	ch := make(chan *client.CallMethodResponse)
 	supervised.GoOnce(n.Logger, func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
@@ -166,9 +165,8 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		if err != nil {
 			panic(fmt.Sprintf("error calling method: %v", err)) // TODO: improve
 		}
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
 		select {
-		case ch <- outputArgsIterator.NextArguments().Uint64Value():
+		case ch <- output.ClientResponse:
 		case <-ctx.Done():
 		}
 	})
