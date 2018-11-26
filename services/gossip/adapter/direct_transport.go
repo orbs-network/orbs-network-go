@@ -25,7 +25,7 @@ type directTransport struct {
 	config config.GossipTransportConfig
 	logger log.BasicLogger
 
-	peerQueues map[string]chan *TransportData // does not require mutex to read
+	outgoingPeerQueues map[string]chan *TransportData // does not require mutex to read
 
 	mutex                       *sync.RWMutex
 	transportListenerUnderMutex TransportListener
@@ -38,7 +38,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 		config: config,
 		logger: logger.WithTags(LogTag),
 
-		peerQueues: make(map[string]chan *TransportData),
+		outgoingPeerQueues: make(map[string]chan *TransportData),
 
 		mutex: &sync.RWMutex{},
 	}
@@ -46,12 +46,12 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	// client channels (not under mutex, before all goroutines)
 	for peerNodeKey := range t.config.GossipPeers(0) {
 		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
-			t.peerQueues[peerNodeKey] = make(chan *TransportData)
+			t.outgoingPeerQueues[peerNodeKey] = make(chan *TransportData)
 		}
 	}
 
 	// server goroutine
-	supervised.GoForever(ctx, logger, func() {
+	supervised.GoForever(ctx, t.logger, func() {
 		t.serverMainLoop(ctx, t.config.GossipListenPort())
 	})
 
@@ -59,8 +59,10 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	for peerNodeKey, peer := range t.config.GossipPeers(0) {
 		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-			//TODO supervise
-			go t.clientMainLoop(ctx, peerAddress, t.peerQueues[peerNodeKey])
+			peerNodeKey := peerNodeKey // required for closure
+			supervised.GoForever(ctx, t.logger, func() {
+				t.clientMainLoop(ctx, peerAddress, t.outgoingPeerQueues[peerNodeKey])
+			})
 		}
 	}
 
@@ -78,14 +80,14 @@ func (t *directTransport) RegisterListener(listener TransportListener, listenerP
 func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for _, peerQueue := range t.peerQueues {
+		for _, peerQueue := range t.outgoingPeerQueues {
 			peerQueue <- data
 		}
 		// TODO: how can we tell if was actually sent without error?
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientPublicKeys {
-			if peerQueue, found := t.peerQueues[recipientPublicKey.KeyForMap()]; found {
+			if peerQueue, found := t.outgoingPeerQueues[recipientPublicKey.KeyForMap()]; found {
 				peerQueue <- data
 			} else {
 				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.KeyForMap())
@@ -156,7 +158,9 @@ func (t *directTransport) serverMainLoop(parentCtx context.Context, listenPort u
 			t.logger.Info("incoming connection accept error", log.Error(err), trace.LogFieldFrom(ctx))
 			continue
 		}
-		go t.serverHandleIncomingConnection(ctx, conn)
+		supervised.GoOnce(t.logger, func() {
+			t.serverHandleIncomingConnection(ctx, conn)
+		})
 	}
 }
 
@@ -181,8 +185,6 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 }
 
 func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
-	t.logger.Info("receiving transport data", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-
 	// TODO: think about timeout policy on receive, we might not want it
 	timeout := t.config.GossipNetworkTimeout()
 	res := [][]byte{}
@@ -193,6 +195,9 @@ func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Con
 		return nil, err
 	}
 	numPayloads := membuffers.GetUint32(sizeBuffer)
+
+	t.logger.Info("receiving transport data", log.Int("payloads", int(numPayloads)), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
+
 	if numPayloads > MAX_PAYLOADS_IN_MESSAGE {
 		return nil, errors.Errorf("received message with too many payloads: %d", numPayloads)
 	}
@@ -245,9 +250,9 @@ func (t *directTransport) getListener() TransportListener {
 	return t.transportListenerUnderMutex
 }
 
-func (t *directTransport) clientMainLoop(parent context.Context, address string, msgs chan *TransportData) {
+func (t *directTransport) clientMainLoop(parentCtx context.Context, address string, msgs chan *TransportData) {
 	for {
-		ctx := trace.NewContext(parent, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", address))
+		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", address))
 		t.logger.Info("attempting outgoing transport connection", log.String("server", address), trace.LogFieldFrom(ctx))
 		conn, err := net.Dial("tcp", address)
 
@@ -339,6 +344,8 @@ func calcPaddingSize(size uint32) uint32 {
 }
 
 func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
+	t.logger.Info("sending transport data", log.Int("payloads", 0), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
+
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 
