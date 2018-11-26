@@ -14,18 +14,18 @@ func TestErrorRecordingOutput_IgnoresNonError(t *testing.T) {
 }
 
 func TestErrorRecordingOutput_IgnoresAllowedError(t *testing.T) {
-	o := NewErrorRecordingOutput([]string{"foo"})
+	o := NewErrorRecordingOutput([]string{"foo", "bar.*baz"})
 	o.Append("error", "foo")
+	o.Append("error", "bar-- free as a bird --baz")
 
 	require.False(t, o.HasErrors(), "allowed error was recorded")
 }
 
 func TestErrorRecordingOutput_RecordsDisallowedError(t *testing.T) {
-	o := NewErrorRecordingOutput([]string{"foo"})
-	e := errors.Errorf("foo error")
+	o := NewErrorRecordingOutput([]string{"foo", "bar.*baz"})
+	e := errors.Errorf("some error")
 	o.Append("error", "bar", Error(e))
 
 	require.True(t, o.HasErrors(), "disallowed error was not recorded")
-	require.Contains(t, o.GetUnexpectedErrors(), "bar (passed Error object: foo error)")
+	require.Contains(t, o.GetUnexpectedErrors(), "bar (passed Error object: some error)")
 }
-
