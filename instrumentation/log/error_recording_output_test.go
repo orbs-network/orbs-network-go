@@ -23,9 +23,9 @@ func TestErrorRecordingOutput_IgnoresAllowedError(t *testing.T) {
 
 func TestErrorRecordingOutput_RecordsDisallowedError(t *testing.T) {
 	o := NewErrorRecordingOutput([]string{"foo", "bar.*baz"})
-	e := errors.Errorf("foo error")
+	e := errors.Errorf("some error")
 	o.Append("error", "bar", Error(e))
 
 	require.True(t, o.HasErrors(), "disallowed error was not recorded")
-	require.Contains(t, o.GetUnexpectedErrors(), "bar (passed Error object: foo error)")
+	require.Contains(t, o.GetUnexpectedErrors(), "bar (passed Error object: some error)")
 }
