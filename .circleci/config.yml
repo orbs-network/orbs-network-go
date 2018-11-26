@@ -63,19 +63,13 @@ jobs:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: ./docker/build/build.sh
-      - run: docker tag orbs:gamma-server orbsnetwork/gamma:$CIRCLE_TAG
-      - run: docker login -u $DOCKER_HUB_LOGIN -p $DOCKER_HUB_PASSWORD
-      - run: docker push orbsnetwork/gamma:$CIRCLE_TAG
+      - run: ./.circleci/release-gamma.sh
 
 workflows:
   version: 2
   build:
     jobs:
-      - build:
-          filters:
-            tags:
-              only:
-                /^v.*/
+      - build
       - flakiness
       - notify_github_about_dashboard
       - success:
@@ -97,8 +91,8 @@ workflows:
               only:
                 - master
       - release_gamma:
-          requires:
-            - build
           filters:
             tags:
               only: /^v.*/
+            branches:
+              ignore: /.*/
