@@ -75,8 +75,9 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		// - a response with TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING status was received if tx is not yet committed
 		// - a response with TRANSACTION_STATUS_COMMITTED status was received if tx is already committed
 		if secondAttemptResponse != nil {
+			t.Logf("received status %s in second SendTransaction", secondAttemptResponse.TransactionStatus().String())
 			require.True(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING == secondAttemptResponse.TransactionStatus() ||
-				protocol.TRANSACTION_STATUS_COMMITTED == secondAttemptResponse.TransactionStatus(), "second attempt must ")
+				protocol.TRANSACTION_STATUS_COMMITTED == secondAttemptResponse.TransactionStatus(), "second attempt must return ALREADY_PENDING or COMMITTED status")
 
 			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, secondAttemptResponse.TransactionReceipt().Txhash())
 		}
