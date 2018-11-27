@@ -20,23 +20,30 @@ func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync")).
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-			address, err := network.EthereumSimulator().DeployStorageContract(ctx, 0, "foobar")
+			addressOfContractInEthereum, err := network.EthereumSimulator().DeployStorageContract(ctx, 0, "foobar")
 			require.NoError(t, err, "deploy of storage contract failed")
 
 			test.RequireSuccess(t, deployOrbsContractCallingEthereum(ctx, network), "failed deploying the EthereumReader contract")
 
-			readTx := builders.Transaction().
-				WithMethod("EthereumReader", "readString").
-				WithArgs(address).
-				Builder()
+			readResponse := readStringFromEthereumReaderAt(ctx, network, addressOfContractInEthereum)
 
-			readResponse := <-network.CallMethod(ctx, readTx.Transaction, 0)
 			require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, readResponse.CallMethodResult())
-			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(readResponse)
-
-			require.EqualValues(t, "foobar", outputArgsIterator.NextArguments().StringValue())
+			require.EqualValues(t, "foobar", extractStringValueFrom(readResponse))
 
 		})
+}
+
+func extractStringValueFrom(readResponse *client.CallMethodResponse) string {
+	return builders.ClientCallMethodResponseOutputArgumentsDecode(readResponse).NextArguments().StringValue()
+}
+
+func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNetworkDriver, address string) *client.CallMethodResponse {
+	readTx := builders.Transaction().
+		WithMethod("EthereumReader", "readString").
+		WithArgs(address).
+		Builder()
+	readResponse := <-network.CallMethod(ctx, readTx.Transaction, 0)
+	return readResponse
 }
 
 func deployOrbsContractCallingEthereum(ctx context.Context, network harness.TestNetworkDriver) *client.SendTransactionResponse {
