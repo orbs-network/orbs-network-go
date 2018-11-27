@@ -3,9 +3,9 @@ package acceptance
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts/ethereum_caller"
 	"github.com/orbs-network/orbs-network-go/test/harness"
@@ -13,17 +13,19 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 	harness.Network(t).
-		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync")).
+		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync"), log.ExcludeEntryPoint("TransactionForwarder")).
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 			addressOfContractInEthereum, err := network.EthereumSimulator().DeployStorageContract(ctx, 0, "foobar")
 			require.NoError(t, err, "deploy of storage contract failed")
 
-			test.RequireSuccess(t, deployOrbsContractCallingEthereum(ctx, network), "failed deploying the EthereumReader contract")
+			deployOrbsContractCallingEthereum(ctx, network)
+			require.NoError(t, ctx.Err(), "failed deploying the EthereumReader contract")
 
 			readResponse := readStringFromEthereumReaderAt(ctx, network, addressOfContractInEthereum)
 
@@ -46,7 +48,9 @@ func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNet
 	return readResponse
 }
 
-func deployOrbsContractCallingEthereum(ctx context.Context, network harness.TestNetworkDriver) *client.SendTransactionResponse {
+func deployOrbsContractCallingEthereum(parent context.Context, network harness.TestNetworkDriver)  {
+	ctx, cancel := context.WithTimeout(parent, 2 * time.Second)
+	defer cancel()
 	ethereumReaderCode := "foo"
 	network.MockContract(&sdkContext.ContractInfo{
 		PublicMethods: ethereum_caller.PUBLIC,
@@ -61,5 +65,6 @@ func deployOrbsContractCallingEthereum(ctx context.Context, network harness.Test
 			[]byte(ethereumReaderCode),
 		).Builder()
 
-	return <-network.SendTransaction(ctx, deployTx, 0)
+	network.SendTransactionInBackground(ctx, deployTx, 0)
+	network.WaitForTransactionInState(ctx, digest.CalcTxHash(deployTx.Build().Transaction()))
 }
