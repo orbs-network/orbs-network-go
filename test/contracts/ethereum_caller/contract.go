@@ -12,7 +12,8 @@ var SYSTEM = sdk.Export(_init)
 func _init() {
 }
 
-func readString(address string) (out string, err error) {
-	ethereum.CallMethod(address, contract.SimpleStorageABI, "getString", out)
-	return
+func readString(address string) string {
+	var out string
+	ethereum.CallMethod(address, contract.SimpleStorageABI, "getString", &out)
+	return out
 }

@@ -154,8 +154,6 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 	}
 
-	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
-
 	cfg := config.ForAcceptanceTestNetwork(
 		federationNodes,
 		leaderKeyPair.PublicKey(),
@@ -164,10 +162,13 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		b.requiredQuorumPercentage,
 	)
 
+	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
+	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(cfg, testLogger)
+
 	network := &acceptanceNetwork{
-		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
+		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport, sharedEthereumSimulator),
 		tamperingTransport: sharedTamperingTransport,
-		ethereumConnection: ethereumAdapter.NewEthereumSimulatorConnection(cfg, testLogger),
+		ethereumConnection: sharedEthereumSimulator,
 		description:        description,
 	}
 

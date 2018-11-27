@@ -28,9 +28,10 @@ type NetworkDriver interface {
 }
 
 type Network struct {
-	Nodes     []*Node
-	Logger    log.BasicLogger
-	Transport adapter.Transport
+	Nodes              []*Node
+	Logger             log.BasicLogger
+	Transport          adapter.Transport
+	ethereumConnection ethereumAdapter.EthereumConnection
 }
 
 type Node struct {
@@ -39,14 +40,13 @@ type Node struct {
 	config             config.NodeConfig
 	blockPersistence   blockStorageAdapter.InMemoryBlockPersistence
 	statePersistence   stateStorageAdapter.TamperingStatePersistence
-	ethereumConnection ethereumAdapter.EthereumConnection
 	nativeCompiler     nativeProcessorAdapter.Compiler
 	nodeLogic          bootstrap.NodeLogic
 	metricRegistry     metric.Registry
 }
 
-func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
-	return Network{Logger: logger, Transport: transport}
+func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
+	return Network{Logger: logger, Transport: transport, ethereumConnection: ethereumConnection}
 }
 
 func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, logger log.BasicLogger) {
@@ -56,7 +56,6 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(n.Logger)
-	node.ethereumConnection = ethereumAdapter.NewEthereumSimulatorConnection(cfg, logger)
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 
@@ -78,7 +77,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
 			node.config,
-			node.ethereumConnection,
+			n.ethereumConnection,
 		)
 	}
 }

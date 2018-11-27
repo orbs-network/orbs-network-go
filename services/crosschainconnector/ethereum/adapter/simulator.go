@@ -15,11 +15,12 @@ import (
 )
 
 type EthereumSimulator struct {
-	auth      *bind.TransactOpts
-	simClient bind.ContractBackend
-	config    ethereumAdapterConfig
-	logger    log.BasicLogger
-	mu        sync.Mutex
+	auth             *bind.TransactOpts
+	simClient        bind.ContractBackend
+	config           ethereumAdapterConfig
+	logger           log.BasicLogger
+	mu               sync.Mutex
+	contractDeployed bool
 }
 
 func NewEthereumSimulatorConnection(config ethereumAdapterConfig, logger log.BasicLogger) *EthereumSimulator {
@@ -79,5 +80,8 @@ func (es *EthereumSimulator) DeployStorageContract(ctx context.Context, number i
 		return "", err
 	}
 	client.(*backends.SimulatedBackend).Commit() // assuming simulation, this will commit the pending transactions
+
+	es.contractDeployed = true
+
 	return hexutil.Encode(address[:]), nil
 }
