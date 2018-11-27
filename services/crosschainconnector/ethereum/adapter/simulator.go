@@ -16,7 +16,7 @@ import (
 
 type EthereumSimulator struct {
 	auth             *bind.TransactOpts
-	simClient        bind.ContractBackend
+	simClient        *backends.SimulatedBackend
 	config           ethereumAdapterConfig
 	logger           log.BasicLogger
 	mu               sync.Mutex
@@ -30,6 +30,7 @@ func NewEthereumSimulatorConnection(config ethereumAdapterConfig, logger log.Bas
 	}
 }
 
+//TODO should this be a public function?
 func (es *EthereumSimulator) Dial(endpoint string) error {
 	es.mu.Lock()
 	defer es.mu.Unlock()
@@ -45,8 +46,7 @@ func (es *EthereumSimulator) Dial(endpoint string) error {
 			es.auth.From: {Balance: big.NewInt(10000000000)},
 		}
 
-		sim := backends.NewSimulatedBackend(genesisAllocation, 900000000000)
-		es.simClient = sim
+		es.simClient = backends.NewSimulatedBackend(genesisAllocation, 900000000000)
 	}
 	return nil
 }
