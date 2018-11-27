@@ -12,30 +12,30 @@ import (
 
 var hextext = "0123456789abcdef"
 
-func bytesToHexString(s []byte) string {
-	hexText := ""
-	for _, b := range s {
-		hexText = hexText + string(hextext[b])
-	}
-	return hexText
-}
-
-func hexStringToBytes(s string) []byte {
-	if (len(s) % 2) != 0 {
-		panic("key value needs to be a hex representation of a byte array")
-	}
-	bytesKey := make([]byte, len(s)/2)
-	hex.Decode(bytesKey, []byte(s))
-	return bytesKey
-}
+//func bytesToHexString(s []byte) string {
+//	hexText := ""
+//	for _, b := range s {
+//		hexText = hexText + string(hextext[b])
+//	}
+//	return hexText
+//}
+//
+//func hexStringToBytes(s string) []byte {
+//	if (len(s) % 2) != 0 {
+//		panic("key value needs to be a hex representation of a byte array")
+//	}
+//	bytesKey := make([]byte, len(s)/2)
+//	hex.Decode(bytesKey, []byte(s))
+//	return bytesKey
+//}
 
 func updateStringEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
-	diffs := make(MerkleDiffs, len(keyValues)/2)
+	diffs := make(TrieDiffs, len(keyValues)/2)
 	for i := 0; i < len(keyValues); i = i + 2 {
-		diffs[i/2] = &MerkleDiff{Key: hexStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
+		diffs[i/2] = &TrieDiff{Key: hexStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
 	}
 
 	currentRoot, _ := f.Update(baseHash, diffs)
@@ -64,16 +64,16 @@ func TestRootManagement(t *testing.T) {
 	foundRoot := f.findRoot(emptyNode.hash)
 	require.Equal(t, emptyNode, foundRoot, "proof verification returned unexpected result")
 
-	node1 := createNode([]byte("abcd"), hash.CalcSha256([]byte("bye")), true)
+	node1 := createNode([]byte{0,1,0,1}, hash.CalcSha256([]byte("bye")))
 	node1.hash = node1.serialize().hash()
-	node2 := createNode([]byte("1234"), hash.CalcSha256([]byte("d")), true)
+	node2 := createNode([]byte{1,1,1,1}, hash.CalcSha256([]byte("d")))
 	node2.hash = node2.serialize().hash()
 
 	f.appendRoot(node1)
 	f.appendRoot(node2)
 	require.Len(t, f.roots, 3, "mismatch length")
 
-	node1hash := createNode([]byte("abcd"), hash.CalcSha256([]byte("bye")), true).serialize().hash()
+	node1hash := createNode([]byte{0,1,0,1}, hash.CalcSha256([]byte("bye"))).serialize().hash()
 	foundRoot = f.findRoot(node1hash)
 	require.Equal(t, node1, foundRoot, "should be same node")
 }
@@ -81,9 +81,9 @@ func TestRootManagement(t *testing.T) {
 func TestRootForgetWhenMultipleSameRootsAndKeepOrder(t *testing.T) {
 	f, _ := NewForest()
 
-	node1 := createNode([]byte("abcd"), hash.CalcSha256([]byte("bye")), true)
+	node1 := createNode([]byte{0,1,0,1}, hash.CalcSha256([]byte("bye")))
 	node1.hash = node1.serialize().hash()
-	node2 := createNode([]byte("1234"), hash.CalcSha256([]byte("d")), true)
+	node2 := createNode([]byte{0,1,1,1}, hash.CalcSha256([]byte("d")))
 	node2.hash = node2.serialize().hash()
 
 	f.appendRoot(node1)
@@ -433,8 +433,6 @@ func (f *Forest) dump(t *testing.T) {
 	t.Logf("---------------- TRIE END --------------------")
 }
 
-var hexValues = "012345679abcdef"
-
 func (n *node) printNode(label string, depth int, trie *Forest, t *testing.T) {
 	prefix := strings.Repeat(" ", depth)
 	leafText := ""
@@ -443,9 +441,10 @@ func (n *node) printNode(label string, depth int, trie *Forest, t *testing.T) {
 	}
 	pathString := fmt.Sprintf("%s%s)%s", prefix, label, n.path)
 	t.Logf("%s%s\n", pathString, leafText)
-	for l, v := range n.branches {
-		if v != nil {
-			v.printNode(string(hexValues[l]), depth+len(pathString)-1, trie, t)
-		}
+	if n.left != nil {
+		n.left.printNode("0", depth+len(pathString)-1, trie, t)
+	}
+	if n.right != nil {
+		n.right.printNode("1", depth+len(pathString)-1, trie, t)
 	}
 }

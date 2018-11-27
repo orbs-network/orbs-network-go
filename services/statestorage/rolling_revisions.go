@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 )
 
 type merkleRevisions interface {
-	Update(rootMerkle primitives.MerkleSha256, diffs merkle.MerkleDiffs) (primitives.MerkleSha256, error)
+	Update(rootMerkle primitives.MerkleSha256, diffs merkle.TrieDiffs) (primitives.MerkleSha256, error)
 	Forget(rootHash primitives.MerkleSha256)
 }
 
@@ -86,11 +86,11 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 	return ls.evictRevisions()
 }
 
-func toMerkleInput(diff adapter.ChainState) merkle.MerkleDiffs {
-	result := make(merkle.MerkleDiffs, 0, len(diff))
+func toMerkleInput(diff adapter.ChainState) merkle.TrieDiffs {
+	result := make(merkle.TrieDiffs, 0, len(diff))
 	for contractName, contractState := range diff {
 		for _, r := range contractState {
-			result = append(result, &merkle.MerkleDiff{
+			result = append(result, &merkle.TrieDiff{
 				Key:   hash.CalcSha256(append([]byte(contractName), r.Key()...)),
 				Value: hash.CalcSha256(r.Value()),
 			})

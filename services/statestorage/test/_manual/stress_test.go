@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	. "github.com/orbs-network/orbs-network-go/services/statestorage/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -32,10 +32,10 @@ func TestSimulateMerkleInitForAllUsers(t *testing.T) {
 	t.Logf("Finished init phase in %v. HeapAlloc is %dMB", time.Now().Sub(start), ms.HeapAlloc/(1024*1024))
 
 	start = time.Now()
-	diffs := make(merkle.MerkleDiffs, 0, len(userKeys))
+	diffs := make(merkle.TrieDiffs, 0, len(userKeys))
 	for _, u := range userKeys {
 		sha256 := hash.CalcSha256(u)
-		diffs = append(diffs, &merkle.MerkleDiff{
+		diffs = append(diffs, &merkle.TrieDiff{
 			Key:   u,
 			Value: sha256,
 		})

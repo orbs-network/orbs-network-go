@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -231,7 +231,7 @@ func newMerkleMock() *MerkleMock {
 	m := &MerkleMock{}
 	var counter byte = 0
 	m.When("Update", mock.Any, mock.Any).
-		Call(func(root primitives.MerkleSha256, diff merkle.MerkleDiffs) (primitives.MerkleSha256, error) {
+		Call(func(root primitives.MerkleSha256, diff merkle.TrieDiffs) (primitives.MerkleSha256, error) {
 			counter++
 			return primitives.MerkleSha256{counter}, nil
 		}).
@@ -239,7 +239,7 @@ func newMerkleMock() *MerkleMock {
 	return m
 }
 
-func (mm *MerkleMock) Update(rootMerkle primitives.MerkleSha256, diffs merkle.MerkleDiffs) (primitives.MerkleSha256, error) {
+func (mm *MerkleMock) Update(rootMerkle primitives.MerkleSha256, diffs merkle.TrieDiffs) (primitives.MerkleSha256, error) {
 	ret := mm.Mock.Called(rootMerkle, diffs)
 	return ret.Get(0).(primitives.MerkleSha256), ret.Error(1)
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -49,10 +49,10 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 
 func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.MerkleSha256, error) {
 	forest, root := merkle.NewForest()
-	diffs := make([]*merkle.MerkleDiff, len(txs))
+	diffs := make([]*merkle.TrieDiff, len(txs))
 	for i := 0; i < len(txs); i++ {
 		txHash := digest.CalcTxHash(txs[i].Transaction())
-		diffs[i] = &merkle.MerkleDiff{
+		diffs[i] = &merkle.TrieDiff{
 			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
 			Value: txHash,
 		}
@@ -62,10 +62,10 @@ func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitive
 
 func CalculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.MerkleSha256, error) {
 	forest, root := merkle.NewForest()
-	diffs := make([]*merkle.MerkleDiff, len(receipts))
+	diffs := make([]*merkle.TrieDiff, len(receipts))
 	for i := 0; i < len(receipts); i++ {
 		txHash := digest.CalcReceiptHash(receipts[i])
-		diffs[i] = &merkle.MerkleDiff{
+		diffs[i] = &merkle.TrieDiff{
 			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
 			Value: txHash,
 		}
@@ -138,9 +138,9 @@ func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha
 
 func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.MerkleSha256, error) {
 	forest, root := merkle.NewForest()
-	diffs := make([]*merkle.MerkleDiff, len(receipts))
+	diffs := make([]*merkle.TrieDiff, len(receipts))
 	for i := 0; i < len(receipts); i++ {
-		diffs[i] = &merkle.MerkleDiff{
+		diffs[i] = &merkle.TrieDiff{
 			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
 			Value: receipts[i].Txhash(),
 		}

@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-const trieRadix = 16
+//const trieRadix = 16
 
 func GetZeroValueHash() primitives.Sha256 {
 	return hash.CalcSha256([]byte{})
@@ -23,7 +23,8 @@ type Proof []*ProofNode
 type ProofNode struct {
 	path     []byte // TODO parity bool?
 	value    primitives.Sha256
-	branches [trieRadix]primitives.MerkleSha256
+	left primitives.MerkleSha256
+	right primitives.MerkleSha256
 }
 
 func (pn *ProofNode) hash() primitives.MerkleSha256 {
@@ -35,22 +36,22 @@ type node struct {
 	path     []byte // TODO  parity bool
 	value    primitives.Sha256
 	hash     primitives.MerkleSha256
-	branches [trieRadix]*node
-	isLeaf   bool
+	left *node
+	right *node
+	//branches [trieRadix]*node
+	//isLeaf   bool
 }
 
-func createNode(path []byte, valueHash primitives.Sha256, isLeaf bool) *node {
+func createNode(path []byte, valueHash primitives.Sha256) *node {
 	return &node{
 		path:     path,
 		value:    valueHash,
-		branches: [trieRadix]*node{},
-		isLeaf:   isLeaf,
 		hash:     primitives.MerkleSha256{},
 	}
 }
 
 func createEmptyNode() *node {
-	tmp := createNode([]byte{}, zeroValueHash, true)
+	tmp := createNode([]byte{}, zeroValueHash)
 	tmp.hash = tmp.serialize().hash()
 	return tmp
 }
@@ -59,32 +60,46 @@ func (n *node) hasValue() bool {
 	return !zeroValueHash.Equal(n.value)
 }
 
+func (n *node) isLeaf() bool {
+	return n.left == nil && n.right == nil
+}
+
+func (n *node) getChild(bit byte) *node {
+	if bit == 0 {
+		return n.left
+	}
+	return n.right
+}
+
+func (n *node) setChild(bit byte, child *node) {
+	if bit == 0 {
+		n.left = child
+	}
+	n.right = child
+}
+
 func (n *node) serialize() *ProofNode {
 	sn := &ProofNode{
 		path:     n.path,
 		value:    n.value,
-		branches: [trieRadix]primitives.MerkleSha256{},
+		left: primitives.MerkleSha256{},
+		right : primitives.MerkleSha256{},
 	}
-	if !n.isLeaf {
-		for k, v := range n.branches {
-			if v != nil {
-				sn.branches[k] = v.hash
-			}
-		}
+	if n.left != nil {
+		sn.left = n.left.hash
+	}
+	if n.right != nil {
+		sn.right = n.right.hash
 	}
 	return sn
 }
 
 func (n *node) clone() *node {
-	newBranches := [trieRadix]*node{}
-	if !n.isLeaf {
-		copy(newBranches[:], n.branches[:])
-	}
 	result := &node{
 		path:     n.path,
 		value:    n.value,
-		branches: newBranches,
-		isLeaf:   n.isLeaf,
+left : n.left,
+		right: n.right,
 	}
 	return result
 }
@@ -120,7 +135,7 @@ func (f *Forest) appendRoot(root *node) {
 }
 
 func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path []byte) (Proof, error) {
-	path = toHex(path)
+	path = toBin(path)
 	current := f.findRoot(rootHash)
 	if current == nil {
 		return nil, errors.Errorf("unknown root")
@@ -133,7 +148,7 @@ func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path []byte) (Proof,
 		p = p[len(current.path):]
 
 		if len(p) != 0 {
-			if current = current.branches[p[0]]; current != nil {
+			if current = current.getChild(p[0]); current != nil {
 				proof = append(proof, current.serialize())
 				p = p[1:]
 			} else {
@@ -147,7 +162,7 @@ func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path []byte) (Proof,
 }
 
 func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path []byte, value primitives.Sha256) (bool, error) {
-	path = toHex(path)
+	path = toBin(path)
 	currentHash := rootHash
 	emptyMerkleHash := primitives.MerkleSha256{}
 
@@ -165,7 +180,12 @@ func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path []by
 		if !bytes.HasPrefix(path, currentNode.path) {
 			return value.Equal(zeroValueHash), nil
 		}
-		currentHash = currentNode.branches[path[len(currentNode.path)]]
+
+		if path[len(currentNode.path)] == 0 {
+			currentHash = currentNode.left
+		} else {
+			currentHash = currentNode.right
+		}
 		path = path[len(currentNode.path)+1:]
 
 		if emptyMerkleHash.Equal(currentHash) {
@@ -197,11 +217,17 @@ func (f *Forest) Forget(rootHash primitives.MerkleSha256) {
 	f.roots = newRoots
 }
 
-func toHex(s []byte) []byte {
-	hexBytes := make([]byte, len(s)*2)
+func toBin(s []byte) []byte {
+	bitsArray := make([]byte, len(s)*8)
 	for i, b := range s {
-		hexBytes[i*2] = 0xf & (b >> 4)
-		hexBytes[i*2+1] = 0x0f & b
+		bitsArray[i*8] = 1 | b >> 7
+		bitsArray[i*8+1] = 1 | b >> 6
+		bitsArray[i*8+2] = 1 | b >> 5
+		bitsArray[i*8+3] = 1 | b >> 4
+		bitsArray[i*8+4] = 1 | b >> 3
+		bitsArray[i*8+5] = 1 | b >> 2
+		bitsArray[i*8+6] = 1 | b >> 1
+		bitsArray[i*8+7] = 1 | b
 	}
-	return hexBytes
+	return bitsArray
 }
