@@ -11,7 +11,6 @@ import (
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
@@ -122,7 +121,7 @@ func (n *Network) Size() int {
 
 func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse {
 	ch := make(chan *client.SendTransactionResponse)
-	supervised.GoOnce(n.Logger, func() {
+	go func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
@@ -136,12 +135,12 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		case ch <- output.ClientResponse:
 		case <-ctx.Done():
 		}
-	})
+	}()
 	return ch
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
-	supervised.GoOnce(n.Logger, func() {
+	go func() {
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		_, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
@@ -150,13 +149,13 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 		if err != nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
 		}
-	})
+	}()
 }
 
 func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse {
 
 	ch := make(chan *client.CallMethodResponse)
-	supervised.GoOnce(n.Logger, func() {
+	go func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
@@ -169,7 +168,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		case ch <- output.ClientResponse:
 		case <-ctx.Done():
 		}
-	})
+	}()
 	return ch
 }
 
