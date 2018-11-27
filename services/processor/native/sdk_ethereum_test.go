@@ -23,6 +23,8 @@ func TestEthereumSdk_CallMethod(t *testing.T) {
 	var out string
 	sampleABI := "[{\"inputs\":[],\"name\":\"say\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"type\":\"function\"}]"
 	s.SdkEthereumCallMethod(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "ExampleAddress", sampleABI, "say", &out)
+
+	require.Equal(t, "hello etherworld", out, "did not get the expected return value from ethereum call")
 }
 
 func createEthereumSdk() *service {

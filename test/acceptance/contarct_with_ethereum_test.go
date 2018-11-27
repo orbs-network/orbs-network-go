@@ -34,7 +34,7 @@ func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 			require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, readResponse.CallMethodResult())
 			outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(readResponse)
 
-			require.EqualValues(t, "foobar", outputArgsIterator.NextArguments().String())
+			require.EqualValues(t, "foobar", outputArgsIterator.NextArguments().StringValue())
 
 		})
 }
