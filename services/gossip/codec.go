@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR = 5 // txHeader, txMetadata, rxHeader..
+const NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR = 6 // txHeader, txMetadata, rxHeader..
 
 func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
@@ -22,6 +22,7 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 		blockPair.TransactionsBlock.Metadata == nil ||
 		blockPair.TransactionsBlock.BlockProof == nil ||
 		blockPair.ResultsBlock.Header == nil ||
+		blockPair.ResultsBlock.TransactionsBloomFilter == nil ||
 		blockPair.ResultsBlock.BlockProof == nil {
 		return nil, errors.Errorf("codec failed to encode block pair due to missing fields: %s", blockPair.String())
 	}
@@ -30,6 +31,7 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	payloads = append(payloads, blockPair.TransactionsBlock.Metadata.Raw())
 	payloads = append(payloads, blockPair.TransactionsBlock.BlockProof.Raw())
 	payloads = append(payloads, blockPair.ResultsBlock.Header.Raw())
+	payloads = append(payloads, blockPair.ResultsBlock.TransactionsBloomFilter.Raw())
 	payloads = append(payloads, blockPair.ResultsBlock.BlockProof.Raw())
 
 	for _, tx := range blockPair.TransactionsBlock.SignedTransactions {
@@ -85,7 +87,8 @@ func decodeBlockPairs(payloads [][]byte) (results []*protocol.BlockPairContainer
 		txBlockMetadata := protocol.TransactionsBlockMetadataReader(payloads[payloadIndex+1])
 		txBlockProof := protocol.TransactionsBlockProofReader(payloads[payloadIndex+2])
 		rxBlockHeader := protocol.ResultsBlockHeaderReader(payloads[payloadIndex+3])
-		rxBlockProof := protocol.ResultsBlockProofReader(payloads[payloadIndex+4])
+		rxTxBloomFilter := protocol.TransactionsBloomFilterReader(payloads[payloadIndex+4])
+		rxBlockProof := protocol.ResultsBlockProofReader(payloads[payloadIndex+5])
 		payloadIndex += uint32(NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR)
 
 		expectedPayloads := txBlockHeader.NumSignedTransactions() + rxBlockHeader.NumTransactionReceipts() + rxBlockHeader.NumContractStateDiffs()
@@ -120,10 +123,11 @@ func decodeBlockPairs(payloads [][]byte) (results []*protocol.BlockPairContainer
 				BlockProof:         txBlockProof,
 			},
 			ResultsBlock: &protocol.ResultsBlockContainer{
-				Header:              rxBlockHeader,
-				TransactionReceipts: receipts,
-				ContractStateDiffs:  sdiffs,
-				BlockProof:          rxBlockProof,
+				Header:                  rxBlockHeader,
+				TransactionsBloomFilter: rxTxBloomFilter,
+				TransactionReceipts:     receipts,
+				ContractStateDiffs:      sdiffs,
+				BlockProof:              rxBlockProof,
 			},
 		}
 		results = append(results, blockPair)

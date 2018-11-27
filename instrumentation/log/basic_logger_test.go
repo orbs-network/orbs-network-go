@@ -134,8 +134,8 @@ func TestStringableSlice(t *testing.T) {
 	jsonMap := parseOutput(b.String())
 
 	require.Equal(t, []interface{}{
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,}",
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,}",
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEvents:,}",
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEvents:,}",
 	}, jsonMap["a-collection"])
 }
 
@@ -176,7 +176,7 @@ func TestHumanReadable_AggregateField(t *testing.T) {
 
 	out := b.String()
 	require.Regexp(t, "entry-point=foo", out)
-	require.Regexp(t, trace.RequestId + "=foo.*", out)
+	require.Regexp(t, trace.RequestId+"=foo.*", out)
 
 }
 

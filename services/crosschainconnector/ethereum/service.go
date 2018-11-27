@@ -55,3 +55,7 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 
 	return &services.EthereumCallContractOutput{EthereumPackedOutput: output}, nil
 }
+
+func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *services.EthereumGetTransactionLogsInput) (*services.EthereumGetTransactionLogsOutput, error) {
+	panic("Not implemented")
+}
