@@ -59,9 +59,9 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	for peerNodeKey, peer := range t.config.GossipPeers(0) {
 		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-			peerNodeKey := peerNodeKey // required for closure
+			closureSafePeerNodeKey := peerNodeKey
 			supervised.GoForever(ctx, t.logger, func() {
-				t.clientMainLoop(ctx, peerAddress, t.outgoingPeerQueues[peerNodeKey])
+				t.clientMainLoop(ctx, peerAddress, t.outgoingPeerQueues[closureSafePeerNodeKey])
 			})
 		}
 	}
