@@ -1,12 +1,15 @@
 package adapter
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"math/big"
 	"sync"
 )
@@ -19,7 +22,7 @@ type EthereumSimulator struct {
 	mu        sync.Mutex
 }
 
-func NewEthereumSimulatorConnection(config ethereumAdapterConfig, logger log.BasicLogger) EthereumConnection {
+func NewEthereumSimulatorConnection(config ethereumAdapterConfig, logger log.BasicLogger) *EthereumSimulator {
 	return &EthereumSimulator{
 		config: config,
 		logger: logger,
@@ -60,4 +63,21 @@ func (es *EthereumSimulator) GetClient() (bind.ContractBackend, error) {
 		}
 	}
 	return es.simClient, nil
+}
+
+
+func (es *EthereumSimulator) DeployStorageContract(ctx context.Context, number int64, text string) (string, error) {
+	if err := es.Dial(""); err != nil { // create the client so we can deploy
+		return "", err
+	}
+	client, err := es.GetClient()
+	if err != nil {
+		return "", err
+	}
+	address, _, _, err := contract.DeploySimpleStorage(es.GetAuth(), client, big.NewInt(number), text)
+	if err != nil {
+		return "", err
+	}
+	client.(*backends.SimulatedBackend).Commit() // assuming simulation, this will commit the pending transactions
+	return hexutil.Encode(address[:]), nil
 }

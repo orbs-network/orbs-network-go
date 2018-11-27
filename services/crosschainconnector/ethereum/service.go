@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -28,8 +29,9 @@ func NewEthereumCrosschainConnector(ctx context.Context, // TODO: why don't we u
 }
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	// TODO: use input.ReferenceTimestamp to find the reference block number
-	s.logger.Info("calling contract at", log.String("address", input.EthereumContractAddress))
+	logger.Info("calling contract at", log.String("address", input.EthereumContractAddress))
 	address, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
 		return nil, err
