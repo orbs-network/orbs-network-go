@@ -26,7 +26,6 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"internal-node sync to consensus algo failed",         //TODO Remove this once internal node sync is implemented
 			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
@@ -38,6 +37,7 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 					WithHeight(i).
 					Build()
 				network.BlockPersistence(0).WriteNextBlock(blockPair)
+				network.BlockPersistence(1).WriteNextBlock(blockPair)
 			}
 		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
@@ -84,7 +84,6 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"internal-node sync to consensus algo failed",         //TODO Remove this once internal node sync is implemented
 			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
@@ -107,15 +106,16 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 	harness.Network(t).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"internal-node sync to consensus algo failed",         //TODO Remove this once internal node sync is implemented
 			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
 		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
-			// inject blocks from builder network
+			// inject blocks from builder network into both nodes
 			for _, bpc := range blockPairContainers {
-				_, err := network.BlockPersistence(0).WriteNextBlock(bpc)
-				require.NoError(t, err)
+				_, err0 := network.BlockPersistence(0).WriteNextBlock(bpc)
+				_, err1 := network.BlockPersistence(1).WriteNextBlock(bpc)
+				require.NoError(t, err0)
+				require.NoError(t, err1)
 			}
 		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
