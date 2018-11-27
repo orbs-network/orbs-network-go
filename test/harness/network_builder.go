@@ -106,7 +106,7 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 
 			network.Start(ctx, b.numOfNodesToStart)
 
-			ctxWithTimeout, cancel := context.WithTimeout(ctx, 2*time.Second)
+			ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second) //TODO 5 seconds is infinity; reduce to 2 seconds when system is more stable
 			defer cancel()
 			f(ctxWithTimeout, network)
 		})
