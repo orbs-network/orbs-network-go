@@ -68,10 +68,12 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		contract := network.GetBenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 1)
 
-		txToSendTwice := builders.TransferTransaction().WithTimestamp(ts).Builder()
+		//TODO this should be the same builder, but membuffers has a stability bug preventing re-usage of builders
+		tx1 := builders.TransferTransaction().WithTimestamp(ts).Builder()
+		tx2 := builders.TransferTransaction().WithTimestamp(ts).Builder()
 
-		network.SendTransactionInBackground(ctx, txToSendTwice, 0)
-		secondAttemptResponse := <-network.SendTransaction(ctx, txToSendTwice, 0)
+		network.SendTransactionInBackground(ctx, tx1, 0)
+		secondAttemptResponse := <-network.SendTransaction(ctx, tx2, 0)
 
 		// A race condition here makes three possible outcomes:
 		// - secondAttemptResponse is nil, which means an error was returned // TODO understand under what circumstances an error here is ok
@@ -82,7 +84,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 			require.True(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING == secondAttemptResponse.TransactionStatus() ||
 				protocol.TRANSACTION_STATUS_COMMITTED == secondAttemptResponse.TransactionStatus(), "second attempt must return ALREADY_PENDING or COMMITTED status")
 
-			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, digest.CalcTxHash(txToSendTwice.Transaction.Build()))
+			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, digest.CalcTxHash(tx1.Build().Transaction()))
 		}
 	})
 }
