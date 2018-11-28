@@ -8,14 +8,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts/ethereum_caller"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/stretchr/testify/require"
-	"math/big"
 	"testing"
 	"time"
 )
@@ -39,10 +37,7 @@ func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 }
 
 func deployEthereumContract(t *testing.T, simulator *adapter.EthereumSimulator, stringValue string) string {
-	backend, err := simulator.GetClient()
-	require.NoError(t, err, "failed connecting to ethereum simulator")
-
-	addressOfContractInEthereum, _, _, err := contract.DeploySimpleStorage(simulator.GetAuth(), backend, big.NewInt(42), stringValue)
+	addressOfContractInEthereum, err := simulator.DeploySimpleStorageContract(simulator.GetAuth(), stringValue)
 	simulator.Commit()
 	require.NoError(t, err, "deploy of storage contract failed")
 	return hexutil.Encode(addressOfContractInEthereum[:])

@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"math/big"
 	"os"
 	"strings"
 )
@@ -30,13 +29,8 @@ func (c *ethereumConnectorConfigForTests) EthereumEndpoint() string {
 	return c.endpoint
 }
 
-func (h *harness) deployStorageContract(ctx context.Context, number int64, text string) error {
-	client, err := h.adapter.GetClient()
-	if err != nil {
-		return err
-	}
-
-	address, _, _, err := contract.DeploySimpleStorage(h.adapter.GetAuth(), client, big.NewInt(number), text)
+func (h *harness) deployStorageContract(ctx context.Context, text string) error {
+	address, err := h.adapter.DeploySimpleStorageContract(h.adapter.GetAuth(), text)
 	h.adapter.Commit()
 	if err != nil {
 		return err
