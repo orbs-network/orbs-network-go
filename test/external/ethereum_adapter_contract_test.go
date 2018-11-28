@@ -15,14 +15,9 @@ import (
 	"testing"
 )
 
-const mnemonic = "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
-const privKeyHex = "f2ce3a9eddde6e5d996f6fe7c1882960b0e8ee8d799e0ef608276b8de4dc7f19"
-const pubKeyHex = "037a809cc481303d337c1c83d1ba3a2222c7b1b820ac75e3c6f8dc63fa0ed79b18"
-const dockerRun = "docker run -d -p 8545:8545 trufflesuite/ganache-cli:latest -a 10 -m \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\""
-const ethereumEndpoint = "http://localhost:8545"
-
 type localconfig struct {
 	endpoint string
+	privateKeyHex string
 }
 
 func (c *localconfig) EthereumEndpoint() string {
@@ -30,15 +25,17 @@ func (c *localconfig) EthereumEndpoint() string {
 }
 
 func getConfig() *localconfig {
-	endpoint := ethereumEndpoint
+	var cfg localconfig
 
-	if endpointFromEnv := os.Getenv("ETHEREUM_ENDPOINT"); endpointFromEnv != "" {
-		endpoint = endpointFromEnv
+	if endpoint := os.Getenv("ETHEREUM_ENDPOINT"); endpoint != "" {
+		cfg.endpoint = endpoint
 	}
 
-	return &localconfig{
-		endpoint: endpoint,
+	if privateKey := os.Getenv("ETHEREUM_PRIVATE_KEY"); privateKey != "" {
+		cfg.privateKeyHex = privateKey
 	}
+
+	return &cfg
 }
 
 //TODO refactor and make sense of: adapter directory, sdk_ethereum + its test
@@ -61,7 +58,7 @@ func connectViaRpcAndDeploySimpleStorageContract(t *testing.T) ([]byte, adapter.
 	cfg := getConfig()
 	rpcClient := adapter.NewEthereumRpcConnection(cfg, logger)
 
-	key, err := crypto.HexToECDSA(privKeyHex)
+	key, err := crypto.HexToECDSA(cfg.privateKeyHex)
 	require.NoError(t, err, "failed generating key")
 	auth := bind.NewKeyedTransactor(key)
 
