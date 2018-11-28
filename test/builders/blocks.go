@@ -21,6 +21,7 @@ type blockPair struct {
 	sdiffs           []*protocol.ContractStateDiff
 	rxProof          *protocol.ResultsBlockProofBuilder
 	blockProofSigner primitives.Ed25519PrivateKey
+	txBloomFilter    *protocol.TransactionsBloomFilterBuilder
 }
 
 func BlockPair() *blockPair {
@@ -44,19 +45,22 @@ func BlockPair() *blockPair {
 		transactions: transactions,
 		txProof:      nil,
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:           DEFAULT_TEST_PROTOCOL_VERSION,
-			VirtualChainId:            DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-			BlockHeight:               1,
-			PrevBlockHashPtr:          nil,
-			Timestamp:                 primitives.TimestampNano(createdDate.UnixNano()),
-			ReceiptsRootHash:          nil,
-			StateDiffHash:             nil,
-			TransactionsBlockHashPtr:  nil,
-			PreExecutionStateRootHash: nil,
-			TxhashBloomFilter:         nil,
-			TimestampBloomFilter:      nil,
-			NumContractStateDiffs:     1,
-			NumTransactionReceipts:    1,
+			ProtocolVersion:             DEFAULT_TEST_PROTOCOL_VERSION,
+			VirtualChainId:              DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+			BlockHeight:                 1,
+			PrevBlockHashPtr:            nil,
+			Timestamp:                   primitives.TimestampNano(createdDate.UnixNano()),
+			ReceiptsRootHash:            nil,
+			StateDiffHash:               nil,
+			TransactionsBlockHashPtr:    nil,
+			PreExecutionStateRootHash:   nil,
+			TransactionsBloomFilterHash: nil,
+			NumContractStateDiffs:       1,
+			NumTransactionReceipts:      1,
+		},
+		txBloomFilter: &protocol.TransactionsBloomFilterBuilder{
+			TxhashBloomFilter:    nil,
+			TimestampBloomFilter: nil,
 		},
 		receipts: []*protocol.TransactionReceipt{
 			(TransactionReceipt().Build()),
@@ -85,10 +89,11 @@ func (b *blockPair) Build() *protocol.BlockPairContainer {
 			BlockProof:         b.txProof.Build(),
 		},
 		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:              rxHeaderBuilt,
-			TransactionReceipts: b.receipts,
-			ContractStateDiffs:  b.sdiffs,
-			BlockProof:          b.rxProof.Build(),
+			Header:                  rxHeaderBuilt,
+			TransactionReceipts:     b.receipts,
+			ContractStateDiffs:      b.sdiffs,
+			BlockProof:              b.rxProof.Build(),
+			TransactionsBloomFilter: b.txBloomFilter.Build(),
 		},
 	}
 }
@@ -186,13 +191,13 @@ func (b *blockPair) WithStateDiffs(num uint32) *blockPair {
 	return b
 }
 
-func (b *blockPair) WithTimestampBloomFilter() *blockPair {
+func (b *blockPair) WithTransactionsBloomFilter() *blockPair {
 	bf := bloom.New(len(b.transactions))
 	for _, t := range b.transactions {
 		bf.Add(t.Transaction().Timestamp())
 	}
 
-	b.rxHeader.TimestampBloomFilter = bf.Raw()
+	b.txBloomFilter.TimestampBloomFilter = bf.Raw()
 	return b
 }
 

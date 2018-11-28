@@ -87,7 +87,7 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 	}
 
 	for _, b := range blocksToSearch {
-		tbf := bloom.NewFromRaw(b.ResultsBlock.Header.TimestampBloomFilter())
+		tbf := bloom.NewFromRaw(b.ResultsBlock.TransactionsBloomFilter.TimestampBloomFilter())
 		if tbf.Test(input.TransactionTimestamp) {
 			for _, txr := range b.ResultsBlock.TransactionReceipts {
 				if txr.Txhash().Equal(input.Txhash) {
@@ -125,4 +125,3 @@ func (s *service) createEmptyTransactionReceiptResult(ctx context.Context) (*ser
 		BlockTimestamp:     out.LastCommittedBlockTimestamp,
 	}, nil
 }
-

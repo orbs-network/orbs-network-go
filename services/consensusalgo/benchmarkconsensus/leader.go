@@ -93,10 +93,11 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 		BlockProof:         nil, // will be generated in a minute when signed
 	}
 	resultsBlock := &protocol.ResultsBlockContainer{
-		Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
-		TransactionReceipts: []*protocol.TransactionReceipt{},
-		ContractStateDiffs:  []*protocol.ContractStateDiff{},
-		BlockProof:          nil, // will be generated in a minute when signed
+		Header:                  (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{}).Build(),
+		TransactionReceipts:     []*protocol.TransactionReceipt{},
+		ContractStateDiffs:      []*protocol.ContractStateDiff{},
+		BlockProof:              nil, // will be generated in a minute when signed
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
