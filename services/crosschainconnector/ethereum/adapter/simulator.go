@@ -8,14 +8,18 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"math/big"
+	"sync"
 )
 
 type EthereumSimulator struct {
 	connectorCommon
 
 	auth      *bind.TransactOpts
-	simClient *backends.SimulatedBackend
 	logger    log.BasicLogger
+	mu struct {
+		sync.Mutex
+		simClient *backends.SimulatedBackend
+	}
 }
 
 func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
@@ -23,7 +27,15 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 		logger: logger,
 	}
 
-	e.createClientAndInitAccount()
+	e.getContractCaller = func() (bind.ContractBackend, error) {
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		if e.mu.simClient == nil {
+			e.createClientAndInitAccount()
+		}
+
+		return e.mu.simClient, nil
+	}
 
 	return e
 }
@@ -41,10 +53,8 @@ func (es *EthereumSimulator) createClientAndInitAccount() {
 		es.auth.From: {Balance: big.NewInt(10000000000)},
 	}
 
-	es.simClient = backends.NewSimulatedBackend(genesisAllocation, 900000000000)
-	es.getContractCaller = func() (bind.ContractBackend, error) {
-		return es.simClient, nil
-	}
+	es.mu.simClient = backends.NewSimulatedBackend(genesisAllocation, 900000000000)
+
 }
 
 func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
@@ -53,5 +63,5 @@ func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
 }
 
 func (es *EthereumSimulator) Commit() {
-	es.simClient.Commit()
+	es.mu.simClient.Commit()
 }
