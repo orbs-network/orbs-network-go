@@ -17,9 +17,8 @@ import (
 )
 
 type E2EConfig struct {
-	bootstrap bool
-	baseUrl   string
-
+	bootstrap  bool
+	baseUrl    string
 	stressTest StressTestConfig
 }
 
@@ -34,52 +33,19 @@ const VITRUAL_CHAIN_ID = 42
 const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
-func getConfig() E2EConfig {
-	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
-
-	stressTestEnabled := os.Getenv("STRESS_TEST") == "true"
-	stressTestNumberOfTransactions := int64(10000)
-	stressTestFailureRate := int64(2)
-	stressTestTargetTPS := float64(700)
-
-	if !shouldBootstrap {
-		apiEndpoint := os.Getenv("API_ENDPOINT")
-		apiUrl, _ := url.Parse(apiEndpoint)
-		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
-
-		if stressTestEnabled {
-			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
-			stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
-			stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
-		}
-	}
-
-	return E2EConfig{
-		shouldBootstrap,
-		baseUrl,
-		StressTestConfig{
-			stressTestEnabled,
-			stressTestNumberOfTransactions,
-			stressTestFailureRate,
-			stressTestTargetTPS,
-		},
-	}
-}
-
 type harness struct {
 	client *orbsclient.OrbsClient
-}
-
-func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (*codec.SendTransactionResponse, error) {
-	response, _, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
-	return response, err
 }
 
 func newHarness() *harness {
 	return &harness{
 		client: orbsclient.NewOrbsClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
 	}
+}
+
+func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (*codec.SendTransactionResponse, error) {
+	response, _, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+	return response, err
 }
 
 func (h *harness) sendTransaction(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
@@ -138,4 +104,37 @@ func (h *harness) getMetrics() metrics {
 func printTestTime(t *testing.T, msg string, last *time.Time) {
 	t.Logf("%s (+%.3fs)", msg, time.Since(*last).Seconds())
 	*last = time.Now()
+}
+
+func getConfig() E2EConfig {
+	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
+	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
+
+	stressTestEnabled := os.Getenv("STRESS_TEST") == "true"
+	stressTestNumberOfTransactions := int64(10000)
+	stressTestFailureRate := int64(2)
+	stressTestTargetTPS := float64(700)
+
+	if !shouldBootstrap {
+		apiEndpoint := os.Getenv("API_ENDPOINT")
+		apiUrl, _ := url.Parse(apiEndpoint)
+		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
+
+		if stressTestEnabled {
+			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
+			stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
+			stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
+		}
+	}
+
+	return E2EConfig{
+		shouldBootstrap,
+		baseUrl,
+		StressTestConfig{
+			stressTestEnabled,
+			stressTestNumberOfTransactions,
+			stressTestFailureRate,
+			stressTestTargetTPS,
+		},
+	}
 }
