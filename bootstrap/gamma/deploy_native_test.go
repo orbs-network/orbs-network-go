@@ -1,11 +1,11 @@
-package gammaserver
+package gamma
 
 import (
 	"context"
-	contractClient "github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	contractClient "github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
