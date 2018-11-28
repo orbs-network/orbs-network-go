@@ -1,16 +1,12 @@
 package e2e
 
 import (
-	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/orbs-network/membuffers/go"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-client-sdk-go/codec"
+	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -21,9 +17,8 @@ import (
 )
 
 type E2EConfig struct {
-	bootstrap   bool
-	apiEndpoint string
-	baseUrl     string
+	bootstrap bool
+	baseUrl   string
 
 	stressTest StressTestConfig
 }
@@ -35,13 +30,13 @@ type StressTestConfig struct {
 	targetTPS             float64
 }
 
+const VITRUAL_CHAIN_ID = 42
 const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {
 	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
-	apiEndpoint := fmt.Sprintf("%s/api/v1/", baseUrl)
 
 	stressTestEnabled := os.Getenv("STRESS_TEST") == "true"
 	stressTestNumberOfTransactions := int64(10000)
@@ -49,7 +44,7 @@ func getConfig() E2EConfig {
 	stressTestTargetTPS := float64(700)
 
 	if !shouldBootstrap {
-		apiEndpoint = os.Getenv("API_ENDPOINT")
+		apiEndpoint := os.Getenv("API_ENDPOINT")
 		apiUrl, _ := url.Parse(apiEndpoint)
 		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
 
@@ -62,7 +57,6 @@ func getConfig() E2EConfig {
 
 	return E2EConfig{
 		shouldBootstrap,
-		apiEndpoint,
 		baseUrl,
 		StressTestConfig{
 			stressTestEnabled,
@@ -73,82 +67,50 @@ func getConfig() E2EConfig {
 	}
 }
 
-type harness struct{}
+type harness struct {
+	client *orbsclient.OrbsClient
+}
 
-func (h *harness) deployNativeContract(name string, code []byte) (*client.SendTransactionResponse, error) {
-	return h.sendTransaction(builders.Transaction().
-		WithMethod("_Deployments", "deployService").
-		WithArgs(
-			name,
-			uint32(protocol.PROCESSOR_TYPE_NATIVE),
-			code,
-		).Builder())
+func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (*codec.SendTransactionResponse, error) {
+	response, _, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+	return response, err
 }
 
 func newHarness() *harness {
-	return &harness{}
+	return &harness{
+		client: orbsclient.NewOrbsClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
+	}
 }
 
-func (h *harness) sendTransaction(txBuilder *protocol.SignedTransactionBuilder) (*client.SendTransactionResponse, error) {
-	request := (&client.SendTransactionRequestBuilder{
-		SignedTransaction: txBuilder,
-	}).Build()
-	responseBytes, err := h.httpPost(request, "send-transaction")
+func (h *harness) sendTransaction(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
+	payload, txId, err := h.client.CreateSendTransactionPayload(sender.PublicKey(), sender.PrivateKey(), contractName, methodName, args...)
 	if err != nil {
-		return nil, err
+		return nil, txId, err
 	}
-
-	response := client.SendTransactionResponseReader(responseBytes)
-	if !response.IsValid() {
-		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
-		return nil, errors.Errorf("SendTransaction response invalid, raw as text: %s, raw as hex: %s, txHash: %s", string(responseBytes), hex.EncodeToString(responseBytes), digest.CalcTxHash(request.SignedTransaction().Transaction()))
-	}
-	return response, nil
+	response, err = h.client.SendTransaction(payload)
+	return
 }
 
-func (h *harness) callMethod(txBuilder *protocol.TransactionBuilder) (*client.CallMethodResponse, error) {
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: txBuilder,
-	}).Build()
-	responseBytes, err := h.httpPost(request, "call-method")
+func (h *harness) callMethod(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.CallMethodResponse, err error) {
+	payload, err := h.client.CreateCallMethodPayload(sender.PublicKey(), contractName, methodName, args...)
 	if err != nil {
 		return nil, err
 	}
-
-	response := client.CallMethodResponseReader(responseBytes)
-	if !response.IsValid() {
-		// TODO: this is temporary until httpserver returns errors according to spec (issue #190)
-		return nil, errors.Errorf("CallMethod response invalid, raw as text: %s, raw as hex: %s", string(responseBytes), hex.EncodeToString(responseBytes))
-	}
-	return response, nil
+	response, err = h.client.CallMethod(payload)
+	return
 }
 
-func (h *harness) httpPost(input membuffers.Message, endpoint string) ([]byte, error) {
-	res, err := http.Post(h.apiUrlFor(endpoint), "application/membuffers", bytes.NewReader(input.Raw()))
+func (h *harness) getTransactionStatus(txId string) (response *codec.GetTransactionStatusResponse, err error) {
+	payload, err := h.client.CreateGetTransactionStatusPayload(txId)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO - see issue https://github.com/orbs-network/orbs-network-go/issues/523
-	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusAccepted {
-		return nil, errors.Errorf("got http status code %v calling %s", res.StatusCode, endpoint)
-	}
-
-	readBytes, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return readBytes, nil
+	response, err = h.client.GetTransactionStatus(payload)
+	return
 }
 
 func (h *harness) absoluteUrlFor(endpoint string) string {
 	return getConfig().baseUrl + "/" + endpoint
-}
-
-func (h *harness) apiUrlFor(endpoint string) string {
-	return getConfig().apiEndpoint + endpoint
 }
 
 type metrics map[string]map[string]interface{}
