@@ -110,19 +110,22 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 
 	rxBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:           primitives.ProtocolVersion(s.config.ProtocolVersion()),
-			VirtualChainId:            s.config.VirtualChainId(),
-			BlockHeight:               blockHeight,
-			PrevBlockHashPtr:          prevBlockHash,
-			Timestamp:                 primitives.TimestampNano(time.Now().UnixNano()),
-			ReceiptsRootHash:          merkleReceiptsRoot,
-			StateDiffHash:             stateDiffHash,
-			TransactionsBlockHashPtr:  digest.CalcTransactionsBlockHash(transactionsBlock),
-			PreExecutionStateRootHash: nil,
-			TxhashBloomFilter:         nil, // TODO ODEDW to decide
-			TimestampBloomFilter:      nil, // TODO ODEDW to decide
-			NumTransactionReceipts:    uint32(len(output.TransactionReceipts)),
-			NumContractStateDiffs:     uint32(len(output.ContractStateDiffs)),
+			ProtocolVersion:             primitives.ProtocolVersion(s.config.ProtocolVersion()),
+			VirtualChainId:              s.config.VirtualChainId(),
+			BlockHeight:                 blockHeight,
+			PrevBlockHashPtr:            prevBlockHash,
+			Timestamp:                   primitives.TimestampNano(time.Now().UnixNano()),
+			ReceiptsRootHash:            merkleReceiptsRoot,
+			StateDiffHash:               stateDiffHash,
+			TransactionsBlockHashPtr:    digest.CalcTransactionsBlockHash(transactionsBlock),
+			PreExecutionStateRootHash:   nil,
+			TransactionsBloomFilterHash: nil,
+			NumTransactionReceipts:      uint32(len(output.TransactionReceipts)),
+			NumContractStateDiffs:       uint32(len(output.ContractStateDiffs)),
+		}).Build(),
+		TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{
+			TxhashBloomFilter:    nil,
+			TimestampBloomFilter: nil,
 		}).Build(),
 		TransactionReceipts: output.TransactionReceipts,
 		ContractStateDiffs:  output.ContractStateDiffs,
