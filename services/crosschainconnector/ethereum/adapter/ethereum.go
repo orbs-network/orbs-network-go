@@ -9,6 +9,5 @@ type ethereumAdapterConfig interface {
 }
 
 type EthereumConnection interface {
-	GetAuth() *bind.TransactOpts // for simulation usage only
 	GetClient() (bind.ContractBackend, error)
 }

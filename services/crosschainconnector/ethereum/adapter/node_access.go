@@ -21,7 +21,7 @@ func NewEthereumConnection(config ethereumAdapterConfig, logger log.BasicLogger)
 	}
 }
 
-func (nc *EthereumNodeAdapter) Dial(endpoint string) error {
+func (nc *EthereumNodeAdapter) dial(endpoint string) error {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 	if nc.client == nil {
@@ -34,14 +34,10 @@ func (nc *EthereumNodeAdapter) Dial(endpoint string) error {
 	return nil
 }
 
-func (nc *EthereumNodeAdapter) GetAuth() *bind.TransactOpts {
-	return nil
-}
-
 func (nc *EthereumNodeAdapter) GetClient() (bind.ContractBackend, error) {
 	if nc.client == nil {
 		nc.logger.Info("connecting to ethereum", log.String("endpoint", nc.config.EthereumEndpoint()))
-		if err := nc.Dial(nc.config.EthereumEndpoint()); err != nil {
+		if err := nc.dial(nc.config.EthereumEndpoint()); err != nil {
 			return nil, err
 		}
 	}

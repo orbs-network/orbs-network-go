@@ -3,12 +3,14 @@ package test
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"math/big"
 	"os"
 	"strings"
 )
@@ -29,12 +31,18 @@ func (c *ethereumConnectorConfigForTests) EthereumEndpoint() string {
 }
 
 func (h *harness) deployStorageContract(ctx context.Context, number int64, text string) error {
-	address, err := h.adapter.DeployStorageContract(ctx, number, text)
+	client, err := h.adapter.GetClient()
 	if err != nil {
 		return err
 	}
 
-	h.address = address
+	address, _, _, err := contract.DeploySimpleStorage(h.adapter.GetAuth(), client, big.NewInt(number), text)
+	h.adapter.Commit()
+	if err != nil {
+		return err
+	}
+
+	h.address = hexutil.Encode(address[:])
 	return nil
 }
 

@@ -1,15 +1,12 @@
 package adapter
 
 import (
-	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"math/big"
 	"sync"
 )
@@ -19,7 +16,6 @@ type EthereumSimulator struct {
 	simClient        *backends.SimulatedBackend
 	logger           log.BasicLogger
 	mu               sync.Mutex
-	contractDeployed bool
 }
 
 func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
@@ -28,8 +24,7 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 	}
 }
 
-//TODO should this be a public function?
-func (es *EthereumSimulator) Dial(endpoint string) error {
+func (es *EthereumSimulator) createClientAndInitAccount(endpoint string) error {
 	es.mu.Lock()
 	defer es.mu.Unlock()
 	if es.simClient == nil {
@@ -57,26 +52,13 @@ func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
 func (es *EthereumSimulator) GetClient() (bind.ContractBackend, error) {
 	if es.simClient == nil {
 		es.logger.Info("connecting to ethereum simulator")
-		if err := es.Dial(""); err != nil {
+		if err := es.createClientAndInitAccount(""); err != nil {
 			return nil, err
 		}
 	}
 	return es.simClient, nil
 }
 
-
-func (es *EthereumSimulator) DeployStorageContract(ctx context.Context, number int64, text string) (string, error) {
-	client, err := es.GetClient()
-	if err != nil {
-		return "", err
-	}
-	address, _, _, err := contract.DeploySimpleStorage(es.GetAuth(), client, big.NewInt(number), text)
-	if err != nil {
-		return "", err
-	}
-	client.(*backends.SimulatedBackend).Commit() // assuming simulation, this will commit the pending transactions
-
-	es.contractDeployed = true
-
-	return hexutil.Encode(address[:]), nil
+func (es *EthereumSimulator) Commit() {
+	es.simClient.Commit()
 }
