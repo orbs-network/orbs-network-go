@@ -17,15 +17,13 @@ import (
 type EthereumSimulator struct {
 	auth             *bind.TransactOpts
 	simClient        *backends.SimulatedBackend
-	config           ethereumAdapterConfig
 	logger           log.BasicLogger
 	mu               sync.Mutex
 	contractDeployed bool
 }
 
-func NewEthereumSimulatorConnection(config ethereumAdapterConfig, logger log.BasicLogger) *EthereumSimulator {
+func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 	return &EthereumSimulator{
-		config: config,
 		logger: logger,
 	}
 }
@@ -58,8 +56,8 @@ func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
 
 func (es *EthereumSimulator) GetClient() (bind.ContractBackend, error) {
 	if es.simClient == nil {
-		es.logger.Info("connecting to ethereum simulator", log.String("endpoint", es.config.EthereumEndpoint()))
-		if err := es.Dial(es.config.EthereumEndpoint()); err != nil {
+		es.logger.Info("connecting to ethereum simulator")
+		if err := es.Dial(""); err != nil {
 			return nil, err
 		}
 	}
