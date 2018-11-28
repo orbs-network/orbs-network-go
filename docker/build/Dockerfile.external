@@ -1,0 +1,7 @@
+FROM golang:1.10-alpine
+
+ADD ./_bin/external.test /opt/orbs/
+
+WORKDIR /opt/orbs
+
+CMD ./external.test -test.v

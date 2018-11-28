@@ -1,0 +1,26 @@
+version: '2.1'
+
+services:
+  ganache:
+    image: trufflesuite/ganache-cli
+    command: ganache-cli -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
+    networks:
+      orbs-network:
+
+  orbs-external:
+    image: orbs:external
+    environment:
+      ETHEREUM_ENDPOINT: http://1.2.3.4:8545/
+      EXTERNAL_TEST: 'true'
+    command: sh -c "sleep 3 && ./external.test -test.v"
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.5
+
+networks:
+  orbs-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 192.168.199.0/24

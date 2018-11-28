@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
+	"os"
 	"strings"
 	"testing"
 )
@@ -28,21 +29,36 @@ func (c *localconfig) EthereumEndpoint() string {
 	return c.endpoint
 }
 
+func getConfig() *localconfig {
+	endpoint := ethereumEndpoint
+
+	if endpointFromEnv := os.Getenv("ETHEREUM_ENDPOINT"); endpointFromEnv != "" {
+		endpoint = endpointFromEnv
+	}
+
+	return &localconfig{
+		endpoint: endpoint,
+	}
+}
+
 //TODO refactor and make sense of: adapter directory, sdk_ethereum + its test
 func TestEthereumNodeAdapter_Contract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address, adapter := createSimulatorAndDeploySimpleStorageContract(t)
 		t.Run("Simulator Adapter", callSimpleStorageContractAndAssertReturnedValue(ctx, address, adapter))
 
-		address, adapter = connectViaRpcAndDeploySimpleStorageContract(t)
-		t.Run("RPC Adapter", callSimpleStorageContractAndAssertReturnedValue(ctx, address, adapter))
+		if os.Getenv("EXTERNAL_TEST") == "true" {
+			address, adapter = connectViaRpcAndDeploySimpleStorageContract(t)
+			t.Run("RPC Adapter", callSimpleStorageContractAndAssertReturnedValue(ctx, address, adapter))
+		} else {
+			t.Skip("skipping, external tests disabled")
+		}
 	})
 }
 
 func connectViaRpcAndDeploySimpleStorageContract(t *testing.T) ([]byte, adapter.EthereumConnection) {
 	logger := log.GetLogger()
-	cfg := &localconfig{endpoint: ethereumEndpoint}
-
+	cfg := getConfig()
 	rpcClient := adapter.NewEthereumRpcConnection(cfg, logger)
 
 	key, err := crypto.HexToECDSA(privKeyHex)
