@@ -126,7 +126,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
 		})
-		if err != nil {
+		if output == nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
 		}
 
@@ -141,11 +141,11 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
 	go func() {
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
-		_, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
+		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
 			ReturnImmediately: 1,
 		})
-		if err != nil {
+		if output == nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
 		}
 	}()
@@ -160,7 +160,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
 			ClientRequest: (&client.CallMethodRequestBuilder{Transaction: tx}).Build(),
 		})
-		if err != nil {
+		if output == nil {
 			panic(fmt.Sprintf("error calling method: %v", err)) // TODO: improve
 		}
 		select {

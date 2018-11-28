@@ -48,13 +48,11 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 			"expected tx to be committed to non leader tx pool")
 
 		// Resend an already committed transaction to Leader
-		leaderTxResponse, ok := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
-		require.True(t, ok)
+		leaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus())
 
 		// Resend an already committed transaction to Non-Leader
-		nonLeaderTxResponse, ok := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
-		require.True(t, ok)
+		nonLeaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, nonLeaderTxResponse.TransactionStatus())
 	})
 }
