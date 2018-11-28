@@ -3,6 +3,7 @@ package acceptance
 import (
 	"bytes"
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -67,8 +68,12 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		contract := network.GetBenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 1)
 
-		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
-		secondAttemptResponse := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
+		//TODO this should be the same builder, but membuffers has a stability bug preventing re-usage of builders
+		tx1 := builders.TransferTransaction().WithTimestamp(ts).Builder()
+		tx2 := builders.TransferTransaction().WithTimestamp(ts).Builder()
+
+		network.SendTransactionInBackground(ctx, tx1, 0)
+		secondAttemptResponse := <-network.SendTransaction(ctx, tx2, 0)
 
 		// A race condition here makes three possible outcomes:
 		// - secondAttemptResponse is nil, which means an error was returned // TODO understand under what circumstances an error here is ok
@@ -79,7 +84,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 			require.True(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING == secondAttemptResponse.TransactionStatus() ||
 				protocol.TRANSACTION_STATUS_COMMITTED == secondAttemptResponse.TransactionStatus(), "second attempt must return ALREADY_PENDING or COMMITTED status")
 
-			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, secondAttemptResponse.TransactionReceipt().Txhash())
+			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, digest.CalcTxHash(tx1.Build().Transaction()))
 		}
 	})
 }

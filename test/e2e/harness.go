@@ -35,7 +35,6 @@ type StressTestConfig struct {
 	targetTPS             float64
 }
 
-const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 func getConfig() E2EConfig {

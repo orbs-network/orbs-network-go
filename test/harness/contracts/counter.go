@@ -42,11 +42,20 @@ func (c *contractClient) SendCounterAdd(ctx context.Context, nodeIndex int, amou
 }
 
 func (c *contractClient) CallCounterGet(ctx context.Context, nodeIndex int) chan uint64 {
+	ch := make(chan uint64, 1)
+
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.NonSignedTransaction().
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get").
 		Builder()
 
-	return c.API.CallMethod(ctx, tx, nodeIndex)
+	select {
+	case r := <-c.API.CallMethod(ctx, tx, nodeIndex):
+		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(r)
+		ch <- outputArgsIterator.NextArguments().Uint64Value()
+	case <-ctx.Done():
+	}
+
+	return ch
 }

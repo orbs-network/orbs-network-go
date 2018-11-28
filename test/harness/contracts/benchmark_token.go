@@ -59,10 +59,20 @@ func (c *contractClient) SendInvalidTransfer(ctx context.Context, nodeIndex int,
 }
 
 func (c *contractClient) CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) chan uint64 {
+	ch := make(chan uint64, 1)
 	tx := builders.GetBalanceTransaction().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(forAddressIndex)).
 		WithTargetAddress(builders.AddressForEd25519SignerForTests(forAddressIndex)).
 		Builder().Transaction
 
-	return c.API.CallMethod(ctx, tx, nodeIndex)
+	select {
+	case r := <-c.API.CallMethod(ctx, tx, nodeIndex):
+		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(r)
+		ch <- outputArgsIterator.NextArguments().Uint64Value()
+	case <-ctx.Done():
+		close(ch)
+	}
+
+	return ch
+
 }
