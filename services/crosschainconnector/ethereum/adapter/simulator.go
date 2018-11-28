@@ -23,8 +23,15 @@ type EthereumSimulator struct {
 }
 
 func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
+	// Generate a new random account and a funded simulator
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		panic(err)
+	}
+	
 	e := &EthereumSimulator{
 		logger: logger,
+		auth: bind.NewKeyedTransactor(key),
 	}
 
 	e.getContractCaller = func() (bind.ContractBackend, error) {
@@ -41,13 +48,6 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 }
 
 func (es *EthereumSimulator) createClientAndInitAccount() {
-	// Generate a new random account and a funded simulator
-	key, err := crypto.GenerateKey()
-	if err != nil {
-		panic(err)
-	}
-
-	es.auth = bind.NewKeyedTransactor(key)
 
 	genesisAllocation := map[common.Address]core.GenesisAccount{
 		es.auth.From: {Balance: big.NewInt(10000000000)},
