@@ -118,7 +118,7 @@ func (n *Network) Size() int {
 	return len(n.Nodes)
 }
 
-func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse {
+func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) *client.SendTransactionResponse {
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		defer close(ch)
@@ -135,7 +135,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		case <-ctx.Done():
 		}
 	}()
-	return ch
+	return <- ch
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
@@ -151,7 +151,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 	}()
 }
 
-func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse {
+func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) *client.CallMethodResponse {
 
 	ch := make(chan *client.CallMethodResponse)
 	go func() {
@@ -168,7 +168,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		case <-ctx.Done():
 		}
 	}()
-	return ch
+	return <- ch
 }
 
 func (n *Network) WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256) {

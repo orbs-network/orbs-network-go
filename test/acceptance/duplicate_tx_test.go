@@ -26,8 +26,8 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 
 		// send three identical transactions to two nodes
 		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
-		response0 := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
-		response1 := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		response0 := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		response1 := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
 
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response0.TransactionStatus(), "second transaction should be accepted into the pool and committed by the internode sync")
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response1.TransactionStatus(), "third transaction should be rejected as a duplicate")
@@ -73,7 +73,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		tx2 := builders.TransferTransaction().WithTimestamp(ts).Builder()
 
 		network.SendTransactionInBackground(ctx, tx1, 0)
-		secondAttemptResponse := <-network.SendTransaction(ctx, tx2, 0)
+		secondAttemptResponse := network.SendTransaction(ctx, tx2, 0)
 
 		// A race condition here makes three possible outcomes:
 		// - secondAttemptResponse is nil, which means an error was returned // TODO understand under what circumstances an error here is ok

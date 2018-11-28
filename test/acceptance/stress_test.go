@@ -108,10 +108,10 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.Tes
 	}
 
 	for i := 0; i < network.Size(); i++ {
-		actualSum := <-contract.CallGetBalance(ctx, i, toAddress)
+		actualSum := contract.CallGetBalance(ctx, i, toAddress)
 		require.EqualValuesf(t, expectedSum, actualSum, "recipient balance did not equal expected balance in node %d", i)
 
-		actualRemainder := <-contract.CallGetBalance(ctx, i, fromAddress)
+		actualRemainder := contract.CallGetBalance(ctx, i, fromAddress)
 		require.EqualValuesf(t, benchmarktoken.TOTAL_SUPPLY-expectedSum, actualRemainder, "sender balance did not equal expected balance in node %d", i)
 	}
 }

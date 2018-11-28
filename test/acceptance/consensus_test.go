@@ -40,11 +40,11 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 			prePrepareLatch := network.TransportTamperer().LatchOn(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
 			prePrepareTamper := network.TransportTamperer().Fail(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
 
-			<-contract.SendTransfer(ctx, leaderIndex, amount, fromAddress, toAddress)
+			contract.SendTransfer(ctx, leaderIndex, amount, fromAddress, toAddress)
 
 			prePrepareLatch.Wait() // blocking
-			require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, leaderIndex, toAddress), "initial getBalance result on leader")
-			require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, validatorIndex, toAddress), "initial getBalance result on non leader")
+			require.EqualValues(t, 0, contract.CallGetBalance(ctx, leaderIndex, toAddress), "initial getBalance result on leader")
+			require.EqualValues(t, 0, contract.CallGetBalance(ctx, validatorIndex, toAddress), "initial getBalance result on non leader")
 
 			prePrepareTamper.Release(ctx)
 			prePrepareLatch.Remove()
@@ -52,12 +52,12 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 			if err := network.BlockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
 				t.Errorf("waiting for block on node 0 failed: %s", err)
 			}
-			require.EqualValues(t, amount, <-contract.CallGetBalance(ctx, leaderIndex, toAddress), "eventual getBalance result on leader")
+			require.EqualValues(t, amount, contract.CallGetBalance(ctx, leaderIndex, toAddress), "eventual getBalance result on leader")
 
 			if err := network.BlockPersistence(validatorIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
 				t.Errorf("waiting for block on node 1 failed: %s", err)
 			}
-			require.EqualValues(t, amount, <-contract.CallGetBalance(ctx, validatorIndex, toAddress), "eventual getBalance result on non leader")
+			require.EqualValues(t, amount, contract.CallGetBalance(ctx, validatorIndex, toAddress), "eventual getBalance result on non leader")
 
 		})
 }
@@ -85,17 +85,17 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 
 			committedLatch.Wait()
 
-			require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, 0, 6), "initial getBalance result on leader")
-			require.EqualValues(t, 0, <-contract.CallGetBalance(ctx, 1, 6), "initial getBalance result on non leader")
+			require.EqualValues(t, 0, contract.CallGetBalance(ctx, 0, 6), "initial getBalance result on leader")
+			require.EqualValues(t, 0, contract.CallGetBalance(ctx, 1, 6), "initial getBalance result on non leader")
 
 			committedLatch.Remove()
 			committedTamper.Release(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
 
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
-			require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 0, 6), "eventual getBalance result on leader")
+			require.EqualValues(t, 17, contract.CallGetBalance(ctx, 0, 6), "eventual getBalance result on leader")
 
 			network.WaitForTransactionInNodeState(ctx, txHash, 1)
-			require.EqualValues(t, 17, <-contract.CallGetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
+			require.EqualValues(t, 17, contract.CallGetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 
 			blockSyncTamper.Release(ctx)
 		})
