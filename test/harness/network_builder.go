@@ -144,7 +144,7 @@ func (b *acceptanceTestNetworkBuilder) newNetworkWithBlocks(ctx context.Context,
 	}
 	newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo)
 	newNetwork.Start(ctx, b.numOfNodesToStart)
-	for i := range newNetwork.Nodes {
+	for i := 0; i < b.numNodes; i++ {
 		for _, blockPair := range blockPairs {
 			_, err := newNetwork.BlockPersistence(i).WriteNextBlock(blockPair)
 			if err != nil {
