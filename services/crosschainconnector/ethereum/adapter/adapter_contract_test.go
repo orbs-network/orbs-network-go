@@ -17,6 +17,11 @@ import (
 	"testing"
 )
 
+const mnemonic = "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
+const privKeyHex = "f2ce3a9eddde6e5d996f6fe7c1882960b0e8ee8d799e0ef608276b8de4dc7f19"
+const pubKeyHex = "037a809cc481303d337c1c83d1ba3a2222c7b1b820ac75e3c6f8dc63fa0ed79b18"
+const dockerRun = "docker run -d -p 8545:8545 trufflesuite/ganache-cli:latest -a 10 -m \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\""
+
 type ethereumConnectorConfigForTests struct {
 	endpoint string
 }
@@ -42,7 +47,7 @@ func connectViaRpcAndDeploySimpleStorageContract(ctx context.Context, t *testing
 
 	rpcClient := NewEthereumConnection(cfg, logger)
 
-	key, err := crypto.HexToECDSA("97e30dc07275eae3359b3abd87d81ffe295255914276a21d95e5fe5a0bee610b")
+	key, err := crypto.HexToECDSA(privKeyHex)
 	require.NoError(t, err, "failed generating key")
 	auth := bind.NewKeyedTransactor(key)
 

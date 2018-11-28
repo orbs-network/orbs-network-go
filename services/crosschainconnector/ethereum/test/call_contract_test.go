@@ -17,8 +17,7 @@ import (
 func TestContractCallBadNodeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		config := newDefaultEthereumConnectorConfigForTests()
-		config.endpoint = "all your base"
+		config := &ethereumConnectorConfigForTests{"all your base"}
 		conn := adapter.NewEthereumConnection(config, logger)
 		connector := ethereum.NewEthereumCrosschainConnector(ctx, conn, logger)
 		input := builders.EthereumCallContractInput().Build() // don't care about specifics

@@ -163,7 +163,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	)
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
-	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(cfg, testLogger)
+	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
 
 	network := &acceptanceNetwork{
 		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport, sharedEthereumSimulator),

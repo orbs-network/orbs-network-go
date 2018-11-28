@@ -16,7 +16,6 @@ import (
 type harness struct {
 	adapter   *adapter.EthereumSimulator
 	connector services.CrosschainConnector
-	config    *ethereumConnectorConfigForTests
 	logger    log.BasicLogger
 	address   string
 }
@@ -27,12 +26,6 @@ type ethereumConnectorConfigForTests struct {
 
 func (c *ethereumConnectorConfigForTests) EthereumEndpoint() string {
 	return c.endpoint
-}
-
-func newDefaultEthereumConnectorConfigForTests() *ethereumConnectorConfigForTests {
-	return &ethereumConnectorConfigForTests{
-		endpoint: "http://localhost:8545",
-	}
 }
 
 func (h *harness) deployStorageContract(ctx context.Context, number int64, text string) error {
@@ -51,13 +44,11 @@ func (h *harness) getAddress() string {
 
 func newEthereumConnectorHarness() *harness {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-	config := newDefaultEthereumConnectorConfigForTests()
-	conn := adapter.NewEthereumSimulatorConnection(config, logger)
+	conn := adapter.NewEthereumSimulatorConnection(logger)
 	ctx := context.Background()
 
 	return &harness{
 		adapter:   conn,
-		config:    config,
 		logger:    logger,
 		connector: ethereum.NewEthereumCrosschainConnector(ctx, conn, logger),
 	}

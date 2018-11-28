@@ -66,9 +66,6 @@ func (es *EthereumSimulator) GetClient() (bind.ContractBackend, error) {
 
 
 func (es *EthereumSimulator) DeployStorageContract(ctx context.Context, number int64, text string) (string, error) {
-	if err := es.Dial(""); err != nil { // create the client so we can deploy
-		return "", err
-	}
 	client, err := es.GetClient()
 	if err != nil {
 		return "", err
