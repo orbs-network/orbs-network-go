@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -13,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 type InMemoryBlockPersistence interface {
@@ -22,6 +24,10 @@ type InMemoryBlockPersistence interface {
 }
 
 type blockHeightChan chan primitives.BlockHeight
+
+type metrics struct {
+	size *metric.Gauge
+}
 
 type inMemoryBlockPersistence struct {
 	blockChain struct {
@@ -37,14 +43,23 @@ type inMemoryBlockPersistence struct {
 		sync.Mutex
 		channels map[string]blockHeightChan
 	}
+
+	metrics *metrics
 }
 
-func NewInMemoryBlockPersistence(parent log.BasicLogger) InMemoryBlockPersistence {
+func newMetrics(m metric.Factory) *metrics {
+	return &metrics{
+		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInMB"),
+	}
+}
+
+func NewInMemoryBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory) InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
 		logger:         logger,
 		tracker:        synchronization.NewBlockTracker(0, 5),
+		metrics:        newMetrics(metricFactory),
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
@@ -98,6 +113,7 @@ func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 	}
 
 	bp.tracker.IncrementHeight()
+	bp.metrics.size.Add(sizeOfBlock(blockPair))
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
 
@@ -228,4 +244,34 @@ func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last
 	}
 
 	return blocks, firstReturnedBlockHeight, lastReturnedBlockHeight, nil
+}
+
+func sizeOfBlock(block *protocol.BlockPairContainer) int64 {
+	txBlock := block.TransactionsBlock
+	txBlockSize := len(txBlock.Header.Raw()) + len(txBlock.BlockProof.Raw()) + len(txBlock.Metadata.Raw())
+
+	rsBlock := block.ResultsBlock
+	rsBlockSize := len(rsBlock.Header.Raw()) + len(rsBlock.BlockProof.Raw())
+
+	txBlockPointers := unsafe.Sizeof(txBlock) + unsafe.Sizeof(txBlock.Header) + unsafe.Sizeof(txBlock.Metadata) + unsafe.Sizeof(txBlock.BlockProof) + unsafe.Sizeof(txBlock.SignedTransactions)
+	rsBlockPointers := unsafe.Sizeof(rsBlock) + unsafe.Sizeof(rsBlock.Header) + unsafe.Sizeof(rsBlock.BlockProof) + unsafe.Sizeof(rsBlock.TransactionReceipts) + unsafe.Sizeof(rsBlock.ContractStateDiffs)
+
+	for _, tx := range txBlock.SignedTransactions {
+		txBlockSize += len(tx.Raw())
+		txBlockPointers += unsafe.Sizeof(tx)
+	}
+
+	for _, diff := range rsBlock.ContractStateDiffs {
+		rsBlockSize += len(diff.Raw())
+		rsBlockPointers += unsafe.Sizeof(diff)
+	}
+
+	for _, receipt := range rsBlock.TransactionReceipts {
+		rsBlockSize += len(receipt.Raw())
+		rsBlockPointers += unsafe.Sizeof(receipt)
+	}
+
+	pointers := unsafe.Sizeof(block) + txBlockPointers + rsBlockPointers
+
+	return int64(txBlockSize) + int64(rsBlockSize) + int64(pointers)
 }

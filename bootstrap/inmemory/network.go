@@ -35,14 +35,14 @@ type Network struct {
 }
 
 type Node struct {
-	index              int
-	name               string
-	config             config.NodeConfig
-	blockPersistence   blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence   stateStorageAdapter.TamperingStatePersistence
-	nativeCompiler     nativeProcessorAdapter.Compiler
-	nodeLogic          bootstrap.NodeLogic
-	metricRegistry     metric.Registry
+	index            int
+	name             string
+	config           config.NodeConfig
+	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence stateStorageAdapter.TamperingStatePersistence
+	nativeCompiler   nativeProcessorAdapter.Compiler
+	nodeLogic        bootstrap.NodeLogic
+	metricRegistry   metric.Registry
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
@@ -54,10 +54,10 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
-	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
-	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(n.Logger)
-	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
+	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
+	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(n.Logger, node.metricRegistry)
+	node.nativeCompiler = compiler
 
 	n.Nodes = append(n.Nodes, node)
 }
