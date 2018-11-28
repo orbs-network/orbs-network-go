@@ -40,3 +40,6 @@
 [submodule "vendor/github.com/go-playground/ansi"]
 	path = vendor/github.com/go-playground/ansi
 	url = https://github.com/go-playground/ansi
+[submodule "vendor/github.com/orbs-network/orbs-client-sdk-go"]
+	path = vendor/github.com/orbs-network/orbs-client-sdk-go
+	url = https://github.com/orbs-network/orbs-client-sdk-go
