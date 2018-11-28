@@ -75,3 +75,8 @@ func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdkContext.ContractIn
 		}
 	}
 }
+func (n *acceptanceNetwork) Destroy() {
+	for _, node := range n.Nodes {
+		node.Destroy()
+	}
+}

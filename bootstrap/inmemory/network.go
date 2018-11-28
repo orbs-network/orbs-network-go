@@ -102,6 +102,10 @@ func (n *Node) Started() bool {
 	return n.nodeLogic != nil
 }
 
+func (n *Node) Destroy() {
+	n.nodeLogic = nil
+}
+
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
 	return n.Nodes[nodeIndex].nodeLogic.PublicApi()
 }
@@ -119,6 +123,8 @@ func (n *Network) Size() int {
 }
 
 func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse {
+	n.assertStarted(nodeIndex)
+
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		defer close(ch)
@@ -139,6 +145,8 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
+	n.assertStarted(nodeIndex)
+
 	go func() {
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
@@ -152,6 +160,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 }
 
 func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse {
+	n.assertStarted(nodeIndex)
 
 	ch := make(chan *client.CallMethodResponse)
 	go func() {
@@ -169,6 +178,12 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		}
 	}()
 	return ch
+}
+
+func (n *Network) assertStarted(nodeIndex int) {
+	if !n.Nodes[nodeIndex].Started() {
+		panic(fmt.Errorf("accessing a stopped node %d", nodeIndex))
+	}
 }
 
 func (n *Network) WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256) {

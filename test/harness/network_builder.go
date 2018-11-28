@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -13,6 +14,7 @@ import (
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/pkg/errors"
 	"os"
 	"runtime"
 	"strconv"
@@ -84,6 +86,12 @@ func (b *acceptanceTestNetworkBuilder) AllowingErrors(allowedErrors ...string) *
 }
 
 func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network TestNetworkDriver)) {
+	b.StartWithRestart(func(ctx context.Context, network TestNetworkDriver, restart func() TestNetworkDriver) {
+		f(ctx, network)
+	})
+}
+
+func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Context, network TestNetworkDriver, restart func() TestNetworkDriver)) {
 	if b.numOfNodesToStart == 0 {
 		b.numOfNodesToStart = b.numNodes
 	}
@@ -91,29 +99,60 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
-		test.WithContext(func(ctx context.Context) {
+		test.WithContextWithTimeout( 5*time.Second, func(ctx context.Context) { //TODO 5 seconds is infinity; reduce to 2 seconds when system is more stable
+			networkCtx, cancelNetwork := context.WithCancel(ctx)
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)
-			network := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo)
+			network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo)
 
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)
 			defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
 
 			if b.setupFunc != nil {
-				b.setupFunc(ctx, network)
+				b.setupFunc(networkCtx, network)
 			}
 
-			network.Start(ctx, b.numOfNodesToStart)
+			network.Start(networkCtx, b.numOfNodesToStart)
 
-			ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second) //TODO 5 seconds is infinity; reduce to 2 seconds when system is more stable
-			defer cancel()
-			f(ctxWithTimeout, network)
+			restart := func() TestNetworkDriver {
+				cancelNetwork()
+				network.Destroy()
+				time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+
+				// signal the old network to stop
+				networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
+				return b.newNetworkWithBlocks(networkCtx, network.BlockPersistence(0), logger, consensusAlgo)
+			}
+
+			f(ctx, network, restart)
 		})
 		// end test
 
 		time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 	}
+}
+
+func (b *acceptanceTestNetworkBuilder) newNetworkWithBlocks(ctx context.Context, blocks adapter.BlockPersistence, logger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType) (*acceptanceNetwork) {
+	lastBlock, err := blocks.GetLastBlock()
+	if err != nil {
+		panic(errors.Wrapf(err, "spawn network: failed reading block height"))
+	}
+	blockPairs, _, _, err := blocks.GetBlocks(1, lastBlock.ResultsBlock.Header.BlockHeight()+1)
+	if err != nil {
+		panic(errors.Wrapf(err, "spawn network: failed extract blocks"))
+	}
+	newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo)
+	newNetwork.Start(ctx, b.numOfNodesToStart)
+	for i := range newNetwork.Nodes {
+		for _, blockPair := range blockPairs {
+			_, err := newNetwork.BlockPersistence(i).WriteNextBlock(blockPair)
+			if err != nil {
+				panic(errors.Wrapf(err, "spawn network: failed writing block %d to node %d storage", blockPair.ResultsBlock.Header.BlockHeight(), i))
+			}
+		}
+	}
+	return newNetwork
 }
 
 func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {

@@ -19,8 +19,7 @@ func TestExternalBlockSync(t *testing.T) {
 		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(
 			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+			"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
 		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
 			for i := 1; i <= 10; i++ {

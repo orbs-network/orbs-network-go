@@ -25,9 +25,8 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 
 	harness.Network(t).
 		AllowingErrors(
-			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+		"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
+			"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).
 		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
 			for i := primitives.BlockHeight(1); i <= blockCount; i++ {
@@ -73,61 +72,33 @@ func waitForTransactionStatusCommitted(ctx context.Context, network harness.Test
 }
 
 func TestInternalBlockSync_StateStorage(t *testing.T) {
+
 	const transferAmount = 10
 	const transfers = 10
 	const totalAmount = transfers * transferAmount
 
-	containersChan := make(chan []*protocol.BlockPairContainer, 1)
 	harness.Network(t).
 		AllowingErrors(
-			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-		).
-		Start(func(ctx context.Context, builderNetwork harness.TestNetworkDriver) {
+		"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
+		"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+	).
+	StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restart func() harness.TestNetworkDriver) {
 
-			contract := builderNetwork.GetBenchmarkTokenContract()
-			var topBlock primitives.BlockHeight
-			for i := 0; i < transfers; i++ {
-				txRes := <-contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
-				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes.TransactionStatus())
-				topBlock = txRes.BlockHeight()
-			}
-			bpcs, _, _, err := builderNetwork.BlockPersistence(0).GetBlocks(1, topBlock+1)
-			require.True(t, len(bpcs) >= transfers)
-			require.NoError(t, err)
-			containersChan <- bpcs
-		})
+		var mostRecentTxResponse *client.SendTransactionResponse
 
-	blockPairContainers := <-containersChan
-	harness.Network(t).
-		AllowingErrors(
-			"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"all consensus 0 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-			"all consensus 1 algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
-		).
-		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
-			// inject blocks from builder network into both nodes
-			for _, bpc := range blockPairContainers {
-				_, err0 := network.BlockPersistence(0).WriteNextBlock(bpc)
-				_, err1 := network.BlockPersistence(1).WriteNextBlock(bpc)
-				require.NoError(t, err0)
-				require.NoError(t, err1)
-			}
-		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		// generate some blocks with state
+		contract := network.GetBenchmarkTokenContract()
+		for i := 0; i < transfers; i++ {
+			mostRecentTxResponse = <-contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
+			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, mostRecentTxResponse.TransactionStatus())
+		}
+
+		// restart the network, carrying existing blocks into a new network.
+		network = restart()
+		contract = network.GetBenchmarkTokenContract()
 
 		// wait for the most recent block height with transactions to reach state storage:
-		// TODO if we can wait for state storage to reach a block height we don't need this ugly loop
-		var topTxHash primitives.Sha256
-		for _, bpc := range blockPairContainers {
-			if len(bpc.ResultsBlock.TransactionReceipts) > 0 {
-				topTxHash = bpc.ResultsBlock.TransactionReceipts[0].Txhash()
-			}
-		}
-		network.WaitForTransactionInNodeState(ctx, topTxHash, 0)
-		network.WaitForTransactionInNodeState(ctx, topTxHash, 1)
-
-		contract := network.GetBenchmarkTokenContract()
+		network.WaitForTransactionInState(ctx, mostRecentTxResponse.TransactionReceipt().Txhash())
 
 		// verify state in both nodes
 		balanceNode0 := <-contract.CallGetBalance(ctx, 0, 1)
@@ -135,6 +106,9 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 
 		require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
 		require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")
+
+		<-contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
+
 	})
 
 }
