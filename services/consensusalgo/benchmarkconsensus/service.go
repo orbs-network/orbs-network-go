@@ -42,7 +42,7 @@ type service struct {
 	isLeader                bool
 	successfullyVotedBlocks chan primitives.BlockHeight // leader only
 
-	mutex                                           *sync.RWMutex
+	mutex                                           sync.RWMutex
 	lastCommittedBlockUnderMutex                    *protocol.BlockPairContainer
 	lastSuccessfullyVotedBlock                      primitives.BlockHeight // leader only
 	lastCommittedBlockVotersUnderMutex              map[string]bool        // leader only
@@ -90,7 +90,6 @@ func NewBenchmarkConsensusAlgo(
 		successfullyVotedBlocks:    make(chan primitives.BlockHeight), // leader only
 		lastSuccessfullyVotedBlock: blockHeightNone,                   // leader only
 
-		mutex: &sync.RWMutex{},
 		lastCommittedBlockVotersUnderMutex:              make(map[string]bool), // leader only
 		lastCommittedBlockVotersReachedQuorumUnderMutex: false,                 // leader only
 
