@@ -11,7 +11,6 @@ import (
 	"time"
 )
 
-//TODO decide if we need this test - the Gamma e2e also covers deployment of native code, so what extra value does this test add?
 func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")
@@ -25,7 +24,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 
 		t.Log("deploying contract")
 
-		output := <-contract.SendDeployCounterContract(ctx, 1) // leader is nodeIndex 0, validator is nodeIndex 1
+		output := <-contract.SendDeployCounterContract(ctx, 1)                       // leader is nodeIndex 0, validator is nodeIndex 1
 		network.WaitForTransactionInState(ctx, output.TransactionReceipt().Txhash()) // wait for contract deployment take effect in node state
 
 		require.EqualValues(t, counterStart, <-contract.CallCounterGet(ctx, 0), "get counter after deploy")
