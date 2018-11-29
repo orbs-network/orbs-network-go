@@ -40,14 +40,26 @@ type inMemoryBlockPersistence struct {
 }
 
 func NewInMemoryBlockPersistence(parent log.BasicLogger) InMemoryBlockPersistence {
+	return NewInMemoryBlockPersistenceWithBlocks(parent, nil)
+}
+
+func NewInMemoryBlockPersistenceWithBlocks(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer) InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
 		logger:         logger,
-		tracker:        synchronization.NewBlockTracker(0, 5),
+		tracker:        synchronization.NewBlockTracker(uint64(len(preloadedBlocks)), 5),
+		blockChain: struct {
+			sync.RWMutex
+			blocks []*protocol.BlockPairContainer
+		} {blocks: preloadedBlocks},
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
+
+	for _, bpc := range preloadedBlocks {
+		p.advertiseAllTransactions(bpc.TransactionsBlock)
+	}
 
 	return p
 }

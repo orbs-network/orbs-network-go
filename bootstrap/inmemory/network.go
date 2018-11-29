@@ -49,13 +49,13 @@ func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumCon
 	return Network{Logger: logger, Transport: transport, ethereumConnection: ethereumConnection}
 }
 
-func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, logger log.BasicLogger) {
+func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, blockPersistence blockStorageAdapter.InMemoryBlockPersistence) {
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
-	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(n.Logger)
+	node.blockPersistence = blockPersistence
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 

@@ -82,7 +82,7 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 		"leader failed to save block to storage",              // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
 		"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 	).
-	StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restart func() harness.TestNetworkDriver) {
+	StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 
 		var mostRecentTxResponse *client.SendTransactionResponse
 
@@ -93,8 +93,7 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, mostRecentTxResponse.TransactionStatus())
 		}
 
-		// restart the network, carrying existing blocks into a new network.
-		network = restart()
+		network = restartPreservingBlocks()
 		contract = network.GetBenchmarkTokenContract()
 
 		// wait for the most recent block height with transactions to reach state storage:
