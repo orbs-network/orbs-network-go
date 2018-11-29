@@ -105,7 +105,7 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 		// value test
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
-		require.EqualError(t, err, fmt.Sprintf("waiting aborted due to context termination for key %s", txHash.String()))
+		require.Contains(t, err.Error(), fmt.Sprintf("waiting aborted due to context termination for key %s", txHash.String()))
 		require.WithinDuration(t, time.Now(), start, 2*timeout, "timeout duration exceeded")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})

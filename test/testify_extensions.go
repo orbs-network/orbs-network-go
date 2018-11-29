@@ -51,12 +51,12 @@ type transactionStatuser interface {
 func RequireSuccess(t *testing.T, tx transactionStatuser, msg string, args ...interface{}) {
 	message := fmt.Sprintf(msg, args...)
 	RequireStatus(t, protocol.TRANSACTION_STATUS_COMMITTED, tx, message)
-	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, tx.TransactionReceipt().ExecutionResult(), message)
+	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS.String(), tx.TransactionReceipt().ExecutionResult().String(), message)
 
 }
 
 func RequireStatus(t *testing.T, status protocol.TransactionStatus, tx transactionStatuser, msg string) {
-	require.EqualValues(t, status, tx.TransactionStatus(), msg)
+	require.EqualValues(t, status.String(), tx.TransactionStatus().String(), msg)
 }
 
 func RequireDoesNotContainNil(t *testing.T, obj interface{}) bool {

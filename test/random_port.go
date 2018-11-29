@@ -1,17 +1,16 @@
 package test
 
-import "net"
+import (
+	"math/rand"
+)
 
 func RandomPort() int {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		panic(err)
-	}
 
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		panic(err)
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
+	return ((rand.Intn(25000) / 10) * 10) + 25111
+
+	// our old implementation tried to find a "free" OS port but appears to be flaky
+	//addr, _ := net.ResolveTCPAddr("tcp", "localhost:0")
+	//l, _ := net.ListenTCP("tcp", addr)
+	//defer l.Close()
+	//return l.Addr().(*net.TCPAddr).Port
 }

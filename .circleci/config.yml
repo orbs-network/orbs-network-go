@@ -8,6 +8,7 @@ jobs:
       - run: ./docker/build/build.sh
       - run: ./docker/test/test.sh
       - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh
+      - run: ./docker/test/test.external.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
@@ -57,6 +58,14 @@ jobs:
       - run: ./docker/build/build.sh
       - run: ./.circleci/e2e-testnet.sh
 
+  release_gamma:
+    machine: true
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: ./docker/build/build.sh
+      - run: ./.circleci/release-gamma.sh
+
 workflows:
   version: 2
   build:
@@ -82,3 +91,9 @@ workflows:
             branches:
               only:
                 - master
+      - release_gamma:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/

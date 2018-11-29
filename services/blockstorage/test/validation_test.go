@@ -79,12 +79,12 @@ func TestValidateBlockWithInvalidHeight(t *testing.T) {
 		block.TransactionsBlock.Header.MutateBlockHeight(998)
 
 		_, err := harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "block height is 998, expected 2", "tx block height was mutate, expected an error")
+		require.EqualError(t, err, "block pair height mismatch. transactions height is 998, results height is 2", "tx block height was mutate, expected an error")
 
 		block.ResultsBlock.Header.MutateBlockHeight(999)
 
 		_, err = harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "block height is 998, expected 2", "rx block height was mutate, expected an error")
+		require.EqualError(t, err, "block pair height mismatch. transactions height is 998, results height is 999", "rx block height was mutate, expected an error")
 
 		block.TransactionsBlock.Header.MutateBlockHeight(999)
 

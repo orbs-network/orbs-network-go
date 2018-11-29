@@ -35,7 +35,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("intra-node sync to consensus algo failed", log.Error(err))
+		logger.Error("internal-node sync to consensus algo failed", log.Error(err))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -84,12 +84,12 @@ func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer, la
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
-	if txBlockHeader.BlockHeight() != expectedBlockHeight {
-		return fmt.Errorf("block height is %d, expected %d", txBlockHeader.BlockHeight(), expectedBlockHeight)
+	if txBlockHeader.BlockHeight() != rsBlockHeader.BlockHeight() {
+		return fmt.Errorf("block pair height mismatch. transactions height is %d, results height is %d", txBlockHeader.BlockHeight(), rsBlockHeader.BlockHeight())
 	}
 
-	if rsBlockHeader.BlockHeight() != expectedBlockHeight {
-		return fmt.Errorf("block height is %d, expected %d", rsBlockHeader.BlockHeight(), expectedBlockHeight)
+	if txBlockHeader.BlockHeight() > expectedBlockHeight {
+		return fmt.Errorf("block height is %d, expected %d", txBlockHeader.BlockHeight(), expectedBlockHeight)
 	}
 
 	return nil

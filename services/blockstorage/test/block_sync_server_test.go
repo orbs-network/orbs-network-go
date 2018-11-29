@@ -56,7 +56,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).withCommitStateDiff(1).start(ctx)
+		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
 		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)

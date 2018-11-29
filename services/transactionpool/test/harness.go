@@ -139,9 +139,10 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
 }
 
-func (h *harness) getTransactionsForOrdering(ctx context.Context, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+func (h *harness) getTransactionsForOrdering(ctx context.Context, height primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		MaxNumberOfTransactions: maxNumOfTransactions,
+		BlockHeight:              height,
+		MaxNumberOfTransactions:  maxNumOfTransactions,
 	})
 }
 

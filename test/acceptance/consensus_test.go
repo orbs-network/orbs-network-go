@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/sync"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -64,7 +64,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 	harness.Network(t).
-		WithLogFilters(log.ExcludeField(sync.LogTag), log.ExcludeEntryPoint("BlockSync")).
+		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
 		WithMaxTxPerBlock(1).
 		Start(func(parent context.Context, network harness.TestNetworkDriver) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)

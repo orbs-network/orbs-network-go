@@ -82,9 +82,11 @@ func (d *harness) withSyncBroadcast(times int) *harness {
 }
 
 func (d *harness) withCommitStateDiff(times int) *harness {
-	csdOut := &services.CommitStateDiffOutput{}
-
-	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Return(csdOut, nil).Times(times)
+	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Call(func (ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
+		return &services.CommitStateDiffOutput{
+			NextDesiredBlockHeight: input.ResultsBlockHeader.BlockHeight() + 1,
+		}, nil
+	}).Times(times)
 	return d
 }
 
@@ -174,8 +176,6 @@ func (d *harness) failNextBlocks() {
 }
 
 func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
-	d.expectCommitStateDiffTimes(count)
-
 	for i := 1; i <= count; i++ {
 		d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
 	}
@@ -217,7 +217,7 @@ func newBlockStorageHarness() *harness {
 
 	d := &harness{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}
-	d.storageAdapter = adapter.NewInMemoryBlockPersistence()
+	d.storageAdapter = adapter.NewInMemoryBlockPersistence(logger)
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
@@ -231,7 +231,11 @@ func newBlockStorageHarness() *harness {
 
 	d.txPool = &services.MockTransactionPool{}
 	// TODO: this might create issues with some tests later on, should move it to behavior or some other means of setup
-	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
+	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Call(func (ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+		return &services.CommitTransactionReceiptsOutput{
+			NextDesiredBlockHeight: input.ResultsBlockHeader.BlockHeight() + 1,
+		}, nil
+	}).AtLeast(0)
 
 	return d
 }
@@ -239,7 +243,7 @@ func newBlockStorageHarness() *harness {
 func (d *harness) start(ctx context.Context) *harness {
 	registry := metric.NewRegistry()
 
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.stateStorage, d.gossip, d.txPool, d.logger, registry)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.logger, registry, nil)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	return d

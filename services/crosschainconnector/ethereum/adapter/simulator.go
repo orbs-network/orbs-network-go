@@ -12,39 +12,49 @@ import (
 )
 
 type EthereumSimulator struct {
+	connectorCommon
+
 	auth      *bind.TransactOpts
-	simClient bind.ContractBackend
-	config    ethereumAdapterConfig
 	logger    log.BasicLogger
-	mu        sync.Mutex
+	mu struct {
+		sync.Mutex
+		simClient *backends.SimulatedBackend
+	}
 }
 
-func NewEthereumSimulatorConnection(config ethereumAdapterConfig, logger log.BasicLogger) EthereumConnection {
-	return &EthereumSimulator{
-		config: config,
+func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
+	// Generate a new random account and a funded simulator
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		panic(err)
+	}
+	
+	e := &EthereumSimulator{
 		logger: logger,
+		auth: bind.NewKeyedTransactor(key),
 	}
+
+	e.getContractCaller = func() (bind.ContractBackend, error) {
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		if e.mu.simClient == nil {
+			e.createClientAndInitAccount()
+		}
+
+		return e.mu.simClient, nil
+	}
+
+	return e
 }
 
-func (es *EthereumSimulator) Dial(endpoint string) error {
-	es.mu.Lock()
-	defer es.mu.Unlock()
-	if es.simClient == nil {
-		// Generate a new random account and a funded simulator
-		key, err := crypto.GenerateKey()
-		if err != nil {
-			return err
-		}
-		es.auth = bind.NewKeyedTransactor(key)
+func (es *EthereumSimulator) createClientAndInitAccount() {
 
-		genesisAllocation := map[common.Address]core.GenesisAccount{
-			es.auth.From: {Balance: big.NewInt(10000000000)},
-		}
-
-		sim := backends.NewSimulatedBackend(genesisAllocation, 900000000000)
-		es.simClient = sim
+	genesisAllocation := map[common.Address]core.GenesisAccount{
+		es.auth.From: {Balance: big.NewInt(10000000000)},
 	}
-	return nil
+
+	es.mu.simClient = backends.NewSimulatedBackend(genesisAllocation, 900000000000)
+
 }
 
 func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
@@ -52,12 +62,6 @@ func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
 	return es.auth
 }
 
-func (es *EthereumSimulator) GetClient() (bind.ContractBackend, error) {
-	if es.simClient == nil {
-		es.logger.Info("connecting to ethereum simulator", log.String("endpoint", es.config.EthereumEndpoint()))
-		if err := es.Dial(es.config.EthereumEndpoint()); err != nil {
-			return nil, err
-		}
-	}
-	return es.simClient, nil
+func (es *EthereumSimulator) Commit() {
+	es.mu.simClient.Commit()
 }

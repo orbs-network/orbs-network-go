@@ -11,9 +11,7 @@ import (
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
@@ -30,9 +28,10 @@ type NetworkDriver interface {
 }
 
 type Network struct {
-	Nodes     []*Node
-	Logger    log.BasicLogger
-	Transport adapter.Transport
+	Nodes              []*Node
+	Logger             log.BasicLogger
+	Transport          adapter.Transport
+	ethereumConnection ethereumAdapter.EthereumConnection
 }
 
 type Node struct {
@@ -41,14 +40,13 @@ type Node struct {
 	config             config.NodeConfig
 	blockPersistence   blockStorageAdapter.InMemoryBlockPersistence
 	statePersistence   stateStorageAdapter.TamperingStatePersistence
-	ethereumConnection ethereumAdapter.EthereumConnection
 	nativeCompiler     nativeProcessorAdapter.Compiler
 	nodeLogic          bootstrap.NodeLogic
 	metricRegistry     metric.Registry
 }
 
-func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
-	return Network{Logger: logger, Transport: transport}
+func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
+	return Network{Logger: logger, Transport: transport, ethereumConnection: ethereumConnection}
 }
 
 func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, logger log.BasicLogger) {
@@ -57,8 +55,7 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
-	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence()
-	node.ethereumConnection = ethereumAdapter.NewEthereumSimulatorConnection(cfg, logger)
+	node.blockPersistence = blockStorageAdapter.NewInMemoryBlockPersistence(n.Logger)
 	node.nativeCompiler = compiler
 	node.metricRegistry = metric.NewRegistry()
 
@@ -80,7 +77,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
 			node.config,
-			node.ethereumConnection,
+			n.ethereumConnection,
 		)
 	}
 }
@@ -123,52 +120,54 @@ func (n *Network) Size() int {
 
 func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse {
 	ch := make(chan *client.SendTransactionResponse)
-	supervised.GoOnce(n.Logger, func() {
+	go func() {
+		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
 		})
-		if err != nil {
+		if output == nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
+		}
+
+		select {
+		case ch <- output.ClientResponse:
+		case <-ctx.Done():
+		}
+	}()
+	return ch
+}
+
+func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
+	go func() {
+		publicApi := n.Nodes[nodeIndex].GetPublicApi()
+		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
+			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
+			ReturnImmediately: 1,
+		})
+		if output == nil {
+			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
+		}
+	}()
+}
+
+func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse {
+
+	ch := make(chan *client.CallMethodResponse)
+	go func() {
+		defer close(ch)
+		publicApi := n.Nodes[nodeIndex].GetPublicApi()
+		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
+			ClientRequest: (&client.CallMethodRequestBuilder{Transaction: tx}).Build(),
+		})
+		if output == nil {
+			panic(fmt.Sprintf("error calling method: %v", err)) // TODO: improve
 		}
 		select {
 		case ch <- output.ClientResponse:
 		case <-ctx.Done():
 		}
-	})
-	return ch
-}
-
-func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
-	supervised.GoOnce(n.Logger, func() {
-		publicApi := n.Nodes[nodeIndex].GetPublicApi()
-		_, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
-			ReturnImmediately: 1,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
-		}
-	})
-}
-
-func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan uint64 {
-
-	ch := make(chan uint64)
-	supervised.GoOnce(n.Logger, func() {
-		publicApi := n.Nodes[nodeIndex].GetPublicApi()
-		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
-			ClientRequest: (&client.CallMethodRequestBuilder{Transaction: tx}).Build(),
-		})
-		if err != nil {
-			panic(fmt.Sprintf("error calling method: %v", err)) // TODO: improve
-		}
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(output.ClientResponse)
-		select {
-		case ch <- outputArgsIterator.NextArguments().Uint64Value():
-		case <-ctx.Done():
-		}
-	})
+	}()
 	return ch
 }
 
