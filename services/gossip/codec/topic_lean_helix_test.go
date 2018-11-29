@@ -32,7 +32,7 @@ func TestLeanHelix_EmptyLeanHelixMessage(t *testing.T) {
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	decoded, err := DecodeLeanHelixMessage(header, builders.EmptyPayloads(6))
+	decoded, err := DecodeLeanHelixMessage(header, builders.EmptyPayloads(1+NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR))
 	require.NoError(t, err, "decode should not fail")
 	test.RequireDoesNotContainNil(t, decoded)
 }
