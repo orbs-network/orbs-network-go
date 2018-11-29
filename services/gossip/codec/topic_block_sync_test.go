@@ -31,7 +31,7 @@ func TestBlockSync_BlockAvailabilityRequest(t *testing.T) {
 }
 
 func TestBlockSync_EmptyBlockAvailabilityRequest(t *testing.T) {
-	_, err := DecodeBlockAvailabilityRequest(emptyPayloads(2))
+	_, err := DecodeBlockAvailabilityRequest(builders.EmptyPayloads(2))
 	require.Error(t, err, "decode should fail and return error")
 }
 
@@ -54,7 +54,7 @@ func TestBlockSync_BlockAvailabilityRequestDoNotFailWhenSenderContainsNil(t *tes
 	decoded, err := DecodeBlockAvailabilityRequest(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
-	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
+	test.RequireDoesNotContainNil(t, decoded)
 }
 
 func TestBlockSync_BlockAvailabilityResponse(t *testing.T) {
@@ -79,7 +79,7 @@ func TestBlockSync_BlockAvailabilityResponse(t *testing.T) {
 }
 
 func TestBlockSync_EmptyBlockAvailabilityResponse(t *testing.T) {
-	_, err := DecodeBlockAvailabilityResponse(emptyPayloads(2))
+	_, err := DecodeBlockAvailabilityResponse(builders.EmptyPayloads(2))
 	require.Error(t, err, "decode should fail and return error")
 }
 
@@ -102,7 +102,7 @@ func TestBlockSync_BlockAvailabilityResponseDoNotFailWhenSenderContainsNil(t *te
 	decoded, err := DecodeBlockAvailabilityResponse(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
-	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
+	test.RequireDoesNotContainNil(t, decoded)
 }
 
 func TestBlockSync_BlockSyncRequest(t *testing.T) {
@@ -127,7 +127,7 @@ func TestBlockSync_BlockSyncRequest(t *testing.T) {
 }
 
 func TestBlockSync_EmptyBlockSyncRequest(t *testing.T) {
-	_, err := DecodeBlockSyncRequest(emptyPayloads(2))
+	_, err := DecodeBlockSyncRequest(builders.EmptyPayloads(2))
 	require.Error(t, err, "decode should fail and return error")
 }
 
@@ -150,7 +150,7 @@ func TestBlockSync_BlockSyncRequestDoNotFailWhenSenderContainsNil(t *testing.T) 
 	decoded, err := DecodeBlockSyncRequest(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
-	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
+	test.RequireDoesNotContainNil(t, decoded)
 }
 
 func TestBlockSync_BlockSyncResponse(t *testing.T) {
@@ -179,7 +179,7 @@ func TestBlockSync_BlockSyncResponse(t *testing.T) {
 }
 
 func TestBlockSync_EmptyBlockSyncResponse(t *testing.T) {
-	_, err := DecodeBlockSyncResponse(emptyPayloads(2 + NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR))
+	_, err := DecodeBlockSyncResponse(builders.EmptyPayloads(2 + NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR))
 	require.Error(t, err, "decode should fail and return error")
 }
 
@@ -206,7 +206,7 @@ func TestBlockSync_BlockSyncResponseDoNotFailWhenSenderContainsNil(t *testing.T)
 	decoded, err := DecodeBlockSyncResponse(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
-	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
+	test.RequireDoesNotContainNil(t, decoded)
 }
 
 func TestBlockSync_BlockSyncResponseWithCorruptNumTransactions(t *testing.T) {

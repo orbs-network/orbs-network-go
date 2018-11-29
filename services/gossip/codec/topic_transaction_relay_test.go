@@ -27,7 +27,7 @@ func TestTransactionRelay_ForwardedTransactionsMessage(t *testing.T) {
 }
 
 func TestTransactionRelay_EmptyForwardedTransactionsMessage(t *testing.T) {
-	_, err := DecodeForwardedTransactions(emptyPayloads(2))
+	_, err := DecodeForwardedTransactions(builders.EmptyPayloads(2))
 	require.Error(t, err, "decode should fail and return error")
 }
 
@@ -46,5 +46,5 @@ func TestTransactionRelay_ForwardedTransactionsMessageDoNotFailWhenSenderContain
 	decoded, err := DecodeForwardedTransactions(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
-	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
+	test.RequireDoesNotContainNil(t, decoded)
 }

@@ -62,7 +62,7 @@ func TestBenchmarkConsensus_BenchmarkConsensusCommittedMessage(t *testing.T) {
 }
 
 func TestBenchmarkConsensus_EmptyBenchmarkConsensusCommittedMessage(t *testing.T) {
-	_, err := DecodeBlockAvailabilityRequest(emptyPayloads(2))
+	_, err := DecodeBlockAvailabilityRequest(builders.EmptyPayloads(2))
 	require.Error(t, err, "decode should fail and return error")
 }
 
@@ -82,5 +82,5 @@ func TestBenchmarkConsensus_BenchmarkConsensusCommittedMessageDoNotFailWhenSende
 	decoded, err := DecodeBenchmarkConsensusCommittedMessage(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
-	require.False(t, containsNil(decoded), "decoded should not contain nil fields")
+	test.RequireDoesNotContainNil(t, decoded)
 }
