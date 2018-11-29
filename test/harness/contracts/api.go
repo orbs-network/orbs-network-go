@@ -9,9 +9,9 @@ import (
 
 type ContractAPI interface {
 	WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256)
-	SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse
+	SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) *client.SendTransactionResponse
 	SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int)
-	CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse
+	CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) *client.CallMethodResponse
 }
 
 type contractClient struct {

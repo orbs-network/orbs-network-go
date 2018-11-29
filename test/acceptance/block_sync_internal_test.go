@@ -31,7 +31,7 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 		var mostRecentTxResponse *client.SendTransactionResponse
 
 		for _, builder := range txBuilders {
-			mostRecentTxResponse = <-network.SendTransaction(ctx, builder.Builder(), 0)
+			mostRecentTxResponse = network.SendTransaction(ctx, builder.Builder(), 0)
 			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, mostRecentTxResponse.TransactionStatus())
 		}
 
@@ -44,15 +44,14 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 			"expected tx to be committed to non leader tx pool")
 
 		// Resend an already committed transaction to Leader
-		leaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+		leaderTxResponse := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus(),
 			"expected a stale tx sent to leader to be rejected")
 
 		// Resend an already committed transaction to Non-Leader
-		nonLeaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+		nonLeaderTxResponse := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, nonLeaderTxResponse.TransactionStatus(),
 			"expected a stale tx sent to non leader to be rejected")
-
 	})
 }
 
@@ -89,7 +88,7 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			// generate some blocks with state
 			contract := network.GetBenchmarkTokenContract()
 			for i := 0; i < transfers; i++ {
-				mostRecentTxResponse = <-contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
+				mostRecentTxResponse = contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
 				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, mostRecentTxResponse.TransactionStatus())
 			}
 
@@ -100,8 +99,8 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			network.WaitForTransactionInState(ctx, mostRecentTxResponse.TransactionReceipt().Txhash())
 
 			// verify state in both nodes
-			balanceNode0 := <-contract.CallGetBalance(ctx, 0, 1)
-			balanceNode1 := <-contract.CallGetBalance(ctx, 1, 1)
+			balanceNode0 := contract.CallGetBalance(ctx, 0, 1)
+			balanceNode1 := contract.CallGetBalance(ctx, 1, 1)
 
 			require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
 			require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")

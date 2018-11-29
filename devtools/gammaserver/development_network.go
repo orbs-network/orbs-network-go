@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -42,7 +43,8 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 			consensusAlgo,
 		)
 
-		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger), adapter.NewInMemoryBlockPersistence(logger))
+		metricRegistry := metric.NewRegistry()
+		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger), adapter.NewInMemoryBlockPersistence(logger, metricRegistry), metricRegistry)
 	}
 
 	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network

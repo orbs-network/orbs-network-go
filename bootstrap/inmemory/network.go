@@ -35,21 +35,21 @@ type Network struct {
 }
 
 type Node struct {
-	index              int
-	name               string
-	config             config.NodeConfig
-	blockPersistence   blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence   stateStorageAdapter.TamperingStatePersistence
-	nativeCompiler     nativeProcessorAdapter.Compiler
-	nodeLogic          bootstrap.NodeLogic
-	metricRegistry     metric.Registry
+	index            int
+	name             string
+	config           config.NodeConfig
+	blockPersistence blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence stateStorageAdapter.TamperingStatePersistence
+	nativeCompiler   nativeProcessorAdapter.Compiler
+	nodeLogic        bootstrap.NodeLogic
+	metricRegistry   metric.Registry
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
 	return Network{Logger: logger, Transport: transport, ethereumConnection: ethereumConnection}
 }
 
-func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, blockPersistence blockStorageAdapter.InMemoryBlockPersistence) {
+func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, blockPersistence blockStorageAdapter.InMemoryBlockPersistence, metricRegistry metric.Registry) {
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
@@ -57,7 +57,7 @@ func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfi
 	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
 	node.blockPersistence = blockPersistence
 	node.nativeCompiler = compiler
-	node.metricRegistry = metric.NewRegistry()
+	node.metricRegistry = metricRegistry
 
 	n.Nodes = append(n.Nodes, node)
 }
@@ -122,9 +122,8 @@ func (n *Network) Size() int {
 	return len(n.Nodes)
 }
 
-func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) chan *client.SendTransactionResponse {
+func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) *client.SendTransactionResponse {
 	n.assertStarted(nodeIndex)
-
 	ch := make(chan *client.SendTransactionResponse)
 	go func() {
 		defer close(ch)
@@ -141,7 +140,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		case <-ctx.Done():
 		}
 	}()
-	return ch
+	return <- ch
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
@@ -159,7 +158,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 	}()
 }
 
-func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) chan *client.CallMethodResponse {
+func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) *client.CallMethodResponse {
 	n.assertStarted(nodeIndex)
 
 	ch := make(chan *client.CallMethodResponse)
@@ -177,7 +176,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		case <-ctx.Done():
 		}
 	}()
-	return ch
+	return <- ch
 }
 
 func (n *Network) assertStarted(nodeIndex int) {
