@@ -78,15 +78,9 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		network.SendTransactionInBackground(ctx, tx1, 0)
 		secondAttemptResponse := network.SendTransaction(ctx, tx2, 0)
 
-		// A race condition here makes three possible outcomes:
-		// - secondAttemptResponse is nil, which means an error was returned // TODO understand under what circumstances an error here is ok
-		// - a response with TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING status was received if tx is not yet committed
-		// - a response with TRANSACTION_STATUS_COMMITTED status was received if tx is already committed
-		if secondAttemptResponse != nil {
-			t.Logf("received status %s in second SendTransaction", secondAttemptResponse.TransactionStatus().String())
-			require.Contains(t, STATUS_COMMITTED_OR_DUPLICATE, secondAttemptResponse.TransactionStatus(), "second attempt must return ALREADY_PENDING or COMMITTED status")
+		t.Logf("received status %s in second SendTransaction", secondAttemptResponse.TransactionStatus().String())
+		require.Contains(t, STATUS_COMMITTED_OR_DUPLICATE, secondAttemptResponse.TransactionStatus(), "second attempt must return COMMITTED or DUPLICATE status")
 
-			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, digest.CalcTxHash(tx1.Build().Transaction()))
-		}
+		requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, digest.CalcTxHash(tx1.Build().Transaction()))
 	})
 }
