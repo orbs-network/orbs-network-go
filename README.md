@@ -155,7 +155,7 @@ After you've finished editing, run `./docker/build/build.sh && ./docker/test/tes
 
 ### Git hooks
 
-Please run `git config core.hooksPath .githooks` after cloning the repository.
+Please run `git config --local core.hooksPath .githooks` after cloning the repository.
 
 ### Debugging issues on Docker
 
