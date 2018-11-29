@@ -20,30 +20,30 @@ type EthereumRpcConnection struct {
 }
 
 func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.BasicLogger) *EthereumRpcConnection {
-	nc := &EthereumRpcConnection{
+	rpc := &EthereumRpcConnection{
 		config: config,
 		logger: logger,
 	}
-	nc.getContractCaller = nc.dialIfNeededAndReturnClient
-	return nc
+	rpc.getContractCaller = rpc.dialIfNeededAndReturnClient
+	return rpc
 }
 
-func (nc *EthereumRpcConnection) dial() error {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
-	if client, err := ethclient.Dial(nc.config.EthereumEndpoint()); err != nil {
+func (rpc *EthereumRpcConnection) dial() error {
+	rpc.mu.Lock()
+	defer rpc.mu.Unlock()
+	if client, err := ethclient.Dial(rpc.config.EthereumEndpoint()); err != nil {
 		return err
 	} else {
-		nc.mu.client = client
+		rpc.mu.client = client
 	}
 	return nil
 }
 
-func (nc *EthereumRpcConnection) dialIfNeededAndReturnClient() (bind.ContractBackend, error) {
-	if nc.mu.client == nil {
-		if err := nc.dial(); err != nil {
+func (rpc *EthereumRpcConnection) dialIfNeededAndReturnClient() (bind.ContractBackend, error) {
+	if rpc.mu.client == nil {
+		if err := rpc.dial(); err != nil {
 			return nil, err
 		}
 	}
-	return nc.mu.client, nil
+	return rpc.mu.client, nil
 }
