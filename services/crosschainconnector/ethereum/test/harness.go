@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -16,7 +17,6 @@ import (
 type harness struct {
 	adapter   *adapter.EthereumSimulator
 	connector services.CrosschainConnector
-	config    *ethereumConnectorConfigForTests
 	logger    log.BasicLogger
 	address   string
 }
@@ -29,19 +29,14 @@ func (c *ethereumConnectorConfigForTests) EthereumEndpoint() string {
 	return c.endpoint
 }
 
-func newDefaultEthereumConnectorConfigForTests() *ethereumConnectorConfigForTests {
-	return &ethereumConnectorConfigForTests{
-		endpoint: "http://localhost:8545",
-	}
-}
-
-func (h *harness) deployStorageContract(ctx context.Context, number int64, text string) error {
-	address, err := h.adapter.DeployStorageContract(ctx, number, text)
+func (h *harness) deployStorageContract(ctx context.Context, text string) error {
+	address, err := h.adapter.DeploySimpleStorageContract(h.adapter.GetAuth(), text)
+	h.adapter.Commit()
 	if err != nil {
 		return err
 	}
 
-	h.address = address
+	h.address = hexutil.Encode(address[:])
 	return nil
 }
 
@@ -51,13 +46,11 @@ func (h *harness) getAddress() string {
 
 func newEthereumConnectorHarness() *harness {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-	config := newDefaultEthereumConnectorConfigForTests()
-	conn := adapter.NewEthereumSimulatorConnection(config, logger)
+	conn := adapter.NewEthereumSimulatorConnection(logger)
 	ctx := context.Background()
 
 	return &harness{
 		adapter:   conn,
-		config:    config,
 		logger:    logger,
 		connector: ethereum.NewEthereumCrosschainConnector(ctx, conn, logger),
 	}
