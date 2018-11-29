@@ -105,9 +105,6 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 
 		require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
 		require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")
-
-		<-contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
-
 	})
 
 }
