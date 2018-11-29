@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -105,7 +106,9 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 
 			network.Start(ctx, b.numOfNodesToStart)
 
-			f(ctx, network)
+			ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second) //TODO 5 seconds is infinity; reduce to 2 seconds when system is more stable
+			defer cancel()
+			f(ctxWithTimeout, network)
 		})
 		// end test
 
@@ -122,7 +125,7 @@ func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogge
 		log.String("_test-id", testId)).
 		WithOutput(makeFormattingOutput(testId), errorRecorder).
 		WithFilters(b.logFilters...)
-		//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
+	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
 	return logger, errorRecorder
 }
@@ -151,14 +154,6 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
 	}
 
-	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
-
-	network := &acceptanceNetwork{
-		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
-		tamperingTransport: sharedTamperingTransport,
-		description:        description,
-	}
-
 	cfg := config.ForAcceptanceTestNetwork(
 		federationNodes,
 		leaderKeyPair.PublicKey(),
@@ -166,6 +161,16 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		b.maxTxPerBlock,
 		b.requiredQuorumPercentage,
 	)
+
+	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
+	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(cfg, testLogger)
+
+	network := &acceptanceNetwork{
+		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport, sharedEthereumSimulator),
+		tamperingTransport: sharedTamperingTransport,
+		ethereumConnection: sharedEthereumSimulator,
+		description:        description,
+	}
 
 	for i := 0; i < b.numNodes; i++ {
 		keyPair := testKeys.Ed25519KeyPairForTests(i)

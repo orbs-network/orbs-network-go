@@ -14,13 +14,14 @@ import (
 )
 
 func (s *service) SendTransaction(parentCtx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
+	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
+
 	if input.ClientRequest == nil {
 		err := errors.Errorf("error missing input (client request is nil)")
-		s.logger.Info("send transaction received missing input", log.Error(err))
+		s.logger.Info("send transaction received missing input", log.Error(err), trace.LogFieldFrom(ctx))
 		return nil, err
 	}
 
-	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
 	tx := input.ClientRequest.SignedTransaction()
 	txHash := digest.CalcTxHash(tx.Transaction())
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))

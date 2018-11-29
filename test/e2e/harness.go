@@ -30,7 +30,6 @@ type StressTestConfig struct {
 }
 
 const VITRUAL_CHAIN_ID = 42
-const LOCAL_NETWORK_SIZE = 3
 const START_HTTP_PORT = 8090
 
 type harness struct {
