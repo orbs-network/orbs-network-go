@@ -11,12 +11,12 @@ import (
 )
 
 type CounterClient interface {
-	SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse
-	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse
-	CallCounterGet(ctx context.Context, nodeIndex int) chan uint64
+	SendDeployCounterContract(ctx context.Context, nodeIndex int) *client.SendTransactionResponse
+	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) *client.SendTransactionResponse
+	CallCounterGet(ctx context.Context, nodeIndex int) uint64
 }
 
-func (c *contractClient) SendDeployCounterContract(ctx context.Context, nodeIndex int) chan *client.SendTransactionResponse {
+func (c *contractClient) SendDeployCounterContract(ctx context.Context, nodeIndex int) *client.SendTransactionResponse {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.Transaction().
@@ -30,7 +30,7 @@ func (c *contractClient) SendDeployCounterContract(ctx context.Context, nodeInde
 	return c.API.SendTransaction(ctx, tx, nodeIndex)
 }
 
-func (c *contractClient) SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) chan *client.SendTransactionResponse {
+func (c *contractClient) SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) *client.SendTransactionResponse {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.Transaction().
@@ -41,21 +41,14 @@ func (c *contractClient) SendCounterAdd(ctx context.Context, nodeIndex int, amou
 	return c.API.SendTransaction(ctx, tx, nodeIndex)
 }
 
-func (c *contractClient) CallCounterGet(ctx context.Context, nodeIndex int) chan uint64 {
-	ch := make(chan uint64, 1)
-
+func (c *contractClient) CallCounterGet(ctx context.Context, nodeIndex int) uint64 {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.NonSignedTransaction().
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get").
 		Builder()
 
-	select {
-	case r := <-c.API.CallMethod(ctx, tx, nodeIndex):
-		outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(r)
-		ch <- outputArgsIterator.NextArguments().Uint64Value()
-	case <-ctx.Done():
-	}
-
-	return ch
+	r := c.API.CallMethod(ctx, tx, nodeIndex)
+	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(r)
+	return outputArgsIterator.NextArguments().Uint64Value()
 }

@@ -52,7 +52,7 @@ func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNet
 		WithMethod("EthereumReader", "readString").
 		WithArgs(address).
 		Builder()
-	readResponse := <-network.CallMethod(ctx, readTx.Transaction, 0)
+	readResponse := network.CallMethod(ctx, readTx.Transaction, 0)
 	return readResponse
 }
 

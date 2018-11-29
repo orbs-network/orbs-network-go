@@ -48,11 +48,11 @@ func TestInternalBlockSync_TransactionPool(t *testing.T) {
 			"expected tx to be committed to non leader tx pool")
 
 		// Resend an already committed transaction to Leader
-		leaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+		leaderTxResponse := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus())
 
 		// Resend an already committed transaction to Non-Leader
-		nonLeaderTxResponse := <-network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+		nonLeaderTxResponse := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, nonLeaderTxResponse.TransactionStatus())
 	})
 }
@@ -90,7 +90,7 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 			contract := builderNetwork.GetBenchmarkTokenContract()
 			var topBlock primitives.BlockHeight
 			for i := 0; i < transfers; i++ {
-				txRes := <-contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
+				txRes := contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
 				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, txRes.TransactionStatus())
 				topBlock = txRes.BlockHeight()
 			}
@@ -130,8 +130,8 @@ func TestInternalBlockSync_StateStorage(t *testing.T) {
 		contract := network.GetBenchmarkTokenContract()
 
 		// verify state in both nodes
-		balanceNode0 := <-contract.CallGetBalance(ctx, 0, 1)
-		balanceNode1 := <-contract.CallGetBalance(ctx, 1, 1)
+		balanceNode0 := contract.CallGetBalance(ctx, 0, 1)
+		balanceNode1 := contract.CallGetBalance(ctx, 1, 1)
 
 		require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
 		require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")
