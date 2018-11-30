@@ -54,15 +54,27 @@ func newMetrics(m metric.Factory) *metrics {
 }
 
 func NewInMemoryBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory) InMemoryBlockPersistence {
+	return NewInMemoryBlockPersistenceWithBlocks(parent, nil, metricFactory)
+}
+
+func NewInMemoryBlockPersistenceWithBlocks(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
 		logger:         logger,
-		tracker:        synchronization.NewBlockTracker(0, 5),
 		metrics:        newMetrics(metricFactory),
+		tracker:        synchronization.NewBlockTracker(uint64(len(preloadedBlocks)), 5),
+		blockChain: struct {
+			sync.RWMutex
+			blocks []*protocol.BlockPairContainer
+		} {blocks: preloadedBlocks},
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
+
+	for _, bpc := range preloadedBlocks {
+		p.advertiseAllTransactions(bpc.TransactionsBlock)
+	}
 
 	return p
 }

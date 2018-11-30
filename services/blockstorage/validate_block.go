@@ -35,7 +35,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("internal-node sync to consensus algo failed", log.Error(err))
+		logger.Error("block validation by consensus algo failed", log.Error(err))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
