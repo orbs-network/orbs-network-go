@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -29,7 +30,7 @@ func (b *BlockPairWrapper) BlockHash() lhprimitives.Uint256 {
 	return lhprimitives.Uint256(b.blockPair.TransactionsBlock.Header.MetadataHash())
 }
 
-func NewBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapper {
+func ToBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapper {
 	return &BlockPairWrapper{
 		blockPair: blockPair,
 	}
@@ -38,37 +39,53 @@ func NewBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapp
 // TODO This should be updated on commit!!!
 // Currently put the state of the last committed block here, but it might not be the right place for it.
 // See https://tree.taiga.io/project/orbs-network/us/404
+
+// TODO Remove lastCommitedBlock - state must be in lib only
 type blockProvider struct {
-	consensusContext              services.ConsensusContext
-	consensusRoundTimeoutInterval time.Duration
-	nodePublicKey                 primitives.Ed25519PublicKey
-	nodePrivateKey                primitives.Ed25519PrivateKey
-	lastCommittedBlock            *protocol.BlockPairContainer
-	lastCommittedBlockHeight      primitives.BlockHeight
+	logger                              log.BasicLogger
+	blockStorage                        services.BlockStorage
+	consensusContext                    services.ConsensusContext
+	waitTimeForMinimalBlockTransactions time.Duration
+	nodePublicKey                       primitives.Ed25519PublicKey
+	nodePrivateKey                      primitives.Ed25519PrivateKey
 }
 
-func NewBlockProvider(consensusRoundTimeoutInterval time.Duration, nodePublicKey primitives.Ed25519PublicKey, nodePrivateKey primitives.Ed25519PrivateKey) *blockProvider {
+func NewBlockProvider(
+	logger log.BasicLogger,
+	blockStorage services.BlockStorage,
+	consensusContext services.ConsensusContext,
+	consensusRoundTimeoutInterval time.Duration,
+	nodePublicKey primitives.Ed25519PublicKey,
+	nodePrivateKey primitives.Ed25519PrivateKey) *blockProvider {
 
 	return &blockProvider{
-		consensusRoundTimeoutInterval: consensusRoundTimeoutInterval,
-		nodePublicKey:                 nodePublicKey,
-		nodePrivateKey:                nodePrivateKey,
+		logger:                              logger,
+		blockStorage:                        blockStorage,
+		consensusContext:                    consensusContext,
+		waitTimeForMinimalBlockTransactions: consensusRoundTimeoutInterval,
+		nodePublicKey:                       nodePublicKey,
+		nodePrivateKey:                      nodePrivateKey,
 	}
 
 }
 
-func (p *blockProvider) RequestNewBlock(ctx context.Context, blockHeight lhprimitives.BlockHeight) leanhelix.Block {
+func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix.Block) leanhelix.Block {
 	// TODO Is this the right timeout here - probably should be a little smaller
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, p.consensusRoundTimeoutInterval)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, p.waitTimeForMinimalBlockTransactions)
 	defer cancel()
 
-	//lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
-	//logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
+	// TODO: Get prev block - under mutex??
+
+	blockWrapper := prevBlock.(*BlockPairWrapper)
+
+	newBlockHeight := primitives.BlockHeight(prevBlock.Height() + 1)
+
+	p.logger.Info("RequestNewBlock()", log.Stringable("new-block-height", newBlockHeight), log.Stringable("wait-time-for-tx", p.waitTimeForMinimalBlockTransactions))
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctxWithTimeout, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   p.lastCommittedBlockHeight + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(p.lastCommittedBlock.TransactionsBlock),
+		BlockHeight:   newBlockHeight,
+		PrevBlockHash: digest.CalcTransactionsBlockHash(blockWrapper.blockPair.TransactionsBlock),
 	})
 	if err != nil {
 		return nil
@@ -76,8 +93,8 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, blockHeight lhprimi
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctxWithTimeout, &services.RequestNewResultsBlockInput{
-		BlockHeight:       p.lastCommittedBlockHeight + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(p.lastCommittedBlock.ResultsBlock),
+		BlockHeight:       newBlockHeight,
+		PrevBlockHash:     digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
@@ -86,11 +103,10 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, blockHeight lhprimi
 
 	// generate signed block
 	// TODO what to do in case of error - similar to handling timeout
-	pair, _ := p.signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
-	blockPairWrapper := NewBlockPairWrapper(&protocol.BlockPairContainer{
-		TransactionsBlock: pair.TransactionsBlock,
-		ResultsBlock:      pair.ResultsBlock,
-	})
+	pair, _ := signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock, p.nodePrivateKey)
+	blockPairWrapper := ToBlockPairWrapper(pair)
+
+	p.logger.Info("RequestNewBlock() returning", log.Int("tx-count", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("rx-count", len(rxOutput.ResultsBlock.TransactionReceipts)))
 
 	return blockPairWrapper
 
@@ -98,10 +114,10 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, blockHeight lhprimi
 
 func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
 	blockPairWrapper := block.(*BlockPairWrapper)
-	return p.hash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
+	return deepHash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
 }
 
-func (p *blockProvider) hash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.ResultsBlockContainer) []byte {
+func deepHash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.ResultsBlockContainer) []byte {
 	txHash := digest.CalcTransactionsBlockHash(txBlock)
 	rxHash := digest.CalcResultsBlockHash(rxBlock)
 	xorHash := logic.CalcXor(txHash, rxHash)
@@ -109,48 +125,31 @@ func (p *blockProvider) hash(txBlock *protocol.TransactionsBlockContainer, rxBlo
 }
 
 func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
-	panic("implement me")
+	//TODO Implement me!
+
+	return true
 }
 
-// This calls ValidateBlockConsensus
-func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-
-	blockType := input.BlockType
-	mode := input.Mode
-	blockPair := input.BlockPair
-	prevCommittedBlockPair := input.PrevCommittedBlockPair
-	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
-		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
+func generateGenesisBlock(nodePrivateKey primitives.Ed25519PrivateKey) *protocol.BlockPairContainer {
+	transactionsBlock := &protocol.TransactionsBlockContainer{
+		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
+		SignedTransactions: []*protocol.SignedTransaction{},
+		BlockProof:         nil, // will be generated in a minute when signed
 	}
-
-	// validate the block consensus
-	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY {
-		err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
-		if err != nil {
-			return nil, err
-		}
+	resultsBlock := &protocol.ResultsBlockContainer{
+		Header:                  (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{}).Build(),
+		TransactionReceipts:     []*protocol.TransactionReceipt{},
+		ContractStateDiffs:      []*protocol.ContractStateDiff{},
+		BlockProof:              nil, // will be generated in a minute when signed
 	}
-
-	// update lastCommitted to reflect this if newer
-	// TODO: Gad - how to update internal block height and continue from there
-	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
-		//lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
-		//
-		//
-		//if blockPair.TransactionsBlock.Header.BlockHeight() > lastCommittedBlockHeight {
-		//
-		//	// TODO Set last committed block here?
-		//	//err := s.setLastCommittedBlock(blockPair, lastCommittedBlock)
-		//	//if err != nil {
-		//	//	return err
-		//	//}
-		//	// don't forget to update internal vars too since they may be used later on in the function
-		//	lastCommittedBlock = blockPair
-		//	lastCommittedBlockHeight = lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
-		//}
+	blockPair, err := signBlockProposal(transactionsBlock, resultsBlock, nodePrivateKey)
+	if err != nil {
+		//s.logger.Error("leader failed to sign genesis block", log.Error(err))
+		return nil
 	}
-
-	return nil, nil
+	return blockPair
 }
 
 func (s *service) updateLastCommit(mode handlers.HandleBlockConsensusMode, blockPair *protocol.BlockPairContainer) {
@@ -193,48 +192,34 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	return nil
 }
 
-func (s *service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.BlockPairContainer) {
-	s.lastCommittedBlock.RLock()
-	defer s.lastCommittedBlock.RUnlock()
-
-	if s.lastCommittedBlock.block == nil {
-		return 0, nil
-	}
-	return s.lastCommittedBlock.block.TransactionsBlock.Header.BlockHeight(), s.lastCommittedBlock.block
-}
-
-func (p *blockProvider) signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
+func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer, nodePrivateKey primitives.Ed25519PrivateKey) (*protocol.BlockPairContainer, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
 		ResultsBlock:      resultsBlock,
 	}
 
 	// prepare signature over the block headers
-	blockPairDataToSign := p.dataToSignFrom(blockPair)
-	sig, err := signature.SignEd25519(p.nodePrivateKey, blockPairDataToSign)
+	blockPairDataToSign := dataToSignFrom(blockPair)
+	_, err := signature.SignEd25519(nodePrivateKey, blockPairDataToSign)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO Fill BlockProof here once implemented in LH lib
 	// generate tx block proof
 	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
-		Type:               protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
-		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{},
+		Type:      protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		LeanHelix: &consensus.LeanHelixBlockProofBuilder{},
 	}).Build()
 
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
-		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
-		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
-			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
-				SenderPublicKey: p.nodePublicKey,
-				Signature:       sig,
-			},
-		},
+		Type:      protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		LeanHelix: &consensus.LeanHelixBlockProofBuilder{},
 	}).Build()
 	return blockPair, nil
 }
 
-func (p *blockProvider) dataToSignFrom(blockPair *protocol.BlockPairContainer) []byte {
-	return p.hash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
+func dataToSignFrom(blockPair *protocol.BlockPairContainer) []byte {
+	return deepHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 }
