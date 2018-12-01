@@ -104,6 +104,7 @@ func NewLeanHelixConsensusAlgo(
 	gossip.RegisterLeanHelixHandler(s)
 
 	// FIXME This is causing TestExternalBlockSync to hang, so cannot uncomment till then
+	// See https://github.com/orbs-network/orbs-network-go/issues/557
 	//blockStorage.RegisterConsensusBlocksHandler(s)
 
 	s.leanHelix.RegisterOnCommitted(func(block leanhelix.Block) {
