@@ -49,12 +49,12 @@ func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumCon
 	return Network{Logger: logger, Transport: transport, ethereumConnection: ethereumConnection}
 }
 
-func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, blockPersistence blockStorageAdapter.InMemoryBlockPersistence, metricRegistry metric.Registry) {
+func (n *Network) AddNode(nodeKeyPair *keys.Ed25519KeyPair, cfg config.NodeConfig, compiler nativeProcessorAdapter.Compiler, blockPersistence blockStorageAdapter.InMemoryBlockPersistence, metricRegistry metric.Registry, logger log.BasicLogger) {
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
-	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence()
+	node.statePersistence = stateStorageAdapter.NewTamperingStatePersistence(logger)
 	node.blockPersistence = blockPersistence
 	node.nativeCompiler = compiler
 	node.metricRegistry = metricRegistry
@@ -140,7 +140,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		case <-ctx.Done():
 		}
 	}()
-	return <- ch
+	return <-ch
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
@@ -176,7 +176,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		case <-ctx.Done():
 		}
 	}()
-	return <- ch
+	return <-ch
 }
 
 func (n *Network) assertStarted(nodeIndex int) {

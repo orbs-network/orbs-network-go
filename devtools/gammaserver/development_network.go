@@ -44,7 +44,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 		)
 
 		metricRegistry := metric.NewRegistry()
-		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger), adapter.NewInMemoryBlockPersistence(logger, metricRegistry), metricRegistry)
+		network.AddNode(keyPair, cfg, nativeProcessorAdapter.NewNativeCompiler(cfg, logger), adapter.NewInMemoryBlockPersistence(logger, metricRegistry), metricRegistry, logger)
 	}
 
 	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network

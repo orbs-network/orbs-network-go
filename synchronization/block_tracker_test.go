@@ -2,6 +2,7 @@ package synchronization
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"sync/atomic"
@@ -10,7 +11,7 @@ import (
 
 func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(1, 1)
+		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
 
 		err := tracker.WaitForBlock(ctx, 3)
 		require.EqualError(t, err, "requested future block outside of grace range", "did not fail immediately")
@@ -20,7 +21,7 @@ func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
 func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
 	test.WithContext(func(parentCtx context.Context) {
 		ctx, cancel := context.WithCancel(parentCtx)
-		tracker := NewBlockTracker(1, 1)
+		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
 		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
 		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
@@ -30,7 +31,7 @@ func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
 func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
 	test.WithContext(func(parentCtx context.Context) {
 		ctx, cancel := context.WithCancel(parentCtx)
-		tracker := NewBlockTracker(0, 5)
+		tracker := NewBlockTracker(log.GetLogger(), 0, 5)
 		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
 		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
@@ -39,7 +40,7 @@ func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
 
 func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(1, 2)
+		tracker := NewBlockTracker(log.GetLogger(), 1, 2)
 
 		var waitCount int32
 		internalWaitChan := make(chan int32)
@@ -63,7 +64,7 @@ func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t
 
 func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(1, 1)
+		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
 
 		var waitCount int32
 		internalWaitChan := make(chan int32)
