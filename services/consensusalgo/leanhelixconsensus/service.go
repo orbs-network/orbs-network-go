@@ -102,7 +102,9 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanHelix
 
 	gossip.RegisterLeanHelixHandler(s)
-	blockStorage.RegisterConsensusBlocksHandler(s)
+
+	// FIXME This is causing TestExternalBlockSync to hang, so cannot uncomment till then
+	//blockStorage.RegisterConsensusBlocksHandler(s)
 
 	s.leanHelix.RegisterOnCommitted(func(block leanhelix.Block) {
 		parentLogger.Info("YEYYYY CONSENSUS!!!!", log.Stringable("block-height", block.Height()))
