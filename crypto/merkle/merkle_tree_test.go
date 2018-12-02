@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func hashTwoInTest(l, r []byte) primitives.MerkleSha256 {
+func hashTwoInTest(l, r []byte) primitives.Sha256 {
 	s, b := l, r
 	for i := range l {
 		if l[i] < r[i] {
@@ -28,15 +28,15 @@ func hashTwoInTest(l, r []byte) primitives.MerkleSha256 {
 	for i := 0; i < len(b); i++ {
 		res[i+len(s)] = b[i]
 	}
-	return primitives.MerkleSha256(hash.CalcSha256(res))
+	return hash.CalcSha256(res)
 }
 
-func hashTreeInTest(n *node) primitives.MerkleSha256 {
+func hashTreeInTest(n *node) primitives.Sha256 {
 	if n == nil {
-		return primitives.MerkleSha256(zeroValueHash)
+		return zeroValueHash
 	}
 	if n.isLeaf() {
-		return primitives.MerkleSha256(n.value)
+		return n.value
 	}
 	return hashTwoInTest(hashTreeInTest(n.left), hashTreeInTest(n.right))
 }
@@ -66,8 +66,8 @@ func generateHashValueList(vals []int) []primitives.Sha256 {
 func TestTreeNodeHash(t *testing.T) {
 	// Note in our tree implementation there can be nodes that have 0 or 2 children only
 	value := hash.CalcSha256([]byte("value sha"))
-	left := primitives.MerkleSha256(hash.CalcSha256([]byte("value left")))
-	right := primitives.MerkleSha256(hash.CalcSha256([]byte("value right")))
+	left := hash.CalcSha256([]byte("value left"))
+	right := hash.CalcSha256([]byte("value right"))
 
 	leaf := &node{
 		path:  nil,
@@ -76,7 +76,7 @@ func TestTreeNodeHash(t *testing.T) {
 		left:  nil,
 		right: nil,
 	}
-	require.Equal(t, treeHash(leaf), primitives.MerkleSha256(value), "leaf node hash mishmatch")
+	require.Equal(t, treeHash(leaf), value, "leaf node hash mishmatch")
 
 	fullNode := &node{
 		path:  nil,
@@ -166,7 +166,7 @@ func TestProofFull(t *testing.T) {
 
 		current := tree.root
 		for j := tree.keySize - 1; j >= 0; j-- {
-			var stepHash primitives.MerkleSha256
+			var stepHash primitives.Sha256
 			if ((1 << uint(j)) & i) == 0 {
 				stepHash = current.right.hash
 				current = current.left

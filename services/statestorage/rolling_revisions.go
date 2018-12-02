@@ -12,13 +12,13 @@ import (
 )
 
 type merkleRevisions interface {
-	Update(rootMerkle primitives.MerkleSha256, diffs merkle.TrieDiffs) (primitives.MerkleSha256, error)
-	Forget(rootHash primitives.MerkleSha256)
+	Update(rootMerkle primitives.Sha256, diffs merkle.TrieDiffs) (primitives.Sha256, error)
+	Forget(rootHash primitives.Sha256)
 }
 
 type revisionDiff struct {
 	diff       adapter.ChainState
-	merkleRoot primitives.MerkleSha256
+	merkleRoot primitives.Sha256
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
 }
@@ -30,9 +30,9 @@ type rollingRevisions struct {
 	merkle             merkleRevisions
 	currentHeight      primitives.BlockHeight
 	currentTs          primitives.TimestampNano
-	currentMerkleRoot  primitives.MerkleSha256
+	currentMerkleRoot  primitives.Sha256
 	persistedHeight    primitives.BlockHeight
-	persistedRoot      primitives.MerkleSha256
+	persistedRoot      primitives.Sha256
 	persistedTs        primitives.TimestampNano
 }
 
@@ -136,7 +136,7 @@ func (ls *rollingRevisions) getRevisionRecord(height primitives.BlockHeight, con
 	return ls.persist.Read(contract, key)
 }
 
-func (ls *rollingRevisions) getRevisionHash(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
+func (ls *rollingRevisions) getRevisionHash(height primitives.BlockHeight) (primitives.Sha256, error) {
 	for i := len(ls.revisions) - 1; i >= 0; i-- {
 		if ls.revisions[i].height == height {
 			return ls.revisions[i].merkleRoot, nil

@@ -15,7 +15,7 @@ var zeroValueHash = GetZeroValueHash()
 type node struct {
 	path  []byte // TODO  parity bool
 	value primitives.Sha256
-	hash  primitives.MerkleSha256
+	hash  primitives.Sha256
 	left  *node
 	right *node
 }
@@ -24,7 +24,7 @@ func createNode(path []byte, valueHash primitives.Sha256) *node {
 	return &node{
 		path:  path,
 		value: valueHash,
-		hash:  primitives.MerkleSha256{},
+		hash:  primitives.Sha256{},
 	}
 }
 
@@ -180,7 +180,7 @@ func lastCommonPathIndex(current *node, path []byte) (i int) {
 	return
 }
 
-type hashNode func(n *node) primitives.MerkleSha256
+type hashNode func(n *node) primitives.Sha256
 
 func collapseAndHash(current *node, sandbox dirtyNodes, f hashNode) *node {
 	if !current.isLeaf() {

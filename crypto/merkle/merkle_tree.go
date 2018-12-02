@@ -8,7 +8,7 @@ import (
 	"math"
 )
 
-type TreeProof []primitives.MerkleSha256
+type TreeProof []primitives.Sha256
 
 type Tree struct {
 	root    *node
@@ -29,7 +29,7 @@ func calculateTreeRootCollapseOneLevel(src, dst []primitives.Sha256, size int) i
 	return size
 }
 
-func CalculateTreeRoot(values []primitives.Sha256) primitives.MerkleSha256 {
+func CalculateTreeRoot(values []primitives.Sha256) primitives.Sha256 {
 	nodes := make([]primitives.Sha256, len(values)/2+1)
 	n := calculateTreeRootCollapseOneLevel(values, nodes, len(values))
 
@@ -37,7 +37,7 @@ func CalculateTreeRoot(values []primitives.Sha256) primitives.MerkleSha256 {
 	for i := 1; i < iteration; i++ {
 		n = calculateTreeRootCollapseOneLevel(nodes, nodes, n)
 	}
-	return primitives.MerkleSha256(nodes[0])
+	return nodes[0]
 }
 
 func newTree(values []primitives.Sha256) *Tree {
@@ -59,11 +59,11 @@ func create(values []primitives.Sha256, keySize int) *node {
 }
 
 // NOTE : practical - we don't have a node with just one child.
-func treeHash(n *node) primitives.MerkleSha256 {
+func treeHash(n *node) primitives.Sha256 {
 	if n.isLeaf() {
-		return primitives.MerkleSha256(n.value)
+		return n.value
 	}
-	return primitives.MerkleSha256(hashTwo(primitives.Sha256(n.left.hash), primitives.Sha256(n.right.hash))) // TODO REMOVE CAST
+	return hashTwo(n.left.hash, n.right.hash)
 }
 
 func (t *Tree) GetProof(index int) (TreeProof, error) {
@@ -94,13 +94,13 @@ func (t *Tree) GetProof(index int) (TreeProof, error) {
 	return proof, nil
 }
 
-func (t *Tree) Verify(value primitives.Sha256, proof TreeProof, root primitives.MerkleSha256) error {
+func (t *Tree) Verify(value primitives.Sha256, proof TreeProof, root primitives.Sha256) error {
 	current := value
 	for i := len(proof) - 1; i >= 0; i-- {
-		current = hashTwo(current, primitives.Sha256(proof[i])) // TODO remove cast
+		current = hashTwo(current, proof[i])
 	}
 
-	if !bytes.Equal(root, primitives.MerkleSha256(current)) {
+	if !bytes.Equal(root, current) {
 		return errors.Errorf("proof hash did not match the root")
 	}
 	return nil

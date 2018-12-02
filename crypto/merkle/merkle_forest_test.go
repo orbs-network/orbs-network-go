@@ -20,7 +20,7 @@ func hexStringToBytes(s string) []byte {
 }
 
 // when the test checks general keys or keys with diff len
-func generalKeyUpdateEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
+func generalKeyUpdateEntries(f *Forest, baseHash primitives.Sha256, keyValues ...string) primitives.Sha256 {
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
@@ -34,15 +34,15 @@ func generalKeyUpdateEntries(f *Forest, baseHash primitives.MerkleSha256, keyVal
 	return currentRoot
 }
 
-func generalKeyVerifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path string, value string, exists bool) {
+func generalKeyVerifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof Proof, path string, value string, exists bool) {
 	verifyProof(t, f, root, proof, hexStringToBytes(path), value, exists)
 }
 
-func generalKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path string, expectedHeight int) Proof {
+func generalKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path string, expectedHeight int) Proof {
 	return getProofRequireHeight(t, f, root, hexStringToBytes(path), expectedHeight)
 }
 
-func generalKeyGetProof(t *testing.T, f *Forest, root primitives.MerkleSha256, path string) Proof {
+func generalKeyGetProof(t *testing.T, f *Forest, root primitives.Sha256, path string) Proof {
 	proof, err := f.GetProof(root, hexStringToBytes(path))
 	require.NoError(t, err, "failed with error: %s", err)
 	return proof
@@ -75,7 +75,7 @@ func bitStringToBytes(s string) []byte {
 }
 
 // for tests that need a specific key to create specific node relations
-func binaryKeyUpdateEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
+func binaryKeyUpdateEntries(f *Forest, baseHash primitives.Sha256, keyValues ...string) primitives.Sha256 {
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
@@ -89,21 +89,21 @@ func binaryKeyUpdateEntries(f *Forest, baseHash primitives.MerkleSha256, keyValu
 	return currentRoot
 }
 
-func binaryKeyVerifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path string, value string, exists bool) {
+func binaryKeyVerifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof Proof, path string, value string, exists bool) {
 	verifyProof(t, f, root, proof, bitStringToBytes(path), value, exists)
 }
 
-func binaryKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path string, expectedHeight int) Proof {
+func binaryKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path string, expectedHeight int) Proof {
 	return getProofRequireHeight(t, f, root, bitStringToBytes(path), expectedHeight)
 }
 
-func verifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path []byte, value string, exists bool) {
+func verifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof Proof, path []byte, value string, exists bool) {
 	verified, err := f.Verify(root, proof, path, hash.CalcSha256([]byte(value)))
 	require.NoError(t, err, "proof verification failed")
 	require.Equal(t, exists, verified, "proof verification returned unexpected result")
 }
 
-func getProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path []byte, expectedHeight int) Proof {
+func getProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path []byte, expectedHeight int) Proof {
 	proof, err := f.GetProof(root, path)
 	require.NoError(t, err, "failed with error: %s", err)
 	require.Equal(t, expectedHeight, len(proof), "unexpected proof length")
@@ -189,7 +189,7 @@ func TestValidProofForMissingKey(t *testing.T) {
 
 func TestUpdateTrieFailsForMissingBaseNode(t *testing.T) {
 	f, _ := NewForest()
-	badroot := primitives.MerkleSha256(hash.CalcSha256([]byte("deaddead")))
+	badroot := hash.CalcSha256([]byte("deaddead"))
 
 	root := generalKeyUpdateEntries(f, badroot, "abcdef", "val")
 

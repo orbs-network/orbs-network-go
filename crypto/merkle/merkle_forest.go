@@ -17,16 +17,16 @@ type Proof []*ProofNode
 type ProofNode struct {
 	path  []byte // TODO parity bool?
 	value primitives.Sha256
-	left  primitives.MerkleSha256
-	right primitives.MerkleSha256
+	left  primitives.Sha256
+	right primitives.Sha256
 }
 
 func newProofNode(n* node) *ProofNode {
 	pn := &ProofNode{
 		path:  n.path,
 		value: n.value,
-		left:  primitives.MerkleSha256{},
-		right: primitives.MerkleSha256{},
+		left:  primitives.Sha256{},
+		right: primitives.Sha256{},
 	}
 	if n.left != nil {
 		pn.left = n.left.hash
@@ -37,9 +37,9 @@ func newProofNode(n* node) *ProofNode {
 	return pn
 }
 
-func (pn *ProofNode) hash() primitives.MerkleSha256 {
+func (pn *ProofNode) hash() primitives.Sha256 {
 	serializedNode := fmt.Sprintf("%+v", pn)
-	return primitives.MerkleSha256(hash.CalcSha256([]byte(serializedNode)))
+	return hash.CalcSha256([]byte(serializedNode))
 }
 
 func createEmptyTrieNode() *node {
@@ -53,12 +53,12 @@ type Forest struct {
 	roots []*node
 }
 
-func NewForest() (*Forest, primitives.MerkleSha256) {
+func NewForest() (*Forest, primitives.Sha256) {
 	var emptyNode = createEmptyTrieNode()
 	return &Forest{sync.Mutex{}, []*node{emptyNode}}, emptyNode.hash
 }
 
-func (f *Forest) findRoot(rootHash primitives.MerkleSha256) *node {
+func (f *Forest) findRoot(rootHash primitives.Sha256) *node {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -78,7 +78,7 @@ func (f *Forest) appendRoot(root *node) {
 	f.roots = append(f.roots, root)
 }
 
-func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path []byte) (Proof, error) {
+func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (Proof, error) {
 	current := f.findRoot(rootHash)
 	if current == nil {
 		return nil, errors.Errorf("unknown root")
@@ -105,10 +105,10 @@ func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path []byte) (Proof,
 	return proof, nil
 }
 
-func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path []byte, value primitives.Sha256) (bool, error) {
+func (f *Forest) Verify(rootHash primitives.Sha256, proof Proof, path []byte, value primitives.Sha256) (bool, error) {
 	path = toBin(path)
 	currentHash := rootHash
-	emptyMerkleHash := primitives.MerkleSha256{}
+	emptyMerkleHash := primitives.Sha256{}
 
 	for i, currentNode := range proof {
 		calcHash := currentNode.hash()
@@ -140,7 +140,7 @@ func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, path []by
 	return false, errors.Errorf("proof incomplete ")
 }
 
-func (f *Forest) Forget(rootHash primitives.MerkleSha256) {
+func (f *Forest) Forget(rootHash primitives.Sha256) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -167,7 +167,7 @@ type TrieDiff struct {
 }
 type TrieDiffs []*TrieDiff
 
-func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs TrieDiffs) (primitives.MerkleSha256, error) {
+func (f *Forest) Update(rootMerkle primitives.Sha256, diffs TrieDiffs) (primitives.Sha256, error) {
 	root := f.findRoot(rootMerkle)
 	if root == nil {
 		return nil, errors.Errorf("must start with valid root")
@@ -188,7 +188,7 @@ func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs TrieDiffs) (pr
 	return root.hash, nil
 }
 
-func hashTrieNode(n *node) primitives.MerkleSha256 {
+func hashTrieNode(n *node) primitives.Sha256 {
 	return newProofNode(n).hash()
 }
 
