@@ -9,7 +9,5 @@ time go test -o _bin/e2e.test -a -c ./test/e2e
 time go test -o _bin/external.test -a -c ./test/external
 
 if [ "$SKIP_DEVTOOLS" == "" ]; then
-    time go build -o _bin/gamma-cli -a devtools/gammacli/main/main.go
-
-    time go build -o _bin/gamma-server -a devtools/gammaserver/main/main.go
+    time go build -o _bin/gamma-server -a bootstrap/gamma/main/main.go
 fi
