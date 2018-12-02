@@ -153,6 +153,10 @@ After you've finished editing, run `./docker/build/build.sh && ./docker/test/tes
 
 ## Developer experience
 
+### Git hooks
+
+Please run `git config --local core.hooksPath .githooks` after cloning the repository.
+
 ### Debugging issues on Docker
 
 Occasionally, local tests with `go test` will pass but the same tests on Docker will fail. This usually happens when tests are flaky and sensitive to timing (we do our best to avoid this). 

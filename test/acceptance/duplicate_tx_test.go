@@ -13,7 +13,8 @@ import (
 	"time"
 )
 
-var COMMITTED_OR_ALREADY_PENDING = []TransactionStatus{TRANSACTION_STATUS_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
+var STATUS_COMMITTED_OR_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
+var STATUS_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 
 func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	harness.Network(t).AllowingErrors(
@@ -28,11 +29,11 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 
 		// send three identical transactions to two nodes
 		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
-		response0 := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
-		response1 := <-network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		response0 := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		response1 := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
 
-		require.Contains(t, COMMITTED_OR_ALREADY_PENDING, response0.TransactionStatus(), "second transaction should be accepted into the pool and committed by the internode sync")
-		require.EqualValues(t, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response1.TransactionStatus(), "third transaction should be rejected as a duplicate")
+		require.Contains(t, STATUS_COMMITTED_OR_DUPLICATE, response0.TransactionStatus(), "second transaction should be accepted into the pool and committed or rejected as duplidate")
+		require.Contains(t, STATUS_DUPLICATE, response1.TransactionStatus(), "third transaction should be rejected as a duplicate")
 
 		require.True(t, response0.BlockHeight() <= response1.BlockHeight(), "second response must reference a later block height than first")
 
@@ -75,17 +76,11 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		tx2 := builders.TransferTransaction().WithTimestamp(ts).Builder()
 
 		network.SendTransactionInBackground(ctx, tx1, 0)
-		secondAttemptResponse := <-network.SendTransaction(ctx, tx2, 0)
+		secondAttemptResponse := network.SendTransaction(ctx, tx2, 0)
 
-		// A race condition here makes three possible outcomes:
-		// - secondAttemptResponse is nil, which means an error was returned // TODO understand under what circumstances an error here is ok
-		// - a response with TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING status was received if tx is not yet committed
-		// - a response with TRANSACTION_STATUS_COMMITTED status was received if tx is already committed
-		if secondAttemptResponse != nil {
-			t.Logf("received status %s in second SendTransaction", secondAttemptResponse.TransactionStatus().String())
-			require.Contains(t, COMMITTED_OR_ALREADY_PENDING, secondAttemptResponse.TransactionStatus(), "second attempt must return ALREADY_PENDING or COMMITTED status")
+		t.Logf("received status %s in second SendTransaction", secondAttemptResponse.TransactionStatus().String())
+		require.Contains(t, STATUS_COMMITTED_OR_DUPLICATE, secondAttemptResponse.TransactionStatus(), "second attempt must return COMMITTED or DUPLICATE status")
 
-			requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, digest.CalcTxHash(tx1.Build().Transaction()))
-		}
+		requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, digest.CalcTxHash(tx1.Build().Transaction()))
 	})
 }

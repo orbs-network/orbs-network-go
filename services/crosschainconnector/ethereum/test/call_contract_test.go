@@ -17,9 +17,8 @@ import (
 func TestContractCallBadNodeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		config := newDefaultEthereumConnectorConfigForTests()
-		config.endpoint = "all your base"
-		conn := adapter.NewEthereumConnection(config, logger)
+		config := &ethereumConnectorConfigForTests{"all your base"}
+		conn := adapter.NewEthereumRpcConnection(config, logger)
 		connector := ethereum.NewEthereumCrosschainConnector(ctx, conn, logger)
 		input := builders.EthereumCallContractInput().Build() // don't care about specifics
 
@@ -31,10 +30,9 @@ func TestContractCallBadNodeConfig(t *testing.T) {
 func TestCallContractWithoutArgs(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newEthereumConnectorHarness()
-		initNum := int64(15)
 		initText := "are belong to us"
 		methodToCall := "getValues"
-		h.deployStorageContract(ctx, initNum, initText)
+		h.deployStorageContract(ctx, initText)
 
 		ethCallData, err := ethereumPackInputArguments(contract.SimpleStorageABI, methodToCall, nil)
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
@@ -56,7 +54,6 @@ func TestCallContractWithoutArgs(t *testing.T) {
 		})
 		ethereumUnpackOutput(output.EthereumPackedOutput, methodToCall, ret)
 
-		require.Equal(t, initNum, ret.IntValue.Int64(), "number part from eth")
 		require.Equal(t, initText, ret.StringValue, "text part from eth")
 	})
 }

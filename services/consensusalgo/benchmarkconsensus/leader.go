@@ -53,7 +53,6 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 	if s.lastSuccessfullyVotedBlock == lastCommittedBlockHeight {
 		proposedBlock, err := s.leaderGenerateNewProposedBlock(ctx, lastCommittedBlockHeight, lastCommittedBlock)
 		if err != nil {
-			logger.Error("leader failed to generate block", log.Error(err))
 			return err
 		}
 
