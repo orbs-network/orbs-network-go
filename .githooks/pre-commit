@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# An example hook script to verify what is about to be committed.
+# Called by "git commit" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message if
+# it wants to stop the commit.
+#
+
+gofiles=$(git diff --cached --name-only --diff-filter=ACM | grep \.go$)
+[ -z "$gofiles" ] && exit 0
+
+fmtfiles=$(gofmt -l -w $gofiles)
+[ -z "$fmtfiles" ] && exit 0
+
+echo
+echo go fmt: $fmtfiles
+echo
+
+git add $fmtfiles
