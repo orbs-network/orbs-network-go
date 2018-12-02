@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -43,7 +44,6 @@ type Config interface {
 	NodePrivateKey() primitives.Ed25519PrivateKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
-	ConsensusContextMinimalBlockTime() time.Duration
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 }
 
@@ -67,18 +67,17 @@ func NewLeanHelixConsensusAlgo(
 ) services.ConsensusAlgoLeanHelix {
 
 	logger := parentLogger.WithTags(LogTag)
+	logger.Info("NewLeanHelixConsensusAlgo() start")
 	comm := NewNetworkCommunication(logger, consensusContext, gossip)
 	mgr := NewKeyManager(logger, config.NodePublicKey(), config.NodePrivateKey())
 	genesisBlock := generateGenesisBlock(config.NodePrivateKey())
 	blockHeight := lhprimitives.BlockHeight(genesisBlock.TransactionsBlock.Header.BlockHeight() + 1)
 
-	waitTimeForMinimalBlockTransactions := config.ConsensusContextMinimalBlockTime()
-	consensusRoundTime := waitTimeForMinimalBlockTransactions * 10
-	provider := NewBlockProvider(logger, blockStorage, consensusContext, waitTimeForMinimalBlockTransactions, config.NodePublicKey(), config.NodePrivateKey())
+	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodePublicKey(), config.NodePrivateKey())
 
 	// TODO Configure to be 5 times the minimum wait for transactions (consensus context)
 
-	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(consensusRoundTime)
+	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
 
 	s := &service{
 		comm:         comm,
@@ -97,32 +96,42 @@ func NewLeanHelixConsensusAlgo(
 		Logger:               NewLoggerWrapper(parentLogger, true),
 	}
 
+	logger.Info("NewLeanHelixConsensusAlgo() calling NewLeanHelix()")
 	leanHelix := leanhelix.NewLeanHelix(leanHelixConfig)
 
 	s.leanHelix = leanHelix
 
-	gossip.RegisterLeanHelixHandler(s)
-
-	// FIXME This is causing TestExternalBlockSync to hang, so cannot uncomment till then
-	// See https://github.com/orbs-network/orbs-network-go/issues/557
-	//blockStorage.RegisterConsensusBlocksHandler(s)
-
 	s.leanHelix.RegisterOnCommitted(func(block leanhelix.Block) {
-		parentLogger.Info("YEYYYY CONSENSUS!!!!", log.Stringable("block-height", block.Height()))
+		parentLogger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
 		blockPairWrapper := block.(*BlockPairWrapper)
 		blockPair := blockPairWrapper.blockPair
 		s.saveToBlockStorage(ctx, blockPair)
 	})
 
+	logger.Info("NewLeanHelixConsensusAlgo() registering with Gossip")
+	gossip.RegisterLeanHelixHandler(s)
+	logger.Info("NewLeanHelixConsensusAlgo() registering with Block Storage")
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		parentLogger.Info("Lean Helix go routine starts", log.BlockHeight(primitives.BlockHeight(blockHeight)))
 
-		go s.leanHelix.Run(ctx) // TODO Get the block height from someplace
-
+		supervised.GoForever(ctx, logger, func() {
+			s.leanHelix.Run(ctx)
+		})
+		logger.Info("NewLeanHelixConsensusAlgo() Sending genesis block to AcknowledgeBlockConsensus()")
 		s.leanHelix.AcknowledgeBlockConsensus(ToBlockPairWrapper(genesisBlock))
+		logger.Info("NewLeanHelixConsensusAlgo() Sent genesis block to AcknowledgeBlockConsensus()")
 
+		// FIXME This is causing TestExternalBlockSync to hang, so cannot uncomment till then
+		// See https://github.com/orbs-network/orbs-network-go/issues/557
+		blockStorage.RegisterConsensusBlocksHandler(s)
+		logger.Info("NewLeanHelixConsensusAlgo() registered with Block Storage")
+		logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
+
+	} else {
+		parentLogger.Info("Lean Helix is not the active consensus algo, not starting its consensus loop")
 	}
 
+	logger.Info("NewLeanHelixConsensusAlgo() return")
 	return s
 }
 
@@ -155,8 +164,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		}
 	}
 
-	prevBlock := ToBlockPairWrapper(prevCommittedBlockPair)
-
+	prevBlock := ToBlockPairWrapper(blockPair)
 	s.leanHelix.AcknowledgeBlockConsensus(prevBlock)
 
 	return nil, nil
