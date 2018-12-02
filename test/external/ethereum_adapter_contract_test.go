@@ -4,12 +4,14 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -38,8 +40,7 @@ func getConfig() *localconfig {
 	return &cfg
 }
 
-//TODO refactor and make sense of: adapter directory, sdk_ethereum + its test
-func TestEthereumNodeAdapter_Contract(t *testing.T) {
+func TestEthereumNodeAdapter_SimpleStorageContractAndAssertReturnedValue(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address, adapter := createSimulatorAndDeploySimpleStorageContract(t)
 		t.Run("Simulator Adapter", callSimpleStorageContractAndAssertReturnedValue(ctx, address, adapter))
@@ -50,6 +51,38 @@ func TestEthereumNodeAdapter_Contract(t *testing.T) {
 		} else {
 			t.Skip("skipping, external tests disabled")
 		}
+	})
+}
+
+func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		logger := log.GetLogger()
+		simulator := adapter.NewEthereumSimulatorConnection(logger)
+
+		contractAddress, err := simulator.DeployEmitEvent(simulator.GetAuth())
+		simulator.Commit()
+		require.NoError(t, err, "failed deploying contract to Ethereum")
+
+		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
+		require.NoError(t, err, "failed parsing ABI")
+
+		tuid := big.NewInt(1)
+		ethAddress := common.HexToAddress("80755fE3D774006c9A9563A09310a0909c42C786")
+		orbsAddress := [20]byte{}
+		eventValue := big.NewInt(42)
+
+		packedInput, err := parsedABI.Pack("transferOut", tuid, ethAddress, orbsAddress, eventValue)
+		require.NoError(t, err, "failed packing arguments")
+
+		ethTxHash, err := simulator.SendTransaction(ctx, simulator.GetAuth(), contractAddress, packedInput)
+		simulator.Commit()
+		require.NoError(t, err, "failed emitting event")
+
+		//TODO eventSignature
+		logs, err := simulator.GetLogs(ctx, ethTxHash, contractAddress)
+		require.NoError(t, err, "failed getting logs")
+
+		require.Len(t, logs, 1, "did not get logs from transaction")
 	})
 }
 

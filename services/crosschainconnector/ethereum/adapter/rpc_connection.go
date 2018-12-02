@@ -1,7 +1,6 @@
 package adapter
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"sync"
@@ -15,7 +14,7 @@ type EthereumRpcConnection struct {
 
 	mu struct {
 		sync.Mutex
-		client bind.ContractBackend
+		client EthereumCaller
 	}
 }
 
@@ -39,7 +38,7 @@ func (rpc *EthereumRpcConnection) dial() error {
 	return nil
 }
 
-func (rpc *EthereumRpcConnection) dialIfNeededAndReturnClient() (bind.ContractBackend, error) {
+func (rpc *EthereumRpcConnection) dialIfNeededAndReturnClient() (EthereumCaller, error) {
 	if rpc.mu.client == nil {
 		if err := rpc.dial(); err != nil {
 			return nil, err

@@ -5,6 +5,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
 )
 
@@ -17,7 +19,12 @@ type EthereumConnection interface {
 }
 
 type connectorCommon struct {
-	getContractCaller func() (bind.ContractBackend, error)
+	getContractCaller func() (EthereumCaller, error)
+}
+
+type EthereumCaller interface {
+	bind.ContractBackend
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 }
 
 func (c *connectorCommon) CallContract(ctx context.Context, address []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error) {
@@ -45,4 +52,16 @@ func (c *connectorCommon) CallContract(ctx context.Context, address []byte, pack
 	return output, err
 }
 
+func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte) ([]*types.Log, error) {
+	client, err := c.getContractCaller()
+	if err != nil {
+		return nil, err
+	}
 
+	receipt, err := client.TransactionReceipt(ctx, common.BytesToHash(txHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return receipt.Logs, nil
+}

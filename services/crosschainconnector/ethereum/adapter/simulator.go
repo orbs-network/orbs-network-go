@@ -34,7 +34,7 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 		auth: bind.NewKeyedTransactor(key),
 	}
 
-	e.getContractCaller = func() (bind.ContractBackend, error) {
+	e.getContractCaller = func() (EthereumCaller, error) {
 		e.mu.Lock()
 		defer e.mu.Unlock()
 		if e.mu.simClient == nil {
@@ -65,3 +65,4 @@ func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
 func (es *EthereumSimulator) Commit() {
 	es.mu.simClient.Commit()
 }
+
