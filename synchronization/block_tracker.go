@@ -64,7 +64,7 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 		}
 		select {
 		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), fmt.Sprintf("aborted while waiting for block at height %v", requestedHeight))
+			return errors.Wrap(ctx.Err(), fmt.Sprintf("aborted while waiting for block at height %d", requestedHeight))
 		case <-currentLatch:
 			currentHeight, currentLatch = t.readAtomicHeightAndLatch()
 		}
