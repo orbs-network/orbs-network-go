@@ -10,26 +10,17 @@ import (
 	"testing"
 )
 
-var hextext = "0123456789abcdef"
+func hexStringToBytes(s string) []byte {
+	if (len(s) % 2) != 0 {
+		panic("key value needs to be a hex representation of a byte array")
+	}
+	bytesKey := make([]byte, len(s)/2)
+	hex.Decode(bytesKey, []byte(s))
+	return bytesKey
+}
 
-//func bytesToHexString(s []byte) string {
-//	hexText := ""
-//	for _, b := range s {
-//		hexText = hexText + string(hextext[b])
-//	}
-//	return hexText
-//}
-//
-//func hexStringToBytes(s string) []byte {
-//	if (len(s) % 2) != 0 {
-//		panic("key value needs to be a hex representation of a byte array")
-//	}
-//	bytesKey := make([]byte, len(s)/2)
-//	hex.Decode(bytesKey, []byte(s))
-//	return bytesKey
-//}
-
-func updateStringEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
+// when the test checks general keys or keys with diff len
+func generalKeyUpdateEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
 	if len(keyValues)%2 != 0 {
 		panic("expected key value pairs")
 	}
@@ -43,14 +34,77 @@ func updateStringEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues 
 	return currentRoot
 }
 
-func verifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path string, value string, exists bool) {
-	verified, err := f.Verify(root, proof, hexStringToBytes(path), hash.CalcSha256([]byte(value)))
+func generalKeyVerifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path string, value string, exists bool) {
+	verifyProof(t, f, root, proof, hexStringToBytes(path), value, exists)
+}
+
+func generalKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path string, expectedHeight int) Proof {
+	return getProofRequireHeight(t, f, root, hexStringToBytes(path), expectedHeight)
+}
+
+func generalKeyGetProof(t *testing.T, f *Forest, root primitives.MerkleSha256, path string) Proof {
+	proof, err := f.GetProof(root, hexStringToBytes(path))
+	require.NoError(t, err, "failed with error: %s", err)
+	return proof
+}
+
+func isChar0(ch uint8) byte {
+	if ch == uint8('0') {
+		return 0
+	}
+	return 1
+}
+
+func bitStringToBytes(s string) []byte {
+	if (len(s) % 8) != 0 {
+		panic("key value needs to be a bit representation of a byte array")
+	}
+	bytelen := len(s) / 8
+	bytesKey := make([]byte, bytelen)
+	for i := 0; i < bytelen; i++ {
+		bytesKey[i] = isChar0(s[i*8])<<7 |
+			isChar0(s[i*8+1])<<6 |
+			isChar0(s[i*8+2])<<5 |
+			isChar0(s[i*8+3])<<4 |
+			isChar0(s[i*8+4])<<3 |
+			isChar0(s[i*8+5])<<2 |
+			isChar0(s[i*8+6])<<1 |
+			isChar0(s[i*8+7])
+	}
+	return bytesKey
+}
+
+// for tests that need a specific key to create specific node relations
+func binaryKeyUpdateEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
+	if len(keyValues)%2 != 0 {
+		panic("expected key value pairs")
+	}
+	diffs := make(TrieDiffs, len(keyValues)/2)
+	for i := 0; i < len(keyValues); i = i + 2 {
+		diffs[i/2] = &TrieDiff{Key: bitStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
+	}
+
+	currentRoot, _ := f.Update(baseHash, diffs)
+
+	return currentRoot
+}
+
+func binaryKeyVerifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path string, value string, exists bool) {
+	verifyProof(t, f, root, proof, bitStringToBytes(path), value, exists)
+}
+
+func binaryKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path string, expectedHeight int) Proof {
+	return getProofRequireHeight(t, f, root, bitStringToBytes(path), expectedHeight)
+}
+
+func verifyProof(t *testing.T, f *Forest, root primitives.MerkleSha256, proof Proof, path []byte, value string, exists bool) {
+	verified, err := f.Verify(root, proof, path, hash.CalcSha256([]byte(value)))
 	require.NoError(t, err, "proof verification failed")
 	require.Equal(t, exists, verified, "proof verification returned unexpected result")
 }
 
-func getProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path string, expectedHeight int) Proof {
-	proof, err := f.GetProof(root, hexStringToBytes(path))
+func getProofRequireHeight(t *testing.T, f *Forest, root primitives.MerkleSha256, path []byte, expectedHeight int) Proof {
+	proof, err := f.GetProof(root, path)
 	require.NoError(t, err, "failed with error: %s", err)
 	require.Equal(t, expectedHeight, len(proof), "unexpected proof length")
 	return proof
@@ -60,20 +114,20 @@ func TestRootManagement(t *testing.T) {
 	f, _ := NewForest()
 
 	require.Len(t, f.roots, 1, "new forest should have 1 root")
-	emptyNode := createEmptyNode()
+	emptyNode := createEmptyTrieNode()
 	foundRoot := f.findRoot(emptyNode.hash)
 	require.Equal(t, emptyNode, foundRoot, "proof verification returned unexpected result")
 
-	node1 := createNode([]byte{0,1,0,1}, hash.CalcSha256([]byte("bye")))
-	node1.hash = node1.serialize().hash()
-	node2 := createNode([]byte{1,1,1,1}, hash.CalcSha256([]byte("d")))
-	node2.hash = node2.serialize().hash()
+	node1 := createNode([]byte{0, 1, 0, 1}, hash.CalcSha256([]byte("bye")))
+	node1.hash = hashTrieNode(node1)
+	node2 := createNode([]byte{1, 1, 1, 1}, hash.CalcSha256([]byte("d")))
+	node2.hash = hashTrieNode(node2)
 
 	f.appendRoot(node1)
 	f.appendRoot(node2)
 	require.Len(t, f.roots, 3, "mismatch length")
 
-	node1hash := createNode([]byte{0,1,0,1}, hash.CalcSha256([]byte("bye"))).serialize().hash()
+	node1hash := hashTrieNode(createNode([]byte{0, 1, 0, 1}, hash.CalcSha256([]byte("bye"))))
 	foundRoot = f.findRoot(node1hash)
 	require.Equal(t, node1, foundRoot, "should be same node")
 }
@@ -81,10 +135,10 @@ func TestRootManagement(t *testing.T) {
 func TestRootForgetWhenMultipleSameRootsAndKeepOrder(t *testing.T) {
 	f, _ := NewForest()
 
-	node1 := createNode([]byte{0,1,0,1}, hash.CalcSha256([]byte("bye")))
-	node1.hash = node1.serialize().hash()
-	node2 := createNode([]byte{0,1,1,1}, hash.CalcSha256([]byte("d")))
-	node2.hash = node2.serialize().hash()
+	node1 := createNode([]byte{0, 1, 0, 1}, hash.CalcSha256([]byte("bye")))
+	node1.hash = hashTrieNode(node1)
+	node2 := createNode([]byte{0, 1, 1, 1}, hash.CalcSha256([]byte("d")))
+	node2.hash = hashTrieNode(node2)
 
 	f.appendRoot(node1)
 	f.appendRoot(node2)
@@ -101,16 +155,16 @@ func TestRootForgetWhenMultipleSameRootsAndKeepOrder(t *testing.T) {
 
 func TestAddSingleEntryToEmptyTree(t *testing.T) {
 	f, root := NewForest()
-	root = updateStringEntries(f, root, "badd", "baz")
+	root = generalKeyUpdateEntries(f, root, "badd", "baz")
 
-	getProofRequireHeight(t, f, root, "badd", 1)
+	generalKeyGetProofRequireHeight(t, f, root, "badd", 1)
 }
 
 func TestRootChangeAfterStateChange(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "abcdef", "val")
-	root2 := updateStringEntries(f, root1, "abcdef", "val1")
+	root1 := generalKeyUpdateEntries(f, root, "abcdef", "val")
+	root2 := generalKeyUpdateEntries(f, root1, "abcdef", "val1")
 
 	require.NotEqual(t, root1, root2, "root hash did not change after state change")
 }
@@ -118,9 +172,9 @@ func TestRootChangeAfterStateChange(t *testing.T) {
 func TestRevertingStateChangeRevertsMerkleRoot(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "abcdef", "val")
-	root2 := updateStringEntries(f, root1, "abcdef", "val1")
-	root3 := updateStringEntries(f, root2, "abcdef", "val")
+	root1 := generalKeyUpdateEntries(f, root, "abcdef", "val")
+	root2 := generalKeyUpdateEntries(f, root1, "abcdef", "val1")
+	root3 := generalKeyUpdateEntries(f, root2, "abcdef", "val")
 
 	require.Equal(t, root1, root3, "root hash did not revert back after resetting state")
 }
@@ -128,143 +182,145 @@ func TestRevertingStateChangeRevertsMerkleRoot(t *testing.T) {
 func TestValidProofForMissingKey(t *testing.T) {
 	f, root := NewForest()
 	key := "deaddead"
-	proof := getProofRequireHeight(t, f, root, key, 1)
-	verifyProof(t, f, root, proof, key, "", true)
-	verifyProof(t, f, root, proof, key, "non-zero", false)
+	proof := generalKeyGetProofRequireHeight(t, f, root, key, 1)
+	generalKeyVerifyProof(t, f, root, proof, key, "", true)
+	generalKeyVerifyProof(t, f, root, proof, key, "non-zero", false)
 }
 
 func TestUpdateTrieFailsForMissingBaseNode(t *testing.T) {
 	f, _ := NewForest()
 	badroot := primitives.MerkleSha256(hash.CalcSha256([]byte("deaddead")))
 
-	root := updateStringEntries(f, badroot, "abcdef", "val")
+	root := generalKeyUpdateEntries(f, badroot, "abcdef", "val")
 
 	require.Nil(t, root, "did not receive an empty response when using a corrupt merkle root")
 }
 
 func TestProofValidationForTwoRevisionsOfSameKey(t *testing.T) {
 	f, root := NewForest()
-	root1 := updateStringEntries(f, root, "abc1", "baz1")
-	root2 := updateStringEntries(f, root1, "abc1", "baz2")
+	root1 := generalKeyUpdateEntries(f, root, "abc1", "baz1")
+	root2 := generalKeyUpdateEntries(f, root1, "abc1", "baz2")
 
-	proof := getProofRequireHeight(t, f, root1, "abc1", 1)
-	verifyProof(t, f, root1, proof, "abc1", "baz1", true)
+	proof := generalKeyGetProofRequireHeight(t, f, root1, "abc1", 1)
+	generalKeyVerifyProof(t, f, root1, proof, "abc1", "baz1", true)
 
-	proof = getProofRequireHeight(t, f, root2, "abc1", 1)
-	verifyProof(t, f, root2, proof, "abc1", "baz2", true)
+	proof = generalKeyGetProofRequireHeight(t, f, root2, "abc1", 1)
+	generalKeyVerifyProof(t, f, root2, proof, "abc1", "baz2", true)
 }
 
 func TestExtendingLeafNode(t *testing.T) {
 	// one at a time
 	f1, root1 := NewForest()
-	root11 := updateStringEntries(f1, root1, "ab", "zoo")
-	root12 := updateStringEntries(f1, root11, "abc1", "baz")
-	root13 := updateStringEntries(f1, root12, "abc123", "Hello")
+	root11 := generalKeyUpdateEntries(f1, root1, "ab", "zoo")
+	root12 := generalKeyUpdateEntries(f1, root11, "abc1", "baz")
+	root13 := generalKeyUpdateEntries(f1, root12, "abc123", "Hello")
 
 	// all together
 	f2, root2 := NewForest()
-	root23 := updateStringEntries(f2, root2, "ab", "zoo", "abc1", "baz", "abc123", "Hello")
+	root23 := generalKeyUpdateEntries(f2, root2, "ab", "zoo", "abc1", "baz", "abc123", "Hello")
 
 	// all together diff orer
 	f3, root3 := NewForest()
-	root33 := updateStringEntries(f3, root3, "abc123", "Hello", "abc1", "baz", "ab", "zoo")
+	root33 := generalKeyUpdateEntries(f3, root3, "abc123", "Hello", "abc1", "baz", "ab", "zoo")
 
 	require.Equal(t, root13, root23, "should be same root")
 	require.Equal(t, root13, root33, "should be same root")
 
-	proof1 := getProofRequireHeight(t, f1, root13, "abc123", 3)
-	proof3 := getProofRequireHeight(t, f3, root33, "abc123", 3)
+	proof1 := generalKeyGetProofRequireHeight(t, f1, root13, "abc123", 3)
+	proof3 := generalKeyGetProofRequireHeight(t, f3, root33, "abc123", 3)
 	require.EqualValues(t, proof1, proof3, "proofs should be same")
 }
 
 func TestExtendingKeyPathBySeveralChars(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "ab", "baz", "ab12", "qux", "ab126789", "quux")
+	root1 := generalKeyUpdateEntries(f, root, "ab", "baz", "ab12", "qux", "ab126789", "quux")
 
-	proof := getProofRequireHeight(t, f, root1, "ab126789", 3)
-	verifyProof(t, f, root1, proof, "ab126789", "quux", true)
+	proof := generalKeyGetProofRequireHeight(t, f, root1, "ab126789", 3)
+	generalKeyVerifyProof(t, f, root1, proof, "ab126789", "quux", true)
 }
 
 func TestProofValidationAfterUpdateWithBothReplaceAndNewValue(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "abc1", "baz", "ffeedd", "quux1")
+	root1 := generalKeyUpdateEntries(f, root, "abc1", "baz", "1234", "quux1")
 
-	proof := getProofRequireHeight(t, f, root1, "abc1", 2)
-	verifyProof(t, f, root1, proof, "abc1", "baz", true)
-	proof = getProofRequireHeight(t, f, root1, "abc2", 2)
-	verifyProof(t, f, root1, proof, "abc2", "qux", false)
+	proof := generalKeyGetProofRequireHeight(t, f, root1, "abc1", 2)
+	generalKeyVerifyProof(t, f, root1, proof, "abc1", "baz", true)
+	proof = generalKeyGetProofRequireHeight(t, f, root1, "abc2", 2)
+	generalKeyVerifyProof(t, f, root1, proof, "abc2", "qux", false)
 
-	root2 := updateStringEntries(f, root1, "abc2", "qux", "ffeedd", "quux2")
+	root2 := generalKeyUpdateEntries(f, root1, "abc2", "qux", "1234", "quux2")
 	require.NotEqual(t, root2, root1, "roots should be different")
 
 	// retest that first insert proof still valid
-	proof = getProofRequireHeight(t, f, root1, "abc1", 2)
-	verifyProof(t, f, root1, proof, "abc1", "baz", true)
-	proof = getProofRequireHeight(t, f, root1, "abc2", 2)
-	verifyProof(t, f, root1, proof, "abc2", "qux", false)
-	proof = getProofRequireHeight(t, f, root1, "ffeedd", 2)
-	verifyProof(t, f, root1, proof, "ffeedd", "quux1", true)
-	verifyProof(t, f, root1, proof, "ffeedd", "quux2", false)
+	proof = generalKeyGetProofRequireHeight(t, f, root1, "abc1", 2)
+	generalKeyVerifyProof(t, f, root1, proof, "abc1", "baz", true)
+	proof = generalKeyGetProofRequireHeight(t, f, root1, "abc2", 2)
+	generalKeyVerifyProof(t, f, root1, proof, "abc2", "qux", false)
+	proof = generalKeyGetProofRequireHeight(t, f, root1, "1234", 2)
+	generalKeyVerifyProof(t, f, root1, proof, "1234", "quux1", true)
+	generalKeyVerifyProof(t, f, root1, proof, "1234", "quux2", false)
 
 	// after second insert proofs
-	proof = getProofRequireHeight(t, f, root2, "abc2", 3)
-	verifyProof(t, f, root2, proof, "abc2", "qux", true)
-	proof = getProofRequireHeight(t, f, root2, "abc1", 3)
-	verifyProof(t, f, root2, proof, "abc1", "baz", true)
-	proof = getProofRequireHeight(t, f, root2, "ffeedd", 2)
-	verifyProof(t, f, root2, proof, "ffeedd", "quux2", true)
-	verifyProof(t, f, root2, proof, "ffeedd", "quux1", false)
+	proof = generalKeyGetProofRequireHeight(t, f, root2, "abc2", 3)
+	generalKeyVerifyProof(t, f, root2, proof, "abc2", "qux", true)
+	proof = generalKeyGetProofRequireHeight(t, f, root2, "abc1", 3)
+	generalKeyVerifyProof(t, f, root2, proof, "abc1", "baz", true)
+	proof = generalKeyGetProofRequireHeight(t, f, root2, "1234", 2)
+	generalKeyVerifyProof(t, f, root2, proof, "1234", "quux2", true)
+	generalKeyVerifyProof(t, f, root2, proof, "1234", "quux1", false)
 }
 
 func TestAddSiblingNode(t *testing.T) {
 	f, root := NewForest()
-	root1 := updateStringEntries(f, root, "ab", "baz", "abc1", "qux", "abd1", "quux")
+	root1 := binaryKeyUpdateEntries(f, root, "00000000", "baz")
+	root2 := binaryKeyUpdateEntries(f, root1, "0000000000000000", "qux", "0000000010000000", "quux")
 
-	proof := getProofRequireHeight(t, f, root1, "abd1", 2)
-	verifyProof(t, f, root1, proof, "abd1", "quux", true)
+	proof := binaryKeyGetProofRequireHeight(t, f, root2, "0000000010000000", 2)
+	binaryKeyVerifyProof(t, f, root2, proof, "0000000010000000", "quux", true)
 }
 
 func TestAddPathToCauseBranchingAlongExistingPath(t *testing.T) {
 	f, root := NewForest()
-	root1 := updateStringEntries(f, root, "ab", "baz", "abc1", "qux", "abf0", "quux")
+	root1 := binaryKeyUpdateEntries(f, root, "00000000", "baz", "0000000000000000", "qux")
+	root2 := binaryKeyUpdateEntries(f, root1, "0000000010000000", "quux")
 
-	proof := getProofRequireHeight(t, f, root1, "abf0", 2)
-	verifyProof(t, f, root1, proof, "abf0", "quux", true)
+	proof := binaryKeyGetProofRequireHeight(t, f, root2, "0000000010000000", 2)
+	binaryKeyVerifyProof(t, f, root2, proof, "0000000010000000", "quux", true)
 }
 
 func TestReplaceExistingValueBelowDivergingPaths(t *testing.T) {
 	f, root := NewForest()
-	root1 := updateStringEntries(f, root, "ab", "baz", "abc1", "qux", "abc2", "bar", "abf0", "quux")
-	root2 := updateStringEntries(f, root1, "abc1", "zoo")
+	root1 := binaryKeyUpdateEntries(f, root, "00000000", "baz", "0000000000000000", "qux", "0000000010000000", "bar", "0000000011000000", "quux")
+	root2 := binaryKeyUpdateEntries(f, root1, "0000000000000000", "zoo")
 
-	proof := getProofRequireHeight(t, f, root2, "abc1", 3)
-	verifyProof(t, f, root2, proof, "abc1", "zoo", true)
-	verifyProof(t, f, root2, proof, "abc1", "qux", false)
+	proof := binaryKeyGetProofRequireHeight(t, f, root2, "0000000000000000", 2)
+	binaryKeyVerifyProof(t, f, root2, proof, "0000000000000000", "zoo", true)
+	binaryKeyVerifyProof(t, f, root2, proof, "0000000000000000", "qux", false)
 }
 
 func TestAddPathToCauseNewParent(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "abc123", "Hirsch", "abc1", "Hello")
+	root1 := generalKeyUpdateEntries(f, root, "abc123", "Hirsch", "abc1", "Hello")
 
-	proof := getProofRequireHeight(t, f, root1, "abc1", 1)
-	verifyProof(t, f, root1, proof, "abc1", "Hello", true)
+	proof := generalKeyGetProofRequireHeight(t, f, root1, "abc1", 1)
+	generalKeyVerifyProof(t, f, root1, proof, "abc1", "Hello", true)
 
-	proof = getProofRequireHeight(t, f, root1, "abc123", 2)
-	verifyProof(t, f, root1, proof, "abc123", "Hirsch", true)
+	proof = generalKeyGetProofRequireHeight(t, f, root1, "abc123", 2)
+	generalKeyVerifyProof(t, f, root1, proof, "abc123", "Hirsch", true)
 }
 
 func TestRemoveValue_SingleExistingNode(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "ab", "aValue")
-	root2 := updateStringEntries(f, root1, "ab", "")
+	root1 := generalKeyUpdateEntries(f, root, "ab", "aValue")
+	root2 := generalKeyUpdateEntries(f, root1, "ab", "")
 
-	getProofRequireHeight(t, f, root, "ab", 1)
-	getProofRequireHeight(t, f, root1, "ab", 1)
-	getProofRequireHeight(t, f, root2, "ab", 1)
+	generalKeyGetProofRequireHeight(t, f, root, "ab", 1)
+	generalKeyGetProofRequireHeight(t, f, root1, "ab", 1)
+	generalKeyGetProofRequireHeight(t, f, root2, "ab", 1)
 	require.EqualValues(t, root, root2, "for identical states hash must be identical")
 	require.NotEqual(t, root1, root2, "for different states hash must be different")
 }
@@ -272,102 +328,115 @@ func TestRemoveValue_SingleExistingNode(t *testing.T) {
 func TestRemoveValue_RemoveSingleChildLeaf(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "abcd", "1")
-	root2 := updateStringEntries(f, root1, "abcdef", "2")
-	root3 := updateStringEntries(f, root2, "abcdef", "")
+	root1 := generalKeyUpdateEntries(f, root, "abcd", "1")
+	root2 := generalKeyUpdateEntries(f, root1, "abcdef", "2")
+	root3 := generalKeyUpdateEntries(f, root2, "abcdef", "")
 
-	getProofRequireHeight(t, f, root1, "abcdef", 1)
-	getProofRequireHeight(t, f, root2, "abcdef", 2)
-	getProofRequireHeight(t, f, root3, "abcdef", 1)
+	generalKeyGetProofRequireHeight(t, f, root1, "abcdef", 1)
+	generalKeyGetProofRequireHeight(t, f, root2, "abcdef", 2)
+	generalKeyGetProofRequireHeight(t, f, root3, "abcdef", 1)
 	require.EqualValues(t, root1, root3, "root hash should be identical")
+}
+
+func bytesToBinaryString(s []byte) string {
+	text := ""
+	for _, b := range s {
+		if b == 0 {
+			text = text + "0"
+		} else {
+			text = text + "1"
+		}
+	}
+	return text
 }
 
 func TestRemoveValue_ParentWithSingleChild(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "abcd", "1", "abcdef", "1")
-	root2 := updateStringEntries(f, root1, "abcd", "")
+	root1 := generalKeyUpdateEntries(f, root, "ab", "1", "abcd", "1")
+	root2 := generalKeyUpdateEntries(f, root1, "ab", "")
 
-	p := getProofRequireHeight(t, f, root2, "abcdef", 1)
-	require.EqualValues(t, "abcdef", bytesToHexString(p[0].path), "full tree proof for and does not end with expected node path")
+	p := generalKeyGetProofRequireHeight(t, f, root2, "abcd", 1)
+	require.EqualValues(t, "1010101111001101" /*"abcd"*/, bytesToBinaryString(p[0].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_NonBranchingNonLeaf1(t *testing.T) {
 	f, root := NewForest()
 
-	fullTree := updateStringEntries(f, root, "ab", "1", "abcd", "2", "abcdef", "3")
-	afterRemove := updateStringEntries(f, fullTree, "abcd", "")
+	fullTree := generalKeyUpdateEntries(f, root, "ab", "1", "abcd", "2", "abcdef", "3")
+	afterRemove := generalKeyUpdateEntries(f, fullTree, "abcd", "")
 
-	p1 := getProofRequireHeight(t, f, fullTree, "abcd", 2)
-	p2 := getProofRequireHeight(t, f, afterRemove, "abcd", 2)
+	p1 := generalKeyGetProofRequireHeight(t, f, fullTree, "abcd", 2)
+	p2 := generalKeyGetProofRequireHeight(t, f, afterRemove, "abcd", 2)
 
-	getProofRequireHeight(t, f, fullTree, "abcdef", 3)
-	getProofRequireHeight(t, f, afterRemove, "abcdef", 2)
+	generalKeyGetProofRequireHeight(t, f, fullTree, "abcdef", 3)
+	generalKeyGetProofRequireHeight(t, f, afterRemove, "abcdef", 2)
 
-	require.EqualValues(t, "d", bytesToHexString(p1[1].path), "full tree proof for and does not end with expected node path")
-	require.EqualValues(t, "def", bytesToHexString(p2[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "1001101" /* "cd" without first bit*/, bytesToBinaryString(p1[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "100110111101111" /*"cdef" without first bit*/, bytesToBinaryString(p2[1].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_BranchingNonLeaf_NodeStructureUnchanged(t *testing.T) {
 	f, root := NewForest()
 
-	fullTree := updateStringEntries(f, root, "ab", "1", "ab1234", "1", "abcdef", "1")
-	afterRemove := updateStringEntries(f, fullTree, "ab", "")
+	fullTree := generalKeyUpdateEntries(f, root, "ab", "1", "ab12", "1", "abcd", "1")
+	afterRemove := generalKeyUpdateEntries(f, fullTree, "ab", "")
 
-	p1 := getProofRequireHeight(t, f, afterRemove, "ab1234", 2)
-	p2 := getProofRequireHeight(t, f, afterRemove, "abcdef", 2)
+	p1 := generalKeyGetProofRequireHeight(t, f, afterRemove, "ab12", 2)
+	p2 := generalKeyGetProofRequireHeight(t, f, afterRemove, "abcd", 2)
 
-	getProofRequireHeight(t, f, fullTree, "abcdef", 2)
-	getProofRequireHeight(t, f, afterRemove, "abcdef", 2)
+	generalKeyGetProofRequireHeight(t, f, fullTree, "abcd", 2)
+	generalKeyGetProofRequireHeight(t, f, afterRemove, "abcd", 2)
 
-	require.EqualValues(t, "234", bytesToHexString(p1[1].path), "full tree proof for and does not end with expected node path")
-	require.EqualValues(t, "def", bytesToHexString(p2[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "0010010" /* missing first bit of "12"*/, bytesToBinaryString(p1[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "1001101" /* missing first bit of "cd" */, bytesToBinaryString(p2[1].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_BranchingNonLeaf_CollapseRoot(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "ab", "7", "abcd", "8", "abce", "9")
-	root2 := updateStringEntries(f, root1, "ab", "")
+	root1 := generalKeyUpdateEntries(f, root, "ab", "7", "abcd", "8", "abce", "9")
+	root2 := generalKeyUpdateEntries(f, root1, "ab", "")
 
-	p0 := getProofRequireHeight(t, f, root1, "abcd", 3)
-	require.EqualValues(t, "ab", bytesToHexString(p0[0].path), "unexpected proof structure")
+	p0 := generalKeyGetProofRequireHeight(t, f, root1, "abcd", 3)
+	require.EqualValues(t, "10101011" /*"ab"*/, bytesToBinaryString(p0[0].path), "unexpected proof structure")
 
-	p := getProofRequireHeight(t, f, root2, "abcd", 2)
+	p := generalKeyGetProofRequireHeight(t, f, root2, "abcd", 2)
 	require.EqualValues(t, zeroValueHash, p[0].value, "unexpected proof structure")
-	require.EqualValues(t, "abc", bytesToHexString(p[0].path), "unexpected proof structure")
+
+	require.EqualValues(t, "10101011110011" /*"abc"+first two bits of d/e*/, bytesToBinaryString(p[0].path), "unexpected proof structure")
 }
 
 func TestRemoveValue_OneOfTwoChildren(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "ab", "1", "abcdef", "1", "ab1234", "1")
-	root2 := updateStringEntries(f, root1, "ab1234", "")
+	root1 := generalKeyUpdateEntries(f, root, "ab", "1", "abcdef", "1", "ab1234", "1")
+	root2 := generalKeyUpdateEntries(f, root1, "ab1234", "")
 
-	p := getProofRequireHeight(t, f, root2, "abcdef", 2)
-	getProofRequireHeight(t, f, root2, "ab1234", 1)
-	require.EqualValues(t, "ab", bytesToHexString(p[0].path), "full tree proof for and does not end with expected node path")
+	p := generalKeyGetProofRequireHeight(t, f, root2, "abcdef", 2)
+	generalKeyGetProofRequireHeight(t, f, root2, "ab1234", 1)
+	require.EqualValues(t, "10101011" /*"ab"*/, bytesToBinaryString(p[0].path), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_OneOfTwoChildrenCollapsingParent(t *testing.T) {
 	f, root := NewForest()
 
-	root1 := updateStringEntries(f, root, "abcd", "8", "abc4", "9")
-	root2 := updateStringEntries(f, root1, "abc4", "")
+	root1 := generalKeyUpdateEntries(f, root, "abcd", "8", "abc4", "9")
+	root2 := generalKeyUpdateEntries(f, root1, "abc4", "")
 
-	p := getProofRequireHeight(t, f, root2, "abcd", 1)
-	getProofRequireHeight(t, f, root2, "abc4", 1)
-	require.EqualValues(t, "abcd", bytesToHexString(p[0].path), "unexpected proof structure")
+	p := generalKeyGetProofRequireHeight(t, f, root2, "abcd", 1)
+	generalKeyGetProofRequireHeight(t, f, root2, "abc4", 1)
+	require.EqualValues(t, "1010101111001101" /*"abcd"*/, bytesToBinaryString(p[0].path), "unexpected proof structure")
 }
 
 func TestRemoveValue_MissingKey(t *testing.T) {
 	f, root := NewForest()
 
-	baseHash := updateStringEntries(f, root, "abc1ab", "1", "abc1ba", "1", "abc1abccdd", "1", "abc1abccee", "1")
-	hash1 := updateStringEntries(f, baseHash, "abc2aa123456", "")
-	hash2 := updateStringEntries(f, hash1, "abc1", "")
-	hash3 := updateStringEntries(f, hash2, "ab", "")
-	hash4 := updateStringEntries(f, hash3, "abc1abcc", "")
+	baseHash := generalKeyUpdateEntries(f, root, "abc1ab", "1", "abc1ba", "1", "abc1abccdd", "1", "abc1abccee", "1")
+	hash1 := generalKeyUpdateEntries(f, baseHash, "abc2aa123456", "")
+	hash2 := generalKeyUpdateEntries(f, hash1, "abc1", "")
+	hash3 := generalKeyUpdateEntries(f, hash2, "ab", "")
+	hash4 := generalKeyUpdateEntries(f, hash3, "abc1abcc", "")
 
 	require.EqualValues(t, baseHash, hash1, "tree changed after removing missing key")
 	require.EqualValues(t, baseHash, hash2, "tree changed after removing missing key")
@@ -382,23 +451,24 @@ func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 	var3 := []int{8, 6, 4, 2, 0}
 
 	f1, initRoot1 := NewForest()
-	root1 := updateStringEntries(f1, initRoot1, keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
+	root1 := generalKeyUpdateEntries(f1, initRoot1, keyValue[var1[0]], keyValue[var1[0]+1], keyValue[var1[1]], keyValue[var1[1]+1],
 		keyValue[var1[2]], keyValue[var1[2]+1], keyValue[var1[3]], keyValue[var1[3]+1], keyValue[var1[4]], keyValue[var1[4]+1])
-	proof1, _ := f1.GetProof(root1, hexStringToBytes("abc12345"))
+	proof1 := generalKeyGetProof(t, f1, root1, "abc12345")
+	//proof1, _ := f1.GetProof(root1, hexStringToBytes("abc12345"))
 
 	f2, initRoot2 := NewForest()
-	root2 := updateStringEntries(f2, initRoot2, keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
+	root2 := generalKeyUpdateEntries(f2, initRoot2, keyValue[var2[0]], keyValue[var2[0]+1], keyValue[var2[1]], keyValue[var2[1]+1],
 		keyValue[var2[2]], keyValue[var2[2]+1], keyValue[var2[3]], keyValue[var2[3]+1], keyValue[var2[4]], keyValue[var2[4]+1])
-	proof2, _ := f2.GetProof(root2, hexStringToBytes("abc12345"))
+	proof2 := generalKeyGetProof(t, f2, root2, "abc12345")
 
 	require.Equal(t, root1, root2, "unexpected different root hash")
 	require.Equal(t, len(proof1), len(proof2), "unexpected different tree depth / proof lengths")
 	require.Equal(t, proof1[3].hash(), proof2[3].hash(), "unexpected different leaf node hash")
 
 	f3, initRoot3 := NewForest()
-	root3 := updateStringEntries(f3, initRoot3, keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
+	root3 := generalKeyUpdateEntries(f3, initRoot3, keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
 		keyValue[var3[2]], keyValue[var3[2]+1], keyValue[var3[3]], keyValue[var3[3]+1], keyValue[var3[4]], keyValue[var3[4]+1])
-	proof3, _ := f3.GetProof(root3, hexStringToBytes("abc12345"))
+	proof3 := generalKeyGetProof(t, f3, root3, "abc12345")
 
 	require.Equal(t, root2, root3, "unexpected different root hash")
 	require.Equal(t, len(proof2), len(proof3), "unexpected different tree depth / proof lengths")
@@ -407,18 +477,18 @@ func TestOrderOfAdditionsDoesNotMatter(t *testing.T) {
 
 func TestAddConvegingPathsWithExactValues(t *testing.T) {
 	f, root := NewForest()
-	root1 := updateStringEntries(f, root, "abdbda", "1", "abdcda", "1", "acdbda", "1", "acdcda", "1")
-	root2 := updateStringEntries(f, root1, "abdcda", "2")
+	root1 := generalKeyUpdateEntries(f, root, "abdbda", "1", "abdcda", "1", "acdbda", "1", "acdcda", "1")
+	root2 := generalKeyUpdateEntries(f, root1, "abdcda", "2")
 
-	proof1, _ := f.GetProof(root2, hexStringToBytes("abdbda"))
-	proof2, _ := f.GetProof(root2, hexStringToBytes("abdcda"))
-	proof3, _ := f.GetProof(root2, hexStringToBytes("acdbda"))
-	proof4, _ := f.GetProof(root2, hexStringToBytes("acdcda"))
+	proof1 := generalKeyGetProof(t, f, root2, "abdbda")
+	proof2 := generalKeyGetProof(t, f, root2, "abdcda")
+	proof3 := generalKeyGetProof(t, f, root2, "acdbda")
+	proof4 := generalKeyGetProof(t, f, root2, "acdcda")
 
-	verifyProof(t, f, root2, proof1, "abdbda", "1", true)
-	verifyProof(t, f, root2, proof2, "abdcda", "2", true)
-	verifyProof(t, f, root2, proof3, "acdbda", "1", true)
-	verifyProof(t, f, root2, proof4, "acdcda", "1", true)
+	generalKeyVerifyProof(t, f, root2, proof1, "abdbda", "1", true)
+	generalKeyVerifyProof(t, f, root2, proof2, "abdcda", "2", true)
+	generalKeyVerifyProof(t, f, root2, proof3, "acdbda", "1", true)
+	generalKeyVerifyProof(t, f, root2, proof4, "acdcda", "1", true)
 }
 
 // =================

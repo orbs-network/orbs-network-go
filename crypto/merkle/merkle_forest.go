@@ -11,20 +11,30 @@ import (
 
 //const trieRadix = 16
 
-func GetZeroValueHash() primitives.Sha256 {
-	return hash.CalcSha256([]byte{})
-}
-
-var zeroValueHash = GetZeroValueHash()
-
 type Proof []*ProofNode
 
 // TODO replace proofNode with membuf/proto
 type ProofNode struct {
-	path     []byte // TODO parity bool?
-	value    primitives.Sha256
-	left primitives.MerkleSha256
+	path  []byte // TODO parity bool?
+	value primitives.Sha256
+	left  primitives.MerkleSha256
 	right primitives.MerkleSha256
+}
+
+func newProofNode(n* node) *ProofNode {
+	pn := &ProofNode{
+		path:  n.path,
+		value: n.value,
+		left:  primitives.MerkleSha256{},
+		right: primitives.MerkleSha256{},
+	}
+	if n.left != nil {
+		pn.left = n.left.hash
+	}
+	if n.right != nil {
+		pn.right = n.right.hash
+	}
+	return pn
 }
 
 func (pn *ProofNode) hash() primitives.MerkleSha256 {
@@ -32,76 +42,10 @@ func (pn *ProofNode) hash() primitives.MerkleSha256 {
 	return primitives.MerkleSha256(hash.CalcSha256([]byte(serializedNode)))
 }
 
-type node struct {
-	path     []byte // TODO  parity bool
-	value    primitives.Sha256
-	hash     primitives.MerkleSha256
-	left *node
-	right *node
-	//branches [trieRadix]*node
-	//isLeaf   bool
-}
-
-func createNode(path []byte, valueHash primitives.Sha256) *node {
-	return &node{
-		path:     path,
-		value:    valueHash,
-		hash:     primitives.MerkleSha256{},
-	}
-}
-
-func createEmptyNode() *node {
+func createEmptyTrieNode() *node {
 	tmp := createNode([]byte{}, zeroValueHash)
-	tmp.hash = tmp.serialize().hash()
+	tmp.hash = hashTrieNode(tmp)
 	return tmp
-}
-
-func (n *node) hasValue() bool {
-	return !zeroValueHash.Equal(n.value)
-}
-
-func (n *node) isLeaf() bool {
-	return n.left == nil && n.right == nil
-}
-
-func (n *node) getChild(bit byte) *node {
-	if bit == 0 {
-		return n.left
-	}
-	return n.right
-}
-
-func (n *node) setChild(bit byte, child *node) {
-	if bit == 0 {
-		n.left = child
-	}
-	n.right = child
-}
-
-func (n *node) serialize() *ProofNode {
-	sn := &ProofNode{
-		path:     n.path,
-		value:    n.value,
-		left: primitives.MerkleSha256{},
-		right : primitives.MerkleSha256{},
-	}
-	if n.left != nil {
-		sn.left = n.left.hash
-	}
-	if n.right != nil {
-		sn.right = n.right.hash
-	}
-	return sn
-}
-
-func (n *node) clone() *node {
-	result := &node{
-		path:     n.path,
-		value:    n.value,
-left : n.left,
-		right: n.right,
-	}
-	return result
 }
 
 type Forest struct {
@@ -110,7 +54,7 @@ type Forest struct {
 }
 
 func NewForest() (*Forest, primitives.MerkleSha256) {
-	var emptyNode = createEmptyNode()
+	var emptyNode = createEmptyTrieNode()
 	return &Forest{sync.Mutex{}, []*node{emptyNode}}, emptyNode.hash
 }
 
@@ -135,21 +79,21 @@ func (f *Forest) appendRoot(root *node) {
 }
 
 func (f *Forest) GetProof(rootHash primitives.MerkleSha256, path []byte) (Proof, error) {
-	path = toBin(path)
 	current := f.findRoot(rootHash)
 	if current == nil {
 		return nil, errors.Errorf("unknown root")
 	}
 
 	proof := make(Proof, 0, 10)
-	proof = append(proof, current.serialize())
+	proof = append(proof, newProofNode(current))
 
+	path = toBin(path)
 	for p := path; bytes.HasPrefix(p, current.path); {
 		p = p[len(current.path):]
 
 		if len(p) != 0 {
 			if current = current.getChild(p[0]); current != nil {
-				proof = append(proof, current.serialize())
+				proof = append(proof, newProofNode(current))
 				p = p[1:]
 			} else {
 				break
@@ -217,17 +161,48 @@ func (f *Forest) Forget(rootHash primitives.MerkleSha256) {
 	f.roots = newRoots
 }
 
+type TrieDiff struct {
+	Key   []byte
+	Value primitives.Sha256
+}
+type TrieDiffs []*TrieDiff
+
+func (f *Forest) Update(rootMerkle primitives.MerkleSha256, diffs TrieDiffs) (primitives.MerkleSha256, error) {
+	root := f.findRoot(rootMerkle)
+	if root == nil {
+		return nil, errors.Errorf("must start with valid root")
+	}
+
+	sandbox := make(dirtyNodes)
+
+	for _, diff := range diffs {
+		root = insert(diff.Value, nil, 0, root, toBin(diff.Key), sandbox)
+	}
+
+	root = collapseAndHash(root, sandbox, hashTrieNode)
+	if root == nil { // special case we got back to empty merkle
+		root = createEmptyTrieNode()
+	}
+
+	f.appendRoot(root)
+	return root.hash, nil
+}
+
+func hashTrieNode(n *node) primitives.MerkleSha256 {
+	return newProofNode(n).hash()
+}
+
 func toBin(s []byte) []byte {
 	bitsArray := make([]byte, len(s)*8)
 	for i, b := range s {
-		bitsArray[i*8] = 1 | b >> 7
-		bitsArray[i*8+1] = 1 | b >> 6
-		bitsArray[i*8+2] = 1 | b >> 5
-		bitsArray[i*8+3] = 1 | b >> 4
-		bitsArray[i*8+4] = 1 | b >> 3
-		bitsArray[i*8+5] = 1 | b >> 2
-		bitsArray[i*8+6] = 1 | b >> 1
-		bitsArray[i*8+7] = 1 | b
+		bitsArray[i*8] = 1 & (b >> 7)
+		bitsArray[i*8+1] = 1 & (b >> 6)
+		bitsArray[i*8+2] = 1 & (b >> 5)
+		bitsArray[i*8+3] = 1 & (b >> 4)
+		bitsArray[i*8+4] = 1 & (b >> 3)
+		bitsArray[i*8+5] = 1 & (b >> 2)
+		bitsArray[i*8+6] = 1 & (b >> 1)
+		bitsArray[i*8+7] = 1 & b
 	}
 	return bitsArray
 }
