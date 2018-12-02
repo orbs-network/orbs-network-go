@@ -62,7 +62,7 @@ func NewConsensusContext(
 
 func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("starting to create transactions block")
+	logger.Info("starting to create transactions block", log.BlockHeight(input.BlockHeight))
 	txBlock, err := s.createTransactionsBlock(ctx, input.BlockHeight, input.PrevBlockHash)
 	if err != nil {
 		logger.Info("failed to create transactions block", log.Error(err))
