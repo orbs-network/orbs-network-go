@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type BlockPairWrapper struct {
@@ -42,48 +41,43 @@ func ToBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrappe
 
 // TODO Remove lastCommitedBlock - state must be in lib only
 type blockProvider struct {
-	logger                              log.BasicLogger
-	blockStorage                        services.BlockStorage
-	consensusContext                    services.ConsensusContext
-	waitTimeForMinimalBlockTransactions time.Duration
-	nodePublicKey                       primitives.Ed25519PublicKey
-	nodePrivateKey                      primitives.Ed25519PrivateKey
+	logger           log.BasicLogger
+	blockStorage     services.BlockStorage
+	consensusContext services.ConsensusContext
+	nodePublicKey    primitives.Ed25519PublicKey
+	nodePrivateKey   primitives.Ed25519PrivateKey
 }
 
 func NewBlockProvider(
 	logger log.BasicLogger,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	consensusRoundTimeoutInterval time.Duration,
 	nodePublicKey primitives.Ed25519PublicKey,
 	nodePrivateKey primitives.Ed25519PrivateKey) *blockProvider {
 
 	return &blockProvider{
-		logger:                              logger,
-		blockStorage:                        blockStorage,
-		consensusContext:                    consensusContext,
-		waitTimeForMinimalBlockTransactions: consensusRoundTimeoutInterval,
-		nodePublicKey:                       nodePublicKey,
-		nodePrivateKey:                      nodePrivateKey,
+		logger:           logger,
+		blockStorage:     blockStorage,
+		consensusContext: consensusContext,
+		nodePublicKey:    nodePublicKey,
+		nodePrivateKey:   nodePrivateKey,
 	}
 
 }
 
 func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix.Block) leanhelix.Block {
-	// TODO Is this the right timeout here - probably should be a little smaller
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, p.waitTimeForMinimalBlockTransactions)
-	defer cancel()
-
 	// TODO: Get prev block - under mutex??
+
+	// TODO: Should limit the ctx of RequestNewTransactionsBlock
 
 	blockWrapper := prevBlock.(*BlockPairWrapper)
 
 	newBlockHeight := primitives.BlockHeight(prevBlock.Height() + 1)
 
-	p.logger.Info("RequestNewBlock()", log.Stringable("new-block-height", newBlockHeight), log.Stringable("wait-time-for-tx", p.waitTimeForMinimalBlockTransactions))
+	p.logger.Info("RequestNewBlock()", log.Stringable("new-block-height", newBlockHeight))
 
 	// get tx
-	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctxWithTimeout, &services.RequestNewTransactionsBlockInput{
+	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:   newBlockHeight,
 		PrevBlockHash: digest.CalcTransactionsBlockHash(blockWrapper.blockPair.TransactionsBlock),
 	})
@@ -92,7 +86,7 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 	}
 
 	// get rx
-	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctxWithTimeout, &services.RequestNewResultsBlockInput{
+	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
 		BlockHeight:       newBlockHeight,
 		PrevBlockHash:     digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
 		TransactionsBlock: txOutput.TransactionsBlock,
@@ -106,7 +100,7 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 	pair, _ := signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock, p.nodePrivateKey)
 	blockPairWrapper := ToBlockPairWrapper(pair)
 
-	p.logger.Info("RequestNewBlock() returning", log.Int("tx-count", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("rx-count", len(rxOutput.ResultsBlock.TransactionReceipts)))
+	p.logger.Info("RequestNewBlock() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
 
 	return blockPairWrapper
 
@@ -114,6 +108,9 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 
 func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
 	blockPairWrapper := block.(*BlockPairWrapper)
+	if blockPairWrapper == nil || blockPairWrapper.blockPair == nil {
+		return nil
+	}
 	return deepHash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
 }
 
@@ -127,6 +124,22 @@ func deepHash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.Re
 func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
 	//TODO Implement me!
 
+	if block == nil {
+		return false
+	}
+	blockWrapper := block.(*BlockPairWrapper)
+	if blockWrapper == nil {
+		return false
+	}
+	if blockWrapper.blockPair == nil {
+		return false
+	}
+	if blockWrapper.blockPair.TransactionsBlock == nil || blockWrapper.blockPair.ResultsBlock == nil {
+		return false
+	}
+	if blockWrapper.blockPair.TransactionsBlock.Header == nil {
+		return false
+	}
 	return true
 }
 
@@ -164,31 +177,8 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 		return errors.Errorf("incorrect block proof type: %v", blockPair.ResultsBlock.BlockProof.Type())
 	}
 
-	panic("should not have reached here - not supposed to have generated any Lean Helix blocks!!")
-
-	// TODO Verify with Gad - do this here?
-	// prev block hash ptr (if given)
-	if prevCommittedBlockPair != nil {
-		prevTxHash := digest.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
-		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
-			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
-		}
-		prevRxHash := digest.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
-		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
-			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
-		}
-	}
-
-	// TODO block proof
-	//blockProof := blockPair.ResultsBlock.BlockProof.LeanHelix()
-	//if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
-	//	return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
-	//}
-	//signedData := s.dataToSignFrom(blockPair)
-	//if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
-	//	return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
-	//}
-
+	// TODO IMPL THIS - return "valid" until validation logic is implemented
+	//  (maybe take from benchmark)
 	return nil
 }
 
