@@ -145,4 +145,3 @@ func (s *service) validateWithConsensusAlgosWithMode(
 
 	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers))
 }
-

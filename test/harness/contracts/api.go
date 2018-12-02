@@ -15,7 +15,7 @@ type ContractAPI interface {
 }
 
 type contractClient struct {
-	API    ContractAPI
+	API ContractAPI
 }
 
 func NewContractClient(api ContractAPI) *contractClient {

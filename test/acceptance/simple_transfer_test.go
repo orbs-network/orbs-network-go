@@ -102,4 +102,3 @@ func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
 		require.EqualValues(t, 39, contract.CallGetBalance(ctx, 1, 6), "getBalance result on non leader")
 	})
 }
-
