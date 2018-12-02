@@ -5,6 +5,7 @@ import (
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -16,6 +17,7 @@ type TestNetworkDriver interface {
 	inmemory.NetworkDriver
 	GetBenchmarkTokenContract() contracts.BenchmarkTokenClient
 	TransportTamperer() testGossipAdapter.Tamperer
+	EthereumSimulator() *ethereumAdapter.EthereumSimulator
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
@@ -28,6 +30,7 @@ type acceptanceNetwork struct {
 
 	tamperingTransport testGossipAdapter.Tamperer
 	description        string
+	ethereumConnection *ethereumAdapter.EthereumSimulator
 }
 
 func (n *acceptanceNetwork) Start(ctx context.Context, numOfNodesToStart int) {
@@ -44,6 +47,10 @@ func (n *acceptanceNetwork) Description() string {
 
 func (n *acceptanceNetwork) TransportTamperer() testGossipAdapter.Tamperer {
 	return n.tamperingTransport
+}
+
+func (n *acceptanceNetwork) EthereumSimulator() *ethereumAdapter.EthereumSimulator {
+	return n.ethereumConnection
 }
 
 func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
@@ -66,5 +73,10 @@ func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdkContext.ContractIn
 		if fakeCompiler, ok := node.GetCompiler().(nativeProcessorAdapter.FakeCompiler); ok {
 			fakeCompiler.ProvideFakeContract(fakeContractInfo, code)
 		}
+	}
+}
+func (n *acceptanceNetwork) Destroy() {
+	for _, node := range n.Nodes {
+		node.Destroy()
 	}
 }

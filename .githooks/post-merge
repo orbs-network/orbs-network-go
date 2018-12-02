@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# This hook is invoked by git-merge[1], which happens when a git pull is done on a local repository.
+# The hook takes a single parameter, a status flag specifying whether or not the merge being done was a squash merge.
+# This hook cannot affect the outcome of git merge and is not executed, if the merge failed due to conflicts.
+#
+
+./git-submodule-checkout.sh

@@ -14,6 +14,7 @@ import (
 )
 
 var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant across all e2e tests since we deploy the contract only once
+const LOCAL_NETWORK_SIZE = 3
 
 type inProcessE2ENetwork struct {
 	nodes []bootstrap.Node

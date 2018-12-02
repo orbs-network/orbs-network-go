@@ -3,6 +3,7 @@ package virtualmachine
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -31,6 +32,7 @@ func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *e
 // inputArg3: ethereumPackedInputArguments ([]byte)
 // outputArg0: ethereumPackedOutput ([]byte)
 func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionContext *executionContext, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 4 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeStringValue() || !args[3].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK ethereum callMethod args: %v", args)
 	}
@@ -52,7 +54,7 @@ func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionCont
 		EthereumPackedInputArguments: ethereumPackedInputArguments,
 	})
 	if err != nil {
-		s.logger.Info("Sdk.Ethereum.CallMethod failed", log.Error(err), log.String("jsonAbi", jsonAbi))
+		logger.Info("Sdk.Ethereum.CallMethod failed", log.Error(err), log.String("jsonAbi", jsonAbi))
 		return nil, err
 	}
 

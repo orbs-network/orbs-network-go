@@ -116,7 +116,8 @@ func (s *service) prepareMethodInputArgsForCall(executionContextId primitives.Ex
 func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
 	res := []*protocol.MethodArgumentBuilder{}
 	for i, arg := range args {
-		switch arg.Kind() {
+		k := arg.Kind()
+		switch k {
 		case reflect.Uint32:
 			res = append(res, &protocol.MethodArgumentBuilder{Name: "uint32", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.Interface().(uint32)})
 		case reflect.Uint64:

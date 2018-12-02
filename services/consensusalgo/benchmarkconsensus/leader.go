@@ -53,7 +53,6 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 	if s.lastSuccessfullyVotedBlock == lastCommittedBlockHeight {
 		proposedBlock, err := s.leaderGenerateNewProposedBlock(ctx, lastCommittedBlockHeight, lastCommittedBlock)
 		if err != nil {
-			logger.Error("leader failed to generate block", log.Error(err))
 			return err
 		}
 
@@ -94,10 +93,11 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 		BlockProof:         nil, // will be generated in a minute when signed
 	}
 	resultsBlock := &protocol.ResultsBlockContainer{
-		Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
-		TransactionReceipts: []*protocol.TransactionReceipt{},
-		ContractStateDiffs:  []*protocol.ContractStateDiff{},
-		BlockProof:          nil, // will be generated in a minute when signed
+		Header:                  (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{}).Build(),
+		TransactionReceipts:     []*protocol.TransactionReceipt{},
+		ContractStateDiffs:      []*protocol.ContractStateDiff{},
+		BlockProof:              nil, // will be generated in a minute when signed
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {

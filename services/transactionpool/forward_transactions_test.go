@@ -52,7 +52,6 @@ func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, 
 }
 
 func TestForwardsTransactionAfterTimeout(t *testing.T) {
-	t.Parallel()
 
 	test.WithContext(func(ctx context.Context) {
 		gossip := &gossiptopics.MockTransactionRelay{}
@@ -76,7 +75,6 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 }
 
 func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
-	t.Parallel()
 
 	test.WithContext(func(ctx context.Context) {
 		gossip := &gossiptopics.MockTransactionRelay{}
@@ -95,6 +93,6 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		txForwarder.submit(tx)
 		txForwarder.submit(anotherTx)
 
-		require.NoError(t, test.EventuallyVerify(1*time.Millisecond, gossip), "mocks were not called as expected")
+		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, gossip), "mocks were not called as expected")
 	})
 }
