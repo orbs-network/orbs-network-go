@@ -5,11 +5,25 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
+
+func TestLeaderCommitsTransactionsAndSkipsInvalidOnesLeanHelix(t *testing.T) {
+	harness.Network(t).
+		WithNumNodes(4).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
+		Start(func(parent context.Context, network harness.TestNetworkDriver) {
+			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			defer cancel()
+			contract := network.GetBenchmarkTokenContract()
+			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+			contract.SendTransfer(ctx, 0, 17, 5, 6)
+		})
+}
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
@@ -102,4 +116,3 @@ func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
 		require.EqualValues(t, 39, contract.CallGetBalance(ctx, 1, 6), "getBalance result on non leader")
 	})
 }
-
