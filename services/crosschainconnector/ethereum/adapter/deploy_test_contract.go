@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
@@ -59,6 +60,8 @@ func (c *connectorCommon) SendTransaction(ctx context.Context, auth *bind.Transa
 
 	txHash = signedTx.Hash().Bytes()
 	err = client.SendTransaction(ctx, signedTx)
+
+	c.logger.Info("sent transaction", log.Stringable("txHash", txHash))
 
 	return
 }

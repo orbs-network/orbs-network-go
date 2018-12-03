@@ -3,19 +3,21 @@ package adapter
 import (
 	"bytes"
 	"context"
+	"github.com/chain/chain/errors"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
 )
 
 type TransactionLog struct {
 	ContractAddress []byte
-	PackedTopics [][]byte // indexed fields
-	Data         []byte   // non-indexed fields
-	BlockNumber  uint64
+	PackedTopics    [][]byte // indexed fields
+	Data            []byte   // non-indexed fields
+	BlockNumber     uint64
 }
 
 type ethereumAdapterConfig interface {
@@ -28,6 +30,7 @@ type EthereumConnection interface {
 }
 
 type connectorCommon struct {
+	logger            log.BasicLogger
 	getContractCaller func() (EthereumCaller, error)
 }
 
@@ -62,6 +65,7 @@ func (c *connectorCommon) CallContract(ctx context.Context, address []byte, pack
 }
 
 func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*TransactionLog, error) {
+	c.logger.Info("getting transaction logs", log.Stringable("txHash", txHash))
 	client, err := c.getContractCaller()
 	if err != nil {
 		return nil, err
@@ -69,7 +73,7 @@ func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256
 
 	receipt, err := client.TransactionReceipt(ctx, common.BytesToHash(txHash))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error getting receipt for transaction with hash %s", txHash)
 	}
 
 	var eventLogs []*TransactionLog
@@ -80,9 +84,9 @@ func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256
 				topics = append(topics, topic.Bytes())
 			}
 			transactionLog := &TransactionLog{
-				PackedTopics: topics,
-				Data:         log.Data,
-				BlockNumber:  log.BlockNumber,
+				PackedTopics:    topics,
+				Data:            log.Data,
+				BlockNumber:     log.BlockNumber,
 				ContractAddress: log.Address.Bytes(),
 			}
 			eventLogs = append(eventLogs, transactionLog)

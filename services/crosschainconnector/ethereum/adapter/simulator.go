@@ -15,7 +15,6 @@ type EthereumSimulator struct {
 	connectorCommon
 
 	auth      *bind.TransactOpts
-	logger    log.BasicLogger
 	mu struct {
 		sync.Mutex
 		simClient *backends.SimulatedBackend
@@ -30,9 +29,10 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 	}
 	
 	e := &EthereumSimulator{
-		logger: logger,
 		auth: bind.NewKeyedTransactor(key),
 	}
+
+	e.logger = logger
 
 	e.getContractCaller = func() (EthereumCaller, error) {
 		e.mu.Lock()

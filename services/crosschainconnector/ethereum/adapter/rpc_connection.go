@@ -10,7 +10,6 @@ type EthereumRpcConnection struct {
 	connectorCommon
 
 	config ethereumAdapterConfig
-	logger log.BasicLogger
 
 	mu struct {
 		sync.Mutex
@@ -21,8 +20,8 @@ type EthereumRpcConnection struct {
 func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.BasicLogger) *EthereumRpcConnection {
 	rpc := &EthereumRpcConnection{
 		config: config,
-		logger: logger,
 	}
+	rpc.logger = logger.WithTags(log.String("adapter", "ethereum"))
 	rpc.getContractCaller = rpc.dialIfNeededAndReturnClient
 	return rpc
 }
