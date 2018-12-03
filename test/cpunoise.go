@@ -36,7 +36,7 @@ func generateCpuNoiseRunLoop() {
 
 		time.Sleep(restDuration)
 
-		cpuNoiseBurst(burstDuration, runtime.GOMAXPROCS(0))
+		cpuNoiseBurst(burstDuration, 2) //runtime.GOMAXPROCS(0))
 	}
 }
 
