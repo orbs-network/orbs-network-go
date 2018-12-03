@@ -37,4 +37,3 @@ func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopi
 	}
 	return nil, nil
 }
-

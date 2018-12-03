@@ -45,7 +45,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 	logger := parent.WithTags(LogTag)
 	return &service{
 		config:       config,
-		blockTracker: synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
+		blockTracker: synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
 		logger:       logger,
 		metrics:      newMetrics(metricFactory),
 

@@ -83,11 +83,9 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 		return nil, err
 	}
 
-	// TODO Waiting for state-storage fix: internal sync does not yet update the state storage when committing blocks
-	// See https://tree.taiga.io/project/orbs-network/us/383
-	//preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-	//	BlockHeight: blockHeight - 1,
-	//})
+	preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
+		BlockHeight: blockHeight - 1,
+	})
 
 	if err != nil {
 		return nil, err
@@ -107,7 +105,7 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 			ReceiptsRootHash:            primitives.MerkleSha256(merkleReceiptsRoot),
 			StateDiffHash:               stateDiffHash,
 			TransactionsBlockHashPtr:    digest.CalcTransactionsBlockHash(transactionsBlock),
-			PreExecutionStateRootHash:   nil,
+			PreExecutionStateRootHash:   preExecutionStateRootHash.StateRootHash,
 			TransactionsBloomFilterHash: nil,
 			NumTransactionReceipts:      uint32(len(output.TransactionReceipts)),
 			NumContractStateDiffs:       uint32(len(output.ContractStateDiffs)),
