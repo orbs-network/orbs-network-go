@@ -17,6 +17,112 @@ import (
 	"testing"
 )
 
+func TestEthereumNodeAdapter_CallContract(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		adapter, auth, commit := createSimulator()
+		t.Run("Simulator Adapter", testCallContract(ctx, adapter, auth, commit))
+
+		if runningWithDocker() {
+			adapter, auth, commit = createRpcClient()
+			t.Run("RPC Adapter", testCallContract(ctx, adapter, auth, commit))
+		} else {
+			t.Skip("skipping, external tests disabled")
+		}
+	})
+}
+
+func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		adapter, auth, commit := createSimulator()
+		t.Run("Simulator Adapter", testGetLogs(ctx, adapter, auth, commit))
+
+		if runningWithDocker() {
+			adapter, auth, commit = createRpcClient()
+			t.Run("RPC Adapter", testGetLogs(ctx, adapter, auth, commit))
+		} else {
+			t.Skip("skipping, external tests disabled")
+		}
+	})
+}
+
+func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnection, auth *bind.TransactOpts, commit func()) func(t *testing.T) {
+	return func(t *testing.T) {
+		contractAddress, err := adapter.DeployEmitEvent(auth)
+		commit()
+		require.NoError(t, err, "failed deploying contract to Ethereum")
+
+		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
+		require.NoError(t, err, "failed parsing ABI")
+
+		tuid := big.NewInt(17)
+		ethAddress := common.HexToAddress("80755fE3D774006c9A9563A09310a0909c42C786")
+		orbsAddress := [20]byte{0x1, 0x2, 0x3}
+		eventValue := big.NewInt(42)
+		packedInput, err := parsedABI.Pack("transferOut", tuid, ethAddress, orbsAddress, eventValue)
+		require.NoError(t, err, "failed packing arguments")
+
+		ethTxHash, err := adapter.SendTransaction(ctx, auth, contractAddress, packedInput)
+		commit()
+		require.NoError(t, err, "failed emitting event")
+
+		eventSignature := parsedABI.Events["TransferredOut"].Id().Bytes()
+		logs, err := adapter.GetLogs(ctx, ethTxHash, contractAddress, eventSignature)
+		require.NoError(t, err, "failed getting logs")
+
+		require.Len(t, logs, 1, "did not get the expected event log")
+		log := logs[0]
+		require.Equal(t, contractAddress, log.ContractAddress, "contract address in log differed from actual contract address")
+		require.Equal(t, eventSignature, log.PackedTopics[0], "event returned did not have the expected signature as the first topic")
+	}
+}
+
+func createRpcClient() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
+	logger := log.GetLogger()
+	cfg := getConfig()
+
+	a := adapter.NewEthereumRpcConnection(cfg, logger)
+	auth, err := authFromConfig(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	return a, auth, func() {}
+}
+
+func createSimulator() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
+	a := adapter.NewEthereumSimulatorConnection(log.GetLogger())
+	opts := a.GetAuth()
+	commit := a.Commit
+
+	return a, opts, commit
+}
+
+func testCallContract(ctx context.Context, adapter adapter.DeployingEthereumConnection, auth *bind.TransactOpts, commit func()) func(t *testing.T) {
+	return func(t *testing.T) {
+		address, err := adapter.DeploySimpleStorageContract(auth, "foobar")
+		commit()
+		require.NoError(t, err, "failed deploying contract to Ethereum")
+
+		parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
+		require.NoError(t, err, "failed parsing ABI")
+
+		packedInput, err := parsedABI.Pack("getString")
+		require.NoError(t, err, "failed packing arguments")
+
+		packedOutput, err := adapter.CallContract(ctx, address, packedInput, nil)
+
+		var out string
+		err = parsedABI.Unpack(&out, "getString", packedOutput)
+		require.NoError(t, err, "could not unpack call output")
+
+		require.Equal(t, "foobar", out, "string output differed from expected")
+	}
+}
+
+func runningWithDocker() bool {
+	return os.Getenv("EXTERNAL_TEST") == "true"
+}
+
 type localconfig struct {
 	endpoint      string
 	privateKeyHex string
@@ -24,6 +130,15 @@ type localconfig struct {
 
 func (c *localconfig) EthereumEndpoint() string {
 	return c.endpoint
+}
+
+func authFromConfig(cfg *localconfig) (*bind.TransactOpts, error) {
+	key, err := crypto.HexToECDSA(cfg.privateKeyHex)
+	if err != nil {
+		return nil, err
+	}
+
+	return bind.NewKeyedTransactor(key), nil
 }
 
 func getConfig() *localconfig {
@@ -38,100 +153,4 @@ func getConfig() *localconfig {
 	}
 
 	return &cfg
-}
-
-func TestEthereumNodeAdapter_SimpleStorageContractAndAssertReturnedValue(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		address, adapter := createSimulatorAndDeploySimpleStorageContract(t)
-		t.Run("Simulator Adapter", callSimpleStorageContractAndAssertReturnedValue(ctx, address, adapter))
-
-		if os.Getenv("EXTERNAL_TEST") == "true" {
-			address, adapter = connectViaRpcAndDeploySimpleStorageContract(t)
-			t.Run("RPC Adapter", callSimpleStorageContractAndAssertReturnedValue(ctx, address, adapter))
-		} else {
-			t.Skip("skipping, external tests disabled")
-		}
-	})
-}
-
-func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		logger := log.GetLogger()
-		simulator := adapter.NewEthereumSimulatorConnection(logger)
-
-		contractAddress, err := simulator.DeployEmitEvent(simulator.GetAuth())
-		simulator.Commit()
-		require.NoError(t, err, "failed deploying contract to Ethereum")
-
-		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
-		require.NoError(t, err, "failed parsing ABI")
-
-		tuid := big.NewInt(17)
-		ethAddress := common.HexToAddress("80755fE3D774006c9A9563A09310a0909c42C786")
-		orbsAddress := [20]byte{0x1, 0x2, 0x3}
-		eventValue := big.NewInt(42)
-
-		packedInput, err := parsedABI.Pack("transferOut", tuid, ethAddress, orbsAddress, eventValue)
-		require.NoError(t, err, "failed packing arguments")
-
-		ethTxHash, err := simulator.SendTransaction(ctx, simulator.GetAuth(), contractAddress, packedInput)
-		simulator.Commit()
-		require.NoError(t, err, "failed emitting event")
-
-		eventSignature := parsedABI.Events["TransferredOut"].Id().Bytes()
-
-		logs, err := simulator.GetLogs(ctx, ethTxHash, contractAddress, eventSignature)
-		require.NoError(t, err, "failed getting logs")
-
-		require.Len(t, logs, 1, "did not get the expected event log")
-
-		require.NoError(t, err, "failed parsing event ABI")
-
-		log := logs[0]
-		require.Equal(t, contractAddress, log.ContractAddress, "contract address in log differed from actual contract address")
-		require.Equal(t, eventSignature, log.PackedTopics[0], "event returned did not have the expected signature as the first topic")
-	})
-}
-
-func connectViaRpcAndDeploySimpleStorageContract(t *testing.T) ([]byte, adapter.EthereumConnection) {
-	logger := log.GetLogger()
-	cfg := getConfig()
-	rpcClient := adapter.NewEthereumRpcConnection(cfg, logger)
-
-	key, err := crypto.HexToECDSA(cfg.privateKeyHex)
-	require.NoError(t, err, "failed generating key")
-	auth := bind.NewKeyedTransactor(key)
-
-	address, err := rpcClient.DeploySimpleStorageContract(auth, "foobar")
-	require.NoError(t, err, "failed deploying contract")
-
-	return address, rpcClient
-}
-
-func createSimulatorAndDeploySimpleStorageContract(t *testing.T) ([]byte, adapter.EthereumConnection) {
-	logger := log.GetLogger()
-	simulator := adapter.NewEthereumSimulatorConnection(logger)
-
-	address, err := simulator.DeploySimpleStorageContract(simulator.GetAuth(), "foobar")
-	simulator.Commit()
-	require.NoError(t, err, "failed deploying contract to Ethereum")
-	return address, simulator
-}
-
-func callSimpleStorageContractAndAssertReturnedValue(ctx context.Context, address []byte, connection adapter.EthereumConnection) func(t *testing.T) {
-	return func(t *testing.T) {
-		parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
-		require.NoError(t, err, "failed parsing ABI")
-
-		packedInput, err := parsedABI.Pack("getString")
-		require.NoError(t, err, "failed packing arguments")
-
-		packedOutput, err := connection.CallContract(ctx, address, packedInput, nil)
-
-		var out string
-		err = parsedABI.Unpack(&out, "getString", packedOutput)
-		require.NoError(t, err, "could not unpack call output")
-
-		require.Equal(t, "foobar", out, "string output differed from expected")
-	}
 }

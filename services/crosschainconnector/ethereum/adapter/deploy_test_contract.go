@@ -10,6 +10,14 @@ import (
 	"math/big"
 )
 
+type DeployingEthereumConnection interface {
+	EthereumConnection
+	DeploySimpleStorageContract(auth *bind.TransactOpts, stringValue string) ([]byte, error)
+	DeployEmitEvent(auth *bind.TransactOpts) ([]byte, error)
+	SendTransaction(ctx context.Context, auth *bind.TransactOpts, address []byte, packedInput []byte) (txHash primitives.Uint256, err error)
+}
+
+
 // this is a helper for integration test, not used in production code
 func (c *connectorCommon) DeploySimpleStorageContract(auth *bind.TransactOpts, stringValue string) ([]byte, error){
 	client, err := c.getContractCaller()
@@ -41,7 +49,7 @@ func (c *connectorCommon) SendTransaction(ctx context.Context, auth *bind.Transa
 
 	contractAddress := common.BytesToAddress(address)
 
-	unsignedTx := types.NewTransaction(0, contractAddress, common.Big0, 900000000, common.Big0, packedInput)
+	unsignedTx := types.NewTransaction(0, contractAddress, common.Big0, 90000000000, common.Big0, packedInput)
 
 	signer := types.NewEIP155Signer(nil)
 	signedTx, err := auth.Signer(signer, auth.From, unsignedTx)
