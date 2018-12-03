@@ -55,13 +55,14 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primitives.BlockHeight) error {
 	requestedHeightUint := uint64(requestedHeight)
 	currentHeight, currentLatch := t.readAtomicHeightAndLatch()
-	t.logger.Info("WaitForBlock() start", log.Uint64("current-height", currentHeight), log.Uint64("requestedHeight", requestedHeightUint))
+	t.logger.Info("WaitForBlock() start", log.Uint64("current-height", currentHeight), log.Uint64("requestedHeight", requestedHeightUint), log.Uint("grace-distance", uint(t.graceDistance)))
 
 	if currentHeight >= requestedHeightUint { // requested block already committed
 		return nil
 	}
 
 	if currentHeight+uint64(t.graceDistance) < requestedHeightUint { // requested block too far ahead, no grace
+		t.logger.Info("WaitForBlock() error outside grace range", log.Uint64("current-height", currentHeight), log.Uint64("requestedHeight", requestedHeightUint), log.Uint("grace-distance", uint(t.graceDistance)))
 		return errors.Errorf("requested future block outside of grace range")
 	}
 
