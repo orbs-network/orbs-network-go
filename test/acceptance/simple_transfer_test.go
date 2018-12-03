@@ -16,23 +16,23 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnesLeanHelix(t *testing.T) {
 	harness.Network(t).
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(func(parent context.Context, network harness.TestNetworkDriver) {
-			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-			defer cancel()
+		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+			//ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			//defer cancel()
 			contract := network.GetBenchmarkTokenContract()
 			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
-			contract.SendTransfer(ctx, 0, 17, 5, 6)
+			tx := contract.SendTransfer(ctx, 0, 17, 5, 6)
 
 			// FIXME Uncomment this section after state storage is fixed. Presently waiting for transaction on the just-written block will not work
 			// See PR https://github.com/orbs-network/orbs-network-go/issues/567
-			//t.Log(tx.String())
-			//t.Log("SendTransfer complete")
-			//network.WaitForTransactionInNodeState(ctx, tx.TransactionReceipt().Txhash(), 0)
-			//t.Log("finished waiting for tx")
+			t.Log(tx.String())
+			t.Log("SendTransfer complete")
+			network.WaitForTransactionInNodeState(ctx, tx.TransactionReceipt().Txhash(), 0)
+			t.Log("finished waiting for tx")
 
-			//require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-17, contract.CallGetBalance(ctx, 0, 5), "getBalance result for the sender on gateway node")
-			//require.EqualValues(t, 17, contract.CallGetBalance(ctx, 0, 6), "getBalance result for the receiver on gateway node")
-			//t.Log("test done")
+			require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-17, contract.CallGetBalance(ctx, 0, 5), "getBalance result for the sender on gateway node")
+			require.EqualValues(t, 17, contract.CallGetBalance(ctx, 0, 6), "getBalance result for the receiver on gateway node")
+			t.Log("test done")
 		})
 
 }

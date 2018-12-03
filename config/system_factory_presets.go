@@ -100,7 +100,7 @@ func ForAcceptanceTestNetwork(
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
-	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 50*time.Millisecond)
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 500*time.Millisecond) // TODO IDO Return to 10 millis when resolving https://github.com/orbs-network/orbs-network-go/issues/573
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 10*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
