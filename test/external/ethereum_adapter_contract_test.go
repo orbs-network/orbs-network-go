@@ -88,10 +88,8 @@ func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
 		require.NoError(t, err, "failed parsing event ABI")
 
 		log := logs[0]
-		require.Equal(t, contractAddress, log.Address.Bytes(), "contract address in log differed from actual contract address")
-
-
-		//log.Topics[0]
+		require.Equal(t, contractAddress, log.ContractAddress, "contract address in log differed from actual contract address")
+		require.Equal(t, eventSignature, log.PackedTopics[0], "event returned did not have the expected signature as the first topic")
 	})
 }
 

@@ -11,6 +11,13 @@ import (
 	"math/big"
 )
 
+type TransactionLog struct {
+	ContractAddress []byte
+	PackedTopics [][]byte // indexed fields
+	Data         []byte   // non-indexed fields
+	BlockNumber  uint64
+}
+
 type ethereumAdapterConfig interface {
 	EthereumEndpoint() string
 }
@@ -53,7 +60,7 @@ func (c *connectorCommon) CallContract(ctx context.Context, address []byte, pack
 	return output, err
 }
 
-func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*types.Log, error) {
+func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*TransactionLog, error) {
 	client, err := c.getContractCaller()
 	if err != nil {
 		return nil, err
@@ -64,12 +71,32 @@ func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256
 		return nil, err
 	}
 
-	var eventLogs []*types.Log
+	var eventLogs []*TransactionLog
 	for _, log := range receipt.Logs {
-		if bytes.Equal(log.Topics[0].Bytes(), eventSignature) {
-			eventLogs = append(eventLogs, log)
+		if matchesEvent(log, eventSignature) {
+			var topics [][]byte
+			for _, topic := range log.Topics {
+				topics = append(topics, topic.Bytes())
+			}
+			transactionLog := &TransactionLog{
+				PackedTopics: topics,
+				Data:         log.Data,
+				BlockNumber:  log.BlockNumber,
+				ContractAddress: log.Address.Bytes(),
+			}
+			eventLogs = append(eventLogs, transactionLog)
 		}
 	}
 
 	return eventLogs, nil
+}
+
+func matchesEvent(log *types.Log, eventSignature []byte) bool {
+	for _, topic := range log.Topics {
+		if bytes.Equal(topic.Bytes(), eventSignature) {
+			return true
+		}
+	}
+
+	return false
 }
