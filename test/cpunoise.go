@@ -22,7 +22,7 @@ var once sync.Once
 func StartCpuSchedulingJitter() {
 	once.Do(func() {
 		runtime.GOMAXPROCS(4)
-		go generateCpuNoiseRunLoop()
+		// go generateCpuNoiseRunLoop()
 		go verifyNoStarvationRunLoop()
 	})
 }
