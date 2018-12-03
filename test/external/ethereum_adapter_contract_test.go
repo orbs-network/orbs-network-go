@@ -16,7 +16,7 @@ import (
 )
 
 type localconfig struct {
-	endpoint string
+	endpoint      string
 	privateKeyHex string
 }
 

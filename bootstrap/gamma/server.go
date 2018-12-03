@@ -1,4 +1,4 @@
-package gammaserver
+package gamma
 
 import (
 	"context"
