@@ -11,7 +11,7 @@ import (
 
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 
-	//TODO fail if requested block height is in the past
+	//TODO(v1) fail if requested block height is in the past
 	s.logger.Info("GetTransactionsForOrdering called for block height", trace.LogFieldFrom(ctx), log.BlockHeight(input.BlockHeight))
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
@@ -19,7 +19,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	// we're collecting transactions for a new proposed block at input.BlockHeight.
 	// wait for previous block height to be synced to avoid processing any tx that was already committed a second time.
-	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight - 1); err != nil {
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight-1); err != nil {
 		return nil, err
 	}
 
@@ -42,7 +42,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		}
 	}
 
-	//TODO handle error from vm
+	//TODO(v1) handle error from vm
 	bh, _ := s.currentBlockHeightAndTime()
 	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		SignedTransactions: transactionsForPreOrder,
@@ -54,7 +54,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		if preOrderResults.PreOrderResults[i] == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
 			out.SignedTransactions = append(out.SignedTransactions, tx)
 		} else {
-			txHash := digest.CalcTxHash(tx.Transaction()) //TODO we calculate TX hash again even though we calculated it above while iterating. Consider memoization.
+			txHash := digest.CalcTxHash(tx.Transaction())
 			s.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Transaction(txHash))
 			s.pendingPool.remove(ctx, txHash, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
 		}

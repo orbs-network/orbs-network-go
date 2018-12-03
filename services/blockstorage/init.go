@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	// TODO extract it to the spec
 	ProtocolVersion = primitives.ProtocolVersion(1)
 )
 
@@ -55,11 +54,11 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &service{
-		persistence:  persistence,
-		gossip:       gossip,
-		logger:       logger,
-		config:       config,
-		metrics:      newMetrics(metricFactory),
+		persistence: persistence,
+		gossip:      gossip,
+		logger:      logger,
+		config:      config,
+		metrics:     newMetrics(metricFactory),
 	}
 
 	gossip.RegisterBlockSyncHandler(s)
@@ -92,4 +91,3 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 	// update the consensus algo about the latest block we have (for its initialization)
 	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO()) // TODO: (talkol) not sure if we should create a new context here or pass to RegisterConsensusBlocksHandler in code generation
 }
-

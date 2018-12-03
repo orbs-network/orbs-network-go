@@ -50,5 +50,5 @@ func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *tes
 }
 
 func TestCommitTransactionReceiptsIgnoresExpiredBlocks(t *testing.T) {
-	t.Skipf("TODO: ignore blocks with an expired timestamp")
+	t.Skipf("TODO(v1): ignore blocks with an expired timestamp")
 }

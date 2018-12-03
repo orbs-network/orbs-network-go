@@ -222,7 +222,7 @@ func newBlockStorageHarness() *harness {
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
-	// TODO: this might create issues with some tests later on, should move it to behavior or some other means of setup
+	// TODO(v1): this might create issues with some tests later on, should move it to behavior or some other means of setup
 	// Always expect at least 0 because sometimes it gets triggered because of the timings
 	// HandleBlockConsensus always gets called when we try to start the sync which happens automatically
 	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
@@ -231,7 +231,7 @@ func newBlockStorageHarness() *harness {
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 
 	d.txPool = &services.MockTransactionPool{}
-	// TODO: this might create issues with some tests later on, should move it to behavior or some other means of setup
+	// TODO(v1): this might create issues with some tests later on, should move it to behavior or some other means of setup
 	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 		return &services.CommitTransactionReceiptsOutput{
 			NextDesiredBlockHeight: input.ResultsBlockHeader.BlockHeight() + 1,

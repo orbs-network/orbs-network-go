@@ -244,14 +244,13 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 			RecipientPublicKeys: []primitives.Ed25519PublicKey{h.publicKeyForPeer(1)},
 			Payloads:            [][]byte{{0x11}, {0x22, 0x33}},
 		})
-		require.NoError(t, err, "adapter Send should not fail") // TODO: maybe it should fail?
+		require.NoError(t, err, "adapter Send should not fail")
 
 		h.peersListenersConnections[1].Close() // break the pipe during Send
 
 		h.peersListenersConnections[1], err = h.peersListeners[1].Accept()
 		require.NoError(t, err, "test peer server did not accept new connection from local transport")
 
-		// TODO: maybe we should retransmit the original Send here?
 		data, err := h.peerListenerReadTotal(1, 4)
 		require.NoError(t, err, "test peer server could not read keepalive from local transport")
 		require.Equal(t, exampleWireProtocolEncoding_KeepAlive(), data)
