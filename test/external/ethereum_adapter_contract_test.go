@@ -18,7 +18,7 @@ import (
 )
 
 type localconfig struct {
-	endpoint string
+	endpoint      string
 	privateKeyHex string
 }
 
@@ -66,9 +66,9 @@ func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
 		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
 		require.NoError(t, err, "failed parsing ABI")
 
-		tuid := big.NewInt(1)
+		tuid := big.NewInt(17)
 		ethAddress := common.HexToAddress("80755fE3D774006c9A9563A09310a0909c42C786")
-		orbsAddress := [20]byte{}
+		orbsAddress := [20]byte{0x1, 0x2, 0x3}
 		eventValue := big.NewInt(42)
 
 		packedInput, err := parsedABI.Pack("transferOut", tuid, ethAddress, orbsAddress, eventValue)
@@ -78,11 +78,20 @@ func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
 		simulator.Commit()
 		require.NoError(t, err, "failed emitting event")
 
-		//TODO eventSignature
-		logs, err := simulator.GetLogs(ctx, ethTxHash, contractAddress)
+		eventSignature := parsedABI.Events["TransferredOut"].Id().Bytes()
+
+		logs, err := simulator.GetLogs(ctx, ethTxHash, contractAddress, eventSignature)
 		require.NoError(t, err, "failed getting logs")
 
-		require.Len(t, logs, 1, "did not get logs from transaction")
+		require.Len(t, logs, 1, "did not get the expected event log")
+
+		require.NoError(t, err, "failed parsing event ABI")
+
+		log := logs[0]
+		require.Equal(t, contractAddress, log.Address.Bytes(), "contract address in log differed from actual contract address")
+
+
+		//log.Topics[0]
 	})
 }
 

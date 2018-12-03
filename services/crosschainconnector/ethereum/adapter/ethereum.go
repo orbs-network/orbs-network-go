@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"bytes"
 	"context"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -52,7 +53,7 @@ func (c *connectorCommon) CallContract(ctx context.Context, address []byte, pack
 	return output, err
 }
 
-func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte) ([]*types.Log, error) {
+func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*types.Log, error) {
 	client, err := c.getContractCaller()
 	if err != nil {
 		return nil, err
@@ -63,5 +64,12 @@ func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256
 		return nil, err
 	}
 
-	return receipt.Logs, nil
+	var eventLogs []*types.Log
+	for _, log := range receipt.Logs {
+		if bytes.Equal(log.Topics[0].Bytes(), eventSignature) {
+			eventLogs = append(eventLogs, log)
+		}
+	}
+
+	return eventLogs, nil
 }
