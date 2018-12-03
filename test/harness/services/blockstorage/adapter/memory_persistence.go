@@ -67,7 +67,7 @@ func NewInMemoryBlockPersistenceWithBlocks(parent log.BasicLogger, preloadedBloc
 		blockChain: struct {
 			sync.RWMutex
 			blocks []*protocol.BlockPairContainer
-		} {blocks: preloadedBlocks},
+		}{blocks: preloadedBlocks},
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)

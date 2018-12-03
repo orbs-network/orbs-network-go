@@ -140,7 +140,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		case <-ctx.Done():
 		}
 	}()
-	return <- ch
+	return <-ch
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
@@ -176,7 +176,7 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 		case <-ctx.Done():
 		}
 	}()
-	return <- ch
+	return <-ch
 }
 
 func (n *Network) assertStarted(nodeIndex int) {

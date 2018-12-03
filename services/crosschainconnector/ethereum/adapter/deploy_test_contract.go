@@ -7,7 +7,7 @@ import (
 )
 
 // this is a helper for integration test, not used in production code
-func (c *connectorCommon) DeploySimpleStorageContract(auth *bind.TransactOpts, stringValue string) ([]byte, error){
+func (c *connectorCommon) DeploySimpleStorageContract(auth *bind.TransactOpts, stringValue string) ([]byte, error) {
 	client, err := c.getContractCaller()
 	if err != nil {
 		return nil, err
