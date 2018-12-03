@@ -180,9 +180,9 @@ func lastCommonPathIndex(current *node, path []byte) (i int) {
 	return
 }
 
-type hashNode func(n *node) primitives.Sha256
+type nodeHasherFunc func(n *node) primitives.Sha256
 
-func collapseAndHash(current *node, sandbox dirtyNodes, f hashNode) *node {
+func collapseAndHash(current *node, sandbox dirtyNodes, f nodeHasherFunc) *node {
 	if !current.isLeaf() {
 		collapseDirtyChildren(current, sandbox, f)
 	}
@@ -201,7 +201,7 @@ func collapseAndHash(current *node, sandbox dirtyNodes, f hashNode) *node {
 	return current
 }
 
-func collapseDirtyChildren(current *node, sandbox dirtyNodes, f hashNode) {
+func collapseDirtyChildren(current *node, sandbox dirtyNodes, f nodeHasherFunc) {
 	if sandbox[current] != nil {
 		if sandbox[current].left {
 			current.setChild(0, collapseAndHash(current.left, sandbox, f))

@@ -11,18 +11,18 @@ import (
 
 //const trieRadix = 16
 
-type Proof []*ProofNode
+type TrieProof []*TrieProofNode
 
 // TODO replace proofNode with membuf/proto
-type ProofNode struct {
+type TrieProofNode struct {
 	path  []byte // TODO parity bool?
 	value primitives.Sha256
 	left  primitives.Sha256
 	right primitives.Sha256
 }
 
-func newProofNode(n* node) *ProofNode {
-	pn := &ProofNode{
+func newProofNode(n* node) *TrieProofNode {
+	pn := &TrieProofNode{
 		path:  n.path,
 		value: n.value,
 		left:  primitives.Sha256{},
@@ -37,7 +37,7 @@ func newProofNode(n* node) *ProofNode {
 	return pn
 }
 
-func (pn *ProofNode) hash() primitives.Sha256 {
+func (pn *TrieProofNode) hash() primitives.Sha256 {
 	serializedNode := fmt.Sprintf("%+v", pn)
 	return hash.CalcSha256([]byte(serializedNode))
 }
@@ -78,13 +78,13 @@ func (f *Forest) appendRoot(root *node) {
 	f.roots = append(f.roots, root)
 }
 
-func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (Proof, error) {
+func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (TrieProof, error) {
 	current := f.findRoot(rootHash)
 	if current == nil {
 		return nil, errors.Errorf("unknown root")
 	}
 
-	proof := make(Proof, 0, 10)
+	proof := make(TrieProof, 0, 10)
 	proof = append(proof, newProofNode(current))
 
 	path = toBin(path)
@@ -105,7 +105,7 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (Proof, error
 	return proof, nil
 }
 
-func (f *Forest) Verify(rootHash primitives.Sha256, proof Proof, path []byte, value primitives.Sha256) (bool, error) {
+func (f *Forest) Verify(rootHash primitives.Sha256, proof TrieProof, path []byte, value primitives.Sha256) (bool, error) {
 	path = toBin(path)
 	currentHash := rootHash
 	emptyMerkleHash := primitives.Sha256{}

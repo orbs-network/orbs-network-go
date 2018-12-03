@@ -8,15 +8,15 @@ import (
 	"math"
 )
 
-type TreeProof []primitives.Sha256
+type OrderedTreeProof []primitives.Sha256
 
-type Tree struct {
+type OrderedTree struct {
 	root    *node
 	keySize int
 	maxKey  int
 }
 
-func calculateTreeRootCollapseOneLevel(src, dst []primitives.Sha256, size int) int {
+func calculateOrderedTreeRootCollapseOneLevel(src, dst []primitives.Sha256, size int) int {
 	for j := 1; j < size; j = j + 2 {
 		dst[j/2] = hashTwo(src[j-1], src[j])
 	}
@@ -29,21 +29,21 @@ func calculateTreeRootCollapseOneLevel(src, dst []primitives.Sha256, size int) i
 	return size
 }
 
-func CalculateTreeRoot(values []primitives.Sha256) primitives.Sha256 {
+func CalculateOrderedTreeRoot(values []primitives.Sha256) primitives.Sha256 {
 	nodes := make([]primitives.Sha256, len(values)/2+1)
-	n := calculateTreeRootCollapseOneLevel(values, nodes, len(values))
+	n := calculateOrderedTreeRootCollapseOneLevel(values, nodes, len(values))
 
 	iteration := int(math.Ceil(math.Log2(float64(len(values)))))
 	for i := 1; i < iteration; i++ {
-		n = calculateTreeRootCollapseOneLevel(nodes, nodes, n)
+		n = calculateOrderedTreeRootCollapseOneLevel(nodes, nodes, n)
 	}
 	return nodes[0]
 }
 
-func newTree(values []primitives.Sha256) *Tree {
+func NewOrderedTree(values []primitives.Sha256) *OrderedTree {
 	keySize := int(math.Ceil(math.Log2(float64(len(values)))))
 	root := create(values, keySize)
-	return &Tree{root, keySize, len(values) - 1}
+	return &OrderedTree{root, keySize, len(values) - 1}
 }
 
 func create(values []primitives.Sha256, keySize int) *node {
@@ -66,11 +66,11 @@ func treeHash(n *node) primitives.Sha256 {
 	return hashTwo(n.left.hash, n.right.hash)
 }
 
-func (t *Tree) GetProof(index int) (TreeProof, error) {
+func (t *OrderedTree) GetProof(index int) (OrderedTreeProof, error) {
 	if index < 0 || index > t.maxKey {
 		return nil, errors.Errorf("index for proof is out of bounds")
 	}
-	proof := make(TreeProof, 0, t.keySize)
+	proof := make(OrderedTreeProof, 0, t.keySize)
 	keyInBytes := toKey(index, t.keySize)
 	current := t.root
 	other := t.root
@@ -94,7 +94,7 @@ func (t *Tree) GetProof(index int) (TreeProof, error) {
 	return proof, nil
 }
 
-func (t *Tree) Verify(value primitives.Sha256, proof TreeProof, root primitives.Sha256) error {
+func Verify(value primitives.Sha256, proof OrderedTreeProof, root primitives.Sha256) error {
 	current := value
 	for i := len(proof) - 1; i >= 0; i-- {
 		current = hashTwo(current, proof[i])

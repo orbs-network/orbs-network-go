@@ -31,7 +31,7 @@ manually removed from block storage.
 optimal performance is achieved when the entire state and Merkle trie are stored in memory.
 
 Persistent storage may be used to satisfy two requirements:
-1. Scale beyond the RAM capacity of a node (see [merkle](../../crypto/merkle/README.md))
+1. Scale beyond the RAM capacity of a node (see [merkle](merkle_README.md))
 1. Using regular interval snapshots we can ensure [Startup time]() requirement 
 
 ### A Single full State snapshot with subsequent diffs in memory

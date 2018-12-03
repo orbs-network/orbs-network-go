@@ -10,106 +10,6 @@ import (
 	"testing"
 )
 
-func hexStringToBytes(s string) []byte {
-	if (len(s) % 2) != 0 {
-		panic("key value needs to be a hex representation of a byte array")
-	}
-	bytesKey := make([]byte, len(s)/2)
-	hex.Decode(bytesKey, []byte(s))
-	return bytesKey
-}
-
-// when the test checks general keys or keys with diff len
-func generalKeyUpdateEntries(f *Forest, baseHash primitives.Sha256, keyValues ...string) primitives.Sha256 {
-	if len(keyValues)%2 != 0 {
-		panic("expected key value pairs")
-	}
-	diffs := make(TrieDiffs, len(keyValues)/2)
-	for i := 0; i < len(keyValues); i = i + 2 {
-		diffs[i/2] = &TrieDiff{Key: hexStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
-	}
-
-	currentRoot, _ := f.Update(baseHash, diffs)
-
-	return currentRoot
-}
-
-func generalKeyVerifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof Proof, path string, value string, exists bool) {
-	verifyProof(t, f, root, proof, hexStringToBytes(path), value, exists)
-}
-
-func generalKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path string, expectedHeight int) Proof {
-	return getProofRequireHeight(t, f, root, hexStringToBytes(path), expectedHeight)
-}
-
-func generalKeyGetProof(t *testing.T, f *Forest, root primitives.Sha256, path string) Proof {
-	proof, err := f.GetProof(root, hexStringToBytes(path))
-	require.NoError(t, err, "failed with error: %s", err)
-	return proof
-}
-
-func isChar0(ch uint8) byte {
-	if ch == uint8('0') {
-		return 0
-	}
-	return 1
-}
-
-func bitStringToBytes(s string) []byte {
-	if (len(s) % 8) != 0 {
-		panic("key value needs to be a bit representation of a byte array")
-	}
-	bytelen := len(s) / 8
-	bytesKey := make([]byte, bytelen)
-	for i := 0; i < bytelen; i++ {
-		bytesKey[i] = isChar0(s[i*8])<<7 |
-			isChar0(s[i*8+1])<<6 |
-			isChar0(s[i*8+2])<<5 |
-			isChar0(s[i*8+3])<<4 |
-			isChar0(s[i*8+4])<<3 |
-			isChar0(s[i*8+5])<<2 |
-			isChar0(s[i*8+6])<<1 |
-			isChar0(s[i*8+7])
-	}
-	return bytesKey
-}
-
-// for tests that need a specific key to create specific node relations
-func binaryKeyUpdateEntries(f *Forest, baseHash primitives.Sha256, keyValues ...string) primitives.Sha256 {
-	if len(keyValues)%2 != 0 {
-		panic("expected key value pairs")
-	}
-	diffs := make(TrieDiffs, len(keyValues)/2)
-	for i := 0; i < len(keyValues); i = i + 2 {
-		diffs[i/2] = &TrieDiff{Key: bitStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
-	}
-
-	currentRoot, _ := f.Update(baseHash, diffs)
-
-	return currentRoot
-}
-
-func binaryKeyVerifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof Proof, path string, value string, exists bool) {
-	verifyProof(t, f, root, proof, bitStringToBytes(path), value, exists)
-}
-
-func binaryKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path string, expectedHeight int) Proof {
-	return getProofRequireHeight(t, f, root, bitStringToBytes(path), expectedHeight)
-}
-
-func verifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof Proof, path []byte, value string, exists bool) {
-	verified, err := f.Verify(root, proof, path, hash.CalcSha256([]byte(value)))
-	require.NoError(t, err, "proof verification failed")
-	require.Equal(t, exists, verified, "proof verification returned unexpected result")
-}
-
-func getProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path []byte, expectedHeight int) Proof {
-	proof, err := f.GetProof(root, path)
-	require.NoError(t, err, "failed with error: %s", err)
-	require.Equal(t, expectedHeight, len(proof), "unexpected proof length")
-	return proof
-}
-
 func TestRootManagement(t *testing.T) {
 	f, _ := NewForest()
 
@@ -489,6 +389,116 @@ func TestAddConvegingPathsWithExactValues(t *testing.T) {
 	generalKeyVerifyProof(t, f, root2, proof2, "abdcda", "2", true)
 	generalKeyVerifyProof(t, f, root2, proof3, "acdbda", "1", true)
 	generalKeyVerifyProof(t, f, root2, proof4, "acdcda", "1", true)
+}
+
+// =================
+// helper funcs for working with keys represented by hex value strings
+// used when the general relations between keys are length wise
+// =================
+func hexStringToBytes(s string) []byte {
+	if (len(s) % 2) != 0 {
+		panic("key value needs to be a hex representation of a byte array")
+	}
+	bytesKey := make([]byte, len(s)/2)
+	hex.Decode(bytesKey, []byte(s))
+	return bytesKey
+}
+
+func generalKeyUpdateEntries(f *Forest, baseHash primitives.Sha256, keyValues ...string) primitives.Sha256 {
+	if len(keyValues)%2 != 0 {
+		panic("expected key value pairs")
+	}
+	diffs := make(TrieDiffs, len(keyValues)/2)
+	for i := 0; i < len(keyValues); i = i + 2 {
+		diffs[i/2] = &TrieDiff{Key: hexStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
+	}
+
+	currentRoot, _ := f.Update(baseHash, diffs)
+
+	return currentRoot
+}
+
+func generalKeyVerifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof TrieProof, path string, value string, exists bool) {
+	verifyProof(t, f, root, proof, hexStringToBytes(path), value, exists)
+}
+
+func generalKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path string, expectedHeight int) TrieProof {
+	return getProofRequireHeight(t, f, root, hexStringToBytes(path), expectedHeight)
+}
+
+func generalKeyGetProof(t *testing.T, f *Forest, root primitives.Sha256, path string) TrieProof {
+	proof, err := f.GetProof(root, hexStringToBytes(path))
+	require.NoError(t, err, "failed with error: %s", err)
+	return proof
+}
+
+
+// =================
+// helper funcs for working with keys represented by a string with 0s or 1s
+// used when the specific node relations are required in tests
+// =================
+func isChar0(ch uint8) byte {
+	if ch == uint8('0') {
+		return 0
+	}
+	return 1
+}
+
+func bitStringToBytes(s string) []byte {
+	if (len(s) % 8) != 0 {
+		panic("key value needs to be a bit representation of a byte array")
+	}
+	bytelen := len(s) / 8
+	bytesKey := make([]byte, bytelen)
+	for i := 0; i < bytelen; i++ {
+		bytesKey[i] = isChar0(s[i*8])<<7 |
+			isChar0(s[i*8+1])<<6 |
+			isChar0(s[i*8+2])<<5 |
+			isChar0(s[i*8+3])<<4 |
+			isChar0(s[i*8+4])<<3 |
+			isChar0(s[i*8+5])<<2 |
+			isChar0(s[i*8+6])<<1 |
+			isChar0(s[i*8+7])
+	}
+	return bytesKey
+}
+
+func binaryKeyUpdateEntries(f *Forest, baseHash primitives.Sha256, keyValues ...string) primitives.Sha256 {
+	if len(keyValues)%2 != 0 {
+		panic("expected key value pairs")
+	}
+	diffs := make(TrieDiffs, len(keyValues)/2)
+	for i := 0; i < len(keyValues); i = i + 2 {
+		diffs[i/2] = &TrieDiff{Key: bitStringToBytes(keyValues[i]), Value: hash.CalcSha256([]byte(keyValues[i+1]))}
+	}
+
+	currentRoot, _ := f.Update(baseHash, diffs)
+
+	return currentRoot
+}
+
+func binaryKeyVerifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof TrieProof, path string, value string, exists bool) {
+	verifyProof(t, f, root, proof, bitStringToBytes(path), value, exists)
+}
+
+func binaryKeyGetProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path string, expectedHeight int) TrieProof {
+	return getProofRequireHeight(t, f, root, bitStringToBytes(path), expectedHeight)
+}
+
+// =================
+// verify and getproof short hand funcs
+// =================
+func verifyProof(t *testing.T, f *Forest, root primitives.Sha256, proof TrieProof, path []byte, value string, exists bool) {
+	verified, err := f.Verify(root, proof, path, hash.CalcSha256([]byte(value)))
+	require.NoError(t, err, "proof verification failed")
+	require.Equal(t, exists, verified, "proof verification returned unexpected result")
+}
+
+func getProofRequireHeight(t *testing.T, f *Forest, root primitives.Sha256, path []byte, expectedHeight int) TrieProof {
+	proof, err := f.GetProof(root, path)
+	require.NoError(t, err, "failed with error: %s", err)
+	require.Equal(t, expectedHeight, len(proof), "unexpected proof length")
+	return proof
 }
 
 // =================

@@ -51,7 +51,7 @@ func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitive
 	for i := 0; i < len(txs); i++ {
 		txHashValues[i] = digest.CalcTxHash(txs[i].Transaction())
 	}
-	return merkle.CalculateTreeRoot(txHashValues), nil
+	return merkle.CalculateOrderedTreeRoot(txHashValues), nil
 }
 
 func CalculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
@@ -59,7 +59,7 @@ func CalculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primiti
 	for i := 0; i < len(receipts); i++ {
 		rptHashValues[i] = digest.CalcReceiptHash(receipts[i])
 	}
-	return merkle.CalculateTreeRoot(rptHashValues), nil
+	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
 }
 
 func CalculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
@@ -133,5 +133,5 @@ func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primiti
 	for i := 0; i < len(receipts); i++ {
 		rptHashValues[i] = receipts[i].Txhash()
 	}
-	return merkle.CalculateTreeRoot(rptHashValues), nil
+	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
 }

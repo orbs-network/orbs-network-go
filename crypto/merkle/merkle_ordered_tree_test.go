@@ -9,60 +9,6 @@ import (
 	"time"
 )
 
-func hashTwoInTest(l, r []byte) primitives.Sha256 {
-	s, b := l, r
-	for i := range l {
-		if l[i] < r[i] {
-			break
-		}
-		if l[i] > r[i] {
-			s = r
-			b = l
-			break
-		}
-	}
-	res := make([]byte, len(s)+len(b))
-	for i := 0; i < len(s); i++ {
-		res[i] = s[i]
-	}
-	for i := 0; i < len(b); i++ {
-		res[i+len(s)] = b[i]
-	}
-	return hash.CalcSha256(res)
-}
-
-func hashTreeInTest(n *node) primitives.Sha256 {
-	if n == nil {
-		return zeroValueHash
-	}
-	if n.isLeaf() {
-		return n.value
-	}
-	return hashTwoInTest(hashTreeInTest(n.left), hashTreeInTest(n.right))
-}
-
-func fakeHashValues(vals []int) []primitives.Sha256 {
-	hashValues := make([]primitives.Sha256, len(vals))
-	for i, v := range vals {
-		b := make([]byte, 32)
-		b[31] = byte(v)
-		hashValues[i] = b
-	}
-	return hashValues
-}
-
-func generateHashValue(v int) primitives.Sha256 {
-	return hash.CalcSha256([]byte(strconv.Itoa(v)))
-}
-
-func generateHashValueList(vals []int) []primitives.Sha256 {
-	hashValues := make([]primitives.Sha256, len(vals))
-	for i, v := range vals {
-		hashValues[i] = generateHashValue(v)
-	}
-	return hashValues
-}
-
 func TestTreeNodeHash(t *testing.T) {
 	// Note in our tree implementation there can be nodes that have 0 or 2 children only
 	value := hash.CalcSha256([]byte("value sha"))
@@ -122,7 +68,7 @@ func TestTreeHashAndStructure(t *testing.T) {
 		t.Run(cTest.name, func(t *testing.T) {
 			t.Parallel()
 			hashValues := generateHashValueList(cTest.values)
-			tree := newTree(hashValues)
+			tree := NewOrderedTree(hashValues)
 			require.Equal(t, hashTreeInTest(tree.root), tree.root.hash, "%s hash mismatch", cTest.name)
 			require.Equal(t, cTest.keysize, tree.keySize, "tree max depth size error", cTest.name)
 			require.Equal(t, cTest.maxkey, tree.maxKey, "max index is wrong", cTest.name)
@@ -132,7 +78,7 @@ func TestTreeHashAndStructure(t *testing.T) {
 
 func TestProofOutOfBounds(t *testing.T) {
 	values := []int{0, 1, 2, 3, 4, 5, 6, 7, 8}
-	tree := newTree(generateHashValueList(values))
+	tree := NewOrderedTree(generateHashValueList(values))
 
 	proof, err := tree.GetProof(-5)
 	require.Nil(t, proof, "proof should not exist")
@@ -143,9 +89,9 @@ func TestProofOutOfBounds(t *testing.T) {
 	require.Error(t, err, "error should have occurred")
 }
 
-func TestProofShort(t *testing.T) {
+func TestGetProofInIncomleteTreeShortBranch(t *testing.T) {
 	values := []int{7, 4, 6, -5, 6, 66, 669, -100, 5}
-	tree := newTree(generateHashValueList(values))
+	tree := NewOrderedTree(generateHashValueList(values))
 
 	proof, err := tree.GetProof(8)
 	require.NotNil(t, proof, "proof should exist")
@@ -155,9 +101,9 @@ func TestProofShort(t *testing.T) {
 	require.Equal(t, hashTwoInTest(proof[0], generateHashValue(5)), tree.root.hash, "proof and root don't match")
 }
 
-func TestProofFull(t *testing.T) {
+func TestGetProofInCompleteTree(t *testing.T) {
 	values := []int{7, 4, 6, -5, 6, 66, 669, -100, 5, 4, -77, -91, 12, 77, 7, 16} // must be list of 2*n
-	tree := newTree(generateHashValueList(values))
+	tree := NewOrderedTree(generateHashValueList(values))
 
 	for i := range values {
 		proof, err := tree.GetProof(i)
@@ -181,11 +127,11 @@ func TestProofFull(t *testing.T) {
 
 func TestVerifyOnlyCorrectInputWorks(t *testing.T) {
 	values := []int{7, 4, 16, -5, 6, 66, 669, -100, 5}
-	tree := newTree(generateHashValueList(values))
+	tree := NewOrderedTree(generateHashValueList(values))
 	proof, _ := tree.GetProof(2)
 
 	for i := 0; i < len(values); i++ {
-		err := tree.Verify(generateHashValue(values[i]), proof, tree.root.hash)
+		err := Verify(generateHashValue(values[i]), proof, tree.root.hash)
 		if i != 2 {
 			require.Error(t, err, "verify should have error at index %d", i)
 		} else {
@@ -210,21 +156,21 @@ func TestTreeVerifyProofs(t *testing.T) {
 		cTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
 		t.Run(cTest.name, func(t *testing.T) {
 			t.Parallel()
-			tree := newTree(generateHashValueList(cTest.values))
+			tree := NewOrderedTree(generateHashValueList(cTest.values))
 
 			index := 0
 			proof1, _ := tree.GetProof(index)
-			err := tree.Verify(generateHashValue(cTest.values[index]), proof1, tree.root.hash)
+			err := Verify(generateHashValue(cTest.values[index]), proof1, tree.root.hash)
 			require.NoError(t, err, "checking index 0")
 
 			index = len(cTest.values) - 1
 			proof2, _ := tree.GetProof(index)
-			err = tree.Verify(generateHashValue(cTest.values[index]), proof2, tree.root.hash)
+			err = Verify(generateHashValue(cTest.values[index]), proof2, tree.root.hash)
 			require.NoError(t, err, "checking last index")
 
 			index = len(cTest.values) / 2
 			proof3, _ := tree.GetProof(index)
-			err = tree.Verify(generateHashValue(cTest.values[index]), proof3, tree.root.hash)
+			err = Verify(generateHashValue(cTest.values[index]), proof3, tree.root.hash)
 			require.NoError(t, err, "checking middle")
 		})
 	}
@@ -249,13 +195,75 @@ func TestTreeCalculatedHash(t *testing.T) {
 		cTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
 		t.Run(cTest.name, func(t *testing.T) {
 			hashValues := generateHashValueList(cTest.values)
-			tree := newTree(hashValues)
-			rootCalc := CalculateTreeRoot(hashValues)
+			tree := NewOrderedTree(hashValues)
+			rootCalc := CalculateOrderedTreeRoot(hashValues)
 			require.Equal(t, tree.root.hash, rootCalc, "%s calculated hash mismatch", cTest.name)
 		})
 	}
 }
 
+
+// =================
+// helpers
+// =================
+
+func hashTwoInTest(l, r []byte) primitives.Sha256 {
+	s, b := l, r
+	for i := range l {
+		if l[i] < r[i] {
+			break
+		}
+		if l[i] > r[i] {
+			s = r
+			b = l
+			break
+		}
+	}
+	res := make([]byte, len(s)+len(b))
+	for i := 0; i < len(s); i++ {
+		res[i] = s[i]
+	}
+	for i := 0; i < len(b); i++ {
+		res[i+len(s)] = b[i]
+	}
+	return hash.CalcSha256(res)
+}
+
+func hashTreeInTest(n *node) primitives.Sha256 {
+	if n == nil {
+		return zeroValueHash
+	}
+	if n.isLeaf() {
+		return n.value
+	}
+	return hashTwoInTest(hashTreeInTest(n.left), hashTreeInTest(n.right))
+}
+
+func fakeHashValues(vals []int) []primitives.Sha256 {
+	hashValues := make([]primitives.Sha256, len(vals))
+	for i, v := range vals {
+		b := make([]byte, 32)
+		b[31] = byte(v)
+		hashValues[i] = b
+	}
+	return hashValues
+}
+
+func generateHashValue(v int) primitives.Sha256 {
+	return hash.CalcSha256([]byte(strconv.Itoa(v)))
+}
+
+func generateHashValueList(vals []int) []primitives.Sha256 {
+	hashValues := make([]primitives.Sha256, len(vals))
+	for i, v := range vals {
+		hashValues[i] = generateHashValue(v)
+	}
+	return hashValues
+}
+
+/*
+* test to compare creating a tree vs just calculating root directly
+*/
 func TestTreeStress(t *testing.T) {
 	t.SkipNow()
 	times := 10000
@@ -269,14 +277,14 @@ func TestTreeStress(t *testing.T) {
 
 	start := time.Now()
 	for i := 0; i < times; i++ {
-		newTree(hashValues)
+		NewOrderedTree(hashValues)
 	}
 	duration := time.Now().Sub(start)
 	t.Logf("created merkle trees in %v", duration)
 
 	start = time.Now()
 	for i := 0; i < times; i++ {
-		CalculateTreeRoot(hashValues)
+		CalculateOrderedTreeRoot(hashValues)
 	}
 	duration = time.Now().Sub(start)
 	t.Logf("calculated merkle trees in %v", duration)
