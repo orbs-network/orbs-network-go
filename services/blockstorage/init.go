@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"sync"
 )
 
 const (
@@ -31,7 +32,10 @@ type service struct {
 	config config.BlockStorageConfig
 
 	logger                  log.BasicLogger
-	consensusBlocksHandlers []handlers.ConsensusBlocksHandler
+	consensusBlocksHandlers struct {
+		sync.RWMutex
+		handlers []handlers.ConsensusBlocksHandler
+	}
 
 	// lastCommittedBlock state variable is inside adapter.BlockPersistence (GetLastBlock)
 
@@ -87,8 +91,13 @@ func getBlockTimestamp(block *protocol.BlockPairContainer) primitives.TimestampN
 }
 
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
-	s.consensusBlocksHandlers = append(s.consensusBlocksHandlers, handler)
-
+	s.appendHandlerUnderLock(handler)
 	// update the consensus algo about the latest block we have (for its initialization)
 	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO()) // TODO: (talkol) not sure if we should create a new context here or pass to RegisterConsensusBlocksHandler in code generation
+}
+
+func (s *service) appendHandlerUnderLock(handler handlers.ConsensusBlocksHandler) {
+	s.consensusBlocksHandlers.Lock()
+	defer s.consensusBlocksHandlers.Unlock()
+	s.consensusBlocksHandlers.handlers = append(s.consensusBlocksHandlers.handlers, handler)
 }
