@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	MIN_REST_DURATION      = 1 * time.Millisecond
+	MIN_REST_DURATION      = 2 * time.Millisecond
 	MAX_REST_DURATION      = 5 * time.Millisecond
-	MIN_BURST_DURATION     = 1 * time.Millisecond
-	MAX_BURST_DURATION     = 2 * time.Millisecond
+	MIN_BURST_DURATION     = 100 * time.Microsecond
+	MAX_BURST_DURATION     = 1 * time.Millisecond
 	MAX_ALLOWED_STARVATION = 10 * time.Millisecond
 )
 
