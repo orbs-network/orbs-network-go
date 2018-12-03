@@ -119,14 +119,13 @@ func deepHash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.Re
 	return xorHash
 }
 
+// TODO Consider adding Validate() on leanhelix.Block that will call this method
 func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
-	//TODO Implement me!
-
 	if block == nil {
 		return false
 	}
-	blockWrapper := block.(*BlockPairWrapper)
-	if blockWrapper == nil {
+	blockWrapper, ok := block.(*BlockPairWrapper)
+	if !ok {
 		return false
 	}
 	if blockWrapper.blockPair == nil {
