@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -46,7 +47,7 @@ func verifyNoStarvationRunLoop() {
 
 		now := time.Now()
 		if now.Sub(lastScheduled) > MAX_ALLOWED_STARVATION {
-			panic("cpunoise is causing goroutine starvation! configure it to be less aggressive")
+			panic(fmt.Sprintf("cpunoise is causing goroutine starvation! configure it to be less aggressive\nstarved for %d milliseconds, with %d active cores, total %d goroutines", now.Sub(lastScheduled).Nanoseconds()/1000000, runtime.GOMAXPROCS(0), runtime.NumGoroutine()))
 		}
 		lastScheduled = now
 
