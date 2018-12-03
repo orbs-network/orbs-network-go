@@ -8,10 +8,11 @@ import (
 )
 
 var (
-	MIN_REST_DURATION  = 1 * time.Millisecond
-	MAX_REST_DURATION  = 5 * time.Millisecond
-	MIN_BURST_DURATION = 1 * time.Millisecond
-	MAX_BURST_DURATION = 10 * time.Millisecond
+	MIN_REST_DURATION      = 1 * time.Millisecond
+	MAX_REST_DURATION      = 5 * time.Millisecond
+	MIN_BURST_DURATION     = 1 * time.Millisecond
+	MAX_BURST_DURATION     = 2 * time.Millisecond
+	MAX_ALLOWED_STARVATION = 10 * time.Millisecond
 )
 
 var once sync.Once
@@ -20,6 +21,7 @@ var once sync.Once
 func StartCpuSchedulingJitter() {
 	once.Do(func() {
 		go generateCpuNoiseRunLoop()
+		go verifyNoStarvationRunLoop()
 	})
 }
 
@@ -33,6 +35,21 @@ func generateCpuNoiseRunLoop() {
 		time.Sleep(restDuration)
 
 		cpuNoiseBurst(burstDuration, runtime.GOMAXPROCS(0))
+	}
+}
+
+func verifyNoStarvationRunLoop() {
+	lastScheduled := time.Now()
+	for {
+
+		runtime.Gosched()
+
+		now := time.Now()
+		if now.Sub(lastScheduled) > MAX_ALLOWED_STARVATION {
+			panic("cpunoise is causing goroutine starvation! configure it to be less aggressive")
+		}
+		lastScheduled = now
+
 	}
 }
 
