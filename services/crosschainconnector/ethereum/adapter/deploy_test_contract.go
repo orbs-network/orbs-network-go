@@ -50,9 +50,14 @@ func (c *connectorCommon) SendTransaction(ctx context.Context, auth *bind.Transa
 
 	contractAddress := common.BytesToAddress(address)
 
-	unsignedTx := types.NewTransaction(0, contractAddress, common.Big0, 90000000000, common.Big0, packedInput)
+	nonce, err := client.PendingNonceAt(ctx, auth.From)
+	if err != nil {
+		return nil, err
+	}
 
-	signer := types.NewEIP155Signer(nil)
+	unsignedTx := types.NewTransaction(nonce, contractAddress, common.Big0, 90000000000, common.Big0, packedInput)
+
+	signer := types.HomesteadSigner{}
 	signedTx, err := auth.Signer(signer, auth.From, unsignedTx)
 	if err != nil {
 		return nil, err

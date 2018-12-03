@@ -3,13 +3,13 @@ package adapter
 import (
 	"bytes"
 	"context"
-	"github.com/chain/chain/errors"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
