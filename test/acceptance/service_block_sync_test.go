@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func TestInternalBlockSync_TransactionPool(t *testing.T) {
+func TestServiceBlockSync_TransactionPool(t *testing.T) {
 
 	blockCount := primitives.BlockHeight(10)
 	txBuilders := make([]*builders.TransactionBuilder, blockCount)
@@ -70,7 +70,7 @@ func waitForTransactionStatusCommitted(ctx context.Context, network harness.Test
 	})
 }
 
-func TestInternalBlockSync_StateStorage(t *testing.T) {
+func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 	const transferAmount = 10
 	const transfers = 10
