@@ -22,7 +22,19 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnesLeanHelix(t *testing.T) {
 			contract := network.GetBenchmarkTokenContract()
 			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 			contract.SendTransfer(ctx, 0, 17, 5, 6)
+
+			// FIXME Uncomment this section after state storage is fixed. Presently waiting for transaction on the just-written block will not work
+			// See PR https://github.com/orbs-network/orbs-network-go/issues/567
+			//t.Log(tx.String())
+			//t.Log("SendTransfer complete")
+			//network.WaitForTransactionInNodeState(ctx, tx.TransactionReceipt().Txhash(), 0)
+			//t.Log("finished waiting for tx")
+
+			//require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-17, contract.CallGetBalance(ctx, 0, 5), "getBalance result for the sender on gateway node")
+			//require.EqualValues(t, 17, contract.CallGetBalance(ctx, 0, 6), "getBalance result for the receiver on gateway node")
+			//t.Log("test done")
 		})
+
 }
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
