@@ -11,9 +11,9 @@ import (
 var (
 	MIN_REST_DURATION      = 2 * time.Millisecond
 	MAX_REST_DURATION      = 5 * time.Millisecond
-	MIN_BURST_DURATION     = 100 * time.Microsecond
-	MAX_BURST_DURATION     = 500 * time.Microsecond
-	MAX_ALLOWED_STARVATION = 15 * time.Millisecond
+	MIN_BURST_DURATION     = 500 * time.Microsecond
+	MAX_BURST_DURATION     = 1000 * time.Microsecond
+	MAX_ALLOWED_STARVATION = 10 * time.Millisecond
 )
 
 var once sync.Once
@@ -40,13 +40,14 @@ func generateCpuNoiseRunLoop() {
 }
 
 func verifyNoStarvationRunLoop() {
+	pollInterval := 1 * time.Millisecond
 	lastScheduled := time.Now()
 	for {
 
-		runtime.Gosched()
+		time.Sleep(pollInterval)
 
 		now := time.Now()
-		if now.Sub(lastScheduled) > MAX_ALLOWED_STARVATION {
+		if now.Sub(lastScheduled) > MAX_ALLOWED_STARVATION+pollInterval {
 			panic(fmt.Sprintf("cpunoise is causing goroutine starvation! configure it to be less aggressive\nstarved for %d milliseconds, with %d active cores, total %d goroutines", now.Sub(lastScheduled).Nanoseconds()/1000000, runtime.GOMAXPROCS(0), runtime.NumGoroutine()))
 		}
 		lastScheduled = now
