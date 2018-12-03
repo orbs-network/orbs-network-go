@@ -21,7 +21,7 @@ var once sync.Once
 // creates ongoing random bursts of cpu noise (all cores together) to make goroutine scheduling erratic in -count 100 flakiness tests
 func StartCpuSchedulingJitter() {
 	once.Do(func() {
-		runtime.GOMAXPROCS(4)
+		runtime.GOMAXPROCS(8)
 		// go generateCpuNoiseRunLoop()
 		go verifyNoStarvationRunLoop()
 	})
