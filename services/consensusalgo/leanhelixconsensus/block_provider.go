@@ -66,10 +66,6 @@ func NewBlockProvider(
 }
 
 func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix.Block) leanhelix.Block {
-	// TODO: Get prev block - under mutex??
-
-	// TODO: Should limit the ctx of RequestNewTransactionsBlock
-
 	blockWrapper := prevBlock.(*BlockPairWrapper)
 
 	newBlockHeight := primitives.BlockHeight(prevBlock.Height() + 1)
@@ -78,8 +74,9 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   newBlockHeight,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(blockWrapper.blockPair.TransactionsBlock),
+		BlockHeight:        newBlockHeight,
+		PrevBlockHash:      digest.CalcTransactionsBlockHash(blockWrapper.blockPair.TransactionsBlock),
+		PrevBlockTimestamp: blockWrapper.blockPair.TransactionsBlock.Header.Timestamp(),
 	})
 	if err != nil {
 		return nil
@@ -87,9 +84,10 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       newBlockHeight,
-		PrevBlockHash:     digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
-		TransactionsBlock: txOutput.TransactionsBlock,
+		BlockHeight:        newBlockHeight,
+		PrevBlockHash:      digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
+		TransactionsBlock:  txOutput.TransactionsBlock,
+		PrevBlockTimestamp: blockWrapper.blockPair.ResultsBlock.Header.Timestamp(),
 	})
 	if err != nil {
 		return nil
@@ -212,4 +210,11 @@ func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, r
 
 func dataToSignFrom(blockPair *protocol.BlockPairContainer) []byte {
 	return deepHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
+}
+
+func CalculateNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now primitives.TimestampNano) primitives.TimestampNano {
+	if now > prevBlockTimestamp {
+		return now + 1
+	}
+	return prevBlockTimestamp + 1
 }
