@@ -112,7 +112,7 @@ func NewLeanHelixConsensusAlgo(
 	gossip.RegisterLeanHelixHandler(s)
 	logger.Info("NewLeanHelixConsensusAlgo() registering with Block Storage")
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		parentLogger.Info("Lean Helix go routine starts", log.BlockHeight(primitives.BlockHeight(blockHeight)))
+		parentLogger.Info("LeanHelix go routine starts", log.BlockHeight(primitives.BlockHeight(blockHeight)))
 
 		supervised.GoForever(ctx, logger, func() {
 			s.leanHelix.Run(ctx)
@@ -128,7 +128,7 @@ func NewLeanHelixConsensusAlgo(
 		logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
 
 	} else {
-		parentLogger.Info("Lean Helix is not the active consensus algo, not starting its consensus loop")
+		parentLogger.Info("LeanHelix is not the active consensus algo, not starting its consensus loop")
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() return")

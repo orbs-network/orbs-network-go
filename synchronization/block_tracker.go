@@ -77,7 +77,6 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 		case <-currentLatch:
 			t.logger.Info("WaitForBlock() Latch released", log.Uint64("current-height", currentHeight), log.Uint64("requestedHeight", requestedHeightUint))
 			currentHeight, currentLatch = t.readAtomicHeightAndLatch()
-			t.logger.Info("WaitForBlock() read new height", log.Uint64("current-height", currentHeight), log.Uint64("requestedHeight", requestedHeightUint))
 		}
 	}
 	t.logger.Info("WaitForBlock() return", log.Uint64("current-height", currentHeight), log.Uint64("requestedHeight", requestedHeightUint))
