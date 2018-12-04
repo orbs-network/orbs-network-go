@@ -211,8 +211,10 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
 
 		metricRegistry := metric.NewRegistry()
-		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(testLogger, preloadedBlocks, metricRegistry)
-		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, testLogger.WithTags(log.Node(fmt.Sprintf("%d", i))))
+		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodePublicKey().String()))
+		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
+
+		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, nodeLogger)
 	}
 
 	return network

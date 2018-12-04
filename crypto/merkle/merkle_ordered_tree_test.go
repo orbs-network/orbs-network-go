@@ -202,7 +202,6 @@ func TestTreeCalculatedHash(t *testing.T) {
 	}
 }
 
-
 // =================
 // helpers
 // =================
@@ -263,7 +262,7 @@ func generateHashValueList(vals []int) []primitives.Sha256 {
 
 /*
 * test to compare creating a tree vs just calculating root directly
-*/
+ */
 func TestTreeStress(t *testing.T) {
 	t.SkipNow()
 	times := 10000

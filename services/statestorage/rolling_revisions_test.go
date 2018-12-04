@@ -3,8 +3,9 @@ package statestorage
 import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -154,7 +155,7 @@ func TestRevisionEviction(t *testing.T) {
 }
 
 type driver struct {
-	inner         *rollingRevisions
+	inner *rollingRevisions
 }
 
 func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.Sha256)) *driver {
@@ -165,7 +166,7 @@ func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCal
 		m.When("Forget", mock.Any).Return(nil).Times(1)
 	}
 	d := &driver{
-		inner: newRollingRevisions(persistence, layers, m),
+		inner: newRollingRevisions(log.GetLogger(), persistence, layers, m),
 	}
 	return d
 }

@@ -20,7 +20,7 @@ import (
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight
+	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
 type blockHeightChan chan primitives.BlockHeight
