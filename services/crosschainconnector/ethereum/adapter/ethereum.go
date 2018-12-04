@@ -13,13 +13,6 @@ import (
 	"math/big"
 )
 
-type TransactionLog struct {
-	ContractAddress []byte
-	PackedTopics    [][]byte // indexed fields
-	Data            []byte   // non-indexed fields
-	BlockNumber     uint64
-}
-
 type ethereumAdapterConfig interface {
 	EthereumEndpoint() string
 }

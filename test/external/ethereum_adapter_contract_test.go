@@ -64,15 +64,32 @@ func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnectio
 		commit()
 		require.NoError(t, err, "failed emitting event")
 
-		eventSignature := parsedABI.Events["TransferredOut"].Id().Bytes()
+		eventABI := parsedABI.Events["TransferredOut"]
+		eventSignature := eventABI.Id().Bytes()
 
 		logs, err := adapter.GetLogs(ctx, primitives.Uint256(tx.Hash().Bytes()), contractAddress, eventSignature)
 		require.NoError(t, err, "failed getting logs")
 
 		require.Len(t, logs, 1, "did not get the expected event log")
 		log := logs[0]
+
 		require.Equal(t, contractAddress, log.ContractAddress, "contract address in log differed from actual contract address")
 		require.Equal(t, eventSignature, log.PackedTopics[0], "event returned did not have the expected signature as the first topic")
+
+		data, err := log.UnpackDataUsing(eventABI)
+		require.NoError(t, err, "failed unpacking data")
+
+		require.Len(t, data, 1, "got unexpected items in log data")
+		require.EqualValues(t, eventValue, data[0], "did not get expected value from event")
+
+		eventTuid, err := log.PackedTopics.BigIntAt(1)
+		require.EqualValues(t, tuid, eventTuid, "failed unpacking tuid")
+
+		eventEthAddress, err := log.PackedTopics.BytesAt(2, len(ethAddress))
+		require.EqualValues(t, ethAddress.Bytes(), eventEthAddress, "failed unpacking ethAddress")
+
+		//TODO orbs address seems to be big-endian
+
 	}
 }
 
