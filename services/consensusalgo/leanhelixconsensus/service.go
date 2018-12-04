@@ -108,30 +108,24 @@ func NewLeanHelixConsensusAlgo(
 		s.saveToBlockStorage(ctx, blockPair)
 	})
 
-	logger.Info("NewLeanHelixConsensusAlgo() registering with Gossip")
 	gossip.RegisterLeanHelixHandler(s)
-	logger.Info("NewLeanHelixConsensusAlgo() registering with Block Storage")
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		parentLogger.Info("LeanHelix go routine starts", log.BlockHeight(primitives.BlockHeight(blockHeight)))
 
 		supervised.GoForever(ctx, logger, func() {
 			s.leanHelix.Run(ctx)
 		})
-		logger.Info("NewLeanHelixConsensusAlgo() Sending genesis block to AcknowledgeBlockConsensus()")
-		s.leanHelix.AcknowledgeBlockConsensus(ToBlockPairWrapper(genesisBlock))
+		s.leanHelix.UpdateConsensusRound(ToBlockPairWrapper(genesisBlock))
 		logger.Info("NewLeanHelixConsensusAlgo() Sent genesis block to AcknowledgeBlockConsensus()")
 
 		// FIXME This is causing TestExternalBlockSync to hang, so cannot uncomment till then
 		// See https://github.com/orbs-network/orbs-network-go/issues/557
 		blockStorage.RegisterConsensusBlocksHandler(s)
-		logger.Info("NewLeanHelixConsensusAlgo() registered with Block Storage")
 		logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
 
 	} else {
 		parentLogger.Info("LeanHelix is not the active consensus algo, not starting its consensus loop")
 	}
-
-	logger.Info("NewLeanHelixConsensusAlgo() return")
 	return s
 }
 
@@ -165,14 +159,13 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	}
 
 	prevBlock := ToBlockPairWrapper(blockPair)
-	s.leanHelix.AcknowledgeBlockConsensus(prevBlock)
+	s.leanHelix.UpdateConsensusRound(prevBlock)
 
 	return nil, nil
 }
 
 func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
 	messageType := input.Message.MessageType
-	s.logger.Info("leanhelix comm.HandleLeanHelixMessage()", log.Stringable("message-type", messageType))
 	message := leanhelix.CreateConsensusRawMessage(
 		leanhelix.MessageType(messageType),
 		input.Message.Content,

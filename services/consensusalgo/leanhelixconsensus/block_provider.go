@@ -84,10 +84,9 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:        newBlockHeight,
-		PrevBlockHash:      digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
-		TransactionsBlock:  txOutput.TransactionsBlock,
-		PrevBlockTimestamp: blockWrapper.blockPair.ResultsBlock.Header.Timestamp(),
+		BlockHeight:       newBlockHeight,
+		PrevBlockHash:     digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
+		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
 		return nil
@@ -105,8 +104,8 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 }
 
 func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
-	blockPairWrapper := block.(*BlockPairWrapper)
-	if blockPairWrapper == nil || blockPairWrapper.blockPair == nil {
+	blockPairWrapper, ok := block.(*BlockPairWrapper)
+	if !ok {
 		return nil
 	}
 	return deepHash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)

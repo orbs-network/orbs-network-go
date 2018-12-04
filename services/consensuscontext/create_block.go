@@ -5,17 +5,18 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
 
-func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256) (*protocol.TransactionsBlockContainer, error) {
+func (s *service) createTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*protocol.TransactionsBlockContainer, error) {
 	start := time.Now()
 	defer s.metrics.createTxBlockTime.RecordSince(start)
 
-	proposedTransactions, err := s.fetchTransactions(ctx, blockHeight, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
+	proposedTransactions, err := s.fetchTransactions(ctx, input.BlockHeight, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
 	if err != nil {
 		return nil, err
 	}
@@ -26,13 +27,15 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 		return nil, err
 	}
 
+	timestamp := leanhelixconsensus.CalculateNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
+
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
 			ProtocolVersion:       primitives.ProtocolVersion(s.config.ProtocolVersion()),
 			VirtualChainId:        s.config.VirtualChainId(),
-			BlockHeight:           blockHeight,
-			PrevBlockHashPtr:      prevBlockHash,
-			Timestamp:             primitives.TimestampNano(time.Now().UnixNano()),
+			BlockHeight:           input.BlockHeight,
+			PrevBlockHashPtr:      input.PrevBlockHash,
+			Timestamp:             timestamp,
 			TransactionsRootHash:  primitives.MerkleSha256(merkleTransactionsRoot),
 			MetadataHash:          nil,
 			NumSignedTransactions: uint32(txCount),
@@ -66,14 +69,13 @@ func CalculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) pri
 	return digest.CalcTransactionsBlockHash(txBlock)
 }
 
-// TODO This flow is not final
-func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockHash primitives.Sha256, transactionsBlock *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
+func (s *service) createResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*protocol.ResultsBlockContainer, error) {
 	start := time.Now()
 	defer s.metrics.createResultsBlockTime.RecordSince(start)
 
 	output, err := s.virtualMachine.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		BlockHeight:        blockHeight,
-		SignedTransactions: transactionsBlock.SignedTransactions,
+		BlockHeight:        input.BlockHeight,
+		SignedTransactions: input.TransactionsBlock.SignedTransactions,
 	})
 	if err != nil {
 		return nil, err
@@ -84,7 +86,7 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 	}
 
 	preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-		BlockHeight: blockHeight - 1,
+		BlockHeight: input.BlockHeight - 1,
 	})
 
 	if err != nil {
@@ -99,12 +101,12 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 		Header: (&protocol.ResultsBlockHeaderBuilder{
 			ProtocolVersion:             primitives.ProtocolVersion(s.config.ProtocolVersion()),
 			VirtualChainId:              s.config.VirtualChainId(),
-			BlockHeight:                 blockHeight,
-			PrevBlockHashPtr:            prevBlockHash,
-			Timestamp:                   primitives.TimestampNano(time.Now().UnixNano()),
+			BlockHeight:                 input.BlockHeight,
+			PrevBlockHashPtr:            input.PrevBlockHash,
+			Timestamp:                   input.TransactionsBlock.Header.Timestamp(),
 			ReceiptsRootHash:            primitives.MerkleSha256(merkleReceiptsRoot),
 			StateDiffHash:               stateDiffHash,
-			TransactionsBlockHashPtr:    digest.CalcTransactionsBlockHash(transactionsBlock),
+			TransactionsBlockHashPtr:    digest.CalcTransactionsBlockHash(input.TransactionsBlock),
 			PreExecutionStateRootHash:   preExecutionStateRootHash.StateRootHash,
 			TransactionsBloomFilterHash: nil,
 			NumTransactionReceipts:      uint32(len(output.TransactionReceipts)),

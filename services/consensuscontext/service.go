@@ -63,7 +63,7 @@ func NewConsensusContext(
 func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("starting to create transactions block", log.BlockHeight(input.BlockHeight))
-	txBlock, err := s.createTransactionsBlock(ctx, input.BlockHeight, input.PrevBlockHash)
+	txBlock, err := s.createTransactionsBlock(ctx, input)
 	if err != nil {
 		logger.Info("failed to create transactions block", log.Error(err))
 		return nil, err
@@ -87,7 +87,7 @@ func (s *service) printTxHash(logger log.BasicLogger, txBlock *protocol.Transact
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	rxBlock, err := s.createResultsBlock(ctx, input.BlockHeight, input.PrevBlockHash, input.TransactionsBlock)
+	rxBlock, err := s.createResultsBlock(ctx, input)
 	if err != nil {
 		return nil, err
 	}
