@@ -72,7 +72,6 @@ func (comm *networkCommunication) SendMessage(ctx context.Context, lhtargets []l
 		}
 	}
 
-	comm.logger.Info("leanhelix.comm.SendMessage()", log.Stringable("message-type", consensusRawMessage.MessageType()), log.Stringable("block-pair", blockPair))
 	message := &gossiptopics.LeanHelixInput{
 		RecipientsList: &gossiptopics.RecipientsList{
 			RecipientPublicKeys: targets,
