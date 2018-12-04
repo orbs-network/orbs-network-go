@@ -118,7 +118,7 @@ func NewLeanHelixConsensusAlgo(
 			s.leanHelix.Run(ctx)
 		})
 		logger.Info("NewLeanHelixConsensusAlgo() Sending genesis block to AcknowledgeBlockConsensus()")
-		s.leanHelix.AcknowledgeBlockConsensus(ToBlockPairWrapper(genesisBlock))
+		s.leanHelix.UpdateConsensusRound(ToBlockPairWrapper(genesisBlock))
 		logger.Info("NewLeanHelixConsensusAlgo() Sent genesis block to AcknowledgeBlockConsensus()")
 
 		// FIXME This is causing TestExternalBlockSync to hang, so cannot uncomment till then
@@ -165,7 +165,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	}
 
 	prevBlock := ToBlockPairWrapper(blockPair)
-	s.leanHelix.AcknowledgeBlockConsensus(prevBlock)
+	s.leanHelix.UpdateConsensusRound(prevBlock)
 
 	return nil, nil
 }
