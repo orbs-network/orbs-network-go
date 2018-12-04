@@ -63,7 +63,7 @@ func (n *Network) AddNode(
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
-	node.statePersistence = harnessStateStorageAdapter.NewTamperingStatePersistence(metricRegistry, logger)
+	node.statePersistence = harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry, logger)
 	node.stateBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
 	node.blockPersistence = blockPersistence
 	node.nativeCompiler = compiler

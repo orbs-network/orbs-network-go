@@ -15,7 +15,7 @@ type TestStatePersistence struct {
 	*adapter.InMemoryStatePersistence
 }
 
-func NewTamperingStatePersistence(metric metric.Registry, log log.BasicLogger) *TestStatePersistence {
+func NewDumpingStatePersistence(metric metric.Registry, log log.BasicLogger) *TestStatePersistence {
 	result := &TestStatePersistence{
 		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(metric),
 	}
