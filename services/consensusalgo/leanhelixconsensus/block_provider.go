@@ -84,10 +84,9 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:        newBlockHeight,
-		PrevBlockHash:      digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
-		TransactionsBlock:  txOutput.TransactionsBlock,
-		PrevBlockTimestamp: blockWrapper.blockPair.ResultsBlock.Header.Timestamp(),
+		BlockHeight:       newBlockHeight,
+		PrevBlockHash:     digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
+		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
 		return nil
