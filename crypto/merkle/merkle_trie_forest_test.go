@@ -432,7 +432,6 @@ func generalKeyGetProof(t *testing.T, f *Forest, root primitives.Sha256, path st
 	return proof
 }
 
-
 // =================
 // helper funcs for working with keys represented by a string with 0s or 1s
 // used when the specific node relations are required in tests
