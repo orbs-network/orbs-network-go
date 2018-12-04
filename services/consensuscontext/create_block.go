@@ -4,11 +4,10 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"strconv"
 	"time"
 )
 
@@ -34,7 +33,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 			BlockHeight:           blockHeight,
 			PrevBlockHashPtr:      prevBlockHash,
 			Timestamp:             primitives.TimestampNano(time.Now().UnixNano()),
-			TransactionsRootHash:  merkleTransactionsRoot,
+			TransactionsRootHash:  primitives.MerkleSha256(merkleTransactionsRoot),
 			MetadataHash:          nil,
 			NumSignedTransactions: uint32(txCount),
 		}).Build(),
@@ -47,30 +46,20 @@ func (s *service) createTransactionsBlock(ctx context.Context, blockHeight primi
 	return txBlock, nil
 }
 
-func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.MerkleSha256, error) {
-	forest, root := merkle.NewForest()
-	diffs := make([]*merkle.MerkleDiff, len(txs))
+func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.Sha256, error) {
+	txHashValues := make([]primitives.Sha256, len(txs))
 	for i := 0; i < len(txs); i++ {
-		txHash := digest.CalcTxHash(txs[i].Transaction())
-		diffs[i] = &merkle.MerkleDiff{
-			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
-			Value: txHash,
-		}
+		txHashValues[i] = digest.CalcTxHash(txs[i].Transaction())
 	}
-	return forest.Update(root, diffs)
+	return merkle.CalculateOrderedTreeRoot(txHashValues), nil
 }
 
-func CalculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.MerkleSha256, error) {
-	forest, root := merkle.NewForest()
-	diffs := make([]*merkle.MerkleDiff, len(receipts))
+func CalculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
+	rptHashValues := make([]primitives.Sha256, len(receipts))
 	for i := 0; i < len(receipts); i++ {
-		txHash := digest.CalcReceiptHash(receipts[i])
-		diffs[i] = &merkle.MerkleDiff{
-			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
-			Value: txHash,
-		}
+		rptHashValues[i] = digest.CalcReceiptHash(receipts[i])
 	}
-	return forest.Update(root, diffs)
+	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
 }
 
 func CalculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
@@ -94,11 +83,9 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 		return nil, err
 	}
 
-	// TODO Waiting for state-storage fix: internal sync does not yet update the state storage when committing blocks
-	// See https://tree.taiga.io/project/orbs-network/us/383
-	//preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-	//	BlockHeight: blockHeight - 1,
-	//})
+	preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
+		BlockHeight: blockHeight - 1,
+	})
 
 	if err != nil {
 		return nil, err
@@ -115,10 +102,10 @@ func (s *service) createResultsBlock(ctx context.Context, blockHeight primitives
 			BlockHeight:                 blockHeight,
 			PrevBlockHashPtr:            prevBlockHash,
 			Timestamp:                   primitives.TimestampNano(time.Now().UnixNano()),
-			ReceiptsRootHash:            merkleReceiptsRoot,
+			ReceiptsRootHash:            primitives.MerkleSha256(merkleReceiptsRoot),
 			StateDiffHash:               stateDiffHash,
 			TransactionsBlockHashPtr:    digest.CalcTransactionsBlockHash(transactionsBlock),
-			PreExecutionStateRootHash:   nil,
+			PreExecutionStateRootHash:   preExecutionStateRootHash.StateRootHash,
 			TransactionsBloomFilterHash: nil,
 			NumTransactionReceipts:      uint32(len(output.TransactionReceipts)),
 			NumContractStateDiffs:       uint32(len(output.ContractStateDiffs)),
@@ -139,15 +126,10 @@ func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha
 	return hash.CalcSha256([]byte{1, 2, 3, 4, 5, 6, 6, 7, 8}), nil
 }
 
-func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.MerkleSha256, error) {
-	forest, root := merkle.NewForest()
-	diffs := make([]*merkle.MerkleDiff, len(receipts))
+func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
+	rptHashValues := make([]primitives.Sha256, len(receipts))
 	for i := 0; i < len(receipts); i++ {
-		diffs[i] = &merkle.MerkleDiff{
-			Key:   []byte(strconv.Itoa(i)), // no need to be overly smart here
-			Value: receipts[i].Txhash(),
-		}
+		rptHashValues[i] = receipts[i].Txhash()
 	}
-	return forest.Update(root, diffs)
-
+	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
 }

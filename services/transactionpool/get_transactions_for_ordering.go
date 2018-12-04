@@ -19,7 +19,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	// we're collecting transactions for a new proposed block at input.BlockHeight.
 	// wait for previous block height to be synced to avoid processing any tx that was already committed a second time.
-	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight - 1); err != nil {
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight-1); err != nil {
 		return nil, err
 	}
 

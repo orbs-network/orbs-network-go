@@ -3,8 +3,8 @@ package statestorage
 import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -78,13 +78,13 @@ func TestMergeToPersistence(t *testing.T) {
 	persistenceMock := &StatePersistenceMock{}
 	persistenceMock.
 		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
-		Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
+		Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff adapter.ChainState) error {
 			expectedValue := fmt.Sprintf("v%v", writeCallCount)
 			v := string(diff["c"]["k"].Value())
 			require.EqualValues(t, expectedValue, v)
 			require.EqualValues(t, writeCallCount, height)
 			require.EqualValues(t, writeCallCount, ts)
-			require.EqualValues(t, primitives.MerkleSha256{writeCallCount}, root)
+			require.EqualValues(t, primitives.Sha256{writeCallCount}, root)
 			writeCallCount++
 			return nil
 		}).
@@ -125,11 +125,11 @@ func TestReadHash(t *testing.T) {
 
 	root, err := d.readHash(1)
 	require.NoError(t, err)
-	require.Equal(t, primitives.MerkleSha256{1}, root)
+	require.Equal(t, primitives.Sha256{1}, root)
 
 	root, err = d.readHash(2)
 	require.NoError(t, err)
-	require.Equal(t, primitives.MerkleSha256{2}, root)
+	require.Equal(t, primitives.Sha256{2}, root)
 
 	_, err = d.readHash(3)
 	require.Error(t, err)
@@ -140,8 +140,8 @@ func TestReadHash(t *testing.T) {
 
 func TestRevisionEviction(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
-	var evictedMerkleRoots []primitives.MerkleSha256
-	d := newDriver(persistenceMock, 1, func(sha256 primitives.MerkleSha256) {
+	var evictedMerkleRoots []primitives.Sha256
+	d := newDriver(persistenceMock, 1, func(sha256 primitives.Sha256) {
 		evictedMerkleRoots = append(evictedMerkleRoots, sha256)
 	})
 
@@ -150,14 +150,14 @@ func TestRevisionEviction(t *testing.T) {
 	require.Len(t, evictedMerkleRoots, 0)
 
 	d.writeFull(2, 2, "c", "k", "v2")
-	require.Equal(t, []primitives.MerkleSha256{firstHash}, evictedMerkleRoots)
+	require.Equal(t, []primitives.Sha256{firstHash}, evictedMerkleRoots)
 }
 
 type driver struct {
-	inner         *rollingRevisions
+	inner *rollingRevisions
 }
 
-func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.MerkleSha256)) *driver {
+func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.Sha256)) *driver {
 	m := newMerkleMock()
 	if merkleForgetCallback != nil {
 		m.When("Forget", mock.Any).Call(merkleForgetCallback).Return(nil).Times(1)
@@ -195,7 +195,7 @@ func (d *driver) read(h primitives.BlockHeight, contract primitives.ContractName
 	return value, exists, err
 }
 
-func (d *driver) readHash(h primitives.BlockHeight) (primitives.MerkleSha256, error) {
+func (d *driver) readHash(h primitives.BlockHeight) (primitives.Sha256, error) {
 	return d.inner.getRevisionHash(h)
 }
 
@@ -212,15 +212,15 @@ func statePersistenceMockWithWriteAnyNoErrors(writeTimes int) *StatePersistenceM
 	return persistenceMock
 }
 
-func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
+func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff adapter.ChainState) error {
 	return spm.Mock.Called(height, ts, root, diff).Error(0)
 }
 func (spm *StatePersistenceMock) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
 	ret := spm.Mock.Called(contract, key)
 	return ret.Get(0).(*protocol.StateRecord), ret.Bool(1), ret.Error(2)
 }
-func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.MerkleSha256, error) {
-	return 0, 0, primitives.MerkleSha256{}, nil
+func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.Sha256, error) {
+	return 0, 0, primitives.Sha256{}, nil
 }
 
 type MerkleMock struct {
@@ -231,18 +231,18 @@ func newMerkleMock() *MerkleMock {
 	m := &MerkleMock{}
 	var counter byte = 0
 	m.When("Update", mock.Any, mock.Any).
-		Call(func(root primitives.MerkleSha256, diff merkle.MerkleDiffs) (primitives.MerkleSha256, error) {
+		Call(func(root primitives.Sha256, diff merkle.TrieDiffs) (primitives.Sha256, error) {
 			counter++
-			return primitives.MerkleSha256{counter}, nil
+			return primitives.Sha256{counter}, nil
 		}).
 		AtLeast(0)
 	return m
 }
 
-func (mm *MerkleMock) Update(rootMerkle primitives.MerkleSha256, diffs merkle.MerkleDiffs) (primitives.MerkleSha256, error) {
+func (mm *MerkleMock) Update(rootMerkle primitives.Sha256, diffs merkle.TrieDiffs) (primitives.Sha256, error) {
 	ret := mm.Mock.Called(rootMerkle, diffs)
-	return ret.Get(0).(primitives.MerkleSha256), ret.Error(1)
+	return ret.Get(0).(primitives.Sha256), ret.Error(1)
 }
-func (mm *MerkleMock) Forget(rootHash primitives.MerkleSha256) {
+func (mm *MerkleMock) Forget(rootHash primitives.Sha256) {
 	mm.Mock.Called(rootHash)
 }

@@ -63,11 +63,11 @@ func NewInMemoryBlockPersistenceWithBlocks(parent log.BasicLogger, preloadedBloc
 		failNextBlocks: false,
 		logger:         logger,
 		metrics:        newMetrics(metricFactory),
-		tracker:        synchronization.NewBlockTracker(uint64(len(preloadedBlocks)), 5),
+		tracker:        synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
 		blockChain: struct {
 			sync.RWMutex
 			blocks []*protocol.BlockPairContainer
-		} {blocks: preloadedBlocks},
+		}{blocks: preloadedBlocks},
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)

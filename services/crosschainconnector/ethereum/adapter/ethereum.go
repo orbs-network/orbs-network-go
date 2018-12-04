@@ -44,5 +44,3 @@ func (c *connectorCommon) CallContract(ctx context.Context, address []byte, pack
 
 	return output, err
 }
-
-
