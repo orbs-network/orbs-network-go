@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 )
 
 type service struct {
@@ -43,5 +44,19 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 }
 
 func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *services.EthereumGetTransactionLogsInput) (*services.EthereumGetTransactionLogsOutput, error) {
-	panic("Not implemented")
+	logs, err := s.connection.GetLogs(ctx, input.EthereumTxhash, []byte(input.EthereumContractAddress), []byte(input.EventSignature))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting logs for Ethereum txhash %s of contract %s", input.EthereumTxhash, input.EthereumContractAddress)
+	}
+
+	if len(logs) != 1 {
+		return nil, errors.Errorf("expected exactly one log entry for txhash %s of contract %s but got %d", input.EthereumTxhash, input.EthereumContractAddress, len(logs))
+	}
+
+	out := &services.EthereumGetTransactionLogsOutput{
+		EthereumPackedEventData: logs[0].Data,
+		EthereumPackedEventTopics: logs[0].PackedTopics,
+	}
+
+	return out, nil
 }
