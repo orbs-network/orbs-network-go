@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
-	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +14,7 @@ import (
 
 func TestE2EStress(t *testing.T) {
 	h := newHarness()
+	ctrlRand := test.NewControlledRand(t) // TODO this is the only place outside of test package where this method is used. If we can remove this here, NewControlledRand can turn private
 
 	config := getConfig().stressTest
 
@@ -35,7 +35,7 @@ func TestE2EStress(t *testing.T) {
 
 				targetKey, _ := keys.GenerateEd25519Key()
 				targetAddress := builders.AddressFor(targetKey)
-				amount := uint64(rand.Intn(10))
+				amount := uint64(ctrlRand.Intn(10))
 
 				_, _, err2 := h.sendTransaction(OwnerOfAllSupply, "BenchmarkToken", "transfer", uint64(amount), []byte(targetAddress))
 

@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -11,20 +12,22 @@ import (
 )
 
 func TestPublicApiSendTx_PrepareResponse(t *testing.T) {
-	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
-	receipt := builders.TransactionReceipt().WithRandomHash().Build()
+	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
+		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+		receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 
-	response := toSendTxOutput(&txResponse{
-		transactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
-		transactionReceipt: receipt,
-		blockHeight:        126,
-		blockTimestamp:     blockTime,
+		response := toSendTxOutput(&txResponse{
+			transactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
+			transactionReceipt: receipt,
+			blockHeight:        126,
+			blockTimestamp:     blockTime,
+		})
+
+		test.RequireCmpEqual(t, receipt, response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
+		require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
+		require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
+		test.RequireStatus(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response.ClientResponse, "status response is wrong")
 	})
-
-	test.RequireCmpEqual(t, receipt, response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
-	require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
-	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	test.RequireStatus(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, response.ClientResponse, "status response is wrong")
 }
 
 func TestPublicApiSendTx_PrepareResponseNilReceipt(t *testing.T) {

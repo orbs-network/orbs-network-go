@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"math/rand"
+	"github.com/orbs-network/orbs-network-go/test"
 	"runtime"
 	"sync"
 	"time"
@@ -17,7 +17,7 @@ type failingTamperer struct {
 
 func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		return &adapter.ErrTransportFailed{Data:data}, true
+		return &adapter.ErrTransportFailed{Data: data}, true
 	}
 
 	return nil, false
@@ -74,10 +74,11 @@ type corruptingTamperer struct {
 }
 
 func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+	ctrlRand := test.GetRand(ctx)
 	if o.predicate(data) {
 		for i := 0; i < 10; i++ {
-			x := rand.Intn(len(data.Payloads))
-			y := rand.Intn(len(data.Payloads[x]))
+			x := ctrlRand.Intn(len(data.Payloads))
+			y := ctrlRand.Intn(len(data.Payloads[x]))
 			data.Payloads[x][y] = 0
 		}
 	}

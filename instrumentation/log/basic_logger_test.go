@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -251,46 +252,53 @@ func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
-	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash().Build(),
-		builders.TransactionReceipt().WithRandomHash().Build(),
-	}
+	test.WithContextWithRand(b, func(ctx context.Context, ctrlRand *test.ControlledRand) {
 
-	formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
+		receipts := []*protocol.TransactionReceipt{
+			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+		}
 
-	for _, formatter := range formatters {
-		b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
-			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-				WithOutput(log.NewFormattingOutput(ioutil.Discard, log.NewJsonFormatter()))
+		formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
 
-			b.StartTimer()
-			for i := 0; i < b.N; i++ {
-				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
-			}
-			b.StopTimer()
-		})
-	}
+		for _, formatter := range formatters {
+			b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
+				serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+					WithOutput(log.NewFormattingOutput(ioutil.Discard, log.NewJsonFormatter()))
+
+				b.StartTimer()
+				for i := 0; i < b.N; i++ {
+					serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+				}
+				b.StopTimer()
+			})
+		}
+	})
+
 }
 
 func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
-	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash().Build(),
-		builders.TransactionReceipt().WithRandomHash().Build(),
-	}
+	test.WithContextWithRand(b, func(ctx context.Context, ctrlRand *test.ControlledRand) {
 
-	outputs := []io.Writer{os.Stdout, ioutil.Discard}
+		receipts := []*protocol.TransactionReceipt{
+			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+		}
 
-	for _, output := range outputs {
-		b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
+		outputs := []io.Writer{os.Stdout, ioutil.Discard}
 
-			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-				WithOutput(log.NewFormattingOutput(output, log.NewHumanReadableFormatter()))
+		for _, output := range outputs {
+			b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
 
-			b.StartTimer()
-			for i := 0; i < b.N; i++ {
-				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
-			}
-			b.StopTimer()
-		})
-	}
+				serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+					WithOutput(log.NewFormattingOutput(output, log.NewHumanReadableFormatter()))
+
+				b.StartTimer()
+				for i := 0; i < b.N; i++ {
+					serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+				}
+				b.StopTimer()
+			})
+		}
+	})
 }

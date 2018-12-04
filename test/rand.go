@@ -8,12 +8,10 @@ import (
 	"time"
 )
 
-type namedLogger interface {
-	Log(args ...interface{})
-	Name() string
-}
-
 type randMode int
+type ControlledRand struct {
+	*rand.Rand
+}
 
 const (
 	randPrefInvokeClock randMode = iota
@@ -59,7 +57,7 @@ func init() {
 			" the same arbitrary value in each test invocation")
 }
 
-func NewRand(t namedLogger) *rand.Rand {
+func NewControlledRand(t NamedLogger) *ControlledRand {
 	var newSeed int64
 	if randPreference.mode == randPrefInvokeClock {
 		newSeed = time.Now().UTC().UnixNano()
@@ -67,5 +65,5 @@ func NewRand(t namedLogger) *rand.Rand {
 		newSeed = randPreference.seed
 	}
 	t.Log(fmt.Sprintf("random seed %v (%s)", newSeed, t.Name()))
-	return rand.New(rand.NewSource(newSeed))
+	return &ControlledRand{rand.New(rand.NewSource(newSeed))}
 }

@@ -104,7 +104,7 @@ func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T)
 
 func TestStateWaitingForChunks_DoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
 	h := newBlockSyncHarness()
-	test.WithContextWithTimeout(h.config.collectChunks/2, func(ctx context.Context) {
+	test.WithContextWithTimeout(t, h.config.collectChunks/2, func(ctx context.Context) {
 		state := h.factory.CreateWaitingForChunksState(h.config.NodePublicKey())
 		messageSourceKey := keys.Ed25519KeyPairForTests(1).PublicKey()
 		blocksMessage := builders.BlockSyncResponseInput().WithSenderPublicKey(messageSourceKey).Build().Message

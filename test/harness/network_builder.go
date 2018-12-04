@@ -24,13 +24,14 @@ import (
 	"time"
 )
 
-type canFail interface {
+type canFailAndLog interface {
+	test.NamedLogger
 	Failed() bool
 	Fatal(args ...interface{})
 }
 
 type acceptanceTestNetworkBuilder struct {
-	f                        canFail
+	fl                       canFailAndLog
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
@@ -42,8 +43,8 @@ type acceptanceTestNetworkBuilder struct {
 	requiredQuorumPercentage uint32
 }
 
-func Network(f canFail) *acceptanceTestNetworkBuilder {
-	n := &acceptanceTestNetworkBuilder{f: f, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+func Network(fl canFailAndLog) *acceptanceTestNetworkBuilder {
+	n := &acceptanceTestNetworkBuilder{fl: fl, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	return n.
 		WithTestId(getCallerFuncName()).
@@ -101,15 +102,15 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
-		test.WithContextWithTimeout(10*time.Second, func(ctx context.Context) { //TODO 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+		test.WithContextWithTimeout(b.fl, 10*time.Second, func(ctx context.Context) { //TODO 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 			networkCtx, cancelNetwork := context.WithCancel(ctx)
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)
 			network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
-			defer printTestIdOnFailure(b.f, testId)
-			defer dumpStateOnFailure(b.f, network)
-			defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
+			defer printTestIdOnFailure(b.fl, testId)
+			defer dumpStateOnFailure(b.fl, network)
+			defer test.RequireNoUnexpectedErrors(b.fl, errorRecorder)
 
 			if b.setupFunc != nil {
 				b.setupFunc(networkCtx, network)
@@ -237,13 +238,13 @@ func makeFormattingOutput(testId string) log.Output {
 	return output
 }
 
-func printTestIdOnFailure(f canFail, testId string) {
+func printTestIdOnFailure(f canFailAndLog, testId string) {
 	if f.Failed() {
 		fmt.Println("FAIL search snippet: grep _test-id="+testId, "test.out")
 	}
 }
 
-func dumpStateOnFailure(f canFail, network TestNetworkDriver) {
+func dumpStateOnFailure(f canFailAndLog, network TestNetworkDriver) {
 	if f.Failed() {
 		network.DumpState()
 	}

@@ -13,12 +13,13 @@ import (
 
 func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+
+	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
 		p := NewCommittedPool(metric.NewRegistry())
 
-		r1 := builders.TransactionReceipt().WithRandomHash().Build()
-		r2 := builders.TransactionReceipt().WithRandomHash().Build()
-		r3 := builders.TransactionReceipt().WithRandomHash().Build()
+		r1 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
+		r2 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
+		r3 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 		p.add(r1, primitives.TimestampNano(time.Now().Add(-5*time.Minute).UnixNano()))
 		p.add(r2, primitives.TimestampNano(time.Now().Add(-29*time.Minute).UnixNano()))
 		p.add(r3, primitives.TimestampNano(time.Now().Add(-31*time.Minute).UnixNano()))

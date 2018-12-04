@@ -51,7 +51,7 @@ func TestStateIdle_TerminatesOnContextTermination(t *testing.T) {
 func TestStateIdle_DoesNotBlockOnNewBlockNotificationWhenChannelIsNotReady(t *testing.T) {
 	h := newBlockSyncHarness()
 
-	test.WithContextWithTimeout(h.config.noCommit/2, func(ctx context.Context) {
+	test.WithContextWithTimeout(t, h.config.noCommit/2, func(ctx context.Context) {
 		state := h.factory.CreateIdleState()
 		state.blockCommitted(ctx) // we did not call process, so channel is not ready, test only fails on timeout, if this blocks
 	})

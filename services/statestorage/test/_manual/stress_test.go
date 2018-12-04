@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"math"
-	"math/rand"
 	"runtime"
 	"testing"
 	"time"
@@ -24,58 +23,61 @@ const MAX_BLOCK_SIZE = 200
 const USERS = 1000000
 
 func TestSimulateMerkleInitForAllUsers(t *testing.T) {
-	start := time.Now()
-	userKeys := randomUsers()
+	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
+		start := time.Now()
 
-	ms := runtime.MemStats{}
-	runtime.ReadMemStats(&ms)
-	t.Logf("Finished init phase in %v. HeapAlloc is %dMB", time.Now().Sub(start), ms.HeapAlloc/(1024*1024))
+		userKeys := randomUsers(ctrlRand)
 
-	start = time.Now()
-	diffs := make(merkle.TrieDiffs, 0, len(userKeys))
-	for _, u := range userKeys {
-		sha256 := hash.CalcSha256(u)
-		diffs = append(diffs, &merkle.TrieDiff{
-			Key:   u,
-			Value: sha256,
-		})
-	}
+		ms := runtime.MemStats{}
+		runtime.ReadMemStats(&ms)
+		t.Logf("Finished init phase in %v. HeapAlloc is %dMB", time.Now().Sub(start), ms.HeapAlloc/(1024*1024))
 
-	forest, root := merkle.NewForest()
-	newRoot, err := forest.Update(root, diffs)
-	require.NoError(t, err)
-	require.NotEqual(t, root, newRoot)
-	duration := time.Now().Sub(start)
-	runtime.GC()
-	runtime.GC()
-	runtime.GC()
-	runtime.GC()
-	ms = runtime.MemStats{}
-	runtime.ReadMemStats(&ms)
-	t.Logf("Finished merkle build phase (%v keys) in %v. HeapAlloc is %dMB", len(userKeys), duration, ms.HeapAlloc/(1024*1024))
+		start = time.Now()
+		diffs := make(merkle.TrieDiffs, 0, len(userKeys))
+		for _, u := range userKeys {
+			sha256 := hash.CalcSha256(u)
+			diffs = append(diffs, &merkle.TrieDiff{
+				Key:   u,
+				Value: sha256,
+			})
+		}
 
-	user500Proof, err := forest.GetProof(newRoot, userKeys[500])
-	t.Logf("user 500 value proof length is %v", len(user500Proof))
-	require.NoError(t, err)
+		forest, root := merkle.NewForest()
+		newRoot, err := forest.Update(root, diffs)
+		require.NoError(t, err)
+		require.NotEqual(t, root, newRoot)
+		duration := time.Now().Sub(start)
+		runtime.GC()
+		runtime.GC()
+		runtime.GC()
+		runtime.GC()
+		ms = runtime.MemStats{}
+		runtime.ReadMemStats(&ms)
+		t.Logf("Finished merkle build phase (%v keys) in %v. HeapAlloc is %dMB", len(userKeys), duration, ms.HeapAlloc/(1024*1024))
 
-	valid, err := forest.Verify(newRoot, user500Proof, userKeys[500], hash.CalcSha256(userKeys[500]))
-	require.True(t, valid)
-	require.NoError(t, err)
+		user500Proof, err := forest.GetProof(newRoot, userKeys[500])
+		t.Logf("user 500 value proof length is %v", len(user500Proof))
+		require.NoError(t, err)
 
-	require.WithinDuration(t, start, time.Now(), 30*time.Second, "Expected Merkle to be populated in 30 seconds")
-	require.True(t, ms.HeapAlloc < 500*1024*1024, "Expected memory use to be below 0.5GB")
+		valid, err := forest.Verify(newRoot, user500Proof, userKeys[500], hash.CalcSha256(userKeys[500]))
+		require.True(t, valid)
+		require.NoError(t, err)
+
+		require.WithinDuration(t, start, time.Now(), 30*time.Second, "Expected Merkle to be populated in 30 seconds")
+		require.True(t, ms.HeapAlloc < 500*1024*1024, "Expected memory use to be below 0.5GB")
+	})
 }
 
 func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
 		d := NewStateStorageDriver(1)
 
 		// generate User keys
-		userKeys := randomUsers()
+		userKeys := randomUsers(ctrlRand)
 
 		keysWritten := make(map[string]bool)
 		start := time.Now()
-		txCount, blockCount, commitDuration := loadTransactions(userKeys, keysWritten, d, ctx, t)
+		txCount, blockCount, commitDuration := loadTransactions(userKeys, keysWritten, d, ctx, t, ctrlRand)
 
 		// print summary
 		t.Logf("Wrote    %v transactions in %v blocks to state for %v users in %v\f", txCount, blockCount, USERS, time.Now().Sub(start))
@@ -101,16 +103,16 @@ func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
 	})
 }
 
-func randomUsers() [][]byte {
+func randomUsers(ctrlRand *test.ControlledRand) [][]byte {
 	userKeys := make([][]byte, USERS)
 	for i := range userKeys {
 		userKeys[i] = make([]byte, 32)
-		rand.Read(userKeys[i])
+		ctrlRand.Read(userKeys[i])
 	}
 	return userKeys
 }
 
-func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver, ctx context.Context, t *testing.T) (int, int, time.Duration) {
+func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver, ctx context.Context, t *testing.T, ctrlRand *test.ControlledRand) (int, int, time.Duration) {
 	var txCount int
 	var blockCount int
 	var generatingInputDuration time.Duration
@@ -120,7 +122,7 @@ func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver,
 	var nextBlockHeight primitives.BlockHeight = 1
 	for txCount < TX_COUNT_SIX_MONTHS_AT_AVG_TPS { // create input for current simulated block
 		generationStart := time.Now()
-		commitTxs, commit := generateRandomBlockStateDiff(userKeys, keysWritten, nextBlockHeight, "someContract")
+		commitTxs, commit := generateRandomBlockStateDiff(userKeys, keysWritten, nextBlockHeight, "someContract", ctrlRand)
 
 		generatingInputDuration += time.Now().Sub(generationStart)
 		txCount += commitTxs
@@ -153,13 +155,13 @@ func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver,
 	return txCount, blockCount, commitDuration
 }
 
-func generateRandomBlockStateDiff(userKeys [][]byte, keysWritten map[string]bool, height primitives.BlockHeight, contract string) (int, *services.CommitStateDiffInput) {
-	blockSize := rand.Int() % MAX_BLOCK_SIZE
+func generateRandomBlockStateDiff(userKeys [][]byte, keysWritten map[string]bool, height primitives.BlockHeight, contract string, ctrlRand *test.ControlledRand) (int, *services.CommitStateDiffInput) {
+	blockSize := ctrlRand.Int() % MAX_BLOCK_SIZE
 	blockDiff := builders.ContractStateDiff().WithContractName(contract)
 	for i := 0; i < blockSize; i++ {
-		randUser := userKeys[rand.Int()%len(userKeys)]
+		randUser := userKeys[ctrlRand.Int()%len(userKeys)]
 		keysWritten[string(randUser)] = true
-		randBalance := fmt.Sprintf("%x"+"", rand.Uint64())
+		randBalance := fmt.Sprintf("%x"+"", ctrlRand.Uint64())
 		blockDiff.WithStringRecord(string(randUser), randBalance)
 	}
 	commit := CommitStateDiff().WithBlockHeight(int(height)).WithDiff(blockDiff.Build()).Build()

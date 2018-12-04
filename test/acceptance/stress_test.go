@@ -5,11 +5,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	. "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"testing"
 	"time"
 )
@@ -46,8 +46,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
+		ctrlRand := test.GetRand(ctx)
 		network.TransportTamperer().Delay(func() time.Duration {
-			return (time.Duration(rand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
+			return (time.Duration(ctrlRand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
 		}, AnyNthMessage(2))
 
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
@@ -94,13 +95,14 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.Tes
 	toAddress := 6
 	contract := network.GetBenchmarkTokenContract()
 
+	ctrlRand := test.GetRand(ctx)
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256
 	for i := 0; i < numTransactions; i++ {
-		amount := uint64(rand.Int63n(100))
+		amount := uint64(ctrlRand.Int63n(100))
 		expectedSum += amount
 
-		txHash := contract.SendTransferInBackground(ctx, rand.Intn(network.Size()), amount, fromAddress, toAddress)
+		txHash := contract.SendTransferInBackground(ctx, ctrlRand.Intn(network.Size()), amount, fromAddress, toAddress)
 		txHashes = append(txHashes, txHash)
 	}
 	for _, txHash := range txHashes {
