@@ -12,7 +12,7 @@ import (
 
 type BenchmarkTokenClient interface {
 	DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int)
-	SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse
+	SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256)
 	SendTransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256
 	SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse
 	CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64
@@ -26,7 +26,7 @@ func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressI
 	c.API.WaitForTransactionInState(timeoutCtx, txHash)
 }
 
-func (c *contractClient) SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse {
+func (c *contractClient) SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	tx := builders.TransferTransaction().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(fromAddressIndex)).
 		WithAmountAndTargetAddress(amount, builders.AddressForEd25519SignerForTests(toAddressIndex)).
@@ -45,9 +45,10 @@ func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex
 		Builder()
 	builtTx := tx.Build()
 
+	txHash := digest.CalcTxHash(builtTx.Transaction()) // transaction may not be thread safe, pre-calculate txHash
 	c.API.SendTransactionInBackground(ctx, tx, nodeIndex)
 
-	return digest.CalcTxHash(builtTx.Transaction())
+	return txHash
 }
 
 func (c *contractClient) SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse {
@@ -55,7 +56,8 @@ func (c *contractClient) SendInvalidTransfer(ctx context.Context, nodeIndex int,
 	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)
 	tx := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithInvalidAmount(targetAddress).Builder()
 
-	return c.API.SendTransaction(ctx, tx, nodeIndex)
+	out, _ := c.API.SendTransaction(ctx, tx, nodeIndex)
+	return out
 }
 
 func (c *contractClient) CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64 {

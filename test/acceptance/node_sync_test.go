@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestExternalBlockSync(t *testing.T) {
+func TestInterNodeBlockSync(t *testing.T) {
 
 	// Skipping until internal node sync is implemented and updates state storage on every block committed.
 	// Presently state storage is not updated so consensus context's CreateResultsBlock flow fails to pull state hash
