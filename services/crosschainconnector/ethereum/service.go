@@ -54,7 +54,7 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	}
 
 	out := &services.EthereumGetTransactionLogsOutput{
-		EthereumPackedEventData: logs[0].Data,
+		EthereumPackedEventData:   logs[0].Data,
 		EthereumPackedEventTopics: logs[0].PackedTopics,
 	}
 

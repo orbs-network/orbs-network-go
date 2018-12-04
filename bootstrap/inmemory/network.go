@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -134,14 +135,18 @@ func (n *Network) Size() int {
 	return len(n.Nodes)
 }
 
-func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) *client.SendTransactionResponse {
+func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	n.assertStarted(nodeIndex)
 	ch := make(chan *client.SendTransactionResponse)
+
+	transactionRequestBuilder := &client.SendTransactionRequestBuilder{SignedTransaction: tx}
+	txHash := digest.CalcTxHash(transactionRequestBuilder.SignedTransaction.Transaction.Build())
+
 	go func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
+			ClientRequest: transactionRequestBuilder.Build(),
 		})
 		if output == nil {
 			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
@@ -152,7 +157,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		case <-ctx.Done():
 		}
 	}()
-	return <-ch
+	return <-ch, txHash
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {

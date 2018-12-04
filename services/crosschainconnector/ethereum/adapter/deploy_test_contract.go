@@ -13,7 +13,6 @@ type DeployingEthereumConnection interface {
 	DeployEmitEvent(auth *bind.TransactOpts, abi abi.ABI) ([]byte, *bind.BoundContract, error)
 }
 
-
 // this is a helper for integration test, not used in production code
 func (c *connectorCommon) DeploySimpleStorageContract(auth *bind.TransactOpts, stringValue string) ([]byte, error) {
 	client, err := c.getContractCaller()
@@ -26,7 +25,7 @@ func (c *connectorCommon) DeploySimpleStorageContract(auth *bind.TransactOpts, s
 }
 
 // this is a helper for integration test, not used in production code
-func (c *connectorCommon) DeployEmitEvent(auth *bind.TransactOpts, abi abi.ABI) ([]byte, *bind.BoundContract, error){
+func (c *connectorCommon) DeployEmitEvent(auth *bind.TransactOpts, abi abi.ABI) ([]byte, *bind.BoundContract, error) {
 	client, err := c.getContractCaller()
 	if err != nil {
 		return nil, nil, err

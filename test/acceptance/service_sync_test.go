@@ -28,28 +28,27 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 			"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
 		).StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 
-		var mostRecentTxResponse *client.SendTransactionResponse
+		var mostRecentTxHash primitives.Sha256
 
 		for _, builder := range txBuilders {
-			mostRecentTxResponse = network.SendTransaction(ctx, builder.Builder(), 0)
-			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, mostRecentTxResponse.TransactionStatus())
+			_, mostRecentTxHash = network.SendTransaction(ctx, builder.Builder(), 0)
 		}
+		network.WaitForTransactionInNodeState(ctx, mostRecentTxHash, 0)
 
 		network = restartPreservingBlocks()
 
-		txHash := mostRecentTxResponse.TransactionReceipt().Txhash()
-		require.True(t, waitForTransactionStatusCommitted(ctx, network, txHash, 0),
+		require.True(t, waitForTransactionStatusCommitted(ctx, network, mostRecentTxHash, 0),
 			"expected tx to be committed to leader tx pool")
-		require.True(t, waitForTransactionStatusCommitted(ctx, network, txHash, 1),
+		require.True(t, waitForTransactionStatusCommitted(ctx, network, mostRecentTxHash, 1),
 			"expected tx to be committed to non leader tx pool")
 
 		// Resend an already committed transaction to Leader
-		leaderTxResponse := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+		leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus(),
 			"expected a stale tx sent to leader to be rejected")
 
 		// Resend an already committed transaction to Non-Leader
-		nonLeaderTxResponse := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+		nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, nonLeaderTxResponse.TransactionStatus(),
 			"expected a stale tx sent to non leader to be rejected")
 	})
@@ -83,20 +82,22 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 		).
 		StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 
-			var mostRecentTxResponse *client.SendTransactionResponse
+			var mostRecentTxHash primitives.Sha256
 
 			// generate some blocks with state
 			contract := network.GetBenchmarkTokenContract()
 			for i := 0; i < transfers; i++ {
-				mostRecentTxResponse = contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
-				require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, mostRecentTxResponse.TransactionStatus())
+				_, txHash := contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
+				mostRecentTxHash = txHash
 			}
+
+			network.WaitForTransactionInState(ctx, mostRecentTxHash)
 
 			network = restartPreservingBlocks()
 			contract = network.GetBenchmarkTokenContract()
 
 			// wait for the most recent block height with transactions to reach state storage:
-			network.WaitForTransactionInState(ctx, mostRecentTxResponse.TransactionReceipt().Txhash())
+			network.WaitForTransactionInState(ctx, mostRecentTxHash)
 
 			// verify state in both nodes
 			balanceNode0 := contract.CallGetBalance(ctx, 0, 1)

@@ -17,15 +17,11 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnesLeanHelix(t *testing.T) {
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-			//ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-			//defer cancel()
 			contract := network.GetBenchmarkTokenContract()
 			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
-			tx := contract.SendTransfer(ctx, 0, 17, 5, 6)
+			_, txHash := contract.SendTransfer(ctx, 0, 17, 5, 6)
 
-			t.Log(tx.String())
-			t.Log("SendTransfer complete")
-			network.WaitForTransactionInNodeState(ctx, tx.TransactionReceipt().Txhash(), 0)
+			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			t.Log("finished waiting for tx")
 
 			require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-17, contract.CallGetBalance(ctx, 0, 5), "getBalance result for the sender on gateway node")
@@ -45,21 +41,21 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 
 		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 
-		tx1 := contract.SendTransfer(ctx, 0, 17, 5, 6)
+		_, txHash1 := contract.SendTransfer(ctx, 0, 17, 5, 6)
 		contract.SendInvalidTransfer(ctx, 0, 5, 6)
-		tx2 := contract.SendTransfer(ctx, 0, 22, 5, 6)
+		_, txHash2 := contract.SendTransfer(ctx, 0, 22, 5, 6)
 
 		t.Log("waiting for leader blocks")
 
-		network.WaitForTransactionInNodeState(ctx, tx1.TransactionReceipt().Txhash(), 0)
-		network.WaitForTransactionInNodeState(ctx, tx2.TransactionReceipt().Txhash(), 0)
+		network.WaitForTransactionInNodeState(ctx, txHash1, 0)
+		network.WaitForTransactionInNodeState(ctx, txHash2, 0)
 		require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.CallGetBalance(ctx, 0, 5), "getBalance result on leader")
 		require.EqualValues(t, 39, contract.CallGetBalance(ctx, 0, 6), "getBalance result on leader")
 
 		t.Log("waiting for non leader blocks")
 
-		network.WaitForTransactionInNodeState(ctx, tx1.TransactionReceipt().Txhash(), 1)
-		network.WaitForTransactionInNodeState(ctx, tx2.TransactionReceipt().Txhash(), 1)
+		network.WaitForTransactionInNodeState(ctx, txHash1, 1)
+		network.WaitForTransactionInNodeState(ctx, txHash2, 1)
 		require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.CallGetBalance(ctx, 1, 5), "getBalance result on non leader")
 		require.EqualValues(t, 39, contract.CallGetBalance(ctx, 1, 6), "getBalance result on non leader")
 

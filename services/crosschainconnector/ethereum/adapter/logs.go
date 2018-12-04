@@ -9,7 +9,7 @@ import (
 type LogTopics [][]byte
 
 func (topics LogTopics) BigIntAt(index int) (*big.Int, error) {
-	if len(topics) - 1 < index {
+	if len(topics)-1 < index {
 		return nil, errors.Errorf("request index %d is out of range, got %d topics", index, len(topics))
 	}
 	var out big.Int
@@ -18,7 +18,7 @@ func (topics LogTopics) BigIntAt(index int) (*big.Int, error) {
 }
 
 func (topics LogTopics) BytesAt(index int, size int) ([]byte, error) {
-	if len(topics) - 1 < index {
+	if len(topics)-1 < index {
 		return nil, errors.Errorf("request index %d is out of range, got %d topics", index, len(topics))
 	}
 	to := 32
@@ -36,5 +36,3 @@ type TransactionLog struct {
 func (log *TransactionLog) UnpackDataUsing(eventABI abi.Event) ([]interface{}, error) {
 	return eventABI.Inputs.UnpackValues(log.Data)
 }
-
-

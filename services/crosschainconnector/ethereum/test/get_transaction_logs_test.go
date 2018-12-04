@@ -40,9 +40,9 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 			EthereumContractAddress: hexutil.Encode(contractAddress),
-			EthereumTxhash: primitives.Uint256(tx.Hash().Bytes()),
-			EventSignature: string(eventABI.Id().Bytes()),
-			ReferenceTimestamp: primitives.TimestampNano(0), //TODO real timestamp
+			EthereumTxhash:          primitives.Uint256(tx.Hash().Bytes()),
+			EventSignature:          string(eventABI.Id().Bytes()),
+			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
 		})
 
 		require.NoError(t, err, "failed getting logs")
@@ -54,4 +54,3 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		require.EqualValues(t, amount, outAmount[0], "failed getting amount from unpacked data")
 	})
 }
-
