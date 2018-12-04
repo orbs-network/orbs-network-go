@@ -10,7 +10,9 @@ import (
 )
 
 func TestInterNodeBlockSync(t *testing.T) {
+
 	harness.Network(t).
+		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
@@ -22,25 +24,29 @@ func TestInterNodeBlockSync(t *testing.T) {
 					WithTransactions(2).
 					Build()
 				network.BlockPersistence(0).WriteNextBlock(blockPair)
+
 			}
 
 			numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
 		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
+			t.Errorf("waiting for block on node 0 failed: %s", err)
+		}
 
-		err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10)
-		require.NoError(t, err, "sanity wait on node 0 failed")
-
-		err = network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 5)
-		require.NoError(t, err, "waiting for half sync on node 1 failed")
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 5); err != nil {
+			t.Errorf("waiting for block on node 1 failed: %s", err)
+		}
 
 		// Wait until full sync
-		err = network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 10)
-		require.NoError(t, err, "waiting for full sync on node 1 failed")
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
+			t.Errorf("waiting for block on node 1 failed: %s", err)
+		}
 
 		// Wait again to get new blocks created after the sync
-		err = network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 15)
-		require.NoError(t, err, "waiting for extra new blocks on node 1 failed")
+		if err := network.BlockPersistence(1).GetBlockTracker().WaitForBlock(ctx, 15); err != nil {
+			t.Errorf("waiting for block on node 1 failed: %s", err)
+		}
 	})
 }
