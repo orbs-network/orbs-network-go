@@ -10,7 +10,6 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
@@ -47,10 +46,9 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 		metricRegistry := metric.NewRegistry()
 		nodeLogger := logger.WithTags(log.Node(cfg.NodePublicKey().String()))
 		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
-		statePersistence, stateBlockHeightReporter := harnessStateStorageAdapter.NewTamperingStatePersistence(metricRegistry, nodeLogger)
 		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
 
-		network.AddNode(keyPair, cfg, compiler, blockPersistence, statePersistence, stateBlockHeightReporter, metricRegistry, nodeLogger)
+		network.AddNode(keyPair, cfg, compiler, blockPersistence, metricRegistry, nodeLogger)
 	}
 
 	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network

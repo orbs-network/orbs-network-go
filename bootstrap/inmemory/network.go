@@ -11,7 +11,7 @@ import (
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
@@ -20,6 +20,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"math"
 )
 
 type NetworkDriver interface {
@@ -36,15 +37,15 @@ type Network struct {
 }
 
 type Node struct {
-	index                    int
-	name                     string
-	config                   config.NodeConfig
-	blockPersistence         blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence         harnessStateStorageAdapter.TamperingStatePersistence
-	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter
-	nativeCompiler           nativeProcessorAdapter.Compiler
-	nodeLogic                bootstrap.NodeLogic
-	metricRegistry           metric.Registry
+	index                   int
+	name                    string
+	config                  config.NodeConfig
+	blockPersistence        blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence        harnessStateStorageAdapter.DumpingStatePersistence
+	stateBlockHeightTracker *synchronization.BlockTracker
+	nativeCompiler          nativeProcessorAdapter.Compiler
+	nodeLogic               bootstrap.NodeLogic
+	metricRegistry          metric.Registry
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
@@ -56,15 +57,14 @@ func (n *Network) AddNode(
 	cfg config.NodeConfig,
 	compiler nativeProcessorAdapter.Compiler,
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence,
-	stateStorageAdapter harnessStateStorageAdapter.TamperingStatePersistence,
-	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
 	metricRegistry metric.Registry, logger log.BasicLogger) {
+
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])
 	node.config = cfg
-	node.statePersistence = stateStorageAdapter
-	node.stateBlockHeightReporter = stateBlockHeightReporter
+	node.statePersistence = harnessStateStorageAdapter.NewTamperingStatePersistence(metricRegistry, logger)
+	node.stateBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
 	node.blockPersistence = blockPersistence
 	node.nativeCompiler = compiler
 	node.metricRegistry = metricRegistry
@@ -83,7 +83,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			n.Transport,
 			node.blockPersistence,
 			node.statePersistence,
-			node.stateBlockHeightReporter,
+			node.stateBlockHeightTracker,
 			node.nativeCompiler,
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
@@ -103,7 +103,7 @@ func (n *Node) GetCompiler() nativeProcessorAdapter.Compiler {
 
 func (n *Node) WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
 	blockHeight := n.blockPersistence.WaitForTransaction(ctx, txHash)
-	err := n.statePersistence.WaitUntilCommittedBlockOfHeight(ctx, blockHeight)
+	err := n.stateBlockHeightTracker.WaitForBlock(ctx, blockHeight)
 	if err != nil {
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
@@ -126,7 +126,7 @@ func (n *Network) GetBlockPersistence(nodeIndex int) blockStorageAdapter.InMemor
 	return n.Nodes[nodeIndex].blockPersistence
 }
 
-func (n *Network) GetStatePersistence(i int) harnessStateStorageAdapter.TamperingStatePersistence {
+func (n *Network) GetStatePersistence(i int) harnessStateStorageAdapter.DumpingStatePersistence {
 	return n.Nodes[i].statePersistence
 }
 

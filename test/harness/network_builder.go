@@ -14,7 +14,6 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
-	harnessStateAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
@@ -214,9 +213,8 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		metricRegistry := metric.NewRegistry()
 		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodePublicKey().String()))
 		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
-		stateStorageAdapter, stateBlockHeightReporter := harnessStateAdapter.NewTamperingStatePersistence(metricRegistry, nodeLogger)
 
-		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, stateStorageAdapter, stateBlockHeightReporter, metricRegistry, nodeLogger)
+		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, nodeLogger)
 	}
 
 	return network
