@@ -126,12 +126,13 @@ func (n *Network) Size() int {
 func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	n.assertStarted(nodeIndex)
 	ch := make(chan *client.SendTransactionResponse)
-	var txHash primitives.Sha256
+
+	transactionRequestBuilder := &client.SendTransactionRequestBuilder{SignedTransaction: tx}
+	txHash := digest.CalcTxHash(transactionRequestBuilder.SignedTransaction.Transaction.Build())
+
 	go func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
-		transactionRequestBuilder := &client.SendTransactionRequestBuilder{SignedTransaction: tx}
-		txHash = digest.CalcTxHash(transactionRequestBuilder.SignedTransaction.Transaction.Build())
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: transactionRequestBuilder.Build(),
 		})
