@@ -23,8 +23,6 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnesLeanHelix(t *testing.T) {
 			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 			tx := contract.SendTransfer(ctx, 0, 17, 5, 6)
 
-			// FIXME Uncomment this section after state storage is fixed. Presently waiting for transaction on the just-written block will not work
-			// See PR https://github.com/orbs-network/orbs-network-go/issues/567
 			t.Log(tx.String())
 			t.Log("SendTransfer complete")
 			network.WaitForTransactionInNodeState(ctx, tx.TransactionReceipt().Txhash(), 0)
