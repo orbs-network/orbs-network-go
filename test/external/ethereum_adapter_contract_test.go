@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"math/big"
 	"os"
@@ -47,26 +48,25 @@ func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
 
 func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnection, auth *bind.TransactOpts, commit func()) func(t *testing.T) {
 	return func(t *testing.T) {
-		contractAddress, err := adapter.DeployEmitEvent(auth)
-		commit()
-		require.NoError(t, err, "failed deploying contract to Ethereum")
-
 		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
 		require.NoError(t, err, "failed parsing ABI")
+
+		contractAddress, contract, err := adapter.DeployEmitEvent(auth, parsedABI)
+		commit()
+		require.NoError(t, err, "failed deploying contract to Ethereum")
 
 		tuid := big.NewInt(17)
 		ethAddress := common.HexToAddress("80755fE3D774006c9A9563A09310a0909c42C786")
 		orbsAddress := [20]byte{0x1, 0x2, 0x3}
 		eventValue := big.NewInt(42)
-		packedInput, err := parsedABI.Pack("transferOut", tuid, ethAddress, orbsAddress, eventValue)
-		require.NoError(t, err, "failed packing arguments")
 
-		ethTxHash, err := adapter.SendTransaction(ctx, auth, contractAddress, packedInput)
+		tx, err := contract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, eventValue)
 		commit()
 		require.NoError(t, err, "failed emitting event")
 
 		eventSignature := parsedABI.Events["TransferredOut"].Id().Bytes()
-		logs, err := adapter.GetLogs(ctx, ethTxHash, contractAddress, eventSignature)
+
+		logs, err := adapter.GetLogs(ctx, primitives.Uint256(tx.Hash().Bytes()), contractAddress, eventSignature)
 		require.NoError(t, err, "failed getting logs")
 
 		require.Len(t, logs, 1, "did not get the expected event log")
@@ -74,27 +74,6 @@ func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnectio
 		require.Equal(t, contractAddress, log.ContractAddress, "contract address in log differed from actual contract address")
 		require.Equal(t, eventSignature, log.PackedTopics[0], "event returned did not have the expected signature as the first topic")
 	}
-}
-
-func createRpcClient() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
-	logger := log.GetLogger()
-	cfg := getConfig()
-
-	a := adapter.NewEthereumRpcConnection(cfg, logger)
-	auth, err := authFromConfig(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	return a, auth, func() {}
-}
-
-func createSimulator() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
-	a := adapter.NewEthereumSimulatorConnection(log.GetLogger())
-	opts := a.GetAuth()
-	commit := a.Commit
-
-	return a, opts, commit
 }
 
 func testCallContract(ctx context.Context, adapter adapter.DeployingEthereumConnection, auth *bind.TransactOpts, commit func()) func(t *testing.T) {
@@ -117,6 +96,27 @@ func testCallContract(ctx context.Context, adapter adapter.DeployingEthereumConn
 
 		require.Equal(t, "foobar", out, "string output differed from expected")
 	}
+}
+
+func createRpcClient() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
+	logger := log.GetLogger()
+	cfg := getConfig()
+
+	a := adapter.NewEthereumRpcConnection(cfg, logger)
+	auth, err := authFromConfig(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	return a, auth, func() {}
+}
+
+func createSimulator() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
+	a := adapter.NewEthereumSimulatorConnection(log.GetLogger())
+	opts := a.GetAuth()
+	commit := a.Commit
+
+	return a, opts, commit
 }
 
 func runningWithDocker() bool {

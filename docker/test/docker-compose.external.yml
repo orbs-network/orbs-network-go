@@ -2,7 +2,7 @@ version: '2.1'
 
 services:
   ganache:
-    image: trufflesuite/ganache-cli
+    image: trufflesuite/ganache-cli:v6.1.8 # this version is freezed because a bug in >6.2.0, that uses ganache-core 2.3.1, resulting in inconsistent hashes with go-ethereum https://github.com/trufflesuite/ganache-cli/issues/387
     command: ganache-cli --gasLimit 90000000000 --gasPrice 1 -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
     networks:
       orbs-network:

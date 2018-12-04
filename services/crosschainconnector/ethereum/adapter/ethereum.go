@@ -76,6 +76,10 @@ func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256
 		return nil, errors.Wrapf(err, "error getting receipt for transaction with hash %s", txHash)
 	}
 
+	if receipt == nil {
+		return nil, errors.Wrapf(err, "got no logs for transaction with hash %s", txHash)
+	}
+
 	var eventLogs []*TransactionLog
 	for _, log := range receipt.Logs {
 		if matchesEvent(log, eventSignature) {
