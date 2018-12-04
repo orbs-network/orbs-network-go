@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestSyncLoop(t *testing.T) {
@@ -87,6 +88,41 @@ func TestSyncInitialState(t *testing.T) {
 		_, err = committerMock.Verify()
 		require.NoError(t, err, "blockPairCommitter should be called as expected")
 	})
+}
+
+func TestSyncTriggersImmediately(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		// Set up block source mock
+		sourceTracker := synchronization.NewBlockTracker(log.GetLogger(), 1, 10)
+		sourceMock := newBlockSourceMock(1)
+		sourceMock.When("GetLastBlock")
+		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil)
+		sourceMock.When("GetBlocks", mock.Any, mock.Any)
+
+		var thinCommitter thinCommitter
+
+		NewServiceBlockSync(ctx, log.GetLogger(), sourceMock, &thinCommitter)
+
+		time.Sleep(1 * time.Millisecond)
+		require.EqualValues(t, 1, thinCommitter, "expected source initial state to sync immediately")
+
+		// push another block
+		sourceMock.setLastBlockHeight(2)
+		sourceTracker.IncrementHeight()
+
+		time.Sleep(1 * time.Millisecond)
+		require.EqualValues(t, 2, thinCommitter, "expected source modified state to sync immediately")
+	})
+}
+
+type thinCommitter int
+
+func (t *thinCommitter) commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+	*t++
+	return primitives.BlockHeight(*t + 1), nil
+}
+func (_ *thinCommitter) getServiceName() string {
+	return "thin-committer"
 }
 
 type blockSourceMock struct {
