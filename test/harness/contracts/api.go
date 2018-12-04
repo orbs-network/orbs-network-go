@@ -8,14 +8,14 @@ import (
 )
 
 type ContractAPI interface {
-	WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256)
+	WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256)
 	SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) *client.SendTransactionResponse
 	SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int)
 	CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) *client.CallMethodResponse
 }
 
 type contractClient struct {
-	API    ContractAPI
+	API ContractAPI
 }
 
 func NewContractClient(api ContractAPI) *contractClient {

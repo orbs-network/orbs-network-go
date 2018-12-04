@@ -38,7 +38,7 @@ func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlo
 	p := adapter.NewInMemoryStatePersistence(registry)
 	logger := log.GetLogger().WithOutput() // a mute logger
 
-	return &Driver{service: statestorage.NewStateStorage(cfg, p, logger, registry)}
+	return &Driver{service: statestorage.NewStateStorage(cfg, p, nil, logger, registry)}
 }
 
 func (d *Driver) ReadSingleKey(ctx context.Context, contract string, key string) ([]byte, error) {

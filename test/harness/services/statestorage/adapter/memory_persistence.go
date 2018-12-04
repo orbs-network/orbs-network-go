@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"math"
 )
 
 type TamperingStatePersistence interface {
@@ -19,21 +20,12 @@ type TestStatePersistence struct {
 	blockTrackerForTests *synchronization.BlockTracker
 }
 
-func NewTamperingStatePersistence() TamperingStatePersistence {
-	return &TestStatePersistence{
-		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(metric.NewRegistry()),
-		blockTrackerForTests:     synchronization.NewBlockTracker(0, 64000),
+func NewTamperingStatePersistence(metric metric.Registry) (*TestStatePersistence, adapter.BlockHeightReporter) {
+	result := &TestStatePersistence{
+		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(metric),
+		blockTrackerForTests:     synchronization.NewBlockTracker(0, math.MaxUint16),
 	}
-}
-
-func (t *TestStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff adapter.ChainState) error {
-	err := t.InMemoryStatePersistence.Write(height, ts, root, diff)
-	if err != nil {
-		return err
-	}
-
-	t.blockTrackerForTests.IncrementHeight()
-	return nil
+	return result, result.blockTrackerForTests
 }
 
 func (t *TestStatePersistence) WaitUntilCommittedBlockOfHeight(ctx context.Context, height primitives.BlockHeight) error {
