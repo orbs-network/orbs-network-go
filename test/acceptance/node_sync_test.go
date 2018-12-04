@@ -11,10 +11,6 @@ import (
 
 func TestInterNodeBlockSync(t *testing.T) {
 
-	// Skipping until internal node sync is implemented and updates state storage on every block committed.
-	// Presently state storage is not updated so consensus context's CreateResultsBlock flow fails to pull state hash
-	// of the last committed block
-	//t.Skip()
 	harness.Network(t).
 		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(

@@ -61,7 +61,7 @@ func TestCalcTxId(t *testing.T) {
 	}
 
 	if !bytes.Equal(txHash, expectedHash) {
-		t.Fatalf("extracted txhash came out wrong, expected %x, got %x", expectedHash, txHash)
+		t.Fatalf("extracted txHash came out wrong, expected %x, got %x", expectedHash, txHash)
 	}
 
 	if !txTimestamp.Equal(tx.Timestamp()) {
