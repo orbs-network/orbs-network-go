@@ -1,0 +1,14 @@
+{
+  "ContractName": "BenchmarkToken",
+  "MethodName": "transfer",
+  "Arguments": [
+    {
+      "Type": "uint64",
+      "Value": "17"
+    },
+    {
+      "Type": "gamma:keys-file-address",
+      "Value": "user2"
+    }
+  ]
+}

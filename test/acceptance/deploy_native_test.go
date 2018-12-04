@@ -2,9 +2,9 @@ package acceptance
 
 import (
 	"context"
-	contractClient "github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/harness"
+	contractClient "github.com/orbs-network/orbs-network-go/test/harness/contracts"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -23,7 +23,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 		output := contract.SendDeployCounterContract(ctx, 1)
 
 		t.Log("wait for node to sync with deployment")
-		network.WaitForTransactionInNodeState(ctx, output.TransactionReceipt().Txhash() , 0)
+		network.WaitForTransactionInNodeState(ctx, output.TransactionReceipt().Txhash(), 0)
 
 		require.EqualValues(t, counterStart, contract.CallCounterGet(ctx, 0), "get counter after deploy")
 
@@ -32,7 +32,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 		output = contract.SendCounterAdd(ctx, 1, 17)
 
 		t.Log("wait for node to sync with transaction")
-		network.WaitForTransactionInNodeState(ctx, output.TransactionReceipt().Txhash() , 0)
+		network.WaitForTransactionInNodeState(ctx, output.TransactionReceipt().Txhash(), 0)
 
 		require.EqualValues(t, counterStart+17, contract.CallCounterGet(ctx, 0), "get counter after transaction")
 

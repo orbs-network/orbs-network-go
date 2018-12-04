@@ -36,7 +36,7 @@ func NewTransactionPool(ctx context.Context,
 
 		pendingPool:          pendingPool,
 		committedPool:        committedPool,
-		blockTracker:         synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
+		blockTracker:         synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
 		transactionForwarder: txForwarder,
 	}
 
