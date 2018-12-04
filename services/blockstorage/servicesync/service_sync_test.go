@@ -103,14 +103,14 @@ func TestSyncTriggersImmediately(t *testing.T) {
 
 		NewServiceBlockSync(ctx, log.GetLogger(), sourceMock, &thinCommitter)
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 		require.EqualValues(t, 1, thinCommitter, "expected source initial state to sync immediately")
 
 		// push another block
 		sourceMock.setLastBlockHeight(2)
 		sourceTracker.IncrementHeight()
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 		require.EqualValues(t, 2, thinCommitter, "expected source modified state to sync immediately")
 	})
 }
