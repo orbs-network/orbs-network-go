@@ -3,11 +3,11 @@ package statestorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -53,7 +53,7 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 	}
 	return &service{
 		config:         config,
-		blockTracker:   synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
+		blockTracker:   synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
 		heightReporter: heightReporter,
 		logger:         logger,
 		metrics:        newMetrics(metricFactory),
@@ -172,7 +172,7 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
-	output := &services.GetStateHashOutput{StateRootHash: value}
+	output := &services.GetStateHashOutput{StateRootHash: primitives.MerkleSha256(value)}
 
 	return output, nil
 }

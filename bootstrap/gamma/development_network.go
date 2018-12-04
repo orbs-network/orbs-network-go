@@ -45,11 +45,12 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 		)
 
 		metricRegistry := metric.NewRegistry()
-		blockPersistence := adapter.NewInMemoryBlockPersistence(logger, metricRegistry)
-		statePersistence, stateBlockHeightReporter := harnessStateStorageAdapter.NewTamperingStatePersistence(metricRegistry)
-		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, logger)
+		nodeLogger := logger.WithTags(log.Node(cfg.NodePublicKey().String()))
+		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
+		statePersistence, stateBlockHeightReporter := harnessStateStorageAdapter.NewTamperingStatePersistence(metricRegistry, nodeLogger)
+		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
 
-		network.AddNode(keyPair, cfg, compiler, blockPersistence, statePersistence, stateBlockHeightReporter, metricRegistry)
+		network.AddNode(keyPair, cfg, compiler, blockPersistence, statePersistence, stateBlockHeightReporter, metricRegistry, nodeLogger)
 	}
 
 	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network

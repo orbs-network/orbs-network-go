@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -20,10 +21,10 @@ type TestStatePersistence struct {
 	blockTrackerForTests *synchronization.BlockTracker
 }
 
-func NewTamperingStatePersistence(metric metric.Registry) (*TestStatePersistence, adapter.BlockHeightReporter) {
+func NewTamperingStatePersistence(metric metric.Registry, log log.BasicLogger) (*TestStatePersistence, adapter.BlockHeightReporter) {
 	result := &TestStatePersistence{
 		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(metric),
-		blockTrackerForTests:     synchronization.NewBlockTracker(0, math.MaxUint16),
+		blockTrackerForTests:     synchronization.NewBlockTracker(log, 0, math.MaxUint16),
 	}
 	return result, result.blockTrackerForTests
 }

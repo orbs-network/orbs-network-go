@@ -14,9 +14,9 @@ import (
 type EthereumSimulator struct {
 	connectorCommon
 
-	auth      *bind.TransactOpts
-	logger    log.BasicLogger
-	mu struct {
+	auth   *bind.TransactOpts
+	logger log.BasicLogger
+	mu     struct {
 		sync.Mutex
 		simClient *backends.SimulatedBackend
 	}
@@ -28,10 +28,10 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	e := &EthereumSimulator{
 		logger: logger,
-		auth: bind.NewKeyedTransactor(key),
+		auth:   bind.NewKeyedTransactor(key),
 	}
 
 	e.getContractCaller = func() (bind.ContractBackend, error) {

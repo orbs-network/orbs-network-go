@@ -58,8 +58,7 @@ func (n *Network) AddNode(
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence,
 	stateStorageAdapter harnessStateStorageAdapter.TamperingStatePersistence,
 	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
-	metricRegistry metric.Registry) {
-
+	metricRegistry metric.Registry, logger log.BasicLogger) {
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = fmt.Sprintf("%s", nodeKeyPair.PublicKey()[:3])

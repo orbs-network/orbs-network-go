@@ -102,7 +102,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
-		test.WithContextWithTimeout(5*time.Second, func(ctx context.Context) { //TODO 5 seconds is infinity; reduce to 2 seconds when system is more stable
+		test.WithContextWithTimeout(10*time.Second, func(ctx context.Context) { //TODO 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 			networkCtx, cancelNetwork := context.WithCancel(ctx)
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)
@@ -212,10 +212,11 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
 
 		metricRegistry := metric.NewRegistry()
-		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(testLogger, preloadedBlocks, metricRegistry)
-		stateStorageAdapter, stateBlockHeightReporter := harnessStateAdapter.NewTamperingStatePersistence(metricRegistry)
+		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodePublicKey().String()))
+		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
+		stateStorageAdapter, stateBlockHeightReporter := harnessStateAdapter.NewTamperingStatePersistence(metricRegistry, nodeLogger)
 
-		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, stateStorageAdapter, stateBlockHeightReporter, metricRegistry)
+		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, stateStorageAdapter, stateBlockHeightReporter, metricRegistry, nodeLogger)
 	}
 
 	return network
