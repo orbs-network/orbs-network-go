@@ -39,6 +39,9 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	bh = s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
 
 	s.blockTracker.IncrementHeight()
+	if s.blockHeightReporter != nil {
+		s.blockHeightReporter.IncrementHeight()
+	}
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {
@@ -66,13 +69,9 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.mu.lastCommittedBlockHeight = header.BlockHeight()
+	s.mu.lastCommittedBlockTimestamp = header.Timestamp()
 
-	if header.Timestamp() == 0 {
-		s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
-		s.logger.Info("got 0 timestamp from results block header")
-	} else {
-		s.mu.lastCommittedBlockTimestamp = header.Timestamp()
-	}
+	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
 	return header.BlockHeight()
 }

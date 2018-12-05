@@ -208,7 +208,7 @@ func newHarnessWithSizeLimit(ctx context.Context, sizeLimit uint32) *harness {
 	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
 	metricFactory := metric.NewRegistry()
 
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger(), metricFactory)
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, log.GetLogger(), metricFactory)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)

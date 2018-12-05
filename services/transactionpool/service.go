@@ -3,6 +3,7 @@ package transactionpool
 import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -13,9 +14,14 @@ import (
 
 var LogTag = log.Service("transaction-pool")
 
+type BlockHeightReporter interface {
+	IncrementHeight()
+}
+
 type service struct {
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
+	blockHeightReporter        BlockHeightReporter // used to allow test to wait for a block height to reach the transaction pool
 	transactionResultsHandlers []handlers.TransactionResultsHandler
 	logger                     log.BasicLogger
 	config                     config.TransactionPoolConfig
@@ -30,6 +36,10 @@ type service struct {
 	committedPool        *committedTxPool
 	blockTracker         *synchronization.BlockTracker
 	transactionForwarder *transactionForwarder
+
+	metrics struct {
+		blockHeight *metric.Gauge
+	}
 }
 
 func (s *service) currentBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {

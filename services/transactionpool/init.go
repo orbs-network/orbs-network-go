@@ -16,6 +16,7 @@ import (
 func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
+	blockHeightReporter BlockHeightReporter,
 	config config.TransactionPoolConfig,
 	parent log.BasicLogger,
 	metricFactory metric.Factory) services.TransactionPool {
@@ -36,10 +37,12 @@ func NewTransactionPool(ctx context.Context,
 		pendingPool:          pendingPool,
 		committedPool:        committedPool,
 		blockTracker:         synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
+		blockHeightReporter:  blockHeightReporter,
 		transactionForwarder: txForwarder,
 	}
 
 	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
+	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
 
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
