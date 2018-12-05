@@ -35,7 +35,7 @@ func TestValidateTransaction_ValidTransaction(t *testing.T) {
 	require.Nil(t, err, "a valid transaction was rejected")
 }
 
-//TODO talk to TalKol about Invalid Signer
+//TODO(v1) talk to TalKol about Invalid Signer
 func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	tests := []struct {
 		name           string

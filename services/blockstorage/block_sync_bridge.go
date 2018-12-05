@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
-// TODO: this function should return an error
+// TODO(v1): this function should return an error
 func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
 	// the source of truth for the last committed block is persistence
 	lastCommittedBlock, err := s.persistence.GetLastBlock()

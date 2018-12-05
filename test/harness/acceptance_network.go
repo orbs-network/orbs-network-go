@@ -21,7 +21,7 @@ type TestNetworkDriver interface {
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
-	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int)
+	WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int)
 	MockContract(fakeContractInfo *sdkContext.ContractInfo, code string)
 }
 
@@ -37,8 +37,8 @@ func (n *acceptanceNetwork) Start(ctx context.Context, numOfNodesToStart int) {
 	n.CreateAndStartNodes(ctx, numOfNodesToStart) // needs to start first so that nodes can register their listeners to it
 }
 
-func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int) {
-	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
+func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
+	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txHash)
 }
 
 func (n *acceptanceNetwork) Description() string {

@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// TODO move to unit tests
+// TODO(v1) move to unit tests
 func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
@@ -95,7 +95,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			WithLastBlockHeight(primitives.BlockHeight(4)).
 			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
 
-		// TODO: the source key here is the same for both to make our lives easier in BlockSyncResponse
+		// the source key here is the same for both to make our lives easier in BlockSyncResponse
 		anotherBlockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).

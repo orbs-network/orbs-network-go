@@ -18,7 +18,6 @@ func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 
 	messageType := header.LeanHelix()
 
-	s.logger.Info("receivedLeanHelixMessage()", log.Stringable("message-type", messageType), log.Int("len-payloads", len(payloads)))
 	if len(payloads) < 1 {
 		s.logger.Info("receivedLeanHelixMessage() too little payloads!")
 		return
@@ -37,7 +36,6 @@ func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 	}
 
 	for _, l := range s.leanHelixHandlers {
-		s.logger.Info("receivedLeanHelixMessage() calling HandleLeanHelixMessage", log.Stringable("message-type", messageType))
 		_, err := l.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{
 			Message: &gossipmessages.LeanHelixMessage{
 				MessageType: messageType,
@@ -69,7 +67,6 @@ func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.
 			return nil, err
 		}
 	}
-	s.logger.Info("gossip.SendLeanHelixMessage()", log.Stringable("message-type", messageType), log.Int("len-block-pair-payloads", len(blockPairPayloads)))
 	if input.Message.Content == nil {
 		return nil, errors.Errorf("cannot encode LeanHelixMessage: %s", input.Message.String())
 	}
@@ -77,8 +74,6 @@ func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.
 	if len(blockPairPayloads) > 0 {
 		payloads = append(payloads, blockPairPayloads...)
 	}
-
-	s.logger.Info("gossip.SendLeanHelixMessage() SENDING", log.Stringable("message-type", messageType), log.Int("len-payloads", len(payloads)))
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST, // TODO: shouldn't be broadcast

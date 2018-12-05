@@ -96,7 +96,7 @@ func (s *service) handleSdkStateWrite(executionContext *executionContext, args [
 	currentService := executionContext.serviceStackTop()
 
 	// write to transient state
-	// TODO: maybe compare with getValue to see the value actually changed
+	// TODO(v1): maybe compare with getValue to see the value actually changed
 	executionContext.transientState.setValue(currentService, key, value, true)
 
 	return nil

@@ -60,7 +60,6 @@ func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.Get
 	return nil, err
 }
 
-// TODO: are we sure that if we don't find the receipt this API should fail? it should succeed just return nil receipt
 func (s *service) GetTransactionReceipt(ctx context.Context, input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
 	searchRules := adapter.BlockSearchRules{
 		EndGraceNano:          s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds(),
@@ -73,7 +72,7 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 		if err != nil {
 			return nil, err
 		}
-		// TODO: probably don't fail here (issue#448)
+		// TODO((https://github.com/orbs-network/orbs-network-go/issues/448): probably don't fail here
 		return receipt, errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
 	}
 
@@ -109,7 +108,7 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 }
 
 // Returns a slice of blocks containing first and last
-// TODO support paging
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/174): support paging
 func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight, err error) {
 	return s.persistence.GetBlocks(first, last)
 }

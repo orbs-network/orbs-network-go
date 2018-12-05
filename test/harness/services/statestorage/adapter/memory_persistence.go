@@ -1,42 +1,23 @@
 package adapter
 
 import (
-	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-type TamperingStatePersistence interface {
+type DumpingStatePersistence interface {
 	adapter.StatePersistence
 	Dump() string
-	WaitUntilCommittedBlockOfHeight(ctx context.Context, height primitives.BlockHeight) error
 }
 
 type TestStatePersistence struct {
 	*adapter.InMemoryStatePersistence
-	blockTrackerForTests *synchronization.BlockTracker
 }
 
-func NewTamperingStatePersistence(log log.BasicLogger) TamperingStatePersistence {
-	return &TestStatePersistence{
-		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(metric.NewRegistry()),
-		blockTrackerForTests:     synchronization.NewBlockTracker(log, 0, 64000),
+func NewDumpingStatePersistence(metric metric.Registry, log log.BasicLogger) *TestStatePersistence {
+	result := &TestStatePersistence{
+		InMemoryStatePersistence: adapter.NewInMemoryStatePersistence(metric),
 	}
-}
-
-func (t *TestStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff adapter.ChainState) error {
-	err := t.InMemoryStatePersistence.Write(height, ts, root, diff)
-	if err != nil {
-		return err
-	}
-
-	t.blockTrackerForTests.IncrementHeight()
-	return nil
-}
-
-func (t *TestStatePersistence) WaitUntilCommittedBlockOfHeight(ctx context.Context, height primitives.BlockHeight) error {
-	return t.blockTrackerForTests.WaitForBlock(ctx, height)
+	return result
 }

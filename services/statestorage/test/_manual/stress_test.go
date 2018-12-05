@@ -101,7 +101,7 @@ func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
 	})
 }
 
-func randomUsers() ([][]byte) {
+func randomUsers() [][]byte {
 	userKeys := make([][]byte, USERS)
 	for i := range userKeys {
 		userKeys[i] = make([]byte, 32)

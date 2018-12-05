@@ -20,11 +20,11 @@ func TestContract_SendBroadcast(t *testing.T) {
 }
 
 func TestContract_SendToList(t *testing.T) {
-	t.Skipf("TODO implement")
+	t.Skipf("implement") // TODO(v1)
 }
 
 func TestContract_SendToAllButList(t *testing.T) {
-	t.Skipf("TODO implement")
+	t.Skipf("implement") // TODO(v1)
 }
 
 func broadcastTest(makeContext func(ctx context.Context) *transportContractContext) func(*testing.T) {
@@ -111,8 +111,8 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 		listenTo(res.transports[3], res.publicKeys[3]),
 	}
 
-	// TODO: improve this, we need some time until everybody connects to everybody else
-	// TODO: maybe add an adapter function to check how many active outgoing connections we have
+	// TODO(v1): improve this, we need some time until everybody connects to everybody else
+	// TODO(v1): maybe add an adapter function to check how many active outgoing connections we have
 	// @electricmonk proposal: Adapter could take a ConnectionListener that gets notified on connects/disconnects, and the test could provide such a listener to block until the desired number of connections has been reached
 	time.Sleep(2 * configs[0].GossipConnectionKeepAliveInterval())
 
@@ -121,7 +121,7 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 
 func (c *transportContractContext) verify(t *testing.T) {
 	for _, mockListener := range c.listeners {
-		// TODO: reduce eventually timeout to test.EVENTUALLY_ADAPTER_TIMEOUT once we remove memberlist
+		// TODO(v1): reduce eventually timeout to test.EVENTUALLY_ADAPTER_TIMEOUT once we remove memberlist
 		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, mockListener))
 	}
 }

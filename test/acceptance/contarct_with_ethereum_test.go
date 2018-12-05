@@ -73,6 +73,8 @@ func deployOrbsContractCallingEthereum(parent context.Context, network harness.T
 			[]byte(ethereumReaderCode),
 		).Builder()
 
+	deployTxHash := digest.CalcTxHash(deployTx.Build().Transaction()) // because the builder isn't thread safe pre-calc txHash
+
 	network.SendTransactionInBackground(ctx, deployTx, 0)
-	network.WaitForTransactionInState(ctx, digest.CalcTxHash(deployTx.Build().Transaction()))
+	network.WaitForTransactionInState(ctx, deployTxHash)
 }

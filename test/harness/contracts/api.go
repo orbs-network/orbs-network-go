@@ -8,8 +8,8 @@ import (
 )
 
 type ContractAPI interface {
-	WaitForTransactionInState(ctx context.Context, txhash primitives.Sha256)
-	SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) *client.SendTransactionResponse
+	WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256)
+	SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256)
 	SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int)
 	CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) *client.CallMethodResponse
 }

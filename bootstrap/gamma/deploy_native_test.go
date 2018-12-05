@@ -24,15 +24,15 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 
 		t.Log("deploying contract")
 
-		output := contract.SendDeployCounterContract(ctx, 1)                         // leader is nodeIndex 0, validator is nodeIndex 1
-		network.WaitForTransactionInState(ctx, output.TransactionReceipt().Txhash()) // wait for contract deployment take effect in node state
+		_, txHash := contract.SendDeployCounterContract(ctx, 1) // leader is nodeIndex 0, validator is nodeIndex 1
+		network.WaitForTransactionInState(ctx, txHash)          // wait for contract deployment take effect in node state
 
 		require.EqualValues(t, counterStart, contract.CallCounterGet(ctx, 0), "get counter after deploy")
 
 		t.Log("transacting with contract")
 
-		output = contract.SendCounterAdd(ctx, 1, 17)
-		network.WaitForTransactionInState(ctx, output.TransactionReceipt().Txhash())
+		_, txHash = contract.SendCounterAdd(ctx, 1, 17)
+		network.WaitForTransactionInState(ctx, txHash)
 
 		require.EqualValues(t, counterStart+17, contract.CallCounterGet(ctx, 0), "get counter after transaction")
 

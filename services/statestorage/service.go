@@ -3,11 +3,11 @@ package statestorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -31,26 +31,35 @@ func newMetrics(m metric.Factory) *metrics {
 }
 
 type service struct {
-	config       config.StateStorageConfig
-	blockTracker *synchronization.BlockTracker
-	logger       log.BasicLogger
-	metrics      *metrics
+	config         config.StateStorageConfig
+	blockTracker   *synchronization.BlockTracker
+	heightReporter adapter.BlockHeightReporter
+	logger         log.BasicLogger
+	metrics        *metrics
 
 	mutex     sync.RWMutex
 	revisions *rollingRevisions
 }
 
-func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, parent log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
+type nopHeightReporter struct{}
+
+func (_ nopHeightReporter) IncrementHeight() {}
+
+func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, heightReporter adapter.BlockHeightReporter, parent log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
 	forest, _ := merkle.NewForest()
 	logger := parent.WithTags(LogTag)
+	if heightReporter == nil {
+		heightReporter = nopHeightReporter{}
+	}
 	return &service{
-		config:       config,
-		blockTracker: synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
-		logger:       logger,
-		metrics:      newMetrics(metricFactory),
+		config:         config,
+		blockTracker:   synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
+		heightReporter: heightReporter,
+		logger:         logger,
+		metrics:        newMetrics(metricFactory),
 
 		mutex:     sync.RWMutex{},
-		revisions: newRollingRevisions(persistence, int(config.StateStorageHistorySnapshotNum()), forest),
+		revisions: newRollingRevisions(logger, persistence, int(config.StateStorageHistorySnapshotNum()), forest),
 	}
 }
 
@@ -74,7 +83,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: currentHeight + 1}, nil
 	}
 
-	// TODO assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
+	// TODO(v1) assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
 
 	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
@@ -84,10 +93,13 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	s.metrics.writeKeys.Measure(int64(len(input.ContractStateDiffs)))
 
 	s.blockTracker.IncrementHeight()
+	s.heightReporter.IncrementHeight()
+
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
+	s.logger.Info("ReadKeys", log.BlockHeight(input.BlockHeight), log.String("contract", string(input.ContractName)))
 	if input.ContractName == "" {
 		return nil, errors.Errorf("missing contract name")
 	}
@@ -137,6 +149,7 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 		LastCommittedBlockHeight:    s.revisions.getCurrentHeight(),
 		LastCommittedBlockTimestamp: s.revisions.getCurrentTimestamp(),
 	}
+	s.logger.Info("state storage block height requested", log.BlockHeight(result.LastCommittedBlockHeight))
 	return result, nil
 }
 

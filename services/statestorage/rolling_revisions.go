@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -24,6 +25,7 @@ type revisionDiff struct {
 }
 
 type rollingRevisions struct {
+	logger             log.BasicLogger
 	persist            adapter.StatePersistence
 	transientRevisions int
 	revisions          []*revisionDiff
@@ -36,13 +38,14 @@ type rollingRevisions struct {
 	persistedTs        primitives.TimestampNano
 }
 
-func newRollingRevisions(persist adapter.StatePersistence, transientRevisions int, merkle merkleRevisions) *rollingRevisions {
+func newRollingRevisions(logger log.BasicLogger, persist adapter.StatePersistence, transientRevisions int, merkle merkleRevisions) *rollingRevisions {
 	h, ts, r, err := persist.ReadMetadata()
 	if err != nil {
 		panic("could not load state metadata")
 	}
 
 	result := &rollingRevisions{
+		logger:             logger,
 		persist:            persist,
 		transientRevisions: transientRevisions,
 		merkle:             merkle,
@@ -81,8 +84,11 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 	ls.currentTs = ts
 	ls.currentMerkleRoot = newRoot
 
-	// TODO - move this a separate goroutine to prevent addRevision from blocking on IO
-	// TODO - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
+	ls.logger.Info("rollingRevisions received revision", log.BlockHeight(height))
+
+	// TODO(v1) - move this a separate goroutine to prevent addRevision from blocking on IO
+	// TODO(v1) - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
+
 	return ls.evictRevisions()
 }
 

@@ -41,6 +41,7 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
+	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
 	nativeCompiler nativeProcessorAdapter.Compiler,
 	logger log.BasicLogger,
 	metricRegistry metric.Registry,
@@ -55,7 +56,7 @@ func NewNodeLogic(
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector(ctx, ethereumConnection, logger)
 
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
-	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger, metricRegistry)
+	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, metricRegistry)
 	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}

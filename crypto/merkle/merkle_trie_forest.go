@@ -21,7 +21,7 @@ type TrieProofNode struct {
 	right primitives.Sha256
 }
 
-func newProofNode(n* node) *TrieProofNode {
+func newProofNode(n *node) *TrieProofNode {
 	pn := &TrieProofNode{
 		path:  n.path,
 		value: n.value,

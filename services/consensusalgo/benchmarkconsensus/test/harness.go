@@ -58,7 +58,7 @@ func newHarness(
 		nodeKeyPair = nonLeaderKeyPair()
 	}
 
-	//TODO don't use acceptance tests config! use a per-service config
+	//TODO(v1) don't use acceptance tests config! use a per-service config
 	cfg := config.ForAcceptanceTestNetwork(
 		federationNodes,
 		leaderKeyPair().PublicKey(),

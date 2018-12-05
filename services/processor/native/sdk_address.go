@@ -10,6 +10,7 @@ import (
 
 const SDK_OPERATION_NAME_ADDRESS = "Sdk.Address"
 
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/584): fix context here
 func (s *service) SdkAddressGetSignerAddress(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) []byte {
 	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:       primitives.ExecutionContextId(executionContextId),
