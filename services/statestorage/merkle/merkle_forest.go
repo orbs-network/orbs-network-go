@@ -19,9 +19,9 @@ var zeroValueHash = GetZeroValueHash()
 
 type Proof []*ProofNode
 
-// TODO replace proofNode with membuf/proto
+// TODO(v1) replace proofNode with membuf/proto
 type ProofNode struct {
-	path     []byte // TODO parity bool?
+	path     []byte // TODO(v1) parity bool?
 	value    primitives.Sha256
 	branches [trieRadix]primitives.MerkleSha256
 }
@@ -32,7 +32,7 @@ func (pn *ProofNode) hash() primitives.MerkleSha256 {
 }
 
 type node struct {
-	path     []byte // TODO  parity bool
+	path     []byte // TODO(v1)  parity bool
 	value    primitives.Sha256
 	hash     primitives.MerkleSha256
 	branches [trieRadix]*node

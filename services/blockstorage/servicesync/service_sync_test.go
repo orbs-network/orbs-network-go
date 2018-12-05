@@ -112,7 +112,7 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 	}
 }
 
-// TODO - this fake implementation assumes there is no genesis block, Fix once addressing genesis
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this fake implementation assumes there is no genesis block, Fix once addressing genesis
 func (bsf *blockSourceMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
 	bsf.Called(first, last)
 	result := make([]*protocol.BlockPairContainer, last-first)

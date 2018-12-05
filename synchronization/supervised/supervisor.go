@@ -31,7 +31,7 @@ func GoForever(ctx context.Context, logger Errorer, f func()) ContextEndedChan {
 
 		for {
 			tryOnce(logger, f)
-			//TODO count restarts, fail if too many restarts, etc
+			//TODO(v1) report number of restarts to metrics
 			if ctx.Err() != nil { // this returns non-nil when context has been closed via cancellation or timeout or whatever
 				return
 			}

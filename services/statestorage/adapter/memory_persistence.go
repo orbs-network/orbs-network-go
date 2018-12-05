@@ -35,7 +35,7 @@ type InMemoryStatePersistence struct {
 
 func NewInMemoryStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence {
 	_, merkleRoot := merkle.NewForest()
-	// TODO - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
 	return &InMemoryStatePersistence{
 		metrics:    newMetrics(metricFactory),
 		mutex:      sync.RWMutex{},
@@ -130,7 +130,6 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	return output.String()
 }
 
-// TODO - there is an identical method in statestorage. extract and reuse?
 func isZeroValue(value []byte) bool {
 	return bytes.Equal(value, []byte{})
 }

@@ -74,7 +74,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: currentHeight + 1}, nil
 	}
 
-	// TODO assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
+	// TODO(v1) assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
 
 	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, inflateChainState(input.ContractStateDiffs))
 	if err != nil {

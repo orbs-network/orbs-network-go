@@ -132,7 +132,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
 		})
 		if output == nil {
-			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
+			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 		}
 
 		select {
@@ -140,7 +140,7 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 		case <-ctx.Done():
 		}
 	}()
-	return <- ch
+	return <-ch
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
@@ -153,7 +153,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 			ReturnImmediately: 1,
 		})
 		if output == nil {
-			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO: improve
+			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 		}
 	}()
 }
@@ -169,14 +169,14 @@ func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilde
 			ClientRequest: (&client.CallMethodRequestBuilder{Transaction: tx}).Build(),
 		})
 		if output == nil {
-			panic(fmt.Sprintf("error calling method: %v", err)) // TODO: improve
+			panic(fmt.Sprintf("error calling method: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 		}
 		select {
 		case ch <- output.ClientResponse:
 		case <-ctx.Done():
 		}
 	}()
-	return <- ch
+	return <-ch
 }
 
 func (n *Network) assertStarted(nodeIndex int) {

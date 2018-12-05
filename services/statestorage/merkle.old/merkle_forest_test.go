@@ -12,12 +12,12 @@ import (
 	"testing"
 )
 
-//TODO - serialization based on spec (oded)
-//TODO - Radix 16 +/- parity
+//TODO(v1) - serialization based on spec (oded)
+//TODO(v1) - Radix 16 +/- parity
 
-//TODO - avoid hashing values of less than 32 bytes ?? Other optimizations (see ethereum)?
-//TODO - what hash functions should be used for values and what functions for node addresses?
-//TODO - should we include full values or just hashes (compare Ethereum)
+//TODO(v1) - avoid hashing values of less than 32 bytes ?? Other optimizations (see ethereum)?
+//TODO(v1) - what hash functions should be used for values and what functions for node addresses?
+//TODO(v1) - should we include full values or just hashes (compare Ethereum)
 
 func updateStringEntries(f *Forest, baseHash primitives.MerkleSha256, keyValues ...string) primitives.MerkleSha256 {
 	if len(keyValues)%2 != 0 {
@@ -429,7 +429,7 @@ func (p *Proof) dump() {
 	fmt.Println("---------------- PROOF END --------------------")
 }
 
-// TODO - this just checks there are no data integrity in our driver integrity
+// TODO(v1) - this just checks there are no data integrity in our driver integrity
 func (f *Forest) testForestIntegrity(t *testing.T) {
 	for h, n := range f.nodes {
 		require.Equal(t, n.hash().KeyForMap(), h, "node key is not true hash code")

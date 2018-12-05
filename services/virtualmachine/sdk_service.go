@@ -57,7 +57,7 @@ func (s *service) handleSdkServiceCallMethod(ctx context.Context, executionConte
 		InputArgumentArray:     inputArgumentArray,
 		AccessScope:            executionContext.accessScope,
 		CallingPermissionScope: permissionScope,
-		CallingService:         callingService, // TODO: input.CallingService is probably not needed, can remove from protos
+		CallingService:         callingService, // TODO(v1): input.CallingService is probably not needed, can remove from protos
 	})
 	if err != nil {
 		s.logger.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("caller", callingService), log.Stringable("callee", primitives.ContractName(serviceName)))

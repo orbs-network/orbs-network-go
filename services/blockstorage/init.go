@@ -89,5 +89,5 @@ func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlock
 	s.consensusBlocksHandlers = append(s.consensusBlocksHandlers, handler)
 
 	// update the consensus algo about the latest block we have (for its initialization)
-	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO()) // TODO: (talkol) not sure if we should create a new context here or pass to RegisterConsensusBlocksHandler in code generation
+	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO())
 }
