@@ -129,7 +129,9 @@ func (s *service) validateWithConsensusAlgosWithMode(
 	lastCommittedBlockPair *protocol.BlockPairContainer,
 	mode handlers.HandleBlockConsensusMode) error {
 
-	for _, handler := range s.consensusBlocksHandlers {
+	s.consensusBlocksHandlers.RLock()
+	defer s.consensusBlocksHandlers.RUnlock()
+	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
@@ -143,5 +145,5 @@ func (s *service) validateWithConsensusAlgosWithMode(
 		}
 	}
 
-	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers))
+	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
 }

@@ -48,7 +48,7 @@ func TestSyncInitialState(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		// Set up block source mock
-		sourceTracker := synchronization.NewBlockTracker(3, 10)
+		sourceTracker := synchronization.NewBlockTracker(log.GetLogger(), 3, 10)
 		sourceMock := newBlockSourceMock(3)
 		sourceMock.When("GetLastBlock").Times(2)
 		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil).AtLeast(0)
@@ -57,7 +57,7 @@ func TestSyncInitialState(t *testing.T) {
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
 		targetCurrentHeight := primitives.BlockHeight(0)
-		targetTracker := synchronization.NewBlockTracker(0, 10)
+		targetTracker := synchronization.NewBlockTracker(log.GetLogger(), 0, 10)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+1 {
 				targetTracker.IncrementHeight()

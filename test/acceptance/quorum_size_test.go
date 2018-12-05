@@ -22,6 +22,7 @@ func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks(t *testing.T) {
 			contract := network.GetBenchmarkTokenContract()
 			contract.DeployBenchmarkToken(ctx, 5)
 
-			require.NotNil(t, contract.SendTransfer(ctx, 0, uint64(23), 5, 6))
+			out, _ := contract.SendTransfer(ctx, 0, uint64(23), 5, 6)
+			require.NotNil(t, out)
 		})
 }

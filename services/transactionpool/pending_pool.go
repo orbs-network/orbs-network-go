@@ -97,18 +97,18 @@ func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	return ok
 }
 
-func (p *pendingTxPool) remove(ctx context.Context, txhash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction {
+func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	pendingTx, ok := p.transactionsByHash[txhash.KeyForMap()]
+	pendingTx, ok := p.transactionsByHash[txHash.KeyForMap()]
 	if ok {
-		delete(p.transactionsByHash, txhash.KeyForMap())
+		delete(p.transactionsByHash, txHash.KeyForMap())
 		p.currentSizeInBytes -= sizeOfSignedTransaction(pendingTx.transaction)
 		p.transactionList.Remove(pendingTx.listElement)
 
 		if p.onTransactionRemoved != nil {
-			p.onTransactionRemoved(ctx, txhash, removalReason)
+			p.onTransactionRemoved(ctx, txHash, removalReason)
 		}
 
 		p.metrics.transactionCountGauge.Dec()

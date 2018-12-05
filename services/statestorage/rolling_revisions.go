@@ -4,45 +4,48 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 )
 
 type merkleRevisions interface {
-	Update(rootMerkle primitives.MerkleSha256, diffs merkle.MerkleDiffs) (primitives.MerkleSha256, error)
-	Forget(rootHash primitives.MerkleSha256)
+	Update(rootMerkle primitives.Sha256, diffs merkle.TrieDiffs) (primitives.Sha256, error)
+	Forget(rootHash primitives.Sha256)
 }
 
 type revisionDiff struct {
 	diff       adapter.ChainState
-	merkleRoot primitives.MerkleSha256
+	merkleRoot primitives.Sha256
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
 }
 
 type rollingRevisions struct {
+	logger             log.BasicLogger
 	persist            adapter.StatePersistence
 	transientRevisions int
 	revisions          []*revisionDiff
 	merkle             merkleRevisions
 	currentHeight      primitives.BlockHeight
 	currentTs          primitives.TimestampNano
-	currentMerkleRoot  primitives.MerkleSha256
+	currentMerkleRoot  primitives.Sha256
 	persistedHeight    primitives.BlockHeight
-	persistedRoot      primitives.MerkleSha256
+	persistedRoot      primitives.Sha256
 	persistedTs        primitives.TimestampNano
 }
 
-func newRollingRevisions(persist adapter.StatePersistence, transientRevisions int, merkle merkleRevisions) *rollingRevisions {
+func newRollingRevisions(logger log.BasicLogger, persist adapter.StatePersistence, transientRevisions int, merkle merkleRevisions) *rollingRevisions {
 	h, ts, r, err := persist.ReadMetadata()
 	if err != nil {
 		panic("could not load state metadata")
 	}
 
 	result := &rollingRevisions{
+		logger:             logger,
 		persist:            persist,
 		transientRevisions: transientRevisions,
 		merkle:             merkle,
@@ -81,16 +84,19 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 	ls.currentTs = ts
 	ls.currentMerkleRoot = newRoot
 
+	ls.logger.Info("rollingRevisions received revision", log.BlockHeight(height))
+
 	// TODO(v1) - move this a separate goroutine to prevent addRevision from blocking on IO
 	// TODO(v1) - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
+
 	return ls.evictRevisions()
 }
 
-func toMerkleInput(diff adapter.ChainState) merkle.MerkleDiffs {
-	result := make(merkle.MerkleDiffs, 0, len(diff))
+func toMerkleInput(diff adapter.ChainState) merkle.TrieDiffs {
+	result := make(merkle.TrieDiffs, 0, len(diff))
 	for contractName, contractState := range diff {
 		for _, r := range contractState {
-			result = append(result, &merkle.MerkleDiff{
+			result = append(result, &merkle.TrieDiff{
 				Key:   hash.CalcSha256(append([]byte(contractName), r.Key()...)),
 				Value: hash.CalcSha256(r.Value()),
 			})
@@ -136,7 +142,7 @@ func (ls *rollingRevisions) getRevisionRecord(height primitives.BlockHeight, con
 	return ls.persist.Read(contract, key)
 }
 
-func (ls *rollingRevisions) getRevisionHash(height primitives.BlockHeight) (primitives.MerkleSha256, error) {
+func (ls *rollingRevisions) getRevisionHash(height primitives.BlockHeight) (primitives.Sha256, error) {
 	for i := len(ls.revisions) - 1; i >= 0; i-- {
 		if ls.revisions[i].height == height {
 			return ls.revisions[i].merkleRoot, nil

@@ -20,7 +20,7 @@ import (
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight
+	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
 type blockHeightChan chan primitives.BlockHeight
@@ -63,7 +63,7 @@ func NewInMemoryBlockPersistenceWithBlocks(parent log.BasicLogger, preloadedBloc
 		failNextBlocks: false,
 		logger:         logger,
 		metrics:        newMetrics(metricFactory),
-		tracker:        synchronization.NewBlockTracker(uint64(len(preloadedBlocks)), 5),
+		tracker:        synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
 		blockChain: struct {
 			sync.RWMutex
 			blocks []*protocol.BlockPairContainer

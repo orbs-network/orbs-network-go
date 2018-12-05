@@ -42,7 +42,7 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	s.nodeSync.HandleBlockCommitted(ctx)
 
-	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))
 
 	return nil, nil
 }
