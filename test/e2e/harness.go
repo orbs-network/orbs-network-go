@@ -6,7 +6,9 @@ import (
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -98,6 +100,19 @@ func (h *harness) getMetrics() metrics {
 	json.Unmarshal(readBytes, &m)
 
 	return m
+}
+
+func (h *harness) waitForFirstBlockToBeCommitted(t *testing.T) {
+	require.True(t, test.Eventually(10*time.Second, func() bool { // 10 seconds to avoid jitter but it really shouldn't take that long
+		m := h.getMetrics()
+		if m == nil {
+			return false
+		}
+
+		blockHeight := m["BlockStorage.BlockHeight"]["Value"].(float64)
+
+		return blockHeight > 0
+	}), "could not retrieve metrics")
 }
 
 func printTestTime(t *testing.T, msg string, last *time.Time) {

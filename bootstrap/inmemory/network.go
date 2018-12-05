@@ -28,6 +28,7 @@ type NetworkDriver interface {
 	contracts.ContractAPI
 	PublicApi(nodeIndex int) services.PublicApi
 	Size() int
+	WaitForBlockAtHeight(ctx context.Context, height int)
 }
 
 type Network struct {
