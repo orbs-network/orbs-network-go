@@ -15,7 +15,7 @@ import (
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 		h.ignoringForwardMessages()
 
 		tx1 := builders.Transaction().Build()
@@ -49,7 +49,7 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 
 func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
 			Txhash: digest.CalcTxHash(builders.Transaction().Build().Transaction()),
@@ -62,7 +62,7 @@ func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 
 func TestGetTransactionReceiptWhenTimestampAheadOfNodeTime(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
 			TransactionTimestamp: primitives.TimestampNano(time.Now().Add(h.config.TransactionPoolFutureTimestampGraceTimeout() + 1*time.Minute).UnixNano()),

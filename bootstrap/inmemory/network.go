@@ -28,6 +28,7 @@ type NetworkDriver interface {
 	contracts.ContractAPI
 	PublicApi(nodeIndex int) services.PublicApi
 	Size() int
+	WaitUntilReadyForTransactions(ctx context.Context)
 }
 
 type Network struct {
@@ -38,15 +39,16 @@ type Network struct {
 }
 
 type Node struct {
-	index                   int
-	name                    string
-	config                  config.NodeConfig
-	blockPersistence        blockStorageAdapter.InMemoryBlockPersistence
-	statePersistence        harnessStateStorageAdapter.DumpingStatePersistence
-	stateBlockHeightTracker *synchronization.BlockTracker
-	nativeCompiler          nativeProcessorAdapter.Compiler
-	nodeLogic               bootstrap.NodeLogic
-	metricRegistry          metric.Registry
+	index                             int
+	name                              string
+	config                            config.NodeConfig
+	blockPersistence                  blockStorageAdapter.InMemoryBlockPersistence
+	statePersistence                  harnessStateStorageAdapter.DumpingStatePersistence
+	stateBlockHeightTracker           *synchronization.BlockTracker
+	transactionPoolBlockHeightTracker *synchronization.BlockTracker
+	nativeCompiler                    nativeProcessorAdapter.Compiler
+	nodeLogic                         bootstrap.NodeLogic
+	metricRegistry                    metric.Registry
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
@@ -66,6 +68,7 @@ func (n *Network) AddNode(
 	node.config = cfg
 	node.statePersistence = harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry, logger)
 	node.stateBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
+	node.transactionPoolBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
 	node.blockPersistence = blockPersistence
 	node.nativeCompiler = compiler
 	node.metricRegistry = metricRegistry
@@ -85,6 +88,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.blockPersistence,
 			node.statePersistence,
 			node.stateBlockHeightTracker,
+			node.transactionPoolBlockHeightTracker,
 			node.nativeCompiler,
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
@@ -208,6 +212,14 @@ func (n *Network) WaitForTransactionInState(ctx context.Context, txHash primitiv
 		if node.Started() {
 			h := node.WaitForTransactionInState(ctx, txHash)
 			n.Logger.Info("WaitForTransactionInState found tx in state", log.BlockHeight(h), log.Node(node.name), log.Transaction(txHash))
+		}
+	}
+}
+
+func (n *Network) WaitUntilReadyForTransactions(ctx context.Context) {
+	for _, node := range n.Nodes {
+		if node.Started() {
+			node.transactionPoolBlockHeightTracker.WaitForBlock(ctx, 1)
 		}
 	}
 }

@@ -125,7 +125,9 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 				// signal the old network to stop
 				networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
 				newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
+
 				newNetwork.Start(networkCtx, b.numOfNodesToStart)
+
 				return newNetwork
 			}
 

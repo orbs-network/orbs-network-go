@@ -39,6 +39,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	bh = s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
 
 	s.blockTracker.IncrementHeight()
+	s.blockHeightReporter.IncrementHeight()
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {
@@ -67,6 +68,7 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	defer s.mu.Unlock()
 	s.mu.lastCommittedBlockHeight = header.BlockHeight()
 	s.mu.lastCommittedBlockTimestamp = header.Timestamp()
+	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
 	return header.BlockHeight()
 }

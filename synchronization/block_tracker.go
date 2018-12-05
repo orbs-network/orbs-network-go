@@ -77,3 +77,8 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 	}
 	return nil
 }
+
+// shim for BlockWriter
+type NopHeightReporter struct{}
+
+func (_ NopHeightReporter) IncrementHeight() {}
