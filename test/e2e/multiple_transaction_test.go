@@ -21,7 +21,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		lt := time.Now()
 		printTestTime(t, "started", &lt)
 
-		h.waitForFirstBlockToBeCommitted(t)
+		h.waitUntilTransactionPoolIsReady(t)
 		printTestTime(t, "first block committed", &lt)
 
 		transferTo, _ := keys.GenerateEd25519Key()

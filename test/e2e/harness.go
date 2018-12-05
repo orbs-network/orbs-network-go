@@ -102,14 +102,14 @@ func (h *harness) getMetrics() metrics {
 	return m
 }
 
-func (h *harness) waitForFirstBlockToBeCommitted(t *testing.T) {
+func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 	require.True(t, test.Eventually(10*time.Second, func() bool { // 10 seconds to avoid jitter but it really shouldn't take that long
 		m := h.getMetrics()
 		if m == nil {
 			return false
 		}
 
-		blockHeight := m["BlockStorage.BlockHeight"]["Value"].(float64)
+		blockHeight := m["TransactionPool.BlockHeight"]["Value"].(float64)
 
 		return blockHeight > 0
 	}), "could not retrieve metrics")

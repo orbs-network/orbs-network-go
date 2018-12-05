@@ -21,7 +21,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		lt := time.Now()
 		printTestTime(t, "started", &lt)
 
-		h.waitForFirstBlockToBeCommitted(t)
+		h.waitUntilTransactionPoolIsReady(t)
 		printTestTime(t, "first block committed", &lt)
 
 		counterStart := uint64(time.Now().UnixNano())
