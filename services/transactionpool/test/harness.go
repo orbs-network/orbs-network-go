@@ -143,8 +143,8 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 
 func (h *harness) getTransactionsForOrdering(ctx context.Context, height primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		BlockHeight:              height,
-		MaxNumberOfTransactions:  maxNumOfTransactions,
+		BlockHeight:             height,
+		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 

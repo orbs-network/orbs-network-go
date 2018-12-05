@@ -70,7 +70,6 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	defer s.mu.Unlock()
 	s.mu.lastCommittedBlockHeight = header.BlockHeight()
 	s.mu.lastCommittedBlockTimestamp = header.Timestamp()
-
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
 	return header.BlockHeight()

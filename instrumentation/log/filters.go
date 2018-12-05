@@ -24,7 +24,6 @@ func Or(filters ...Filter) Filter {
 	return &or{filters}
 }
 
-// FIXME add failed expectations here
 func OnlyErrors() Filter {
 	return &onlyErrors{}
 }

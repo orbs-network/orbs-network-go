@@ -35,7 +35,7 @@ func (c *contractClient) SendTransfer(ctx context.Context, nodeIndex int, amount
 	return c.API.SendTransaction(ctx, tx, nodeIndex)
 }
 
-// TODO: when publicApi supports returning as soon as SendTransaction is in the pool, switch to blocking implementation that waits for this
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/434): when publicApi supports returning as soon as SendTransaction is in the pool, switch to blocking implementation that waits for this
 func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256 {
 	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
 	targetAddress := builders.AddressForEd25519SignerForTests(toAddressIndex)

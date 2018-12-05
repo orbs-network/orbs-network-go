@@ -59,7 +59,6 @@ func CalcXor(a, b []byte) []byte {
 	if supportsUnaligned {
 		fastXORBytes(res, a, b)
 	} else {
-		// TODO(hanwen): if (dst, a, b) have common alignment
 		// we could still try fastXORBytes. It is not clear
 		// how often this happens, and it's only worth it if
 		// the block encryption itself is hardware

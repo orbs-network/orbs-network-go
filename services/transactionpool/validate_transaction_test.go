@@ -47,7 +47,7 @@ func TestValidateTransaction_RejectsTransactionsWhenTimestampIsZero(t *testing.T
 	require.Error(t, err,"a transaction was not rejected when the system is in zero timestamp")
 }
 
-//TODO talk to TalKol about Invalid Signer
+//TODO(v1) talk to TalKol about Invalid Signer
 func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	tests := []struct {
 		name           string

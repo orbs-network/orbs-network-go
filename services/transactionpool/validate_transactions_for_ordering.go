@@ -30,7 +30,7 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 		}
 	}
 
-	//TODO handle error from vm
+	//TODO(v1) handle error from vm
 	bh, _ := s.currentBlockHeightAndTime()
 	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		SignedTransactions: input.SignedTransactions,

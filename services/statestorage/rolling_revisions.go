@@ -86,8 +86,9 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 
 	ls.logger.Info("rollingRevisions received revision", log.BlockHeight(height))
 
-	// TODO - move this a separate goroutine to prevent addRevision from blocking on IO
-	// TODO - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
+	// TODO(v1) - move this a separate goroutine to prevent addRevision from blocking on IO
+	// TODO(v1) - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
+
 	return ls.evictRevisions()
 }
 

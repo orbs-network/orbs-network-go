@@ -157,7 +157,7 @@ func (bp *inMemoryBlockPersistence) GetBlocksRelevantToTxTimestamp(txTimeStamp p
 	}
 	var relevantBlocks []*protocol.BlockPairContainer
 	interval := end - start
-	// TODO: FIXME: sanity check, this is really useless here right now, but we are going to refactor this in about two-three weeks, and when we do, this is here to remind us to have a sanity check on this query
+	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
 	if interval > primitives.TimestampNano(time.Hour.Nanoseconds()) {
 		return nil
 	}
@@ -231,9 +231,8 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 	}
 }
 
-// TODO: better support for paging
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/174): better support for paging
 func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-	// FIXME use more efficient way to slice blocks
 
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()

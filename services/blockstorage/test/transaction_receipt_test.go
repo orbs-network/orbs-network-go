@@ -35,7 +35,7 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 	})
 }
 
-// TODO return transaction receipt while the transaction timestamp is in the future (and too far ahead to be in the grace
+// TODO(v1) return transaction receipt while the transaction timestamp is in the future (and too far ahead to be in the grace
 
 func TestReturnTransactionReceipt(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
@@ -70,6 +70,6 @@ func TestReturnTransactionReceipt(t *testing.T) {
 	})
 }
 
-// TODO return transaction receipt while the transaction timestamp is outside the grace (regular)
-// TODO return transaction receipt while the transaction timestamp is at the expire window
-// TODO return transaction receipt while the transaction timestamp is at the expire window and within the grace
+// TODO(v1) return transaction receipt while the transaction timestamp is outside the grace (regular)
+// TODO(v1) return transaction receipt while the transaction timestamp is at the expire window
+// TODO(v1) return transaction receipt while the transaction timestamp is at the expire window and within the grace

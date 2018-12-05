@@ -14,5 +14,5 @@ const METHOD_APPROVE = "approve"
 var PUBLIC = sdk.Export(approve)
 
 func approve() {
-	// TODO: add subscription check here (panic on error)
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/572): add subscription check here (panic on error)
 }
