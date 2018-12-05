@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
 )
 
 func NewTransactionPool(ctx context.Context,
@@ -40,7 +39,7 @@ func NewTransactionPool(ctx context.Context,
 		transactionForwarder: txForwarder,
 	}
 
-	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) // this is so that we do not reject transactions on startup, before any block has been committed
+	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
 
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError

@@ -129,6 +129,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 				return newNetwork
 			}
 
+			network.WaitForBlockAtHeight(ctx, 1) // this is so that no transactions are sent before each node has committed block 0, otherwise transactions will be rejected
 			f(ctx, network, restart)
 		})
 		// end test

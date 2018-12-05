@@ -15,7 +15,7 @@ import (
 
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		validTx := builders.TransferTransaction().Build()
 		expiredTx := builders.TransferTransaction().WithTimestamp(time.Now().Add(-1 * time.Duration(h.config.TransactionPoolTransactionExpirationWindow()+60) * time.Second)).Build()
@@ -33,7 +33,7 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 
 func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 		h.ignoringForwardMessages()
 
 		tx1 := builders.TransferTransaction().Build()
@@ -58,7 +58,7 @@ func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t 
 
 func TestGetTransactionsForOrderingDropsTransactionsThatAreAlreadyCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		h.ignoringForwardMessages()
 
@@ -82,7 +82,7 @@ func TestGetTransactionsForOrderingDropsTransactionsThatAreAlreadyCommitted(t *t
 
 func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		h.ignoringForwardMessages()
 
@@ -113,7 +113,7 @@ func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testi
 
 func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFromPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		h.ignoringForwardMessages()
 
@@ -142,7 +142,7 @@ func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFr
 
 func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		expiredTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 		validTx := builders.TransferTransaction().Build()
@@ -165,10 +165,10 @@ func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockHeight:             2,
+			BlockHeight:             3,
 			MaxNumberOfTransactions: 1,
 		})
 
@@ -178,7 +178,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		doneWait := make(chan error)
 		go func() {

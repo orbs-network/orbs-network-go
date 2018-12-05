@@ -35,6 +35,18 @@ func TestValidateTransaction_ValidTransaction(t *testing.T) {
 	require.Nil(t, err, "a valid transaction was rejected")
 }
 
+func TestValidateTransaction_RejectsTransactionsWhenTimestampIsZero(t *testing.T) {
+	vctx := &validationContext{
+		expiryWindow:                expirationWindowInterval,
+		lastCommittedBlockTimestamp: 0,
+		futureTimestampGrace:        futureTimestampGrace,
+		virtualChainId:              builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+	}
+
+	err := vctx.validateTransaction(builders.TransferTransaction().Build())
+	require.Error(t, err,"a transaction was not rejected when the system is in zero timestamp")
+}
+
 //TODO talk to TalKol about Invalid Signer
 func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	tests := []struct {
@@ -53,7 +65,6 @@ func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	for i := range tests {
 		test := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
 			err := aValidationContext().validateTransaction(test.txBuilder.Build())
 
 			require.Error(t, err, fmt.Sprintf("a transaction with an invalid %s was not rejected", test.name))

@@ -210,3 +210,11 @@ func (n *Network) WaitForTransactionInState(ctx context.Context, txHash primitiv
 		}
 	}
 }
+
+func (n *Network) WaitForBlockAtHeight(ctx context.Context, height int) {
+	for _, node := range n.Nodes {
+		if node.Started() {
+			node.blockPersistence.GetBlockTracker().WaitForBlock(ctx, primitives.BlockHeight(height))
+		}
+	}
+}

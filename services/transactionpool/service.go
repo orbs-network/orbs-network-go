@@ -41,9 +41,6 @@ func (s *service) currentBlockHeightAndTime() (primitives.BlockHeight, primitive
 func (s *service) createValidationContext() *validationContext {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if s.mu.lastCommittedBlockTimestamp == 0 {
-		panic("last committed block timestamp should never be zero!")
-	}
 	return &validationContext{
 		expiryWindow:                s.config.TransactionPoolTransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.mu.lastCommittedBlockTimestamp,
