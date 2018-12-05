@@ -76,14 +76,13 @@ func (t *directTransport) RegisterListener(listener TransportListener, listenerP
 	t.transportListenerUnderMutex = listener
 }
 
-// TODO: we are not currently respecting any intents given in ctx (added in context refactor)
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)
 func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, peerQueue := range t.outgoingPeerQueues {
 			peerQueue <- data
 		}
-		// TODO: how can we tell if was actually sent without error?
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientPublicKeys {
@@ -93,7 +92,6 @@ func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
 				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.KeyForMap())
 			}
 		}
-		// TODO: how can we tell if was actually sent without error?
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
 		panic("Not implemented")
@@ -102,7 +100,7 @@ func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
 }
 
 func (t *directTransport) serverListenForIncomingConnections(ctx context.Context, listenPort uint16) (net.Listener, error) {
-	// TODO: migrate to ListenConfig which has better support of contexts (go 1.11 required)
+	// TODO(v1): migrate to ListenConfig which has better support of contexts (go 1.11 required)
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", listenPort))
 	if err != nil {
 		return nil, err
@@ -166,8 +164,8 @@ func (t *directTransport) serverMainLoop(parentCtx context.Context, listenPort u
 
 func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, conn net.Conn) {
 	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-	// TODO: add a white list for IPs we're willing to accept connections from
-	// TODO: make sure each IP from the white list connects only once
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): add a white list for IPs we're willing to accept connections from
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): make sure each IP from the white list connects only once
 
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
@@ -185,7 +183,7 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 }
 
 func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
-	// TODO: think about timeout policy on receive, we might not want it
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): think about timeout policy on receive, we might not want it
 	timeout := t.config.GossipNetworkTimeout()
 	res := [][]byte{}
 
@@ -359,14 +357,13 @@ func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) erro
 }
 
 func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {
-	// TODO: consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
 	// make sure context is still open
 	err := ctx.Err()
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: consider working with a pre-allocated buffer pool (enforcing max payload size) to remove allocs and improve performance
 	buffer := make([]byte, totalSize)
 	totalRead := uint32(0)
 	for totalRead < totalSize {
@@ -387,7 +384,7 @@ func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout tim
 }
 
 func write(ctx context.Context, conn net.Conn, buffer []byte, timeout time.Duration) error {
-	// TODO: consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): consider whether the right approach is to poll context this way or have a single watchdog goroutine that closes all active connections when context is cancelled
 	// make sure context is still open
 	err := ctx.Err()
 	if err != nil {

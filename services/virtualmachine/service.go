@@ -75,8 +75,8 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 
 func (s *service) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	previousBlockHeight := input.BlockHeight - 1      // our contracts rely on this block's state for execution (TODO: maybe move the minus one to processTransactionSet so it would match the timestamp)
-	blockTimestamp := primitives.TimestampNano(0x777) // TODO: replace placeholder timestamp 0x777 with actual value (probably needs to be added to input in protos
+	previousBlockHeight := input.BlockHeight - 1      // our contracts rely on this block's state for execution (TODO(https://github.com/orbs-network/orbs-spec/issues/123): maybe move the minus one to processTransactionSet so it would match the timestamp)
+	blockTimestamp := primitives.TimestampNano(0x777) // TODO(v1): replace placeholder timestamp 0x777 with actual value (probably needs to be added to input in protos
 
 	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
 	receipts, stateDiffs := s.processTransactionSet(ctx, previousBlockHeight, blockTimestamp, input.SignedTransactions)
@@ -91,9 +91,9 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
-	// FIXME sometimes we get value of ffffffffffffffff
-	previousBlockHeight := input.BlockHeight - 1      // our contracts rely on this block's state for execution (TODO: maybe move the minus one to callGlobalPreOrderSystemContract so it would match the timestamp)
-	blockTimestamp := primitives.TimestampNano(0x777) // TODO: replace placeholder timestamp 0x777 with actual value (probably needs to be added to input in protos)
+	// TODO(v1) sometimes we get value of ffffffffffffffff
+	previousBlockHeight := input.BlockHeight - 1      // our contracts rely on this block's state for execution (TODO(https://github.com/orbs-network/orbs-spec/issues/123): maybe move the minus one to callGlobalPreOrderSystemContract so it would match the timestamp)
+	blockTimestamp := primitives.TimestampNano(0x777) // TODO(v1): replace placeholder timestamp 0x777 with actual value (probably needs to be added to input in protos)
 
 	// check subscription
 	err := s.callGlobalPreOrderSystemContract(ctx, previousBlockHeight, blockTimestamp)

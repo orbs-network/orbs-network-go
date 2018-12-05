@@ -12,7 +12,6 @@ type entryPointKeyType string
 const entryPointKey entryPointKeyType = "ep"
 const RequestId = "request-id"
 
-//TODO add block height? talk to Shai and Ron
 type Context struct {
 	created   time.Time
 	name      string

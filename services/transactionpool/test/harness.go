@@ -73,7 +73,7 @@ func (h *harness) addTransactions(ctx context.Context, txs ...*protocol.SignedTr
 func (h *harness) reportTransactionsAsCommitted(ctx context.Context, transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
 	return h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
 		LastCommittedBlockHeight: h.lastBlockHeight,
-		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto, see issue #121
+		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO(https://github.com/orbs-network/orbs-network-go/issues/121): ResultsBlockHeader is too much info here, awaiting change in proto
 		TransactionReceipts:      asReceipts(transactions),
 	})
 
@@ -141,8 +141,8 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 
 func (h *harness) getTransactionsForOrdering(ctx context.Context, height primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		BlockHeight:              height,
-		MaxNumberOfTransactions:  maxNumOfTransactions,
+		BlockHeight:             height,
+		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 

@@ -12,6 +12,6 @@ func main() {
 
 	var serverAddress = ":" + strconv.Itoa(*port)
 
-	// TODO Remove the blocking boolean flag from here and make it an environment variable. (Shouldn't concern our users who will see how we bootstrap this)
+	// TODO(v1) add WaitUntilShutdown so this behaves like the regular main (no blocking flag)
 	gamma.StartGammaServer(serverAddress, true)
 }

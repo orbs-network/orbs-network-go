@@ -31,7 +31,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 		require.EqualValues(t, blockCreated.UnixNano(), lastCommittedBlockHeight.LastCommittedBlockTimestamp, "timestamp in storage should be the same")
 
 	})
-	// TODO Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/569) Spec: If any of the intra block syncs (StateStorage, TransactionPool) is blocking and waiting, wake it up.
 }
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {

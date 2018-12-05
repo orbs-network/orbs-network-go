@@ -74,5 +74,5 @@ func (t *transientState) mergeIntoTransientState(masterTransientState *transient
 }
 
 func keyForMap(key []byte) string {
-	return string(key) // TODO: improve to create a version without copy (unsafe cast)
+	return string(key) // TODO(v1): improve to create a version without copy (unsafe cast)
 }

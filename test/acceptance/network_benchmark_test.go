@@ -11,7 +11,6 @@ import (
 )
 
 func BenchmarkInMemoryNetwork(b *testing.B) {
-
 	var wg sync.WaitGroup
 
 	limiter := rate.NewLimiter(1000, 100)
@@ -25,7 +24,7 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 		contract.DeployBenchmarkToken(ctx, 5)
 
 		for i := 0; i < b.N; i++ {
-			if err := limiter.Wait(context.TODO()); err == nil {
+			if err := limiter.Wait(ctx); err == nil {
 				wg.Add(1)
 
 				go func() {
@@ -41,5 +40,4 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 		wg.Wait()
 
 	})
-
 }

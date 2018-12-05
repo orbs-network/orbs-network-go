@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// FIXME implement all block checks
+// TODO(v1) implement all block checks
 func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -99,7 +99,7 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
-	// FIXME we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
+	// TODO(v1) we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
 	if !txBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
 		errorMessage := "protocol version mismatch in transactions block header"
 		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()), log.BlockHeight(txBlockHeader.BlockHeight()))

@@ -56,7 +56,7 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 		return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 	}
 
-	// TODO: replace with given wrapped given context
+	// TODO(v1): replace with given wrapped given context
 	ctx, cancel := context.WithTimeout(context.Background(), adapter.MAX_COMPILATION_TIME)
 	defer cancel()
 
