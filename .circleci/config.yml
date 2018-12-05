@@ -44,11 +44,32 @@ jobs:
     machine: true
     steps:
       - checkout
-      - run: $(aws ecr get-login --no-include-email --region us-west-2)
-      - run: docker pull $DOCKER_IMAGE:$(./docker/tag.sh) && docker tag $DOCKER_IMAGE:$(./docker/tag.sh) orbs:$(./docker/tag.sh)
-#      - run: docker pull $DOCKER_IMAGE:master && docker tag $DOCKER_IMAGE:master orbs:export
-      - run: git clone https://github.com/orbs-network/orbs-network-deploy-script && cd orbs-network-deploy-script && git checkout master
-      - run: export DOCKER_TAG=$(./docker/tag.sh) && cd orbs-network-deploy-script && npm install -g typescript && npm install && ./deploy-staging.sh
+      - run:
+          name: Install node@10.14.1 for Nebula
+          command: |
+            set +e
+            touch $BASH_ENV
+            curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+      - run: export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v10.14.1 && nvm use v10.14.1
+      - run: curl https://releases.hashicorp.com/terraform/0.11.10/terraform_0.11.10_linux_amd64.zip -o tf.zip && unzip tf.zip && sudo mv terraform /usr/bin/
+      - run: echo $TESTNET_SSH_PUBLIC_KEY > ~/.ssh/id_rsa.pub
+      - run: git clone https://github.com/orbs-network/nebula && cd nebula && git checkout testnet
+      - run:
+          command: npm install
+          working_directory: nebula
+      - run:
+          command: aws s3 sync s3://orbs-network-config-staging/nebula/cache/_terraform _terraform
+          working_directory: nebula
+      - run:
+          command: |
+            set +e
+            export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm use v10.14.1
+            export REGIONS=us-east-1,eu-central-1,ap-northeast-1,ap-northeast-2,ap-southeast-2,ca-central-1
+            node deploy.js
+          working_directory: nebula
+      - run:
+          command: rm -rf _terraform/*/.terraform && aws s3 sync _terraform s3://orbs-network-config-staging/nebula/cache/_terraform
+          working_directory: nebula
 
   e2e_testnet:
     machine: true
@@ -70,30 +91,30 @@ workflows:
   version: 2
   build:
     jobs:
-      - build
-      - flakiness
-      - notify_github_about_dashboard
-      - success:
-          requires:
-            - build
-            - flakiness
-      - deploy_testnet:
-          requires:
-            - success
-          filters:
-            branches:
-              only:
-                - master
-      - e2e_testnet:
-          requires:
-            - deploy_testnet
-          filters:
-            branches:
-              only:
-                - master
-      - release_gamma:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+#      - build
+#      - flakiness
+#      - notify_github_about_dashboard
+#      - success:
+#          requires:
+#            - build
+#            - flakiness
+      - deploy_testnet
+#          requires:
+#            - success
+#          filters:
+#            branches:
+#              only:
+#                - master
+#      - e2e_testnet:
+#          requires:
+#            - deploy_testnet
+#          filters:
+#            branches:
+#              only:
+#                - master
+#      - release_gamma:
+#          filters:
+#            tags:
+#              only: /^v.*/
+#            branches:
+#              ignore: /.*/
