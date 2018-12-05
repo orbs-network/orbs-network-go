@@ -101,7 +101,6 @@ func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.Re
 
 func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
 
-	// TODO maybe put these validations in a table
 	checkedHeader := input.TransactionsBlock.Header
 	expectedProtocolVersion := s.config.ProtocolVersion()
 	expectedVirtualChainId := s.config.VirtualChainId()
@@ -135,11 +134,11 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		return nil, errors.New("incorrect previous block hash")
 	}
 
-	// TODO "Check timestamp is within configurable allowed jitter of system timestamp, and later than previous block"
+	// TODO v1 "Check timestamp is within configurable allowed jitter of system timestamp, and later than previous block"
 
 	// TODO "Check transaction merkle root hash" https://github.com/orbs-network/orbs-spec/issues/118
 
-	// TODO "Check metadata hash"
+	// TODO "Check metadata hash" https://tree.taiga.io/project/orbs-network/us/535
 
 	validationInput := &services.ValidateTransactionsForOrderingInput{
 		BlockHeight:        input.BlockHeight,
@@ -191,10 +190,9 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 	}
 
 	// Check the hash of the state diff in the block.
-	// TODO Statediff not impl - pending https://github.com/orbs-network/orbs-spec/issues/111
+	// TODO Statediff not impl - pending https://tree.taiga.io/project/orbs-network/us/535
 
 	// Check hash pointer to the Transactions block of the same height.
-	// TODO Then what is input.BlockHeight() - yet another block height of something??
 	if checkedHeader.BlockHeight() != input.TransactionsBlock.Header.BlockHeight() {
 		return nil, fmt.Errorf("mismatching block height: txBlock=%v rxBlock=%v", checkedHeader.BlockHeight(), input.TransactionsBlock.Header.BlockHeight())
 	}
@@ -234,7 +232,7 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 
 	// Compare the state diff hash to the one in the block (supports only deterministic execution).
 
-	// TODO How to calculate receipts merkle hash root and state diff hash
+	// TODO https://tree.taiga.io/project/orbs-network/us/535 How to calculate receipts merkle hash root and state diff hash
 	// See https://github.com/orbs-network/orbs-spec/issues/111
 	//blockMerkleRootHash := checkedHeader.ReceiptsRootHash()
 
