@@ -76,7 +76,7 @@ func toGetReceiptOutput(status *services.GetTransactionStatusOutput, output *ser
 		}
 	}
 
-	// TODO PROOF get raw info
+	// TODO issue 67 PROOF get raw info
 	response := client.GetTransactionReceiptProofResponseBuilder{
 		RequestStatus:     translateTxStatusToResponseCode(txStatus),
 		Proof:             proofForClient,

@@ -23,7 +23,7 @@ func TestPublicApiGetTxProof_PrepareResponse(t *testing.T) {
 		}).Build(),
 	}
 
-	// TODO builder ?
+	// TODO issue 67 raw data builder ?
 	proof := &services.GenerateReceiptProofOutput{
 		Proof: (&protocol.ReceiptProofBuilder{
 			Header:       nil,
@@ -36,7 +36,7 @@ func TestPublicApiGetTxProof_PrepareResponse(t *testing.T) {
 
 	response := toGetReceiptOutput(status, proof)
 
-	// TODO test this
+	// TODO issue 67 raw data
 	//test.RequireCmpEqual(t, receipt, response.ClientResponse.Proof(), "Transaction receipt is not equal")
 	require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")

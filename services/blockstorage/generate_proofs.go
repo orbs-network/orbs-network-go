@@ -25,9 +25,9 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 				return nil, err
 			}
 
-			// TODO PROOF get raw info
+			// TODO (issue 67) need raw copy
 			result := &services.GenerateReceiptProofOutput{
-				Proof: protocol.ReceiptProofBuilder{
+				Proof: (&protocol.ReceiptProofBuilder{
 					Header: &protocol.ResultsBlockHeaderBuilder{
 						ProtocolVersion:             block.Header.ProtocolVersion(),
 						VirtualChainId:              block.Header.VirtualChainId(),
@@ -56,7 +56,7 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 						OutputArgumentArray: txr.OutputArgumentArray(),
 						OutputEvents:        txr.OutputEvents(),
 					},
-				}.Build(),
+				}).Build(),
 			}
 			return result, nil
 		}
@@ -76,7 +76,7 @@ func generateProof(receipts []*protocol.TransactionReceipt, index int) (primitiv
 		return nil, err
 	}
 
-	arr := make([]byte, len(proof)*len(proof[0])) // TODO proof shaconst
+	arr := make([]byte, 0, len(proof)*len(proof[0])) // TODO (issue 121) need const for sha
 	for _, v := range proof {
 		arr = append(arr, v...)
 	}

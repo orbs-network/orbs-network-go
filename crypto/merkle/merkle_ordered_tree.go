@@ -48,6 +48,11 @@ func NewOrderedTree(values []primitives.Sha256) *OrderedTree {
 
 func create(values []primitives.Sha256, keySize int) *node {
 	root := &node{}
+	if len(values) == 0 {
+		root.hash = make([]byte, 32) // TODO (issue 121) need const
+		return root
+	}
+
 	sandbox := make(dirtyNodes)
 
 	for i, value := range values {
@@ -64,6 +69,10 @@ func treeHash(n *node) primitives.Sha256 {
 		return n.value
 	}
 	return hashTwo(n.left.hash, n.right.hash)
+}
+
+func (t *OrderedTree) GetRoot() primitives.Sha256 {
+	return t.root.hash
 }
 
 func (t *OrderedTree) GetProof(index int) (OrderedTreeProof, error) {
@@ -106,25 +115,11 @@ func Verify(value primitives.Sha256, proof OrderedTreeProof, root primitives.Sha
 	return nil
 }
 
-func orderHashes(left, right primitives.Sha256) (small, big primitives.Sha256) {
-	small, big = left, right
-	for i := range left {
-		if left[i] < right[i] {
-			break
-		}
-		if left[i] > right[i] {
-			small = right
-			big = left
-			break
-		}
-	}
-	return
-}
-
 func hashTwo(left, right primitives.Sha256) primitives.Sha256 {
-	small, big := orderHashes(left, right)
-	result := append(small, big...)
-	return hash.CalcSha256(result)
+	if bytes.Compare(left, right) > 0 {
+		return hash.CalcSha256(append(right, left...))
+	}
+	return hash.CalcSha256(append(left, right...))
 }
 
 func toKey(index int, keySize int) []byte {
