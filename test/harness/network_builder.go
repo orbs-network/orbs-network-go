@@ -125,11 +125,12 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 				// signal the old network to stop
 				networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
 				newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
+
 				newNetwork.Start(networkCtx, b.numOfNodesToStart)
+
 				return newNetwork
 			}
 
-			network.WaitUntilReadyForTransactions(ctx) // this is so that no transactions are sent before each node has committed block 0, otherwise transactions will be rejected
 			f(ctx, network, restart)
 		})
 		// end test

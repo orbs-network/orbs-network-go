@@ -41,15 +41,11 @@ type service struct {
 	revisions *rollingRevisions
 }
 
-type nopHeightReporter struct{}
-
-func (_ nopHeightReporter) IncrementHeight() {}
-
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, heightReporter adapter.BlockHeightReporter, parent log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
 	forest, _ := merkle.NewForest()
 	logger := parent.WithTags(LogTag)
 	if heightReporter == nil {
-		heightReporter = nopHeightReporter{}
+		heightReporter = synchronization.NopHeightReporter{}
 	}
 	return &service{
 		config:         config,

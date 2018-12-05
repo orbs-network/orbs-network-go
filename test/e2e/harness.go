@@ -103,7 +103,7 @@ func (h *harness) getMetrics() metrics {
 }
 
 func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
-	require.True(t, test.Eventually(10*time.Second, func() bool { // 10 seconds to avoid jitter but it really shouldn't take that long
+	require.True(t, test.Eventually(3*time.Second, func() bool { // 3 seconds to avoid jitter but it really shouldn't take that long
 		m := h.getMetrics()
 		if m == nil {
 			return false

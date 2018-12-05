@@ -21,6 +21,10 @@ func NewTransactionPool(ctx context.Context,
 	parent log.BasicLogger,
 	metricFactory metric.Factory) services.TransactionPool {
 
+    if blockHeightReporter == nil {
+    	blockHeightReporter = synchronization.NopHeightReporter{}
+	}
+
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory)
 	committedPool := NewCommittedPool(metricFactory)
 

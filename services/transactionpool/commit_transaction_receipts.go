@@ -39,9 +39,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	bh = s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
 
 	s.blockTracker.IncrementHeight()
-	if s.blockHeightReporter != nil {
-		s.blockHeightReporter.IncrementHeight()
-	}
+	s.blockHeightReporter.IncrementHeight()
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {
