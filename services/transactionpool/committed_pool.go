@@ -37,17 +37,21 @@ func NewCommittedPool(metricFactory metric.Factory) *committedTxPool {
 }
 
 type committedTransaction struct {
-	receipt   *protocol.TransactionReceipt
-	timestamp primitives.TimestampNano
+	receipt        *protocol.TransactionReceipt
+	timestampAdded primitives.TimestampNano
+	blockHeight    primitives.BlockHeight
+	blockTimestamp primitives.TimestampNano
 }
 
-func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, ts primitives.TimestampNano) {
+func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, tsAdded primitives.TimestampNano, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	transaction := &committedTransaction{
-		receipt:   receipt,
-		timestamp: ts,
+		receipt:        receipt,
+		timestampAdded: tsAdded,
+		blockHeight:    blockHeight,
+		blockTimestamp: blockTs,
 	}
 	size := sizeOfCommittedTransaction(transaction)
 
@@ -81,7 +85,7 @@ func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, time t
 	defer p.lock.RUnlock()
 
 	for _, tx := range p.transactions {
-		if int64(tx.timestamp) < time.UnixNano() {
+		if int64(tx.timestampAdded) < time.UnixNano() {
 			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
 
 			p.metrics.transactionCount.Dec()

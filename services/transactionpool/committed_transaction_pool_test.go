@@ -19,9 +19,12 @@ func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
 		r1 := builders.TransactionReceipt().WithRandomHash().Build()
 		r2 := builders.TransactionReceipt().WithRandomHash().Build()
 		r3 := builders.TransactionReceipt().WithRandomHash().Build()
-		p.add(r1, primitives.TimestampNano(time.Now().Add(-5*time.Minute).UnixNano()))
-		p.add(r2, primitives.TimestampNano(time.Now().Add(-29*time.Minute).UnixNano()))
-		p.add(r3, primitives.TimestampNano(time.Now().Add(-31*time.Minute).UnixNano()))
+		bh := primitives.BlockHeight(1)
+		bts := primitives.TimestampNano(1)
+
+		p.add(r1, primitives.TimestampNano(time.Now().Add(-5*time.Minute).UnixNano()), bh, bts)
+		p.add(r2, primitives.TimestampNano(time.Now().Add(-29*time.Minute).UnixNano()), bh, bts)
+		p.add(r3, primitives.TimestampNano(time.Now().Add(-31*time.Minute).UnixNano()), bh, bts)
 
 		p.clearTransactionsOlderThan(ctx, time.Now().Add(-30*time.Minute))
 
