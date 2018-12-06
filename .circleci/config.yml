@@ -91,30 +91,30 @@ workflows:
   version: 2
   build:
     jobs:
-#      - build
-#      - flakiness
-#      - notify_github_about_dashboard
-#      - success:
-#          requires:
-#            - build
-#            - flakiness
-#      - deploy_testnet
-#          requires:
-#            - success
-#          filters:
-#            branches:
-#              only:
-#                - master
-      - e2e_testnet
-#          requires:
-#            - deploy_testnet
-#          filters:
-#            branches:
-#              only:
-#                - master
-#      - release_gamma:
-#          filters:
-#            tags:
-#              only: /^v.*/
-#            branches:
-#              ignore: /.*/
+      - build
+      - flakiness
+      - notify_github_about_dashboard
+      - success:
+          requires:
+            - build
+            - flakiness
+      - deploy_testnet:
+          requires:
+            - success
+          filters:
+            branches:
+              only:
+                - master
+      - e2e_testnet:
+          requires:
+            - deploy_testnet
+          filters:
+            branches:
+              only:
+                - master
+      - release_gamma:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
