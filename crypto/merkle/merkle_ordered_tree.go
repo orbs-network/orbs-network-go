@@ -16,6 +16,10 @@ type OrderedTree struct {
 	maxKey  int
 }
 
+func getEmptyHash() primitives.Sha256 {
+	return make([]byte, 32) // TODO (issue https://github.com/orbs-network/orbs-spec/issues/121) need const
+}
+
 func calculateOrderedTreeRootCollapseOneLevel(src, dst []primitives.Sha256, size int) int {
 	for j := 1; j < size; j = j + 2 {
 		dst[j/2] = hashTwo(src[j-1], src[j])
@@ -30,6 +34,10 @@ func calculateOrderedTreeRootCollapseOneLevel(src, dst []primitives.Sha256, size
 }
 
 func CalculateOrderedTreeRoot(values []primitives.Sha256) primitives.Sha256 {
+	if len(values) == 0 {
+		return getEmptyHash()
+	}
+
 	nodes := make([]primitives.Sha256, len(values)/2+1)
 	n := calculateOrderedTreeRootCollapseOneLevel(values, nodes, len(values))
 
@@ -49,7 +57,7 @@ func NewOrderedTree(values []primitives.Sha256) *OrderedTree {
 func create(values []primitives.Sha256, keySize int) *node {
 	root := &node{}
 	if len(values) == 0 {
-		root.hash = make([]byte, 32) // TODO (issue 121) need const
+		root.hash = getEmptyHash()
 		return root
 	}
 
