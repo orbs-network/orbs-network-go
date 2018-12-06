@@ -21,7 +21,7 @@ type ethereumAdapterConfig interface {
 type EthereumConnection interface {
 	CallContract(ctx context.Context, address []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error)
 	GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*TransactionLog, error)
-	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (*BlockHeader, error)
+	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (int64, error)
 }
 
 type connectorCommon struct {
