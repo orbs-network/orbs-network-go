@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -77,7 +77,7 @@ func (h *harness) getTransactionStatus(txId string) (response *codec.GetTransact
 }
 
 func (h *harness) absoluteUrlFor(endpoint string) string {
-	return getConfig().baseUrl + "/" + endpoint
+	return getConfig().baseUrl + endpoint
 }
 
 type metrics map[string]map[string]interface{}
@@ -131,8 +131,7 @@ func getConfig() E2EConfig {
 
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
-		apiUrl, _ := url.Parse(apiEndpoint)
-		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
+		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
 
 		if stressTestEnabled {
 			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
