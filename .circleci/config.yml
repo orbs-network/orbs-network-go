@@ -98,14 +98,14 @@ workflows:
 #          requires:
 #            - build
 #            - flakiness
-      - deploy_testnet
+#      - deploy_testnet
 #          requires:
 #            - success
 #          filters:
 #            branches:
 #              only:
 #                - master
-#      - e2e_testnet:
+      - e2e_testnet
 #          requires:
 #            - deploy_testnet
 #          filters:
