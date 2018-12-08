@@ -102,7 +102,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
-		test.WithContextWithTimeout(b.fl, 10*time.Second, func(ctx context.Context) { //TODO 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+		test.WithContextWithTimeout(b.fl, 10*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 			networkCtx, cancelNetwork := context.WithCancel(ctx)
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)
@@ -126,7 +126,9 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 				// signal the old network to stop
 				networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
 				newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
+
 				newNetwork.Start(networkCtx, b.numOfNodesToStart)
+
 				return newNetwork
 			}
 

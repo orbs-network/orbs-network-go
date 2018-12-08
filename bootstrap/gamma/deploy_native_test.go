@@ -20,6 +20,8 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 		network := NewDevelopmentNetwork(ctx, log.GetLogger())
 		contract := contractClient.NewContractClient(network)
 
+		network.WaitUntilReadyForTransactions(ctx)
+
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 		t.Log("deploying contract")

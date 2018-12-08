@@ -80,7 +80,7 @@ func (cp *executionContextProvider) allocateExecutionContext(blockHeight primiti
 		transaction:    transaction,
 	}
 
-	// TODO: improve this mechanism because it wraps around on overflow
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/570): improve this mechanism because it wraps around on overflow
 	cp.lastContextId += 1
 	newContextId := cp.lastContextId
 	newContext.contextId = newContextId

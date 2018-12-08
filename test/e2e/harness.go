@@ -6,12 +6,14 @@ import (
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -75,7 +77,7 @@ func (h *harness) getTransactionStatus(txId string) (response *codec.GetTransact
 }
 
 func (h *harness) absoluteUrlFor(endpoint string) string {
-	return getConfig().baseUrl + "/" + endpoint
+	return getConfig().baseUrl + endpoint
 }
 
 type metrics map[string]map[string]interface{}
@@ -100,6 +102,19 @@ func (h *harness) getMetrics() metrics {
 	return m
 }
 
+func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
+	require.True(t, test.Eventually(3*time.Second, func() bool { // 3 seconds to avoid jitter but it really shouldn't take that long
+		m := h.getMetrics()
+		if m == nil {
+			return false
+		}
+
+		blockHeight := m["TransactionPool.BlockHeight"]["Value"].(float64)
+
+		return blockHeight > 0
+	}), "could not retrieve metrics")
+}
+
 func printTestTime(t *testing.T, msg string, last *time.Time) {
 	t.Logf("%s (+%.3fs)", msg, time.Since(*last).Seconds())
 	*last = time.Now()
@@ -116,8 +131,7 @@ func getConfig() E2EConfig {
 
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
-		apiUrl, _ := url.Parse(apiEndpoint)
-		baseUrl = apiUrl.Scheme + "://" + apiUrl.Host
+		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
 
 		if stressTestEnabled {
 			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)

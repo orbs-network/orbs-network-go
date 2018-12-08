@@ -63,7 +63,7 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	s.sdkHandler = handler
 }
 
-// TODO: input.CallingService is probably not needed, can remove from protos
+// TODO(v1): input.CallingService is probably not needed, can remove from protos
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -71,7 +71,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	contractInfo, err := s.retrieveContractInfo(ctx, input.ContextId, string(input.ContractName))
 	if err != nil {
 		return &services.ProcessCallOutput{
-			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
+			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
@@ -85,7 +85,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	contractInstance, methodInstance, err := s.retrieveContractAndMethodInstances(string(input.ContractName), string(input.MethodName), input.CallingPermissionScope)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
+			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
@@ -105,7 +105,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 		logger.Info("contract execution failed", log.Error(err))
 
 		return &services.ProcessCallOutput{
-			// TODO: do we need to remove system errors from OutputArguments? https://github.com/orbs-network/orbs-spec/issues/97
+			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err

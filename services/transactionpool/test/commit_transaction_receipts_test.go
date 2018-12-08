@@ -10,12 +10,12 @@ import (
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		h.assumeBlockStorageAtHeight(3)
 		out, err := h.reportTransactionsAsCommitted(ctx)
 		require.NoError(t, err, "CommitTransactionReceipts returned an error when expecting next desired block height")
-		require.EqualValues(t, 1, out.NextDesiredBlockHeight, "expected next desired block height to be 1")
+		require.EqualValues(t, 2, out.NextDesiredBlockHeight, "expected next desired block height to be 2")
 
 		h.ignoringTransactionResults()
 
@@ -30,7 +30,7 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 
 func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 		myTx1 := builders.TransferTransaction().Build()
 		myTx2 := builders.TransferTransaction().Build()
 		otherTx := builders.TransferTransaction().Build()
@@ -50,5 +50,5 @@ func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *tes
 }
 
 func TestCommitTransactionReceiptsIgnoresExpiredBlocks(t *testing.T) {
-	t.Skipf("TODO: ignore blocks with an expired timestamp")
+	t.Skipf("TODO(v1): ignore blocks with an expired timestamp")
 }

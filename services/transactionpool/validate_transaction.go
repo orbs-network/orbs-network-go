@@ -20,7 +20,7 @@ type validationContext struct {
 }
 
 func (c *validationContext) validateTransaction(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-	//TODO can we create the list of validators once on system startup; this will save on performance in the critical path
+	//TODO(v1) can we create the list of validators once on system startup; this will save on performance in the critical path
 	validators := []validator{
 		validateProtocolVersion,
 		validateContractName,
@@ -57,15 +57,13 @@ func validateSignature(transaction *protocol.SignedTransaction) *ErrTransactionR
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, log.Int("signature-length", keys.ED25519_PUBLIC_KEY_SIZE_BYTES), log.Int("signature-length", len(tx.Signer().Eddsa().SignerPublicKey()))}
 	}
 
-	//TODO actually verify the signature
-
 	return nil
 }
 
 func validateContractName(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	tx := transaction.Transaction()
 	if tx.ContractName() == "" {
-		//TODO what is the expected status?
+		//TODO(v1) what is the expected status?
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED, log.String("contract-name", "non-empty"), log.String("contract-name", "")}
 	}
 

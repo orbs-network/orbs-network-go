@@ -27,7 +27,7 @@ func TestE2EStress(t *testing.T) {
 	limiter := rate.NewLimiter(1000, 50)
 
 	for i := int64(0); i < config.numberOfTransactions; i++ {
-		if err := limiter.Wait(context.TODO()); err == nil {
+		if err := limiter.Wait(context.Background()); err == nil {
 			wg.Add(1)
 
 			go func() {

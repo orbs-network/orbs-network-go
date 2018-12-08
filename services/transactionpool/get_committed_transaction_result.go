@@ -18,7 +18,12 @@ func (s *service) GetCommittedTransactionReceipt(ctx context.Context, input *ser
 	}
 
 	if tx := s.committedPool.get(input.Txhash); tx != nil {
-		return s.getTxResult(tx.receipt, protocol.TRANSACTION_STATUS_COMMITTED), nil
+		return &services.GetCommittedTransactionReceiptOutput{
+			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+			TransactionReceipt: tx.receipt,
+			BlockHeight:        tx.blockHeight,
+			BlockTimestamp:     tx.blockTimestamp,
+		}, nil
 	}
 
 	return s.getTxResult(nil, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND), nil

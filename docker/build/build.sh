@@ -1,6 +1,7 @@
 #!/bin/bash -xe
+export SKIP_TESTS=${SKIP_TESTS-false}
 
-docker build -f ./docker/build/Dockerfile.build -t orbs:build .
+docker build -f ./docker/build/Dockerfile.build --build-arg SKIP_TESTS=$SKIP_TESTS -t orbs:build .
 
 [ "$(docker ps -a | grep orbs_build)" ] && docker rm -f orbs_build
 

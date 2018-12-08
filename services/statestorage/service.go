@@ -41,15 +41,11 @@ type service struct {
 	revisions *rollingRevisions
 }
 
-type nopHeightReporter struct{}
-
-func (_ nopHeightReporter) IncrementHeight() {}
-
 func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, heightReporter adapter.BlockHeightReporter, parent log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
 	forest, _ := merkle.NewForest()
 	logger := parent.WithTags(LogTag)
 	if heightReporter == nil {
-		heightReporter = nopHeightReporter{}
+		heightReporter = synchronization.NopHeightReporter{}
 	}
 	return &service{
 		config:         config,
@@ -83,7 +79,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 		return &services.CommitStateDiffOutput{NextDesiredBlockHeight: currentHeight + 1}, nil
 	}
 
-	// TODO assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
+	// TODO(v1) assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
 
 	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, inflateChainState(input.ContractStateDiffs))
 	if err != nil {

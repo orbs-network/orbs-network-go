@@ -111,7 +111,7 @@ func (o *pausingTamperer) Release(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 	for _, message := range o.messages {
 		o.transport.Send(ctx, message)
-		runtime.Gosched() // TODO: this is required or else messages arrive in the opposite order after resume
+		runtime.Gosched() // TODO(v1): this is required or else messages arrive in the opposite order after resume (supposedly fixed now when we moved to channels in transport)
 	}
 }
 
@@ -126,5 +126,5 @@ func (o *latchingTamperer) Remove() {
 }
 
 func (o *latchingTamperer) Wait() {
-	o.cond.Wait() // TODO: change cond to channel close
+	o.cond.Wait()
 }

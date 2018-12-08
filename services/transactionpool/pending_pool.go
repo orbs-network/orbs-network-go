@@ -53,7 +53,6 @@ type pendingTxPool struct {
 	transactionList    *list.List
 	lock               *sync.RWMutex
 
-	//FIXME get rid of it
 	pendingPoolSizeInBytes func() uint32
 	onTransactionRemoved   transactionRemovedListener
 

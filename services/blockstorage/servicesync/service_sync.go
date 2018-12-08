@@ -36,7 +36,7 @@ func syncOnce(ctx context.Context, source blockSource, committer BlockPairCommit
 		}
 		bp := singleBlockArr[0]
 
-		// log transactions TODO - move this from here into the callback func or just relax logging / write under debug level when available
+		// log transactions TODO(v1) - move this from here into the callback func or just relax logging / write under debug level when available
 		h := bp.ResultsBlock.Header.BlockHeight()
 		for _, tx := range bp.ResultsBlock.TransactionReceipts {
 			logger.Info("attempt service sync for block", log.BlockHeight(h), log.Transaction(tx.Txhash()))

@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO: maybe move all of these actions (the hashes) to crypto/digest since the client needs them as well
+// TODO(v1): maybe move all of these actions (the hashes) to crypto/digest since the client needs them as well
 
 func (s *service) getSignerAddress(signer *protocol.Signer) (primitives.Ripmd160Sha256, error) {
 	switch signer.Scheme() {
@@ -27,7 +27,7 @@ func addressEd25519Signer(signer *protocol.Signer) (primitives.Ripmd160Sha256, e
 	return hash.CalcRipmd160Sha256(signerPublicKey), nil
 }
 
-// TODO: add argument (spec feature)
+// TODO(v1): add argument (spec feature)
 func addressContractCall(contractName primitives.ContractName) (primitives.Ripmd160Sha256, error) {
 	if len(contractName) == 0 {
 		return nil, errors.New("contract name is missing for addressing")

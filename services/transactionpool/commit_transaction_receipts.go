@@ -14,13 +14,14 @@ import (
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	bh, _ := s.currentBlockHeightAndTime()
-	if input.LastCommittedBlockHeight != bh+1 {
+	if bh, _ := s.currentBlockHeightAndTime(); input.LastCommittedBlockHeight != bh+1 {
 		return &services.CommitTransactionReceiptsOutput{
 			NextDesiredBlockHeight:   bh + 1,
 			LastCommittedBlockHeight: bh,
 		}, nil
 	}
+
+	bh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
 
 	var myReceipts []*protocol.TransactionReceipt
 
@@ -30,15 +31,14 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 			myReceipts = append(myReceipts, receipt)
 		}
 
-		s.committedPool.add(receipt, timestampOrNow(removedTx))
+		s.committedPool.add(receipt, timestampOrNow(removedTx), bh, ts)
 
 		logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
 
 	}
 
-	bh = s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
-
 	s.blockTracker.IncrementHeight()
+	s.blockHeightReporter.IncrementHeight()
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {
@@ -61,20 +61,15 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	}, nil
 }
 
-func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) primitives.BlockHeight {
+func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.mu.lastCommittedBlockHeight = header.BlockHeight()
+	s.mu.lastCommittedBlockTimestamp = header.Timestamp()
+	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
-	if header.Timestamp() == 0 {
-		s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) //TODO remove this code when consensus-context actually sets block timestamp
-		s.logger.Info("got 0 timestamp from results block header")
-	} else {
-		s.mu.lastCommittedBlockTimestamp = header.Timestamp()
-	}
-
-	return header.BlockHeight()
+	return header.BlockHeight(), header.Timestamp()
 }
 
 func timestampOrNow(tx *pendingTransaction) primitives.TimestampNano {

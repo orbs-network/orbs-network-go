@@ -17,14 +17,10 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnesLeanHelix(t *testing.T) {
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-			//ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-			//defer cancel()
 			contract := network.GetBenchmarkTokenContract()
 			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
 			_, txHash := contract.SendTransfer(ctx, 0, 17, 5, 6)
 
-			// FIXME Uncomment this section after state storage is fixed. Presently waiting for transaction on the just-written block will not work
-			// See PR https://github.com/orbs-network/orbs-network-go/issues/567
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			t.Log("finished waiting for tx")
 

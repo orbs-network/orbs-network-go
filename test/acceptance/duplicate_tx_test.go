@@ -71,7 +71,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		contract := network.GetBenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 1)
 
-		//TODO this should be the same builder, but membuffers has a stability bug preventing re-usage of builders
+		// this should be the same builder, but membuffers is not thread-safe for concurrent builds on same builder
 		tx1 := builders.TransferTransaction().WithTimestamp(ts).Builder()
 		tx2 := builders.TransferTransaction().WithTimestamp(ts).Builder()
 

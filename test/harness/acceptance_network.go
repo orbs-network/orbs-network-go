@@ -35,6 +35,7 @@ type acceptanceNetwork struct {
 
 func (n *acceptanceNetwork) Start(ctx context.Context, numOfNodesToStart int) {
 	n.CreateAndStartNodes(ctx, numOfNodesToStart) // needs to start first so that nodes can register their listeners to it
+	n.WaitUntilReadyForTransactions(ctx)          // this is so that no transactions are sent before each node has committed block 0, otherwise transactions will be rejected
 }
 
 func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {

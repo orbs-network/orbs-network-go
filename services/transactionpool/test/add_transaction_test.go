@@ -16,7 +16,7 @@ import (
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		tx := builders.TransferTransaction().Build()
 
@@ -33,7 +33,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		tx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 		h.expectNoTransactionsToBeForwarded()
@@ -47,7 +47,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 		tx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
 			return t == tx
@@ -77,7 +77,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
@@ -95,14 +95,13 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(ctx)
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
 		h.ignoringTransactionResults()
 
 		h.addNewTransaction(ctx, tx)
-		h.assumeBlockStorageAtHeight(1)
 		_, err := h.reportTransactionsAsCommitted(ctx, tx)
 		require.NoError(t, err, "committing a transaction returned an unexpected error")
 
@@ -118,7 +117,7 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarnessWithSizeLimit(1)
+		h := newHarnessWithSizeLimit(ctx, 1)
 
 		h.expectNoTransactionsToBeForwarded()
 

@@ -38,7 +38,7 @@ func getCode(serviceName string) []byte {
 }
 
 func deployService(serviceName string, processorType uint32, code []byte) {
-	// TODO: sanitize serviceName
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/571): sanitize serviceName
 
 	existingProcessorType := _readProcessor(serviceName)
 	if existingProcessorType != 0 {

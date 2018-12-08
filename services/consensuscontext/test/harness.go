@@ -102,7 +102,7 @@ func (h *harness) expectVirtualMachineToReturnXTransactionReceipts(receiptsCount
 func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	ok, _ := h.transactionPool.Verify()
 
-	// TODO: How to print err if it's sometimes nil
+	// TODO(v1): How to print err if it's sometimes nil
 	require.True(t, ok)
 }
 func (h *harness) expectStateHashToReturn(hash []byte) {

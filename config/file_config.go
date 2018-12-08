@@ -41,7 +41,6 @@ func parseUint32(f64 float64) (uint32, error) {
 	}
 }
 
-// TODO notify about ignored entries?
 func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, peers map[string]GossipPeer, err error) {
 	nodes = make(map[string]FederationNode)
 	peers = make(map[string]GossipPeer)

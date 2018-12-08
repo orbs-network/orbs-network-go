@@ -24,8 +24,8 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 
 	harness.Network(t).
 		AllowingErrors(
-			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
+			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 
 		var mostRecentTxHash primitives.Sha256
@@ -77,8 +77,8 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 	harness.Network(t).
 		AllowingErrors(
-			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO investigate and explain, or fix and remove expected error
-			"all consensus \\d* algos refused to validate the block", //TODO investigate and explain, or fix and remove expected error
+			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
+			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
 		StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 

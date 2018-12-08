@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	// TODO extract it to the spec
 	ProtocolVersion = primitives.ProtocolVersion(1)
 )
 
@@ -93,7 +92,7 @@ func getBlockTimestamp(block *protocol.BlockPairContainer) primitives.TimestampN
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
 	s.appendHandlerUnderLock(handler)
 	// update the consensus algo about the latest block we have (for its initialization)
-	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO()) // TODO: (talkol) not sure if we should create a new context here or pass to RegisterConsensusBlocksHandler in code generation
+	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO())
 }
 
 func (s *service) appendHandlerUnderLock(handler handlers.ConsensusBlocksHandler) {
