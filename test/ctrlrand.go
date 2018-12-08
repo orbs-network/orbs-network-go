@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+func init() {
+	flag.Var(&randPreference, "test.randSeed",
+		"Specify a random seed for tests, or 'launchClock' to use"+
+			" the same arbitrary value in each test invocation")
+}
+
+const singleRandSafetyBufferSize = 1000
+
+var singleRandSafety = newBufferedSingleRandSafety(singleRandSafetyBufferSize)
+
 type NamedLogger interface {
 	Log(args ...interface{})
 	Name() string
@@ -20,6 +30,24 @@ const (
 	randPrefLaunchClock
 	randPrefExplicit
 )
+
+type ControlledRand struct {
+	*syncRand
+}
+
+func NewControlledRand(t NamedLogger) *ControlledRand {
+	singleRandSafety.assertFirstRand(t)
+
+	var newSeed int64
+	if randPreference.mode == randPrefInvokeClock {
+		newSeed = time.Now().UTC().UnixNano()
+	} else {
+		newSeed = randPreference.seed
+	}
+	t.Log(fmt.Sprintf("random seed %v (%s)", newSeed, t.Name()))
+
+	return &ControlledRand{newSyncRand(newSeed)}
+}
 
 type randomPreference struct {
 	mode randMode // default value is randPrefInvokeClock
@@ -53,36 +81,35 @@ func (i *randomPreference) Set(value string) error {
 	return err
 }
 
-func init() {
-	flag.Var(&randPreference, "test.randSeed",
-		"Specify a random seed for tests, or 'launchClock' to use"+
-			" the same arbitrary value in each test invocation")
+type bufferedSingleRandSafety struct {
+	sync.Mutex
+	loggerSet      map[NamedLogger]bool
+	loggerBuffer   []NamedLogger
+	bufferSize     int
+	nextWriteIndex int
 }
 
-var duplicateRandInitSafety = struct {
-	sync.Mutex
-	ts map[NamedLogger]bool
-}{ts: make(map[NamedLogger]bool)}
+func newBufferedSingleRandSafety(bufferSize int) *bufferedSingleRandSafety {
+	return &bufferedSingleRandSafety{
+		loggerSet:    make(map[NamedLogger]bool),
+		loggerBuffer: make([]NamedLogger, bufferSize),
+		bufferSize:   bufferSize,
+	}
+}
 
-func NewControlledRand(t NamedLogger) *ControlledRand {
-	duplicateRandInitSafety.Lock()
-	defer duplicateRandInitSafety.Unlock()
-	if duplicateRandInitSafety.ts[t] {
+func (ris *bufferedSingleRandSafety) assertFirstRand(t NamedLogger) {
+	ris.Lock()
+	defer ris.Unlock()
+
+	if ris.loggerSet[t] {
 		panic("ControlledRand should be instantiated at most once in each test")
 	}
 
-	var newSeed int64
-	if randPreference.mode == randPrefInvokeClock {
-		newSeed = time.Now().UTC().UnixNano()
-	} else {
-		newSeed = randPreference.seed
+	loggerToEvict := ris.loggerBuffer[ris.nextWriteIndex]
+	if loggerToEvict != nil {
+		delete(ris.loggerSet, loggerToEvict)
 	}
-	t.Log(fmt.Sprintf("random seed %v (%s)", newSeed, t.Name()))
-
-	duplicateRandInitSafety.ts[t] = true
-	return &ControlledRand{newSyncRand(newSeed)}
-}
-
-type ControlledRand struct {
-	*syncRand
+	ris.loggerBuffer[ris.nextWriteIndex] = t
+	ris.loggerSet[t] = true
+	ris.nextWriteIndex = (ris.nextWriteIndex + 1) % ris.bufferSize
 }

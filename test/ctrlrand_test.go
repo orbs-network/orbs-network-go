@@ -84,11 +84,32 @@ func TestWithInvocationClock(t *testing.T) {
 	_, err = nlMock2.Verify()
 	require.NoError(t, err)
 }
+
 func TestNewControlledRand_AtMostOncePerTest(t *testing.T) {
 	NewControlledRand(t)
 	require.Panics(t, func() {
 		NewControlledRand(t)
 	})
+}
+
+func TestBufferedSingleRandSafety_assertFirstRand(t *testing.T) {
+	randInitSafety := newBufferedSingleRandSafety(1)
+
+	// check and store t in the buffer
+	randInitSafety.assertFirstRand(t)
+
+	require.Panics(t, func() {
+		randInitSafety.assertFirstRand(t)
+	}, "expected init safety to protect against duplicate")
+
+	// check and store t1 in the buffer, causing t to be evicted since buffer size is 1
+	t.Run(t.Name(), func(t1 *testing.T) {
+		randInitSafety.assertFirstRand(t1)
+	})
+
+	require.NotPanics(t, func() {
+		randInitSafety.assertFirstRand(t)
+	}, "expected no duplicate to be detected after t has been evicted from buffer")
 }
 
 type namedLoggerMock struct {
