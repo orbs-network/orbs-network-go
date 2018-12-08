@@ -13,18 +13,18 @@ import (
 
 func TestWithRandLogsCorrectSeedAndTestName(t *testing.T) {
 	randPreference.mode = randPrefInvokeClock
-	nlMock := NewNamedLoggerMock("MockName1")
+	nlMock := NewNamedLoggerMock("MockName")
 	var loggedSeed int64
 	nlMock.When("Log", mock.Any).Call(func(message string) {
 		var err error
 		tokens := strings.Split(message, " ")
 		loggedSeed, err = strconv.ParseInt(tokens[2], 0, 64)
 		require.NoError(t, err, "expected third word in log message to be an int64 random seed")
-		require.Equal(t, "(MockName1)", tokens[3], "expected fourth word in log message to be the name of the test")
+		require.Equal(t, "(MockName)", tokens[3], "expected fourth word in log message to be the name of the test")
 	}).Times(1)
-	randUint1 := NewControlledRand(nlMock).Uint64()
-	expectedRandUint1 := rand.New(rand.NewSource(loggedSeed)).Uint64()
-	require.Equal(t, expectedRandUint1, randUint1, "expected NewControlledRand() to log the correct random seed")
+	randUint := NewControlledRand(nlMock).Uint64()
+	expectedRandUint := rand.New(rand.NewSource(loggedSeed)).Uint64()
+	require.Equal(t, expectedRandUint, randUint, "expected ControlledRand to log the random seed used for random source")
 }
 func TestWithExplicitRand(t *testing.T) {
 	randPreference.seed = 1
