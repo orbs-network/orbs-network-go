@@ -7,79 +7,79 @@ import (
 
 type syncRand struct {
 	lk sync.Mutex
-	*rand.Rand
+	r  *rand.Rand // avoid using no identifier name to block access to unwrapped methods in Rand
 }
 
 func newSyncRand(seed int64) *syncRand {
-	return &syncRand{Rand: rand.New(rand.NewSource(seed))}
+	return &syncRand{r: rand.New(rand.NewSource(seed))}
 }
-func (r *syncRand) Read(p []byte) (n int, err error) {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Read(p)
+func (sr *syncRand) Read(p []byte) (n int, err error) {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Read(p)
 }
-func (r *syncRand) Seed(seed int64) {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	r.Rand.Seed(seed)
+func (sr *syncRand) Seed(seed int64) {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	sr.r.Seed(seed)
 }
-func (r *syncRand) Int63() int64 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Int63()
+func (sr *syncRand) Int63() int64 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Int63()
 }
-func (r *syncRand) Uint32() uint32 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Uint32()
+func (sr *syncRand) Uint32() uint32 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Uint32()
 }
-func (r *syncRand) Uint64() uint64 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Uint64()
+func (sr *syncRand) Uint64() uint64 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Uint64()
 }
-func (r *syncRand) Int31() int32 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Int31()
+func (sr *syncRand) Int31() int32 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Int31()
 }
-func (r *syncRand) Int() int {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Int()
+func (sr *syncRand) Int() int {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Int()
 }
-func (r *syncRand) Int63n(n int64) int64 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Int63n(n)
+func (sr *syncRand) Int63n(n int64) int64 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Int63n(n)
 }
-func (r *syncRand) Int31n(n int32) int32 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Int31n(n)
+func (sr *syncRand) Int31n(n int32) int32 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Int31n(n)
 }
-func (r *syncRand) Intn(n int) int {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Intn(n)
+func (sr *syncRand) Intn(n int) int {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Intn(n)
 }
-func (r *syncRand) Float64() float64 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Float64()
+func (sr *syncRand) Float64() float64 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Float64()
 }
-func (r *syncRand) Float32() float32 {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Float32()
+func (sr *syncRand) Float32() float32 {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Float32()
 }
-func (r *syncRand) Perm(n int) []int {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	return r.Rand.Perm(n)
+func (sr *syncRand) Perm(n int) []int {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	return sr.r.Perm(n)
 }
-func (r *syncRand) Shuffle(n int, swap func(i, j int)) {
-	r.lk.Lock()
-	defer r.lk.Unlock()
-	r.Rand.Shuffle(n, swap)
+func (sr *syncRand) Shuffle(n int, swap func(i, j int)) {
+	sr.lk.Lock()
+	defer sr.lk.Unlock()
+	sr.r.Shuffle(n, swap)
 }
