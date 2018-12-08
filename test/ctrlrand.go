@@ -3,7 +3,6 @@ package test
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -81,9 +80,9 @@ func NewControlledRand(t NamedLogger) *ControlledRand {
 	t.Log(fmt.Sprintf("random seed %v (%s)", newSeed, t.Name()))
 
 	duplicateRandInitSafety.ts[t] = true
-	return &ControlledRand{Rand: rand.New(rand.NewSource(newSeed))}
+	return &ControlledRand{newSyncRand(newSeed)}
 }
 
-type ControlledRand struct { //TODO make this type thread safe... wrap all public calls with a lock
-	*rand.Rand
+type ControlledRand struct {
+	*syncRand
 }
