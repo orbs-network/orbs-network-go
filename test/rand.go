@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -57,7 +58,18 @@ func init() {
 			" the same arbitrary value in each test invocation")
 }
 
+var controlledRandDuplicatesSafety = struct {
+	sync.Mutex
+	ts map[NamedLogger]bool
+}{ts: make(map[NamedLogger]bool)}
+
 func NewControlledRand(t NamedLogger) *ControlledRand {
+	controlledRandDuplicatesSafety.Lock()
+	defer controlledRandDuplicatesSafety.Unlock()
+	if controlledRandDuplicatesSafety.ts[t] {
+		panic("NewControlledRand should be called at most once for each test")
+	}
+
 	var newSeed int64
 	if randPreference.mode == randPrefInvokeClock {
 		newSeed = time.Now().UTC().UnixNano()
@@ -65,5 +77,7 @@ func NewControlledRand(t NamedLogger) *ControlledRand {
 		newSeed = randPreference.seed
 	}
 	t.Log(fmt.Sprintf("random seed %v (%s)", newSeed, t.Name()))
+
+	controlledRandDuplicatesSafety.ts[t] = true
 	return &ControlledRand{rand.New(rand.NewSource(newSeed))}
 }

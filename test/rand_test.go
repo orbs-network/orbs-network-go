@@ -74,6 +74,13 @@ func TestWithInvocationClock(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestNewControlledRand_AtMostOncePerTest(t *testing.T) {
+	NewControlledRand(t)
+	require.Panics(t, func() {
+		NewControlledRand(t)
+	})
+}
+
 type namedLoggerMock struct {
 	mock.Mock
 	name string
