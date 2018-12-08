@@ -12,7 +12,8 @@ import (
 )
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
-	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
+	test.WithContext(func(ctx context.Context) {
+		ctrlRand := test.NewControlledRand(t)
 		h := newHarness(ctx)
 
 		invalidSig := make([]byte, 32)

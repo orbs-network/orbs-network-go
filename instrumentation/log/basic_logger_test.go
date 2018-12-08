@@ -252,53 +252,51 @@ func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
-	test.WithContextWithRand(b, func(ctx context.Context, ctrlRand *test.ControlledRand) {
+	ctrlRand := test.NewControlledRand(b)
 
-		receipts := []*protocol.TransactionReceipt{
-			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-		}
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+	}
 
-		formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
+	formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
 
-		for _, formatter := range formatters {
-			b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
-				serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-					WithOutput(log.NewFormattingOutput(ioutil.Discard, log.NewJsonFormatter()))
+	for _, formatter := range formatters {
+		b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
+			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+				WithOutput(log.NewFormattingOutput(ioutil.Discard, log.NewJsonFormatter()))
 
-				b.StartTimer()
-				for i := 0; i < b.N; i++ {
-					serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
-				}
-				b.StopTimer()
-			})
-		}
-	})
+			b.StartTimer()
+			for i := 0; i < b.N; i++ {
+				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+			}
+			b.StopTimer()
+		})
+	}
 
 }
 
 func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
-	test.WithContextWithRand(b, func(ctx context.Context, ctrlRand *test.ControlledRand) {
+	ctrlRand := test.NewControlledRand(b)
 
-		receipts := []*protocol.TransactionReceipt{
-			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-			builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-		}
+	receipts := []*protocol.TransactionReceipt{
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+	}
 
-		outputs := []io.Writer{os.Stdout, ioutil.Discard}
+	outputs := []io.Writer{os.Stdout, ioutil.Discard}
 
-		for _, output := range outputs {
-			b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
+	for _, output := range outputs {
+		b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
 
-				serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-					WithOutput(log.NewFormattingOutput(output, log.NewHumanReadableFormatter()))
+			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
+				WithOutput(log.NewFormattingOutput(output, log.NewHumanReadableFormatter()))
 
-				b.StartTimer()
-				for i := 0; i < b.N; i++ {
-					serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
-				}
-				b.StopTimer()
-			})
-		}
-	})
+			b.StartTimer()
+			for i := 0; i < b.N; i++ {
+				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+			}
+			b.StopTimer()
+		})
+	}
 }

@@ -85,7 +85,7 @@ func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 
 func TestStateCollectingAvailabilityResponses_ReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
 	h := newBlockSyncHarness()
-	test.WithContextWithTimeout(t, h.config.collectResponses/2, func(ctx context.Context) {
+	test.WithContextWithTimeout(h.config.collectResponses/2, func(ctx context.Context) {
 
 		state := h.factory.CreateCollectingAvailabilityResponseState()
 		// not calling the process state will not activate the reader part

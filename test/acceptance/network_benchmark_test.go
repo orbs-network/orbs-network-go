@@ -14,13 +14,13 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 	var wg sync.WaitGroup
 
 	limiter := rate.NewLimiter(1000, 100)
+	ctrlRand := test.NewControlledRand(b)
 
 	harness.Network(b).
 		WithLogFilters(log.DiscardAll()).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		contract := network.GetBenchmarkTokenContract()
-		ctrlRand := test.GetRand(ctx)
 
 		contract.DeployBenchmarkToken(ctx, 5)
 

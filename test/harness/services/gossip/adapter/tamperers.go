@@ -71,14 +71,14 @@ func (o *delayingTamperer) Release(ctx context.Context) {
 type corruptingTamperer struct {
 	predicate MessagePredicate
 	transport *TamperingTransport
+	ctrlRand  test.ControlledRand
 }
 
 func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
-	ctrlRand := test.GetRand(ctx)
 	if o.predicate(data) {
 		for i := 0; i < 10; i++ {
-			x := ctrlRand.Intn(len(data.Payloads))
-			y := ctrlRand.Intn(len(data.Payloads[x]))
+			x := o.ctrlRand.Intn(len(data.Payloads))
+			y := o.ctrlRand.Intn(len(data.Payloads[x]))
 			data.Payloads[x][y] = 0
 		}
 	}

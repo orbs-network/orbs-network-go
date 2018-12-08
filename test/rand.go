@@ -9,10 +9,12 @@ import (
 	"time"
 )
 
-type randMode int
-type ControlledRand struct {
-	*rand.Rand
+type NamedLogger interface {
+	Log(args ...interface{})
+	Name() string
 }
+
+type randMode int
 
 const (
 	randPrefInvokeClock randMode = iota
@@ -58,16 +60,16 @@ func init() {
 			" the same arbitrary value in each test invocation")
 }
 
-var controlledRandDuplicatesSafety = struct {
+var duplicateRandInitSafety = struct {
 	sync.Mutex
 	ts map[NamedLogger]bool
 }{ts: make(map[NamedLogger]bool)}
 
 func NewControlledRand(t NamedLogger) *ControlledRand {
-	controlledRandDuplicatesSafety.Lock()
-	defer controlledRandDuplicatesSafety.Unlock()
-	if controlledRandDuplicatesSafety.ts[t] {
-		panic("NewControlledRand should be called at most once for each test")
+	duplicateRandInitSafety.Lock()
+	defer duplicateRandInitSafety.Unlock()
+	if duplicateRandInitSafety.ts[t] {
+		panic("ControlledRand should be instantiated at most once in each test")
 	}
 
 	var newSeed int64
@@ -78,6 +80,10 @@ func NewControlledRand(t NamedLogger) *ControlledRand {
 	}
 	t.Log(fmt.Sprintf("random seed %v (%s)", newSeed, t.Name()))
 
-	controlledRandDuplicatesSafety.ts[t] = true
-	return &ControlledRand{rand.New(rand.NewSource(newSeed))}
+	duplicateRandInitSafety.ts[t] = true
+	return &ControlledRand{Rand: rand.New(rand.NewSource(newSeed))}
+}
+
+type ControlledRand struct { //TODO make this type thread safe... wrap all public calls with a lock
+	*rand.Rand
 }

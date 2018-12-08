@@ -1,7 +1,6 @@
 package publicapi
 
 import (
-	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -12,23 +11,22 @@ import (
 )
 
 func TestPublicApiGetTx_PrepareResponse(t *testing.T) {
-	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
+	ctrlRand := test.NewControlledRand(t)
 
-		blockTime := primitives.TimestampNano(time.Now().Nanosecond())
-		receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
+	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+	receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 
-		response := toGetTxOutput(&txResponse{
-			transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-			transactionReceipt: receipt,
-			blockHeight:        126,
-			blockTimestamp:     blockTime,
-		})
-
-		test.RequireCmpEqual(t, receipt, response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
-		require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
-		require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	response := toGetTxOutput(&txResponse{
+		transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+		transactionReceipt: receipt,
+		blockHeight:        126,
+		blockTimestamp:     blockTime,
 	})
+
+	test.RequireCmpEqual(t, receipt, response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
+	require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
+	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
 }
 
 func TestPublicApiGetTx_PrepareResponseNilReceipt(t *testing.T) {

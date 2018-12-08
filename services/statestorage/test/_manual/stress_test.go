@@ -23,53 +23,54 @@ const MAX_BLOCK_SIZE = 200
 const USERS = 1000000
 
 func TestSimulateMerkleInitForAllUsers(t *testing.T) {
-	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
-		start := time.Now()
+	ctrlRand := test.NewControlledRand(t)
+	start := time.Now()
 
-		userKeys := randomUsers(ctrlRand)
+	userKeys := randomUsers(ctrlRand)
 
-		ms := runtime.MemStats{}
-		runtime.ReadMemStats(&ms)
-		t.Logf("Finished init phase in %v. HeapAlloc is %dMB", time.Now().Sub(start), ms.HeapAlloc/(1024*1024))
+	ms := runtime.MemStats{}
+	runtime.ReadMemStats(&ms)
+	t.Logf("Finished init phase in %v. HeapAlloc is %dMB", time.Now().Sub(start), ms.HeapAlloc/(1024*1024))
 
-		start = time.Now()
-		diffs := make(merkle.TrieDiffs, 0, len(userKeys))
-		for _, u := range userKeys {
-			sha256 := hash.CalcSha256(u)
-			diffs = append(diffs, &merkle.TrieDiff{
-				Key:   u,
-				Value: sha256,
-			})
-		}
+	start = time.Now()
+	diffs := make(merkle.TrieDiffs, 0, len(userKeys))
+	for _, u := range userKeys {
+		sha256 := hash.CalcSha256(u)
+		diffs = append(diffs, &merkle.TrieDiff{
+			Key:   u,
+			Value: sha256,
+		})
+	}
 
-		forest, root := merkle.NewForest()
-		newRoot, err := forest.Update(root, diffs)
-		require.NoError(t, err)
-		require.NotEqual(t, root, newRoot)
-		duration := time.Now().Sub(start)
-		runtime.GC()
-		runtime.GC()
-		runtime.GC()
-		runtime.GC()
-		ms = runtime.MemStats{}
-		runtime.ReadMemStats(&ms)
-		t.Logf("Finished merkle build phase (%v keys) in %v. HeapAlloc is %dMB", len(userKeys), duration, ms.HeapAlloc/(1024*1024))
+	forest, root := merkle.NewForest()
+	newRoot, err := forest.Update(root, diffs)
+	require.NoError(t, err)
+	require.NotEqual(t, root, newRoot)
+	duration := time.Now().Sub(start)
+	runtime.GC()
+	runtime.GC()
+	runtime.GC()
+	runtime.GC()
+	ms = runtime.MemStats{}
+	runtime.ReadMemStats(&ms)
+	t.Logf("Finished merkle build phase (%v keys) in %v. HeapAlloc is %dMB", len(userKeys), duration, ms.HeapAlloc/(1024*1024))
 
-		user500Proof, err := forest.GetProof(newRoot, userKeys[500])
-		t.Logf("user 500 value proof length is %v", len(user500Proof))
-		require.NoError(t, err)
+	user500Proof, err := forest.GetProof(newRoot, userKeys[500])
+	t.Logf("user 500 value proof length is %v", len(user500Proof))
+	require.NoError(t, err)
 
-		valid, err := forest.Verify(newRoot, user500Proof, userKeys[500], hash.CalcSha256(userKeys[500]))
-		require.True(t, valid)
-		require.NoError(t, err)
+	valid, err := forest.Verify(newRoot, user500Proof, userKeys[500], hash.CalcSha256(userKeys[500]))
+	require.True(t, valid)
+	require.NoError(t, err)
 
-		require.WithinDuration(t, start, time.Now(), 30*time.Second, "Expected Merkle to be populated in 30 seconds")
-		require.True(t, ms.HeapAlloc < 500*1024*1024, "Expected memory use to be below 0.5GB")
-	})
+	require.WithinDuration(t, start, time.Now(), 30*time.Second, "Expected Merkle to be populated in 30 seconds")
+	require.True(t, ms.HeapAlloc < 500*1024*1024, "Expected memory use to be below 0.5GB")
 }
 
 func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
-	test.WithContextWithRand(t, func(ctx context.Context, ctrlRand *test.ControlledRand) {
+	test.WithContext(func(ctx context.Context) {
+		ctrlRand := test.NewControlledRand(t)
+
 		d := NewStateStorageDriver(1)
 
 		// generate User keys

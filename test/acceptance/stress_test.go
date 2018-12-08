@@ -22,9 +22,11 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+
+		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Duplicate(AnyNthMessage(7))
 
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
 	})
 }
 
@@ -32,9 +34,11 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 	harness.Network(t).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+
+		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
 	})
 }
 
@@ -46,27 +50,28 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
 		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-		ctrlRand := test.GetRand(ctx)
+		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Delay(func() time.Duration {
 			return (time.Duration(ctrlRand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
 		}, AnyNthMessage(2))
 
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 100)
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
 	})
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	harness.Network(t).WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 		t.Skip("this test causes the system to hang, seems like consensus algo stops")
+		ctrlRand := test.NewControlledRand(t)
 
-		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)))
+		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)), ctrlRand)
 
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 90)
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 90, ctrlRand)
 
 		tamper.Release(ctx)
 
 		// assert that the system recovered properly
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 10)
+		sendTransfersAndAssertTotalBalance(ctx, network, t, 10, ctrlRand)
 
 	})
 }
@@ -90,12 +95,11 @@ func AnyNthMessage(n int) MessagePredicate {
 	}
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.TestNetworkDriver, t *testing.T, numTransactions int) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.TestNetworkDriver, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
 	contract := network.GetBenchmarkTokenContract()
 
-	ctrlRand := test.GetRand(ctx)
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256
 	for i := 0; i < numTransactions; i++ {
