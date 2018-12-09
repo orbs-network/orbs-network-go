@@ -5,11 +5,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/pkg/errors"
 )
 
 func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.BenchmarkConsensusHandler) {
@@ -32,11 +32,10 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 		RecipientMode:      gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	blockPairPayloads, err := encodeBlockPair(input.Message.BlockPair)
+	payloads, err := codec.EncodeBenchmarkConsensusCommitMessage(header, input.Message)
 	if err != nil {
 		return nil, err
 	}
-	payloads := append([][]byte{header.Raw()}, blockPairPayloads...)
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
@@ -47,19 +46,14 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 
 func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
-	blockPair, err := decodeBlockPair(payloads)
+	message, err := codec.DecodeBenchmarkConsensusCommitMessage(payloads)
 	if err != nil {
 		logger.Info("HandleBenchmarkConsensusCommit failed to decode block pair", log.Error(err))
 		return
 	}
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		_, err := l.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{
-			Message: &gossipmessages.BenchmarkConsensusCommitMessage{
-				BlockPair: blockPair,
-			},
-		})
+		_, err := l.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{Message: message})
 		if err != nil {
 			logger.Info("HandleBenchmarkConsensusCommit failed", log.Error(err))
 		}
@@ -73,11 +67,10 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
-
-	if input.Message.Status == nil {
-		return nil, errors.Errorf("cannot encode BenchmarkConsensusCommittedMessage: %s", input.Message.String())
+	payloads, err := codec.EncodeBenchmarkConsensusCommittedMessage(header, input.Message)
+	if err != nil {
+		return nil, err
 	}
-	payloads := [][]byte{header.Raw(), input.Message.Status.Raw(), input.Message.Sender.Raw()}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
@@ -88,19 +81,13 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 }
 
 func (s *service) receivedBenchmarkConsensusCommitted(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 2 {
+	message, err := codec.DecodeBenchmarkConsensusCommittedMessage(payloads)
+	if err != nil {
 		return
 	}
-	status := gossipmessages.BenchmarkConsensusStatusReader(payloads[0])
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
 
 	for _, l := range s.benchmarkConsensusHandlers {
-		_, err := l.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
-			Message: &gossipmessages.BenchmarkConsensusCommittedMessage{
-				Status: status,
-				Sender: senderSignature,
-			},
-		})
+		_, err := l.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBenchmarkConsensusCommitted failed", log.Error(err))
 		}

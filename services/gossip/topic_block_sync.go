@@ -4,10 +4,10 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/pkg/errors"
 )
 
 func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler) {
@@ -33,12 +33,10 @@ func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *
 		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
-
-	if input.Message.SignedBatchRange == nil {
-		return nil, errors.Errorf("cannot encode BlockAvailabilityRequestMessage: %s", input.Message.String())
+	payloads, err := codec.EncodeBlockAvailabilityRequest(header, input.Message)
+	if err != nil {
+		return nil, err
 	}
-	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
-
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),
 		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
@@ -47,23 +45,12 @@ func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *
 }
 
 func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 2 {
+	message, err := codec.DecodeBlockAvailabilityRequest(payloads)
+	if err != nil {
 		return
 	}
-	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
-	// attempting with talkol to fix issue #437
-	if !senderSignature.IsValid() {
-		return
-	}
-
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{
-			Message: &gossipmessages.BlockAvailabilityRequestMessage{
-				SignedBatchRange: batchRange,
-				Sender:           senderSignature,
-			},
-		})
+		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockAvailabilityRequest failed", log.Error(err))
 		}
@@ -77,11 +64,10 @@ func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
-
-	if input.Message.SignedBatchRange == nil {
-		return nil, errors.Errorf("cannot encode BlockAvailabilityResponseMessage: %s", input.Message.String())
+	payloads, err := codec.EncodeBlockAvailabilityResponse(header, input.Message)
+	if err != nil {
+		return nil, err
 	}
-	payloads := [][]byte{header.Raw(), input.Message.SignedBatchRange.Raw(), input.Message.Sender.Raw()}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
@@ -92,19 +78,12 @@ func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 }
 
 func (s *service) receivedBlockSyncAvailabilityResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 2 {
+	message, err := codec.DecodeBlockAvailabilityResponse(payloads)
+	if err != nil {
 		return
 	}
-	batchRange := gossipmessages.BlockSyncRangeReader(payloads[0])
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
-
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockAvailabilityResponse(ctx, &gossiptopics.BlockAvailabilityResponseInput{
-			Message: &gossipmessages.BlockAvailabilityResponseMessage{
-				SignedBatchRange: batchRange,
-				Sender:           senderSignature,
-			},
-		})
+		_, err := l.HandleBlockAvailabilityResponse(ctx, &gossiptopics.BlockAvailabilityResponseInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockAvailabilityResponse failed", log.Error(err))
 		}
@@ -118,11 +97,10 @@ func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
-
-	if input.Message.SignedChunkRange == nil {
-		return nil, errors.Errorf("cannot encode BlockSyncRequestMessage: %s", input.Message.String())
+	payloads, err := codec.EncodeBlockSyncRequest(header, input.Message)
+	if err != nil {
+		return nil, err
 	}
-	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
@@ -133,19 +111,12 @@ func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 }
 
 func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 2 {
+	message, err := codec.DecodeBlockSyncRequest(payloads)
+	if err != nil {
 		return
 	}
-	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
-
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockSyncRequest(ctx, &gossiptopics.BlockSyncRequestInput{
-			Message: &gossipmessages.BlockSyncRequestMessage{
-				SignedChunkRange: chunkRange,
-				Sender:           senderSignature,
-			},
-		})
+		_, err := l.HandleBlockSyncRequest(ctx, &gossiptopics.BlockSyncRequestInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockSyncRequest failed", log.Error(err))
 		}
@@ -159,17 +130,10 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
 	}).Build()
-
-	if input.Message.SignedChunkRange == nil || len(input.Message.BlockPairs) == 0 {
-		return nil, errors.Errorf("cannot encode BlockSyncResponseMessage: %s", input.Message.String())
-	}
-	payloads := [][]byte{header.Raw(), input.Message.SignedChunkRange.Raw(), input.Message.Sender.Raw()}
-
-	blockPairPayloads, err := encodeBlockPairs(input.Message.BlockPairs)
+	payloads, err := codec.EncodeBlockSyncResponse(header, input.Message)
 	if err != nil {
 		return nil, err
 	}
-	payloads = append(payloads, blockPairPayloads...)
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey:     s.config.NodePublicKey(),
@@ -180,27 +144,12 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 }
 
 func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	if len(payloads) < 2 {
-		return
-	}
-	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[1])
-
-	blocks, err := decodeBlockPairs(payloads[2:])
-
+	message, err := codec.DecodeBlockSyncResponse(payloads)
 	if err != nil {
-		s.logger.Error("could not decode block pair from block sync", log.Error(err))
 		return
 	}
-
 	for _, l := range s.blockSyncHandlers {
-		_, err := l.HandleBlockSyncResponse(ctx, &gossiptopics.BlockSyncResponseInput{
-			Message: &gossipmessages.BlockSyncResponseMessage{
-				SignedChunkRange: chunkRange,
-				Sender:           senderSignature,
-				BlockPairs:       blocks,
-			},
-		})
+		_, err := l.HandleBlockSyncResponse(ctx, &gossiptopics.BlockSyncResponseInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockSyncResponse failed", log.Error(err))
 		}

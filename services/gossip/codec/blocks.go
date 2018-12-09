@@ -1,4 +1,4 @@
-package gossip
+package codec
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -7,7 +7,7 @@ import (
 
 const NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR = 6 // txHeader, txMetadata, rxHeader..
 
-func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
+func EncodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
 		return nil, errors.Errorf("codec failed to encode block pair due to missing fields: %s", blockPair.String())
 	}
@@ -48,11 +48,11 @@ func encodeBlockPair(blockPair *protocol.BlockPairContainer) ([][]byte, error) {
 	return payloads, nil
 }
 
-func encodeBlockPairs(blockPairs []*protocol.BlockPairContainer) ([][]byte, error) {
+func EncodeBlockPairs(blockPairs []*protocol.BlockPairContainer) ([][]byte, error) {
 	var payloads [][]byte
 
 	for _, blocks := range blockPairs {
-		blockPairPayloads, err := encodeBlockPair(blocks)
+		blockPairPayloads, err := EncodeBlockPair(blocks)
 		if err != nil {
 			return nil, err
 		}
@@ -62,8 +62,8 @@ func encodeBlockPairs(blockPairs []*protocol.BlockPairContainer) ([][]byte, erro
 	return payloads, nil
 }
 
-func decodeBlockPair(payloads [][]byte) (*protocol.BlockPairContainer, error) {
-	results, err := decodeBlockPairs(payloads)
+func DecodeBlockPair(payloads [][]byte) (*protocol.BlockPairContainer, error) {
+	results, err := DecodeBlockPairs(payloads)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func decodeBlockPair(payloads [][]byte) (*protocol.BlockPairContainer, error) {
 	return results[0], nil
 }
 
-func decodeBlockPairs(payloads [][]byte) (results []*protocol.BlockPairContainer, err error) {
+func DecodeBlockPairs(payloads [][]byte) (results []*protocol.BlockPairContainer, err error) {
 	payloadIndex := uint32(0)
 
 	for payloadIndex < uint32(len(payloads)) {

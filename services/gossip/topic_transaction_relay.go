@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
@@ -30,11 +30,9 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 		RecipientMode:    gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	payloads := make([][]byte, 0, 2+len(input.Message.SignedTransactions))
-	payloads = append(payloads, header.Raw())
-	payloads = append(payloads, input.Message.Sender.Raw())
-	for _, tx := range input.Message.SignedTransactions {
-		payloads = append(payloads, tx.Raw())
+	payloads, err := codec.EncodeForwardedTransactions(header, input.Message)
+	if err != nil {
+		return nil, err
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
@@ -46,23 +44,14 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 
 func (s *service) receivedForwardedTransactions(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	txs := make([]*protocol.SignedTransaction, 0, len(payloads)-1)
-	senderSignature := gossipmessages.SenderSignatureReader(payloads[0])
-
-	for _, payload := range payloads[1:] {
-		tx := protocol.SignedTransactionReader(payload)
-		txs = append(txs, tx)
+	message, err := codec.DecodeForwardedTransactions(payloads)
+	if err != nil {
+		return
 	}
-
-	logger.Info("received forwarded transactions", log.Stringable("sender", senderSignature), log.StringableSlice("transactions", txs))
+	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", message.SignedTransactions))
 
 	for _, l := range s.transactionHandlers {
-		_, err := l.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
-			Message: &gossipmessages.ForwardedTransactionsMessage{
-				Sender:             senderSignature,
-				SignedTransactions: txs,
-			},
-		})
+		_, err := l.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{Message: message})
 		if err != nil {
 			logger.Info("HandleForwardedTransactions failed", log.Error(err))
 		}
