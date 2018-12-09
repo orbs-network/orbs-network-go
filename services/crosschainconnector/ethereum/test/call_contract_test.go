@@ -49,6 +49,7 @@ func TestCallContractWithoutArgs(t *testing.T) {
 		output, err := h.connector.EthereumCallContract(ctx, input)
 		require.NoError(t, err, "expecting call to succeed")
 		require.True(t, len(output.EthereumAbiPackedOutput) > 0, "expecting output to have some data")
+
 		t.Log(output.EthereumAbiPackedOutput)
 		ret := new(struct { // this is the expected return type of that ethereum call for the SimpleStorage contract getValues
 			IntValue    *big.Int
