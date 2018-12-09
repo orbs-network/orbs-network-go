@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// FIXME implement all block checks
+// TODO(v1) implement all block checks
 func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -35,7 +35,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("internal-node sync to consensus algo failed", log.Error(err))
+		logger.Error("block validation by consensus algo failed", log.Error(err))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -99,7 +99,7 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
-	// FIXME we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
+	// TODO(v1) we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
 	if !txBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
 		errorMessage := "protocol version mismatch in transactions block header"
 		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()), log.BlockHeight(txBlockHeader.BlockHeight()))
@@ -129,7 +129,9 @@ func (s *service) validateWithConsensusAlgosWithMode(
 	lastCommittedBlockPair *protocol.BlockPairContainer,
 	mode handlers.HandleBlockConsensusMode) error {
 
-	for _, handler := range s.consensusBlocksHandlers {
+	s.consensusBlocksHandlers.RLock()
+	defer s.consensusBlocksHandlers.RUnlock()
+	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
@@ -143,6 +145,5 @@ func (s *service) validateWithConsensusAlgosWithMode(
 		}
 	}
 
-	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers))
+	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
 }
-

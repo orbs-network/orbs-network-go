@@ -21,7 +21,7 @@ type TestNetworkDriver interface {
 	Description() string
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
-	WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int)
+	WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int)
 	MockContract(fakeContractInfo *sdkContext.ContractInfo, code string)
 }
 
@@ -35,10 +35,11 @@ type acceptanceNetwork struct {
 
 func (n *acceptanceNetwork) Start(ctx context.Context, numOfNodesToStart int) {
 	n.CreateAndStartNodes(ctx, numOfNodesToStart) // needs to start first so that nodes can register their listeners to it
+	n.WaitUntilReadyForTransactions(ctx) // this is so that no transactions are sent before each node has committed block 0, otherwise transactions will be rejected
 }
 
-func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txhash primitives.Sha256, nodeIndex int) {
-	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txhash)
+func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
+	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txHash)
 }
 
 func (n *acceptanceNetwork) Description() string {
@@ -73,5 +74,10 @@ func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdkContext.ContractIn
 		if fakeCompiler, ok := node.GetCompiler().(nativeProcessorAdapter.FakeCompiler); ok {
 			fakeCompiler.ProvideFakeContract(fakeContractInfo, code)
 		}
+	}
+}
+func (n *acceptanceNetwork) Destroy() {
+	for _, node := range n.Nodes {
+		node.Destroy()
 	}
 }

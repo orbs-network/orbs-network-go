@@ -30,6 +30,8 @@ type harness struct {
 	config             config.TransactionPoolConfig
 }
 
+var now = primitives.TimestampNano(time.Now().UnixNano())
+
 var (
 	thisNodeKeyPair  = testKeys.Ed25519KeyPairForTests(8)
 	otherNodeKeyPair = testKeys.Ed25519KeyPairForTests(9)
@@ -72,7 +74,7 @@ func (h *harness) addTransactions(ctx context.Context, txs ...*protocol.SignedTr
 
 func (h *harness) reportTransactionsAsCommitted(ctx context.Context, transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
 	return h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
-		LastCommittedBlockHeight: h.lastBlockHeight,
+		LastCommittedBlockHeight: h.lastBlockHeight + 1,
 		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto, see issue #121
 		TransactionReceipts:      asReceipts(transactions),
 	})
@@ -141,8 +143,8 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 
 func (h *harness) getTransactionsForOrdering(ctx context.Context, height primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		BlockHeight:              height,
-		MaxNumberOfTransactions:  maxNumOfTransactions,
+		BlockHeight:             height,
+		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 
@@ -193,13 +195,11 @@ func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeig
 	return err
 }
 
-func newHarness() *harness {
-	return newHarnessWithSizeLimit(20 * 1024 * 1024)
+func newHarness(ctx context.Context, ) *harness {
+	return newHarnessWithSizeLimit(ctx, 20 * 1024 * 1024)
 }
 
-func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
-	ctx := context.Background()
-
+func newHarnessWithSizeLimit(ctx context.Context, sizeLimit uint32) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
@@ -208,7 +208,7 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
 	metricFactory := metric.NewRegistry()
 
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, cfg, log.GetLogger(), metricFactory)
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, log.GetLogger(), metricFactory)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
@@ -223,6 +223,8 @@ func newHarnessWithSizeLimit(sizeLimit uint32) *harness {
 	}
 
 	h.passAllPreOrderChecks()
+
+	h.goToBlock(ctx, 1, now)
 
 	return h
 }

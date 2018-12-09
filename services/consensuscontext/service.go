@@ -62,8 +62,8 @@ func NewConsensusContext(
 
 func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("starting to create transactions block")
-	txBlock, err := s.createTransactionsBlock(ctx, input.BlockHeight, input.PrevBlockHash)
+	logger.Info("starting to create transactions block", log.BlockHeight(input.BlockHeight))
+	txBlock, err := s.createTransactionsBlock(ctx, input)
 	if err != nil {
 		logger.Info("failed to create transactions block", log.Error(err))
 		return nil, err
@@ -87,7 +87,7 @@ func (s *service) printTxHash(logger log.BasicLogger, txBlock *protocol.Transact
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	rxBlock, err := s.createResultsBlock(ctx, input.BlockHeight, input.PrevBlockHash, input.TransactionsBlock)
+	rxBlock, err := s.createResultsBlock(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -201,18 +201,16 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 
 	// Check merkle root of the state prior to the block execution, retrieved by calling `StateStorage.GetStateHash`.
 
-	// TODO Uncomment when state diff is fixed
-	// See https://tree.taiga.io/project/orbs-network/us/383
-	//calculatedPreExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-	//	BlockHeight: checkedHeader.BlockHeight(),
-	//})
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if !bytes.Equal(checkedHeader.PreExecutionStateRootHash(), calculatedPreExecutionStateRootHash.StateRootHash) {
-	//	return nil, fmt.Errorf("mismatching PreExecutionStateRootHash: expected %v but results block hash %v",
-	//		calculatedPreExecutionStateRootHash, checkedHeader.PreExecutionStateRootHash())
-	//}
+	calculatedPreExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
+		BlockHeight: checkedHeader.BlockHeight(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(checkedHeader.PreExecutionStateRootHash(), calculatedPreExecutionStateRootHash.StateRootHash) {
+		return nil, fmt.Errorf("mismatching PreExecutionStateRootHash: expected %v but results block hash %v",
+			calculatedPreExecutionStateRootHash, checkedHeader.PreExecutionStateRootHash())
+	}
 
 	// Check transaction id bloom filter (see block format for structure).
 	// TODO Pending spec https://github.com/orbs-network/orbs-spec/issues/118

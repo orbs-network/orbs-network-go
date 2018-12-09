@@ -46,7 +46,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 
 func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
 	bh, _ := s.currentBlockHeightAndTime()
-	//TODO handle error from vm call
+	//TODO(v1) handle error from vm call
 	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
 		SignedTransactions: Transactions{transaction},
 		BlockHeight:        bh,

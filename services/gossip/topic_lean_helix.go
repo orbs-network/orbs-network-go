@@ -22,7 +22,7 @@ func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 	for _, l := range s.leanHelixHandlers {
 		_, err := l.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{Message: message})
 		if err != nil {
-			s.logger.Info("HandleLeanHelixMessage failed", log.Error(err))
+			s.logger.Info("receivedLeanHelixMessage() HandleLeanHelixMessage failed", log.Error(err))
 		}
 	}
 }
@@ -33,6 +33,7 @@ func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.
 		LeanHelix:     input.Message.MessageType,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
+
 	payloads, err := codec.EncodeLeanHelixMessage(header, input.Message)
 	if err != nil {
 		return nil, err

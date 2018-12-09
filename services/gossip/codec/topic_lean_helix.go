@@ -1,6 +1,7 @@
 package codec
 
 import (
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/pkg/errors"
 )
@@ -10,24 +11,38 @@ func EncodeLeanHelixMessage(header *gossipmessages.Header, message *gossipmessag
 		return nil, errors.New("missing Content")
 	}
 
-	blockPairPayloads, err := EncodeBlockPair(message.BlockPair)
-	if err != nil {
-		return nil, err
+	var blockPairPayloads [][]byte
+	if message.BlockPair != nil {
+		var err error
+		blockPairPayloads, err = EncodeBlockPair(message.BlockPair)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return append([][]byte{header.Raw(), message.Content}, blockPairPayloads...), nil
+	payloads := [][]byte{header.Raw(), message.Content}
+	if len(blockPairPayloads) > 0 {
+		payloads = append(payloads, blockPairPayloads...)
+	}
+
+	return payloads, nil
 }
 
 func DecodeLeanHelixMessage(header *gossipmessages.Header, payloads [][]byte) (*gossipmessages.LeanHelixMessage, error) {
-	if len(payloads) < 1+NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
+	if len(payloads) < 1 {
 		return nil, errors.New("wrong num of payloads")
 	}
 
 	messageType := header.LeanHelix()
 	content := payloads[0]
-	blockPair, err := DecodeBlockPair(payloads[1:])
-	if err != nil {
-		return nil, err
+
+	var blockPair *protocol.BlockPairContainer
+	if len(payloads) > 1 {
+		var err error
+		blockPair, err = DecodeBlockPair(payloads[1:])
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &gossipmessages.LeanHelixMessage{

@@ -41,7 +41,6 @@ func (r *runtimeReporter) startReporting(ctx context.Context, logger log.BasicLo
 func (r *runtimeReporter) reportRuntimeMetrics() {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
-	//TODO debug.ReadGCStats()?
 
 	r.metrics.heapSys.Update(int64(mem.HeapSys))
 	r.metrics.heapAlloc.Update(int64(mem.HeapAlloc))

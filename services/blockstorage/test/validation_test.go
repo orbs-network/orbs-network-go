@@ -98,9 +98,9 @@ func TestValidateBlockWithInvalidHeight(t *testing.T) {
 	})
 }
 
-//TODO validate virtual chain
-//TODO validate transactions root hash
-//TODO validate metadata hash
-//TODO validate receipts root hash
-//TODO validate state diff hash
-//TODO validate block consensus
+//TODO(v1) validate virtual chain
+//TODO(v1) validate transactions root hash
+//TODO(v1) validate metadata hash
+//TODO(v1) validate receipts root hash
+//TODO(v1) validate state diff hash
+//TODO(v1) validate block consensus

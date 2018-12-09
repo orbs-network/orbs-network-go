@@ -41,6 +41,8 @@ func NewNodeLogic(
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
+	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
+	transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter,
 	nativeCompiler nativeProcessorAdapter.Compiler,
 	logger log.BasicLogger,
 	metricRegistry metric.Registry,
@@ -55,24 +57,21 @@ func NewNodeLogic(
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector(ctx, ethereumConnection, logger)
 
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
-	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, logger, metricRegistry)
+	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
-	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, nodeConfig, logger, metricRegistry)
+	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
 	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, gossipService, logger, metricRegistry, serviceSyncCommitters)
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, stateStorageService, nodeConfig, logger, metricRegistry)
 
-	// TODO Uncomment and append to consensusAlgo when you want to integrate Lean Helix.
-	// TODO For now, NewLeanHelixConsensusAlgo() is executed to ensure compilation
-	/*leanHelixAlgo := */
-	leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
 	benchmarkConsensusAlgo := benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
+	leanHelixAlgo := leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
 
 	// TODO: Restore this when lean-helix-go submodule is integrated
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
-	//consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
+	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)

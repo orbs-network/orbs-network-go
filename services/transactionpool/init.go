@@ -11,15 +11,19 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
 )
 
 func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
+	blockHeightReporter BlockHeightReporter,
 	config config.TransactionPoolConfig,
 	parent log.BasicLogger,
 	metricFactory metric.Factory) services.TransactionPool {
+
+    if blockHeightReporter == nil {
+    	blockHeightReporter = synchronization.NopHeightReporter{}
+	}
 
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory)
 	committedPool := NewCommittedPool(metricFactory)
@@ -36,11 +40,13 @@ func NewTransactionPool(ctx context.Context,
 
 		pendingPool:          pendingPool,
 		committedPool:        committedPool,
-		blockTracker:         synchronization.NewBlockTracker(0, uint16(config.BlockTrackerGraceDistance())),
+		blockTracker:         synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
+		blockHeightReporter:  blockHeightReporter,
 		transactionForwarder: txForwarder,
 	}
 
-	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) // this is so that we do not reject transactions on startup, before any block has been committed
+	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
+	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
 
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError

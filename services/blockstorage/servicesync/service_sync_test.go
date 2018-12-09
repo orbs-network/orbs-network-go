@@ -48,7 +48,7 @@ func TestSyncInitialState(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		// Set up block source mock
-		sourceTracker := synchronization.NewBlockTracker(3, 10)
+		sourceTracker := synchronization.NewBlockTracker(log.GetLogger(), 3, 10)
 		sourceMock := newBlockSourceMock(3)
 		sourceMock.When("GetLastBlock").Times(2)
 		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil).AtLeast(0)
@@ -57,7 +57,7 @@ func TestSyncInitialState(t *testing.T) {
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
 		targetCurrentHeight := primitives.BlockHeight(0)
-		targetTracker := synchronization.NewBlockTracker(0, 10)
+		targetTracker := synchronization.NewBlockTracker(log.GetLogger(), 0, 10)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+1 {
 				targetTracker.IncrementHeight()
@@ -112,7 +112,7 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 	}
 }
 
-// TODO - this fake implementation assumes there is no genesis block, Fix once addressing genesis
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this fake implementation assumes there is no genesis block, Fix once addressing genesis
 func (bsf *blockSourceMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
 	bsf.Called(first, last)
 	result := make([]*protocol.BlockPairContainer, last-first)

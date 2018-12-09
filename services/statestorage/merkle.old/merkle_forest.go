@@ -11,7 +11,7 @@ import (
 
 type Proof []*Node
 
-const trieRadix = 256 // base of the merkle trie. TODO change to 16
+const trieRadix = 256 // base of the merkle trie. TODO(v1)-delete? change to 16
 
 func getZeroValueHash() primitives.Sha256 {
 	return hash.CalcSha256([]byte{})
@@ -20,7 +20,7 @@ func getZeroValueHash() primitives.Sha256 {
 var zeroValueHash = getZeroValueHash()
 
 type Node struct {
-	path     string // TODO replace with []byte + parity bool when moving to trieRadix = 16
+	path     string // TODO(v1)-delete? replace with []byte + parity bool when moving to trieRadix = 16
 	value    primitives.Sha256
 	branches [trieRadix]primitives.MerkleSha256
 }
@@ -36,7 +36,7 @@ func (n *Node) hasValue() bool {
 	return !zeroValueHash.Equal(n.value)
 }
 func (n *Node) hash() primitives.MerkleSha256 {
-	// TODO replace this with membuffers serialization. Sprintf should not reach production
+	// TODO(v1)-delete? replace this with membuffers serialization. Sprintf should not reach production
 	serializedNode := fmt.Sprintf("%+v", n)
 	return primitives.MerkleSha256(hash.CalcSha256([]byte(serializedNode)))
 }
@@ -45,11 +45,11 @@ func (n *Node) clone() *Node {
 	copy(newBranches[:], n.branches[:])
 	result := &Node{
 		path:     n.path,
-		value:    n.value, // TODO - copy?
+		value:    n.value, // TODO(v1)-delete? - copy?
 		branches: newBranches,
 	}
 	//for k, v := range n.branches {
-	//	result.branches[k] = v // TODO - copy?
+	//	result.branches[k] = v // TODO(v1)-delete? - copy?
 	//}
 	return result
 }
@@ -95,7 +95,6 @@ func (f *Forest) connectChildToParentAndSaveChild(childNode, parentNode *Node, s
 }
 
 func (f *Forest) updateSingleEntry(baseHash primitives.MerkleSha256, path string, valueHash primitives.Sha256) primitives.MerkleSha256 {
-	// TODO fmt.Printf("old path %s value %x\n", path, valueHash)
 	baseNode := f.nodes[baseHash.KeyForMap()]
 	var newRoot *Node
 	if valueHash.Equal(zeroValueHash) {
@@ -239,7 +238,7 @@ func (f *Forest) GetProof(rootHash primitives.MerkleSha256, contract string, key
 // return true if proof and merkle rootHash validate value for key. false if it confirms value does not match key
 // return an error if the proof is inconsistent internally, or, with key, value or rootHash
 func (f *Forest) Verify(rootHash primitives.MerkleSha256, proof Proof, contract string, key string, value string) (bool, error) {
-	//TODO split the case where we compare against zero value - to simplify determineValueHashByProof
+	//TODO(v1)-delete? split the case where we compare against zero value - to simplify determineValueHashByProof
 	valueSha256 := hash.CalcSha256([]byte(value))
 	expectedHash, err := determineValueHashByProof(proof, contract+key, rootHash)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -13,15 +14,20 @@ import (
 	"github.com/pkg/errors"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 type InMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	WaitForTransaction(ctx context.Context, txhash primitives.Sha256) primitives.BlockHeight
+	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
 type blockHeightChan chan primitives.BlockHeight
+
+type metrics struct {
+	size *metric.Gauge
+}
 
 type inMemoryBlockPersistence struct {
 	blockChain struct {
@@ -37,17 +43,38 @@ type inMemoryBlockPersistence struct {
 		sync.Mutex
 		channels map[string]blockHeightChan
 	}
+
+	metrics *metrics
 }
 
-func NewInMemoryBlockPersistence(parent log.BasicLogger) InMemoryBlockPersistence {
+func newMetrics(m metric.Factory) *metrics {
+	return &metrics{
+		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInMB"),
+	}
+}
+
+func NewInMemoryBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory) InMemoryBlockPersistence {
+	return NewInMemoryBlockPersistenceWithBlocks(parent, nil, metricFactory)
+}
+
+func NewInMemoryBlockPersistenceWithBlocks(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &inMemoryBlockPersistence{
 		failNextBlocks: false,
 		logger:         logger,
-		tracker:        synchronization.NewBlockTracker(0, 5),
+		metrics:        newMetrics(metricFactory),
+		tracker:        synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
+		blockChain: struct {
+			sync.RWMutex
+			blocks []*protocol.BlockPairContainer
+		}{blocks: preloadedBlocks},
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
+
+	for _, bpc := range preloadedBlocks {
+		p.advertiseAllTransactions(bpc.TransactionsBlock)
+	}
 
 	return p
 }
@@ -98,6 +125,7 @@ func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 	}
 
 	bp.tracker.IncrementHeight()
+	bp.metrics.size.Add(sizeOfBlock(blockPair))
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
 
@@ -129,7 +157,7 @@ func (bp *inMemoryBlockPersistence) GetBlocksRelevantToTxTimestamp(txTimeStamp p
 	}
 	var relevantBlocks []*protocol.BlockPairContainer
 	interval := end - start
-	// TODO: FIXME: sanity check, this is really useless here right now, but we are going to refactor this in about two-three weeks, and when we do, this is here to remind us to have a sanity check on this query
+	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
 	if interval > primitives.TimestampNano(time.Hour.Nanoseconds()) {
 		return nil
 	}
@@ -203,9 +231,8 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 	}
 }
 
-// TODO: better support for paging
+// TODO(https://github.com/orbs-network/orbs-network-go/issues/174): better support for paging
 func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-	// FIXME use more efficient way to slice blocks
 
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
@@ -228,4 +255,34 @@ func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last
 	}
 
 	return blocks, firstReturnedBlockHeight, lastReturnedBlockHeight, nil
+}
+
+func sizeOfBlock(block *protocol.BlockPairContainer) int64 {
+	txBlock := block.TransactionsBlock
+	txBlockSize := len(txBlock.Header.Raw()) + len(txBlock.BlockProof.Raw()) + len(txBlock.Metadata.Raw())
+
+	rsBlock := block.ResultsBlock
+	rsBlockSize := len(rsBlock.Header.Raw()) + len(rsBlock.BlockProof.Raw())
+
+	txBlockPointers := unsafe.Sizeof(txBlock) + unsafe.Sizeof(txBlock.Header) + unsafe.Sizeof(txBlock.Metadata) + unsafe.Sizeof(txBlock.BlockProof) + unsafe.Sizeof(txBlock.SignedTransactions)
+	rsBlockPointers := unsafe.Sizeof(rsBlock) + unsafe.Sizeof(rsBlock.Header) + unsafe.Sizeof(rsBlock.BlockProof) + unsafe.Sizeof(rsBlock.TransactionReceipts) + unsafe.Sizeof(rsBlock.ContractStateDiffs)
+
+	for _, tx := range txBlock.SignedTransactions {
+		txBlockSize += len(tx.Raw())
+		txBlockPointers += unsafe.Sizeof(tx)
+	}
+
+	for _, diff := range rsBlock.ContractStateDiffs {
+		rsBlockSize += len(diff.Raw())
+		rsBlockPointers += unsafe.Sizeof(diff)
+	}
+
+	for _, receipt := range rsBlock.TransactionReceipts {
+		rsBlockSize += len(receipt.Raw())
+		rsBlockPointers += unsafe.Sizeof(receipt)
+	}
+
+	pointers := unsafe.Sizeof(block) + txBlockPointers + rsBlockPointers
+
+	return int64(txBlockSize) + int64(rsBlockSize) + int64(pointers)
 }

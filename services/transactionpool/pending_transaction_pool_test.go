@@ -164,7 +164,7 @@ func TestPendingTransactionPoolCallsRemovalListenerWhenRemovingTransaction(t *te
 		txHash := digest.CalcTxHash(tx.Transaction())
 		p.remove(ctx, txHash, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
 
-		require.Equal(t, txHash, removedTxHash, "removed txhash didn't equal expected txhash")
+		require.Equal(t, txHash, removedTxHash, "removed txHash didn't equal expected txHash")
 		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, removalReason, "removal reason didn't equal expected reason")
 	})
 }

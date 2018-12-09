@@ -3,8 +3,8 @@ package adapter
 import (
 	"bytes"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sort"
@@ -30,12 +30,12 @@ type InMemoryStatePersistence struct {
 	fullState  ChainState
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
-	merkleRoot primitives.MerkleSha256
+	merkleRoot primitives.Sha256
 }
 
 func NewInMemoryStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence {
 	_, merkleRoot := merkle.NewForest()
-	// TODO - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
 	return &InMemoryStatePersistence{
 		metrics:    newMetrics(metricFactory),
 		mutex:      sync.RWMutex{},
@@ -57,7 +57,7 @@ func (sp *InMemoryStatePersistence) reportSize() {
 	sp.metrics.numberOfContracts.Update(int64(nContracts))
 }
 
-func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.MerkleSha256, diff ChainState) error {
+func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff ChainState) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
@@ -94,7 +94,7 @@ func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key s
 	return record, ok, nil
 }
 
-func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.MerkleSha256, error) {
+func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.Sha256, error) {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 
@@ -130,7 +130,6 @@ func (sp *InMemoryStatePersistence) Dump() string {
 	return output.String()
 }
 
-// TODO - there is an identical method in statestorage. extract and reuse?
 func isZeroValue(value []byte) bool {
 	return bytes.Equal(value, []byte{})
 }

@@ -4,54 +4,73 @@ import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
 	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
 
 type networkCommunication struct {
+	consensusContext        services.ConsensusContext
+	logger                  log.BasicLogger
 	gossip                  gossiptopics.LeanHelix
 	messageReceiversCounter int
-	messageReceivers        map[int]func(ctx context.Context, message leanhelix.ConsensusRawMessage)
+	//messageReceivers        map[int]leanhelix.MessageHandler
 }
 
-func NewNetworkCommunication(gossip gossiptopics.LeanHelix) *networkCommunication {
+func NewNetworkCommunication(logger log.BasicLogger, consensusContext services.ConsensusContext, gossip gossiptopics.LeanHelix) *networkCommunication {
+	if consensusContext == nil {
+		panic("consensusContext cannot be nil")
+	}
 	return &networkCommunication{
-		gossip:                  gossip,
-		messageReceivers:        make(map[int]func(ctx context.Context, message leanhelix.ConsensusRawMessage)),
+		consensusContext: consensusContext,
+		logger:           logger,
+		gossip:           gossip,
+		//messageReceivers:        make(map[int]leanhelix.MessageHandler),
 		messageReceiversCounter: 0,
 	}
 }
 
-func (comm *networkCommunication) RequestOrderedCommittee(seed uint64) []lhprimitives.Ed25519PublicKey {
-	panic("implement me")
+func (comm *networkCommunication) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64, maxCommitteeSize uint32) []lhprimitives.Ed25519PublicKey {
+
+	res, err := comm.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
+		BlockHeight:      primitives.BlockHeight(blockHeight),
+		RandomSeed:       seed,
+		MaxCommitteeSize: maxCommitteeSize,
+	})
+	if err != nil {
+		comm.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))
+		return nil
+	}
+	publicKeys := make([]lhprimitives.Ed25519PublicKey, 0, len(res.NodePublicKeys))
+	for _, publicKey := range res.NodePublicKeys {
+		publicKeys = append(publicKeys, lhprimitives.Ed25519PublicKey(publicKey))
+	}
+
+	return publicKeys
 }
 
 func (comm *networkCommunication) IsMember(pk lhprimitives.Ed25519PublicKey) bool {
 	panic("implement me")
 }
 
-// Lib calls this method to register itself for incoming messages, and supplies the callback
-func (comm *networkCommunication) RegisterOnMessage(onReceivedMessage func(ctx context.Context, message leanhelix.ConsensusRawMessage)) int {
-	comm.messageReceiversCounter++
-	comm.messageReceivers[comm.messageReceiversCounter] = onReceivedMessage
-
-	return comm.messageReceiversCounter
-}
-
-func (comm *networkCommunication) UnregisterOnMessage(subscriptionToken int) {
-	delete(comm.messageReceivers, subscriptionToken)
-}
-
 // LeanHelix lib sends its messages here
 func (comm *networkCommunication) SendMessage(ctx context.Context, lhtargets []lhprimitives.Ed25519PublicKey, consensusRawMessage leanhelix.ConsensusRawMessage) {
 	targets := make([]primitives.Ed25519PublicKey, 0, len(lhtargets))
-	for i, lhtarget := range lhtargets {
-		targets[i] = primitives.Ed25519PublicKey(lhtarget)
+	for _, lhtarget := range lhtargets {
+		targets = append(targets, primitives.Ed25519PublicKey(lhtarget))
 	}
 
-	blockPairWrapper := consensusRawMessage.Block().(*BlockPairWrapper)
+	var blockPair *protocol.BlockPairContainer
+	if consensusRawMessage.Block() != nil {
+		blockPairWrapper := consensusRawMessage.Block().(*BlockPairWrapper)
+		if blockPairWrapper != nil {
+			blockPair = blockPairWrapper.blockPair
+		}
+	}
 
 	message := &gossiptopics.LeanHelixInput{
 		RecipientsList: &gossiptopics.RecipientsList{
@@ -61,27 +80,8 @@ func (comm *networkCommunication) SendMessage(ctx context.Context, lhtargets []l
 		Message: &gossipmessages.LeanHelixMessage{
 			MessageType: consensus.LeanHelixMessageType(consensusRawMessage.MessageType()),
 			Content:     consensusRawMessage.Content(),
-			BlockPair:   blockPairWrapper.blockPair,
+			BlockPair:   blockPair,
 		},
 	}
 	comm.gossip.SendLeanHelixMessage(ctx, message)
-}
-
-func (comm *networkCommunication) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
-	message := leanhelix.CreateConsensusRawMessage(
-		leanhelix.MessageType(input.Message.MessageType),
-		input.Message.Content,
-		&BlockPairWrapper{
-			blockPair: input.Message.BlockPair,
-		},
-	)
-
-	for _, messageReceiver := range comm.messageReceivers {
-		messageReceiver(ctx, message)
-	}
-	return nil, nil
-}
-
-func (comm *networkCommunication) CountRegisteredOnMessage() int {
-	return len(comm.messageReceivers)
 }

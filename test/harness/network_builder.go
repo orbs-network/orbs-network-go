@@ -6,13 +6,17 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/pkg/errors"
 	"os"
 	"runtime"
 	"strconv"
@@ -84,6 +88,12 @@ func (b *acceptanceTestNetworkBuilder) AllowingErrors(allowedErrors ...string) *
 }
 
 func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network TestNetworkDriver)) {
+	b.StartWithRestart(func(ctx context.Context, network TestNetworkDriver, _ func() TestNetworkDriver) {
+		f(ctx, network)
+	})
+}
+
+func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Context, network TestNetworkDriver, restartPreservingBlocks func() TestNetworkDriver)) {
 	if b.numOfNodesToStart == 0 {
 		b.numOfNodesToStart = b.numNodes
 	}
@@ -91,29 +101,54 @@ func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
-		test.WithContext(func(ctx context.Context) {
+		test.WithContextWithTimeout(10*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+			networkCtx, cancelNetwork := context.WithCancel(ctx)
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)
-			network := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo)
+			network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)
 			defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
 
 			if b.setupFunc != nil {
-				b.setupFunc(ctx, network)
+				b.setupFunc(networkCtx, network)
 			}
 
-			network.Start(ctx, b.numOfNodesToStart)
+			network.Start(networkCtx, b.numOfNodesToStart)
 
-			ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second) //TODO 5 seconds is infinity; reduce to 2 seconds when system is more stable
-			defer cancel()
-			f(ctxWithTimeout, network)
+			restart := func() TestNetworkDriver {
+				cancelNetwork()
+				network.Destroy()
+				time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+
+				// signal the old network to stop
+				networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
+				newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
+
+				newNetwork.Start(networkCtx, b.numOfNodesToStart)
+
+				return newNetwork
+			}
+
+			f(ctx, network, restart)
 		})
 		// end test
 
 		time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 	}
+}
+
+func extractBlocks(blocks blockStorageAdapter.InMemoryBlockPersistence) []*protocol.BlockPairContainer {
+	lastBlock, err := blocks.GetLastBlock()
+	if err != nil {
+		panic(errors.Wrapf(err, "spawn network: failed reading block height"))
+	}
+	blockPairs, _, _, err := blocks.GetBlocks(1, lastBlock.ResultsBlock.Header.BlockHeight()+1)
+	if err != nil {
+		panic(errors.Wrapf(err, "spawn network: failed extract blocks"))
+	}
+	return blockPairs
 }
 
 func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
@@ -140,7 +175,7 @@ func (b *acceptanceTestNetworkBuilder) WithRequiredQuorumPercentage(percentage i
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType) *acceptanceNetwork {
+func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer) *acceptanceNetwork {
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", b.numNodes))
@@ -177,7 +212,11 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 
 		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
 
-		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), testLogger)
+		metricRegistry := metric.NewRegistry()
+		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodePublicKey().String()))
+		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
+
+		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, nodeLogger)
 	}
 
 	return network
