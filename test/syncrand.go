@@ -5,6 +5,9 @@ import (
 	"sync"
 )
 
+// syncRand is a locking wrapper around rand.Rand object
+// unlike math/rand.lockedSource this object does not distinguish
+// between single and array value random methods.
 type syncRand struct {
 	lk sync.Mutex
 	r  *rand.Rand // avoid using no identifier name to block access to unwrapped methods in Rand

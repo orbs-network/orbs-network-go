@@ -8,8 +8,9 @@ import (
 	"time"
 )
 
+// seedPreference is meant to be specified at command line, parse test.randSeed flag
 func init() {
-	flag.Var(&randPreference, "test.randSeed",
+	flag.Var(&seedPreference, "test.randSeed",
 		"Specify a random seed for tests, or 'launchClock' to use"+
 			" the same arbitrary value in each test invocation")
 }
@@ -17,85 +18,91 @@ func init() {
 const singleRandSafetyBufferSize = 1000
 
 var singleRandPerTestSafety = newBufferedSingleRandSafety(singleRandSafetyBufferSize)
-var randPreference randomPreference // initialized in init()
+var seedPreference randomSeedPref // initialized in init()
 
-type NamedLogger interface {
+type testLogger interface {
 	Log(args ...interface{})
 	Name() string
 }
 
-type controlledRandMode int
+// randomMode represents the global policy mode for selecting test random seeds
+type randomMode int
 
 const (
-	randPrefInvokeClock controlledRandMode = iota
-	randPrefLaunchClock
-	randPrefExplicit
+	randModeTestClockSeed    randomMode = iota // default. seed is the clock at each test instance
+	randModeProcessClockSeed                   // seed is the clock at process launch. same for every test instance
+	randModeExplicitSeed                       // seed is specified at command line, and reset in each test instance
 )
 
+// tests should use this random object when generating random values
 type ControlledRand struct {
 	*syncRand
 }
 
-func NewControlledRand(t NamedLogger) *ControlledRand {
+func NewControlledRand(t testLogger) *ControlledRand {
 	singleRandPerTestSafety.assertFirstRand(t)
 
 	var newSeed int64
-	if randPreference.mode == randPrefInvokeClock {
+	if seedPreference.mode == randModeTestClockSeed {
 		newSeed = time.Now().UTC().UnixNano()
 	} else {
-		newSeed = randPreference.seed
+		newSeed = seedPreference.seed
 	}
 	t.Log(fmt.Sprintf("random seed %v (%s)", newSeed, t.Name()))
 
 	return &ControlledRand{newSyncRand(newSeed)}
 }
 
-type randomPreference struct {
-	mode controlledRandMode // default value is randPrefInvokeClock
-	seed int64              // applicable only in mode != randPrefInvokeClock
+// randomSeedPref implements flag.Value to parse the desired random seed preference
+type randomSeedPref struct {
+	mode randomMode
+	seed int64 // applicable only if mode != randModeTestClockSeed
 }
 
-func (i *randomPreference) String() string {
+func (i *randomSeedPref) String() string {
 	var preference string
 	switch i.mode {
-	case randPrefInvokeClock:
+	case randModeTestClockSeed:
 		preference = "clock at invocation (default)"
-	case randPrefLaunchClock:
+	case randModeProcessClockSeed:
 		preference = fmt.Sprintf("launchClock: %v", i.seed)
-	case randPrefExplicit:
+	case randModeExplicitSeed:
 		preference = fmt.Sprintf("explicit seed: %v", i.seed)
 	}
 	return preference
 }
 
-func (i *randomPreference) Set(value string) error {
+func (i *randomSeedPref) Set(value string) error {
 	if value == "launchClock" {
-		i.mode = randPrefLaunchClock
+		i.mode = randModeProcessClockSeed
 		i.seed = time.Now().UTC().UnixNano()
 		return nil
 	}
-	i.mode = randPrefExplicit
+	i.mode = randModeExplicitSeed
 	v, err := strconv.ParseInt(value, 0, 64)
 	i.seed = v
 	return err
 }
 
+// bufferedSingleRandSafety.assertFirstRand() will panic
+// when the same test object initializes two random objects
+// each test instance should instantiate at most one ControlledRand
 type bufferedSingleRandSafety struct {
 	sync.Mutex
-	loggerLookup   map[NamedLogger]bool
-	loggerBuffer   []NamedLogger
+	loggerLookup   map[testLogger]bool
+	loggerBuffer   []testLogger
 	nextWriteIndex int
 }
 
 func newBufferedSingleRandSafety(bufferSize int) *bufferedSingleRandSafety {
 	return &bufferedSingleRandSafety{
-		loggerLookup:   make(map[NamedLogger]bool),
-		loggerBuffer:   make([]NamedLogger, bufferSize),
+		loggerLookup:   make(map[testLogger]bool),
+		loggerBuffer:   make([]testLogger, bufferSize),
 		nextWriteIndex: 0,
 	}
 }
 
-func (ris *bufferedSingleRandSafety) assertFirstRand(t NamedLogger) {
+func (ris *bufferedSingleRandSafety) assertFirstRand(t testLogger) {
 	ris.Lock()
 	defer ris.Unlock()
 
