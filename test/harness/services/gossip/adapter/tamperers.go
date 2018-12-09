@@ -71,7 +71,7 @@ func (o *delayingTamperer) Release(ctx context.Context) {
 type corruptingTamperer struct {
 	predicate MessagePredicate
 	transport *TamperingTransport
-	ctrlRand  test.ControlledRand
+	ctrlRand  *test.ControlledRand
 }
 
 func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {

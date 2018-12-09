@@ -17,16 +17,17 @@ func init() {
 const singleRandSafetyBufferSize = 1000
 
 var singleRandSafety = newBufferedSingleRandSafety(singleRandSafetyBufferSize)
+var randPreference randomPreference // initialized in init()
 
 type NamedLogger interface {
 	Log(args ...interface{})
 	Name() string
 }
 
-type randMode int
+type controlledRandMode int
 
 const (
-	randPrefInvokeClock randMode = iota
+	randPrefInvokeClock controlledRandMode = iota
 	randPrefLaunchClock
 	randPrefExplicit
 )
@@ -50,11 +51,9 @@ func NewControlledRand(t NamedLogger) *ControlledRand {
 }
 
 type randomPreference struct {
-	mode randMode // default value is randPrefInvokeClock
-	seed int64    // applicable only in mode != randPrefInvokeClock
+	mode controlledRandMode // default value is randPrefInvokeClock
+	seed int64              // applicable only in mode != randPrefInvokeClock
 }
-
-var randPreference randomPreference
 
 func (i *randomPreference) String() string {
 	var preference string
@@ -83,17 +82,16 @@ func (i *randomPreference) Set(value string) error {
 
 type bufferedSingleRandSafety struct {
 	sync.Mutex
-	loggerSet      map[NamedLogger]bool
+	loggerLookup   map[NamedLogger]bool
 	loggerBuffer   []NamedLogger
-	bufferSize     int
 	nextWriteIndex int
 }
 
 func newBufferedSingleRandSafety(bufferSize int) *bufferedSingleRandSafety {
 	return &bufferedSingleRandSafety{
-		loggerSet:    make(map[NamedLogger]bool),
-		loggerBuffer: make([]NamedLogger, bufferSize),
-		bufferSize:   bufferSize,
+		loggerLookup:   make(map[NamedLogger]bool),
+		loggerBuffer:   make([]NamedLogger, bufferSize),
+		nextWriteIndex: 0,
 	}
 }
 
@@ -101,15 +99,19 @@ func (ris *bufferedSingleRandSafety) assertFirstRand(t NamedLogger) {
 	ris.Lock()
 	defer ris.Unlock()
 
-	if ris.loggerSet[t] {
+	if ris.loggerLookup[t] {
 		panic("ControlledRand should be instantiated at most once in each test")
 	}
 
+	// update buffer
 	loggerToEvict := ris.loggerBuffer[ris.nextWriteIndex]
-	if loggerToEvict != nil {
-		delete(ris.loggerSet, loggerToEvict)
-	}
 	ris.loggerBuffer[ris.nextWriteIndex] = t
-	ris.loggerSet[t] = true
-	ris.nextWriteIndex = (ris.nextWriteIndex + 1) % ris.bufferSize
+
+	// update lookup
+	if loggerToEvict != nil {
+		delete(ris.loggerLookup, loggerToEvict)
+	}
+	ris.loggerLookup[t] = true
+
+	ris.nextWriteIndex = (ris.nextWriteIndex + 1) % len(ris.loggerBuffer)
 }
