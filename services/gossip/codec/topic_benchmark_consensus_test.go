@@ -3,8 +3,6 @@ package codec
 import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-
-	//"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -62,7 +60,7 @@ func TestBenchmarkConsensus_BenchmarkConsensusCommittedMessage(t *testing.T) {
 }
 
 func TestBenchmarkConsensus_EmptyBenchmarkConsensusCommittedMessage(t *testing.T) {
-	_, err := DecodeBlockAvailabilityRequest(builders.EmptyPayloads(2))
+	_, err := DecodeBenchmarkConsensusCommittedMessage(builders.EmptyPayloads(2))
 	require.Error(t, err, "decode should fail and return error")
 }
 

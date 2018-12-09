@@ -26,6 +26,24 @@ func TestLeanHelix_LeanHelixMessage(t *testing.T) {
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
 }
 
+func TestLeanHelix_LeanHelixMessageWithNoBlockPair(t *testing.T) {
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+	}).Build()
+
+	message := &gossipmessages.LeanHelixMessage{
+		Content: []byte{},
+	}
+
+	payloads, err := EncodeLeanHelixMessage(header, message)
+	require.NoError(t, err, "encode should not fail")
+	decoded, err := DecodeLeanHelixMessage(header, payloads[1:])
+	require.NoError(t, err, "decode should not fail")
+	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
+	test.RequireDoesNotContainNil(t, decoded)
+}
+
 func TestLeanHelix_EmptyLeanHelixMessage(t *testing.T) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,

@@ -30,7 +30,10 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 		RecipientMode:    gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 
-	payloads := codec.EncodeForwardedTransactions(header, input.Message)
+	payloads, err := codec.EncodeForwardedTransactions(header, input.Message)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
 		SenderPublicKey: s.config.NodePublicKey(),

@@ -6,7 +6,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-func EncodeForwardedTransactions(header *gossipmessages.Header, message *gossipmessages.ForwardedTransactionsMessage) [][]byte {
+func EncodeForwardedTransactions(header *gossipmessages.Header, message *gossipmessages.ForwardedTransactionsMessage) ([][]byte, error) {
+	if message.Sender == nil {
+		return nil, errors.New("missing Sender")
+	}
+	if len(message.SignedTransactions) == 0 {
+		return nil, errors.New("missing SignedTransactions")
+	}
+
 	payloads := make([][]byte, 0, 2+len(message.SignedTransactions))
 	payloads = append(payloads, header.Raw())
 	payloads = append(payloads, message.Sender.Raw())
@@ -14,10 +21,14 @@ func EncodeForwardedTransactions(header *gossipmessages.Header, message *gossipm
 		payloads = append(payloads, tx.Raw())
 	}
 
-	return payloads
+	return payloads, nil
 }
 
 func DecodeForwardedTransactions(payloads [][]byte) (*gossipmessages.ForwardedTransactionsMessage, error) {
+	if len(payloads) < 2 {
+		return nil, errors.New("wrong num of payloads")
+	}
+
 	txs := make([]*protocol.SignedTransaction, 0, len(payloads)-1)
 
 	senderSignature := gossipmessages.SenderSignatureReader(payloads[0])

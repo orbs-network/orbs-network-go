@@ -9,6 +9,9 @@ func EncodeBlockAvailabilityRequest(header *gossipmessages.Header, message *goss
 	if message.SignedBatchRange == nil {
 		return nil, errors.New("missing SignedBatchRange")
 	}
+	if message.Sender == nil {
+		return nil, errors.New("missing Sender")
+	}
 	return [][]byte{header.Raw(), message.SignedBatchRange.Raw(), message.Sender.Raw()}, nil
 }
 
@@ -35,6 +38,9 @@ func DecodeBlockAvailabilityRequest(payloads [][]byte) (*gossipmessages.BlockAva
 func EncodeBlockAvailabilityResponse(header *gossipmessages.Header, message *gossipmessages.BlockAvailabilityResponseMessage) ([][]byte, error) {
 	if message.SignedBatchRange == nil {
 		return nil, errors.New("missing SignedBatchRange")
+	}
+	if message.Sender == nil {
+		return nil, errors.New("missing Sender")
 	}
 	return [][]byte{header.Raw(), message.SignedBatchRange.Raw(), message.Sender.Raw()}, nil
 }
@@ -63,6 +69,9 @@ func EncodeBlockSyncRequest(header *gossipmessages.Header, message *gossipmessag
 	if message.SignedChunkRange == nil {
 		return nil, errors.New("missing SignedChunkRange")
 	}
+	if message.Sender == nil {
+		return nil, errors.New("missing Sender")
+	}
 	return [][]byte{header.Raw(), message.SignedChunkRange.Raw(), message.Sender.Raw()}, nil
 }
 
@@ -87,9 +96,16 @@ func DecodeBlockSyncRequest(payloads [][]byte) (*gossipmessages.BlockSyncRequest
 }
 
 func EncodeBlockSyncResponse(header *gossipmessages.Header, message *gossipmessages.BlockSyncResponseMessage) ([][]byte, error) {
-	if message.SignedChunkRange == nil || len(message.BlockPairs) == 0 {
-		return nil, errors.New("missing SignedChunkRange or BlockPairs")
+	if message.SignedChunkRange == nil {
+		return nil, errors.New("missing SignedChunkRange")
 	}
+	if len(message.BlockPairs) == 0 {
+		return nil, errors.New("missing BlockPairs")
+	}
+	if message.Sender == nil {
+		return nil, errors.New("missing Sender")
+	}
+
 	payloads := [][]byte{header.Raw(), message.SignedChunkRange.Raw(), message.Sender.Raw()}
 
 	blockPairPayloads, err := EncodeBlockPairs(message.BlockPairs)

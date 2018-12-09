@@ -29,6 +29,9 @@ func EncodeBenchmarkConsensusCommittedMessage(header *gossipmessages.Header, mes
 	if message.Status == nil {
 		return nil, errors.New("missing Status")
 	}
+	if message.Sender == nil {
+		return nil, errors.New("missing Sender")
+	}
 	return [][]byte{header.Raw(), message.Status.Raw(), message.Sender.Raw()}, nil
 }
 

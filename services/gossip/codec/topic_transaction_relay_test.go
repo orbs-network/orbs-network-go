@@ -20,7 +20,8 @@ func TestTransactionRelay_ForwardedTransactionsMessage(t *testing.T) {
 		},
 	}
 
-	payloads := EncodeForwardedTransactions((&gossipmessages.HeaderBuilder{}).Build(), message)
+	payloads, err := EncodeForwardedTransactions((&gossipmessages.HeaderBuilder{}).Build(), message)
+	require.NoError(t, err, "encode should not fail")
 	decoded, err := DecodeForwardedTransactions(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
@@ -42,7 +43,8 @@ func TestTransactionRelay_ForwardedTransactionsMessageDoNotFailWhenSenderContain
 		},
 	}
 
-	payloads := EncodeForwardedTransactions((&gossipmessages.HeaderBuilder{}).Build(), message)
+	payloads, err := EncodeForwardedTransactions((&gossipmessages.HeaderBuilder{}).Build(), message)
+	require.NoError(t, err, "encode should not fail")
 	decoded, err := DecodeForwardedTransactions(payloads[1:])
 	require.NoError(t, err, "decode should not fail")
 	test.RequireCmpEqual(t, message, decoded, "decoded encoded should equal to original")
