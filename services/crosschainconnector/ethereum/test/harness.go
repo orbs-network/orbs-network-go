@@ -47,12 +47,11 @@ func (h *harness) getAddress() string {
 func newEthereumConnectorHarness() *harness {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	conn := adapter.NewEthereumSimulatorConnection(logger)
-	ctx := context.Background()
 
 	return &harness{
 		adapter:   conn,
 		logger:    logger,
-		connector: ethereum.NewEthereumCrosschainConnector(ctx, conn, logger),
+		connector: ethereum.NewEthereumCrosschainConnector(conn, logger),
 	}
 }
 

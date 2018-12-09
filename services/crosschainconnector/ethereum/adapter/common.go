@@ -18,8 +18,8 @@ type ethereumAdapterConfig interface {
 }
 
 type EthereumConnection interface {
-	CallContract(ctx context.Context, address []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error)
-	GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*TransactionLog, error)
+	CallContract(ctx context.Context, contractAddress []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error)
+	GetTransactionLogs(ctx context.Context, txHash primitives.Uint256, eventSignature []byte) ([]*TransactionLog, error)
 }
 
 type connectorCommon struct {
@@ -32,22 +32,22 @@ type EthereumCaller interface {
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 }
 
-func (c *connectorCommon) CallContract(ctx context.Context, address []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error) {
+func (c *connectorCommon) CallContract(ctx context.Context, contractAddress []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error) {
 	client, err := c.getContractCaller()
 	if err != nil {
 		return nil, err
 	}
 
-	contractAddress := common.BytesToAddress(address)
+	address := common.BytesToAddress(contractAddress)
 
 	// we do not support pending calls, opts is always empty
 	opts := new(bind.CallOpts)
 
-	msg := ethereum.CallMsg{From: opts.From, To: &contractAddress, Data: packedInput}
+	msg := ethereum.CallMsg{From: opts.From, To: &address, Data: packedInput}
 	output, err := client.CallContract(ctx, msg, blockNumber)
 	if err == nil && len(output) == 0 {
 		// Make sure we have a contract to operate on, and bail out otherwise.
-		if code, err := client.CodeAt(ctx, contractAddress, blockNumber); err != nil {
+		if code, err := client.CodeAt(ctx, address, blockNumber); err != nil {
 			return nil, err
 		} else if len(code) == 0 {
 			return nil, bind.ErrNoCode
@@ -57,8 +57,7 @@ func (c *connectorCommon) CallContract(ctx context.Context, address []byte, pack
 	return output, err
 }
 
-func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*TransactionLog, error) {
-	c.logger.Info("getting transaction logs", log.Stringable("txHash", txHash))
+func (c *connectorCommon) GetTransactionLogs(ctx context.Context, txHash primitives.Uint256, eventSignature []byte) ([]*TransactionLog, error) {
 	client, err := c.getContractCaller()
 	if err != nil {
 		return nil, err
@@ -68,7 +67,6 @@ func (c *connectorCommon) GetLogs(ctx context.Context, txHash primitives.Uint256
 	if err != nil {
 		return nil, errors.Wrapf(err, "error getting receipt for transaction with hash %s", txHash)
 	}
-
 	if receipt == nil {
 		return nil, errors.Wrapf(err, "got no logs for transaction with hash %s", txHash)
 	}

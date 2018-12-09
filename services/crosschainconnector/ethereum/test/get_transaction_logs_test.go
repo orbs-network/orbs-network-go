@@ -22,35 +22,38 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		logger := log.GetLogger()
 		simulator := adapter.NewEthereumSimulatorConnection(logger)
 		auth := simulator.GetAuth()
-		connector := ethereum.NewEthereumCrosschainConnector(ctx, simulator, logger)
+		connector := ethereum.NewEthereumCrosschainConnector(simulator, logger)
 
 		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
 		require.NoError(t, err, "failed parsing ABI")
 
-		contractAddress, contract, err := simulator.DeployEmitEvent(auth, parsedABI)
+		contractAddress, deployedContract, err := simulator.DeployEmitEvent(auth, parsedABI)
 		simulator.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
 		amount := big.NewInt(42)
-		tx, err := contract.Transact(auth, "transferOut", big.NewInt(0), [20]byte{}, [20]byte{}, amount)
+		tuid := big.NewInt(33)
+		ethAddress := [20]byte{0x01, 0x02, 0x03}
+		orbsAddress := [20]byte{0x04, 0x05, 0x06}
+
+		tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
 		simulator.Commit()
 		require.NoError(t, err, "failed emitting event")
-
-		eventABI := parsedABI.Events["TransferredOut"]
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 			EthereumContractAddress: hexutil.Encode(contractAddress),
 			EthereumTxhash:          primitives.Uint256(tx.Hash().Bytes()),
-			EventSignature:          string(eventABI.Id().Bytes()),
+			EthereumEventName:       "TransferredOut",
+			EthereumJsonAbi:         contract.EmitEventAbi,
 			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
 		})
-
 		require.NoError(t, err, "failed getting logs")
 
-		require.Len(t, out.EthereumPackedEventTopics, 4, "did not get 4 topics from event (expecting 4 topics since event has 3 indexed fields, the first topic being the event signature)")
-
-		outAmount, err := eventABI.Inputs.UnpackValues(out.EthereumPackedEventData)
+		outArgs, err := ethereum.ABIUnpackAllEventArgumentsValues(parsedABI, "TransferredOut", out.EthereumAbiPackedOutput)
 		require.NoError(t, err, "failed getting amount from tx log")
-		require.EqualValues(t, amount, outAmount[0], "failed getting amount from unpacked data")
+		require.EqualValues(t, tuid, outArgs[0], "failed getting tuid from unpacked data")
+		require.EqualValues(t, ethAddress, outArgs[1], "failed getting ethAddress from unpacked data")
+		require.EqualValues(t, orbsAddress, outArgs[2], "failed getting orbsAddress from unpacked data")
+		require.EqualValues(t, amount, outArgs[3], "failed getting amount from unpacked data")
 	})
 }
