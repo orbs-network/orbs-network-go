@@ -29,22 +29,28 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 
 		// send three identical transactions to two nodes
 		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
-		response0, _ := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		response0, txHash := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
 		response1, _ := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
 
 		require.Contains(t, STATUS_COMMITTED_OR_PENDING_OR_DUPLICATE, response0.TransactionStatus(), "second transaction should be accepted into the pool or rejected as duplidate")
 		require.Contains(t, STATUS_DUPLICATE, response1.TransactionStatus(), "third transaction should be rejected as a duplicate")
 
-		require.True(t, response0.BlockHeight() <= response1.BlockHeight(), "second response must reference a later block height than first")
-
-		requireTxCommittedOnce(ctx, t, response1.BlockHeight()+5, network, response0.TransactionReceipt().Txhash())
-
+		requireTxCommittedOnce(ctx, t, network, txHash)
 	})
 }
 
-func requireTxCommittedOnce(ctx context.Context, t *testing.T, height primitives.BlockHeight, network harness.TestNetworkDriver, txHash primitives.Sha256) {
-	err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, height)
+func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.TestNetworkDriver, txHash primitives.Sha256) {
+	// wait for the tx to be seen as committed in state
+	network.WaitForTransactionInState(ctx, txHash)
+	txHeight, err := network.BlockPersistence(0).GetNumBlocks()
+	require.NoError(t, err)
+
+	// wait for 5 more blocks to be committed
+	height := txHeight + 5
+	err = network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, height)
 	require.NoError(t, err, "expected to reach target block height before proceeding with test")
+
+	// count receipts for txHash in leader block storage
 	receiptCount := 0
 	blocks, _, _, err := network.BlockPersistence(0).GetBlocks(1, height)
 	require.NoError(t, err, "GetBlocks should return blocks")
@@ -81,6 +87,6 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 		t.Logf("received status %s in second SendTransaction", secondAttemptResponse.TransactionStatus().String())
 		require.Contains(t, STATUS_COMMITTED_OR_DUPLICATE, secondAttemptResponse.TransactionStatus(), "second attempt must return COMMITTED or DUPLICATE status")
 
-		requireTxCommittedOnce(ctx, t, secondAttemptResponse.BlockHeight()+5, network, txHash)
+		requireTxCommittedOnce(ctx, t, network, txHash)
 	})
 }
