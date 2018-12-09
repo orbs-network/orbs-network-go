@@ -16,7 +16,7 @@ func init() {
 
 const singleRandSafetyBufferSize = 1000
 
-var singleRandSafety = newBufferedSingleRandSafety(singleRandSafetyBufferSize)
+var singleRandPerTestSafety = newBufferedSingleRandSafety(singleRandSafetyBufferSize)
 var randPreference randomPreference // initialized in init()
 
 type NamedLogger interface {
@@ -37,7 +37,7 @@ type ControlledRand struct {
 }
 
 func NewControlledRand(t NamedLogger) *ControlledRand {
-	singleRandSafety.assertFirstRand(t)
+	singleRandPerTestSafety.assertFirstRand(t)
 
 	var newSeed int64
 	if randPreference.mode == randPrefInvokeClock {
