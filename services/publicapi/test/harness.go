@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -77,10 +78,14 @@ func (h *harness) transactionIsCommitedInPool() {
 	h.bksMock.Never("GetTransactionReceipt", mock.Any)
 }
 
-func (h *harness) transactionIsNotInPoolIsInBlockStorage() {
+func (h *harness) transactionIsNotInPool() {
 	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any, mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
 		TransactionStatus: protocol.TRANSACTION_STATUS_NO_RECORD_FOUND,
 	}).Times(1)
+}
+
+func (h *harness) transactionIsNotInPoolIsInBlockStorage() {
+	h.transactionIsNotInPool()
 	h.bksMock.When("GetTransactionReceipt", mock.Any, mock.Any).Return(
 		&services.GetTransactionReceiptOutput{
 			TransactionReceipt: builders.TransactionReceipt().Build(),
@@ -93,6 +98,26 @@ func (h *harness) runTransactionSuccess() {
 			CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
 			OutputArgumentArray: nil,
 		})
+}
+
+func (h *harness) transactionHasProof() {
+	h.transactionIsCommitedInPool()
+	h.bksMock.When("GenerateReceiptProof", mock.Any, mock.Any).Return(
+		&services.GenerateReceiptProofOutput{
+			Proof: (&protocol.ReceiptProofBuilder {
+			}).Build(),
+		}).Times(1)
+}
+
+func (h *harness) transactionPendingNoProofCalled() {
+	h.transactionIsPendingInPool()
+	h.bksMock.Never("GenerateReceiptProof", mock.Any)
+}
+
+func (h *harness) getTransactionStatusFailed() {
+	h.transactionIsNotInPool()
+	h.bksMock.When("GetTransactionReceipt", mock.Any, mock.Any).Return(nil, errors.Errorf("stam")).Times(1)
+	h.bksMock.Never("GenerateReceiptProof", mock.Any)
 }
 
 func (h *harness) verifyMocks(t *testing.T) {

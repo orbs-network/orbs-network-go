@@ -202,6 +202,23 @@ func TestTreeCalculatedHash(t *testing.T) {
 	}
 }
 
+func TestTreeOneValue(t *testing.T) {
+	vals := fakeHashValues([]int{1})
+	tree := NewOrderedTree(vals)
+	require.Equal(t, tree.root.hash, vals[0], "calculated hash mismatch")
+	proof, _ := tree.GetProof(0)
+	require.Len(t, proof, 0, "wrong length")
+	err := Verify(vals[0], proof, tree.root.hash)
+	require.NoError(t, err, "proof verification failed")
+}
+
+func TestTreeNoValues(t *testing.T) {
+	tree := NewOrderedTree(nil)
+	require.Equal(t, tree.root.hash, getEmptyHash(), "calculated hash mismatch")
+	_, err := tree.GetProof(0)
+	require.Error(t, err, "proof cannot be created")
+}
+
 // =================
 // helpers
 // =================
@@ -241,7 +258,7 @@ func hashTreeInTest(n *node) primitives.Sha256 {
 func fakeHashValues(vals []int) []primitives.Sha256 {
 	hashValues := make([]primitives.Sha256, len(vals))
 	for i, v := range vals {
-		b := make([]byte, 32)
+		b := getEmptyHash()
 		b[31] = byte(v)
 		hashValues[i] = b
 	}

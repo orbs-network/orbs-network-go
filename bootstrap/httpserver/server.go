@@ -108,6 +108,7 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/send-transaction", http.HandlerFunc(s.sendTransactionHandler))
 	router.Handle("/api/v1/call-method", http.HandlerFunc(s.callMethodHandler))
 	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(s.getTransactionStatusHandler))
+	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(s.getTransactionReceiptProofHandler))
 	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
 	return router
@@ -190,6 +191,28 @@ func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Requ
 
 	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetTransactionStatus(r.Context(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
+	if result != nil && result.ClientResponse != nil {
+		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
+	} else {
+		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+	}
+}
+
+func (s *server) getTransactionReceiptProofHandler(w http.ResponseWriter, r *http.Request) {
+	bytes, e := readInput(r)
+	if e != nil {
+		s.writeErrorResponseAndLog(w, e)
+		return
+	}
+
+	clientRequest := client.GetTransactionReceiptProofRequestReader(bytes)
+	if e := validate(clientRequest); e != nil {
+		s.writeErrorResponseAndLog(w, e)
+		return
+	}
+
+	s.logger.Info("http server received get-transaction-receipt-proof", log.Stringable("request", clientRequest))
+	result, err := s.publicApi.GetTransactionReceiptProof(r.Context(), &services.GetTransactionReceiptProofInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
 	} else {

@@ -22,6 +22,10 @@ func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetT
 	txHash := input.ClientRequest.Txhash()
 	timestamp := input.ClientRequest.TransactionTimestamp()
 
+	return s.getTransactionStatus(ctx, txHash, timestamp)
+}
+
+func (s *service) getTransactionStatus(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*services.GetTransactionStatusOutput, error) {
 	start := time.Now()
 	defer s.metrics.getTransactionStatusTime.RecordSince(start)
 

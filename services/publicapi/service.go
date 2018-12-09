@@ -103,11 +103,15 @@ func (s *service) HandleTransactionError(ctx context.Context, input *handlers.Ha
 }
 
 func isTransactionRequestValid(config config.PublicApiConfig, tx *protocol.Transaction) protocol.TransactionStatus {
-	if config.VirtualChainId() != tx.VirtualChainId() {
+	return isTransactionValuesValid(config, tx.VirtualChainId(), tx.ProtocolVersion())
+}
+
+func isTransactionValuesValid(config config.PublicApiConfig, vcId primitives.VirtualChainId, protocolVersion primitives.ProtocolVersion) protocol.TransactionStatus {
+	if config.VirtualChainId() != vcId {
 		return protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH
 	}
 
-	if primitives.ProtocolVersion(1) != tx.ProtocolVersion() {
+	if primitives.ProtocolVersion(1) != protocolVersion {
 		return protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION
 	}
 
