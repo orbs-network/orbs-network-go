@@ -61,7 +61,6 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 
 	// TODO(v1): use input.ReferenceTimestamp to reduce non-determinism here (ask OdedW how)
 	logs, err := s.connection.GetTransactionLogs(ctx, input.EthereumTxhash, eventABI.Id().Bytes())
-
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting logs for Ethereum txhash %s of contract %s", input.EthereumTxhash, input.EthereumContractAddress)
 	}
