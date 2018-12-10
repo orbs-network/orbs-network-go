@@ -5,8 +5,16 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 	"strings"
 )
+
+type EmitEvent struct {
+	Tuid        *big.Int
+	EthAddress  [20]byte
+	OrbsAddress [20]byte
+	Value       *big.Int
+}
 
 const EmitEventAbi = `
 [

@@ -51,23 +51,23 @@ func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnectio
 		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
 		require.NoError(t, err, "failed parsing ABI")
 
-		contractAddress, contract, err := adapter.DeployEmitEvent(auth, parsedABI)
+		contractAddress, emitEventContract, err := adapter.DeployEmitEvent(auth, parsedABI)
 		commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
 		tuid := big.NewInt(17)
 		ethAddress := common.HexToAddress("80755fE3D774006c9A9563A09310a0909c42C786")
 		orbsAddress := [20]byte{0x1, 0x2, 0x3}
-		eventValue := big.NewInt(42)
+		amount := big.NewInt(42)
 
-		tx, err := contract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, eventValue)
+		tx, err := emitEventContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
 		commit()
 		require.NoError(t, err, "failed emitting event")
 
 		eventABI := parsedABI.Events["TransferredOut"]
 		eventSignature := eventABI.Id().Bytes()
 
-		logs, err := adapter.GetLogs(ctx, primitives.Uint256(tx.Hash().Bytes()), contractAddress, eventSignature)
+		logs, err := adapter.GetTransactionLogs(ctx, primitives.Uint256(tx.Hash().Bytes()), eventSignature)
 		require.NoError(t, err, "failed getting logs")
 
 		require.Len(t, logs, 1, "did not get the expected event log")
@@ -76,20 +76,18 @@ func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnectio
 		require.Equal(t, contractAddress, log.ContractAddress, "contract address in log differed from actual contract address")
 		require.Equal(t, eventSignature, log.PackedTopics[0], "event returned did not have the expected signature as the first topic")
 
-		data, err := log.UnpackDataUsing(eventABI)
+		data, err := eventABI.Inputs.UnpackValues(log.Data)
 		require.NoError(t, err, "failed unpacking data")
 
 		require.Len(t, data, 1, "got unexpected items in log data")
-		require.EqualValues(t, eventValue, data[0], "did not get expected value from event")
+		require.EqualValues(t, amount, data[0], "did not get expected value from event")
 
-		eventTuid, err := log.PackedTopics.BigIntAt(1)
-		require.EqualValues(t, tuid, eventTuid, "failed unpacking tuid")
+		outTuid := big.NewInt(0)
+		outTuid.SetBytes(log.PackedTopics[1])
+		require.EqualValues(t, tuid, outTuid, "failed unpacking tuid")
 
-		eventEthAddress, err := log.PackedTopics.BytesAt(2, len(ethAddress))
+		eventEthAddress := log.PackedTopics[2][32-len(ethAddress):]
 		require.EqualValues(t, ethAddress.Bytes(), eventEthAddress, "failed unpacking ethAddress")
-
-		//TODO orbs address seems to be big-endian
-
 	}
 }
 

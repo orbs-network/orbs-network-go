@@ -15,14 +15,14 @@ import (
 var exampleAddress1, _ = hex.DecodeString("1acb19a469206161ed7e5ed9feb996a6e24be441") // ripmd160
 var exampleAddress2, _ = hex.DecodeString("223344a469206161ed7e5ed9feb996a6e24be441") // ripmd160
 
-func TestGetSignerAddress(t *testing.T) {
+func TestSdkAddress_GetSignerAddress(t *testing.T) {
 	s := createAddressSdk()
 
 	address := s.SdkAddressGetSignerAddress(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE)
 	require.EqualValues(t, exampleAddress1, address, "example1 should be returned")
 }
 
-func TestGetCallerAddress(t *testing.T) {
+func TestSdkAddress_GetCallerAddress(t *testing.T) {
 	s := createAddressSdk()
 
 	address := s.SdkAddressGetCallerAddress(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE)

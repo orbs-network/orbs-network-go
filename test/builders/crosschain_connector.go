@@ -51,10 +51,10 @@ func (ec *ethereumConnector) WithPackedArguments(data []byte) *ethereumConnector
 
 func (ec *ethereumConnector) Build() *services.EthereumCallContractInput {
 	return &services.EthereumCallContractInput{
-		ReferenceTimestamp:           ec.timestamp,
-		EthereumPackedInputArguments: ec.packedArgs,
-		EthereumContractAddress:      ec.contractAddress,
-		EthereumAbi:                  ec.abi,
-		EthereumFunctionName:         ec.functionName,
+		ReferenceTimestamp:              ec.timestamp,
+		EthereumAbiPackedInputArguments: ec.packedArgs,
+		EthereumContractAddress:         ec.contractAddress,
+		EthereumJsonAbi:                 ec.abi,
+		EthereumFunctionName:            ec.functionName,
 	}
 }

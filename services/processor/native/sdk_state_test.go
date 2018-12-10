@@ -21,7 +21,7 @@ func exampleKeyAddress() []byte {
 	return hash.CalcRipmd160Sha256([]byte(exampleKey()))
 }
 
-func TestWriteReadBytesByAddress(t *testing.T) {
+func TestSdkState_WriteReadBytesByAddress(t *testing.T) {
 	s := createStateSdk()
 	s.SdkStateWriteBytesByAddress(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE, exampleKeyAddress(), []byte{0x01, 0x02, 0x03})
 

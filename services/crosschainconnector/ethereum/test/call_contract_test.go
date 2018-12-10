@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math/big"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -19,7 +21,7 @@ func TestContractCallBadNodeConfig(t *testing.T) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 		config := &ethereumConnectorConfigForTests{"all your base"}
 		conn := adapter.NewEthereumRpcConnection(config, logger)
-		connector := ethereum.NewEthereumCrosschainConnector(ctx, conn, logger)
+		connector := ethereum.NewEthereumCrosschainConnector(conn, logger)
 		input := builders.EthereumCallContractInput().Build() // don't care about specifics
 
 		_, err := connector.EthereumCallContract(ctx, input)
@@ -46,14 +48,16 @@ func TestCallContractWithoutArgs(t *testing.T) {
 
 		output, err := h.connector.EthereumCallContract(ctx, input)
 		require.NoError(t, err, "expecting call to succeed")
-		require.True(t, len(output.EthereumPackedOutput) > 0, "expecting output to have some data")
-		t.Log(output.EthereumPackedOutput)
+		require.True(t, len(output.EthereumAbiPackedOutput) > 0, "expecting output to have some data")
+
+		t.Log(output.EthereumAbiPackedOutput)
 		ret := new(struct { // this is the expected return type of that ethereum call for the SimpleStorage contract getValues
 			IntValue    *big.Int
 			StringValue string
 		})
-		ethereumUnpackOutput(output.EthereumPackedOutput, methodToCall, ret)
 
+		parsedABI, _ := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
+		ethereum.ABIUnpackFunctionOutputArguments(parsedABI, ret, methodToCall, output.EthereumAbiPackedOutput)
 		require.Equal(t, initText, ret.StringValue, "text part from eth")
 	})
 }

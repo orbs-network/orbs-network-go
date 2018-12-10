@@ -35,3 +35,27 @@ func TestSdkEthereum_CallMethod(t *testing.T) {
 		h.verifyEthereumConnectorMethodCalled(t)
 	})
 }
+
+func TestSdkEthereum_GetTransactionLog(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness()
+		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
+
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+			t.Log("Ethereum.GetTransactionLog")
+			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "getTransactionLog", "EthContractAddress", "EthJsonAbi", []byte{0x01, 0x02, 0x03}, "EthEventName")
+			require.NoError(t, err, "handleSdkCall should not fail")
+			require.Equal(t, []byte{0x04, 0x05, 0x06}, res[0].BytesValue(), "handleSdkCall result should be equal")
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+		})
+		h.expectEthereumConnectorGetTransactionLogs("EthContractAddress", "EthEventName", nil, []byte{0x04, 0x05, 0x06})
+
+		h.processTransactionSet(ctx, []*contractAndMethod{
+			{"Contract1", "method1"},
+		})
+
+		h.verifySystemContractCalled(t)
+		h.verifyNativeContractMethodCalled(t)
+		h.verifyEthereumConnectorMethodCalled(t)
+	})
+}

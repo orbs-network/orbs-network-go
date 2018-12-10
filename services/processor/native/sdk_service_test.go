@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestServiceSdk_CallMethod(t *testing.T) {
+func TestSdkService_CallMethod(t *testing.T) {
 	s := createServiceSdk()
 
 	res := s.SdkServiceCallMethod(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "AnotherContract", "someMethod", uint64(17), "hello")
