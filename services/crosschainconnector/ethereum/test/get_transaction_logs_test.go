@@ -49,13 +49,7 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		})
 		require.NoError(t, err, "failed getting logs")
 
-		event := new(struct {
-			Tuid        *big.Int
-			EthAddress  [20]byte
-			OrbsAddress [20]byte
-			Value       *big.Int
-		})
-
+		event := new(contract.EmitEvent)
 		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "TransferredOut", out.EthereumAbiPackedOutput)
 		require.NoError(t, err, "failed getting amount from tx log")
 		require.EqualValues(t, ethAddress, event.EthAddress, "failed getting ethAddress from unpacked data")
