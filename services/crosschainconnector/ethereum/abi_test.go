@@ -47,7 +47,7 @@ func TestABI_UnpackFunctionOutput(t *testing.T) {
 	require.Equal(t, "are belong to us", ret.StringValue, "text part from eth")
 }
 
-func TestABI_UnpackAllEventArgumentsValues(t *testing.T) {
+func TestABI_UnpackAllEventArgument(t *testing.T) {
 	ABIEvent := `[{"anonymous": false,"inputs": [{"indexed": true,"name": "tuid","type": "uint256"},{"indexed": false,"name": "value","type": "uint256"}],"name": "MyEvent","type": "event"}]`
 	parsedAbi := parseABIForTests(t, ABIEvent)
 	outputData := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22}

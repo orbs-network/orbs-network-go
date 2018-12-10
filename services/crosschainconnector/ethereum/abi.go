@@ -24,15 +24,6 @@ func ABIUnpackAllEventArguments(abi abi.ABI, out interface{}, eventName string, 
 	return cloneEventABIWithoutIndexed(eventABI).Inputs.Unpack(out, packedOutput)
 }
 
-func ABIUnpackAllEventArgumentsValues(abi abi.ABI, eventName string, packedOutput []byte) ([]interface{}, error) {
-	eventABI, found := abi.Events[eventName]
-	if !found {
-		return nil, errors.Errorf("event with name '%s' not found in ABI", eventName)
-	}
-
-	return cloneEventABIWithoutIndexed(eventABI).Inputs.UnpackValues(packedOutput)
-}
-
 func cloneEventABIWithoutIndexed(eventABI abi.Event) abi.Event {
 	clone := eventABI
 	clone.Inputs = nil
