@@ -27,15 +27,17 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, logge
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("calling contract", log.String("contract-address", input.EthereumContractAddress), log.String("function", input.EthereumFunctionName))
-
-	contractAddress, err := hexutil.Decode(input.EthereumContractAddress)
+	refenceBlockNumber, err := s.connection.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("calling contract at", log.String("address", input.EthereumContractAddress))
+	address, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO(v1): use input.ReferenceTimestamp to find the reference block number (last param)
-	output, err := s.connection.CallContract(ctx, contractAddress, input.EthereumAbiPackedInputArguments, nil)
+	output, err := s.connection.CallContract(ctx, address, input.EthereumPackedInputArguments, refenceBlockNumber)
 	if err != nil {
 		return nil, err
 	}

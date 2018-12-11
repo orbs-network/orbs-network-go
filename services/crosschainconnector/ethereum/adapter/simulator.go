@@ -1,12 +1,14 @@
 package adapter
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
 	"sync"
 )
@@ -42,6 +44,10 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 		}
 
 		return e.mu.simClient, nil
+	}
+
+	e.getBlockByTimestamp = func(context context.Context, nano primitives.TimestampNano) (i *big.Int, e error) {
+		return nil, nil
 	}
 
 	return e

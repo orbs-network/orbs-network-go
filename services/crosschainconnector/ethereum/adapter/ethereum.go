@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -21,29 +20,18 @@ type ethereumAdapterConfig interface {
 type EthereumConnection interface {
 	CallContract(ctx context.Context, address []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error)
 	GetLogs(ctx context.Context, txHash primitives.Uint256, contractAddress []byte, eventSignature []byte) ([]*TransactionLog, error)
-	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (int64, error)
+	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (*big.Int, error)
 }
 
 type connectorCommon struct {
-	logger            log.BasicLogger
-	getContractCaller func() (EthereumCaller, error)
+	logger              log.BasicLogger
+	getContractCaller   func() (EthereumCaller, error)
+	getBlockByTimestamp func(context.Context, primitives.TimestampNano) (*big.Int, error)
 }
 
 type EthereumCaller interface {
 	bind.ContractBackend
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
-}
-
-func (c *connectorCommon) getFullClient() (*ethclient.Client, error) {
-	if client, err := c.getContractCaller(); err != nil {
-		return nil, err
-	} else {
-		if fullClient, ok := client.(*ethclient.Client); !ok {
-			return nil, errors.New("unable to get the full ethereum client")
-		} else {
-			return fullClient, nil
-		}
-	}
 }
 
 func (c *connectorCommon) CallContract(ctx context.Context, address []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error) {
