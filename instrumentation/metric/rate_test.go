@@ -6,20 +6,36 @@ import (
 	"time"
 )
 
-func TestRate_Measure(t *testing.T) {
-	t.Skip("this test is for Shai")
+func testRateMeasure(t *testing.T, measure func(rate *Rate)) {
+	start := time.Now()
+	rate := newRateWihStart("tps", start)
 
-	rate := newRateWithInterval("tps", 10*time.Millisecond)
-	baseRate := rate.movingAverage.Value()
+	require.EqualValues(t, 0, rate.export().Rate)
+	measure(rate)
 
-	require.EqualValues(t, 0, baseRate)
-	for i := 0; i < 100; i++ {
-		rate.Measure(1)
+	rate.maybeRotateAsOf(start.Add(1100 * time.Millisecond))
+
+	require.EqualValues(t, 100, rate.export().Rate)
+
+	for i := 1; i < 10; i++ {
+		rate.maybeRotateAsOf(start.Add(time.Duration(i) * time.Second))
 	}
 
-	time.Sleep(10 * time.Millisecond)
-	require.EqualValues(t, 100, baseRate)
+	require.Condition(t, func() bool {
+		return rate.export().Rate < 100
+	}, "rate did not decay")
+}
 
-	time.Sleep(10 * time.Millisecond)
-	require.EqualValues(t, 50, baseRate)
+func TestRate_MeasureSingleValue(t *testing.T) {
+	testRateMeasure(t, func(rate *Rate) {
+		rate.Measure(100)
+	})
+}
+
+func TestRate_MeasureLoop(t *testing.T) {
+	testRateMeasure(t, func(rate *Rate) {
+		for i := 0; i < 100; i++ {
+			rate.Measure(1)
+		}
+	})
 }
