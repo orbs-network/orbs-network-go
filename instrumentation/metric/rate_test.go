@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-func TestRate_Measure(t *testing.T) {
+func testRateMeasure(t *testing.T, measure func(rate *Rate)) {
 	start := time.Now()
 	rate := newRateWihStart("tps", start)
 
 	require.EqualValues(t, 0, rate.export().Rate)
-	rate.Measure(100)
+	measure(rate)
 
 	rate.maybeRotateAsOf(start.Add(1100 * time.Millisecond))
 
@@ -24,5 +24,18 @@ func TestRate_Measure(t *testing.T) {
 	require.Condition(t, func() bool {
 		return rate.export().Rate < 100
 	}, "rate did not decay")
+}
 
+func TestRate_MeasureSingleValue(t *testing.T) {
+	testRateMeasure(t, func(rate *Rate) {
+		rate.Measure(100)
+	})
+}
+
+func TestRate_MeasureLoop(t *testing.T) {
+	testRateMeasure(t, func(rate *Rate) {
+		for i := 0; i < 100; i++ {
+			rate.Measure(1)
+		}
+	})
 }
