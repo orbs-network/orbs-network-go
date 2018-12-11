@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
 )
 
@@ -24,22 +23,12 @@ func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
 	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
 }
 
-func (b *BlockPairWrapper) BlockHash() lhprimitives.Uint256 {
-	// TODO This is surely incorrect, fix to use the right hash
-	return lhprimitives.Uint256(b.blockPair.TransactionsBlock.Header.MetadataHash())
-}
-
 func ToBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapper {
 	return &BlockPairWrapper{
 		blockPair: blockPair,
 	}
 }
 
-// TODO This should be updated on commit!!!
-// Currently put the state of the last committed block here, but it might not be the right place for it.
-// See https://tree.taiga.io/project/orbs-network/us/404
-
-// TODO Remove lastCommitedBlock - state must be in lib only
 type blockProvider struct {
 	logger           log.BasicLogger
 	blockStorage     services.BlockStorage
@@ -93,9 +82,11 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 	}
 
 	// generate signed block
-	// TODO what to do in case of error - similar to handling timeout
-	pair, _ := signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock, p.nodePrivateKey)
+	pair, err := signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock, p.nodePrivateKey)
 	blockPairWrapper := ToBlockPairWrapper(pair)
+	if err != nil {
+		return nil
+	}
 
 	p.logger.Info("RequestNewBlock() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
 
@@ -118,7 +109,6 @@ func deepHash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.Re
 	return xorHash
 }
 
-// TODO Consider adding Validate() on leanhelix.Block that will call this method
 func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
 	if block == nil {
 		return false
@@ -161,9 +151,6 @@ func generateGenesisBlock(nodePrivateKey primitives.Ed25519PrivateKey) *protocol
 	return blockPair
 }
 
-func (s *service) updateLastCommit(mode handlers.HandleBlockConsensusMode, blockPair *protocol.BlockPairContainer) {
-}
-
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
@@ -173,8 +160,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 		return errors.Errorf("incorrect block proof type: %v", blockPair.ResultsBlock.BlockProof.Type())
 	}
 
-	// TODO IMPL THIS - return "valid" until validation logic is implemented
-	//  (maybe take from benchmark)
+	// TODO Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
 	return nil
 }
 
@@ -191,17 +177,22 @@ func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, r
 		return nil, err
 	}
 
-	// TODO Fill BlockProof here once implemented in LH lib
 	// generate tx block proof
 	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
 		Type:      protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: &consensus.LeanHelixBlockProofBuilder{},
+		LeanHelix: &consensus.LeanHelixBlockProofBuilder{
+			// TODO Transactions BlockProof goes here https://tree.taiga.io/project/orbs-network/us/529
+			// See https://tree.taiga.io/project/orbs-network/us/529
+		},
 	}).Build()
 
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type:      protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: &consensus.LeanHelixBlockProofBuilder{},
+		LeanHelix: &consensus.LeanHelixBlockProofBuilder{
+			// TODO Results BlockProof goes here https://tree.taiga.io/project/orbs-network/us/529
+			// See https://tree.taiga.io/project/orbs-network/us/529
+		},
 	}).Build()
 	return blockPair, nil
 }

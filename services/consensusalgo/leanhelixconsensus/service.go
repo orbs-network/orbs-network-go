@@ -75,8 +75,7 @@ func NewLeanHelixConsensusAlgo(
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodePublicKey(), config.NodePrivateKey())
 
-	// TODO Configure to be 5 times the minimum wait for transactions (consensus context)
-
+	// Configure to be ~5 times the minimum wait for transactions (consensus context)
 	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
 
 	s := &service{
@@ -118,8 +117,6 @@ func NewLeanHelixConsensusAlgo(
 		s.leanHelix.UpdateConsensusRound(ToBlockPairWrapper(genesisBlock))
 		logger.Info("NewLeanHelixConsensusAlgo() Sent genesis block to AcknowledgeBlockConsensus()")
 
-		// FIXME This is causing TestExternalBlockSync to hang, so cannot uncomment till then
-		// See https://github.com/orbs-network/orbs-network-go/issues/557
 		blockStorage.RegisterConsensusBlocksHandler(s)
 		logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
 

@@ -12,7 +12,7 @@ func (s *service) fetchTransactions(ctx context.Context, blockHeight primitives.
 
 	input := &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumberOfTransactions,
-		BlockHeight: blockHeight,
+		BlockHeight:             blockHeight,
 	}
 
 	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(ctx, input)
@@ -24,7 +24,7 @@ func (s *service) fetchTransactions(ctx context.Context, blockHeight primitives.
 		return proposedTransactions, nil
 	}
 
-	// FIXME find better way to wait for new block, maybe block tracker?
+	// FIXME v1 find better way to wait for new block, maybe block tracker?
 	<-time.After(minimalBlockDelay)
 
 	proposedTransactions, err = s.transactionPool.GetTransactionsForOrdering(ctx, input)
