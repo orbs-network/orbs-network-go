@@ -15,6 +15,7 @@ type executionContext struct {
 	accessScope         protocol.ExecutionAccessScope
 	batchTransientState *transientState
 	transaction         *protocol.Transaction
+	eventList           []*protocol.EventBuilder
 }
 
 func (c *executionContext) serviceStackTop() primitives.ContractName {
@@ -25,6 +26,7 @@ func (c *executionContext) serviceStackTop() primitives.ContractName {
 	return res
 }
 
+// TODO(micro-services): this will need to become thread-safe once we switch to micro-services, now only one goroutine accesses the executionContext
 func (c *executionContext) serviceStackPush(service primitives.ContractName) {
 	c.serviceStack = append(c.serviceStack, service)
 }
@@ -52,6 +54,15 @@ func (c *executionContext) serviceStackPeekCaller() primitives.ContractName {
 		return ""
 	}
 	return c.serviceStack[len(c.serviceStack)-2]
+}
+
+func (c *executionContext) eventListAdd(eventName primitives.EventName, opaqueArgumentArray []byte) {
+	event := &protocol.EventBuilder{
+		ContractName:        c.serviceStackPeekCurrent(),
+		EventName:           eventName,
+		OutputArgumentArray: opaqueArgumentArray,
+	}
+	c.eventList = append(c.eventList, event)
 }
 
 type executionContextProvider struct {

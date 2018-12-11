@@ -112,6 +112,20 @@ func (h *harness) expectSdkCallMadeWithAddressGetCaller(returnAddress []byte) {
 	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.Address, method equals getCallerAddress and 1 arg match", addressGetCallerCallMatcher)).Return(returnOutput, nil).Times(1)
 }
 
+func (h *harness) expectSdkCallMadeWithEventsEmit(expectedEventName string, expectedArgArray *protocol.MethodArgumentArray, returnError error) {
+	eventsEmitMatcher := func(i interface{}) bool {
+		input, ok := i.(*handlers.HandleSdkCallInput)
+		return ok &&
+			input.OperationName == native.SDK_OPERATION_NAME_EVENTS &&
+			input.MethodName == "emitEvent" &&
+			len(input.InputArguments) == 2 &&
+			input.InputArguments[0].StringValue() == expectedEventName &&
+			bytes.Equal(input.InputArguments[1].BytesValue(), expectedArgArray.Raw())
+	}
+
+	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.Events, method equals emitEvent and 2 args match", eventsEmitMatcher)).Return(nil, returnError).Times(1)
+}
+
 func (h *harness) verifySdkCallMade(t *testing.T) {
 	_, err := h.sdkCallHandler.Verify()
 	require.NoError(t, err, "sdkCallHandler should be called as expected")
