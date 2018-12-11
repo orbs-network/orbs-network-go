@@ -26,6 +26,10 @@ type rateExport struct {
 }
 
 func newRate(name string) *Rate {
+	return newRateWithInterval(name, tickInterval)
+}
+
+func newRateWithInterval(name string, tickInterval time.Duration) *Rate {
 	return &Rate{
 		namedMetric:   namedMetric{name: name},
 		movingAverage: ewma.NewMovingAverage(),
