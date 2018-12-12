@@ -27,7 +27,6 @@ func TestGetTransactionReceipt_GetCommitStatusFromTxPool(t *testing.T) {
 				VirtualChainId:       txb.Transaction.VirtualChainId,
 				TransactionTimestamp: txb.Transaction.Timestamp,
 				Txhash:               txHash,
-				BlockHeight:          0, // TODO issue 67 - raw data
 			}).Build(),
 		})
 
@@ -55,7 +54,6 @@ func TestGetTransactionReceipt_GetPendingStatusFromTxPool(t *testing.T) {
 				VirtualChainId:       txb.Transaction.VirtualChainId,
 				TransactionTimestamp: txb.Transaction.Timestamp,
 				Txhash:               txHash,
-				BlockHeight:          0, // TODO issue 67 raw data
 			}).Build(),
 		})
 
@@ -83,7 +81,6 @@ func TestGetTransactionReceipt_NoRecordsFound(t *testing.T) {
 				VirtualChainId:       txb.Transaction.VirtualChainId,
 				TransactionTimestamp: txb.Transaction.Timestamp,
 				Txhash:               txHash,
-				BlockHeight:          0, // TODO issue 67 raw data
 			}).Build(),
 		})
 
