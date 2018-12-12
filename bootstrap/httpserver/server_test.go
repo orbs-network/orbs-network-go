@@ -69,10 +69,9 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 func mockServer() *server {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	return &server{
-		logger:         logger.WithTags(LogTag),
+		logger: logger.WithTags(LogTag),
 	}
 }
-
 
 func TestHttpServerWriteMembuffResponse(t *testing.T) {
 	expectedResponse := (&client.SendTransactionResponseBuilder{
