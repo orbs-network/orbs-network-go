@@ -34,11 +34,10 @@ func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossip
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	sender := input.Message.Sender
-	oneBigHash, _ , err:= HashTransactions(input.Message.SignedTransactions...)
+	oneBigHash, _, err := HashTransactions(input.Message.SignedTransactions...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not create one hash, invalid signature in relay message from sender %s", sender.SenderPublicKey())
 	}
-
 
 	if !signature.VerifyEd25519(sender.SenderPublicKey(), oneBigHash, sender.Signature()) {
 		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderPublicKey())
