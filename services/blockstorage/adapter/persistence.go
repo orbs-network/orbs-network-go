@@ -6,12 +6,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-type BlockSearchRules struct {
-	StartGraceNano        int64
-	EndGraceNano          int64
-	TransactionExpireNano int64
-}
-
 type BlockPersistence interface {
 	WriteNextBlock(blockPairs *protocol.BlockPairContainer) (bool, error)
 	GetLastBlock() (*protocol.BlockPairContainer, error)
@@ -25,5 +19,5 @@ type BlockPersistence interface {
 	GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error)
 
 	// TODO(v1): kill this function and move its logic into the adapter
-	GetBlocksRelevantToTxTimestamp(txTimeStamp primitives.TimestampNano, rules BlockSearchRules) []*protocol.BlockPairContainer
+	GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error)
 }

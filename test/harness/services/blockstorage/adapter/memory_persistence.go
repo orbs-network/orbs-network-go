@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"sync"
-	"time"
 	"unsafe"
 )
 
@@ -148,32 +147,32 @@ func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	return true, nil
 }
 
-func (bp *inMemoryBlockPersistence) GetBlocksRelevantToTxTimestamp(txTimeStamp primitives.TimestampNano, rules adapter.BlockSearchRules) []*protocol.BlockPairContainer {
-	start := txTimeStamp - primitives.TimestampNano(rules.StartGraceNano)
-	end := txTimeStamp + primitives.TimestampNano(rules.EndGraceNano+rules.TransactionExpireNano)
-
-	if end < start {
-		return nil
-	}
-	var relevantBlocks []*protocol.BlockPairContainer
-	interval := end - start
-	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
-	if interval > primitives.TimestampNano(time.Hour.Nanoseconds()) {
-		return nil
-	}
+func (bp *inMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {
 
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	blockPairs := bp.blockChain.blocks
-
-	for _, blockPair := range blockPairs {
-		delta := end - blockPair.TransactionsBlock.Header.Timestamp()
-		if delta > 0 && interval > delta {
-			relevantBlocks = append(relevantBlocks, blockPair)
+	allBlocks := bp.blockChain.blocks
+	var candidateBlocks []*protocol.BlockPairContainer
+	for _, blockPair := range allBlocks {
+		bts := blockPair.TransactionsBlock.Header.Timestamp()
+		if maxBlockTs > bts && minBlockTs < bts {
+			candidateBlocks = append(candidateBlocks, blockPair)
 		}
 	}
-	return relevantBlocks
+
+	if len(candidateBlocks) == 0 {
+		return nil, 0, nil
+	}
+
+	for _, b := range candidateBlocks {
+		for txi, txr := range b.ResultsBlock.TransactionReceipts {
+			if txr.Txhash().Equal(txHash) {
+				return b, txi, nil
+			}
+		}
+	}
+	return nil, 0, nil
 }
 
 func (bp *inMemoryBlockPersistence) getBlockPairAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
