@@ -58,11 +58,10 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 
 	// generate user address, key and give user some tokens
 	amount := big.NewInt(17)
-	ethContractUserAddress := common.HexToAddress("44AA79091FAD956d12086C5Ee782DDf3A8124549") // TODO v1 generate from contractuser private key
-	key, err := crypto.HexToECDSA( /*cfg.ethContractUPrivateKeyHex*/ "8cc01e40b06f3ea9745352b9724d64abdd487ec451a2b06c6b277c37416c2a03")
+	key, err := crypto.HexToECDSA(getConfig().ethContractUserPrivateKeyHex)
 	require.NoError(t, err, "could not create auth of contract user")
 	ethContractUserAuth := bind.NewKeyedTransactor(key)
-	_, err = ethTetContract.Transact(ethTetAuth, "assign", ethContractUserAddress, amount) // generate token in source address
+	_, err = ethTetContract.Transact(ethTetAuth, "assign", ethContractUserAuth.From /*address of user*/, amount) // generate token in source address
 	require.NoError(t, err, "could not assign token to sender")
 
 	// target orbs user address
@@ -74,28 +73,25 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	orbsContractUserAddressRaw, err := orbsContractUserAddress.Raw()
 	copy(orbsContractUserAddressRaw20[:], orbsContractUserAddressRaw)
 
-	// Ethereurm trasnfer out
+	// Ethereum transfer out
 	_, err = ethTetContract.Transact(ethContractUserAuth, "approve", ethAsbAddress, amount)
 	require.NoError(t, err, "could not approve transfer")
 	tx, err := ethAsbContract.Transact(ethContractUserAuth, "transferOut", orbsContractUserAddressRaw20, amount)
 	require.NoError(t, err, "could not transfer out")
 	// TODO check token was transferred from eth tet
-
 	ethTxHash := tx.Hash() // TODO how to get the tuid (eth log id) from tx.Data()
 
 	// TODO wait 100 blocks
 
 	// in orbs
 	// send tx transfer in to asb contract
-	response, _, err = h.sendTransaction(OwnerOfAllSupply, orbsAsbContractName, "transferIn", ethTxHash.Bytes())
+	response, _, err = h.sendTransaction(orbsContractOwnerAddress, orbsAsbContractName, "transferIn", ethTxHash.Bytes())
 	require.NoError(t, err, "failed calling transfer in")
 	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
 	//require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 
 	// check that the tokens got there.
-	methodResp, err := h.callMethod(OwnerOfAllSupply, orbsTetContractName, "balanceOf", orbsContractUserAddressRaw[:20])
-	t.Log("XXXXXXXXXXXX")
-	t.Log(methodResp)
+	methodResp, err := h.callMethod(orbsContractOwnerAddress, orbsTetContractName, "balanceOf", orbsContractUserAddressRaw20[:])
 	require.NoError(t, err, "checking balance failed")
 	//require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 	require.Equal(t, string(codec.EXECUTION_RESULT_SUCCESS), string(methodResp.ExecutionResult))
