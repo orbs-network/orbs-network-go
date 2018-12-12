@@ -45,19 +45,21 @@ func newHarness() *harness {
 }
 
 func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
-	waitThreshold := 5 * time.Second
+	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
 	sendTxOut, txId, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
 
-	txStatus := sendTxOut.TransactionStatus
-	executionResult := sendTxOut.ExecutionResult
+	txStatus, executionResult := sendTxOut.TransactionStatus, sendTxOut.ExecutionResult
+
 	for txStatus == codec.TRANSACTION_STATUS_PENDING {
-		if time.Now().Sub(beginTime) > waitThreshold {
-			return "", "", fmt.Errorf("contract deployment is TRANSACTION_STATUS_PENDING for over %v", waitThreshold)
+		// check timeout
+		if time.Now().Sub(beginTime) > timeoutDuration {
+			return "", "", fmt.Errorf("contract deployment is TRANSACTION_STATUS_PENDING for over %v", timeoutDuration)
 		}
+
 		txStatusOut, _ := h.getTransactionStatus(txId)
-		txStatus = txStatusOut.TransactionStatus
-		executionResult = txStatusOut.ExecutionResult
+
+		txStatus, executionResult = txStatusOut.TransactionStatus, txStatusOut.ExecutionResult
 	}
 
 	return executionResult, txStatus, err
