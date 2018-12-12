@@ -28,10 +28,10 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		contractName := fmt.Sprintf("CounterFrom%d", counterStart)
 
 		printTestTime(t, "send deploy - start", &lt)
-		dcExResult, dcTxStatus, err := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
+		dcExResult, dcTxStatus, dcErr := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
 		printTestTime(t, "send deploy - end", &lt)
 
-		require.NoError(t, err, "deploy transaction should not return error")
+		require.NoError(t, dcErr, "deploy transaction should not return error")
 		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, dcTxStatus)
 		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult)
 
