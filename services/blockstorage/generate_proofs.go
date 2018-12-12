@@ -54,7 +54,7 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 						Txhash:              txr.Txhash(),
 						ExecutionResult:     txr.ExecutionResult(),
 						OutputArgumentArray: txr.OutputArgumentArray(),
-						OutputEvents:        txr.OutputEvents(),
+						OutputEventsArray:   txr.OutputEventsArray(),
 					},
 				}).Build(),
 			}

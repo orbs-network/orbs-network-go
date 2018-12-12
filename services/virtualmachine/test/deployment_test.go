@@ -22,7 +22,7 @@ func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
 		h.expectStateStorageBlockHeightRequested(12)
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
-		result, outputArgs, refHeight, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, outputArgs, refHeight, _, err := h.runLocalMethod(ctx, "Contract1", "method1")
 		require.Error(t, err, "run local method should fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
 		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
@@ -43,7 +43,7 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContra
 
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
-		results, outputArgs, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+		results, outputArgs, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 		})
 		require.Equal(t, results, []protocol.ExecutionResult{
@@ -97,7 +97,7 @@ func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 		})
 
-		results, outputArgs, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+		results, outputArgs, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 		})
 		require.Equal(t, results, []protocol.ExecutionResult{
@@ -123,7 +123,7 @@ func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *t
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_DEPLOY_SERVICE, errors.New("deploy error"), uint32(0))
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
-		results, outputArgs, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+		results, outputArgs, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 		})
 		require.Equal(t, results, []protocol.ExecutionResult{
