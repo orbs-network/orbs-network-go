@@ -1,18 +1,20 @@
 package test
 
 import (
-	"flag"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
 // seedPreference is meant to be specified at command line, parse test.randSeed flag
 func init() {
-	flag.Var(&seedPreference, "test.randSeed",
-		"Specify a random seed for tests, or 'launchClock' to use"+
-			" the same arbitrary value in each test invocation")
+	envRandSeedPref := strings.Trim(os.Getenv("TEST_RAND_SEED"), " \t")
+	if envRandSeedPref != "" {
+		seedPreference.Set(envRandSeedPref)
+	}
 }
 
 const singleRandSafetyBufferSize = 1000

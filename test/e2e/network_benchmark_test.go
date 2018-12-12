@@ -14,7 +14,7 @@ import (
 
 func TestE2EStress(t *testing.T) {
 	h := newHarness()
-	ctrlRand := test.NewControlledRand(t) // TODO this is the only place outside of test package where this method is used. If we can remove this here, NewControlledRand can turn private
+	ctrlRand := test.NewControlledRand(t)
 
 	config := getConfig().stressTest
 
