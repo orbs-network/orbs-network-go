@@ -44,7 +44,7 @@ func TestValidateTransaction_RejectsTransactionsWhenTimestampIsZero(t *testing.T
 	}
 
 	err := vctx.validateTransaction(builders.TransferTransaction().Build())
-	require.Error(t, err,"a transaction was not rejected when the system is in zero timestamp")
+	require.Error(t, err, "a transaction was not rejected when the system is in zero timestamp")
 }
 
 //TODO(v1) talk to TalKol about Invalid Signer

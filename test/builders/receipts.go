@@ -2,8 +2,8 @@ package builders
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"math/rand"
 )
 
 // protocol.TransactionReceipt
@@ -40,8 +40,8 @@ func (r *receipt) Builder() *protocol.TransactionReceiptBuilder {
 	return r.builder
 }
 
-func (r *receipt) WithRandomHash() *receipt {
-	rand.Read(r.builder.Txhash)
+func (r *receipt) WithRandomHash(ctrlRand *test.ControlledRand) *receipt {
+	ctrlRand.Read(r.builder.Txhash)
 	return r
 }
 

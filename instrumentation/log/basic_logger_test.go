@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -251,9 +252,11 @@ func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
+	ctrlRand := test.NewControlledRand(b)
+
 	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash().Build(),
-		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
 	}
 
 	formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
@@ -270,12 +273,15 @@ func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
 			b.StopTimer()
 		})
 	}
+
 }
 
 func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
+	ctrlRand := test.NewControlledRand(b)
+
 	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash().Build(),
-		builders.TransactionReceipt().WithRandomHash().Build(),
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
+		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
 	}
 
 	outputs := []io.Writer{os.Stdout, ioutil.Discard}
