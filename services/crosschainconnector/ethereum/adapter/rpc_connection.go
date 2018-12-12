@@ -75,16 +75,18 @@ func (rpc *EthereumRpcConnection) getFullClient() (*ethclient.Client, error) {
 }
 
 func (rpc *EthereumRpcConnection) refreshBlocksCache(ctx context.Context) error {
+	rpc.logger.Info("refreshing eth blocks cache")
+
+	client, err := rpc.getFullClient()
+	if err != nil {
+		return err
+	}
+
 	rpc.mu.Lock()
 	defer rpc.mu.Unlock()
 
 	if rpc.mu.blocksCache == nil {
 		rpc.mu.blocksCache = &EthBlocksSearchCache{}
-	}
-
-	client, err := rpc.getFullClient()
-	if err != nil {
-		return err
 	}
 
 	latest, err := client.HeaderByNumber(ctx, nil)
