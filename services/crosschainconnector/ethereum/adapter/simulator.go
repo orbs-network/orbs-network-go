@@ -47,6 +47,7 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 	}
 
 	e.getBlockByTimestamp = func(context context.Context, nano primitives.TimestampNano) (i *big.Int, e error) {
+		// simulator only works on latest block. nil means latest
 		return nil, nil
 	}
 

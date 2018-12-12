@@ -37,7 +37,7 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 		return nil, err
 	}
 
-	output, err := s.connection.CallContract(ctx, address, input.EthereumPackedInputArguments, refenceBlockNumber)
+	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, refenceBlockNumber)
 	if err != nil {
 		return nil, err
 	}
