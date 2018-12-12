@@ -93,7 +93,7 @@ func TestSdkState_ReadWithTransactionSetReadWriteAccess(t *testing.T) {
 		})
 		h.expectStateStorageRead(11, "Contract1", []byte{0x01}, []byte{0x02})
 
-		_, _, sd := h.processTransactionSet(ctx, []*contractAndMethod{
+		_, _, sd, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 		})
 		require.ElementsMatch(t, sd["Contract1"], []*keyValuePair{}, "processTransactionSet returned contract state diffs should be empty")
@@ -134,7 +134,7 @@ func TestSdkState_WriteWithTransactionSetReadWriteAccess(t *testing.T) {
 		})
 		h.expectStateStorageNotRead()
 
-		_, _, sd := h.processTransactionSet(ctx, []*contractAndMethod{
+		_, _, sd, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 			{"Contract1", "method2"},
 		})
@@ -181,7 +181,7 @@ func TestSdkState_WriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) 
 		})
 		h.expectStateStorageNotRead()
 
-		_, _, sd := h.processTransactionSet(ctx, []*contractAndMethod{
+		_, _, sd, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 			{"Contract2", "method1"},
 			{"Contract1", "method2"},
@@ -232,7 +232,7 @@ func TestSdkState_WriteIgnoredWithTransactionSetHavingFailedTransactions(t *test
 		})
 		h.expectStateStorageNotRead()
 
-		_, _, sd := h.processTransactionSet(ctx, []*contractAndMethod{
+		_, _, sd, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 			{"Contract1", "method2"},
 			{"Contract1", "method3"},

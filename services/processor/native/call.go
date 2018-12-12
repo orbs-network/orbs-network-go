@@ -41,7 +41,7 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	}()
 
 	// verify input args
-	inValues, err := s.prepareMethodInputArgsForCall(executionContextId, methodInstance, args)
+	inValues, err := s.prepareMethodInputArgsForCall(methodInstance, args)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -59,7 +59,7 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(executionContextId primitives.ExecutionContextId, methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
+func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(methodInstance).Type()
 

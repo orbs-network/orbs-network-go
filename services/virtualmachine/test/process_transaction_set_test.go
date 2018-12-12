@@ -26,7 +26,7 @@ func TestProcessTransactionSet_Success(t *testing.T) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(uint32(17), "hello", []byte{0x01, 0x02}), nil
 		})
 
-		results, outputArgs, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+		results, outputArgs, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 			{"Contract1", "method2"},
 		})
@@ -58,7 +58,7 @@ func TestProcessTransactionSet_WithErrors(t *testing.T) {
 			return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.MethodArgumentsArray(), errors.New("unexpected error")
 		})
 
-		results, outputArgs, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+		results, outputArgs, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 			{"Contract1", "method2"},
 		})

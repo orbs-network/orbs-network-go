@@ -2,6 +2,7 @@ package benchmarkcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/events"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
 )
 
@@ -11,9 +12,13 @@ const CONTRACT_NAME = "BenchmarkContract"
 /////////////////////////////////////////////////////////////////
 // contract starts here
 
-var PUBLIC = sdk.Export(add, set, get, argTypes, throw)
+var PUBLIC = sdk.Export(add, set, get, argTypes, throw, giveBirth)
 var SYSTEM = sdk.Export(_init)
+var EVENTS = sdk.Export(BabyBorn)
+
 var PRIVATE = sdk.Export(nop) // needed to avoid lint error since this private function is not used by anyone (it's for a test)
+
+func BabyBorn(name string, weight uint32) {}
 
 func _init() {
 	state.WriteUint64ByKey("initialized", 1)
@@ -40,4 +45,8 @@ func argTypes(a1 uint32, a2 uint64, a3 string, a4 []byte) (uint32, uint64, strin
 
 func throw() {
 	panic("example error returned by contract")
+}
+
+func giveBirth(name string) {
+	events.EmitEvent(BabyBorn, name, uint32(3))
 }
