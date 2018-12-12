@@ -169,12 +169,12 @@ func getConfig() E2EConfig {
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
 		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
+	}
 
-		if stressTestEnabled {
-			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
-			stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
-			stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
-		}
+	if stressTestEnabled {
+		stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
+		stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
+		stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
 	}
 
 	return E2EConfig{

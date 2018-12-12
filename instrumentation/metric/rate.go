@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var tickInterval = 1 * time.Second
+var hardCodedTickInterval = 1 * time.Second // this cannot really be changed as the EWMA library doesn't work well with sub-second intervals
 
 type Rate struct {
 	namedMetric
@@ -26,35 +26,54 @@ type rateExport struct {
 }
 
 func newRate(name string) *Rate {
+	return newRateWihStart(name, time.Now())
+}
+
+func newRateWihStart(name string, start time.Time) *Rate {
 	return &Rate{
 		namedMetric:   namedMetric{name: name},
 		movingAverage: ewma.NewMovingAverage(),
-		nextTick:      time.Now().Add(tickInterval),
+		nextTick:      start.Add(hardCodedTickInterval),
 	}
 }
 
 func (r *Rate) Export() exportedMetric {
+	return r.export()
+}
+
+func (r *Rate) export() rateExport {
+	r.m.Lock()
+	defer r.m.Unlock()
+	r.maybeRotate()
+
 	return rateExport{
 		r.name,
 		r.movingAverage.Value(),
-		toMillis(tickInterval.Nanoseconds()),
+		toMillis(hardCodedTickInterval.Nanoseconds()),
 	}
 }
 
 func (r *Rate) String() string {
-	return fmt.Sprintf("metric %s: %f per %s\n", r.name, r.movingAverage.Value(), tickInterval)
+	return fmt.Sprintf("metric %s: %f per %s\n", r.name, r.movingAverage.Value(), hardCodedTickInterval)
 }
 
 func (r *Rate) Measure(eventCount int64) {
 	r.m.Lock()
 	defer r.m.Unlock()
-	if r.nextTick.Before(time.Now()) {
+	r.maybeRotate()
+	r.runningSum += eventCount
+}
+
+func (r *Rate) maybeRotate() {
+	r.maybeRotateAsOf(time.Now())
+}
+
+func (r *Rate) maybeRotateAsOf(asOf time.Time) {
+	if r.nextTick.Before(asOf) {
 		r.movingAverage.Add(float64(r.runningSum))
 		r.runningSum = 0
-		r.nextTick = r.nextTick.Add(tickInterval)
+		r.nextTick = r.nextTick.Add(hardCodedTickInterval)
 	}
-
-	r.runningSum += eventCount
 }
 
 func (r *Rate) Reset() {

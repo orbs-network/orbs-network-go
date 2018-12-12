@@ -15,5 +15,3 @@ func AddressForEd25519SignerForTests(setIndex int) primitives.Ripmd160Sha256 {
 func AddressFor(keyPair *keys.Ed25519KeyPair) primitives.Ripmd160Sha256 {
 	return hash.CalcRipmd160Sha256(keyPair.PublicKey())
 }
-
-

@@ -124,7 +124,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 }
 func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
 
-	// TODO Just a placeholder for now, ODEDW to decide
+	// TODO IMPL THIS https://tree.taiga.io/project/orbs-network/us/535
 	return hash.CalcSha256([]byte{1, 2, 3, 4, 5, 6, 6, 7, 8}), nil
 }
 

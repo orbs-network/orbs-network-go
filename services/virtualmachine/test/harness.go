@@ -91,7 +91,7 @@ func (h *harness) handleSdkCallWithSystemPermissions(ctx context.Context, execut
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, error) {
+func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, []byte, error) {
 	output, err := h.service.RunLocalMethod(ctx, &services.RunLocalMethodInput{
 		BlockHeight: 0,
 		Transaction: (&protocol.TransactionBuilder{
@@ -101,7 +101,7 @@ func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.Co
 			InputArgumentArray: []byte{},
 		}).Build(),
 	})
-	return output.CallResult, output.OutputArgumentArray, output.ReferenceBlockHeight, err
+	return output.CallResult, output.OutputArgumentArray, output.ReferenceBlockHeight, output.OutputEventsArray, err
 }
 
 type keyValuePair struct {
@@ -114,7 +114,7 @@ type contractAndMethod struct {
 	methodName   primitives.MethodName
 }
 
-func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair) {
+func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
@@ -134,11 +134,13 @@ func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods 
 
 	results := []protocol.ExecutionResult{}
 	outputArgsOfAllTransactions := [][]byte{}
+	outputEventsOfAllTransactions := [][]byte{}
 	for _, transactionReceipt := range output.TransactionReceipts {
 		result := transactionReceipt.ExecutionResult()
 		results = append(results, result)
 		outputArgs := transactionReceipt.OutputArgumentArray()
 		outputArgsOfAllTransactions = append(outputArgsOfAllTransactions, outputArgs)
+		outputEventsOfAllTransactions = append(outputEventsOfAllTransactions, transactionReceipt.OutputEventsArray())
 	}
 
 	for _, contractStateDiffs := range output.ContractStateDiffs {
@@ -152,7 +154,7 @@ func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods 
 		}
 	}
 
-	return results, outputArgsOfAllTransactions, resultKeyValuePairsPerContract
+	return results, outputArgsOfAllTransactions, resultKeyValuePairsPerContract, outputEventsOfAllTransactions
 }
 
 func (h *harness) transactionSetPreOrder(ctx context.Context, signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {

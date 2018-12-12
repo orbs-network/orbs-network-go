@@ -103,7 +103,7 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 				[]*Field{Function(function), Source(source)},
 				b.tags...),
 			params...),
-		)
+	)
 
 	for _, f := range b.filters {
 		if !f.Allows(level, message, enrichmentParams) {

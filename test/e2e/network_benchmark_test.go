@@ -2,19 +2,41 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
-	"math/rand"
 	"sync"
 	"testing"
 	"time"
 )
 
+func getTransactionCount(t *testing.T, h *harness) float64 {
+	var m metrics
+
+	require.True(t, test.Eventually(1*time.Minute, func() bool {
+		m = h.getMetrics()
+		return m != nil
+	}), "could not retrieve metrics")
+
+	return m["TransactionPool.CommittedPool.TransactionCount"]["Value"].(float64)
+}
+
+func groupErrors(errors []error) map[string]int {
+	groupedErrors := make(map[string]int)
+
+	for _, error := range errors {
+		groupedErrors[error.Error()]++
+	}
+
+	return groupedErrors
+}
+
 func TestE2EStress(t *testing.T) {
 	h := newHarness()
+	ctrlRand := test.NewControlledRand(t)
 
 	config := getConfig().stressTest
 
@@ -22,9 +44,13 @@ func TestE2EStress(t *testing.T) {
 		t.Skip("Skipping stress test")
 	}
 
+	baseTxCount := getTransactionCount(t, h)
+
 	var wg sync.WaitGroup
 
 	limiter := rate.NewLimiter(1000, 50)
+
+	var errors []error
 
 	for i := int64(0); i < config.numberOfTransactions; i++ {
 		if err := limiter.Wait(context.Background()); err == nil {
@@ -35,39 +61,46 @@ func TestE2EStress(t *testing.T) {
 
 				targetKey, _ := keys.GenerateEd25519Key()
 				targetAddress := builders.AddressFor(targetKey)
-				amount := uint64(rand.Intn(10))
+				amount := uint64(ctrlRand.Intn(10))
 
 				_, _, err2 := h.sendTransaction(OwnerOfAllSupply, "BenchmarkToken", "transfer", uint64(amount), []byte(targetAddress))
 
 				if err2 != nil {
-					t.Logf("error sending transaction %s\n", err)
+					errors = append(errors, err2)
 				}
 			}()
 		} else {
-			t.Logf("error %s\n", err)
+			errors = append(errors, err)
 		}
 	}
 
 	wg.Wait()
 
-	var m metrics
+	txCount := getTransactionCount(t, h) - baseTxCount
 
-	require.True(t, test.Eventually(1*time.Minute, func() bool {
-		m = h.getMetrics()
-		return m != nil
-	}), "could not retrieve metrics")
+	expectedNumberOfTx := float64(100-config.acceptableFailureRate) / 100 * float64(config.numberOfTransactions)
 
-	txCount := m["TransactionPool.CommittedPool.TransactionCount"]["Value"].(float64)
+	fmt.Printf("Successfully processed %.0f%% of transactions\n", txCount/float64(config.numberOfTransactions)*100)
 
-	expectedNumberOfTx := float64((100 - config.acceptableFailureRate) / 100 * config.numberOfTransactions)
+	if len(errors) != 0 {
+		fmt.Println()
+		fmt.Println("===== ERRORS =====")
+		for k, v := range groupErrors(errors) {
+			fmt.Printf("%d times: %s\n", v, k)
+		}
+		fmt.Println("===== ERRORS =====")
+		fmt.Println()
+	}
 
 	require.Condition(t, func() (success bool) {
 		return txCount >= expectedNumberOfTx
-	}, "transaction processed (%f) < expected transactions processed (%f) out of %i transactions sent", txCount, expectedNumberOfTx, config.numberOfTransactions)
+	}, "transaction processed (%.0f) < expected transactions processed (%.0f) out of %d transactions sent", txCount, expectedNumberOfTx, config.numberOfTransactions)
 
-	ratePerSecond := m["TransactionPool.RatePerSecond"]["Rate"].(float64)
+	// Commenting out until we get reliable rates
 
-	require.Condition(t, func() (success bool) {
-		return ratePerSecond >= config.targetTPS
-	}, "actual tps (%f) is less than target tps (%f)", ratePerSecond, config.targetTPS)
+	//ratePerSecond := m["TransactionPool.RatePerSecond"]["Rate"].(float64)
+
+	//require.Condition(t, func() (success bool) {
+	//	return ratePerSecond >= config.targetTPS
+	//}, "actual tps (%f) is less than target tps (%f)", ratePerSecond, config.targetTPS)
 }

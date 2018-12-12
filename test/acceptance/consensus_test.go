@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// TODO Make sure the test is correct for LH
+// TODO v1 Make sure the test is correct for LH
 // Add more nodes for consensus to work (min 4)
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	t.Skipf("Change this - Orbs is not supposed to know LH message types")

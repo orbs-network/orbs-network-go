@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestBenchmarkContract_AddMethod(t *testing.T) {
+func TestBenchmarkContract_SimpleCalculation(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -24,7 +24,7 @@ func TestBenchmarkContract_AddMethod(t *testing.T) {
 	})
 }
 
-func TestBenchmarkContract_SetGetMethods(t *testing.T) {
+func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		const value = uint64(41)
@@ -49,6 +49,22 @@ func TestBenchmarkContract_SetGetMethods(t *testing.T) {
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
 		require.Equal(t, builders.MethodArgumentsArray(value), output.OutputArgumentArray, "call return args should be equal")
+		h.verifySdkCallMade(t)
+	})
+}
+
+func TestBenchmarkContract_EmitEvent(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness()
+
+		t.Log("Runs BenchmarkContract.giveBirth to emit an event")
+
+		call := processCallInput().WithMethod("BenchmarkContract", "giveBirth").WithArgs("John Snow").Build()
+		h.expectSdkCallMadeWithEventsEmit("BabyBorn", builders.MethodArgumentsArray("John Snow", uint32(3)), nil)
+
+		output, err := h.service.ProcessCall(ctx, call)
+		require.NoError(t, err, "call should succeed")
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
 		h.verifySdkCallMade(t)
 	})
 }

@@ -17,7 +17,7 @@ func (s *service) runMethod(
 	transaction *protocol.Transaction,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
-) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+) (protocol.ExecutionResult, *protocol.MethodArgumentArray, *protocol.EventsArray, error) {
 
 	// create execution context
 	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockTimestamp, accessScope, transaction)
@@ -28,7 +28,7 @@ func (s *service) runMethod(
 	processor, err := s.getServiceDeployment(ctx, executionContext, transaction.ContractName())
 	if err != nil {
 		s.logger.Info("get deployment info for contract failed", log.Error(err), log.Stringable("transaction", transaction))
-		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, err
+		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, nil, err
 	}
 
 	// modify execution context
@@ -54,7 +54,11 @@ func (s *service) runMethod(
 		executionContext.transientState.mergeIntoTransientState(batchTransientState)
 	}
 
-	return output.CallResult, output.OutputArgumentArray, err
+	outputEvents := (&protocol.EventsArrayBuilder{
+		Events: executionContext.eventList,
+	}).Build()
+
+	return output.CallResult, output.OutputArgumentArray, outputEvents, err
 }
 
 func (s *service) processTransactionSet(
@@ -74,12 +78,15 @@ func (s *service) processTransactionSet(
 	for _, signedTransaction := range signedTransactions {
 
 		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(blockHeight))
-		callResult, outputArgs, _ := s.runMethod(ctx, blockHeight, blockTimestamp, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
+		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, blockHeight, blockTimestamp, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
 			outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
 		}
+		if outputEvents == nil {
+			outputEvents = (&protocol.EventsArrayBuilder{}).Build()
+		}
 
-		receipt := s.encodeTransactionReceipt(signedTransaction.Transaction(), callResult, outputArgs)
+		receipt := s.encodeTransactionReceipt(signedTransaction.Transaction(), callResult, outputArgs, outputEvents)
 		receipts = append(receipts, receipt)
 	}
 
@@ -95,10 +102,11 @@ func (s *service) getRecentBlockHeight(ctx context.Context) (primitives.BlockHei
 	return output.LastCommittedBlockHeight, output.LastCommittedBlockTimestamp, nil
 }
 
-func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.MethodArgumentArray) *protocol.TransactionReceipt {
+func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.MethodArgumentArray, outputEvents *protocol.EventsArray) *protocol.TransactionReceipt {
 	return (&protocol.TransactionReceiptBuilder{
 		Txhash:              digest.CalcTxHash(transaction),
 		ExecutionResult:     result,
+		OutputEventsArray:   outputEvents.RawEventsArray(),
 		OutputArgumentArray: outputArgs.RawArgumentsArray(),
 	}).Build()
 }

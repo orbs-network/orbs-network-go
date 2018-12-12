@@ -54,4 +54,3 @@ func makeFederation(key primitives.Ed25519PublicKey) map[string]config.Federatio
 	federationNodes[key.KeyForMap()] = config.NewHardCodedFederationNode(key)
 	return federationNodes
 }
-

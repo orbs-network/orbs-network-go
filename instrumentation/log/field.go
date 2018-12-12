@@ -27,7 +27,6 @@ type Field struct {
 	Nested AggregateField
 }
 
-
 const (
 	NoType = iota
 	ErrorType
@@ -199,7 +198,6 @@ func (f *Field) Value() interface{} {
 func (f *Field) IsNested() bool {
 	return f.Type == AggregateType
 }
-
 
 func (f *Field) String() string {
 	return fmt.Sprintf("Field: key=%s, value=%v", f.Key, f.Value())

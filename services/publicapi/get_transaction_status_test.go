@@ -11,8 +11,10 @@ import (
 )
 
 func TestPublicApiGetTx_PrepareResponse(t *testing.T) {
+	ctrlRand := test.NewControlledRand(t)
+
 	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
-	receipt := builders.TransactionReceipt().WithRandomHash().Build()
+	receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 
 	response := toGetTxOutput(&txResponse{
 		transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,

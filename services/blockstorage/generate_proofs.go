@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -44,9 +43,9 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 					},
 					BlockProof: &protocol.ResultsBlockProofBuilder{
 						TransactionsBlockHash: block.BlockProof.TransactionsBlockHash(),
-						Type:               0,
-						BenchmarkConsensus: nil,
-						LeanHelix:          nil,
+						Type:                  0,
+						BenchmarkConsensus:    nil,
+						LeanHelix:             nil,
 					},
 					ReceiptProof: proof,
 					ReceiptIndex: nil, /* i */
@@ -54,7 +53,7 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 						Txhash:              txr.Txhash(),
 						ExecutionResult:     txr.ExecutionResult(),
 						OutputArgumentArray: txr.OutputArgumentArray(),
-						OutputEvents:        txr.OutputEvents(),
+						OutputEventsArray:   txr.OutputEventsArray(),
 					},
 				}).Build(),
 			}
@@ -62,7 +61,7 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 		}
 	}
 
-	return nil, errors.Errorf("could not find transaction inside block", log.Transaction(input.Txhash))
+	return nil, errors.Errorf("could not find transaction inside block %x", input.Txhash)
 
 }
 

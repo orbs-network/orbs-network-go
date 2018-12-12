@@ -117,7 +117,7 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarnessWithSizeLimit(ctx,1)
+		h := newHarnessWithSizeLimit(ctx, 1)
 
 		h.expectNoTransactionsToBeForwarded()
 
