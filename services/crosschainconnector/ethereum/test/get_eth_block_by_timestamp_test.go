@@ -12,6 +12,17 @@ import (
 	"time"
 )
 
+func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+		config := &ethereumConnectorConfigForTests{"https://mainnet.infura.io/v3/55322c8f5b9440f0940a37a3646eac76"} // using real endpoint
+		conn := adapter.NewEthereumRpcConnection(config, logger)
+		// something before 2015/07/31
+		_, err := conn.GetBlockByTimestamp(ctx, primitives.TimestampNano(1438300700000000000))
+		require.Error(t, err, "expecting an error when trying to go too much into the past")
+	})
+}
+
 func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
