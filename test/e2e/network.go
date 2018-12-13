@@ -41,6 +41,8 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(firstRandomPort+i, "127.0.0.1")
 	}
 
+	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched
+
 	os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
 	console := log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())
 
@@ -48,6 +50,7 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 		log.String("_test", "e2e"),
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT"))).
+		WithFilters(log.IgnoreMessagesMatching("Metric recorded")).
 		WithOutput(console)
 	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
@@ -61,7 +64,7 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 		nodeLogger := logger.WithOutput(console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
 		processorArtifactPath, _ := getProcessorArtifactPath()
 
-		cfg := config.ForE2E(processorArtifactPath, federationNodes, gossipPeers, leaderKeyPair.PublicKey(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
+		cfg := config.ForE2E(processorArtifactPath, federationNodes, gossipPeers, leaderKeyPair.PublicKey(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, ethereumEndpoint).
 			OverrideNodeSpecificValues(
 				firstRandomPort+i,
 				nodeKeyPair.PublicKey(),
