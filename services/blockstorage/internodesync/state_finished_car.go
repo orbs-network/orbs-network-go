@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"math/rand"
 	"time"
 )
 
@@ -43,7 +42,7 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	}
 	s.metrics.timesWithResponses.Inc()
 	logger.Info("selecting from received sources", log.Int("sources-count", c))
-	syncSource := s.responses[rand.Intn(c)]
+	syncSource := s.responses[0] //TODO add a real selection algorithm for selecting the source for the sync
 	syncSourceKey := syncSource.Sender.SenderPublicKey()
 
 	return s.factory.CreateWaitingForChunksState(syncSourceKey)

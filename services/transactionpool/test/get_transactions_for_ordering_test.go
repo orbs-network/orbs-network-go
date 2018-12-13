@@ -24,7 +24,7 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 		// we use forward rather than add to simulate a scenario where a byzantine node submitted invalid transactions
 		h.handleForwardFrom(ctx, otherNodeKeyPair, validTx, expiredTx)
 
-		txSet, err := h.getTransactionsForOrdering(ctx,1,2)
+		txSet, err := h.getTransactionsForOrdering(ctx, 1, 2)
 
 		require.NoError(t, err, "expected transaction set but got an error")
 		require.Equal(t, []*protocol.SignedTransaction{validTx}, txSet.SignedTransactions, "got an expired transaction")
@@ -99,13 +99,13 @@ func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testi
 
 		h.expectTransactionErrorCallbackFor(tx1, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED)
 
-		txSet, err := h.getTransactionsForOrdering(ctx,1,1)
+		txSet, err := h.getTransactionsForOrdering(ctx, 1, 1)
 
 		require.NoError(t, err, "failed getting transactions unexpectedly")
 		require.Empty(t, txSet.SignedTransactions, "got a transaction that has already been committed")
 
-		txSet, _ = h.getTransactionsForOrdering(ctx,1,1)
-		require.Len(t, txSet.SignedTransactions,1, "did not get a valid transaction from the pool")
+		txSet, _ = h.getTransactionsForOrdering(ctx, 1, 1)
+		require.Len(t, txSet.SignedTransactions, 1, "did not get a valid transaction from the pool")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not executed as expected")
 	})
@@ -128,12 +128,12 @@ func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFr
 
 		h.expectTransactionErrorCallbackFor(tx1, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
 
-		txSet, err := h.getTransactionsForOrdering(ctx,1,1)
+		txSet, err := h.getTransactionsForOrdering(ctx, 1, 1)
 
 		require.NoError(t, err, "failed getting transactions unexpectedly")
 		require.Empty(t, txSet.SignedTransactions, "got a transaction that failed pre-order checks")
 
-		txSet, _ = h.getTransactionsForOrdering(ctx,1, 1)
+		txSet, _ = h.getTransactionsForOrdering(ctx, 1, 1)
 		require.Len(t, txSet.SignedTransactions, 1, "did not get a valid transaction from the pool")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not executed as expected")
@@ -152,12 +152,12 @@ func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing
 
 		h.expectTransactionErrorCallbackFor(expiredTx, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME)
 
-		txSet, err := h.getTransactionsForOrdering(ctx,1,1)
+		txSet, err := h.getTransactionsForOrdering(ctx, 1, 1)
 		require.NoError(t, err)
 		require.Empty(t, txSet.SignedTransactions, "got an invalid transaction")
 
-		txSet, _ = h.getTransactionsForOrdering(ctx,1,1)
-		require.Len(t, txSet.SignedTransactions,1, "did not get a valid transaction from the pool")
+		txSet, _ = h.getTransactionsForOrdering(ctx, 1, 1)
+		require.Len(t, txSet.SignedTransactions, 1, "did not get a valid transaction from the pool")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not executed as expected")
 	})

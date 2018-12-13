@@ -60,13 +60,17 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 	}
 
 	logger.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
-	callResult, outputArgs, err := s.runMethod(ctx, blockHeight, blockTimestamp, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, blockHeight, blockTimestamp, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+	}
+	if outputEvents == nil {
+		outputEvents = (&protocol.EventsArrayBuilder{}).Build()
 	}
 
 	return &services.RunLocalMethodOutput{
 		CallResult:              callResult,
+		OutputEventsArray:       outputEvents.RawEventsArray(),
 		OutputArgumentArray:     outputArgs.RawArgumentsArray(),
 		ReferenceBlockHeight:    blockHeight,
 		ReferenceBlockTimestamp: blockTimestamp,
@@ -131,6 +135,8 @@ func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCa
 		output, err = s.handleSdkStateCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	case native.SDK_OPERATION_NAME_SERVICE:
 		output, err = s.handleSdkServiceCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
+	case native.SDK_OPERATION_NAME_EVENTS:
+		output, err = s.handleSdkEventsCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	case native.SDK_OPERATION_NAME_ETHEREUM:
 		output, err = s.handleSdkEthereumCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	case native.SDK_OPERATION_NAME_ADDRESS:

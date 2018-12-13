@@ -195,8 +195,8 @@ func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeig
 	return err
 }
 
-func newHarness(ctx context.Context, ) *harness {
-	return newHarnessWithSizeLimit(ctx, 20 * 1024 * 1024)
+func newHarness(ctx context.Context) *harness {
+	return newHarnessWithSizeLimit(ctx, 20*1024*1024)
 }
 
 func newHarnessWithSizeLimit(ctx context.Context, sizeLimit uint32) *harness {

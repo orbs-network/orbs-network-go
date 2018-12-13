@@ -148,9 +148,21 @@ func loadSharedObject(soFilePath string) (*sdkContext.ContractInfo, error) {
 		systemMethods = *systemMethodsPtr
 	}
 
+	eventsMethods := []interface{}{}
+	var eventsMethodsPtr *[]interface{}
+	eventsMethodsSymbol, err := loadedPlugin.Lookup("EVENTS")
+	if err == nil {
+		eventsMethodsPtr, ok = eventsMethodsSymbol.(*[]interface{})
+		if !ok {
+			return nil, errors.New("EVENTS methods export has incorrect type")
+		}
+		eventsMethods = *eventsMethodsPtr
+	}
+
 	return &sdkContext.ContractInfo{
 		PublicMethods: publicMethods,
 		SystemMethods: systemMethods,
+		EventsMethods: eventsMethods,
 		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE, // we don't support compiling system contracts on the fly
 	}, nil
 }

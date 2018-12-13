@@ -50,3 +50,23 @@ func TestContext_ServiceStack(t *testing.T) {
 	require.EqualValues(t, "Service1", c.serviceStackPeekCurrent(), "current service should match")
 	require.Zero(t, c.serviceStackPeekCaller(), "calling service should be empty")
 }
+
+func TestContext_EventList(t *testing.T) {
+	cp := newExecutionContextProvider()
+	executionContextId, c := cp.allocateExecutionContext(1, 0x222, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	defer cp.destroyExecutionContext(executionContextId)
+
+	c.serviceStackPush("Service1")
+	c.eventListAdd("Event1", []byte{0x01, 0x02})
+
+	c.serviceStackPush("Service2")
+	c.eventListAdd("Event2", []byte{0x03, 0x04})
+
+	require.EqualValues(t, "Event1", c.eventList[0].EventName)
+	require.EqualValues(t, "Service1", c.eventList[0].ContractName)
+	require.EqualValues(t, []byte{0x01, 0x02}, c.eventList[0].OutputArgumentArray)
+
+	require.EqualValues(t, "Event2", c.eventList[1].EventName)
+	require.EqualValues(t, "Service2", c.eventList[1].ContractName)
+	require.EqualValues(t, []byte{0x03, 0x04}, c.eventList[1].OutputArgumentArray)
+}

@@ -31,7 +31,7 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndIsPreBuiltNativeContrac
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 		})
 
-		results, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+		results, _, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
 			{"Contract1", "method1"},
 			{"Contract1", "method1"},
 		}, DEPLOYMENT_CONTRACT)

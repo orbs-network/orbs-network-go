@@ -13,37 +13,49 @@ type MethodInstance interface{}
 type ContractInstance struct {
 	PublicMethods map[string]MethodInstance
 	SystemMethods map[string]MethodInstance
+	EventsMethods map[string]MethodInstance
 }
 
 func NewContractInstance(contractInfo *context.ContractInfo) (*ContractInstance, error) {
 	res := &ContractInstance{
 		PublicMethods: make(map[string]MethodInstance),
 		SystemMethods: make(map[string]MethodInstance),
+		EventsMethods: make(map[string]MethodInstance),
 	}
 	for _, method := range contractInfo.PublicMethods {
-		v := reflect.ValueOf(method)
-		if v.Kind() != reflect.Func {
-			return nil, errors.New("public method is not a valid func")
+		name, err := GetContractMethodNameFromFunction(method)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid public method")
 		}
-		name := extractMethodName(runtime.FuncForPC(v.Pointer()).Name())
 		res.PublicMethods[name] = method
 	}
 	for _, method := range contractInfo.SystemMethods {
-		v := reflect.ValueOf(method)
-		if v.Kind() != reflect.Func {
-			return nil, errors.New("system method is not a valid func")
+		name, err := GetContractMethodNameFromFunction(method)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid system method")
 		}
-		name := extractMethodName(runtime.FuncForPC(v.Pointer()).Name())
+		res.SystemMethods[name] = method
+	}
+	for _, method := range contractInfo.EventsMethods {
+		name, err := GetContractMethodNameFromFunction(method)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid event method")
+		}
 		res.SystemMethods[name] = method
 	}
 	return res, nil
 }
 
-func extractMethodName(fullPackageName string) string {
+func GetContractMethodNameFromFunction(function interface{}) (string, error) {
+	v := reflect.ValueOf(function)
+	if v.Kind() != reflect.Func {
+		return "", errors.New("did not receive a valid function")
+	}
+	fullPackageName := runtime.FuncForPC(v.Pointer()).Name()
 	parts := strings.Split(fullPackageName, ".")
 	if len(parts) == 0 {
-		return ""
+		return "", errors.New("function name does not contain a valid package name")
 	} else {
-		return parts[len(parts)-1]
+		return parts[len(parts)-1], nil
 	}
 }

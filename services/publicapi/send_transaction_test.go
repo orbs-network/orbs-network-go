@@ -11,8 +11,9 @@ import (
 )
 
 func TestPublicApiSendTx_PrepareResponse(t *testing.T) {
+	ctrlRand := test.NewControlledRand(t)
 	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
-	receipt := builders.TransactionReceipt().WithRandomHash().Build()
+	receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 
 	response := toSendTxOutput(&txResponse{
 		transactionStatus:  protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,

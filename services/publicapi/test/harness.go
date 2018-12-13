@@ -104,8 +104,7 @@ func (h *harness) transactionHasProof() {
 	h.transactionIsCommitedInPool()
 	h.bksMock.When("GenerateReceiptProof", mock.Any, mock.Any).Return(
 		&services.GenerateReceiptProofOutput{
-			Proof: (&protocol.ReceiptProofBuilder {
-			}).Build(),
+			Proof: (&protocol.ReceiptProofBuilder{}).Build(),
 		}).Times(1)
 }
 

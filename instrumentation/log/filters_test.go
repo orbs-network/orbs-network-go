@@ -54,5 +54,3 @@ type aggregateField struct {
 func (f *aggregateField) NestedFields() []*Field {
 	return f.fields
 }
-
-

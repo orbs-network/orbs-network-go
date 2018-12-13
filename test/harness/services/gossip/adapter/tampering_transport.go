@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"sync"
 	"time"
@@ -33,7 +34,7 @@ type Tamperer interface {
 	Duplicate(predicate MessagePredicate) OngoingTamper
 
 	// Creates an ongoing tamper which corrupts messages matching the given predicate
-	Corrupt(predicate MessagePredicate) OngoingTamper
+	Corrupt(predicate MessagePredicate, rand *test.ControlledRand) OngoingTamper
 
 	// Creates an ongoing tamper which delays (reshuffles) messages matching the given predicate for the specified duration
 	Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper
@@ -61,7 +62,7 @@ type TamperingTransport struct {
 		ongoingTamperers []OngoingTamper
 	}
 
-	logger     log.BasicLogger
+	logger log.BasicLogger
 }
 
 func NewTamperingTransport(logger log.BasicLogger, nested adapter.Transport) *TamperingTransport {
@@ -116,7 +117,7 @@ func (t *TamperingTransport) Duplicate(predicate MessagePredicate) OngoingTamper
 	return t.addTamperer(&duplicatingTamperer{predicate: predicate, transport: t})
 }
 
-func (t *TamperingTransport) Corrupt(predicate MessagePredicate) OngoingTamper {
+func (t *TamperingTransport) Corrupt(predicate MessagePredicate, ctrlRand *test.ControlledRand) OngoingTamper {
 	return t.addTamperer(&corruptingTamperer{predicate: predicate, transport: t})
 }
 
@@ -191,4 +192,3 @@ func (t *TamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
 	t.tamperers.ongoingTamperers = append(t.tamperers.ongoingTamperers, tamperer)
 	return tamperer
 }
-
