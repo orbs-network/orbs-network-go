@@ -1,4 +1,4 @@
-package main
+package oip2
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 // helpers for avoiding reliance on strings throughout the system
-const CONTRACT_NAME = "OIP2"
+const CONTRACT_NAME = "oip2"
 
 /////////////////////////////////////////////////////////////////
 // contract starts here

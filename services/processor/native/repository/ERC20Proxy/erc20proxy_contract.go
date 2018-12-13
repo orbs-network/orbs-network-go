@@ -8,7 +8,7 @@ import (
 )
 
 // helpers for avoiding reliance on strings throughout the system
-const CONTRACT_NAME = "ERC20Proxy"
+const CONTRACT_NAME = "erc20Pproxy_contract"
 
 /////////////////////////////////////////////////////////////////
 // contract starts here

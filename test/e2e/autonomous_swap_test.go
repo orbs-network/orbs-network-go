@@ -1,15 +1,16 @@
 package e2e
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/crypto/address"
+	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ASBEthereum"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/OIP2"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"math/big"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 
 	fakeFederation := common.BigToAddress(big.NewInt(1700))
 
-	orbsAsbContractName := "orbsAbs"
+	orbsAsbContractName := asb_ether.CONTRACT_NAME
 	// deploy contract asb to ganache
 	ethAsbAddress, ethAsbContract, _ /*ethAsbAuth*/, err := h.deployEthereumContract(asbABI, asbByteCode, uint32(0), uint64(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID), //TODO CHANGE IN LEoNId,
 		orbsAsbContractName, ethTetAddress, fakeFederation)
@@ -41,21 +42,21 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 
 	// deploy contract TET token in orbs
 	orbsContractOwnerAddress := OwnerOfAllSupply // TODO v1 is this ok ?
-	orbsTetContractName := "orbsTet"
+	orbsTetContractName := oip2.CONTRACT_NAME
 
-	orbsTetContractCode, err := ioutil.ReadFile("./services/processor/native/repository/oip2/oip2_contract.go") // TODO v1 how to get  TODO v1 decide oip or erc
-	require.NoError(t, err, "could read tet contract")
-	response, err := h.deployNativeContract(orbsContractOwnerAddress, orbsTetContractName, orbsTetContractCode)
-	require.NoError(t, err, "could not deploy tet to orbs")
-	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+	/*	orbsTetContractCode, err := ioutil.ReadFile("./services/processor/native/repository/oip2/oip2_contract.go") // TODO v1 how to get  TODO v1 decide oip or erc
+		require.NoError(t, err, "could read tet contract")
+		response, err := h.deployNativeContract(orbsContractOwnerAddress, orbsTetContractName, orbsTetContractCode)
+		require.NoError(t, err, "could not deploy tet to orbs")
+		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 
-	// deploy contract asb in orbs
-	orbsAsbContractCode, err := ioutil.ReadFile("./services/processor/native/repository/ASBEthereum/asb_ether_contract.go") // TODO v1 how to get
-	require.NoError(t, err, "could read asb contract")
-	response, err = h.deployNativeContract(orbsContractOwnerAddress, orbsAsbContractName, orbsAsbContractCode)
-	require.NoError(t, err, "could not deploy asb to orbs")
-	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-
+		// deploy contract asb in orbs
+		orbsAsbContractCode, err := ioutil.ReadFile("./services/processor/native/repository/ASBEthereum/asb_ether_contract.go") // TODO v1 how to get
+		require.NoError(t, err, "could read asb contract")
+		response, err = h.deployNativeContract(orbsContractOwnerAddress, orbsAsbContractName, orbsAsbContractCode)
+		require.NoError(t, err, "could not deploy asb to orbs")
+		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+	*/
 	// generate user address, key and give user some tokens
 	amount := big.NewInt(17)
 	key, err := crypto.HexToECDSA(getConfig().ethContractUserPrivateKeyHex)
@@ -65,18 +66,16 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	require.NoError(t, err, "could not assign token to sender")
 
 	// target orbs user address
-	// TODO address code expects strings and its WRONG
-	orbsContractUserAddress, err := address.NewFromPK(keys.Ed25519KeyPairForTests(9).PublicKey(), "640ed3", address.TEST_NETWORK_ID)
+	orbsUser, err := orbsclient.CreateAccount()
 	require.NoError(t, err, "could not create orbs address")
-	// TODO raw needs to return [20]bytes
-	var orbsContractUserAddressRaw20 [20]byte
-	orbsContractUserAddressRaw, err := orbsContractUserAddress.Raw()
-	copy(orbsContractUserAddressRaw20[:], orbsContractUserAddressRaw)
+	var orbsUserAddress [20]byte
+	copy(orbsUserAddress[:], orbsUser.RawAddress)
 
 	// Ethereum transfer out
 	_, err = ethTetContract.Transact(ethContractUserAuth, "approve", ethAsbAddress, amount)
 	require.NoError(t, err, "could not approve transfer")
-	tx, err := ethAsbContract.Transact(ethContractUserAuth, "transferOut", orbsContractUserAddressRaw20, amount)
+	fmt.Printf("XXXXX2 : {%x}\n", orbsUser.RawAddress)
+	tx, err := ethAsbContract.Transact(ethContractUserAuth, "transferOut", orbsUserAddress, amount)
 	require.NoError(t, err, "could not transfer out")
 	// TODO check token was transferred from eth tet
 	ethTxHash := tx.Hash() // TODO how to get the tuid (eth log id) from tx.Data()
@@ -84,14 +83,22 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	// TODO wait 100 blocks
 
 	// in orbs
-	// send tx transfer in to asb contract
-	response, _, err = h.sendTransaction(orbsContractOwnerAddress, orbsAsbContractName, "transferIn", ethTxHash.Bytes())
+	// bind orbs asb to eth asb
+	response, _, err := h.sendTransaction(orbsContractOwnerAddress, orbsAsbContractName, "setAsbAddr", ethAsbAddress.Hex())
+	require.NoError(t, err, "failed calling set addr")
+	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
+	require.Equal(t, string(codec.EXECUTION_RESULT_SUCCESS), string(response.ExecutionResult))
+
+	// TODO v1 deploy causes who is owner - important for both.
+	response, _, err = h.sendTransaction(orbsContractOwnerAddress, orbsAsbContractName, "transferIn", ethTxHash.Hex())
+	t.Log(response.OutputArguments[0].(string))
 	require.NoError(t, err, "failed calling transfer in")
 	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
+	require.Equal(t, string(codec.EXECUTION_RESULT_SUCCESS), string(response.ExecutionResult))
 	//require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 
 	// check that the tokens got there.
-	methodResp, err := h.callMethod(orbsContractOwnerAddress, orbsTetContractName, "balanceOf", orbsContractUserAddressRaw20[:])
+	methodResp, err := h.callMethod(orbsContractOwnerAddress, orbsTetContractName, "balanceOf", orbsUser.RawAddress)
 	require.NoError(t, err, "checking balance failed")
 	//require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 	require.Equal(t, string(codec.EXECUTION_RESULT_SUCCESS), string(methodResp.ExecutionResult))
