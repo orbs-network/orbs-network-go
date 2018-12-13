@@ -1,6 +1,7 @@
 package asb_ether
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
@@ -26,7 +27,7 @@ var PRIVATE = sdk.Export(getOutTuid, setOutTuid, genInTuidKey, isInTuidExists, s
 
 // defaults
 const TOKEN_CONTRACT_KEY = "_TOKEN_CONTRACT_KEY_"
-const defaultTokenContract = "asb_ether" // TODO fill in
+const defaultTokenContract = "oip2" // TODO fill in
 const ASB_ETH_ADDR_KEY = "_ASB_ETH_ADDR_KEY_"
 const defaultAsbAddr = "stam" // TODO fill in
 const ASB_ABI_KEY = "_ASB_ABI_KEY_"
@@ -43,10 +44,10 @@ func _init() {
 
 //event TransferredOut(uint256 indexed tuid, address indexed from, bytes20 indexed to, uint256 value);
 type TransferredOut struct {
-	tuid  *big.Int
-	from  *common.Address
-	to    []byte
-	value *big.Int
+	Tuid  *big.Int
+	From  common.Address
+	To    [20]byte
+	Value *big.Int
 }
 
 func OrbsTransferOut(
@@ -58,16 +59,25 @@ func OrbsTransferOut(
 
 func transferIn(hexEncodedEthTxHash string) {
 	absAddr := getAsbAddr()
-	ethEvent := &TransferredOut{}
-	ethereum.GetTransactionLog(absAddr, getAsbAbi(), hexEncodedEthTxHash, "TransferredOut", ethEvent)
+	e := &TransferredOut{}
+	ethereum.GetTransactionLog(absAddr, getAsbAbi(), hexEncodedEthTxHash, "TransferredOut", e)
 
-	inTuidKey := genInTuidKey(ethEvent.tuid.String())
-	if isInTuidExists(inTuidKey) {
-		panic(fmt.Errorf("transfer of %d to address %x failed since inbound-tuid %d has already been spent", ethEvent.value, ethEvent.to, ethEvent.tuid))
+	fmt.Printf("tuid=%s, from=%s, to=%s, value=%s\n", e.Tuid, hex.EncodeToString(e.From.Bytes()), hex.EncodeToString(e.To[:]), e.Value)
+
+	if e.Tuid == nil {
+		panic("Got nil tuid from logs")
 	}
 
-	fmt.Printf("XXXXX : {%x}\n", ethEvent.to)
-	service.CallMethod(getTokenContract(), "mint", ethEvent.to, ethEvent.value) // todo mint or transfer
+	if e.Value == nil {
+		panic("Got nil value from log")
+	}
+
+	inTuidKey := genInTuidKey(e.Tuid.String())
+	if isInTuidExists(inTuidKey) {
+		panic(fmt.Errorf("transfer of %d to address %x failed since inbound-tuid %d has already been spent", e.Value, e.To, e.Tuid))
+	}
+
+	service.CallMethod(getTokenContract(), "mint", e.To[:], e.Value.Uint64()) // todo mint or transfer
 
 	setInTuid(inTuidKey)
 }

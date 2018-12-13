@@ -3,7 +3,9 @@ package test
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -33,8 +35,8 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 
 		amount := big.NewInt(42)
 		tuid := big.NewInt(33)
-		ethAddress := [20]byte{0x01, 0x02, 0x03}
-		orbsAddress := [20]byte{0x04, 0x05, 0x06}
+		ethAddress := common.BigToAddress(big.NewInt(42000000000))
+		orbsAddress := anOrbsAddress()
 
 		tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
 		simulator.Commit()
@@ -57,4 +59,11 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		require.EqualValues(t, orbsAddress, event.OrbsAddress, "failed getting orbsAddress from unpacked data")
 		require.EqualValues(t, amount, event.Value, "failed getting amount from unpacked data")
 	})
+}
+
+func anOrbsAddress() [20]byte {
+	orbsUser, _ := orbsclient.CreateAccount()
+	var orbsUserAddress [20]byte
+	copy(orbsUserAddress[:], orbsUser.RawAddress)
+	return orbsUserAddress
 }

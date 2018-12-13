@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -78,7 +79,9 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	tx, err := ethAsbContract.Transact(ethContractUserAuth, "transferOut", orbsUserAddress, amount)
 	require.NoError(t, err, "could not transfer out")
 	// TODO check token was transferred from eth tet
-	ethTxHash := tx.Hash() // TODO how to get the tuid (eth log id) from tx.Data()
+	ethTxHash := tx.Hash()
+	t.Log("Ethereum txHash", ethTxHash.String())
+	t.Log("Orbs address", hex.EncodeToString(orbsUser.RawAddress))
 
 	// TODO wait 100 blocks
 
@@ -91,7 +94,7 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 
 	// TODO v1 deploy causes who is owner - important for both.
 	response, _, err = h.sendTransaction(orbsContractOwnerAddress, orbsAsbContractName, "transferIn", ethTxHash.Hex())
-	t.Log(response.OutputArguments[0].(string))
+	//t.Log(response.OutputArguments[0].(string))
 	require.NoError(t, err, "failed calling transfer in")
 	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
 	require.Equal(t, string(codec.EXECUTION_RESULT_SUCCESS), string(response.ExecutionResult))
@@ -102,7 +105,7 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	require.NoError(t, err, "checking balance failed")
 	//require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 	require.Equal(t, string(codec.EXECUTION_RESULT_SUCCESS), string(methodResp.ExecutionResult))
-	require.Equal(t, amount, methodResp.OutputArguments[0], "wrong amount")
+	require.EqualValues(t, amount.Uint64(), methodResp.OutputArguments[0], "wrong amount")
 }
 
 const tetABI = `[{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"constant":false,"inputs":[{"name":"_account","type":"address"},{"name":"_value","type":"uint256"}],"name":"assign","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
