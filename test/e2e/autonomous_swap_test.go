@@ -45,19 +45,6 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	orbsContractOwnerAddress := OwnerOfAllSupply // TODO v1 is this ok ?
 	orbsTetContractName := oip2.CONTRACT_NAME
 
-	/*	orbsTetContractCode, err := ioutil.ReadFile("./services/processor/native/repository/oip2/oip2_contract.go") // TODO v1 how to get  TODO v1 decide oip or erc
-		require.NoError(t, err, "could read tet contract")
-		response, err := h.deployNativeContract(orbsContractOwnerAddress, orbsTetContractName, orbsTetContractCode)
-		require.NoError(t, err, "could not deploy tet to orbs")
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-
-		// deploy contract asb in orbs
-		orbsAsbContractCode, err := ioutil.ReadFile("./services/processor/native/repository/ASBEthereum/asb_ether_contract.go") // TODO v1 how to get
-		require.NoError(t, err, "could read asb contract")
-		response, err = h.deployNativeContract(orbsContractOwnerAddress, orbsAsbContractName, orbsAsbContractCode)
-		require.NoError(t, err, "could not deploy asb to orbs")
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-	*/
 	// generate user address, key and give user some tokens
 	amount := big.NewInt(17)
 	key, err := crypto.HexToECDSA(getConfig().ethContractUserPrivateKeyHex)

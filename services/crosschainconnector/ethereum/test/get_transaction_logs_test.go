@@ -26,10 +26,7 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		auth := simulator.GetAuth()
 		connector := ethereum.NewEthereumCrosschainConnector(simulator, logger)
 
-		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
-		require.NoError(t, err, "failed parsing ABI")
-
-		contractAddress, deployedContract, err := simulator.DeployEmitEvent(auth, parsedABI)
+		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 		simulator.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
@@ -43,13 +40,16 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		require.NoError(t, err, "failed emitting event")
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
-			EthereumContractAddress: hexutil.Encode(contractAddress),
+			EthereumContractAddress: hexutil.Encode(contractAddress.Bytes()),
 			EthereumTxhash:          primitives.Uint256(tx.Hash().Bytes()),
 			EthereumEventName:       "TransferredOut",
 			EthereumJsonAbi:         contract.EmitEventAbi,
 			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
 		})
 		require.NoError(t, err, "failed getting logs")
+
+		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
+		require.NoError(t, err, "failed parsing ABI")
 
 		event := new(contract.EmitEvent)
 		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "TransferredOut", out.EthereumAbiPackedOutput)
