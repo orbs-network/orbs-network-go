@@ -59,16 +59,19 @@ func newDriver(networkDriver harness.TestNetworkDriver) *driver {
 }
 
 type driver struct {
-	network                  harness.TestNetworkDriver
-	simulator                *adapter.EthereumSimulator
-	orbsUser                 *orbsclient.OrbsAccount
-	addressInEthereum        *bind.TransactOpts // we use a single address for both the "admin" stuff like deploying the contracts and as our swapping user, so as to simplify setup - otherwise we'll need to create two PKs in the simulator
-	erc20contract            *bind.BoundContract
-	erc20address             *common.Address
-	orbsASBContractName      string
-	ethASBAddress            *common.Address
-	ethASBContract           *bind.BoundContract
+	network   harness.TestNetworkDriver
+	simulator *adapter.EthereumSimulator
+
 	orbsContractOwnerAddress *keys.Ed25519KeyPair
+	orbsASBContractName      string
+	orbsUser                 *orbsclient.OrbsAccount
+
+	addressInEthereum *bind.TransactOpts // we use a single address for both the "admin" stuff like deploying the contracts and as our swapping user, so as to simplify setup - otherwise we'll need to create two PKs in the simulator
+
+	erc20contract  *bind.BoundContract
+	erc20address   *common.Address
+	ethASBAddress  *common.Address
+	ethASBContract *bind.BoundContract
 }
 
 func (d *driver) transferOutFromEthereum(t *testing.T, amount *big.Int) string {

@@ -18,9 +18,7 @@ import (
 )
 
 func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping E2E tests in short mode")
-	}
+	t.Skip("translated to acceptance test")
 
 	h := newHarness()
 	lt := time.Now()
