@@ -21,33 +21,34 @@ import (
 )
 
 func TestTransferFromEthereumToOrbs(t *testing.T) {
-	harness.
-		Network(t).
+	harness.Network(t).
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-			amount := big.NewInt(17)
+			d := newAutonomousSwapDriver(network)
 
-			d := newDriver(network)
+			amount := big.NewInt(17)
 
 			d.generateOrbsAccount(t)
 
-			d.deployERC20Contract(t)
-			d.generateEthAccountAndAssignFunds(t, amount)
+			d.deployTokenContractToEthereum(t)
+			d.generateEthereumAccountAndAssignFunds(t, amount)
 
-			d.deployAutonomousSwapBridge(t)
-			d.bindAutonomousSwapBridges(ctx, t)
+			d.deployAutonomousSwapBridgeToEthereum(t)
+			d.bindOrbsAutonomousSwapBridgeToEthereum(ctx, t)
 
-			d.approveTransferInTokenContract(t, amount)
+			d.approveTransferInEthereumTokenContract(t, amount)
 			transferOutTxHash := d.transferOutFromEthereum(t, amount)
 
 			// TODO v1 deploy causes who is owner - important for both.
 			d.transferInToOrbs(ctx, t, transferOutTxHash)
 
-			balanceAfterTransfer := d.getBalance(ctx, t)
+			balanceAfterTransfer := d.getBalanceInOrbs(ctx, t)
 			require.EqualValues(t, amount.Uint64(), balanceAfterTransfer, "wrong amount")
+
+			//TODO v1 assert balance was removed from Ethereum
 		})
 }
 
-func newDriver(networkDriver harness.TestNetworkDriver) *driver {
+func newAutonomousSwapDriver(networkDriver harness.TestNetworkDriver) *driver {
 	simulator := networkDriver.EthereumSimulator()
 	return &driver{
 		network:                  networkDriver,
@@ -84,13 +85,13 @@ func (d *driver) transferOutFromEthereum(t *testing.T, amount *big.Int) string {
 	return transferOutTx.Hash().Hex()
 }
 
-func (d *driver) approveTransferInTokenContract(t *testing.T, amount *big.Int) {
+func (d *driver) approveTransferInEthereumTokenContract(t *testing.T, amount *big.Int) {
 	_, err := d.erc20contract.Transact(d.addressInEthereum, "approve", d.ethASBAddress, amount)
 	require.NoError(t, err, "could not approve transfer")
 	d.simulator.Commit()
 }
 
-func (d *driver) getBalance(ctx context.Context, t *testing.T) uint64 {
+func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
 	balanceResponse := d.network.CallMethod(ctx, builders.Transaction().
 		WithEd25519Signer(d.orbsContractOwnerAddress).
 		WithMethod(primitives.ContractName(oip2.CONTRACT_NAME), "balanceOf").
@@ -113,7 +114,7 @@ func (d *driver) transferInToOrbs(ctx context.Context, t *testing.T, transferOut
 	test.RequireSuccess(t, response, "failed setting asb address")
 }
 
-func (d *driver) bindAutonomousSwapBridges(ctx context.Context, t *testing.T) {
+func (d *driver) bindOrbsAutonomousSwapBridgeToEthereum(ctx context.Context, t *testing.T) {
 	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
 		WithMethod(primitives.ContractName(d.orbsASBContractName), "setAsbAddr").
 		WithEd25519Signer(d.orbsContractOwnerAddress).
@@ -132,7 +133,7 @@ func (d *driver) generateOrbsAccount(t *testing.T) {
 	d.orbsUser = orbsUser
 }
 
-func (d *driver) generateEthAccountAndAssignFunds(t *testing.T, amount *big.Int) {
+func (d *driver) generateEthereumAccountAndAssignFunds(t *testing.T, amount *big.Int) {
 	ethContractUserAuth := d.addressInEthereum
 	// we don't REALLY care who is the user we transfer from, so for simplicity's sake we use the same mega-user defined when simulator is created
 	_, err := d.erc20contract.Transact(d.addressInEthereum, "assign", ethContractUserAuth.From /*address of user*/, amount)
@@ -142,7 +143,7 @@ func (d *driver) generateEthAccountAndAssignFunds(t *testing.T, amount *big.Int)
 }
 
 // orbs side of the contract is automatically deployed so this only deploys to Ethereum
-func (d *driver) deployAutonomousSwapBridge(t *testing.T) {
+func (d *driver) deployAutonomousSwapBridgeToEthereum(t *testing.T) {
 	fakeFederation := common.BigToAddress(big.NewInt(1700))
 
 	ethAsbAddress, ethAsbContract, err := d.simulator.DeployEthereumContract(d.addressInEthereum, asbABI, asbByteCode, uint32(0), uint64(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID), //TODO CHANGE IN LEoNId,
@@ -153,7 +154,7 @@ func (d *driver) deployAutonomousSwapBridge(t *testing.T) {
 	d.ethASBContract = ethAsbContract
 }
 
-func (d *driver) deployERC20Contract(t *testing.T) {
+func (d *driver) deployTokenContractToEthereum(t *testing.T) {
 	ethTetAddress, ethTetContract, err := d.simulator.DeployEthereumContract(d.addressInEthereum, tetABI, tetByteCode)
 	require.NoError(t, err, "could not deploy erc token to Ethereum")
 	d.simulator.Commit()
