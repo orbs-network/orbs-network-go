@@ -48,13 +48,6 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 						LeanHelix:          nil,
 					},
 					ReceiptProof: proof,
-					ReceiptIndex: nil, /* i */
-					Receipt: &protocol.TransactionReceiptBuilder{
-						Txhash:              txr.Txhash(),
-						ExecutionResult:     txr.ExecutionResult(),
-						OutputArgumentArray: txr.OutputArgumentArray(),
-						OutputEventsArray:   txr.OutputEventsArray(),
-					},
 				}).Build(),
 			}
 			return result, nil
