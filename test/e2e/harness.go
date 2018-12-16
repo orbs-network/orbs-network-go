@@ -57,6 +57,8 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 			return "", "", fmt.Errorf("contract deployment is TRANSACTION_STATUS_PENDING for over %v", timeoutDuration)
 		}
 
+		time.Sleep(10 * time.Millisecond)
+
 		txStatusOut, _ := h.getTransactionStatus(txId)
 
 		txStatus, executionResult = txStatusOut.TransactionStatus, txStatusOut.ExecutionResult
