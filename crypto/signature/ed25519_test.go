@@ -16,6 +16,7 @@ func TestSignEd25519(t *testing.T) {
 	sig, err := SignEd25519(kp.PrivateKey(), someDataToSign_Ed25519)
 	require.NoError(t, err)
 	require.Equal(t, ED25519_SIGNATURE_SIZE_BYTES, len(sig))
+
 	ok := VerifyEd25519(kp.PublicKey(), someDataToSign_Ed25519, sig)
 	require.True(t, ok, "verification should succeed")
 }
