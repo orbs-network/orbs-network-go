@@ -28,11 +28,21 @@ type node struct {
 	ctxCancel    context.CancelFunc
 }
 
+func getMetricRegistry() metric.Registry {
+	metricRegistry := metric.NewRegistry()
+	version := config.GetVersion()
+
+	metricRegistry.NewText("Version.Semantic", version.Semantic)
+	metricRegistry.NewText("Version.Commit", version.Commit)
+
+	return metricRegistry
+}
+
 func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress string) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodePublicKey().String()))
-	metricRegistry := metric.NewRegistry()
+	metricRegistry := getMetricRegistry()
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
 	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)

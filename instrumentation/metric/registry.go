@@ -13,6 +13,7 @@ type Factory interface {
 	NewLatency(name string, maxDuration time.Duration) *Histogram
 	NewGauge(name string) *Gauge
 	NewRate(name string) *Rate
+	NewText(name string, defaultValue ...string) *Text
 }
 
 type Registry interface {
@@ -73,6 +74,12 @@ func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *H
 	h := newHistogram(name, maxDuration.Nanoseconds())
 	r.register(h)
 	return h
+}
+
+func (r *inMemoryRegistry) NewText(name string, defaultValue ...string) *Text {
+	m := newText(name, defaultValue...)
+	r.register(m)
+	return m
 }
 
 func (r *inMemoryRegistry) String() string {
