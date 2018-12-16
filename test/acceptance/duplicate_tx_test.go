@@ -52,9 +52,13 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.T
 
 	// count receipts for txHash in leader block storage
 	receiptCount := 0
-	blocks, _, _, err := network.BlockPersistence(0).GetBlocks(1, height)
-	require.NoError(t, err, "GetBlocks should return blocks")
-	require.Len(t, blocks, int(height), "GetBlocks should return %d blocks", height)
+	var blocks []*BlockPairContainer
+	err = network.BlockPersistence(0).ScanBlocks(1, uint(height), func(offset primitives.BlockHeight, page []*BlockPairContainer) bool {
+		blocks = page
+		return false
+	})
+	require.NoError(t, err, "ScanBlocks should return blocks")
+	require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks", height)
 	for _, block := range blocks {
 		for _, r := range block.ResultsBlock.TransactionReceipts {
 			if bytes.Equal(r.Txhash(), txHash) {

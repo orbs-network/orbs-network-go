@@ -2,6 +2,7 @@ package blockstorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -98,8 +99,19 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 
 // Returns a slice of blocks containing first and last
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/174): support paging
-func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight, err error) {
-	return s.persistence.GetBlocks(first, last)
+func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
+	var blocks []*protocol.BlockPairContainer
+	err := s.persistence.ScanBlocks(first, uint(last-first+1), func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		blocks = page
+		return false
+	})
+	if err != nil {
+		return nil, 0, 0, errors.Wrap(err, "failed getting blocks")
+	}
+	if len(blocks) == 0 {
+		return nil, 0, 0, fmt.Errorf("could not find blocks in height range %d-%d", first, last)
+	}
+	return blocks, first, first + primitives.BlockHeight(len(blocks)) - 1, nil
 }
 
 func (s *service) createEmptyTransactionReceiptResult(ctx context.Context) (*services.GetTransactionReceiptOutput, error) {

@@ -18,7 +18,7 @@ type BlockPairCommitter interface {
 
 type blockSource interface {
 	GetBlockTracker() *synchronization.BlockTracker
-	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error)
+	ScanBlocks(from primitives.BlockHeight, pageSize uint, f func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool) error
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 
@@ -30,7 +30,13 @@ func syncOnce(ctx context.Context, source blockSource, committer BlockPairCommit
 	topBlockHeight := topBlock.ResultsBlock.Header.BlockHeight()
 
 	for i := topBlockHeight; i <= topBlockHeight; {
-		singleBlockArr, _, _, err := source.GetBlocks(i, i+1) // GetBlocks is 1 based for some strange reason
+		var singleBlockArr []*protocol.BlockPairContainer
+
+		// TODO - use ScanBlocks more efficiently
+		err := source.ScanBlocks(i, 1, func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+			singleBlockArr = page
+			return false
+		})
 		if err != nil {
 			return 0, err
 		}

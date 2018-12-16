@@ -230,30 +230,23 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 	}
 }
 
-// TODO(https://github.com/orbs-network/orbs-network-go/issues/174): better support for paging
-func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-
+func (bp *inMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint, f func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool) error {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
 	allBlocks := bp.blockChain.blocks
 	allBlocksLength := primitives.BlockHeight(len(allBlocks))
 
-	if first > allBlocksLength {
-		return nil, 0, 0, nil
+	cont := true
+	for from <= allBlocksLength && cont {
+		to := from + primitives.BlockHeight(pageSize) - 1
+		if to > allBlocksLength {
+			to = allBlocksLength
+		}
+		cont = f(from, allBlocks[from-1:to])
+		from = to + 1
 	}
-	firstReturnedBlockHeight = first
-
-	lastReturnedBlockHeight = last
-	if last > allBlocksLength {
-		lastReturnedBlockHeight = allBlocksLength
-	}
-
-	for i := first - 1; i < lastReturnedBlockHeight; i++ {
-		blocks = append(blocks, allBlocks[i])
-	}
-
-	return blocks, firstReturnedBlockHeight, lastReturnedBlockHeight, nil
+	return nil
 }
 
 func sizeOfBlock(block *protocol.BlockPairContainer) int64 {

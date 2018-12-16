@@ -14,6 +14,7 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
@@ -144,7 +145,12 @@ func extractBlocks(blocks blockStorageAdapter.InMemoryBlockPersistence) []*proto
 	if err != nil {
 		panic(errors.Wrapf(err, "spawn network: failed reading block height"))
 	}
-	blockPairs, _, _, err := blocks.GetBlocks(1, lastBlock.ResultsBlock.Header.BlockHeight()+1)
+	var blockPairs []*protocol.BlockPairContainer
+	pageSize := uint(lastBlock.ResultsBlock.Header.BlockHeight())
+	err = blocks.ScanBlocks(1, pageSize, func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		blockPairs = page // TODO should we copy the slice here to make sure both networks are isolated?
+		return false
+	})
 	if err != nil {
 		panic(errors.Wrapf(err, "spawn network: failed extract blocks"))
 	}

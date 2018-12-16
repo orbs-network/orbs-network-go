@@ -18,7 +18,7 @@ func TestSyncLoop(t *testing.T) {
 		// Set up block source mock
 		sourceMock := newBlockSourceMock(4)
 		sourceMock.When("GetLastBlock").Times(1)
-		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
+		sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).Times(5)
 
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
@@ -52,7 +52,7 @@ func TestSyncInitialState(t *testing.T) {
 		sourceMock := newBlockSourceMock(3)
 		sourceMock.When("GetLastBlock").Times(2)
 		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil).AtLeast(0)
-		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
+		sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).Times(5)
 
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
@@ -113,16 +113,17 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 }
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this fake implementation assumes there is no genesis block, Fix once addressing genesis
-func (bsf *blockSourceMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-	bsf.Called(first, last)
-	result := make([]*protocol.BlockPairContainer, last-first)
-	for i := range result {
-		result[i] = &protocol.BlockPairContainer{
-			TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
-			ResultsBlock:      &protocol.ResultsBlockContainer{Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
+func (bsf *blockSourceMock) ScanBlocks(from primitives.BlockHeight, pageSize uint, f func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool) error {
+	bsf.Called(from, pageSize, f)
+	blocks := make([]*protocol.BlockPairContainer, pageSize)
+	for i := range blocks {
+		blocks[i] = &protocol.BlockPairContainer{
+			TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: from + primitives.BlockHeight(i)}).Build()},
+			ResultsBlock:      &protocol.ResultsBlockContainer{Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: from + primitives.BlockHeight(i)}).Build()},
 		}
 	}
-	return result, first, last, nil
+	f(from, blocks)
+	return nil
 }
 
 func (bsf *blockSourceMock) GetBlockTracker() *synchronization.BlockTracker {
