@@ -135,8 +135,8 @@ func TestStringableSlice(t *testing.T) {
 	jsonMap := parseOutput(b.String())
 
 	require.Equal(t, []interface{}{
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputEventsArray:,OutputArgumentArray:,}",
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputEventsArray:,OutputArgumentArray:,}",
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
+		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
 	}, jsonMap["a-collection"])
 }
 
