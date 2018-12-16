@@ -3,11 +3,6 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
@@ -24,12 +19,9 @@ import (
 )
 
 type E2EConfig struct {
-	bootstrap                     bool
-	baseUrl                       string
-	stressTest                    StressTestConfig
-	ethEndpoint                   string
-	ethContractOwnerPrivateKeyHex string
-	ethContractUserPrivateKeyHex  string
+	bootstrap  bool
+	baseUrl    string
+	stressTest StressTestConfig
 }
 
 type StressTestConfig struct {
@@ -50,35 +42,6 @@ func newHarness() *harness {
 	return &harness{
 		client: orbsclient.NewOrbsClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
 	}
-}
-
-func (h *harness) deployEthereumContract(abijson string, bytecode string, params ...interface{}) (*common.Address, *bind.BoundContract, *bind.TransactOpts, error) {
-	cfg := getConfig()
-
-	// connect
-	client, err := ethclient.Dial(cfg.ethEndpoint)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// gen auth key
-	key, err := crypto.HexToECDSA(cfg.ethContractOwnerPrivateKeyHex)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	auth := bind.NewKeyedTransactor(key)
-
-	// deploy
-	parsedAbi, err := abi.JSON(strings.NewReader(abijson))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	address, _, contract, err := bind.DeployContract(auth, parsedAbi, common.FromHex(bytecode), client, params...)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return &address, contract, auth, nil
 }
 
 func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (*codec.SendTransactionResponse, error) {
@@ -169,12 +132,12 @@ func getConfig() E2EConfig {
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
 		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
-	}
 
-	if stressTestEnabled {
-		stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
-		stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
-		stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
+		if stressTestEnabled {
+			stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
+			stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
+			stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
+		}
 	}
 
 	return E2EConfig{
@@ -186,8 +149,5 @@ func getConfig() E2EConfig {
 			stressTestFailureRate,
 			stressTestTargetTPS,
 		},
-		os.Getenv("ETHEREUM_ENDPOINT"), // TODO v1 get from sys config x2   generate address from mne or pass all 10 address and choose
-		os.Getenv("ETHEREUM_CONTRACT_OWNER_PRIVATE_KEY"),
-		os.Getenv("ETHEREUM_CONTRACT_USER_PRIVATE_KEY"),
 	}
 }

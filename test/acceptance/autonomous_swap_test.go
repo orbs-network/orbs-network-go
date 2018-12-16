@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ASBEthereum"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/OIP2"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ERC20Proxy"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -66,6 +66,7 @@ type driver struct {
 	orbsContractOwnerAddress *keys.Ed25519KeyPair
 	orbsASBContractName      string
 	orbsUser                 *orbsclient.OrbsAccount
+	orbsUserAddress          [20]byte
 
 	addressInEthereum *bind.TransactOpts // we use a single address for both the "admin" stuff like deploying the contracts and as our swapping user, so as to simplify setup - otherwise we'll need to create two PKs in the simulator
 
@@ -76,10 +77,7 @@ type driver struct {
 }
 
 func (d *driver) transferOutFromEthereum(t *testing.T, amount *big.Int) string {
-	var orbsUserAddress [20]byte
-	copy(orbsUserAddress[:], d.orbsUser.RawAddress)
-
-	transferOutTx, err := d.ethASBContract.Transact(d.addressInEthereum, "transferOut", orbsUserAddress, amount)
+	transferOutTx, err := d.ethASBContract.Transact(d.addressInEthereum, "transferOut", d.orbsUserAddress, amount)
 	require.NoError(t, err, "could not transfer out")
 	d.simulator.Commit()
 	return transferOutTx.Hash().Hex()
@@ -94,7 +92,7 @@ func (d *driver) approveTransferInEthereumTokenContract(t *testing.T, amount *bi
 func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
 	balanceResponse := d.network.CallMethod(ctx, builders.Transaction().
 		WithEd25519Signer(d.orbsContractOwnerAddress).
-		WithMethod(primitives.ContractName(oip2.CONTRACT_NAME), "balanceOf").
+		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "balanceOf").
 		WithArgs(d.orbsUser.RawAddress).
 		Builder().Transaction, 0)
 	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, balanceResponse.CallMethodResult())
@@ -127,9 +125,8 @@ func (d *driver) bindOrbsAutonomousSwapBridgeToEthereum(ctx context.Context, t *
 func (d *driver) generateOrbsAccount(t *testing.T) {
 	orbsUser, err := orbsclient.CreateAccount()
 	require.NoError(t, err, "could not create orbs address")
-	var orbsUserAddress [20]byte
-	copy(orbsUserAddress[:], orbsUser.RawAddress)
 
+	copy(d.orbsUserAddress[:], orbsUser.RawAddress)
 	d.orbsUser = orbsUser
 }
 

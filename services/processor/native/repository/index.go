@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ASBEthereum"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkContract"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/OIP2"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ERC20Proxy"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
@@ -40,9 +40,9 @@ var PreBuiltContracts = map[string]*sdkContext.ContractInfo{
 		EventsMethods: asb_ether.EVENTS,
 		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE,
 	},
-	oip2.CONTRACT_NAME: {
-		PublicMethods: oip2.PUBLIC,
-		SystemMethods: oip2.SYSTEM,
+	erc20proxy.CONTRACT_NAME: {
+		PublicMethods: erc20proxy.PUBLIC,
+		SystemMethods: erc20proxy.SYSTEM,
 		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE,
 	},
 	// add new pre-built native system contracts here

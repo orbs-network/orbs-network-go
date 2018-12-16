@@ -1,4 +1,4 @@
-package ERC20Proxy
+package erc20proxy
 
 import (
 	"fmt"
@@ -8,17 +8,17 @@ import (
 )
 
 // helpers for avoiding reliance on strings throughout the system
-const CONTRACT_NAME = "erc20Pproxy_contract"
+const CONTRACT_NAME = "erc20proxy"
 
 /////////////////////////////////////////////////////////////////
 // contract starts here
 
-var PUBLIC = sdk.Export(totalSupply, balanceOf, transfer, approve, allowance, transferFrom)
+var PUBLIC = sdk.Export(totalSupply, balanceOf, transfer, approve, allowance, transferFrom, mint, burn)
 var SYSTEM = sdk.Export(_init)
 var PRIVATE = sdk.Export(_transferImpl)
 
 // defaults
-const TOTAL_SUPPLY = 1000000000
+const TOTAL_SUPPLY = 0
 const OWNER_KEY = "_OWNER_KEY_"
 const TOTAL_SUPPLY_KEY = "_TOTAL_SUPPLY_KEY_"
 
@@ -26,7 +26,7 @@ func _init() {
 	ownerAddress := address.GetSignerAddress()
 	state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, TOTAL_SUPPLY)
 	state.WriteBytesByKey(OWNER_KEY, ownerAddress)
-	state.WriteUint64ByAddress(ownerAddress, TOTAL_SUPPLY)
+	//	state.WriteUint64ByAddress(ownerAddress, TOTAL_SUPPLY)
 }
 
 func totalSupply() uint64 {
@@ -86,4 +86,23 @@ func _transferImpl(senderAddress []byte, targetAddress []byte, amount uint64) {
 	// recipient
 	targetBalance := state.ReadUint64ByAddress(targetAddress)
 	state.WriteUint64ByAddress(targetAddress, targetBalance+amount)
+}
+
+func mint(targetAddress []byte, amount uint64) {
+	address.ValidateAddress(targetAddress)
+	targetBalance := state.ReadUint64ByAddress(targetAddress)
+	state.WriteUint64ByAddress(targetAddress, targetBalance+amount)
+	total := state.ReadUint64ByKey(TOTAL_SUPPLY_KEY)
+	state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, total+amount)
+}
+
+func burn(targetAddress []byte, amount uint64) {
+	address.ValidateAddress(targetAddress)
+	targetBalance := state.ReadUint64ByAddress(targetAddress)
+	if targetBalance < amount {
+		panic(fmt.Sprintf("burn of %d from %x failed since balance is only %d", amount, targetAddress, targetBalance))
+	}
+	state.WriteUint64ByAddress(targetAddress, targetBalance-amount)
+	total := state.ReadUint64ByKey(TOTAL_SUPPLY_KEY)
+	state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, total-amount)
 }

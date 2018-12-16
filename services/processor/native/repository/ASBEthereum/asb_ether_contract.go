@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/safemath/safeuint64"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ERC20Proxy"
 	"math/big"
 )
 
@@ -27,7 +28,7 @@ var PRIVATE = sdk.Export(getOutTuid, setOutTuid, genInTuidKey, isInTuidExists, s
 
 // defaults
 const TOKEN_CONTRACT_KEY = "_TOKEN_CONTRACT_KEY_"
-const defaultTokenContract = "oip2" // TODO fill in
+const defaultTokenContract = erc20proxy.CONTRACT_NAME
 const ASB_ETH_ADDR_KEY = "_ASB_ETH_ADDR_KEY_"
 const defaultAsbAddr = "stam" // TODO fill in
 const ASB_ABI_KEY = "_ASB_ABI_KEY_"
