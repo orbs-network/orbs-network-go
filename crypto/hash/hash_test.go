@@ -19,8 +19,8 @@ func TestCalcSha256(t *testing.T) {
 	}
 }
 
-func TestCalcRipmd160Sha256(t *testing.T) {
-	h := hash.CalcRipmd160Sha256(someData)
+func TestCalcRipemd160Sha256(t *testing.T) {
+	h := hash.CalcRipemd160Sha256(someData)
 	if h.String() != ExpectedSha256Ripmd160 {
 		t.Errorf("sha256ripmd160 failed expected %s got %s", ExpectedSha256Ripmd160, h)
 	}
@@ -32,8 +32,8 @@ func BenchmarkCalcSha256(b *testing.B) {
 	}
 }
 
-func BenchmarkCalcRipmd160Sha256(b *testing.B) {
+func BenchmarkCalcRipemd160Sha256(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		hash.CalcRipmd160Sha256(someData)
+		hash.CalcRipemd160Sha256(someData)
 	}
 }

@@ -10,7 +10,7 @@ const (
 	RIPMD160_HASH_SIZE_BYTES = 20
 )
 
-func CalcRipmd160Sha256(data []byte) primitives.Ripmd160Sha256 {
+func CalcRipemd160Sha256(data []byte) primitives.Ripemd160Sha256 {
 	hash := sha256.Sum256(data)
 	r := ripemd160.New()
 	r.Write(hash[:])
