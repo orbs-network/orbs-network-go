@@ -109,18 +109,10 @@ func newSimulatedEthereumConnectorHarness() *harness {
 	}
 }
 
-func ethereumPackInputArguments(jsonAbi string, method string, args []interface{}) ([]byte, error) {
-	if parsedABI, err := abi.JSON(strings.NewReader(jsonAbi)); err != nil {
+func (h *harness) packInputArgumentsForSampleStorage(method string, args []interface{}) ([]byte, error) {
+	if parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI)); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
-		return parsedABI.Pack(method, args...)
-	}
-}
-
-func ethereumUnpackOutput(data []byte, method string, out interface{}) error {
-	if parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI)); err != nil {
-		return errors.WithStack(err)
-	} else {
-		return parsedABI.Unpack(out, method, data)
+		return ethereum.ABIPackFunctionInputArguments(parsedABI, method, args)
 	}
 }

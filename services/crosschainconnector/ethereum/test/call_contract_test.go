@@ -36,7 +36,7 @@ func TestCallContractWithoutArgs(t *testing.T) {
 		methodToCall := "getValues"
 		h.deploySimulatorStorageContract(ctx, initText)
 
-		ethCallData, err := ethereumPackInputArguments(contract.SimpleStorageABI, methodToCall, nil)
+		ethCallData, err := h.packInputArgumentsForSampleStorage(methodToCall, nil)
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
 		input := builders.EthereumCallContractInput().

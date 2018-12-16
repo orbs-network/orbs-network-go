@@ -19,12 +19,12 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 	// the idea of this test is to make sure that the entire 'call-from-ethereum' logic works on a spedific timestamp and different states in time (blocks)
 	// it requires ganache or some other simulation to transact
 
-	//if !runningWithDocker() {
-	//	t.Skip("this test relies on external components - ganache, and will be skipped unless running in docker")
-	//}
+	if !runningWithDocker() {
+		t.Skip("this test relies on external components - ganache, and will be skipped unless running in docker")
+	}
 
 	test.WithContext(func(ctx context.Context) {
-		h := newRpcEthereumConnectorHarness(getHardcodedConfig())
+		h := newRpcEthereumConnectorHarness(getConfig())
 		h.deployContractsToGanache(t, 2, time.Second)
 
 		expectedTextFromEthereum := "test3"
@@ -70,30 +70,12 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 	})
 }
 
-type localconfig struct {
-	endpoint      string
-	privateKeyHex string
-}
-
 func runningWithDocker() bool {
 	return os.Getenv("EXTERNAL_TEST") == "true"
 }
 
-func getHardcodedConfig() *ethereumConnectorConfigForTests {
-	cfg := ethereumConnectorConfigForTests{
-		endpoint:      "http://127.0.0.1:8545",
-		privateKeyHex: "f2ce3a9eddde6e5d996f6fe7c1882960b0e8ee8d799e0ef608276b8de4dc7f19",
-	}
-
-	return &cfg
-}
-
-func (c *localconfig) EthereumEndpoint() string {
-	return c.endpoint
-}
-
-func getConfig() *localconfig {
-	var cfg localconfig
+func getConfig() *ethereumConnectorConfigForTests {
+	var cfg ethereumConnectorConfigForTests
 
 	if endpoint := os.Getenv("ETHEREUM_ENDPOINT"); endpoint != "" {
 		cfg.endpoint = endpoint
