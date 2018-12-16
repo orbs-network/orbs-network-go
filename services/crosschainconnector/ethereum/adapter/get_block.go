@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -37,13 +38,13 @@ func (c *connectorCommon) findBlockByTimeStamp(ctx context.Context, eth *ethclie
 	distanceToTargetFromHigh := highTimestamp - timestamp
 	blocksToJump := distanceToTargetFromHigh / secondsPerBlock
 	c.logger.Info("eth block search delta", log.Int64("jump-backwards", blocksToJump))
-	guess, err := eth.HeaderByNumber(ctx, big.NewInt(highBlockNumber-blocksToJump))
+	guessBlockNumber := highBlockNumber - blocksToJump
+	guess, err := eth.HeaderByNumber(ctx, big.NewInt(guessBlockNumber))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get block by number")
 	}
 
 	guessTimestamp := guess.Time.Int64()
-	guessBlockNumber := guess.Number.Int64()
 
 	// create new relative block diff from guess (educated guess according to known local average)
 	distanceFromTarget := timestamp - guessTimestamp
@@ -51,7 +52,7 @@ func (c *connectorCommon) findBlockByTimeStamp(ctx context.Context, eth *ethclie
 	guessLocalTarget := guessBlockNumber + blocksToJumpForNewLocalGuess
 	newLocalToGuess, err := eth.HeaderByNumber(ctx, big.NewInt(guessLocalTarget))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get block by number")
 	}
 
 	if guessTimestamp > timestamp {

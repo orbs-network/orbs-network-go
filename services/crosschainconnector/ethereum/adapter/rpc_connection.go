@@ -2,10 +2,10 @@ package adapter
 
 import (
 	"context"
-	"errors"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/pkg/errors"
 	"math/big"
 	"sync"
 	"time"
@@ -91,15 +91,21 @@ func (rpc *EthereumRpcConnection) refreshBlocksCache(ctx context.Context) error 
 
 	latest, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get latest block")
 	}
 
 	rpc.mu.blocksCache.latest.timestamp = latest.Time.Int64()
 	rpc.mu.blocksCache.latest.number = latest.Number.Int64()
 
-	older, err := client.HeaderByNumber(ctx, latest.Number.Sub(latest.Number, big.NewInt(10000)))
+	// this was added to support simulations and tests, should not be relevant for production
+	latestNum := latest.Number.Int64()
+	latestNum -= 10000
+	if latestNum < 0 {
+		latestNum = 0
+	}
+	older, err := client.HeaderByNumber(ctx, big.NewInt(latestNum))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get past reference block")
 	}
 
 	rpc.mu.blocksCache.back10k.timestamp = older.Time.Int64()

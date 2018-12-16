@@ -27,19 +27,23 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, logge
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	refenceBlockNumber, err := s.connection.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	referenceBlockNumber, err := s.connection.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("calling contract at", log.String("address", input.EthereumContractAddress))
+	if referenceBlockNumber != nil {
+		logger.Info("calling contract from ethereum",
+			log.String("address", input.EthereumContractAddress),
+			log.Int64("reference-block", referenceBlockNumber.Int64()))
+	}
 	address, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to decode the contract address %s", input.EthereumContractAddress)
 	}
 
-	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, refenceBlockNumber)
+	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, referenceBlockNumber)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "ethereum call failed")
 	}
 
 	return &services.EthereumCallContractOutput{

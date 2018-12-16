@@ -15,7 +15,7 @@ import (
 func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		config := &ethereumConnectorConfigForTests{"https://mainnet.infura.io/v3/55322c8f5b9440f0940a37a3646eac76"} // using real endpoint
+		config := &ethereumConnectorConfigForTests{"https://mainnet.infura.io/v3/55322c8f5b9440f0940a37a3646eac76", ""} // using real endpoint
 		conn := adapter.NewEthereumRpcConnection(config, logger)
 		// something before 2015/07/31
 		_, err := conn.GetBlockByTimestamp(ctx, primitives.TimestampNano(1438300700000000000))
@@ -26,7 +26,7 @@ func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		config := &ethereumConnectorConfigForTests{"https://mainnet.infura.io/v3/55322c8f5b9440f0940a37a3646eac76"} // using real endpoint
+		config := &ethereumConnectorConfigForTests{"https://mainnet.infura.io/v3/55322c8f5b9440f0940a37a3646eac76", ""} // using real endpoint
 		conn := adapter.NewEthereumRpcConnection(config, logger)
 		// something in the future
 		_, err := conn.GetBlockByTimestamp(ctx, primitives.TimestampNano(1944035343000000000))
@@ -37,7 +37,7 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		config := &ethereumConnectorConfigForTests{"https://mainnet.infura.io/v3/55322c8f5b9440f0940a37a3646eac76"} // using real endpoint
+		config := &ethereumConnectorConfigForTests{"https://mainnet.infura.io/v3/55322c8f5b9440f0940a37a3646eac76", ""} // using real endpoint
 		conn := adapter.NewEthereumRpcConnection(config, logger)
 		// something recent
 		blockBI, err := conn.GetBlockByTimestamp(ctx, primitives.TimestampNano(1544035343000000000))
