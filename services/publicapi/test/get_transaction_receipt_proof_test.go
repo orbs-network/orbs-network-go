@@ -63,7 +63,7 @@ func TestGetTransactionReceipt_GetPendingStatusFromTxPool(t *testing.T) {
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "get transaction receipt returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "got wrong status")
-		require.Equal(t, 0, len(result.ClientResponse.Proof().Raw()), "Transaction proof is not equal")
+		require.Equal(t, 0, len(result.ClientResponse.Proof()), "Transaction proof is not equal")
 	})
 }
 
@@ -90,6 +90,6 @@ func TestGetTransactionReceipt_NoRecordsFound(t *testing.T) {
 		require.Error(t, err, "error did not happen when it should")
 		require.NotNil(t, result, "get transaction receipt returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, result.ClientResponse.TransactionStatus(), "got wrong status")
-		require.Equal(t, 0, len(result.ClientResponse.Proof().Raw()), "Transaction proof is not equal")
+		require.Equal(t, 0, len(result.ClientResponse.Proof()), "Transaction proof is not equal")
 	})
 }
