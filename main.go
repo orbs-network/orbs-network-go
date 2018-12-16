@@ -71,11 +71,17 @@ func main() {
 	silentLog := flag.Bool("silent", false, "disable output to stdout")
 	httpLogEndpoint := flag.String("http-log-endpoint", "", "report logs to http/https endpoint (i.e. logz.io)")
 	pathToLog := flag.String("log", "", "path/to/node.log")
+	version := flag.Bool("version", false, "returns information about version")
 
 	var configFiles config.ArrayFlags
 	flag.Var(&configFiles, "config", "path/to/config.json")
 
 	flag.Parse()
+
+	if *version {
+		fmt.Println(config.GetVersion())
+		return
+	}
 
 	cfg, err := getConfig(configFiles)
 	if err != nil {
