@@ -15,7 +15,6 @@ const CONTRACT_NAME = "erc20proxy"
 
 var PUBLIC = sdk.Export(totalSupply, balanceOf, transfer, approve, allowance, transferFrom, mint, burn)
 var SYSTEM = sdk.Export(_init)
-var PRIVATE = sdk.Export(_transferImpl)
 
 // defaults
 const TOTAL_SUPPLY = 0
