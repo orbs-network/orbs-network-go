@@ -1,22 +1,16 @@
 package adapter
 
 import (
-	"encoding/binary"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
-	"sync"
 	"testing"
 )
 
@@ -94,134 +88,5 @@ func aFileSystemAdapter() (adapter.BlockPersistence, func()) {
 	cleanup := func() {
 		os.RemoveAll(dirName)
 	}
-	return NewFilesystemBlockPersistence(dirName), cleanup
-}
-
-func NewFilesystemBlockPersistence(dataDir string) adapter.BlockPersistence {
-	return &FilesystemBlockPersistence{
-		dataFile: struct {
-			sync.RWMutex
-			dataDir   string
-			topHeight primitives.BlockHeight
-		}{
-			dataDir:   dataDir,
-			topHeight: 0,
-		},
-	}
-}
-
-type FilesystemBlockPersistence struct {
-	dataFile struct {
-		sync.RWMutex
-		dataDir   string
-		topHeight primitives.BlockHeight
-	}
-}
-
-func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
-	f.dataFile.Lock()
-	defer f.dataFile.Unlock()
-
-	bh := blockPair.ResultsBlock.Header.BlockHeight()
-	if bh != f.dataFile.topHeight+1 {
-		return fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, f.dataFile.topHeight)
-	}
-
-	file, err := os.Create(f.dataFile.dataDir + "/blocks")
-	if err != nil {
-		return errors.Wrap(err, "failed to open blocks file for writing")
-	}
-	coded, err := codec.EncodeBlockPair(blockPair)
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize block")
-	}
-
-	for _, arr := range coded {
-		chunkSize := make([]byte, 4)
-		binary.LittleEndian.PutUint32(chunkSize, uint32(len(arr)))
-		n, err := file.Write(chunkSize)
-		if err != nil {
-			return errors.Wrap(err, "failed to write bytes to blocks file")
-		}
-		if n != len(chunkSize) {
-			return fmt.Errorf("wrote less bytes than requested to blocks file")
-		}
-		n, err = file.Write(arr)
-		if err != nil {
-			return errors.Wrap(err, "failed to write bytes to blocks file")
-		}
-		if n != len(arr) {
-			return fmt.Errorf("wrote less bytes than requested to blocks file")
-		}
-	}
-	err = file.Sync()
-	if err != nil {
-		return errors.Wrap(err, "failed to flush blocks file to disk")
-	}
-	f.dataFile.topHeight++
-	return nil
-}
-
-func (*FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
-	panic("implement me")
-}
-
-func (*FilesystemBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
-	panic("implement me")
-}
-
-func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
-	f.dataFile.RLock()
-	defer f.dataFile.RUnlock()
-
-	var chunks [][]byte
-	file, err := os.Open(f.dataFile.dataDir + "/blocks")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open blocks file for reading")
-	}
-
-	for {
-		chunkSize := make([]byte, 4)
-		n, err := file.Read(chunkSize)
-		if n == 0 { // EOF
-			break
-		}
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read bytes from blocks file")
-		}
-		if n != len(chunkSize) {
-			return nil, fmt.Errorf("read less bytes than requested from blocks file")
-		}
-		bytesToRead := binary.LittleEndian.Uint32(chunkSize)
-		chunk := make([]byte, bytesToRead)
-		n, err = file.Read(chunk)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read bytes from blocks file")
-		}
-		if n != len(chunk) {
-			return nil, fmt.Errorf("read less bytes than requested from blocks file")
-		}
-		chunks = append(chunks, chunk)
-	}
-	result, err := codec.DecodeBlockPair(chunks)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to deserialize block")
-	}
-	return result, nil
-}
-
-func (*FilesystemBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
-	panic("implement me")
-}
-
-func (*FilesystemBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
-	panic("implement me")
-}
-
-func (*FilesystemBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error) {
-	panic("implement me")
-}
-
-func (*FilesystemBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
-	panic("implement me")
+	return adapter.NewFilesystemBlockPersistence(dirName), cleanup
 }
