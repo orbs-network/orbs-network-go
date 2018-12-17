@@ -3,14 +3,13 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
-	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
+	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 )
@@ -94,7 +93,7 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 
 }
 
-func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
+func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.BlockHash {
 	blockPairWrapper, ok := block.(*BlockPairWrapper)
 	if !ok {
 		return nil
@@ -180,19 +179,13 @@ func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, r
 	// generate tx block proof
 	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
 		Type:      protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: &consensus.LeanHelixBlockProofBuilder{
-			// TODO Transactions BlockProof goes here https://tree.taiga.io/project/orbs-network/us/529
-			// See https://tree.taiga.io/project/orbs-network/us/529
-		},
+		LeanHelix: nil,
 	}).Build()
 
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type:      protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: &consensus.LeanHelixBlockProofBuilder{
-			// TODO Results BlockProof goes here https://tree.taiga.io/project/orbs-network/us/529
-			// See https://tree.taiga.io/project/orbs-network/us/529
-		},
+		LeanHelix: nil,
 	}).Build()
 	return blockPair, nil
 }

@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/lean-helix-go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/test/harness"
@@ -14,52 +13,52 @@ import (
 	"time"
 )
 
-// TODO v1 Make sure the test is correct for LH
+// TODO v1 Rewrite this test without knowing specific LH message types
 // Add more nodes for consensus to work (min 4)
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	t.Skipf("Change this - Orbs is not supposed to know LH message types")
-	harness.
-		Network(t).
-		WithNumNodes(4).
-		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-
-			contract := network.GetBenchmarkTokenContract()
-
-			amount := uint64(17)
-			fromAddress := 5
-			toAddress := 6
-			leaderIndex := 0
-			validatorIndex := 1
-
-			contract.DeployBenchmarkToken(ctx, fromAddress)
-
-			// these get preds
-			// reimpl this, it is supposed to know the ppm but
-
-			prePrepareLatch := network.TransportTamperer().LatchOn(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
-			prePrepareTamper := network.TransportTamperer().Fail(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
-
-			contract.SendTransfer(ctx, leaderIndex, amount, fromAddress, toAddress)
-
-			prePrepareLatch.Wait() // blocking
-			require.EqualValues(t, 0, contract.CallGetBalance(ctx, leaderIndex, toAddress), "initial getBalance result on leader")
-			require.EqualValues(t, 0, contract.CallGetBalance(ctx, validatorIndex, toAddress), "initial getBalance result on non leader")
-
-			prePrepareTamper.Release(ctx)
-			prePrepareLatch.Remove()
-
-			if err := network.BlockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
-				t.Errorf("waiting for block on node 0 failed: %s", err)
-			}
-			require.EqualValues(t, amount, contract.CallGetBalance(ctx, leaderIndex, toAddress), "eventual getBalance result on leader")
-
-			if err := network.BlockPersistence(validatorIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
-				t.Errorf("waiting for block on node 1 failed: %s", err)
-			}
-			require.EqualValues(t, amount, contract.CallGetBalance(ctx, validatorIndex, toAddress), "eventual getBalance result on non leader")
-
-		})
+	//harness.
+	//	Network(t).
+	//	WithNumNodes(4).
+	//	WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
+	//	Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	//
+	//		contract := network.GetBenchmarkTokenContract()
+	//
+	//		amount := uint64(17)
+	//		fromAddress := 5
+	//		toAddress := 6
+	//		leaderIndex := 0
+	//		validatorIndex := 1
+	//
+	//		contract.DeployBenchmarkToken(ctx, fromAddress)
+	//
+	//		// these get preds
+	//		// reimpl this, it is supposed to know the ppm but
+	//
+	//		prePrepareLatch := network.TransportTamperer().LatchOn(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
+	//		prePrepareTamper := network.TransportTamperer().Fail(adapter.LeanHelixMessage(leanhelix.LEAN_HELIX_PREPREPARE))
+	//
+	//		contract.SendTransfer(ctx, leaderIndex, amount, fromAddress, toAddress)
+	//
+	//		prePrepareLatch.Wait() // blocking
+	//		require.EqualValues(t, 0, contract.CallGetBalance(ctx, leaderIndex, toAddress), "initial getBalance result on leader")
+	//		require.EqualValues(t, 0, contract.CallGetBalance(ctx, validatorIndex, toAddress), "initial getBalance result on non leader")
+	//
+	//		prePrepareTamper.Release(ctx)
+	//		prePrepareLatch.Remove()
+	//
+	//		if err := network.BlockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
+	//			t.Errorf("waiting for block on node 0 failed: %s", err)
+	//		}
+	//		require.EqualValues(t, amount, contract.CallGetBalance(ctx, leaderIndex, toAddress), "eventual getBalance result on leader")
+	//
+	//		if err := network.BlockPersistence(validatorIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
+	//			t.Errorf("waiting for block on node 1 failed: %s", err)
+	//		}
+	//		require.EqualValues(t, amount, contract.CallGetBalance(ctx, validatorIndex, toAddress), "eventual getBalance result on non leader")
+	//
+	//	})
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
