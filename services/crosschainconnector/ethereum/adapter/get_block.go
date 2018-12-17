@@ -33,21 +33,17 @@ func (c *connectorCommon) findBlockByTimeStamp(ctx context.Context, eth ClientFo
 	}
 
 	timeDiff := currentTimestamp - prevTimestamp
-	c.logger.Info("timeDiff", log.Int64("timeDiff", timeDiff))
-
 	secondsPerBlock := int64(math.Ceil(float64(timeDiff) / float64(blockNumberDiff)))
-	c.logger.Info("secondsPerBlock", log.Int64("secondsPerBlock", secondsPerBlock))
-
 	distanceToTargetFromCurrent := currentTimestamp - timestamp
 	blocksToJump := distanceToTargetFromCurrent / secondsPerBlock
 	c.logger.Info("eth block search delta", log.Int64("jump-backwards", blocksToJump))
-	guess, err := eth.HeaderByNumber(ctx, big.NewInt(currentBlockNumber-blocksToJump))
+	guessBlockNumber := currentBlockNumber - blocksToJump
+	guess, err := eth.HeaderByNumber(ctx, big.NewInt(guessBlockNumber))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get block by number")
 	}
 
 	guessTimestamp := guess.Time.Int64()
-	guessBlockNumber := guess.Number.Int64()
 
 	return c.findBlockByTimeStamp(ctx, eth, timestamp, guessBlockNumber, guessTimestamp, currentBlockNumber, currentTimestamp)
 }
