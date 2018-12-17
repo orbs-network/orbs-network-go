@@ -6,8 +6,9 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-// A Callback function receiving block pages. ScanBlocks() will call this function
-// repeatedly until it returns false or there are no more blocks to fetch
+// A Callback function provided by consumers of blocks from storage. Each invocation receives a single blocks page
+// of the requested size. Methods receiving this type will call this function
+// repeatedly until it returns false to signal no more pages are required or until there are no more blocks to fetch.
 type CursorFunc func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool)
 
 type BlockPersistence interface {

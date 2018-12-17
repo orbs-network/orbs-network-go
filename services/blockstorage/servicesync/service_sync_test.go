@@ -113,7 +113,7 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 	}
 }
 
-// TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this fake implementation assumes there is no genesis block, Fix once addressing genesis
+// TODO V1 - this duplicates logic form inMemoryBlockPersistence. Do we really need a mock object here?
 func (bsf *blockSourceMock) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
 	bsf.Called(from, pageSize, f)
 
