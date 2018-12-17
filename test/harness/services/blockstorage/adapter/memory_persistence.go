@@ -106,7 +106,7 @@ func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer
 	return bp.blockChain.blocks[count-1], nil
 }
 
-func (bp *inMemoryBlockPersistence) GetNumBlocks() (primitives.BlockHeight, error) {
+func (bp *inMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
@@ -230,21 +230,22 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 	}
 }
 
-func (bp *inMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint, f func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool) error {
+func (bp *inMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
 	allBlocks := bp.blockChain.blocks
 	allBlocksLength := primitives.BlockHeight(len(allBlocks))
 
-	cont := true
-	for from <= allBlocksLength && cont {
-		to := from + primitives.BlockHeight(pageSize) - 1
-		if to > allBlocksLength {
-			to = allBlocksLength
+	wantsMore := true
+	for from <= allBlocksLength && wantsMore {
+		fromIndex := from - 1
+		toIndex := fromIndex + primitives.BlockHeight(pageSize)
+		if toIndex > allBlocksLength {
+			toIndex = allBlocksLength
 		}
-		cont = f(from, allBlocks[from-1:to])
-		from = to + 1
+		wantsMore = f(from, allBlocks[fromIndex:toIndex])
+		from = toIndex + 1
 	}
 	return nil
 }

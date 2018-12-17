@@ -98,15 +98,15 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 }
 
 // Returns a slice of blocks containing first and last
-// TODO(https://github.com/orbs-network/orbs-network-go/issues/174): support paging
-func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
-	var blocks []*protocol.BlockPairContainer
-	err := s.persistence.ScanBlocks(first, uint(last-first+1), func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
-		blocks = page
-		return false
+// TODO kill this method signature or use a larger page size without returning too many blocks
+func (s *service) GetBlockSlice(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
+	blocks := make([]*protocol.BlockPairContainer, 0, last-first+1)
+	err := s.persistence.ScanBlocks(first, 1, func(firstInPage primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		blocks = append(blocks, page...)
+		return firstInPage < last
 	})
 	if err != nil {
-		return nil, 0, 0, errors.Wrap(err, "failed getting blocks")
+		return nil, 0, 0, errors.Wrap(err, "failed getting block slice")
 	}
 	if len(blocks) == 0 {
 		return nil, 0, 0, fmt.Errorf("could not find blocks in height range %d-%d", first, last)

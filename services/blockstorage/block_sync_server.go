@@ -98,7 +98,7 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize()-1)
 	}
 
-	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight, err := s.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
+	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight, err := s.GetBlockSlice(firstRequestedBlockHeight, lastRequestedBlockHeight)
 	if err != nil {
 		return errors.Wrap(err, "block sync failed reading from block persistence")
 	}

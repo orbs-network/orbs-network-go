@@ -146,8 +146,8 @@ func extractBlocks(blocks blockStorageAdapter.InMemoryBlockPersistence) []*proto
 		panic(errors.Wrapf(err, "spawn network: failed reading block height"))
 	}
 	var blockPairs []*protocol.BlockPairContainer
-	pageSize := uint(lastBlock.ResultsBlock.Header.BlockHeight())
-	err = blocks.ScanBlocks(1, pageSize, func(offset primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+	pageSize := uint8(lastBlock.ResultsBlock.Header.BlockHeight())
+	err = blocks.ScanBlocks(1, pageSize, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
 		blockPairs = page // TODO should we copy the slice here to make sure both networks are isolated?
 		return false
 	})
