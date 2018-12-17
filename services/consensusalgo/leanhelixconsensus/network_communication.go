@@ -45,8 +45,8 @@ func (comm *networkCommunication) RequestOrderedCommittee(ctx context.Context, b
 		comm.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))
 		return nil
 	}
-	publicKeys := make([]lhprimitives.Ed25519PublicKey, 0, len(res.NodePublicKeys))
-	for _, publicKey := range res.NodePublicKeys {
+	publicKeys := make([]lhprimitives.Ed25519PublicKey, 0, len(res.NodeAddresses)) // TODO(v1): lhprimitives.Ed25519PublicKey needs to change
+	for _, publicKey := range res.NodeAddresses {
 		publicKeys = append(publicKeys, lhprimitives.Ed25519PublicKey(publicKey))
 	}
 
@@ -59,9 +59,9 @@ func (comm *networkCommunication) IsMember(pk lhprimitives.Ed25519PublicKey) boo
 
 // LeanHelix lib sends its messages here
 func (comm *networkCommunication) SendMessage(ctx context.Context, lhtargets []lhprimitives.Ed25519PublicKey, consensusRawMessage leanhelix.ConsensusRawMessage) {
-	targets := make([]primitives.Ed25519PublicKey, 0, len(lhtargets))
+	targets := make([]primitives.NodeAddress, 0, len(lhtargets))
 	for _, lhtarget := range lhtargets {
-		targets = append(targets, primitives.Ed25519PublicKey(lhtarget))
+		targets = append(targets, primitives.NodeAddress(lhtarget))
 	}
 
 	var blockPair *protocol.BlockPairContainer
@@ -74,8 +74,8 @@ func (comm *networkCommunication) SendMessage(ctx context.Context, lhtargets []l
 
 	message := &gossiptopics.LeanHelixInput{
 		RecipientsList: &gossiptopics.RecipientsList{
-			RecipientPublicKeys: targets,
-			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: targets,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		},
 		Message: &gossipmessages.LeanHelixMessage{
 			MessageType: consensus.LeanHelixMessageType(consensusRawMessage.MessageType()),

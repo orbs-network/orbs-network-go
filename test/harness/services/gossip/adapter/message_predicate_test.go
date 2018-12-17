@@ -9,14 +9,14 @@ import (
 func ExampleMessagePredicate_sender() {
 	aMessageFrom := func(sender string) MessagePredicate {
 		return func(data *adapter.TransportData) bool {
-			return string(data.SenderPublicKey) == sender
+			return string(data.SenderNodeAddress) == sender
 		}
 	}
 
 	pred := aMessageFrom("sender1")
 
 	printSender := func(sender string) {
-		if pred(&adapter.TransportData{SenderPublicKey: primitives.Ed25519PublicKey(sender)}) {
+		if pred(&adapter.TransportData{SenderNodeAddress: primitives.NodeAddress(sender)}) {
 			fmt.Printf("got message from %s\n", sender)
 		} else {
 			fmt.Println("got message from other sender")

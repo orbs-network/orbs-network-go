@@ -31,7 +31,7 @@ type node struct {
 func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress string) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
-	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodePublicKey().String()))
+	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
 	metricRegistry := metric.NewRegistry()
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)

@@ -15,13 +15,13 @@ import (
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		sourcePK := keys.Ed25519KeyPairForTests(4).PublicKey()
-		harness := newBlockStorageHarness().withNodeKey(sourcePK).withSyncBroadcast(1).start(ctx)
+		sourceAddress := keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()
+		harness := newBlockStorageHarness().withNodeAddress(sourceAddress).withSyncBroadcast(1).start(ctx)
 		harness.commitSomeBlocks(ctx, 3)
-		senderPK := keys.Ed25519KeyPairForTests(1).PublicKey()
+		senderAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
 
 		msg := builders.BlockAvailabilityRequestInput().
-			WithSenderPublicKey(senderPK).
+			WithSenderNodeAddress(senderAddress).
 			WithFirstBlockHeight(1).
 			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
 			WithLastBlockHeight(primitives.BlockHeight(2)).
@@ -33,8 +33,8 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 				require.Failf(t, "response type does not match", "", i)
 			}
 
-			require.Equal(t, senderPK, response.RecipientPublicKey, "public key does not match")
-			require.Equal(t, sourcePK, response.Message.Sender.SenderPublicKey(), "source pk does not match")
+			require.Equal(t, senderAddress, response.RecipientNodeAddress, "public key does not match")
+			require.Equal(t, sourceAddress, response.Message.Sender.SenderNodeAddress(), "source nodeAddress does not match")
 			require.Equal(t, primitives.BlockHeight(1), response.Message.SignedBatchRange.FirstBlockHeight(), "first block height is not as expected")
 			require.Equal(t, primitives.BlockHeight(3), response.Message.SignedBatchRange.LastCommittedBlockHeight(), "last committed block height is not as expected")
 			require.Equal(t, primitives.BlockHeight(3), response.Message.SignedBatchRange.LastBlockHeight(), "last block height is not as expected")
@@ -93,7 +93,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 		batchSize := uint32(10)
 		harness := newBlockStorageHarness().
 			withBatchSize(batchSize).
-			withNodeKey(keys.Ed25519KeyPairForTests(4).PublicKey()).
+			withNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()).
 			withSyncBroadcast(1).
 			start(ctx)
 
@@ -104,7 +104,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 		lastHeight := primitives.BlockHeight(10) // hardcoding this, but it is a function of the batchSize
 
 		msg := builders.BlockSyncRequestInput().
-			WithSenderPublicKey(keys.Ed25519KeyPairForTests(1).PublicKey()).
+			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()).
 			WithFirstBlockHeight(firstHeight).
 			Build()
 
@@ -114,11 +114,11 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 				require.Failf(t, "response type does not match", "", i)
 			}
 			require.Len(t, response.Message.BlockPairs, int(batchSize), "actual batch size does not match config")
-			require.Equal(t, keys.Ed25519KeyPairForTests(1).PublicKey(), response.RecipientPublicKey, "recipient pk is incorrect")
+			require.Equal(t, keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(), response.RecipientNodeAddress, "recipient nodeAddress is incorrect")
 			require.Equal(t, firstHeight, response.Message.SignedChunkRange.FirstBlockHeight(), "first block height mismatch")
 			require.Equal(t, lastHeight, response.Message.SignedChunkRange.LastBlockHeight(), "last block height mismatch")
 			require.Equal(t, primitives.BlockHeight(lastBlock), response.Message.SignedChunkRange.LastCommittedBlockHeight(), "last committed block height mismatch")
-			require.Equal(t, keys.Ed25519KeyPairForTests(4).PublicKey(), response.Message.Sender.SenderPublicKey(), "sender does not match config")
+			require.Equal(t, keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress(), response.Message.Sender.SenderNodeAddress(), "sender does not match config")
 			require.Equal(t, msg.Message.SignedChunkRange.BlockType(), response.Message.SignedChunkRange.BlockType(), "block type does not match the request")
 
 			return true

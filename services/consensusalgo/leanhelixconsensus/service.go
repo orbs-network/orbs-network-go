@@ -40,8 +40,8 @@ type metrics struct {
 }
 
 type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	NodePrivateKey() primitives.Ed25519PrivateKey
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
@@ -69,11 +69,11 @@ func NewLeanHelixConsensusAlgo(
 	logger := parentLogger.WithTags(LogTag)
 	logger.Info("NewLeanHelixConsensusAlgo() start")
 	comm := NewNetworkCommunication(logger, consensusContext, gossip)
-	mgr := NewKeyManager(logger, config.NodePublicKey(), config.NodePrivateKey())
+	mgr := NewKeyManager(logger, config.NodeAddress(), config.NodePrivateKey())
 	genesisBlock := generateGenesisBlock(config.NodePrivateKey())
 	blockHeight := lhprimitives.BlockHeight(genesisBlock.TransactionsBlock.Header.BlockHeight() + 1)
 
-	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodePublicKey(), config.NodePrivateKey())
+	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodeAddress(), config.NodePrivateKey())
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
 	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())

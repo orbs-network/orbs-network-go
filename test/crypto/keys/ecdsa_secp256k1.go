@@ -2,6 +2,7 @@ package keys
 
 import (
 	"encoding/hex"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
@@ -24,7 +25,7 @@ var ecdsaSecp256K1KeyPairs = []ecdsaSecp256K1KeyPairHex{
 	{"a69b19f571824184f7847d9ed0e12f92b42688b56a28513d40683de09fb22f2071cbc80cc2850c435e7688b2a4534aa4b8f5deda0d65b2e3afe292ec260a0ac7", "c2ee571d81465cfcea039092a717b8460f8c96b82923b2ea7bb9765da8d013d6"},
 }
 
-func EcdsaSecp256K1KeyPairForTests(setIndex int) *keys.EcdsaSecp256K1KeyPair {
+func EcdsaSecp256K1KeyPairForTests(setIndex int) *TestEcdsaSecp256K1KeyPair {
 	if setIndex > len(ecdsaSecp256K1KeyPairs) {
 		return nil
 	}
@@ -39,15 +40,22 @@ func EcdsaSecp256K1KeyPairForTests(setIndex int) *keys.EcdsaSecp256K1KeyPair {
 		return nil
 	}
 
-	return keys.NewEcdsaSecp256K1KeyPair(pub, pri)
+	return &TestEcdsaSecp256K1KeyPair{keys.NewEcdsaSecp256K1KeyPair(pub, pri)}
 }
 
-func EcdsaSecp256K1PublicKeysForTests() []primitives.EcdsaSecp256K1PublicKey {
-	res := make([]primitives.EcdsaSecp256K1PublicKey, len(ecdsaSecp256K1KeyPairs))
-	i := 0
-	for _, pair := range ecdsaSecp256K1KeyPairs {
-		res[i] = primitives.EcdsaSecp256K1PublicKey(pair.publicKey)
-		i++
+type TestEcdsaSecp256K1KeyPair struct {
+	*keys.EcdsaSecp256K1KeyPair
+}
+
+func (k *TestEcdsaSecp256K1KeyPair) NodeAddress() primitives.NodeAddress {
+	return primitives.NodeAddress(hash.CalcKeccak256(k.PublicKey())[12:])
+}
+
+func NodeAddressesForTests() []primitives.NodeAddress {
+	res := make([]primitives.NodeAddress, len(ecdsaSecp256K1KeyPairs))
+
+	for i := 0; i < len(ecdsaSecp256K1KeyPairs); i++ {
+		res[i] = EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 	}
 	return res
 }

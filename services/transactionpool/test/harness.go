@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -33,17 +32,17 @@ type harness struct {
 var now = primitives.TimestampNano(time.Now().UnixNano())
 
 var (
-	thisNodeKeyPair  = testKeys.Ed25519KeyPairForTests(8)
-	otherNodeKeyPair = testKeys.Ed25519KeyPairForTests(9)
+	thisNodeKeyPair  = testKeys.EcdsaSecp256K1KeyPairForTests(8)
+	otherNodeKeyPair = testKeys.EcdsaSecp256K1KeyPairForTests(9)
 )
 
-func (h *harness) expectTransactionsToBeForwarded(sig primitives.Ed25519Sig, transactions ...*protocol.SignedTransaction) {
+func (h *harness) expectTransactionsToBeForwarded(sig primitives.EcdsaSecp256K1Sig, transactions ...*protocol.SignedTransaction) {
 
 	h.gossip.When("BroadcastForwardedTransactions", mock.Any, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: thisNodeKeyPair.PublicKey(),
-				Signature:       sig,
+				SenderNodeAddress: thisNodeKeyPair.NodeAddress(),
+				Signature:         sig,
 			}).Build(),
 			SignedTransactions: transactions,
 		},
@@ -97,10 +96,10 @@ func (h *harness) verifyMocks() error {
 	return nil
 }
 
-func (h *harness) handleForwardFrom(ctx context.Context, sender *keys.Ed25519KeyPair, transactions ...*protocol.SignedTransaction) {
+func (h *harness) handleForwardFrom(ctx context.Context, sender *testKeys.TestEcdsaSecp256K1KeyPair, transactions ...*protocol.SignedTransaction) {
 	oneBigHash, _, _ := transactionpool.HashTransactions(transactions...)
 
-	sig, err := signature.SignEd25519(sender.PrivateKey(), oneBigHash)
+	sig, err := signature.SignEcdsaSecp256K1(sender.PrivateKey(), oneBigHash)
 	if err != nil {
 		panic(err)
 	}
@@ -108,8 +107,8 @@ func (h *harness) handleForwardFrom(ctx context.Context, sender *keys.Ed25519Key
 	h.txpool.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: sender.PublicKey(),
-				Signature:       sig,
+				SenderNodeAddress: sender.NodeAddress(),
+				Signature:         sig,
 			}).Build(),
 			SignedTransactions: transactions,
 		},

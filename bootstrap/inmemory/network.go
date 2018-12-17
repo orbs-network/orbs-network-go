@@ -56,7 +56,7 @@ func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumCon
 }
 
 func (n *Network) AddNode(
-	nodeKeyPair *keys.Ed25519KeyPair,
+	nodeKeyPair *keys.EcdsaSecp256K1KeyPair,
 	cfg config.NodeConfig,
 	compiler nativeProcessorAdapter.Compiler,
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence,

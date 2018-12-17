@@ -77,7 +77,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 		LastCommittedBlockHeight: lastCommittedBlockHeight,
 	}).Build()
 	signedData := hash.CalcSha256(status.Raw())
-	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	sig, err := signature.SignEcdsaSecp256K1(s.config.NodePrivateKey(), signedData)
 	if err != nil {
 		return err
 	}
@@ -86,17 +86,17 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 	message := &gossipmessages.BenchmarkConsensusCommittedMessage{
 		Status: status,
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: s.config.NodePublicKey(),
-			Signature:       sig,
+			SenderNodeAddress: s.config.NodeAddress(),
+			Signature:         sig,
 		}).Build(),
 	}
 
 	// send committed back to leader via gossip
-	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey()
+	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderNodeAddress()
 	logger.Info("replying committed with last committed height", log.BlockHeight(lastCommittedBlockHeight), log.Stringable("signed-data", signedData))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
-		RecipientPublicKey: recipient,
-		Message:            message,
+		RecipientNodeAddress: recipient,
+		Message:              message,
 	})
 	return err
 }

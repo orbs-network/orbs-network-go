@@ -31,20 +31,20 @@ func TestFileConfigSetDuration(t *testing.T) {
 	require.EqualValues(t, 10*time.Minute, cfg.BlockSyncCollectResponseTimeout())
 }
 
-func TestSetNodePublicKey(t *testing.T) {
-	cfg, err := newEmptyFileConfig(`{"node-public-key": "dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"}`)
+func TestSetNodeAddress(t *testing.T) {
+	cfg, err := newEmptyFileConfig(`{"node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7"}`)
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
-	require.EqualValues(t, keyPair.PublicKey(), cfg.NodePublicKey())
+	require.EqualValues(t, keyPair.NodeAddress(), cfg.NodeAddress())
 }
 
 func TestSetNodePrivateKey(t *testing.T) {
-	cfg, err := newEmptyFileConfig(`{"node-private-key": "93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173"}`)
+	cfg, err := newEmptyFileConfig(`{"node-private-key": "901a1a0bfbe217593062a054e561e708707cb814a123474c25fd567a0fe088f8"}`)
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
@@ -52,13 +52,13 @@ func TestSetNodePrivateKey(t *testing.T) {
 }
 
 func TestSetConstantConsensusLeader(t *testing.T) {
-	cfg, err := newEmptyFileConfig(`{"constant-consensus-leader": "92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152"}`)
+	cfg, err := newEmptyFileConfig(`{"constant-consensus-leader": "d27e2e7398e2582f63d0800330010b3e58952ff6"}`)
 
-	keyPair := keys.Ed25519KeyPairForTests(1)
+	keyPair := keys.EcdsaSecp256K1KeyPairForTests(1)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
-	require.EqualValues(t, keyPair.PublicKey(), cfg.ConstantConsensusLeader())
+	require.EqualValues(t, keyPair.NodeAddress(), cfg.ConstantConsensusLeader())
 }
 
 func TestSetActiveConsensusAlgo(t *testing.T) {
@@ -72,9 +72,9 @@ func TestSetActiveConsensusAlgo(t *testing.T) {
 func TestSetFederationNodes(t *testing.T) {
 	cfg, err := newEmptyFileConfig(`{
 	"federation-nodes": [
-		{"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","Port":4400},
-		{"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","Port":4400},
-		{"Key":"a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0","IP":"192.168.199.4","Port":4400}
+    {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},
+    {"address":"d27e2e7398e2582f63d0800330010b3e58952ff6","ip":"192.168.199.3","port":4400},
+    {"address":"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9","ip":"192.168.199.4","port":4400}
 	]
 }`)
 
@@ -82,21 +82,21 @@ func TestSetFederationNodes(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
 	node1 := &hardCodedFederationNode{
-		nodePublicKey: keyPair.PublicKey(),
+		nodeAddress: keyPair.NodeAddress(),
 	}
 
-	require.EqualValues(t, node1, cfg.FederationNodes(0)[keyPair.PublicKey().KeyForMap()])
+	require.EqualValues(t, node1, cfg.FederationNodes(0)[keyPair.NodeAddress().KeyForMap()])
 }
 
 func TestSetGossipPeers(t *testing.T) {
 	cfg, err := newEmptyFileConfig(`{
 	"federation-nodes": [
-		{"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","Port":4400},
-		{"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","Port":4400},
-		{"Key":"a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0","IP":"192.168.199.4","Port":4400}
+    {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},
+    {"address":"d27e2e7398e2582f63d0800330010b3e58952ff6","ip":"192.168.199.3","port":4400},
+    {"address":"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9","ip":"192.168.199.4","port":4400}
 	]
 }`)
 
@@ -104,14 +104,14 @@ func TestSetGossipPeers(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 3, len(cfg.GossipPeers(0)))
 
-	keyPair := keys.Ed25519KeyPairForTests(0)
+	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
 	node1 := &hardCodedGossipPeer{
 		gossipEndpoint: "192.168.199.2",
 		gossipPort:     4400,
 	}
 
-	require.EqualValues(t, node1, cfg.GossipPeers(0)[keyPair.PublicKey().KeyForMap()])
+	require.EqualValues(t, node1, cfg.GossipPeers(0)[keyPair.NodeAddress().KeyForMap()])
 }
 
 func TestSetGossipPort(t *testing.T) {
@@ -124,10 +124,10 @@ func TestSetGossipPort(t *testing.T) {
 
 func TestMergeWithFileConfig(t *testing.T) {
 	nodes := make(map[string]FederationNode)
-	keyPair := keys.Ed25519KeyPairForTests(2)
+	keyPair := keys.EcdsaSecp256K1KeyPairForTests(2)
 
 	cfg := ForAcceptanceTestNetwork(nodes,
-		keyPair.PublicKey(),
+		keyPair.NodeAddress(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, 30, 100)
 
 	require.EqualValues(t, 0, len(cfg.FederationNodes(0)))
@@ -136,21 +136,21 @@ func TestMergeWithFileConfig(t *testing.T) {
 {
 	"block-sync-batch-size": 999,
 	"block-sync-collect-response-timeout": "10m",
-	"node-public-key": "dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173",
-	"node-private-key": "93e919986a22477fda016789cca30cb841a135650938714f85f0000a65076bd4dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173",
-	"constant-consensus-leader": "92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152",
+	"node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+	"node-private-key": "901a1a0bfbe217593062a054e561e708707cb814a123474c25fd567a0fe088f8",
+	"constant-consensus-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
 	"active-consensus-algo": 999,
 	"gossip-port": 4500,
 	"federation-nodes": [
-		{"Key":"dfc06c5be24a67adee80b35ab4f147bb1a35c55ff85eda69f40ef827bddec173","IP":"192.168.199.2","Port":4400},
-		{"Key":"92d469d7c004cc0b24a192d9457836bf38effa27536627ef60718b00b0f33152","IP":"192.168.199.3","Port":4400},
-		{"Key":"a899b318e65915aa2de02841eeb72fe51fddad96014b73800ca788a547f8cce0","IP":"192.168.199.4","Port":4400}
+    {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},
+    {"address":"d27e2e7398e2582f63d0800330010b3e58952ff6","ip":"192.168.199.3","port":4400},
+    {"address":"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9","ip":"192.168.199.4","port":4400}
 	]
 }
 `)
 
-	newKeyPair := keys.Ed25519KeyPairForTests(0)
+	newKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
 	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
-	require.EqualValues(t, newKeyPair.PublicKey(), cfg.NodePublicKey())
+	require.EqualValues(t, newKeyPair.NodeAddress(), cfg.NodeAddress())
 }

@@ -1,7 +1,7 @@
 package consensuscontext
 
 import (
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -35,7 +35,7 @@ func TestCommitteeSizeVSTotalNodesCount(t *testing.T) {
 }
 
 func TestChooseRandomCommitteeIndices(t *testing.T) {
-	publicKeys := keys.Ed25519PublicKeysForTests()
+	nodeAddresses := testKeys.NodeAddressesForTests()
 	input := &services.RequestCommitteeInput{
 		BlockHeight:      1,
 		RandomSeed:       123456789,
@@ -43,7 +43,7 @@ func TestChooseRandomCommitteeIndices(t *testing.T) {
 	}
 
 	t.Run("Receive same number of indices as requested", func(t *testing.T) {
-		indices, err := chooseRandomCommitteeIndices(input.MaxCommitteeSize, input.RandomSeed, publicKeys)
+		indices, err := chooseRandomCommitteeIndices(input.MaxCommitteeSize, input.RandomSeed, nodeAddresses)
 		if err != nil {
 			t.Error(err)
 		}
@@ -52,7 +52,7 @@ func TestChooseRandomCommitteeIndices(t *testing.T) {
 	})
 
 	t.Run("Receive unique indices", func(t *testing.T) {
-		indices, err := chooseRandomCommitteeIndices(input.MaxCommitteeSize, input.RandomSeed, publicKeys)
+		indices, err := chooseRandomCommitteeIndices(input.MaxCommitteeSize, input.RandomSeed, nodeAddresses)
 		if err != nil {
 			t.Error(err)
 		}

@@ -21,7 +21,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 		tx := builders.TransferTransaction().Build()
 
 		hash, _, _ := transactionpool.HashTransactions(tx)
-		sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), hash)
+		sig, _ := signature.SignEcdsaSecp256K1(thisNodeKeyPair.PrivateKey(), hash)
 
 		h.expectTransactionsToBeForwarded(sig, tx)
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -79,11 +78,11 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 
 	// block proof
 	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
-	if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
-		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
+	if !blockProof.Sender().SenderNodeAddress().Equal(s.config.ConstantConsensusLeader()) {
+		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)
-	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
+	if !digest.VerifyEcdsaSecp256K1WithNodeAddress(blockProof.Sender().SenderNodeAddress(), signedData, blockProof.Sender().Signature()) {
 		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
 	}
 

@@ -25,10 +25,10 @@ func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.F
 }
 
 type pendingTransaction struct {
-	gatewayPublicKey primitives.Ed25519PublicKey
-	transaction      *protocol.SignedTransaction
-	listElement      *list.Element
-	timeAdded        time.Time
+	gatewayNodeAddress primitives.NodeAddress
+	transaction        *protocol.SignedTransaction
+	listElement        *list.Element
+	timeAdded          time.Time
 }
 
 type pendingPoolMetrics struct {
@@ -59,7 +59,7 @@ type pendingTxPool struct {
 	metrics *pendingPoolMetrics
 }
 
-func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
+func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayNodeAddress primitives.NodeAddress) (primitives.Sha256, *ErrTransactionRejected) {
 	size := sizeOfSignedTransaction(transaction)
 
 	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
@@ -76,10 +76,10 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 
 	p.currentSizeInBytes += size
 	p.transactionsByHash[key.KeyForMap()] = &pendingTransaction{
-		transaction:      transaction,
-		gatewayPublicKey: gatewayPublicKey,
-		listElement:      p.transactionList.PushFront(transaction),
-		timeAdded:        time.Now(),
+		transaction:        transaction,
+		gatewayNodeAddress: gatewayNodeAddress,
+		listElement:        p.transactionList.PushFront(transaction),
+		timeAdded:          time.Now(),
 	}
 
 	p.metrics.transactionCountGauge.Inc()

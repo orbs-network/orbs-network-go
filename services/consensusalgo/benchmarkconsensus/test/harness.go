@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
@@ -31,16 +30,16 @@ type harness struct {
 	registry         metric.Registry
 }
 
-func leaderKeyPair() *keys.Ed25519KeyPair {
-	return testKeys.Ed25519KeyPairForTests(0)
+func leaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
+	return testKeys.EcdsaSecp256K1KeyPairForTests(0)
 }
 
-func nonLeaderKeyPair() *keys.Ed25519KeyPair {
-	return testKeys.Ed25519KeyPairForTests(1)
+func nonLeaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
+	return testKeys.EcdsaSecp256K1KeyPairForTests(1)
 }
 
-func otherNonLeaderKeyPair() *keys.Ed25519KeyPair {
-	return testKeys.Ed25519KeyPairForTests(2)
+func otherNonLeaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
+	return testKeys.EcdsaSecp256K1KeyPairForTests(2)
 }
 
 func newHarness(
@@ -49,8 +48,8 @@ func newHarness(
 
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < NETWORK_SIZE; i++ {
-		publicKey := testKeys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
+		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
 	}
 
 	nodeKeyPair := leaderKeyPair()
@@ -61,7 +60,7 @@ func newHarness(
 	//TODO(v1) don't use acceptance tests config! use a per-service config
 	cfg := config.ForAcceptanceTestNetwork(
 		federationNodes,
-		leaderKeyPair().PublicKey(),
+		leaderKeyPair().NodeAddress(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		1,
 		100,
@@ -85,7 +84,7 @@ func newHarness(
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
 		reporting:        log,
-		config:           cfg.OverrideNodeSpecificValues(0, nodeKeyPair.PublicKey(), nodeKeyPair.PrivateKey()),
+		config:           cfg.OverrideNodeSpecificValues(0, nodeKeyPair.NodeAddress(), nodeKeyPair.PrivateKey()),
 		service:          nil,
 		registry:         metric.NewRegistry(),
 	}
