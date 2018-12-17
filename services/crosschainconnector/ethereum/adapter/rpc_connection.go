@@ -17,8 +17,9 @@ type EthBlock struct {
 }
 
 type EthBlocksSearchCache struct {
-	latest  EthBlock
-	back10k EthBlock
+	latest     EthBlock
+	back10k    EthBlock
+	lastUpdate time.Time
 }
 
 type EthereumRpcConnection struct {
@@ -29,7 +30,7 @@ type EthereumRpcConnection struct {
 	mu struct {
 		sync.Mutex
 		client      EthereumCaller
-		fullClient  *ethclient.Client
+		fullClient  ClientForGetBlockHeader
 		blocksCache *EthBlocksSearchCache
 	}
 }
@@ -65,7 +66,7 @@ func (rpc *EthereumRpcConnection) dialIfNeededAndReturnClient() (EthereumCaller,
 	return rpc.mu.client, nil
 }
 
-func (rpc *EthereumRpcConnection) getFullClient() (*ethclient.Client, error) {
+func (rpc *EthereumRpcConnection) getFullClient() (ClientForGetBlockHeader, error) {
 	if rpc.mu.fullClient == nil {
 		if _, err := rpc.dialIfNeededAndReturnClient(); err != nil {
 			return nil, err
@@ -110,6 +111,8 @@ func (rpc *EthereumRpcConnection) refreshBlocksCache(ctx context.Context) error 
 
 	rpc.mu.blocksCache.back10k.timestamp = older.Time.Int64()
 	rpc.mu.blocksCache.back10k.number = older.Number.Int64()
+
+	rpc.mu.blocksCache.lastUpdate = time.Now()
 
 	return nil
 }

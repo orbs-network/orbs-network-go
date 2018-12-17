@@ -10,7 +10,8 @@ import (
 	"time"
 )
 
-const NUMBER_OF_BLOCKS = 1000000
+const FAKE_CLIENT_NUMBER_OF_BLOCKS = 1000000
+const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED = 1506108783
 
 type FakeFullClient struct {
 	connectorCommon
@@ -19,6 +20,13 @@ type FakeFullClient struct {
 }
 
 func (ffc *FakeFullClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	if number == nil {
+		return &types.Header{
+			Number: big.NewInt(FAKE_CLIENT_NUMBER_OF_BLOCKS),
+			Time:   big.NewInt(ffc.data[FAKE_CLIENT_NUMBER_OF_BLOCKS-1]),
+		}, nil
+	}
+
 	h := &types.Header{
 		Number: number,
 		Time:   big.NewInt(ffc.data[number.Int64()]),
@@ -42,7 +50,7 @@ func NewFakeFullClientConnection(logger log.BasicLogger) *FakeFullClient {
 	spacer := int64(10)
 	start := int64(1500000000) // 2017/07/14 @ 14:40 - it will always end at 1506108783, or 2017/09/22 @ 19:3303
 	ffc.data[0] = start
-	for i := int64(1); i < NUMBER_OF_BLOCKS; i++ {
+	for i := int64(1); i < FAKE_CLIENT_NUMBER_OF_BLOCKS; i++ {
 		// important that the numbers will be always increasing but always less than spacer
 		if i%150 == 0 {
 			jitter++
@@ -60,7 +68,7 @@ func NewFakeFullClientConnection(logger log.BasicLogger) *FakeFullClient {
 
 	ffc.getBlockByTimestamp = ffc.getFakeBlockByTimestamp
 
-	ffc.logger.Info("finished initializing 'ethdb'", log.Int64("last-ts", ffc.data[NUMBER_OF_BLOCKS-1]))
+	ffc.logger.Info("finished initializing 'ethdb'", log.Int64("last-ts", ffc.data[FAKE_CLIENT_NUMBER_OF_BLOCKS-1]))
 
 	return ffc
 }
@@ -70,8 +78,8 @@ func (ffc *FakeFullClient) getFakeBlockByTimestamp(ctx context.Context, nano pri
 	return ffc.findBlockByTimeStamp(ctx,
 		ffc,
 		timestampInSeconds,
-		NUMBER_OF_BLOCKS-1000,
-		ffc.data[NUMBER_OF_BLOCKS-1000],
-		NUMBER_OF_BLOCKS,
-		ffc.data[NUMBER_OF_BLOCKS-1])
+		FAKE_CLIENT_NUMBER_OF_BLOCKS-1000,
+		ffc.data[FAKE_CLIENT_NUMBER_OF_BLOCKS-1000],
+		FAKE_CLIENT_NUMBER_OF_BLOCKS,
+		ffc.data[FAKE_CLIENT_NUMBER_OF_BLOCKS-1])
 }
