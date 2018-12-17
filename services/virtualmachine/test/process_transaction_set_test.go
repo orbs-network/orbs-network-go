@@ -36,7 +36,7 @@ func TestProcessTransactionSet_Success(t *testing.T) {
 		}, "processTransactionSet returned receipts should match")
 		require.Equal(t, outputArgs, [][]byte{
 			{},
-			builders.MethodArgumentsOpaqueEncode(uint32(17), "hello", []byte{0x01, 0x02}),
+			builders.PackedArgumentArrayEncode(uint32(17), "hello", []byte{0x01, 0x02}),
 		}, "processTransactionSet returned output args should match")
 
 		h.verifySystemContractCalled(t)

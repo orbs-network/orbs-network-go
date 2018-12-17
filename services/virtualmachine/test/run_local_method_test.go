@@ -25,7 +25,7 @@ func TestRunLocalMethod_Success(t *testing.T) {
 		result, outputArgs, refHeight, outputEvents, err := h.runLocalMethod(ctx, "Contract1", "method1")
 		require.NoError(t, err, "run local method should not fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
-		require.Equal(t, builders.MethodArgumentsOpaqueEncode(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "run local method should return matching output args")
+		require.EqualValues(t, builders.PackedArgumentArrayEncode(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "run local method should return matching output args")
 		require.EqualValues(t, 12, refHeight)
 		require.Equal(t, (&protocol.EventsArrayBuilder{}).Build().RawEventsArray(), outputEvents)
 

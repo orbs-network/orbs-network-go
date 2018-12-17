@@ -20,7 +20,7 @@ const CONTRACT_NAME = "asb_ether"
 /////////////////////////////////////////////////////////////////
 // contract starts here
 
-var PUBLIC = sdk.Export(setAsbAddr /* TODO v1 not system*/, getAsbAddr, getAsbAbi, getTokenContract, transferIn, transferOut)
+var PUBLIC = sdk.Export(setAsbAddr /* TODO v1 should be system*/, getAsbAddr, getAsbAbi, getTokenContract, transferIn, transferOut)
 var SYSTEM = sdk.Export(_init, setAsbAbi, setTokenContract)
 var EVENTS = sdk.Export(OrbsTransferOut)
 
@@ -53,7 +53,7 @@ func OrbsTransferOut(
 	tuid uint64,
 	ethAddress []byte,
 	orbsAddress []byte,
-	amount *big.Int) {
+	amount uint64) {
 }
 
 func transferIn(hexEncodedEthTxHash string) {
@@ -85,10 +85,10 @@ func transferOut(ethAddr []byte, amount uint64) {
 	tuid := safeuint64.Add(getOutTuid(), 1)
 	setOutTuid(tuid)
 
-	sourceOrbsAddress := address.GetCallerAddress() // TODO v1 is this right ? should not be signer ? and wht about test
+	sourceOrbsAddress := address.GetSignerAddress()
 	service.CallMethod(getTokenContract(), "burn", sourceOrbsAddress, amount)
 
-	events.EmitEvent(OrbsTransferOut, tuid, ethAddr, sourceOrbsAddress, big.NewInt(int64(amount)))
+	events.EmitEvent(OrbsTransferOut, tuid, ethAddr, sourceOrbsAddress, amount)
 }
 
 func genInTuidKey(tuid string) string {

@@ -25,26 +25,59 @@ func TestTransferFromEthereumToOrbs(t *testing.T) {
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 			d := newAutonomousSwapDriver(network)
 
-			amount := big.NewInt(17)
+			etherAmountBefore := big.NewInt(20)
+			amountToTransfer := big.NewInt(17)
 
 			d.generateOrbsAccount(t)
 
 			d.deployTokenContractToEthereum(t)
-			d.generateEthereumAccountAndAssignFunds(t, amount)
+			d.generateEthereumAccountAndAssignFunds(t, etherAmountBefore)
 
 			d.deployAutonomousSwapBridgeToEthereum(t)
 			d.bindOrbsAutonomousSwapBridgeToEthereum(ctx, t)
 
-			d.approveTransferInEthereumTokenContract(t, amount)
-			transferOutTxHash := d.transferOutFromEthereum(t, amount)
+			d.approveTransferInEthereumTokenContract(t, amountToTransfer)
+			transferOutTxHash := d.transferOutFromEthereum(t, amountToTransfer)
 
 			// TODO v1 deploy causes who is owner - important for both.
 			d.transferInToOrbs(ctx, t, transferOutTxHash)
 
 			balanceAfterTransfer := d.getBalanceInOrbs(ctx, t)
-			require.EqualValues(t, amount.Uint64(), balanceAfterTransfer, "wrong amount")
+			require.EqualValues(t, amountToTransfer.Uint64(), balanceAfterTransfer, "wrong amount of tokens in orbs")
 
-			//TODO v1 assert balance was removed from Ethereum
+			etherBalanceAfterTransfer := d.getBalanceInEthereum(t)
+			require.EqualValues(t, etherAmountBefore.Sub(etherAmountBefore, amountToTransfer).Uint64(), etherBalanceAfterTransfer, "wrong amount of tokens left in ethereum")
+
+		})
+}
+
+func TestTransferFromOrbsToEthereum(t *testing.T) {
+	harness.Network(t).
+		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+			d := newAutonomousSwapDriver(network)
+
+			etherAmount := big.NewInt(3)
+			amount := big.NewInt(17)
+
+			d.generateOrbsAccount(t)
+			d.generateOrbsFunds(ctx, t, amount)
+
+			d.deployTokenContractToEthereum(t)
+			d.generateEthereumAccountAndAssignFunds(t, etherAmount)
+
+			d.deployAutonomousSwapBridgeToEthereum(t)
+			d.bindOrbsAutonomousSwapBridgeToEthereum(ctx, t)
+
+			// TODO v1 deploy causes who is owner - important for both.
+			d.transferOutFromOrbs(ctx, t, amount)
+
+			//d.transferInToEthereum(ctx, t)
+
+			//balanceAfterTransfer := d.getBalanceInEthereum(t)
+			//require.EqualValues(t, etherAmount.Add(etherAmount, amount).Uint64(), balanceAfterTransfer, "wrong amount")
+
+			orbsBalanceAfterTransfer := d.getBalanceInOrbs(ctx, t)
+			require.EqualValues(t, 0, orbsBalanceAfterTransfer, "wrong amount")
 		})
 }
 
@@ -67,6 +100,7 @@ type driver struct {
 	orbsASBContractName      string
 	orbsUser                 *orbsclient.OrbsAccount
 	orbsUserAddress          [20]byte
+	orbsUserKeyPair          *keys.Ed25519KeyPair
 
 	addressInEthereum *bind.TransactOpts // we use a single address for both the "admin" stuff like deploying the contracts and as our swapping user, so as to simplify setup - otherwise we'll need to create two PKs in the simulator
 
@@ -76,17 +110,24 @@ type driver struct {
 	ethASBContract *bind.BoundContract
 }
 
-func (d *driver) transferOutFromEthereum(t *testing.T, amount *big.Int) string {
-	transferOutTx, err := d.ethASBContract.Transact(d.addressInEthereum, "transferOut", d.orbsUserAddress, amount)
-	require.NoError(t, err, "could not transfer out")
-	d.simulator.Commit()
-	return transferOutTx.Hash().Hex()
+// orbs side funcs
+func (d *driver) generateOrbsAccount(t *testing.T) {
+	orbsUser, err := orbsclient.CreateAccount()
+	require.NoError(t, err, "could not create orbs address")
+
+	copy(d.orbsUserAddress[:], orbsUser.RawAddress)
+	d.orbsUser = orbsUser
+	d.orbsUserKeyPair = keys.NewEd25519KeyPair(orbsUser.PublicKey, orbsUser.PrivateKey)
 }
 
-func (d *driver) approveTransferInEthereumTokenContract(t *testing.T, amount *big.Int) {
-	_, err := d.erc20contract.Transact(d.addressInEthereum, "approve", d.ethASBAddress, amount)
-	require.NoError(t, err, "could not approve transfer")
-	d.simulator.Commit()
+func (d *driver) generateOrbsFunds(ctx context.Context, t *testing.T, amount *big.Int) {
+	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
+		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "mint").
+		WithEd25519Signer(d.orbsContractOwnerAddress).
+		WithArgs(d.orbsUser.RawAddress, amount.Uint64()).
+		Builder(), 0)
+	d.network.WaitForTransactionInState(ctx, txHash)
+	test.RequireSuccess(t, response, "failed setting minting tokens at orbs")
 }
 
 func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
@@ -102,14 +143,14 @@ func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
 	return value
 }
 
-func (d *driver) transferInToOrbs(ctx context.Context, t *testing.T, transferOutTxHash string) {
+func (d *driver) approveTransferInOrbsTokenContract(ctx context.Context, t *testing.T, amount *big.Int) {
 	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
-		WithMethod(primitives.ContractName(d.orbsASBContractName), "transferIn").
-		WithEd25519Signer(d.orbsContractOwnerAddress).
-		WithArgs(transferOutTxHash).
+		WithEd25519Signer(d.orbsUserKeyPair).
+		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "approve").
+		WithArgs(d.addressInEthereum.From, amount.Uint64()).
 		Builder(), 0)
 	d.network.WaitForTransactionInState(ctx, txHash)
-	test.RequireSuccess(t, response, "failed setting asb address")
+	test.RequireSuccess(t, response, "failed approve transfer in orbs")
 }
 
 func (d *driver) bindOrbsAutonomousSwapBridgeToEthereum(ctx context.Context, t *testing.T) {
@@ -122,24 +163,30 @@ func (d *driver) bindOrbsAutonomousSwapBridgeToEthereum(ctx context.Context, t *
 	test.RequireSuccess(t, response, "failed setting asb address")
 }
 
-func (d *driver) generateOrbsAccount(t *testing.T) {
-	orbsUser, err := orbsclient.CreateAccount()
-	require.NoError(t, err, "could not create orbs address")
-
-	copy(d.orbsUserAddress[:], orbsUser.RawAddress)
-	d.orbsUser = orbsUser
+func (d *driver) transferInToOrbs(ctx context.Context, t *testing.T, transferOutTxHash string) {
+	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
+		WithMethod(primitives.ContractName(d.orbsASBContractName), "transferIn").
+		WithEd25519Signer(d.orbsContractOwnerAddress).
+		WithArgs(transferOutTxHash).
+		Builder(), 0)
+	d.network.WaitForTransactionInState(ctx, txHash)
+	test.RequireSuccess(t, response, "failed transferIn in orbs")
 }
 
-func (d *driver) generateEthereumAccountAndAssignFunds(t *testing.T, amount *big.Int) {
-	ethContractUserAuth := d.addressInEthereum
-	// we don't REALLY care who is the user we transfer from, so for simplicity's sake we use the same mega-user defined when simulator is created
-	_, err := d.erc20contract.Transact(d.addressInEthereum, "assign", ethContractUserAuth.From /*address of user*/, amount)
-	// generate token in source address
-	require.NoError(t, err, "could not assign token to sender")
-	d.simulator.Commit()
+func (d *driver) transferOutFromOrbs(ctx context.Context, t *testing.T, amount *big.Int) {
+	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
+		WithMethod(primitives.ContractName(d.orbsASBContractName), "transferOut").
+		WithEd25519Signer(d.orbsUserKeyPair).
+		WithArgs(d.addressInEthereum.From.Bytes(), amount.Uint64()).
+		Builder(), 0)
+	d.network.WaitForTransactionInState(ctx, txHash)
+
+	t.Log(response.StringTransactionReceipt())
+	t.Log(builders.PackedArgumentArrayDecode(response.TransactionReceipt().RawOutputArgumentArrayWithHeader()))
+	test.RequireSuccess(t, response, "failed transfer out in orbs")
 }
 
-// orbs side of the contract is automatically deployed so this only deploys to Ethereum
+// Ethereum related funcs
 func (d *driver) deployAutonomousSwapBridgeToEthereum(t *testing.T) {
 	fakeFederation := common.BigToAddress(big.NewInt(1700))
 
@@ -157,6 +204,42 @@ func (d *driver) deployTokenContractToEthereum(t *testing.T) {
 	d.simulator.Commit()
 	d.erc20contract = ethTetContract
 	d.erc20address = ethTetAddress
+}
+
+func (d *driver) generateEthereumAccountAndAssignFunds(t *testing.T, amount *big.Int) {
+	ethContractUserAuth := d.addressInEthereum
+	// we don't REALLY care who is the user we transfer from, so for simplicity's sake we use the same mega-user defined when simulator is created
+	_, err := d.erc20contract.Transact(d.addressInEthereum, "assign", ethContractUserAuth.From /*address of user*/, amount)
+	// generate token in source address
+	require.NoError(t, err, "could not assign token to sender")
+	d.simulator.Commit()
+}
+
+func (d *driver) getBalanceInEthereum(t *testing.T) uint64 {
+	ethContractUserAuth := d.addressInEthereum
+	// we don't REALLY care who is the user we transfer from, so for simplicity's sake we use the same mega-user defined when simulator is created
+	var (
+		ret0 = new(*big.Int)
+	)
+	result := ret0
+	err := d.erc20contract.Call(nil, result, "balanceOf", ethContractUserAuth.From /*address of user*/)
+	// generate token in source address
+	require.NoError(t, err, "could not get token balance of user")
+	d.simulator.Commit()
+	return (*result).Uint64()
+}
+
+func (d *driver) approveTransferInEthereumTokenContract(t *testing.T, amount *big.Int) {
+	_, err := d.erc20contract.Transact(d.addressInEthereum, "approve", d.ethASBAddress, amount)
+	require.NoError(t, err, "could not approve transfer")
+	d.simulator.Commit()
+}
+
+func (d *driver) transferOutFromEthereum(t *testing.T, amount *big.Int) string {
+	transferOutTx, err := d.ethASBContract.Transact(d.addressInEthereum, "transferOut", d.orbsUserAddress, amount)
+	require.NoError(t, err, "could not transfer out")
+	d.simulator.Commit()
+	return transferOutTx.Hash().Hex()
 }
 
 const tetABI = `[{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"constant":false,"inputs":[{"name":"_account","type":"address"},{"name":"_value","type":"uint256"}],"name":"assign","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
