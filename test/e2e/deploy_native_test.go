@@ -28,12 +28,12 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		contractName := fmt.Sprintf("CounterFrom%d", counterStart)
 
 		printTestTime(t, "send deploy - start", &lt)
-		response, err := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
+		dcExResult, dcTxStatus, dcErr := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
 		printTestTime(t, "send deploy - end", &lt)
 
-		require.NoError(t, err, "deploy transaction should not return error")
-		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+		require.NoError(t, dcErr, "deploy transaction should not return error")
+		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, dcTxStatus)
+		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult)
 
 		// check counter
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
@@ -52,7 +52,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		amount := uint64(17)
 
 		printTestTime(t, "send transaction - start", &lt)
-		response, _, err = h.sendTransaction(OwnerOfAllSupply, contractName, "add", uint64(amount))
+		response, _, err := h.sendTransaction(OwnerOfAllSupply, contractName, "add", uint64(amount))
 		printTestTime(t, "send transaction - end", &lt)
 
 		require.NoError(t, err, "add transaction should not return error")
