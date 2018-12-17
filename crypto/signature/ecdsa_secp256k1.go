@@ -26,18 +26,26 @@ func SignEcdsaSecp256K1(privateKey primitives.EcdsaSecp256K1PrivateKey, data []b
 }
 
 func VerifyEcdsaSecp256K1(publicKey primitives.EcdsaSecp256K1PublicKey, data []byte, signature primitives.EcdsaSecp256K1Sig) bool {
-	if len(publicKey) != keys.ECDSA_SECP256K1_PUBLIC_KEY_SIZE_BYTES {
-		return false
-	}
 	if len(signature) == ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES {
 		signature = signature[:len(signature)-1]
 	}
-	return secp256k1.VerifySignature([]byte(publicKey), data, signature)
+	if len(publicKey) != keys.ECDSA_SECP256K1_PUBLIC_KEY_SIZE_BYTES {
+		return false
+	}
+	publicKeyWithBytePrefix := append([]byte{0x04}, publicKey...)
+	return secp256k1.VerifySignature([]byte(publicKeyWithBytePrefix), data, signature)
 }
 
 func RecoverEcdsaSecp256K1(data []byte, signature primitives.EcdsaSecp256K1Sig) (primitives.EcdsaSecp256K1PublicKey, error) {
 	if len(signature) != ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES {
 		return nil, errors.New("invalid signature size")
 	}
-	return secp256k1.RecoverPubkey(data, signature)
+	publicKeyWithBytePrefix, err := secp256k1.RecoverPubkey(data, signature)
+	if err != nil {
+		return nil, err
+	}
+	if len(publicKeyWithBytePrefix) != keys.ECDSA_SECP256K1_PUBLIC_KEY_SIZE_BYTES+1 {
+		return nil, errors.Errorf("secp256k1.RecoverPubkey returned pub key with len %d", len(publicKeyWithBytePrefix))
+	}
+	return publicKeyWithBytePrefix[1:], nil
 }

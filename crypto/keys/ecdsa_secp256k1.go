@@ -17,7 +17,7 @@ import (
 // we can't import it when go-ethereum is linked due to linking collisions
 
 const (
-	ECDSA_SECP256K1_PUBLIC_KEY_SIZE_BYTES  = 65
+	ECDSA_SECP256K1_PUBLIC_KEY_SIZE_BYTES  = 64
 	ECDSA_SECP256K1_PRIVATE_KEY_SIZE_BYTES = 32
 )
 
@@ -51,7 +51,7 @@ func GenerateEcdsaSecp256K1Key() (*EcdsaSecp256K1KeyPair, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot create key pair")
 	}
-	publicKey := elliptic.Marshal(pri.PublicKey.Curve, pri.PublicKey.X, pri.PublicKey.Y)
+	publicKeyWithBytePrefix := elliptic.Marshal(pri.PublicKey.Curve, pri.PublicKey.X, pri.PublicKey.Y)
 	privateKey := math.PaddedBigBytes(pri.D, pri.Params().BitSize/8)
-	return NewEcdsaSecp256K1KeyPair(publicKey, privateKey), nil
+	return NewEcdsaSecp256K1KeyPair(publicKeyWithBytePrefix[1:], privateKey), nil
 }
