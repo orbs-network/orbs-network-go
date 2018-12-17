@@ -113,14 +113,14 @@ func (bp *inMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight
 	return primitives.BlockHeight(len(bp.blockChain.blocks)), nil
 }
 
-func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 	if bp.failNextBlocks {
-		return false, errors.New("could not write a block")
+		return errors.New("could not write a block")
 	}
 
 	added, err := bp.validateAndAddNextBlock(blockPair)
 	if err != nil || !added {
-		return false, err
+		return err
 	}
 
 	bp.tracker.IncrementHeight()
@@ -128,7 +128,7 @@ func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
 
-	return true, nil
+	return nil
 }
 
 func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {

@@ -12,7 +12,7 @@ import (
 type CursorFunc func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool)
 
 type BlockPersistence interface {
-	WriteNextBlock(blockPairs *protocol.BlockPairContainer) (bool, error)
+	WriteNextBlock(blockPair *protocol.BlockPairContainer) error
 
 	ScanBlocks(from primitives.BlockHeight, pageSize uint8, f CursorFunc) error
 
