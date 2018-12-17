@@ -34,7 +34,7 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 		auth: bind.NewKeyedTransactor(key),
 	}
 
-	e.logger = logger
+	e.logger = logger.WithTags(log.String("adapter", "ethereum-sim"))
 
 	e.getContractCaller = func() (EthereumCaller, error) {
 		e.mu.Lock()

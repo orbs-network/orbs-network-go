@@ -147,6 +147,6 @@ func (rpc *EthereumRpcConnection) getEthBlockByTimestamp(ctx context.Context, na
 		return nil, errors.New("invalid request to get block, trying to get a block in the future (sync issues?)")
 	}
 
-	theBlock, err := rpc.findBlockByTimeStamp(ctx, client, timestampInSeconds, cache.latest.number, cache.latest.timestamp, cache.back10k.number, cache.back10k.timestamp)
+	theBlock, err := rpc.findBlockByTimeStamp(ctx, client, timestampInSeconds, cache.back10k.number, cache.back10k.timestamp, cache.latest.number, cache.latest.timestamp)
 	return theBlock, err
 }

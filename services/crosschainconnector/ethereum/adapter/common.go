@@ -21,6 +21,10 @@ type EthereumConnection interface {
 	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (*big.Int, error)
 }
 
+type ClientForGetBlockHeader interface {
+	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+}
+
 type connectorCommon struct {
 	logger              log.BasicLogger
 	getContractCaller   func() (EthereumCaller, error)
