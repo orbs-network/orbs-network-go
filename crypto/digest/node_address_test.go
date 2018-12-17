@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	ExamplePublicKey    = "30fccea741dd34c7afb146a543616bcb361247148f0c8542541c01da6d6cadf186515f1d851978fc94a6a641e25dec74a6ec28c5ae04c651a0dc2e6104b3ac24"
-	ExamplePrivateKey   = "901a1a0bfbe217593062a054e561e708707cb814a123474c25fd567a0fe088f8"
-	ExpectedNodeAddress = "a328846cd5b4979d68a8c58a9bdfeee657b34de7"
+	ExamplePublicKey     = "30fccea741dd34c7afb146a543616bcb361247148f0c8542541c01da6d6cadf186515f1d851978fc94a6a641e25dec74a6ec28c5ae04c651a0dc2e6104b3ac24"
+	ExamplePrivateKey    = "901a1a0bfbe217593062a054e561e708707cb814a123474c25fd567a0fe088f8"
+	ExpectedNodeAddress  = "a328846cd5b4979d68a8c58a9bdfeee657b34de7"
+	DifferentNodeAddress = "bb51846fd3b4110d6818c55a9bdfe9e657b33300"
 )
 
 func TestCalcNodeAddressFromPublicKey(t *testing.T) {
@@ -31,4 +32,16 @@ func TestVerifyEcdsaSecp256K1WithNodeAddress(t *testing.T) {
 
 	ok := VerifyEcdsaSecp256K1WithNodeAddress(nodeAddress, dataToSign, sig)
 	require.True(t, ok, "verification should succeed")
+}
+
+func TestVerifyEcdsaSecp256K1WithNodeAddressInvalidAddress(t *testing.T) {
+	dataToSign := hash.CalcSha256([]byte("this is what we want to sign"))
+	privateKey, _ := hex.DecodeString(ExamplePrivateKey)
+	differentNodeAddress, _ := hex.DecodeString(DifferentNodeAddress)
+
+	sig, err := signature.SignEcdsaSecp256K1(privateKey, dataToSign)
+	require.NoError(t, err)
+
+	ok := VerifyEcdsaSecp256K1WithNodeAddress(differentNodeAddress, dataToSign, sig)
+	require.False(t, ok, "verification should fail")
 }
