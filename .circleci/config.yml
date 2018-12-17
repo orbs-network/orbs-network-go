@@ -7,30 +7,53 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.sh
-      - run: ./docker/test/test.sh
-      - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh
-      - run: ./docker/test/test.external.sh
+      - run: ./.circleci/gopath.sh
+      - run: cd /go/src/github.com/orbs-network/orbs-network-go/ && ./test.sh
+
+  flakiness:
+    docker:
+      - image: circleci/golang:latest
+    resource_class: xlarge
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: ./.circleci/gopath.sh
+      - run:
+          # remove logs if the test was successful for quicker feedback loop
+          # TODO filter for errors and save them regardless
+          command: |
+            cd /go/src/github.com/orbs-network/orbs-network-go/
+
+            ./test.flakiness.sh
+            EXIT_CODE=$?
+
+            sudo chown -R circleci:circleci _logs
+
+            if [ $EXIT_CODE != 0 ]; then
+              ./.circleci/upload-node-metrics.sh
+              find _logs/acceptance -type f -delete
+            else
+              ./.circleci/archive-logs.sh
+            fi
+
+            exit $EXIT_CODE
+          no_output_timeout: 25m
+      - store_artifacts:
+          path: /go/src/github.com/orbs-network/orbs-network-go/_logs
+
+  build-docker-image:
+    machine: true
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run:
+          command: SKIP_TESTS=true ./docker/build/build.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
       - store_artifacts:
           path: _logs
 
-  flakiness:
-    docker:
-      - image: circleci/golang:latest
-    resource_class: large
-    steps:
-      - checkout
-      - run: ./git-submodule-checkout.sh
-      - run:
-          # remove logs if the test was successful for quicker feedback loop
-          command: ./test.flakiness.sh #&& sudo find _logs/acceptance -type f -delete
-          no_output_timeout: 25m
-      - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
-      - store_artifacts:
-          path: _logs
 
   notify_github_about_dashboard:
     machine: true
@@ -71,7 +94,8 @@ workflows:
   version: 2
   build:
     jobs:
-#      - build
+      - build
+      - build-docker-image
       - flakiness
 #      - notify_github_about_dashboard
 #      - success:
