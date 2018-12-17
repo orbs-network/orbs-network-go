@@ -1,7 +1,9 @@
 version: 2
 jobs:
   build:
-    machine: true
+    docker:
+      - image: circleci/golang:latest
+    resource_class: large
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
@@ -16,14 +18,15 @@ jobs:
           path: _logs
 
   flakiness:
-    machine: true
+    docker:
+      - image: circleci/golang:latest
+    resource_class: large
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.flakiness.sh
       - run:
           # remove logs if the test was successful for quicker feedback loop
-          command: ./docker/test/test.flakiness.sh #&& sudo find _logs/acceptance -type f -delete
+          command: ./test.flakiness.sh #&& sudo find _logs/acceptance -type f -delete
           no_output_timeout: 25m
       - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
       - store_artifacts:
@@ -68,30 +71,30 @@ workflows:
   version: 2
   build:
     jobs:
-      - build
+#      - build
       - flakiness
-      - notify_github_about_dashboard
-      - success:
-          requires:
-            - build
-            - flakiness
-      - deploy_testnet:
-          requires:
-            - success
-          filters:
-            branches:
-              only:
-                - master
-      - e2e_testnet:
-          requires:
-            - deploy_testnet
-          filters:
-            branches:
-              only:
-                - master
-      - release_gamma:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+#      - notify_github_about_dashboard
+#      - success:
+#          requires:
+#            - build
+#            - flakiness
+#      - deploy_testnet:
+#          requires:
+#            - success
+#          filters:
+#            branches:
+#              only:
+#                - master
+#      - e2e_testnet:
+#          requires:
+#            - deploy_testnet
+#          filters:
+#            branches:
+#              only:
+#                - master
+#      - release_gamma:
+#          filters:
+#            tags:
+#              only: /^v.*/
+#            branches:
+#              ignore: /.*/
