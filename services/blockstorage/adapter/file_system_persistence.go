@@ -82,10 +82,6 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	return nil
 }
 
-// TODO - make sure we open files with appropriate locking to prevent concurrent collisions
-
-// TODO - don't lock mutex for thew entire scan duration
-// TODO - make sure we open files with appropriate locking to prevent concurrent collisions
 func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor CursorFunc) error {
 	offset, err := f.bhIndex.fetchBlockOffset(from)
 	if err != nil {
@@ -127,7 +123,6 @@ func (*FilesystemBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight,
 	panic("implement me")
 }
 
-// TODO - make sure we open files with appropriate locking to prevent concurrent collisions
 func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
 	offset, err := f.bhIndex.fetchTopOffest()
 	if err != nil {
