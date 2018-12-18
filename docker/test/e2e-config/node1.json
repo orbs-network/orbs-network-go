@@ -1,6 +1,6 @@
 {
   "node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
-  "node-private-key": "30fccea741dd34c7afb146a543616bcb361247148f0c8542541c01da6d6cadf186515f1d851978fc94a6a641e25dec74a6ec28c5ae04c651a0dc2e6104b3ac24",
+  "node-private-key": "901a1a0bfbe217593062a054e561e708707cb814a123474c25fd567a0fe088f8",
   "constant-consensus-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
   "federation-nodes": [
     {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},

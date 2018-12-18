@@ -109,7 +109,7 @@ func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
 			if peerQueue, found := t.outgoingPeerQueues[recipientPublicKey.KeyForMap()]; found {
 				peerQueue <- data
 			} else {
-				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.KeyForMap())
+				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
 			}
 		}
 		return nil
