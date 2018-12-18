@@ -71,7 +71,7 @@ func NewLeanHelixConsensusAlgo(
 	logger.Info("NewLeanHelixConsensusAlgo() start")
 	comm := NewCommunication(logger, gossip)
 	membership := NewMembership(logger, config.NodeAddress(), consensusContext)
-	mgr := NewKeyManager(logger, config.NodePrivateKey())
+	mgr := NewKeyManager(config.NodePrivateKey())
 	genesisBlock := generateGenesisBlock(config.NodePrivateKey())
 	blockHeight := lhprimitives.BlockHeight(genesisBlock.TransactionsBlock.Header.BlockHeight() + 1)
 
