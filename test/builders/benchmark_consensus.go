@@ -2,10 +2,8 @@ package builders
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -24,7 +22,7 @@ func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.Tr
 	txHash := digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
 	rxHash := digest.CalcResultsBlockHash(&protocol.ResultsBlockContainer{Header: rxHeaderBuilt})
 	xorHash := logic.CalcXor(txHash, rxHash)
-	sig, err := signature.SignEcdsaSecp256K1(b.blockProofSigner, xorHash)
+	sig, err := digest.SignAsNode(b.blockProofSigner, xorHash)
 	if err != nil {
 		panic(err)
 	}
@@ -100,8 +98,7 @@ func (c *committed) WithInvalidSenderSignature(keyPair *testKeys.TestEcdsaSecp25
 
 func (c *committed) Build() *gossipmessages.BenchmarkConsensusCommittedMessage {
 	statusBuilt := c.status.Build()
-	signedData := hash.CalcSha256(statusBuilt.Raw())
-	sig, err := signature.SignEcdsaSecp256K1(c.messageSigner, signedData)
+	sig, err := digest.SignAsNode(c.messageSigner, statusBuilt.Raw())
 	if err != nil {
 		panic(err)
 	}

@@ -82,7 +82,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)
-	if !digest.VerifyEcdsaSecp256K1WithNodeAddress(blockProof.Sender().SenderNodeAddress(), signedData, blockProof.Sender().Signature()) {
+	if !digest.VerifyNodeSignature(blockProof.Sender().SenderNodeAddress(), signedData, blockProof.Sender().Signature()) {
 		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
 	}
 

@@ -3,8 +3,6 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -143,7 +141,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 
 	// prepare signature over the block headers
 	signedData := s.signedDataForBlockProof(blockPair)
-	sig, err := signature.SignEcdsaSecp256K1(s.config.NodePrivateKey(), signedData)
+	sig, err := digest.SignAsNode(s.config.NodePrivateKey(), signedData)
 	if err != nil {
 		return nil, err
 	}
@@ -230,9 +228,8 @@ func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	}
 
 	// signature
-	signedData := hash.CalcSha256(status.Raw())
-	if !digest.VerifyEcdsaSecp256K1WithNodeAddress(sender.SenderNodeAddress(), signedData, sender.Signature()) {
-		return errors.Errorf("sender signature is invalid: %s, signed data: %s", sender.Signature(), signedData)
+	if !digest.VerifyNodeSignature(sender.SenderNodeAddress(), status.Raw(), sender.Signature()) {
+		return errors.Errorf("sender signature is invalid: %s, signed data: %s", sender.Signature(), status.Raw())
 	}
 
 	return nil

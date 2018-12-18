@@ -3,7 +3,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -62,7 +62,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signature.SignEcdsaSecp256K1(cfg.NodePrivateKey(), oneBigHash)
+		sig, _ := digest.SignAsNode(cfg.NodePrivateKey(), oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
@@ -85,7 +85,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signature.SignEcdsaSecp256K1(cfg.NodePrivateKey(), oneBigHash)
+		sig, _ := digest.SignAsNode(cfg.NodePrivateKey(), oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 

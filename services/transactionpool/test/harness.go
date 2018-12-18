@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
@@ -99,7 +98,7 @@ func (h *harness) verifyMocks() error {
 func (h *harness) handleForwardFrom(ctx context.Context, sender *testKeys.TestEcdsaSecp256K1KeyPair, transactions ...*protocol.SignedTransaction) {
 	oneBigHash, _, _ := transactionpool.HashTransactions(transactions...)
 
-	sig, err := signature.SignEcdsaSecp256K1(sender.PrivateKey(), oneBigHash)
+	sig, err := digest.SignAsNode(sender.PrivateKey(), oneBigHash)
 	if err != nil {
 		panic(err)
 	}

@@ -2,8 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -76,8 +75,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: lastCommittedBlockHeight,
 	}).Build()
-	signedData := hash.CalcSha256(status.Raw())
-	sig, err := signature.SignEcdsaSecp256K1(s.config.NodePrivateKey(), signedData)
+	sig, err := digest.SignAsNode(s.config.NodePrivateKey(), status.Raw())
 	if err != nil {
 		return err
 	}
@@ -93,7 +91,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 
 	// send committed back to leader via gossip
 	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderNodeAddress()
-	logger.Info("replying committed with last committed height", log.BlockHeight(lastCommittedBlockHeight), log.Stringable("signed-data", signedData))
+	logger.Info("replying committed with last committed height", log.BlockHeight(lastCommittedBlockHeight), log.Bytes("signed-data", status.Raw()))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientNodeAddress: recipient,
 		Message:              message,
