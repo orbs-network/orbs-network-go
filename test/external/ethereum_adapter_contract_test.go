@@ -51,7 +51,7 @@ func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnectio
 		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
 		require.NoError(t, err, "failed parsing ABI")
 
-		contractAddress, emitEventContract, err := adapter.DeployEmitEvent(auth, parsedABI)
+		contractAddress, emitEventContract, err := adapter.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 		commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
@@ -73,7 +73,7 @@ func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnectio
 		require.Len(t, logs, 1, "did not get the expected event log")
 		log := logs[0]
 
-		require.Equal(t, contractAddress, log.ContractAddress, "contract address in log differed from actual contract address")
+		require.Equal(t, contractAddress.Bytes(), log.ContractAddress, "contract address in log differed from actual contract address")
 		require.Equal(t, eventSignature, log.PackedTopics[0], "event returned did not have the expected signature as the first topic")
 
 		data, err := eventABI.Inputs.UnpackValues(log.Data)

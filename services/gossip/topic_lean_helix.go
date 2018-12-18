@@ -30,7 +30,6 @@ func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		LeanHelix:     input.Message.MessageType,
 		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 	}).Build()
 

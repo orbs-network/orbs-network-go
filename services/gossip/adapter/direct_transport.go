@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -21,6 +22,13 @@ const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
 
+type metrics struct {
+	incomingConnectionAcceptErrors    *metric.Gauge
+	incomingConnectionTransportErrors *metric.Gauge
+	outgoingConnectionFailedSend      *metric.Gauge
+	outgoingConnectionFailedKeepalive *metric.Gauge
+}
+
 type directTransport struct {
 	config config.GossipTransportConfig
 	logger log.BasicLogger
@@ -31,16 +39,28 @@ type directTransport struct {
 	transportListenerUnderMutex TransportListener
 	serverListeningUnderMutex   bool
 	serverPort                  int
+
+	metrics *metrics
 }
 
-func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.BasicLogger) Transport {
+func getMetrics(registry metric.Registry) *metrics {
+	return &metrics{
+		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.AcceptErrors"),
+		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors"),
+		outgoingConnectionFailedSend:      registry.NewGauge("Gossip.OutgoingConnection.FailedSendErrors"),
+		outgoingConnectionFailedKeepalive: registry.NewGauge("Gossip.OutgoingConnection.FailedKeepaliveErrors"),
+	}
+}
+
+func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.BasicLogger, registry metric.Registry) Transport {
 	t := &directTransport{
 		config: config,
 		logger: logger.WithTags(LogTag),
 
 		outgoingPeerQueues: make(map[string]chan *TransportData),
 
-		mutex: &sync.RWMutex{},
+		mutex:   &sync.RWMutex{},
+		metrics: getMetrics(registry),
 	}
 
 	// client channels (not under mutex, before all goroutines)
@@ -153,6 +173,7 @@ func (t *directTransport) serverMainLoop(parentCtx context.Context, listenPort u
 				t.logger.Info("incoming connection accept stopped since server is shutting down", trace.LogFieldFrom(ctx))
 				return
 			}
+			t.metrics.incomingConnectionAcceptErrors.Inc()
 			t.logger.Info("incoming connection accept error", log.Error(err), trace.LogFieldFrom(ctx))
 			continue
 		}
@@ -170,6 +191,7 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
 		if err != nil {
+			t.metrics.incomingConnectionTransportErrors.Inc()
 			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 			conn.Close()
 			return
@@ -275,6 +297,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 		case data := <-msgs:
 			err := t.sendTransportData(ctx, conn, data)
 			if err != nil {
+				t.metrics.outgoingConnectionFailedSend.Inc()
 				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 				conn.Close()
 				return true
@@ -282,6 +305,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 		case <-time.After(t.config.GossipConnectionKeepAliveInterval()):
 			err := t.sendKeepAlive(ctx, conn)
 			if err != nil {
+				t.metrics.outgoingConnectionFailedKeepalive.Inc()
 				t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 				conn.Close()
 				return true

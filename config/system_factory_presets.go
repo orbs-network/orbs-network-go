@@ -65,7 +65,8 @@ func ForE2E(
 	federationNodes map[string]FederationNode,
 	gossipPeers map[string]GossipPeer,
 	constantConsensusLeader primitives.NodeAddress,
-	activeConsensusAlgo consensus.ConsensusAlgoType) mutableNodeConfig {
+	activeConsensusAlgo consensus.ConsensusAlgoType,
+) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 250*time.Millisecond)

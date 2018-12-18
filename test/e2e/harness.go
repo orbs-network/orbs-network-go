@@ -44,9 +44,27 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (*codec.SendTransactionResponse, error) {
-	response, _, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
-	return response, err
+func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+	timeoutDuration := 10 * time.Second
+	beginTime := time.Now()
+	sendTxOut, txId, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+
+	txStatus, executionResult := sendTxOut.TransactionStatus, sendTxOut.ExecutionResult
+
+	for txStatus == codec.TRANSACTION_STATUS_PENDING {
+		// check timeout
+		if time.Now().Sub(beginTime) > timeoutDuration {
+			return "", "", fmt.Errorf("contract deployment is TRANSACTION_STATUS_PENDING for over %v", timeoutDuration)
+		}
+
+		time.Sleep(10 * time.Millisecond)
+
+		txStatusOut, _ := h.getTransactionStatus(txId)
+
+		txStatus, executionResult = txStatusOut.TransactionStatus, txStatusOut.ExecutionResult
+	}
+
+	return executionResult, txStatus, err
 }
 
 func (h *harness) sendTransaction(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
