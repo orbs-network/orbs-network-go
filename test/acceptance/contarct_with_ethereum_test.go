@@ -59,7 +59,7 @@ func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNet
 func deployOrbsContractCallingEthereum(parent context.Context, network harness.TestNetworkDriver) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
-	ethereumReaderCode := "foo"
+	ethereumReaderCode := "foo" // TODO (v1) this junk argument is very confusing
 	network.MockContract(&sdkContext.ContractInfo{
 		PublicMethods: ethereum_caller.PUBLIC,
 		SystemMethods: ethereum_caller.SYSTEM,
