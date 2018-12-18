@@ -11,15 +11,9 @@ import (
 	"sync"
 )
 
-type blockHeightIndex struct {
-	sync.RWMutex
-	topHeight    primitives.BlockHeight
-	heightOffset map[primitives.BlockHeight]int64
-}
-
 func NewFilesystemBlockPersistence(dataDir string) BlockPersistence {
 	return &FilesystemBlockPersistence{
-		bhIndex: blockHeightIndex{
+		bhIndex: &blockHeightIndex{
 			topHeight:    0,
 			heightOffset: map[primitives.BlockHeight]int64{1: 0},
 		},
@@ -28,13 +22,11 @@ func NewFilesystemBlockPersistence(dataDir string) BlockPersistence {
 }
 
 type FilesystemBlockPersistence struct {
-	bhIndex blockHeightIndex
+	bhIndex *blockHeightIndex
 	dataDir string
 
 	writeLock sync.Mutex
 }
-
-// TODO - make sure we open files with appropriate locking to prevent concurrent collisions
 
 func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 	f.writeLock.Lock()
@@ -56,6 +48,8 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for writing")
 	}
+	defer file.Close()
+
 	currentOffset, err := file.Seek(startOffset, io.SeekStart)
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for writing")
@@ -88,6 +82,8 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	return nil
 }
 
+// TODO - make sure we open files with appropriate locking to prevent concurrent collisions
+
 // TODO - don't lock mutex for thew entire scan duration
 // TODO - make sure we open files with appropriate locking to prevent concurrent collisions
 func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor CursorFunc) error {
@@ -100,6 +96,7 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for reading")
 	}
+	defer file.Close()
 
 	newOffset, err := file.Seek(offset, io.SeekStart)
 	if newOffset != offset || err != nil {
@@ -141,6 +138,7 @@ func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContaine
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open blocks file for reading")
 	}
+	defer file.Close()
 
 	newOffset, err := file.Seek(offset, io.SeekStart)
 	if newOffset != offset || err != nil {
@@ -172,6 +170,12 @@ func (*FilesystemBlockPersistence) GetBlockTracker() *synchronization.BlockTrack
 
 func (f *FilesystemBlockPersistence) blockFileName() string {
 	return f.dataDir + "/blocks"
+}
+
+type blockHeightIndex struct {
+	sync.RWMutex
+	topHeight    primitives.BlockHeight
+	heightOffset map[primitives.BlockHeight]int64
 }
 
 func (i *blockHeightIndex) fetchTopOffest() (int64, error) {
