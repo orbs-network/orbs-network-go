@@ -3,14 +3,12 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
-	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
+	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/logic"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 )
@@ -33,22 +31,22 @@ type blockProvider struct {
 	logger           log.BasicLogger
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
-	nodePublicKey    primitives.Ed25519PublicKey
-	nodePrivateKey   primitives.Ed25519PrivateKey
+	nodeAddress      primitives.NodeAddress
+	nodePrivateKey   primitives.EcdsaSecp256K1PrivateKey
 }
 
 func NewBlockProvider(
 	logger log.BasicLogger,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey) *blockProvider {
+	nodeAddress primitives.NodeAddress,
+	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) *blockProvider {
 
 	return &blockProvider{
 		logger:           logger,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		nodePublicKey:    nodePublicKey,
+		nodeAddress:      nodeAddress,
 		nodePrivateKey:   nodePrivateKey,
 	}
 
@@ -94,9 +92,13 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 
 }
 
-func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.Uint256 {
+func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.BlockHash {
 	blockPairWrapper, ok := block.(*BlockPairWrapper)
 	if !ok {
+		return nil
+	}
+	if blockPairWrapper == nil || blockPairWrapper.blockPair == nil {
+		// TODO(v1): talkol added this because of a crash in a test, if this is not needed, remove and see if tests pass
 		return nil
 	}
 	return deepHash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
@@ -129,7 +131,7 @@ func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
 	return true
 }
 
-func generateGenesisBlock(nodePrivateKey primitives.Ed25519PrivateKey) *protocol.BlockPairContainer {
+func generateGenesisBlock(nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) *protocol.BlockPairContainer {
 	transactionsBlock := &protocol.TransactionsBlockContainer{
 		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
@@ -164,7 +166,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	return nil
 }
 
-func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer, nodePrivateKey primitives.Ed25519PrivateKey) (*protocol.BlockPairContainer, error) {
+func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) (*protocol.BlockPairContainer, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
 		ResultsBlock:      resultsBlock,
@@ -172,7 +174,7 @@ func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, r
 
 	// prepare signature over the block headers
 	blockPairDataToSign := dataToSignFrom(blockPair)
-	_, err := signature.SignEd25519(nodePrivateKey, blockPairDataToSign)
+	_, err := digest.SignAsNode(nodePrivateKey, blockPairDataToSign)
 	if err != nil {
 		return nil, err
 	}
@@ -180,19 +182,13 @@ func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, r
 	// generate tx block proof
 	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
 		Type:      protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: &consensus.LeanHelixBlockProofBuilder{
-			// TODO Transactions BlockProof goes here https://tree.taiga.io/project/orbs-network/us/529
-			// See https://tree.taiga.io/project/orbs-network/us/529
-		},
+		LeanHelix: nil,
 	}).Build()
 
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type:      protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: &consensus.LeanHelixBlockProofBuilder{
-			// TODO Results BlockProof goes here https://tree.taiga.io/project/orbs-network/us/529
-			// See https://tree.taiga.io/project/orbs-network/us/529
-		},
+		LeanHelix: nil,
 	}).Build()
 	return blockPair, nil
 }

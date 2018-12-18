@@ -11,10 +11,10 @@ func emptyConfig() mutableNodeConfig {
 }
 func (c *config) OverrideNodeSpecificValues(
 	gossipListenPort int,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey) NodeConfig {
+	nodeAddress primitives.NodeAddress,
+	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig {
 	cloned := c.Clone()
-	cloned.SetNodePublicKey(nodePublicKey)
+	cloned.SetNodeAddress(nodeAddress)
 	cloned.SetNodePrivateKey(nodePrivateKey)
 	cloned.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
 
@@ -32,7 +32,7 @@ func (c *config) Clone() mutableNodeConfig {
 		federationNodes:         c.federationNodes,
 		gossipPeers:             c.gossipPeers,
 		nodePrivateKey:          c.nodePrivateKey,
-		nodePublicKey:           c.nodePublicKey,
+		nodeAddress:             c.nodeAddress,
 		kv:                      cloneMap(c.kv),
 	}
 }

@@ -33,7 +33,6 @@ func DecodeLeanHelixMessage(header *gossipmessages.Header, payloads [][]byte) (*
 		return nil, errors.New("wrong num of payloads")
 	}
 
-	messageType := header.LeanHelix()
 	content := payloads[0]
 
 	var blockPair *protocol.BlockPairContainer
@@ -46,8 +45,7 @@ func DecodeLeanHelixMessage(header *gossipmessages.Header, payloads [][]byte) (*
 	}
 
 	return &gossipmessages.LeanHelixMessage{
-		MessageType: messageType,
-		Content:     content,
-		BlockPair:   blockPair,
+		Content:   content,
+		BlockPair: blockPair,
 	}, nil
 }

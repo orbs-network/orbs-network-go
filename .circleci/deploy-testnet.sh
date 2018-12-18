@@ -12,7 +12,7 @@ echo $TESTNET_SSH_PUBLIC_KEY > ~/.ssh/id_rsa.pub
 git clone https://github.com/orbs-network/nebula && cd nebula && git checkout testnet
 npm install
 
-export DOCKER_TAG_SHA256=$(docker images $DOCKER_IMAGE:master --no-trunc -q)
+export DOCKER_TAG_SHA256=$(docker images $DOCKER_IMAGE --digests --format '{{.Digest}} {{.Tag}}' | grep master | cut -d ' ' -f 1)
 
 #aws s3 sync s3://orbs-network-config-staging/nebula/cache/_terraform _terraform
 

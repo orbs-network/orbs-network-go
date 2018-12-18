@@ -3,7 +3,7 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
-	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
+	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -24,7 +24,8 @@ var LogTag = log.Service("consensus-algo-lean-helix")
 
 type service struct {
 	blockStorage     services.BlockStorage
-	comm             *networkCommunication
+	membership       *membership
+	comm             *communication
 	consensusContext services.ConsensusContext
 	logger           log.BasicLogger
 	config           Config
@@ -40,8 +41,8 @@ type metrics struct {
 }
 
 type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	NodePrivateKey() primitives.Ed25519PrivateKey
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
@@ -68,12 +69,13 @@ func NewLeanHelixConsensusAlgo(
 
 	logger := parentLogger.WithTags(LogTag)
 	logger.Info("NewLeanHelixConsensusAlgo() start")
-	comm := NewNetworkCommunication(logger, consensusContext, gossip)
-	mgr := NewKeyManager(logger, config.NodePublicKey(), config.NodePrivateKey())
+	comm := NewCommunication(logger, gossip)
+	membership := NewMembership(logger, config.NodeAddress(), consensusContext)
+	mgr := NewKeyManager(logger, config.NodePrivateKey())
 	genesisBlock := generateGenesisBlock(config.NodePrivateKey())
 	blockHeight := lhprimitives.BlockHeight(genesisBlock.TransactionsBlock.Header.BlockHeight() + 1)
 
-	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodePublicKey(), config.NodePrivateKey())
+	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodeAddress(), config.NodePrivateKey())
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
 	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
@@ -88,24 +90,24 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	leanHelixConfig := &leanhelix.Config{
-		NetworkCommunication: comm,
-		BlockUtils:           provider,
-		KeyManager:           mgr,
-		ElectionTrigger:      electionTrigger,
-		Logger:               NewLoggerWrapper(parentLogger, true),
+		Communication:   comm,
+		Membership:      membership,
+		BlockUtils:      provider,
+		KeyManager:      mgr,
+		ElectionTrigger: electionTrigger,
+		Logger:          NewLoggerWrapper(parentLogger, true),
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() calling NewLeanHelix()")
-	leanHelix := leanhelix.NewLeanHelix(leanHelixConfig)
-
-	s.leanHelix = leanHelix
-
-	s.leanHelix.RegisterOnCommitted(func(block leanhelix.Block) {
+	onCommit := func(block leanhelix.Block) {
 		parentLogger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
 		blockPairWrapper := block.(*BlockPairWrapper)
 		blockPair := blockPairWrapper.blockPair
 		s.saveToBlockStorage(ctx, blockPair)
-	})
+	}
+	leanHelix := leanhelix.NewLeanHelix(leanHelixConfig, onCommit)
+
+	s.leanHelix = leanHelix
 
 	gossip.RegisterLeanHelixHandler(s)
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
@@ -162,14 +164,10 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 }
 
 func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
-	messageType := input.Message.MessageType
-	message := leanhelix.CreateConsensusRawMessage(
-		leanhelix.MessageType(messageType),
-		input.Message.Content,
-		&BlockPairWrapper{
-			blockPair: input.Message.BlockPair,
-		},
-	)
-	s.leanHelix.GossipMessageReceived(ctx, message)
+	consensusRawMessage := &leanhelix.ConsensusRawMessage{
+		Content: input.Message.Content,
+		Block:   ToBlockPairWrapper(input.Message.BlockPair),
+	}
+	s.leanHelix.GossipMessageReceived(ctx, consensusRawMessage)
 	return nil, nil
 }

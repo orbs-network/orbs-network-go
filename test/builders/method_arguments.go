@@ -1,6 +1,9 @@
 package builders
 
-import "github.com/orbs-network/orbs-spec/types/go/protocol"
+import (
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+)
 
 func MethodArgumentsBuilders(args ...interface{}) (res []*protocol.MethodArgumentBuilder) {
 	res = []*protocol.MethodArgumentBuilder{}
@@ -36,9 +39,11 @@ func MethodArgumentsArray(args ...interface{}) *protocol.MethodArgumentArray {
 	return (&protocol.MethodArgumentArrayBuilder{Arguments: res}).Build()
 }
 
-func MethodArgumentsOpaqueEncode(args ...interface{}) []byte {
+func PackedArgumentArrayEncode(args ...interface{}) primitives.PackedArgumentArray {
 	argArray := MethodArgumentsArray(args...)
 	return argArray.RawArgumentsArray()
 }
 
-// decode with MethodArgumentsOpaque functions like ClientCallMethodResponseOutputArgumentsDecode
+func PackedArgumentArrayDecode(rawArgumentArrayWithHeader []byte) *protocol.MethodArgumentArray {
+	return protocol.MethodArgumentArrayReader(rawArgumentArrayWithHeader)
+}

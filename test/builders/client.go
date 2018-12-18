@@ -10,7 +10,7 @@ func ClientCallMethodResponseOutputArgumentsDecode(r *client.CallMethodResponse)
 	return argsArray.ArgumentsIterator()
 }
 
-// encode MethodArgumentsOpaque with MethodArgumentsOpaqueEncode
+// encode MethodArgumentsOpaque with PackedArgumentArrayEncode
 
 func ClientCallMethodResponseOutputArgumentsPrint(r *client.CallMethodResponse) string {
 	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())

@@ -23,7 +23,7 @@ import (
 )
 
 type configForBlockStorageTests struct {
-	pk                    primitives.Ed25519PublicKey
+	nodeAddress           primitives.NodeAddress
 	syncBatchSize         uint32
 	syncNoCommit          time.Duration
 	syncCollectResponses  time.Duration
@@ -33,8 +33,8 @@ type configForBlockStorageTests struct {
 	queryExpirationWindow time.Duration
 }
 
-func (c *configForBlockStorageTests) NodePublicKey() primitives.Ed25519PublicKey {
-	return c.pk
+func (c *configForBlockStorageTests) NodeAddress() primitives.NodeAddress {
+	return c.nodeAddress
 }
 
 func (c *configForBlockStorageTests) BlockSyncBatchSize() uint32 {
@@ -166,8 +166,8 @@ func (d *harness) withBatchSize(size uint32) *harness {
 	return d
 }
 
-func (d *harness) withNodeKey(key primitives.Ed25519PublicKey) *harness {
-	d.config.(*configForBlockStorageTests).pk = key
+func (d *harness) withNodeAddress(address primitives.NodeAddress) *harness {
+	d.config.(*configForBlockStorageTests).nodeAddress = address
 	return d
 }
 
@@ -195,9 +195,9 @@ func (d *harness) setupCustomBlocksForInit() time.Time {
 	return now
 }
 
-func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorageConfig {
+func createConfig(nodeAddress primitives.NodeAddress) config.BlockStorageConfig {
 	cfg := &configForBlockStorageTests{}
-	cfg.pk = nodePublicKey
+	cfg.nodeAddress = nodeAddress
 	cfg.syncBatchSize = 2
 	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
 	cfg.syncCollectResponses = 5 * time.Millisecond
@@ -212,8 +212,8 @@ func createConfig(nodePublicKey primitives.Ed25519PublicKey) config.BlockStorage
 
 func newBlockStorageHarness() *harness {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-	keyPair := keys.Ed25519KeyPairForTests(0)
-	cfg := createConfig(keyPair.PublicKey())
+	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
+	cfg := createConfig(keyPair.NodeAddress())
 
 	registry := metric.NewRegistry()
 	d := &harness{config: cfg, logger: logger}

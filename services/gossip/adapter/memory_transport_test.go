@@ -17,10 +17,10 @@ import (
 func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 
 	test.WithContext(func(parentContext context.Context) {
-		key := primitives.Ed25519PublicKey{0x01}
+		address := primitives.NodeAddress{0x01}
 
-		transport := NewMemoryTransport(parentContext, log.GetLogger(), makeFederation(key))
-		listener := listenTo(transport, key)
+		transport := NewMemoryTransport(parentContext, log.GetLogger(), makeFederation(address))
+		listener := listenTo(transport, address)
 
 		childContext, cancel := context.WithCancel(parentContext) // this is required so that the parent context does not get polluted
 		defer cancel()
@@ -31,8 +31,8 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 		listener.expectTracingContextToPropagate(t, originalTracingContext)
 
 		transport.Send(contextWithTrace, &TransportData{
-			SenderPublicKey: primitives.Ed25519PublicKey{0x02},
-			RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+			SenderNodeAddress: primitives.NodeAddress{0x02},
+			RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		})
 
 		test.EventuallyVerify(100*time.Millisecond, listener)
@@ -49,8 +49,8 @@ func (l *MockTransportListener) expectTracingContextToPropagate(t *testing.T, or
 	}).Times(1)
 }
 
-func makeFederation(key primitives.Ed25519PublicKey) map[string]config.FederationNode {
+func makeFederation(address primitives.NodeAddress) map[string]config.FederationNode {
 	federationNodes := make(map[string]config.FederationNode)
-	federationNodes[key.KeyForMap()] = config.NewHardCodedFederationNode(key)
+	federationNodes[address.KeyForMap()] = config.NewHardCodedFederationNode(address)
 	return federationNodes
 }
