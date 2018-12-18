@@ -11,53 +11,57 @@ import (
 	"sync"
 )
 
-type dataFile struct {
+type blockHeightIndex struct {
 	sync.RWMutex
-	dataDir      string
 	topHeight    primitives.BlockHeight
 	heightOffset map[primitives.BlockHeight]int64
 }
 
 func NewFilesystemBlockPersistence(dataDir string) BlockPersistence {
 	return &FilesystemBlockPersistence{
-		dataFile: dataFile{
-			dataDir:      dataDir,
+		bhIndex: blockHeightIndex{
 			topHeight:    0,
 			heightOffset: map[primitives.BlockHeight]int64{1: 0},
 		},
+		dataDir: dataDir,
 	}
 }
 
 type FilesystemBlockPersistence struct {
-	dataFile dataFile
+	bhIndex blockHeightIndex
+	dataDir string
+
+	writeLock sync.Mutex
 }
 
 // TODO - make sure we open files with appropriate locking to prevent concurrent collisions
 
 func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
-	f.dataFile.Lock()
-	defer f.dataFile.Unlock()
+	f.writeLock.Lock()
+	defer f.writeLock.Unlock()
 
 	bh := blockPair.ResultsBlock.Header.BlockHeight()
-	if bh != f.dataFile.topHeight+1 {
-		return fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, f.dataFile.topHeight)
+
+	currentTop := f.bhIndex.fetchTopHeight()
+	if bh != currentTop+1 {
+		return fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, currentTop)
 	}
 
-	offset, ok := f.dataFile.heightOffset[bh]
-	if !ok {
-		return fmt.Errorf("index missing offset for block height %d", bh)
+	startOffset, err := f.bhIndex.fetchBlockOffset(bh)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch top block offset")
 	}
 
 	file, err := os.OpenFile(f.blockFileName(), os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for writing")
 	}
-	newOffset, err := file.Seek(offset, io.SeekStart)
+	currentOffset, err := file.Seek(startOffset, io.SeekStart)
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for writing")
 	}
-	if offset != newOffset {
-		return errors.Wrapf(err, "failed to seek in blocks file to position %v", offset)
+	if startOffset != currentOffset {
+		return errors.Wrapf(err, "failed to seek in blocks file to position %v", startOffset)
 	}
 
 	err = encode(blockPair, file)
@@ -71,25 +75,25 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 		return errors.Wrap(err, "failed to flush blocks file to disk")
 	}
 
-	newOffset, err = file.Seek(0, io.SeekEnd)
+	// find our current offset
+	currentOffset, err = file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return errors.Wrap(err, "failed to update block height index")
 	}
 
-	f.dataFile.topHeight++
-	f.dataFile.heightOffset[bh+1] = newOffset
+	err = f.bhIndex.appendBlock(startOffset, currentOffset)
+	if err != nil {
+		return errors.Wrap(err, "failed to update index after writing block")
+	}
 	return nil
 }
 
 // TODO - don't lock mutex for thew entire scan duration
 // TODO - make sure we open files with appropriate locking to prevent concurrent collisions
 func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor CursorFunc) error {
-	f.dataFile.RLock()
-	defer f.dataFile.RUnlock()
-
-	offset, ok := f.dataFile.heightOffset[from]
-	if !ok {
-		return fmt.Errorf("index missing offset for block height %d", f.dataFile.topHeight)
+	offset, err := f.bhIndex.fetchBlockOffset(from)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch last block")
 	}
 
 	file, err := os.Open(f.blockFileName())
@@ -103,12 +107,11 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 	}
 
 	wantNext := true
-	lastHeight := primitives.BlockHeight(0)
+	lastHeightRead := primitives.BlockHeight(0)
 
-	// TODO - check the index under a short lock at any iteration
-	for wantNext && f.dataFile.topHeight > lastHeight {
+	for top := f.bhIndex.fetchTopHeight(); wantNext && top > lastHeightRead; {
 		currentPage := make([]*protocol.BlockPairContainer, 0, pageSize)
-		for uint8(len(currentPage)) < pageSize && f.dataFile.topHeight > lastHeight {
+		for ; uint8(len(currentPage)) < pageSize && top > lastHeightRead; top = f.bhIndex.fetchTopHeight() {
 			aBlock, err := decode(file)
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode block")
@@ -127,15 +130,11 @@ func (*FilesystemBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight,
 	panic("implement me")
 }
 
-// TODO - don't lock mutex for thew entire scan duration
 // TODO - make sure we open files with appropriate locking to prevent concurrent collisions
 func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
-	f.dataFile.RLock()
-	defer f.dataFile.RUnlock()
-
-	offset, ok := f.dataFile.heightOffset[f.dataFile.topHeight]
-	if !ok {
-		return nil, fmt.Errorf("index missing offset for block height %d", f.dataFile.topHeight)
+	offset, err := f.bhIndex.fetchTopOffest()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch last block")
 	}
 
 	file, err := os.Open(f.blockFileName())
@@ -172,5 +171,51 @@ func (*FilesystemBlockPersistence) GetBlockTracker() *synchronization.BlockTrack
 }
 
 func (f *FilesystemBlockPersistence) blockFileName() string {
-	return f.dataFile.dataDir + "/blocks"
+	return f.dataDir + "/blocks"
+}
+
+func (i *blockHeightIndex) fetchTopOffest() (int64, error) {
+	i.RLock()
+	defer i.RUnlock()
+
+	topHeight := i.topHeight
+	offset, ok := i.heightOffset[topHeight]
+	if !ok {
+		return 0, fmt.Errorf("index missing offset for block height %d", topHeight)
+	}
+	return offset, nil
+}
+
+func (i *blockHeightIndex) fetchTopHeight() (height primitives.BlockHeight) {
+	i.RLock()
+	defer i.RUnlock()
+
+	return i.topHeight
+}
+
+func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) (int64, error) {
+	i.RLock()
+	defer i.RUnlock()
+
+	offset, ok := i.heightOffset[height]
+	if !ok {
+		return 0, fmt.Errorf("index missing offset for block height %d", height)
+	}
+	return offset, nil
+}
+
+func (i *blockHeightIndex) appendBlock(prevTopOffset int64, newTopOffset int64) error {
+	i.Lock()
+	defer i.Unlock()
+
+	currentTopOffest, ok := i.heightOffset[i.topHeight+1]
+	if !ok {
+		return fmt.Errorf("index missing offset for block height %d", i.topHeight)
+	}
+	if currentTopOffest != prevTopOffset {
+		return fmt.Errorf("unexpected top block offest, may be a result of two processes writing concurrently. found offest %d while expecting %d", currentTopOffest, prevTopOffset)
+	}
+	i.topHeight++
+	i.heightOffset[i.topHeight+1] = newTopOffset
+	return nil
 }

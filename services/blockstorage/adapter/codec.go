@@ -89,23 +89,24 @@ func encode(block *protocol.BlockPairContainer, w io.Writer) error {
 	rb := block.ResultsBlock
 
 	// write header
-	h := &blockHeader{}
-	h.addFixed(tb.Header)
-	h.addFixed(tb.Metadata)
-	h.addFixed(tb.BlockProof)
-	h.addFixed(rb.Header)
-	h.addFixed(rb.BlockProof)
-	h.addFixed(rb.TransactionsBloomFilter)
+	serializationHeader := &blockHeader{}
+	serializationHeader.addFixed(tb.Header)
+	serializationHeader.addFixed(tb.Metadata)
+	serializationHeader.addFixed(tb.BlockProof)
+	serializationHeader.addFixed(rb.Header)
+	serializationHeader.addFixed(rb.BlockProof)
+	serializationHeader.addFixed(rb.TransactionsBloomFilter)
 	for _, receipt := range rb.TransactionReceipts {
-		h.addReceipt(receipt)
+		serializationHeader.addReceipt(receipt)
 	}
 	for _, diff := range rb.ContractStateDiffs {
-		h.addDiff(diff)
+		serializationHeader.addDiff(diff)
 	}
 	for _, tx := range tb.SignedTransactions {
-		h.addTx(tx)
+		serializationHeader.addTx(tx)
 	}
-	err := h.write(w)
+
+	err := serializationHeader.write(w)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to write block header")
@@ -160,8 +161,8 @@ func encode(block *protocol.BlockPairContainer, w io.Writer) error {
 }
 
 func decode(r io.Reader) (*protocol.BlockPairContainer, error) {
-	header := &blockHeader{}
-	err := header.read(r)
+	serializationHeader := &blockHeader{}
+	err := serializationHeader.read(r)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read block header")
 	}
@@ -202,6 +203,7 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, error) {
 	}
 	rbBloomFilter := protocol.TransactionsBloomFilterReader(rbBloomChunk)
 
+	// TODO V1 add validations : - 1) IsValid() on each membuff 2) check that num of bytes read match header 3) perform structural validations?
 	receipts := make([]*protocol.TransactionReceipt, 0, rbHeader.NumTransactionReceipts())
 	for i := 0; i < cap(receipts); i++ {
 		chunk, err := readChunk(r)
