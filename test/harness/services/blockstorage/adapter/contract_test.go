@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -12,6 +14,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
@@ -27,6 +30,122 @@ func TestBlockPersistenceContract_FailToWriteOutOfOrder(t *testing.T) {
 func TestBlockPersistenceContract_ReturnsTwoBlocks(t *testing.T) {
 	t.Run("In Memory Adapter", testWritesAndReturnsTwoBlocks(anInMemoryAdapter))
 	t.Run("Filesystem Adapter", testWritesAndReturnsTwoBlocks(aFileSystemAdapter))
+}
+
+func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *testing.T) {
+	t.Run("In Memory Adapter", testBlockTrackerBlocksUntilRequestedHeight(anInMemoryAdapter))
+	t.Run("Filesystem Adapter", testBlockTrackerBlocksUntilRequestedHeight(aFileSystemAdapter))
+}
+
+func TestBlockPersistenceContract_ReturnsLastBlockHeight(t *testing.T) {
+	t.Run("In Memory Adapter", testReturnsLastBlockHeight(anInMemoryAdapter))
+	t.Run("Filesystem Adapter", testReturnsLastBlockHeight(aFileSystemAdapter))
+}
+
+func TestBlockPersistenceContract_ReturnsTransactionsAndResultsBlock(t *testing.T) {
+	t.Run("In Memory Adapter", testReturnsTransactionsAndResultsBlock(anInMemoryAdapter))
+	t.Run("Filesystem Adapter", testReturnsTransactionsAndResultsBlock(aFileSystemAdapter))
+}
+
+func TestBlockPersistenceContract_ReturnsBlockByTx(t *testing.T) {
+	t.Run("In Memory Adapter", testReturnsBlockByTx(anInMemoryAdapter))
+	t.Run("Filesystem Adapter", testReturnsBlockByTx(aFileSystemAdapter))
+}
+
+func testReturnsBlockByTx(factory func() (adapter.BlockPersistence, func())) func(t *testing.T) {
+	return func(t *testing.T) {
+		adapter, cleanup := factory()
+		defer cleanup()
+
+		blocks := []*protocol.BlockPairContainer{
+			builders.BlockPair().WithHeight(1).WithTransactions(1).WithReceiptsForTransactions().Build(),
+			builders.BlockPair().WithHeight(2).WithTransactions(7).WithReceiptsForTransactions().Build(),
+			builders.BlockPair().WithHeight(3).WithTransactions(1).WithReceiptsForTransactions().Build(),
+		}
+
+		for _, b := range blocks {
+			err := adapter.WriteNextBlock(b)
+			require.NoError(t, err)
+		}
+
+		tx := blocks[1].TransactionsBlock.SignedTransactions[6].Transaction()
+
+		readBlock, txIndex, err := adapter.GetBlockByTx(digest.CalcTxHash(tx), blocks[0].ResultsBlock.Header.Timestamp(), blocks[2].ResultsBlock.Header.Timestamp())
+		require.NoError(t, err)
+		require.EqualValues(t, 6, txIndex)
+		test.RequireCmpEqual(t, readBlock, blocks[1])
+	}
+}
+
+func testReturnsTransactionsAndResultsBlock(factory func() (adapter.BlockPersistence, func())) func(t *testing.T) {
+	return func(t *testing.T) {
+		adapter, cleanup := factory()
+		defer cleanup()
+
+		blocks := []*protocol.BlockPairContainer{
+			builders.BlockPair().WithHeight(1).WithTransactions(1).WithReceiptsForTransactions().Build(),
+			builders.BlockPair().WithHeight(2).WithTransactions(2).WithReceiptsForTransactions().Build(),
+			builders.BlockPair().WithHeight(3).WithTransactions(3).WithReceiptsForTransactions().Build(),
+		}
+
+		for _, b := range blocks {
+			err := adapter.WriteNextBlock(b)
+			require.NoError(t, err)
+		}
+
+		readTxBlock, err := adapter.GetTransactionsBlock(2)
+		require.NoError(t, err)
+
+		readResultsBlock, err := adapter.GetResultsBlock(2)
+		require.NoError(t, err)
+
+		require.Len(t, readTxBlock.SignedTransactions, 2)
+		test.RequireCmpEqual(t, readTxBlock, blocks[1].TransactionsBlock)
+
+		require.Len(t, readResultsBlock.TransactionReceipts, 2)
+		test.RequireCmpEqual(t, readResultsBlock, blocks[1].ResultsBlock)
+
+	}
+}
+
+func testReturnsLastBlockHeight(factory func() (adapter.BlockPersistence, func())) func(t *testing.T) {
+	return func(t *testing.T) {
+		adapter, cleanup := factory()
+		defer cleanup()
+
+		h, err := adapter.GetLastBlockHeight()
+		require.NoError(t, err)
+		require.EqualValues(t, 0, h)
+
+		// write block height 1
+		err = adapter.WriteNextBlock(builders.BlockPair().WithHeight(1).Build())
+		require.NoError(t, err)
+
+		h, err = adapter.GetLastBlockHeight()
+		require.NoError(t, err)
+		require.EqualValues(t, 1, h)
+	}
+}
+
+func testBlockTrackerBlocksUntilRequestedHeight(factory func() (adapter.BlockPersistence, func())) func(t *testing.T) {
+	return func(t *testing.T) {
+		adapter, cleanup := factory()
+		defer cleanup()
+
+		// block until timeout before block is written
+		shortDeadlineCtx, _ := context.WithTimeout(context.Background(), 5*time.Millisecond)
+		err := adapter.GetBlockTracker().WaitForBlock(shortDeadlineCtx, 1)
+		require.Error(t, err)
+
+		// write block height 1
+		err = adapter.WriteNextBlock(builders.BlockPair().WithHeight(1).Build())
+		require.NoError(t, err)
+
+		// block tracker returns from wait immediately without error
+		shortDeadlineCtx, _ = context.WithTimeout(context.Background(), 5*time.Millisecond)
+		err = adapter.GetBlockTracker().WaitForBlock(shortDeadlineCtx, 1)
+		require.NoError(t, err)
+	}
 }
 
 func testWritesAndReturnsTwoBlocks(factory func() (adapter.BlockPersistence, func())) func(t *testing.T) {
@@ -88,5 +207,5 @@ func aFileSystemAdapter() (adapter.BlockPersistence, func()) {
 	cleanup := func() {
 		os.RemoveAll(dirName)
 	}
-	return adapter.NewFilesystemBlockPersistence(dirName), cleanup
+	return adapter.NewFilesystemBlockPersistence(dirName, log.GetLogger(), metric.NewRegistry()), cleanup
 }

@@ -1,7 +1,10 @@
 package adapter
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -11,23 +14,39 @@ import (
 	"sync"
 )
 
-func NewFilesystemBlockPersistence(dataDir string) BlockPersistence {
+type metrics struct {
+	size *metric.Gauge
+}
+
+func NewFilesystemBlockPersistence(dataDir string, parent log.BasicLogger, metricFactory metric.Factory) BlockPersistence {
+	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	return &FilesystemBlockPersistence{
 		bhIndex: &blockHeightIndex{
-			topHeight:    0,
-			heightOffset: map[primitives.BlockHeight]int64{1: 0},
+			topHeight:            0,
+			heightOffset:         map[primitives.BlockHeight]int64{1: 0},
+			firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
 		},
-		dataDir: dataDir,
+		dataDir:      dataDir,
+		metrics:      newMetrics(metricFactory),
+		blockTracker: synchronization.NewBlockTracker(logger, 0, 5),
+		logger:       logger,
 	}
 }
 
 type FilesystemBlockPersistence struct {
-	bhIndex *blockHeightIndex
-	dataDir string
-
-	writeLock sync.Mutex
+	bhIndex      *blockHeightIndex
+	dataDir      string
+	metrics      *metrics
+	writeLock    sync.Mutex
+	blockTracker *synchronization.BlockTracker
+	logger       log.BasicLogger
 }
 
+func newMetrics(m metric.Factory) *metrics {
+	return &metrics{
+		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInMB"),
+	}
+}
 func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 	f.writeLock.Lock()
 	defer f.writeLock.Unlock()
@@ -75,10 +94,12 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 		return errors.Wrap(err, "failed to update block height index")
 	}
 
-	err = f.bhIndex.appendBlock(startOffset, currentOffset)
+	err = f.bhIndex.appendBlock(startOffset, currentOffset, blockPair.ResultsBlock.Header.NumTransactionReceipts(), blockPair.ResultsBlock.Header.Timestamp())
 	if err != nil {
 		return errors.Wrap(err, "failed to update index after writing block")
 	}
+
+	f.blockTracker.IncrementHeight()
 	return nil
 }
 
@@ -119,8 +140,8 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 	return nil
 }
 
-func (*FilesystemBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
-	panic("implement me")
+func (f *FilesystemBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
+	return f.bhIndex.topHeight, nil
 }
 
 func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
@@ -147,20 +168,64 @@ func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContaine
 	return result, nil
 }
 
-func (*FilesystemBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
-	panic("implement me")
+func (f *FilesystemBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+	bpc, err := f.getBlockAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	return bpc.TransactionsBlock, nil
 }
 
-func (*FilesystemBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
-	panic("implement me")
+func (f *FilesystemBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
+	bpc, err := f.getBlockAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	return bpc.ResultsBlock, nil
 }
 
-func (*FilesystemBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error) {
-	panic("implement me")
+func (f *FilesystemBlockPersistence) getBlockAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+	var bpc *protocol.BlockPairContainer
+	err := f.ScanBlocks(height, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+		bpc = page[0]
+		return false
+	})
+	return bpc, err
 }
 
-func (*FilesystemBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
-	panic("implement me")
+func (f *FilesystemBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error) {
+	scanFrom, ok := f.bhIndex.getEarliestTxBlockInBucketForTsRange(minBlockTs, maxBlockTs)
+	if !ok {
+		return nil, 0, nil
+	}
+
+	err = f.ScanBlocks(scanFrom, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+		b := page[0]
+		if b.ResultsBlock.Header.Timestamp() > maxBlockTs {
+			return false
+		}
+		if b.ResultsBlock.Header.Timestamp() < minBlockTs {
+			return true
+		}
+
+		for i, receipt := range b.ResultsBlock.TransactionReceipts {
+			if bytes.Equal(receipt.Txhash(), txHash) { // found requested transaction
+				block = b
+				txIndexInBlock = i
+				return false
+			}
+		}
+		return true
+	})
+
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "failed to fetch block by txHash")
+	}
+	return block, txIndexInBlock, nil
+}
+
+func (f *FilesystemBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
+	return f.blockTracker
 }
 
 func (f *FilesystemBlockPersistence) blockFileName() string {
@@ -169,8 +234,9 @@ func (f *FilesystemBlockPersistence) blockFileName() string {
 
 type blockHeightIndex struct {
 	sync.RWMutex
-	topHeight    primitives.BlockHeight
-	heightOffset map[primitives.BlockHeight]int64
+	topHeight            primitives.BlockHeight
+	heightOffset         map[primitives.BlockHeight]int64
+	firstBlockInTsBucket map[uint32]primitives.BlockHeight
 }
 
 func (i *blockHeightIndex) fetchTopOffest() (int64, error) {
@@ -203,18 +269,48 @@ func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) (int6
 	return offset, nil
 }
 
-func (i *blockHeightIndex) appendBlock(prevTopOffset int64, newTopOffset int64) error {
+func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primitives.TimestampNano, rangeEnd primitives.TimestampNano) (primitives.BlockHeight, bool) {
+	i.RLock()
+	defer i.RUnlock()
+
+	fromBucket := blockTsBucketKey(rangeStart)
+	toBucket := blockTsBucketKey(rangeEnd)
+	for b := fromBucket; b <= toBucket; b++ {
+		result, exists := i.firstBlockInTsBucket[b]
+		if exists {
+			return result, true
+		}
+	}
+	return 0, false
+
+}
+
+func (i *blockHeightIndex) appendBlock(prevTopOffset int64, newTopOffset int64, numTxReceipts uint32, blockTs primitives.TimestampNano) error {
 	i.Lock()
 	defer i.Unlock()
 
-	currentTopOffest, ok := i.heightOffset[i.topHeight+1]
+	currentTopOffset, ok := i.heightOffset[i.topHeight+1]
 	if !ok {
 		return fmt.Errorf("index missing offset for block height %d", i.topHeight)
 	}
-	if currentTopOffest != prevTopOffset {
-		return fmt.Errorf("unexpected top block offest, may be a result of two processes writing concurrently. found offest %d while expecting %d", currentTopOffest, prevTopOffset)
+	if currentTopOffset != prevTopOffset {
+		return fmt.Errorf("unexpected top block offest, may be a result of two processes writing concurrently. found offest %d while expecting %d", currentTopOffset, prevTopOffset)
 	}
 	i.topHeight++
 	i.heightOffset[i.topHeight+1] = newTopOffset
+
+	if numTxReceipts > 0 {
+		_, exists := i.firstBlockInTsBucket[blockTsBucketKey(blockTs)]
+		if !exists {
+			i.firstBlockInTsBucket[blockTsBucketKey(blockTs)] = i.topHeight
+		}
+	}
+
 	return nil
+}
+
+const minuteToNanoRatio = 60 * 1000 * 1000 * 1000
+
+func blockTsBucketKey(nano primitives.TimestampNano) uint32 {
+	return uint32(nano / minuteToNanoRatio)
 }
