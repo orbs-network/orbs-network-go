@@ -208,6 +208,16 @@ func (b *blockPair) WithTimestampNow() *blockPair {
 	return b
 }
 
+func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
+	b.rxProof = &protocol.ResultsBlockProofBuilder{
+		TransactionsBlockHash: hash,
+		Type:               protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		BenchmarkConsensus: nil,
+		LeanHelix:          nil,
+	}
+	return b
+}
+
 func (b *blockPair) WithCorruptNumTransactions(num uint32) *blockPair {
 	b.transactions = []*protocol.SignedTransaction{}
 	b.txHeader.NumSignedTransactions = num
