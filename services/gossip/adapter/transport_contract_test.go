@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -97,12 +98,13 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 	}
 
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	registry := metric.NewRegistry()
 
 	res.transports = []Transport{
-		NewDirectTransport(ctx, configs[0], logger),
-		NewDirectTransport(ctx, configs[1], logger),
-		NewDirectTransport(ctx, configs[2], logger),
-		NewDirectTransport(ctx, configs[3], logger),
+		NewDirectTransport(ctx, configs[0], logger, registry),
+		NewDirectTransport(ctx, configs[1], logger, registry),
+		NewDirectTransport(ctx, configs[2], logger, registry),
+		NewDirectTransport(ctx, configs[3], logger, registry),
 	}
 	res.listeners = []*MockTransportListener{
 		listenTo(res.transports[0], res.publicKeys[0]),
