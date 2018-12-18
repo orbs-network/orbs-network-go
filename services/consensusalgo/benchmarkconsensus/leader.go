@@ -3,8 +3,6 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -143,7 +141,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 
 	// prepare signature over the block headers
 	signedData := s.signedDataForBlockProof(blockPair)
-	sig, err := signature.SignEd25519(s.config.NodePrivateKey(), signedData)
+	sig, err := digest.SignAsNode(s.config.NodePrivateKey(), signedData)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +157,8 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
 			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
-				Signature:       sig,
+				SenderNodeAddress: s.config.NodeAddress(),
+				Signature:         sig,
 			},
 		},
 	}).Build()
@@ -225,14 +223,13 @@ func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	}
 
 	// approved signer
-	if _, found := s.config.FederationNodes(0)[sender.SenderPublicKey().KeyForMap()]; !found {
-		return errors.Errorf("signer with public key %s is not a valid federation member", sender.SenderPublicKey())
+	if _, found := s.config.FederationNodes(0)[sender.SenderNodeAddress().KeyForMap()]; !found {
+		return errors.Errorf("signer with public key %s is not a valid federation member", sender.SenderNodeAddress())
 	}
 
 	// signature
-	signedData := hash.CalcSha256(status.Raw())
-	if !signature.VerifyEd25519(sender.SenderPublicKey(), signedData, sender.Signature()) {
-		return errors.Errorf("sender signature is invalid: %s, signed data: %s", sender.Signature(), signedData)
+	if !digest.VerifyNodeSignature(sender.SenderNodeAddress(), status.Raw(), sender.Signature()) {
+		return errors.Errorf("sender signature is invalid: %s, signed data: %s", sender.Signature(), status.Raw())
 	}
 
 	return nil
@@ -249,7 +246,7 @@ func (s *service) leaderAddVote(ctx context.Context, sender *gossipmessages.Send
 	}
 
 	// add the vote to our shared state variable
-	s.lastCommittedBlockVotersUnderMutex[sender.SenderPublicKey().KeyForMap()] = true
+	s.lastCommittedBlockVotersUnderMutex[sender.SenderNodeAddress().KeyForMap()] = true
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVotersUnderMutex) + 1

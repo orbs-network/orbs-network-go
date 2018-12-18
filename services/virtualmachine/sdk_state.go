@@ -63,7 +63,7 @@ func (s *service) handleSdkStateRead(ctx context.Context, executionContext *exec
 	output, err := s.stateStorage.ReadKeys(ctx, &services.ReadKeysInput{
 		BlockHeight:  executionContext.blockHeight,
 		ContractName: currentService,
-		Keys:         []primitives.Ripmd160Sha256{key},
+		Keys:         []primitives.Ripemd160Sha256{key},
 	})
 	if err != nil {
 		return nil, err

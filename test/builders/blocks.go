@@ -20,7 +20,7 @@ type blockPair struct {
 	receipts         []*protocol.TransactionReceipt
 	sdiffs           []*protocol.ContractStateDiff
 	rxProof          *protocol.ResultsBlockProofBuilder
-	blockProofSigner primitives.Ed25519PrivateKey
+	blockProofSigner primitives.EcdsaSecp256K1PrivateKey
 	txBloomFilter    *protocol.TransactionsBloomFilterBuilder
 }
 
@@ -70,7 +70,7 @@ func BlockPair() *blockPair {
 		},
 		rxProof: nil,
 	}
-	return b.WithBenchmarkConsensusBlockProof(keys.Ed25519KeyPairForTests(0))
+	return b.WithBenchmarkConsensusBlockProof(keys.EcdsaSecp256K1KeyPairForTests(0))
 }
 
 func (b *blockPair) Build() *protocol.BlockPairContainer {

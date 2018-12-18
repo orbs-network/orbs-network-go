@@ -35,13 +35,13 @@ func (h *harness) verifyCommitIgnored(t *testing.T) {
 	}
 }
 
-func (h *harness) expectCommitSaveAndReply(expectedBlockPair *protocol.BlockPairContainer, expectedLastCommitted primitives.BlockHeight, expectedRecipient primitives.Ed25519PublicKey, expectedSender primitives.Ed25519PublicKey) {
+func (h *harness) expectCommitSaveAndReply(expectedBlockPair *protocol.BlockPairContainer, expectedLastCommitted primitives.BlockHeight, expectedRecipient primitives.NodeAddress, expectedSender primitives.NodeAddress) {
 	lastCommittedReplyMatcher := func(i interface{}) bool {
 		input, ok := i.(*gossiptopics.BenchmarkConsensusCommittedInput)
 		return ok &&
 			input.Message.Status.LastCommittedBlockHeight() == expectedLastCommitted &&
-			input.RecipientPublicKey.Equal(expectedRecipient) &&
-			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
+			input.RecipientNodeAddress.Equal(expectedRecipient) &&
+			input.Message.Sender.SenderNodeAddress().Equal(expectedSender)
 	}
 
 	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{BlockPair: expectedBlockPair}).Return(nil, nil).Times(1)
@@ -55,13 +55,13 @@ func (h *harness) verifyCommitSaveAndReply(t *testing.T) {
 	}
 }
 
-func (h *harness) expectCommitReplyWithoutSave(expectedBlockPair *protocol.BlockPairContainer, expectedLastCommitted primitives.BlockHeight, expectedRecipient primitives.Ed25519PublicKey, expectedSender primitives.Ed25519PublicKey) {
+func (h *harness) expectCommitReplyWithoutSave(expectedBlockPair *protocol.BlockPairContainer, expectedLastCommitted primitives.BlockHeight, expectedRecipient primitives.NodeAddress, expectedSender primitives.NodeAddress) {
 	lastCommittedReplyMatcher := func(i interface{}) bool {
 		input, ok := i.(*gossiptopics.BenchmarkConsensusCommittedInput)
 		return ok &&
 			input.Message.Status.LastCommittedBlockHeight() == expectedLastCommitted &&
-			input.RecipientPublicKey.Equal(expectedRecipient) &&
-			input.Message.Sender.SenderPublicKey().Equal(expectedSender)
+			input.RecipientNodeAddress.Equal(expectedRecipient) &&
+			input.Message.Sender.SenderNodeAddress().Equal(expectedSender)
 	}
 
 	h.blockStorage.When("CommitBlock", mock.Any, &services.CommitBlockInput{BlockPair: expectedBlockPair}).Return(nil, nil).Times(0)
@@ -79,14 +79,14 @@ func (h *harness) verifyCommitReplyWithoutSave(t *testing.T) {
 	}
 }
 
-func (h *harness) expectCommitBroadcastViaGossip(expectedBlockHeight primitives.BlockHeight, expectedSender primitives.Ed25519PublicKey) {
+func (h *harness) expectCommitBroadcastViaGossip(expectedBlockHeight primitives.BlockHeight, expectedSender primitives.NodeAddress) {
 	commitSentMatcher := func(i interface{}) bool {
 		input, ok := i.(*gossiptopics.BenchmarkConsensusCommitInput)
 		return ok &&
 			input.Message.BlockPair.TransactionsBlock.Header.BlockHeight().Equal(expectedBlockHeight) &&
 			input.Message.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedBlockHeight) &&
 			input.Message.BlockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() &&
-			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderPublicKey().Equal(expectedSender)
+			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderNodeAddress().Equal(expectedSender)
 	}
 
 	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any, mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)

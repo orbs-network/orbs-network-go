@@ -20,21 +20,21 @@ type tamperingHarness struct {
 }
 
 func newTamperingHarness(ctx context.Context) *tamperingHarness {
-	senderKey := "sender"
-	listenerKey := "listener"
+	senderAddress := "sender"
+	listenerAddress := "listener"
 	listener := &adapter.MockTransportListener{}
 	logger := log.GetLogger(log.String("adapter", "transport"))
 
 	federationNodes := make(map[string]config.FederationNode)
-	federationNodes[senderKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(senderKey))
-	federationNodes[listenerKey] = config.NewHardCodedFederationNode(primitives.Ed25519PublicKey(listenerKey))
+	federationNodes[senderAddress] = config.NewHardCodedFederationNode(primitives.NodeAddress(senderAddress))
+	federationNodes[listenerAddress] = config.NewHardCodedFederationNode(primitives.NodeAddress(listenerAddress))
 
 	transport := NewTamperingTransport(logger, adapter.NewMemoryTransport(ctx, logger, federationNodes))
 
-	transport.RegisterListener(listener, primitives.Ed25519PublicKey(listenerKey))
+	transport.RegisterListener(listener, primitives.NodeAddress(listenerAddress))
 
 	return &tamperingHarness{
-		senderKey: senderKey,
+		senderKey: senderAddress,
 		transport: transport,
 		listener:  listener,
 	}
@@ -46,9 +46,9 @@ func (c *tamperingHarness) send(ctx context.Context, payloads [][]byte) {
 
 func (c *tamperingHarness) broadcast(ctx context.Context, sender string, payloads [][]byte) error {
 	return c.transport.Send(ctx, &adapter.TransportData{
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		SenderPublicKey: primitives.Ed25519PublicKey(sender),
-		Payloads:        payloads,
+		RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		SenderNodeAddress: primitives.NodeAddress(sender),
+		Payloads:          payloads,
 	})
 }
 

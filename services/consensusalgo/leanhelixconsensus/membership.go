@@ -11,14 +11,14 @@ import (
 type membership struct {
 	consensusContext services.ConsensusContext
 	logger           log.BasicLogger
-	memberId         primitives.Ed25519PublicKey
+	memberId         primitives.NodeAddress
 }
 
 func (m *membership) MyMemberId() lhprimitives.MemberId {
 	return lhprimitives.MemberId(m.memberId)
 }
 
-func NewMembership(logger log.BasicLogger, memberId primitives.Ed25519PublicKey, consensusContext services.ConsensusContext) *membership {
+func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, consensusContext services.ConsensusContext) *membership {
 	if consensusContext == nil {
 		panic("consensusContext cannot be nil")
 	}
@@ -40,10 +40,10 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 		m.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))
 		return nil
 	}
-	publicKeys := make([]lhprimitives.MemberId, 0, len(res.NodePublicKeys))
-	for _, publicKey := range res.NodePublicKeys {
-		publicKeys = append(publicKeys, lhprimitives.MemberId(publicKey))
+	nodeAddresses := make([]lhprimitives.MemberId, 0, len(res.NodeAddresses))
+	for _, nodeAddress := range res.NodeAddresses {
+		nodeAddresses = append(nodeAddresses, lhprimitives.MemberId(nodeAddress))
 	}
 
-	return publicKeys
+	return nodeAddresses
 }

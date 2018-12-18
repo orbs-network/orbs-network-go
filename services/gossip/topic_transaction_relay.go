@@ -36,9 +36,9 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey: s.config.NodePublicKey(),
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Payloads:        payloads,
+		SenderNodeAddress: s.config.NodeAddress(),
+		RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Payloads:          payloads,
 	})
 }
 

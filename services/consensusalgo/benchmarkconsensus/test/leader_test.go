@@ -9,7 +9,7 @@ import (
 func newLeaderHarnessWaitingForCommittedMessages(t *testing.T, ctx context.Context) *harness {
 	h := newHarness(true)
 	h.expectNewBlockProposalNotRequested()
-	h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
+	h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
 	h.createService(ctx)
 	h.verifyCommitBroadcastViaGossip(t)
 	return h
@@ -32,7 +32,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 
 		c0 := multipleCommittedMessages().WithHeight(0).WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalRequestedAndSaved(1)
-		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
@@ -42,7 +42,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 
 		c1 := multipleCommittedMessages().WithHeight(1).WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalRequestedAndSaved(2)
-		h.expectCommitBroadcastViaGossip(2, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(2, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c1)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
@@ -67,7 +67,7 @@ func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 		t.Log("Stop failing to generate, commit height 1")
 
 		h.expectNewBlockProposalRequestedAndSaved(1)
-		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodeAddress())
 
 		h.verifyNewBlockProposalRequestedAndSaved(t)
 		h.verifyCommitBroadcastViaGossip(t)
@@ -82,7 +82,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 
 		c0 := multipleCommittedMessages().WithHeight(0).WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalRequestedAndSaved(1)
-		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
@@ -92,7 +92,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 
 		c1 := multipleCommittedMessages().WithHeight(1).WithCountBelowQuorum(h.config).Build()
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c1)
 		h.verifyNewBlockProposalNotRequested(t)
@@ -108,7 +108,7 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 
 		c0 := multipleCommittedMessages().WithHeight(0).WithInvalidSignatures().WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalNotRequested(t)
@@ -124,7 +124,7 @@ func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
 
 		c0 := multipleCommittedMessages().WithHeight(0).FromNonFederationMembers().WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalNotRequested(t)
@@ -140,7 +140,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 
 		c0 := multipleCommittedMessages().WithHeight(0).WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalRequestedAndSaved(1)
-		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalRequestedAndSaved(t)
@@ -149,7 +149,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 		t.Log("Nodes confirmed height 0 (genesis) again, commit height 1 again")
 
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitBroadcastViaGossip(1, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c0)
 		h.verifyNewBlockProposalNotRequested(t)
@@ -165,7 +165,7 @@ func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
 
 		c1000 := multipleCommittedMessages().WithHeight(1000).WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitBroadcastViaGossip(0, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
 
 		h.receivedCommittedMessagesViaGossip(ctx, c1000)
 		h.verifyNewBlockProposalNotRequested(t)

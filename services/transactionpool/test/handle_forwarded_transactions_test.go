@@ -25,8 +25,8 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 		_, err := h.txpool.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{
 			Message: &gossipmessages.ForwardedTransactionsMessage{
 				Sender: (&gossipmessages.SenderSignatureBuilder{
-					SenderPublicKey: otherNodeKeyPair.PublicKey(),
-					Signature:       invalidSig,
+					SenderNodeAddress: otherNodeKeyPair.NodeAddress(),
+					Signature:         invalidSig,
 				}).Build(),
 				SignedTransactions: transactionpool.Transactions{tx1, tx2},
 			},

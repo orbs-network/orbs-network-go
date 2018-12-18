@@ -14,9 +14,9 @@ func (l *MockTransportListener) OnTransportMessageReceived(ctx context.Context, 
 	l.Called(ctx, payloads)
 }
 
-func listenTo(transport Transport, publicKey primitives.Ed25519PublicKey) *MockTransportListener {
+func listenTo(transport Transport, nodeAddress primitives.NodeAddress) *MockTransportListener {
 	l := &MockTransportListener{}
-	transport.RegisterListener(l, publicKey)
+	transport.RegisterListener(l, nodeAddress)
 	return l
 }
 
