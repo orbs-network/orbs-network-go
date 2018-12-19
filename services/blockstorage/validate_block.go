@@ -29,7 +29,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	if err := s.validateWithConsensusAlgosWithMode(
+	if err := s.notifyConsensusAlgos(
 		ctx,
 		lastCommittedBlock,
 		input.BlockPair,
@@ -115,15 +115,7 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-func (s *service) validateWithConsensusAlgos(
-	ctx context.Context,
-	prevBlockPair *protocol.BlockPairContainer,
-	lastCommittedBlockPair *protocol.BlockPairContainer) error {
-
-	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
-}
-
-func (s *service) validateWithConsensusAlgosWithMode(
+func (s *service) notifyConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	lastCommittedBlockPair *protocol.BlockPairContainer,
@@ -131,6 +123,8 @@ func (s *service) validateWithConsensusAlgosWithMode(
 
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
+
+	validationCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
@@ -138,12 +132,21 @@ func (s *service) validateWithConsensusAlgosWithMode(
 			BlockPair:              lastCommittedBlockPair,
 			PrevCommittedBlockPair: prevBlockPair,
 		})
-
-		// one of the consensus algos has validated the block, this means it's a valid block
+		// in validate mode - count success
 		if err == nil {
-			return nil
+			validationCount++
+
 		}
 	}
 
-	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
+	// in validate mode -> if none succeeded fail
+	if isValidationRequired(mode) && validationCount == 0 {
+		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
+	}
+
+	return nil
+}
+
+func isValidationRequired(mode handlers.HandleBlockConsensusMode) bool {
+	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
 }
