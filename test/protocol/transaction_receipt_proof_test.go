@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
@@ -200,4 +201,20 @@ func TestTransactionReceiptProof(t *testing.T) {
 
 	// write json
 	ioutil.WriteFile("TransactionReceiptProof.json", jsonBytes, 0655)
+
+	// print some hex dumps
+	fmt.Printf("\nEvent:\n")
+	eventBuilder.HexDump("", 0)
+
+	fmt.Printf("\nTransactionReceipt:\n")
+	transactionReceiptBuilder.HexDump("", 0)
+
+	fmt.Printf("\nResultsBlockHeader:\n")
+	resultsBlockHeaderBuilder.HexDump("", 0)
+
+	fmt.Printf("\nLeanHelixBlockProof:\n")
+	leanHelixBlockProofBuilder.HexDump("", 0)
+
+	fmt.Printf("\nResultsBlockProof:\n")
+	resultsBlockProofBuilder.HexDump("", 0)
 }
