@@ -154,3 +154,10 @@ func TestMergeWithFileConfig(t *testing.T) {
 	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
 	require.EqualValues(t, newKeyPair.NodeAddress(), cfg.NodeAddress())
 }
+
+func TestConfig_EthereumEndpoint(t *testing.T) {
+	cfg, err := newEmptyFileConfig(`{"ethereum-endpoint":"http://172.31.1.100:8545"}`)
+	require.NoError(t, err)
+
+	require.EqualValues(t, "http://172.31.1.100:8545", cfg.EthereumEndpoint())
+}
