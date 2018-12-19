@@ -1,9 +1,12 @@
 package adapter
 
 import (
+	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"math/big"
 	"strings"
@@ -43,4 +46,47 @@ func (c *connectorCommon) DeployEthereumContract(auth *bind.TransactOpts, abijso
 	}
 
 	return &address, contract, nil
+}
+
+func (c *connectorCommon) DeployEthereumContractManually(ctx context.Context, auth *bind.TransactOpts, abijson string, bytecode string, params ...interface{}) (*common.Address, error) {
+
+	client, err := c.getContractCaller()
+	if err != nil {
+		return nil, err
+	}
+
+	parsedAbi, err := abi.JSON(strings.NewReader(abijson))
+	if err != nil {
+		return nil, err
+	}
+
+	input, err := parsedAbi.Pack("", params...)
+	if err != nil {
+		return nil, err
+	}
+
+	data := append(common.FromHex(bytecode), input...)
+
+	nonce, err := client.PendingNonceAt(ctx, auth.From)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
+	}
+
+	rawTx := types.NewContractCreation(nonce, big.NewInt(0), 300000000, big.NewInt(1), data)
+	signedTx, err := auth.Signer(types.HomesteadSigner{}, auth.From, rawTx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.SendTransaction(ctx, signedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	contractAddress, err := bind.WaitDeployed(ctx, client, signedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &contractAddress, nil
 }

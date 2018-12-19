@@ -66,6 +66,7 @@ func ForE2E(
 	gossipPeers map[string]GossipPeer,
 	constantConsensusLeader primitives.Ed25519PublicKey,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
+	ethereumEndpoint string,
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
@@ -80,6 +81,7 @@ func ForE2E(
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 1000*time.Millisecond)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 500*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 2*time.Second)
+	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
 
 	cfg.SetGossipPeers(gossipPeers)
 	cfg.SetFederationNodes(federationNodes)
