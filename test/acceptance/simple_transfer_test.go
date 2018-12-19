@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func TestLeaderCommitsTransactionsAndSkipsInvalidOnesLeanHelix(t *testing.T) {
+func TestCommitTransactionWithLeanHelix(t *testing.T) {
 	harness.Network(t).
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
