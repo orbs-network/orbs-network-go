@@ -132,10 +132,9 @@ func (s *service) notifyConsensusAlgos(
 			BlockPair:              lastCommittedBlockPair,
 			PrevCommittedBlockPair: prevBlockPair,
 		})
-		// in validate mode - count success
+
 		if err == nil {
 			validationCount++
-
 		}
 	}
 
