@@ -165,18 +165,50 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
 	}
 
-	// validate the block consensus
-	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY {
-		err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
+	// validate the block consensus (block and proof)
+	if shouldVerify(mode) {
+		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	prevBlock := ToBlockPairWrapper(blockPair)
-	s.leanHelix.UpdateConsensusRound(prevBlock)
+	// update the block consensus - with block and proof - (might be nil -> genesisBlock)
+	if shouldUpdate(mode) {
+		// if LeanHelix is not the active consensus do not update
+		//  Note: genesis case (nil) is special no blockProof type - registered handlers cannot distinguish - should be handled here
+		if s.config.ActiveConsensusAlgo() != consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
+			s.logger.Info("LeanHelix is not the active consensus algo, not starting its consensus loop - update")
+			// TODO: maybe add output in this case? (change protos - HandleBlockConsensusOutput?)
+			return nil, nil
+		}
+
+		if shouldCreateGenesisBlock(blockPair) {
+			blockPair = s.blockProvider.GenerateGenesisBlock(ctx)
+			s.logger.Info("HandleBlockConsensus GenesisBlock", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
+		} else { // we should have a block proof
+			blockProof = blockPair.TransactionsBlock.BlockProof.Raw()
+		}
+		s.logger.Info("HandleBlockConsensus Update LeanHelix ", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
+		s.leanHelix.UpdateConsensusRound(ToBlockPairWrapper(blockPair))
+		// TODO Uncomment when UpdateState is implemented in LH
+		//s.leanHelix.UpdateState(ToBlockPairWrapper(blockPair), blockProof)
+		// TODO: Should we notify error?
+	}
 
 	return nil, nil
+}
+
+func shouldCreateGenesisBlock(blockPair *protocol.BlockPairContainer) bool {
+	return blockPair == nil
+}
+
+func shouldVerify(mode handlers.HandleBlockConsensusMode) bool {
+	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+}
+
+func shouldUpdate(mode handlers.HandleBlockConsensusMode) bool {
+	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY
 }
 
 func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
