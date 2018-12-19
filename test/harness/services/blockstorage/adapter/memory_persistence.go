@@ -140,7 +140,7 @@ func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	}
 
 	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 > blockPair.TransactionsBlock.Header.BlockHeight() {
-		bp.logger.Info("block persistence ignoring write next block with height %d when %d exist", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
+		bp.logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
 		return false, nil
 	}
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)

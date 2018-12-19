@@ -131,6 +131,7 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 				return errors.Wrapf(err, "failed to decode block")
 			}
 			currentPage = append(currentPage, aBlock)
+			lastHeightRead = aBlock.ResultsBlock.Header.BlockHeight()
 		}
 		if len(currentPage) > 0 {
 			wantNext = cursor(currentPage[0].ResultsBlock.Header.BlockHeight(), currentPage)
