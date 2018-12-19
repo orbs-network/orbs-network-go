@@ -17,6 +17,7 @@ import (
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/stretchr/testify/require"
 	"math/big"
+	"os/exec"
 	"testing"
 	"time"
 )
@@ -39,7 +40,8 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	d.deployTokenContractToEthereum(t)
 	d.generateEthereumAccountAndAssignFunds(t, etherAmountBefore)
 
-	d.deployAutonomousSwapBridgeToEthereum(t)
+	//d.deployAutonomousSwapBridgeToEthereum(t)
+	d.deployASBToEthereumUsingTruffle(t)
 	d.bindOrbsAutonomousSwapBridgeToEthereum(t)
 
 	d.approveTransferInEthereumTokenContract(t, amountToTransfer)
@@ -139,6 +141,23 @@ func (d *driver) transferInToOrbs(t *testing.T, transferOutTxHash string) {
 func (d *driver) transferOutFromOrbs(ctx context.Context, t *testing.T, amount *big.Int) {
 	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, d.orbsASBContractName, "transferOut", d.addressInEthereum.From.Bytes(), amount.Uint64())
 	requireSuccess(t, err, response, "transferOut in Orbs")
+}
+
+func (d *driver) deployASBToEthereumUsingTruffle(t *testing.T) {
+	path := "../../vendor/github.com/orbs-network/orbs-federation"
+	//path := "/Users/shaiyallin/go/src/github.com/orbs-network/orbs-network-go/vendor/github.com/orbs-network/orbs-federation"
+
+	output, err := exec.Command("yarn", "--cwd", path, "install").CombinedOutput()
+	t.Log(string(output))
+	require.NoError(t, err, "could yarn install")
+
+	output, err = exec.Command("yarn", "--cwd", path, "build").CombinedOutput()
+	t.Log(string(output))
+	require.NoError(t, err, "could yarn build")
+
+	output, err = exec.Command("yarn", "--cwd", path, "deploy").CombinedOutput()
+	t.Log(string(output))
+	require.NoError(t, err, "could yarn deploy")
 }
 
 // Ethereum related funcs
