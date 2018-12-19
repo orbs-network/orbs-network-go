@@ -156,12 +156,15 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
-			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
+			BlockRef: consensus.BenchmarkConsensusBlockRefBuilderFromRaw(signedData),
+			Nodes: []*consensus.BenchmarkConsensusSenderSignatureBuilder{{
 				SenderNodeAddress: s.config.NodeAddress(),
 				Signature:         sig,
-			},
+			}},
+			Placeholder: []byte{0x01, 0x02},
 		},
 	}).Build()
+
 	return blockPair, nil
 }
 

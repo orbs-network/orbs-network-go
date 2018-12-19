@@ -3,11 +3,11 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
@@ -78,22 +78,29 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 
 	// block proof
 	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
-	if !blockProof.Sender().SenderNodeAddress().Equal(s.config.ConstantConsensusLeader()) {
-		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderNodeAddress())
+	signersIterator := blockProof.NodesIterator()
+	if !signersIterator.HasNext() {
+		return errors.New("block proof not signed")
+	}
+	signer := signersIterator.NextNodes()
+	if !signer.SenderNodeAddress().Equal(s.config.ConstantConsensusLeader()) {
+		return errors.Errorf("block proof not from leader: %s", signer.SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)
-	if !digest.VerifyNodeSignature(blockProof.Sender().SenderNodeAddress(), signedData, blockProof.Sender().Signature()) {
-		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
+	if !digest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()) {
+		return errors.Errorf("block proof signature is invalid: %s", signer.Signature())
 	}
 
 	return nil
 }
 
 func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
-	txHash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
-	rxHash := digest.CalcResultsBlockHash(blockPair.ResultsBlock)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	return xorHash
+	return (&consensus.BenchmarkConsensusBlockRefBuilder{
+		PlaceholderType: consensus.BENCHMARK_CONSENSUS_VALID,
+		BlockHeight:     blockPair.TransactionsBlock.Header.BlockHeight(),
+		PlaceholderView: 1,
+		BlockHash:       digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock),
+	}).Build().Raw()
 }
 
 func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConsensusMode, blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
