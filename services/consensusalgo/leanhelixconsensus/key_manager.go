@@ -14,7 +14,7 @@ type keyManager struct {
 }
 
 func (k *keyManager) SignConsensusMessage(blockHeight lhprimitives.BlockHeight, content []byte) []byte {
-	sig, _ := digest.SignAsNode(k.privateKey, content) // TODO(v1): handle error (log)
+	sig, _ := digest.SignAsNode(k.privateKey, content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
 	return sig
 }
 
@@ -23,7 +23,7 @@ func (k *keyManager) VerifyConsensusMessage(blockHeight lhprimitives.BlockHeight
 }
 
 func (k *keyManager) SignRandomSeed(blockHeight lhprimitives.BlockHeight, randomSeed []byte) []byte {
-	sig, _ := digest.SignAsNode(k.privateKey, randomSeed) // TODO(v1): handle error (log)
+	sig, _ := digest.SignAsNode(k.privateKey, randomSeed) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
 	return sig
 }
 
