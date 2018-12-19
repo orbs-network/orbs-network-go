@@ -18,10 +18,16 @@ import (
 )
 
 type EventJSON struct {
-	Tuid        string
-	EthAddress  string
-	OrbsAddress string
-	Amount      string
+	ContractName string
+	EventName    string
+	Tuid         string
+	EthAddress   string
+	OrbsAddress  string
+	Amount       string
+}
+
+type TransactionReceiptJSON struct {
+	ExecutionResult string
 }
 
 type ResultsBlockHeaderJSON struct {
@@ -49,6 +55,7 @@ type ResultsBlockProofJSON struct {
 type TransactionReceiptProofJSON struct {
 	Event                 *EventJSON
 	RawEvent              string
+	TransactionReceipt    *TransactionReceiptJSON
 	RawTransactionReceipt string
 	ResultsBlockHeader    *ResultsBlockHeaderJSON
 	RawResultsBlockHeader string
@@ -154,12 +161,17 @@ func TestTransactionReceiptProof(t *testing.T) {
 	// wrap everything up
 	transactionReceiptProofJson := &TransactionReceiptProofJSON{
 		Event: &EventJSON{
-			Tuid:        numberToJSON(tuid),
-			EthAddress:  bytesToJSON(ethAddress),
-			OrbsAddress: bytesToJSON(orbsAddress),
-			Amount:      numberToJSON(amount),
+			ContractName: string(eventBuilder.ContractName),
+			EventName:    string(eventBuilder.EventName),
+			Tuid:         numberToJSON(tuid),
+			EthAddress:   bytesToJSON(ethAddress),
+			OrbsAddress:  bytesToJSON(orbsAddress),
+			Amount:       numberToJSON(amount),
 		},
-		RawEvent:              bytesToJSON(eventBuilder.Build().Raw()),
+		RawEvent: bytesToJSON(eventBuilder.Build().Raw()),
+		TransactionReceipt: &TransactionReceiptJSON{
+			ExecutionResult: numberToJSON(transactionReceiptBuilder.ExecutionResult),
+		},
 		RawTransactionReceipt: bytesToJSON(transactionReceiptBuilder.Build().Raw()),
 		ResultsBlockHeader: &ResultsBlockHeaderJSON{
 			ProtocolVersion:  numberToJSON(resultsBlockHeaderBuilder.ProtocolVersion),
