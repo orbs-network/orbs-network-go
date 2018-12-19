@@ -3,7 +3,6 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
-	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -23,14 +22,14 @@ import (
 var LogTag = log.Service("consensus-algo-lean-helix")
 
 type service struct {
-	blockStorage     services.BlockStorage
-	membership       *membership
-	comm             *communication
-	consensusContext services.ConsensusContext
-	logger           log.BasicLogger
-	config           Config
-	metrics          *metrics
-	leanHelix        *leanhelix.LeanHelix
+	blockStorage  services.BlockStorage
+	membership    *membership
+	comm          *communication
+	blockProvider *blockProvider
+	logger        log.BasicLogger
+	config        Config
+	metrics       *metrics
+	leanHelix     *leanhelix.LeanHelix
 }
 
 type metrics struct {
@@ -72,8 +71,6 @@ func NewLeanHelixConsensusAlgo(
 	comm := NewCommunication(logger, gossip)
 	membership := NewMembership(logger, config.NodeAddress(), consensusContext)
 	mgr := NewKeyManager(config.NodePrivateKey())
-	genesisBlock := generateGenesisBlock(config.NodePrivateKey())
-	blockHeight := lhprimitives.BlockHeight(genesisBlock.TransactionsBlock.Header.BlockHeight() + 1)
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodeAddress(), config.NodePrivateKey())
 
@@ -81,12 +78,13 @@ func NewLeanHelixConsensusAlgo(
 	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
 
 	s := &service{
-		comm:         comm,
-		blockStorage: blockStorage,
-		logger:       logger,
-		config:       config,
-		metrics:      newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
-		leanHelix:    nil,
+		comm:          comm,
+		blockStorage:  blockStorage,
+		logger:        logger,
+		config:        config,
+		blockProvider: provider,
+		metrics:       newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
+		leanHelix:     nil,
 	}
 
 	leanHelixConfig := &leanhelix.Config{
@@ -98,39 +96,57 @@ func NewLeanHelixConsensusAlgo(
 		Logger:          NewLoggerWrapper(parentLogger, true),
 	}
 
-	logger.Info("NewLeanHelixConsensusAlgo() calling NewLeanHelix()")
-	onCommit := func(block leanhelix.Block) {
-		parentLogger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
-		blockPairWrapper := block.(*BlockPairWrapper)
-		blockPair := blockPairWrapper.blockPair
-		s.saveToBlockStorage(ctx, blockPair)
-	}
-	leanHelix := leanhelix.NewLeanHelix(leanHelixConfig, onCommit)
+	logger.Info("NewLeanHelixConsensusAlgo() run NewLeanHelix()")
+	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
-	s.leanHelix = leanHelix
+	// Note: LeanHelix could be used as handler to validateBlocks without actively running consensus rounds
+	parentLogger.Info("LeanHelix go routine starts")
+	supervised.GoForever(ctx, logger, func() {
+		s.leanHelix.Run(ctx)
+	})
 
 	gossip.RegisterLeanHelixHandler(s)
-	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		parentLogger.Info("LeanHelix go routine starts", log.BlockHeight(primitives.BlockHeight(blockHeight)))
+	blockStorage.RegisterConsensusBlocksHandler(s)
 
-		supervised.GoForever(ctx, logger, func() {
-			s.leanHelix.Run(ctx)
-		})
-		s.leanHelix.UpdateConsensusRound(ToBlockPairWrapper(genesisBlock))
-		logger.Info("NewLeanHelixConsensusAlgo() Sent genesis block to AcknowledgeBlockConsensus()")
+	logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
 
-		blockStorage.RegisterConsensusBlocksHandler(s)
-		logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
-
-	} else {
-		parentLogger.Info("LeanHelix is not the active consensus algo, not starting its consensus loop")
-	}
 	return s
+}
+
+// TODO Go over this carefully!!
+func (s *service) onCommit(ctx context.Context, block leanhelix.Block, blockProof []byte) {
+	// log
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
+	// convert block with proof to comply to blockstorage
+	blockPairWrapper := block.(*BlockPairWrapper)
+	blockPair := blockPairWrapper.blockPair
+	// set blockProof
+	// generate and set tx block proof
+	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
+		Type:             protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		ResultsBlockHash: digest.CalcResultsBlockHash(blockPair.ResultsBlock),
+		LeanHelix:        blockProof,
+	}).Build()
+	// generate rx block proof
+	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
+		LeanHelix:             blockProof,
+	}).Build()
+
+	err := s.saveToBlockStorage(ctx, blockPair)
+	if err != nil {
+		logger.Info("onCommit - saving block to storage error: ", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	}
+
 }
 
 func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
+	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
+		return errors.Errorf("saveToBlockStorage with block height 0 - genesis is not supported")
+	}
 	hash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
 	logger.Info("saving block to storage", log.Stringable("block-hash", hash), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
