@@ -2,6 +2,7 @@ package leanhelixconsensus
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/lean-helix-go"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -11,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"unsafe"
 )
 
 type BlockPairWrapper struct {
@@ -35,6 +37,18 @@ type blockProvider struct {
 	nodePrivateKey   primitives.EcdsaSecp256K1PrivateKey
 }
 
+func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash, prevBlock leanhelix.Block) bool {
+	panic("implement me")
+}
+
+func (p *blockProvider) ValidateBlockHash(blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash) bool {
+	panic("implement me")
+}
+
+func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
+	panic("Replace this once BlockUtils interface in LH fixed")
+}
+
 func NewBlockProvider(
 	logger log.BasicLogger,
 	blockStorage services.BlockStorage,
@@ -52,7 +66,7 @@ func NewBlockProvider(
 
 }
 
-func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix.Block) leanhelix.Block {
+func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock leanhelix.Block) (leanhelix.Block, lhprimitives.BlockHash) {
 	blockWrapper := prevBlock.(*BlockPairWrapper)
 
 	newBlockHeight := primitives.BlockHeight(prevBlock.Height() + 1)
@@ -66,7 +80,7 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 		PrevBlockTimestamp: blockWrapper.blockPair.TransactionsBlock.Header.Timestamp(),
 	})
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	// get rx
@@ -76,83 +90,64 @@ func (p *blockProvider) RequestNewBlock(ctx context.Context, prevBlock leanhelix
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
-	// generate signed block
-	pair, err := signBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock, p.nodePrivateKey)
-	blockPairWrapper := ToBlockPairWrapper(pair)
-	if err != nil {
-		return nil
+	blockPair := &protocol.BlockPairContainer{
+		TransactionsBlock: txOutput.TransactionsBlock,
+		ResultsBlock:      rxOutput.ResultsBlock,
 	}
 
+	// TODO: this seems hacky here - we should be able to transfer block without proof on the wire - currently the "empty" blockProof build was moved to consensusContext.create_block
+	//blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
+	//blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{}).Build()
+
+	blockPairWrapper := ToBlockPairWrapper(blockPair)
 	p.logger.Info("RequestNewBlock() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
 
-	return blockPairWrapper
+	blockHash := []byte(calculateBlockHash(blockPairWrapper))
+
+	return blockPairWrapper, blockHash
 
 }
 
-func (p *blockProvider) CalculateBlockHash(block leanhelix.Block) lhprimitives.BlockHash {
-	blockPairWrapper, ok := block.(*BlockPairWrapper)
-	if !ok {
-		return nil
-	}
-	if blockPairWrapper == nil || blockPairWrapper.blockPair == nil {
-		// TODO(v1): talkol added this because of a crash in a test, if this is not needed, remove and see if tests pass
-		return nil
-	}
-	return deepHash(blockPairWrapper.blockPair.TransactionsBlock, blockPairWrapper.blockPair.ResultsBlock)
-}
-
-func deepHash(txBlock *protocol.TransactionsBlockContainer, rxBlock *protocol.ResultsBlockContainer) []byte {
-	txHash := digest.CalcTransactionsBlockHash(txBlock)
-	rxHash := digest.CalcResultsBlockHash(rxBlock)
+// TODO Ask Oded/Gad is this is the correct impl! Oded said not to use XOR
+func calculateBlockHash(blockPairWrapper *BlockPairWrapper) primitives.Uint256 {
+	block := blockPairWrapper.blockPair
+	txHash := digest.CalcTransactionsBlockHash(block.TransactionsBlock)
+	rxHash := digest.CalcResultsBlockHash(block.ResultsBlock)
 	xorHash := logic.CalcXor(txHash, rxHash)
 	return xorHash
 }
 
-func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
-	if block == nil {
-		return false
+func sizeOfBlock(block *protocol.BlockPairContainer) int64 {
+	txBlock := block.TransactionsBlock
+	txBlockSize := len(txBlock.Header.Raw()) + len(txBlock.BlockProof.Raw()) + len(txBlock.Metadata.Raw())
+
+	rsBlock := block.ResultsBlock
+	rsBlockSize := len(rsBlock.Header.Raw()) + len(rsBlock.BlockProof.Raw())
+
+	txBlockPointers := unsafe.Sizeof(txBlock) + unsafe.Sizeof(txBlock.Header) + unsafe.Sizeof(txBlock.Metadata) + unsafe.Sizeof(txBlock.BlockProof) + unsafe.Sizeof(txBlock.SignedTransactions)
+	rsBlockPointers := unsafe.Sizeof(rsBlock) + unsafe.Sizeof(rsBlock.Header) + unsafe.Sizeof(rsBlock.BlockProof) + unsafe.Sizeof(rsBlock.TransactionReceipts) + unsafe.Sizeof(rsBlock.ContractStateDiffs)
+
+	for _, tx := range txBlock.SignedTransactions {
+		txBlockSize += len(tx.Raw())
+		txBlockPointers += unsafe.Sizeof(tx)
 	}
-	blockWrapper, ok := block.(*BlockPairWrapper)
-	if !ok {
-		return false
+	for _, diff := range rsBlock.ContractStateDiffs {
+		rsBlockSize += len(diff.Raw())
+		rsBlockPointers += unsafe.Sizeof(diff)
 	}
-	if blockWrapper.blockPair == nil {
-		return false
+	for _, receipt := range rsBlock.TransactionReceipts {
+		rsBlockSize += len(receipt.Raw())
+		rsBlockPointers += unsafe.Sizeof(receipt)
 	}
-	if blockWrapper.blockPair.TransactionsBlock == nil || blockWrapper.blockPair.ResultsBlock == nil {
-		return false
-	}
-	if blockWrapper.blockPair.TransactionsBlock.Header == nil {
-		return false
-	}
-	return true
+	pointers := unsafe.Sizeof(block) + txBlockPointers + rsBlockPointers
+
+	return int64(txBlockSize) + int64(rsBlockSize) + int64(pointers)
 }
 
-func generateGenesisBlock(nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) *protocol.BlockPairContainer {
-	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
-		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
-		SignedTransactions: []*protocol.SignedTransaction{},
-		BlockProof:         nil, // will be generated in a minute when signed
-	}
-	resultsBlock := &protocol.ResultsBlockContainer{
-		Header:                  (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
-		TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{}).Build(),
-		TransactionReceipts:     []*protocol.TransactionReceipt{},
-		ContractStateDiffs:      []*protocol.ContractStateDiff{},
-		BlockProof:              nil, // will be generated in a minute when signed
-	}
-	blockPair, err := signBlockProposal(transactionsBlock, resultsBlock, nodePrivateKey)
-	if err != nil {
-		//s.logger.Error("leader failed to sign genesis block", log.Error(err))
-		return nil
-	}
-	return blockPair
-}
-
+// TODO Replace with code form lh-outline once finalized
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
@@ -166,40 +161,39 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	return nil
 }
 
-func signBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) (*protocol.BlockPairContainer, error) {
-	blockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: transactionsBlock,
-		ResultsBlock:      resultsBlock,
-	}
+// Get an empty block from consensusContext - it will also hold ProtocolVersion and VirtualChainID
+// TODO: 2nd option is to pass virtual chain info to consensusAlgo
+//  TODO: handle errors
+func (p *blockProvider) GenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
 
-	// prepare signature over the block headers
-	blockPairDataToSign := dataToSignFrom(blockPair)
-	_, err := digest.SignAsNode(nodePrivateKey, blockPairDataToSign)
+	// get gensis tx
+	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
+		BlockHeight:             0,
+		PrevBlockHash:           nil,
+		PrevBlockTimestamp:      0, // Genesis block timeStamp will be ~ time.Now() (max(prev,now)+1)
+		MaxNumberOfTransactions: 0,
+	})
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	// generate tx block proof
-	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
-		Type:      protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: nil,
-	}).Build()
-
-	// generate rx block proof
-	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
-		Type:      protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: nil,
-	}).Build()
-	return blockPair, nil
-}
-
-func dataToSignFrom(blockPair *protocol.BlockPairContainer) []byte {
-	return deepHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
-}
-
-func CalculateNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now primitives.TimestampNano) primitives.TimestampNano {
-	if now > prevBlockTimestamp {
-		return now + 1
+	// get gensis rx
+	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
+		BlockHeight:        0,
+		PrevBlockHash:      nil,
+		PrevBlockTimestamp: 0, // Genesis block timeStamp will be ~ time.Now()
+		TransactionsBlock:  txOutput.TransactionsBlock,
+	})
+	if err != nil {
+		panic(err)
 	}
-	return prevBlockTimestamp + 1
+
+	p.logger.Info(fmt.Sprintf("Genesis VirtualChainID: %d; ", txOutput.TransactionsBlock.Header.VirtualChainId()))
+
+	blockPair := &protocol.BlockPairContainer{
+		TransactionsBlock: txOutput.TransactionsBlock,
+		ResultsBlock:      rxOutput.ResultsBlock,
+	}
+
+	return blockPair
 }

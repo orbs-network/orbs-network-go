@@ -100,11 +100,11 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	// Note: LeanHelix could be used as handler to validateBlocks without actively running consensus rounds
-	parentLogger.Info("LeanHelix go routine starts")
+
 	supervised.GoForever(ctx, logger, func() {
+		parentLogger.Info("LeanHelix go routine starts")
 		s.leanHelix.Run(ctx)
 	})
-
 	gossip.RegisterLeanHelixHandler(s)
 	blockStorage.RegisterConsensusBlocksHandler(s)
 
@@ -161,13 +161,14 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	mode := input.Mode
 	blockPair := input.BlockPair
 	prevCommittedBlockPair := input.PrevCommittedBlockPair
+	//var blockProof []byte
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
 		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
 	}
 
 	// validate the block consensus (block and proof)
 	if shouldVerify(mode) {
-		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
+		err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +188,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			blockPair = s.blockProvider.GenerateGenesisBlock(ctx)
 			s.logger.Info("HandleBlockConsensus GenesisBlock", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
 		} else { // we should have a block proof
-			blockProof = blockPair.TransactionsBlock.BlockProof.Raw()
+			/*blockProof*/ _ = blockPair.TransactionsBlock.BlockProof.Raw()
 		}
 		s.logger.Info("HandleBlockConsensus Update LeanHelix ", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
 		s.leanHelix.UpdateConsensusRound(ToBlockPairWrapper(blockPair))

@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
-	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -27,7 +26,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 		return nil, err
 	}
 
-	timestamp := leanhelixconsensus.CalculateNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
+	timestamp := calculateNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
@@ -42,7 +41,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 		}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
 		SignedTransactions: proposedTransactions.SignedTransactions,
-		BlockProof:         nil,
+		BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
 	}
 
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
@@ -80,18 +79,23 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 	if err != nil {
 		return nil, err
 	}
+
 	merkleReceiptsRoot, err := calculateReceiptsRootHash(output.TransactionReceipts)
 	if err != nil {
 		return nil, err
 	}
 
-	preExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-		BlockHeight: input.BlockHeight - 1,
-	})
-
-	if err != nil {
-		return nil, err
+	// TODO: handle genesis block at height 0
+	preExecutionStateRootHash := &services.GetStateHashOutput{}
+	if input.BlockHeight > 0 {
+		preExecutionStateRootHash, err = s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
+			BlockHeight: input.BlockHeight - 1,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	stateDiffHash, err := calculateStateDiffHash(output.ContractStateDiffs)
 	if err != nil {
 		return nil, err
@@ -118,7 +122,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		}).Build(),
 		TransactionReceipts: output.TransactionReceipts,
 		ContractStateDiffs:  output.ContractStateDiffs,
-		BlockProof:          nil,
+		BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
 	}
 	return rxBlock, nil
 }
@@ -134,4 +138,11 @@ func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primiti
 		rptHashValues[i] = receipts[i].Txhash()
 	}
 	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
+}
+
+func calculateNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now primitives.TimestampNano) primitives.TimestampNano {
+	if now > prevBlockTimestamp {
+		return now + 1
+	}
+	return prevBlockTimestamp + 1
 }

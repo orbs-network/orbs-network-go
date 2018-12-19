@@ -7,20 +7,15 @@ import (
 	"time"
 )
 
-func TestCalculateNewBlockTimestampWithPrevBlockInThePast(t *testing.T) {
+func TestCalculateBlockHash(t *testing.T) {
 
-	now := primitives.TimestampNano(time.Now().Unix())
-	prevBlockTimestamp := now - 1000
-
-	res := CalculateNewBlockTimestamp(prevBlockTimestamp, now)
-	require.Equal(t, res, now+1, "return 1 nano later than max between now and prev block timestamp")
 }
 
-func TestCalculateNewBlockTimestampWithPrevBlockInTheFuture(t *testing.T) {
+func TestSizeofBlock(t *testing.T) {
 
-	now := primitives.TimestampNano(time.Now().Unix())
-	prevBlockTimestamp := now + 1000
+}
 
-	res := CalculateNewBlockTimestamp(prevBlockTimestamp, now)
-	require.Equal(t, res, prevBlockTimestamp+1, "return 1 nano later than max between now and prev block timestamp")
+// TODO Placeholder - this will probably be a component test or implicit part of acceptance test
+func TestCreateGenesisBlock(t *testing.T) {
+
 }
