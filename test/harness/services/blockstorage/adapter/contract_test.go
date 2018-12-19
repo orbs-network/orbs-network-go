@@ -248,5 +248,9 @@ func aFileSystemAdapter() (adapter.BlockPersistence, func()) {
 	cleanup := func() {
 		os.RemoveAll(dirName)
 	}
-	return adapter.NewFilesystemBlockPersistence(dirName, log.GetLogger(), metric.NewRegistry()), cleanup
+	persistence, err := adapter.NewFilesystemBlockPersistence(dirName, log.GetLogger(), metric.NewRegistry())
+	if err != nil {
+		panic(err)
+	}
+	return persistence, cleanup
 }

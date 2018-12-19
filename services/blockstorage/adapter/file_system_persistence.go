@@ -18,9 +18,9 @@ type metrics struct {
 	size *metric.Gauge
 }
 
-func NewFilesystemBlockPersistence(dataDir string, parent log.BasicLogger, metricFactory metric.Factory) BlockPersistence {
+func NewFilesystemBlockPersistence(dataDir string, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
-	return &FilesystemBlockPersistence{
+	adapter := &FilesystemBlockPersistence{
 		bhIndex: &blockHeightIndex{
 			topHeight:            0,
 			heightOffset:         map[primitives.BlockHeight]int64{1: 0},
@@ -31,15 +31,60 @@ func NewFilesystemBlockPersistence(dataDir string, parent log.BasicLogger, metri
 		blockTracker: synchronization.NewBlockTracker(logger, 0, 5),
 		logger:       logger,
 	}
+
+	file, err := os.OpenFile(adapter.blockFileName(), os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open blocks file for writing")
+	}
+	adapter.tip = &writingTip{
+		file: file,
+	}
+
+	return adapter, nil
+}
+
+type writingTip struct {
+	sync.Mutex
+	file       *os.File
+	currentPos int64
+}
+
+func (wh *writingTip) writeBlockAtOffset(pos int64, blockPair *protocol.BlockPairContainer) (int64, error) {
+	if pos != wh.currentPos {
+		currentOffset, err := wh.file.Seek(pos, io.SeekStart)
+		if err != nil {
+			return 0, errors.Wrapf(err, "failed to seek writing tip to pos %d", pos)
+		}
+		if pos != currentOffset {
+			return 0, errors.Wrapf(err, "failed to seek in blocks file to position %v", pos)
+		}
+	}
+
+	err := encode(blockPair, wh.file)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to write block")
+	}
+
+	err = wh.file.Sync()
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to flush blocks file to disk")
+	}
+	// find our current offset
+	newPos, err := wh.file.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to update block height index")
+	}
+	wh.currentPos = newPos // assign only after checking err
+	return newPos, nil
 }
 
 type FilesystemBlockPersistence struct {
 	bhIndex      *blockHeightIndex
 	dataDir      string
 	metrics      *metrics
-	writeLock    sync.Mutex
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
+	tip          *writingTip
 }
 
 func newMetrics(m metric.Factory) *metrics {
@@ -47,9 +92,10 @@ func newMetrics(m metric.Factory) *metrics {
 		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInMB"),
 	}
 }
+
 func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
-	f.writeLock.Lock()
-	defer f.writeLock.Unlock()
+	f.tip.Lock()
+	defer f.tip.Unlock()
 
 	bh := blockPair.ResultsBlock.Header.BlockHeight()
 
@@ -63,38 +109,12 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 		return errors.Wrap(err, "failed to fetch top block offset")
 	}
 
-	file, err := os.OpenFile(f.blockFileName(), os.O_WRONLY|os.O_CREATE, 0600)
+	newPos, err := f.tip.writeBlockAtOffset(startOffset, blockPair)
 	if err != nil {
-		return errors.Wrap(err, "failed to open blocks file for writing")
-	}
-	defer file.Close()
-
-	currentOffset, err := file.Seek(startOffset, io.SeekStart)
-	if err != nil {
-		return errors.Wrap(err, "failed to open blocks file for writing")
-	}
-	if startOffset != currentOffset {
-		return errors.Wrapf(err, "failed to seek in blocks file to position %v", startOffset)
+		return err
 	}
 
-	err = encode(blockPair, file)
-
-	if err != nil {
-		return errors.Wrap(err, "failed to write block")
-	}
-
-	err = file.Sync()
-	if err != nil {
-		return errors.Wrap(err, "failed to flush blocks file to disk")
-	}
-
-	// find our current offset
-	currentOffset, err = file.Seek(0, io.SeekEnd)
-	if err != nil {
-		return errors.Wrap(err, "failed to update block height index")
-	}
-
-	err = f.bhIndex.appendBlock(startOffset, currentOffset, blockPair.ResultsBlock.Header.NumTransactionReceipts(), blockPair.ResultsBlock.Header.Timestamp())
+	err = f.bhIndex.appendBlock(startOffset, newPos, blockPair.ResultsBlock.Header.NumTransactionReceipts(), blockPair.ResultsBlock.Header.Timestamp())
 	if err != nil {
 		return errors.Wrap(err, "failed to update index after writing block")
 	}
