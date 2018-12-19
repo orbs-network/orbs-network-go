@@ -122,14 +122,14 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 	if input.BlockHeight != checkedHeader.BlockHeight() {
 		return nil, fmt.Errorf("mismatching blockHeight: input %v checkedHeader %v", input.BlockHeight, checkedHeader.BlockHeight())
 	}
-	calculatedTxRoot, err := CalculateTransactionsRootHash(txs)
+	calculatedTxRoot, err := calculateTransactionsRootHash(txs)
 	if err != nil {
 		return nil, err
 	}
 	if !bytes.Equal(txMerkleRootHash, calculatedTxRoot) {
 		return nil, errors.New("incorrect transactions root hash")
 	}
-	calculatedPrevBlockHashPtr := CalculatePrevBlockHashPtr(input.TransactionsBlock)
+	calculatedPrevBlockHashPtr := calculatePrevBlockHashPtr(input.TransactionsBlock)
 	if !bytes.Equal(prevBlockHashPtr, calculatedPrevBlockHashPtr) {
 		return nil, errors.New("incorrect previous block hash")
 	}
@@ -181,7 +181,7 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 	}
 	// Check the receipts merkle root matches the receipts.
 	receipts := input.ResultsBlock.TransactionReceipts
-	calculatedReceiptsRoot, err := CalculateReceiptsRootHash(receipts)
+	calculatedReceiptsRoot, err := calculateReceiptsRootHash(receipts)
 	if err != nil {
 		return nil, err
 	}

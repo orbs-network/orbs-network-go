@@ -13,3 +13,9 @@ func CalcTransactionsBlockHash(transactionsBlock *protocol.TransactionsBlockCont
 func CalcResultsBlockHash(resultsBlock *protocol.ResultsBlockContainer) primitives.Sha256 {
 	return hash.CalcSha256(resultsBlock.Header.Raw())
 }
+
+func CalcBlockHash(blockPair *protocol.BlockPairContainer) primitives.Sha256 {
+	transactionsBlockHash := CalcTransactionsBlockHash(blockPair.TransactionsBlock)
+	resultsBlockHash := CalcResultsBlockHash(blockPair.ResultsBlock)
+	return hash.CalcSha256(transactionsBlockHash, resultsBlockHash)
+}
