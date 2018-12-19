@@ -41,7 +41,7 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 	panic("implement me")
 }
 
-func (p *blockProvider) ValidateBlockHash(blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash) bool {
+func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash) bool {
 	panic("implement me")
 }
 

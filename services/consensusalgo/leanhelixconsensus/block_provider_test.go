@@ -1,10 +1,7 @@
 package leanhelixconsensus
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestCalculateBlockHash(t *testing.T) {
