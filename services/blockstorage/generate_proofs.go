@@ -24,29 +24,10 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 				return nil, err
 			}
 
-			// TODO (issue 67) need raw copy
 			result := &services.GenerateReceiptProofOutput{
 				Proof: (&protocol.ReceiptProofBuilder{
-					Header: &protocol.ResultsBlockHeaderBuilder{
-						ProtocolVersion:             block.Header.ProtocolVersion(),
-						VirtualChainId:              block.Header.VirtualChainId(),
-						BlockHeight:                 0,
-						PrevBlockHashPtr:            nil,
-						Timestamp:                   0,
-						ReceiptsRootHash:            block.Header.ReceiptsRootHash(),
-						StateDiffHash:               nil,
-						TransactionsBlockHashPtr:    nil,
-						PreExecutionStateRootHash:   nil,
-						TransactionsBloomFilterHash: nil,
-						NumTransactionReceipts:      0,
-						NumContractStateDiffs:       0,
-					},
-					BlockProof: &protocol.ResultsBlockProofBuilder{
-						TransactionsBlockHash: block.BlockProof.TransactionsBlockHash(),
-						Type:               0,
-						BenchmarkConsensus: nil,
-						LeanHelix:          nil,
-					},
+					Header:       protocol.ResultsBlockHeaderBuilderFromRaw(block.Header.Raw()),
+					BlockProof:   protocol.ResultsBlockProofBuilderFromRaw(block.BlockProof.Raw()),
 					ReceiptProof: proof,
 				}).Build(),
 			}
@@ -68,7 +49,7 @@ func generateProof(receipts []*protocol.TransactionReceipt, index int) (primitiv
 		return nil, err
 	}
 
-	arr := make([]byte, 0, len(proof)*len(proof[0])) // TODO (issue 121) need const for sha
+	var arr []byte
 	for _, v := range proof {
 		arr = append(arr, v...)
 	}

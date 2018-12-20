@@ -80,13 +80,18 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		var duration time.Duration
 		var numericValue uint32
 		var nodeAddress primitives.NodeAddress
+		var stringValue string
 		var err error
 
 		switch value.(type) {
 		case float64:
 			numericValue, err = parseUint32(value.(float64))
 		case string:
-			duration, err = time.ParseDuration(value.(string))
+			// Sometimes we try to parse duration, but sometimes it's not worth it, like with Ethereum endpoint
+			var decodeError error
+			if duration, decodeError = time.ParseDuration(value.(string)); decodeError != nil {
+				stringValue = value.(string)
+			}
 		}
 
 		if numericValue != 0 {
@@ -100,29 +105,34 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		if key == "constant-consensus-leader" {
 			nodeAddress, err = hex.DecodeString(value.(string))
 			cfg.SetConstantConsensusLeader(primitives.NodeAddress(nodeAddress))
+			continue
 		}
 
 		if key == "active-consensus-algo" {
 			var i uint32
 			i, err = parseUint32(value.(float64))
 			cfg.SetActiveConsensusAlgo(consensus.ConsensusAlgoType(i))
+			continue
 		}
 
 		if key == "node-address" {
 			nodeAddress, err = hex.DecodeString(value.(string))
 			cfg.SetNodeAddress(primitives.NodeAddress(nodeAddress))
+			continue
 		}
 
 		if key == "node-private-key" {
 			var privateKey primitives.EcdsaSecp256K1PrivateKey
 			privateKey, err = hex.DecodeString(value.(string))
 			cfg.SetNodePrivateKey(primitives.EcdsaSecp256K1PrivateKey(privateKey))
+			continue
 		}
 
 		if key == "gossip-port" {
 			var gossipPort uint32
 			gossipPort, err = parseUint32(value.(float64))
 			cfg.SetUint32(GOSSIP_LISTEN_PORT, gossipPort)
+			continue
 		}
 
 		if key == "federation-nodes" {
@@ -132,6 +142,11 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 			nodes, peers, err = parseNodesAndPeers(value)
 			cfg.SetFederationNodes(nodes)
 			cfg.SetGossipPeers(peers)
+			continue
+		}
+
+		if stringValue != "" {
+			cfg.SetString(convertKeyName(key), stringValue)
 		}
 
 		if err != nil {
