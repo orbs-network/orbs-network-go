@@ -2,7 +2,6 @@ package leanhelixconsensus
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/lean-helix-go"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -12,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 	"unsafe"
 )
 
@@ -23,7 +23,11 @@ func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
 	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
 }
 
-func ToBlockPairWrapper(blockPair *protocol.BlockPairContainer) *BlockPairWrapper {
+func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) leanhelix.Block {
+
+	if blockPair == nil {
+		return nil
+	}
 	return &BlockPairWrapper{
 		blockPair: blockPair,
 	}
@@ -38,11 +42,15 @@ type blockProvider struct {
 }
 
 func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash, prevBlock leanhelix.Block) bool {
-	panic("implement me")
+	// TODO Implement me
+
+	return true
 }
 
 func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash) bool {
-	panic("implement me")
+	// TODO Implement me
+
+	return true
 }
 
 func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
@@ -67,17 +75,33 @@ func NewBlockProvider(
 }
 
 func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock leanhelix.Block) (leanhelix.Block, lhprimitives.BlockHash) {
-	blockWrapper := prevBlock.(*BlockPairWrapper)
 
-	newBlockHeight := primitives.BlockHeight(prevBlock.Height() + 1)
+	var newBlockHeight primitives.BlockHeight
+	var prevTxBlockHash primitives.Sha256
+	var prevRxBlockHash primitives.Sha256
+	var prevBlockTimestamp primitives.TimestampNano
+
+	if prevBlock == nil {
+		newBlockHeight = 1
+		prevTxBlockHash = nil
+		prevRxBlockHash = nil
+		prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano() - 1)
+
+	} else {
+		prevBlockWrapper := prevBlock.(*BlockPairWrapper)
+		newBlockHeight = primitives.BlockHeight(prevBlock.Height() + 1)
+		prevTxBlockHash = digest.CalcTransactionsBlockHash(prevBlockWrapper.blockPair.TransactionsBlock)
+		prevRxBlockHash = digest.CalcResultsBlockHash(prevBlockWrapper.blockPair.ResultsBlock)
+		prevBlockTimestamp = prevBlockWrapper.blockPair.TransactionsBlock.Header.Timestamp()
+	}
 
 	p.logger.Info("RequestNewBlock()", log.Stringable("new-block-height", newBlockHeight))
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:        newBlockHeight,
-		PrevBlockHash:      digest.CalcTransactionsBlockHash(blockWrapper.blockPair.TransactionsBlock),
-		PrevBlockTimestamp: blockWrapper.blockPair.TransactionsBlock.Header.Timestamp(),
+		PrevBlockHash:      prevTxBlockHash,
+		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
 		return nil, nil
@@ -86,7 +110,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
 		BlockHeight:       newBlockHeight,
-		PrevBlockHash:     digest.CalcResultsBlockHash(blockWrapper.blockPair.ResultsBlock),
+		PrevBlockHash:     prevRxBlockHash,
 		TransactionsBlock: txOutput.TransactionsBlock,
 	})
 	if err != nil {
@@ -102,20 +126,18 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 	//blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
 	//blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{}).Build()
 
-	blockPairWrapper := ToBlockPairWrapper(blockPair)
 	p.logger.Info("RequestNewBlock() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
 
-	blockHash := []byte(calculateBlockHash(blockPairWrapper))
-
+	blockHash := []byte(calculateBlockHash(blockPair))
+	blockPairWrapper := ToLeanHelixBlock(blockPair)
 	return blockPairWrapper, blockHash
 
 }
 
 // TODO Ask Oded/Gad is this is the correct impl! Oded said not to use XOR
-func calculateBlockHash(blockPairWrapper *BlockPairWrapper) primitives.Uint256 {
-	block := blockPairWrapper.blockPair
-	txHash := digest.CalcTransactionsBlockHash(block.TransactionsBlock)
-	rxHash := digest.CalcResultsBlockHash(block.ResultsBlock)
+func calculateBlockHash(blockPair *protocol.BlockPairContainer) primitives.Uint256 {
+	txHash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
+	rxHash := digest.CalcResultsBlockHash(blockPair.ResultsBlock)
 	xorHash := logic.CalcXor(txHash, rxHash)
 	return xorHash
 }
@@ -166,34 +188,36 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 //  TODO: handle errors
 func (p *blockProvider) GenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
 
-	// get gensis tx
-	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:             0,
-		PrevBlockHash:           nil,
-		PrevBlockTimestamp:      0, // Genesis block timeStamp will be ~ time.Now() (max(prev,now)+1)
-		MaxNumberOfTransactions: 0,
-	})
-	if err != nil {
-		panic(err)
-	}
+	//// get gensis tx
+	//txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
+	//	BlockHeight:             0,
+	//	PrevBlockHash:           nil,
+	//	PrevBlockTimestamp:      0, // Genesis block timeStamp will be ~ time.Now() (max(prev,now)+1)
+	//	MaxNumberOfTransactions: 0,
+	//})
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//// get gensis rx
+	//rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
+	//	BlockHeight:        0,
+	//	PrevBlockHash:      nil,
+	//	PrevBlockTimestamp: 0, // Genesis block timeStamp will be ~ time.Now()
+	//	TransactionsBlock:  txOutput.TransactionsBlock,
+	//})
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//p.logger.Info(fmt.Sprintf("Genesis VirtualChainID: %d; ", txOutput.TransactionsBlock.Header.VirtualChainId()))
+	//
+	//blockPair := &protocol.BlockPairContainer{
+	//	TransactionsBlock: txOutput.TransactionsBlock,
+	//	ResultsBlock:      rxOutput.ResultsBlock,
+	//}
+	//
+	//return blockPair
 
-	// get gensis rx
-	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:        0,
-		PrevBlockHash:      nil,
-		PrevBlockTimestamp: 0, // Genesis block timeStamp will be ~ time.Now()
-		TransactionsBlock:  txOutput.TransactionsBlock,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	p.logger.Info(fmt.Sprintf("Genesis VirtualChainID: %d; ", txOutput.TransactionsBlock.Header.VirtualChainId()))
-
-	blockPair := &protocol.BlockPairContainer{
-		TransactionsBlock: txOutput.TransactionsBlock,
-		ResultsBlock:      rxOutput.ResultsBlock,
-	}
-
-	return blockPair
+	return nil
 }

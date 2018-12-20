@@ -21,6 +21,9 @@ import (
 
 var LogTag = log.Service("consensus-algo-lean-helix")
 
+// Temporary hack until leader election is fixed in LH
+var DISABLE_LEADER_ELECTION = true
+
 type service struct {
 	blockStorage  services.BlockStorage
 	membership    *membership
@@ -75,7 +78,15 @@ func NewLeanHelixConsensusAlgo(
 	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodeAddress(), config.NodePrivateKey())
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
-	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
+	electionTimeout := config.LeanHelixConsensusRoundTimeoutInterval()
+
+	// TODO For happy-flow, disabling leader election (restore when this works)
+	if DISABLE_LEADER_ELECTION {
+		logger.Info("*****>>> LEADER ELECTION DISABLED <<<***** NewLeanHelixConsensusAlgo()")
+		electionTimeout = time.Hour
+	}
+
+	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(electionTimeout)
 
 	s := &service{
 		comm:          comm,
@@ -191,9 +202,8 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			/*blockProof*/ _ = blockPair.TransactionsBlock.BlockProof.Raw()
 		}
 		s.logger.Info("HandleBlockConsensus Update LeanHelix ", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
-		s.leanHelix.UpdateConsensusRound(ToBlockPairWrapper(blockPair))
-		// TODO Uncomment when UpdateState is implemented in LH
-		//s.leanHelix.UpdateState(ToBlockPairWrapper(blockPair), blockProof)
+		// TODO Uncomment blockProof when UpdateState is implemented in LH
+		s.leanHelix.UpdateState(ToLeanHelixBlock(blockPair) /*, blockProof*/)
 		// TODO: Should we notify error?
 	}
 
@@ -215,8 +225,8 @@ func shouldUpdate(mode handlers.HandleBlockConsensusMode) bool {
 func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
 	consensusRawMessage := &leanhelix.ConsensusRawMessage{
 		Content: input.Message.Content,
-		Block:   ToBlockPairWrapper(input.Message.BlockPair),
+		Block:   ToLeanHelixBlock(input.Message.BlockPair),
 	}
-	s.leanHelix.GossipMessageReceived(ctx, consensusRawMessage)
+	s.leanHelix.HandleConsensusMessage(ctx, consensusRawMessage)
 	return nil, nil
 }
