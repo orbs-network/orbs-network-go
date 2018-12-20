@@ -3,7 +3,6 @@ package builders
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -19,14 +18,19 @@ func BenchmarkConsensusBlockPair() *blockPair {
 }
 
 func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.TransactionsBlockHeader, rxHeaderBuilt *protocol.ResultsBlockHeader) {
-	txHash := digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
-	rxHash := digest.CalcResultsBlockHash(&protocol.ResultsBlockContainer{Header: rxHeaderBuilt})
-	xorHash := logic.CalcXor(txHash, rxHash)
-	sig, err := digest.SignAsNode(b.blockProofSigner, xorHash)
+	b.rxProof.BenchmarkConsensus.BlockRef = &consensus.BenchmarkConsensusBlockRefBuilder{
+		PlaceholderType: consensus.BENCHMARK_CONSENSUS_VALID,
+		BlockHeight:     b.txHeader.BlockHeight,
+		PlaceholderView: 1,
+		BlockHash: digest.CalcBlockHash(
+			&protocol.TransactionsBlockContainer{Header: txHeaderBuilt},
+			&protocol.ResultsBlockContainer{Header: rxHeaderBuilt}),
+	}
+	sig, err := digest.SignAsNode(b.blockProofSigner, b.rxProof.BenchmarkConsensus.BlockRef.Build().Raw())
 	if err != nil {
 		panic(err)
 	}
-	b.rxProof.BenchmarkConsensus.Sender.Signature = sig
+	b.rxProof.BenchmarkConsensus.Nodes[0].Signature = sig
 }
 
 func (b *blockPair) WithBenchmarkConsensusBlockProof(keyPair *testKeys.TestEcdsaSecp256K1KeyPair) *blockPair {
@@ -38,10 +42,12 @@ func (b *blockPair) WithBenchmarkConsensusBlockProof(keyPair *testKeys.TestEcdsa
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
-			Sender: &consensus.BenchmarkConsensusSenderSignatureBuilder{
+			BlockRef: nil,
+			Nodes: []*consensus.BenchmarkConsensusSenderSignatureBuilder{{
 				SenderNodeAddress: keyPair.NodeAddress(),
 				Signature:         nil,
-			},
+			}},
+			Placeholder: []byte{0x01, 0x02},
 		},
 	}
 	return b
