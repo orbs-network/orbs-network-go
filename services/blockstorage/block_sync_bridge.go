@@ -16,7 +16,7 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Cont
 
 	// passing nil on purpose, see spec
 	// If lastCommittedBlock is nil, it means this is the Genesis Block
-	err = s.updateConsensusAlgosWithBlock(ctx, nil, lastCommittedBlock)
+	err = s.validateWithConsensusAlgos(ctx, nil, lastCommittedBlock)
 	if err != nil {
 		s.logger.Error(err.Error())
 		return

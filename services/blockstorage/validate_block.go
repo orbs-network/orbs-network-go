@@ -29,7 +29,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	if err := s.handleBlockWithConsensusAlgos(
+	if err := s.validateWithConsensusAlgosWithMode(
 		ctx,
 		lastCommittedBlock,
 		input.BlockPair,
@@ -115,15 +115,15 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-func (s *service) updateConsensusAlgosWithBlock(
+func (s *service) validateWithConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	lastCommittedBlockPair *protocol.BlockPairContainer) error {
 
-	return s.handleBlockWithConsensusAlgos(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
+	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 }
 
-func (s *service) handleBlockWithConsensusAlgos(
+func (s *service) validateWithConsensusAlgosWithMode(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	lastCommittedBlockPair *protocol.BlockPairContainer,
