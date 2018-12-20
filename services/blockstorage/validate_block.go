@@ -29,7 +29,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	if err := s.validateWithConsensusAlgosWithMode(
+	if err := s.handleBlockWithConsensusAlgos(
 		ctx,
 		lastCommittedBlock,
 		input.BlockPair,
@@ -115,15 +115,15 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-func (s *service) validateWithConsensusAlgos(
+func (s *service) updateConsensusAlgosWithBlock(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	lastCommittedBlockPair *protocol.BlockPairContainer) error {
 
-	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
+	return s.handleBlockWithConsensusAlgos(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 }
 
-func (s *service) validateWithConsensusAlgosWithMode(
+func (s *service) handleBlockWithConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	lastCommittedBlockPair *protocol.BlockPairContainer,
@@ -131,6 +131,8 @@ func (s *service) validateWithConsensusAlgosWithMode(
 
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
+	validatedSuccessfully := 0
+	//  Note: genesis case (nil) is special no blockProof type - registered handlers cannot distinguish - should be handled here
 	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
@@ -139,11 +141,22 @@ func (s *service) validateWithConsensusAlgosWithMode(
 			PrevCommittedBlockPair: prevBlockPair,
 		})
 
-		// one of the consensus algos has validated the block, this means it's a valid block
-		if err == nil {
-			return nil
+		if blockValidatedSuccessfully(mode, err) {
+			validatedSuccessfully++
 		}
 	}
 
-	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
+	if blockFailedValidationOnAllConsensusAlgos(mode, validatedSuccessfully) {
+		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
+	}
+
+	return nil
+}
+
+func blockValidatedSuccessfully(mode handlers.HandleBlockConsensusMode, validationError error) bool {
+	return (mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY) && validationError == nil
+}
+
+func blockFailedValidationOnAllConsensusAlgos(mode handlers.HandleBlockConsensusMode, successfulValidations int) bool {
+	return (mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY) && successfulValidations == 0
 }
