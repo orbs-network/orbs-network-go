@@ -64,7 +64,7 @@ func ForE2E(
 	processorArtifactPath string,
 	federationNodes map[string]FederationNode,
 	gossipPeers map[string]GossipPeer,
-	constantConsensusLeader primitives.Ed25519PublicKey,
+	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	ethereumEndpoint string,
 ) mutableNodeConfig {
@@ -95,7 +95,7 @@ func ForE2E(
 
 func ForAcceptanceTestNetwork(
 	federationNodes map[string]FederationNode,
-	constantConsensusLeader primitives.Ed25519PublicKey,
+	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	maxTxPerBlock uint32,
 	requiredQuorumPercentage uint32,
@@ -126,9 +126,9 @@ func ForAcceptanceTestNetwork(
 // config for gamma dev network that runs with in-memory adapters except for contract compilation
 func ForGamma(
 	federationNodes map[string]FederationNode,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey,
-	constantConsensusLeader primitives.Ed25519PublicKey,
+	nodeAddress primitives.NodeAddress,
+	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
+	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) NodeConfig {
 	cfg := defaultProductionConfig()
@@ -151,5 +151,5 @@ func ForGamma(
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetConstantConsensusLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	return cfg.OverrideNodeSpecificValues(0, nodePublicKey, nodePrivateKey)
+	return cfg.OverrideNodeSpecificValues(0, nodeAddress, nodePrivateKey)
 }

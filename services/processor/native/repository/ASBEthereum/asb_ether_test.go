@@ -156,7 +156,7 @@ func TestTransferOut_AllGood(t *testing.T) {
 
 		// what is expected to be called
 		tuid := safeuint64.Add(getOutTuid(), 1)
-		m.MockEmitEvent(OrbsTransferOut, tuid, ethAddr, orbsUser.RawAddress, big.NewInt(17))
+		m.MockEmitEvent(OrbsTransferOut, tuid, ethAddr, orbsUser.RawAddress, big.NewInt(17).Uint64())
 		m.MockServiceCallMethod(getTokenContract(), "burn", nil, orbsUser.RawAddress, amount)
 
 		// call

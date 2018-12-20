@@ -12,8 +12,8 @@ import (
 func TestTransactionRelay_ForwardedTransactionsMessage(t *testing.T) {
 	message := &gossipmessages.ForwardedTransactionsMessage{
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 		SignedTransactions: []*protocol.SignedTransaction{
 			builders.Transaction().Build(),
@@ -35,8 +35,8 @@ func TestTransactionRelay_EmptyForwardedTransactionsMessage(t *testing.T) {
 func TestTransactionRelay_ForwardedTransactionsMessageDoNotFailWhenSenderContainsNil(t *testing.T) {
 	message := &gossipmessages.ForwardedTransactionsMessage{
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: nil,
-			Signature:       nil,
+			SenderNodeAddress: nil,
+			Signature:         nil,
 		}).Build(),
 		SignedTransactions: []*protocol.SignedTransaction{
 			builders.Transaction().Build(),

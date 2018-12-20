@@ -14,7 +14,7 @@ import (
 var LogTag = log.Service("gossip")
 
 type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
+	NodeAddress() primitives.NodeAddress
 }
 
 type service struct {
@@ -33,7 +33,7 @@ func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogge
 		config:    config,
 		logger:    logger.WithTags(LogTag),
 	}
-	transport.RegisterListener(s, s.config.NodePublicKey())
+	transport.RegisterListener(s, s.config.NodeAddress())
 	return s
 }
 

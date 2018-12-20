@@ -23,7 +23,7 @@ func TestRequestOrderingCommittee(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		actualFederationSize := len(output.NodePublicKeys)
+		actualFederationSize := len(output.NodeAddresses)
 		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
 	})
 	t.Run("if MaxCommitteeSize > federationSize, then return all federation members (federationSize)", func(t *testing.T) {
@@ -36,7 +36,7 @@ func TestRequestOrderingCommittee(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		actualFederationSize := len(output.NodePublicKeys)
+		actualFederationSize := len(output.NodeAddresses)
 		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
 	})
 }

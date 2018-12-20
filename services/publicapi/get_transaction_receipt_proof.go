@@ -60,8 +60,8 @@ func toGetReceiptOutput(status *services.GetTransactionStatusOutput, output *ser
 
 	if status != nil {
 		txStatus = status.ClientResponse.TransactionStatus()
-		txBlock = status.ClientResponse.BlockHeight()   // talkol added - not sure if it's correct here
-		txTime = status.ClientResponse.BlockTimestamp() // talkol added - not sure if it's correct here
+		txBlock = status.ClientResponse.BlockHeight()
+		txTime = status.ClientResponse.BlockTimestamp()
 	}
 
 	var proofForClient primitives.PackedReceiptProof
@@ -69,7 +69,6 @@ func toGetReceiptOutput(status *services.GetTransactionStatusOutput, output *ser
 		proofForClient = output.Proof.Raw()
 	}
 
-	// TODO issue 67 PROOF get raw info
 	response := client.GetTransactionReceiptProofResponseBuilder{
 		RequestStatus:     translateTxStatusToResponseCode(txStatus),
 		Proof:             proofForClient,

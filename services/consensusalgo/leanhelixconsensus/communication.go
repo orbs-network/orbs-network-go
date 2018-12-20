@@ -29,9 +29,9 @@ func NewCommunication(logger log.BasicLogger, gossip gossiptopics.LeanHelix) *co
 
 // LeanHelix lib sends its messages here
 func (comm *communication) SendConsensusMessage(ctx context.Context, lhtargets []lhprimitives.MemberId, consensusRawMessage *leanhelix.ConsensusRawMessage) {
-	targets := make([]primitives.Ed25519PublicKey, 0, len(lhtargets))
+	targets := make([]primitives.NodeAddress, 0, len(lhtargets))
 	for _, lhtarget := range lhtargets {
-		targets = append(targets, primitives.Ed25519PublicKey(lhtarget))
+		targets = append(targets, primitives.NodeAddress(lhtarget))
 	}
 
 	var blockPair *protocol.BlockPairContainer
@@ -44,8 +44,8 @@ func (comm *communication) SendConsensusMessage(ctx context.Context, lhtargets [
 
 	message := &gossiptopics.LeanHelixInput{
 		RecipientsList: &gossiptopics.RecipientsList{
-			RecipientPublicKeys: targets,
-			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: targets,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		},
 		Message: &gossipmessages.LeanHelixMessage{
 			Content:   consensusRawMessage.Content,

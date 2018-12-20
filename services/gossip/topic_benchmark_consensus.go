@@ -38,9 +38,9 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey: s.config.NodePublicKey(),
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Payloads:        payloads,
+		SenderNodeAddress: s.config.NodeAddress(),
+		RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Payloads:          payloads,
 	})
 }
 
@@ -62,10 +62,10 @@ func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *
 
 func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:               gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
-		BenchmarkConsensus:  consensus.BENCHMARK_CONSENSUS_COMMITTED,
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+		Topic:                  gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
+		BenchmarkConsensus:     consensus.BENCHMARK_CONSENSUS_COMMITTED,
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
 	}).Build()
 	payloads, err := codec.EncodeBenchmarkConsensusCommittedMessage(header, input.Message)
 	if err != nil {
@@ -73,10 +73,10 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey:     s.config.NodePublicKey(),
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
-		Payloads:            payloads,
+		SenderNodeAddress:      s.config.NodeAddress(),
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		Payloads:               payloads,
 	})
 }
 

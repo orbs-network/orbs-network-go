@@ -64,9 +64,9 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	}
 
 	// client channels (not under mutex, before all goroutines)
-	for peerNodeKey := range t.config.GossipPeers(0) {
-		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
-			t.outgoingPeerQueues[peerNodeKey] = make(chan *TransportData)
+	for peerNodeAddress := range t.config.GossipPeers(0) {
+		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
+			t.outgoingPeerQueues[peerNodeAddress] = make(chan *TransportData)
 		}
 	}
 
@@ -76,10 +76,10 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	})
 
 	// client goroutines
-	for peerNodeKey, peer := range t.config.GossipPeers(0) {
-		if peerNodeKey != t.config.NodePublicKey().KeyForMap() {
+	for peerNodeAddress, peer := range t.config.GossipPeers(0) {
+		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-			closureSafePeerNodeKey := peerNodeKey
+			closureSafePeerNodeKey := peerNodeAddress
 			supervised.GoForever(ctx, t.logger, func() {
 				t.clientMainLoop(ctx, peerAddress, t.outgoingPeerQueues[closureSafePeerNodeKey])
 			})
@@ -89,7 +89,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	return t
 }
 
-func (t *directTransport) RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
+func (t *directTransport) RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -105,11 +105,11 @@ func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
 		}
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
-		for _, recipientPublicKey := range data.RecipientPublicKeys {
+		for _, recipientPublicKey := range data.RecipientNodeAddresses {
 			if peerQueue, found := t.outgoingPeerQueues[recipientPublicKey.KeyForMap()]; found {
 				peerQueue <- data
 			} else {
-				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.KeyForMap())
+				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
 			}
 		}
 		return nil

@@ -39,8 +39,8 @@ func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey: s.config.NodePublicKey(),
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Payloads:        payloads,
+		SenderNodeAddress: s.config.NodeAddress(),
+		RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Payloads:          payloads,
 	})
 }

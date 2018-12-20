@@ -36,9 +36,9 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 	federationNodes := make(map[string]config.FederationNode)
 	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(firstRandomPort+i, "127.0.0.1")
+		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
+		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(firstRandomPort+i, "127.0.0.1")
 	}
 
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched
@@ -52,9 +52,9 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 		log.String("_commit", os.Getenv("GIT_COMMIT"))).
 		WithFilters(log.IgnoreMessagesMatching("Metric recorded")).
 		WithOutput(console)
-	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+	leaderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
-		nodeKeyPair := keys.Ed25519KeyPairForTests(i)
+		nodeKeyPair := keys.EcdsaSecp256K1KeyPairForTests(i)
 
 		logFile, err := os.OpenFile(fmt.Sprintf("%s/_logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -64,10 +64,10 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 		nodeLogger := logger.WithOutput(console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
 		processorArtifactPath, _ := getProcessorArtifactPath()
 
-		cfg := config.ForE2E(processorArtifactPath, federationNodes, gossipPeers, leaderKeyPair.PublicKey(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, ethereumEndpoint).
+		cfg := config.ForE2E(processorArtifactPath, federationNodes, gossipPeers, leaderKeyPair.NodeAddress(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, ethereumEndpoint).
 			OverrideNodeSpecificValues(
 				firstRandomPort+i,
-				nodeKeyPair.PublicKey(),
+				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey())
 
 		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))

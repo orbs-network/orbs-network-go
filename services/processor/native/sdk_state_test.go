@@ -18,7 +18,7 @@ func exampleKey() string {
 }
 
 func exampleKeyAddress() []byte {
-	return hash.CalcRipmd160Sha256([]byte(exampleKey()))
+	return hash.CalcRipemd160Sha256([]byte(exampleKey()))
 }
 
 func TestSdkState_WriteReadBytesByAddress(t *testing.T) {

@@ -20,7 +20,7 @@ type blockPair struct {
 	receipts         []*protocol.TransactionReceipt
 	sdiffs           []*protocol.ContractStateDiff
 	rxProof          *protocol.ResultsBlockProofBuilder
-	blockProofSigner primitives.Ed25519PrivateKey
+	blockProofSigner primitives.EcdsaSecp256K1PrivateKey
 	txBloomFilter    *protocol.TransactionsBloomFilterBuilder
 }
 
@@ -70,7 +70,7 @@ func BlockPair() *blockPair {
 		},
 		rxProof: nil,
 	}
-	return b.WithBenchmarkConsensusBlockProof(keys.Ed25519KeyPairForTests(0))
+	return b.WithBenchmarkConsensusBlockProof(keys.EcdsaSecp256K1KeyPairForTests(0))
 }
 
 func (b *blockPair) Build() *protocol.BlockPairContainer {
@@ -205,6 +205,16 @@ func (b *blockPair) WithTimestampNow() *blockPair {
 	timeToUse := primitives.TimestampNano(time.Now().UnixNano())
 	b.txHeader.Timestamp = timeToUse
 	b.rxHeader.Timestamp = timeToUse
+	return b
+}
+
+func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
+	b.rxProof = &protocol.ResultsBlockProofBuilder{
+		TransactionsBlockHash: hash,
+		Type:               protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		BenchmarkConsensus: nil,
+		LeanHelix:          nil,
+	}
 	return b
 }
 
