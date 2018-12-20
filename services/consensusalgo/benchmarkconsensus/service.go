@@ -22,11 +22,11 @@ const blockHeightNone = primitives.BlockHeight(math.MaxUint64)
 var LogTag = log.Service("consensus-algo-benchmark")
 
 type Config interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	NodePrivateKey() primitives.Ed25519PrivateKey
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
-	ConstantConsensusLeader() primitives.Ed25519PublicKey
+	ConstantConsensusLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
 	ConsensusRequiredQuorumPercentage() uint32
@@ -86,7 +86,7 @@ func NewBenchmarkConsensusAlgo(
 		logger:           logger,
 		config:           config,
 
-		isLeader:                   config.ConstantConsensusLeader().Equal(config.NodePublicKey()),
+		isLeader:                   config.ConstantConsensusLeader().Equal(config.NodeAddress()),
 		successfullyVotedBlocks:    make(chan primitives.BlockHeight), // leader only
 		lastSuccessfullyVotedBlock: blockHeightNone,                   // leader only
 

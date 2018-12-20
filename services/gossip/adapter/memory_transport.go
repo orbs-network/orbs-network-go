@@ -36,17 +36,17 @@ func NewMemoryTransport(ctx context.Context, logger log.BasicLogger, federation 
 	transport.Lock()
 	defer transport.Unlock()
 	for _, node := range federation {
-		key := node.NodePublicKey().KeyForMap()
-		transport.peers[key] = newPeer(ctx, logger.WithTags(log.String("peer-listener", key)))
+		nodeAddress := node.NodeAddress().KeyForMap()
+		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.String("peer-listener", nodeAddress)))
 	}
 
 	return transport
 }
 
-func (p *memoryTransport) RegisterListener(listener TransportListener, key primitives.Ed25519PublicKey) {
+func (p *memoryTransport) RegisterListener(listener TransportListener, nodeAddress primitives.NodeAddress) {
 	p.Lock()
 	defer p.Unlock()
-	p.peers[string(key)].attach(listener)
+	p.peers[string(nodeAddress)].attach(listener)
 }
 
 func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
@@ -54,13 +54,13 @@ func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for key, peer := range p.peers {
-			if key != data.SenderPublicKey.KeyForMap() {
+			if key != data.SenderNodeAddress.KeyForMap() {
 				peer.send(ctx, data)
 			}
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
-		for _, k := range data.RecipientPublicKeys {
+		for _, k := range data.RecipientNodeAddresses {
 			p.peers[k.KeyForMap()].send(ctx, data)
 		}
 

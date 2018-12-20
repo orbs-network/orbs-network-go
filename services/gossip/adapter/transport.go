@@ -8,14 +8,14 @@ import (
 )
 
 type TransportData struct {
-	SenderPublicKey     primitives.Ed25519PublicKey
-	RecipientMode       gossipmessages.RecipientsListMode
-	RecipientPublicKeys []primitives.Ed25519PublicKey
-	Payloads            [][]byte // the first payload is normally gossipmessages.Header
+	SenderNodeAddress      primitives.NodeAddress
+	RecipientMode          gossipmessages.RecipientsListMode
+	RecipientNodeAddresses []primitives.NodeAddress
+	Payloads               [][]byte // the first payload is normally gossipmessages.Header
 }
 
 type Transport interface {
-	RegisterListener(listener TransportListener, listenerPublicKey primitives.Ed25519PublicKey)
+	RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress)
 	Send(ctx context.Context, data *TransportData) error
 }
 

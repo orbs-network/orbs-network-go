@@ -34,18 +34,18 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 
 		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}
 
-		senderKeyPair := keys.Ed25519KeyPairForTests(9)
+		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(9)
 		input := builders.BlockSyncRequestInput().
 			WithFirstBlockHeight(primitives.BlockHeight(2)).
 			WithLastBlockHeight(primitives.BlockHeight(10002)).
 			WithLastCommittedBlockHeight(primitives.BlockHeight(2)).
-			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
+			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 
 		response := &gossiptopics.BlockSyncResponseInput{
-			RecipientPublicKey: senderKeyPair.PublicKey(),
+			RecipientNodeAddress: senderKeyPair.NodeAddress(),
 			Message: &gossipmessages.BlockSyncResponseMessage{
 				Sender: (&gossipmessages.SenderSignatureBuilder{
-					SenderPublicKey: harness.config.NodePublicKey(),
+					SenderNodeAddress: harness.config.NodeAddress(),
 				}).Build(),
 				SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 					BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -88,19 +88,19 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		// latch until we sent the broadcast (meaning the state machine is now at collecting car state
 		require.NoError(t, test.EventuallyVerify(200*time.Millisecond, harness.gossip), "availability response stage failed")
 
-		senderKeyPair := keys.Ed25519KeyPairForTests(7)
+		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
 		blockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
 			WithLastBlockHeight(primitives.BlockHeight(4)).
-			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
+			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 
 		// the source key here is the same for both to make our lives easier in BlockSyncResponse
 		anotherBlockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
 			WithLastBlockHeight(primitives.BlockHeight(4)).
-			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
+			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 
 		// fake the collecting car response
 		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
@@ -113,11 +113,11 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 
 		// senderKeyPair must be the same as the chosen BlockAvailabilityResponse
 		blockSyncResponse := builders.BlockSyncResponseInput().
-			WithSenderPublicKey(senderKeyPair.PublicKey()).
+			WithSenderNodeAddress(senderKeyPair.NodeAddress()).
 			WithFirstBlockHeight(primitives.BlockHeight(1)).
 			WithLastBlockHeight(primitives.BlockHeight(4)).
 			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
-			WithSenderPublicKey(senderKeyPair.PublicKey()).Build()
+			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 
 		// fake the response
 		harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse)

@@ -39,8 +39,8 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 
 		expectedEventsArray1 := (&protocol.EventsArrayBuilder{
 			Events: []*protocol.EventBuilder{
-				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.MethodArgumentsOpaqueEncode("hello")},
-				{ContractName: "Contract1", EventName: "Event2", OutputArgumentArray: builders.MethodArgumentsOpaqueEncode(uint64(17))},
+				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.PackedArgumentArrayEncode("hello")},
+				{ContractName: "Contract1", EventName: "Event2", OutputArgumentArray: builders.PackedArgumentArrayEncode(uint64(17))},
 			},
 		}).Build().RawEventsArray()
 		expectedEventsArray2 := (&protocol.EventsArrayBuilder{}).Build().RawEventsArray()
@@ -72,7 +72,7 @@ func TestSdkEvents_EmitEvent_InRunLocalMethod(t *testing.T) {
 
 		expectedEventsArray := (&protocol.EventsArrayBuilder{
 			Events: []*protocol.EventBuilder{
-				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.MethodArgumentsOpaqueEncode("hello")},
+				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.PackedArgumentArrayEncode("hello")},
 			},
 		}).Build().RawEventsArray()
 

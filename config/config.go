@@ -10,14 +10,14 @@ type NodeConfig interface {
 	// shared
 	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
-	NodePublicKey() primitives.Ed25519PublicKey
-	NodePrivateKey() primitives.Ed25519PrivateKey
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 
 	// consensus
-	ConstantConsensusLeader() primitives.Ed25519PublicKey
+	ConstantConsensusLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	ConsensusRequiredQuorumPercentage() uint32
 	ConsensusMinimumCommitteeSize() uint32
@@ -81,8 +81,8 @@ type OverridableConfig interface {
 	NodeConfig
 	OverrideNodeSpecificValues(
 		gossipListenPort int,
-		nodePublicKey primitives.Ed25519PublicKey,
-		nodePrivateKey primitives.Ed25519PrivateKey) NodeConfig
+		nodeAddress primitives.NodeAddress,
+		nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
 }
 
 type mutableNodeConfig interface {
@@ -93,16 +93,16 @@ type mutableNodeConfig interface {
 	SetString(key string, value string) mutableNodeConfig
 	SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig
 	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
-	SetNodePublicKey(key primitives.Ed25519PublicKey) mutableNodeConfig
-	SetNodePrivateKey(key primitives.Ed25519PrivateKey) mutableNodeConfig
-	SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig
+	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
+	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
+	SetConstantConsensusLeader(key primitives.NodeAddress) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
 	Clone() mutableNodeConfig
 }
 
 type BlockStorageConfig interface {
-	NodePublicKey() primitives.Ed25519PublicKey
+	NodeAddress() primitives.NodeAddress
 	BlockSyncBatchSize() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
@@ -113,7 +113,7 @@ type BlockStorageConfig interface {
 }
 
 type GossipTransportConfig interface {
-	NodePublicKey() primitives.Ed25519PublicKey
+	NodeAddress() primitives.NodeAddress
 	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
@@ -144,8 +144,8 @@ type StateStorageConfig interface {
 }
 
 type TransactionPoolConfig interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	NodePrivateKey() primitives.Ed25519PrivateKey
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	VirtualChainId() primitives.VirtualChainId
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
@@ -159,7 +159,7 @@ type TransactionPoolConfig interface {
 }
 
 type FederationNode interface {
-	NodePublicKey() primitives.Ed25519PublicKey
+	NodeAddress() primitives.NodeAddress
 }
 
 type GossipPeer interface {
