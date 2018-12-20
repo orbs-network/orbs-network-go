@@ -65,8 +65,8 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 
 type ethconfig struct{}
 
-func (ethconfig) EthereumEndpoint() string {
-	return "http://localhost:8545"
+func (e *ethconfig) EthereumEndpoint() string {
+	return getConfig().ethereumEndpoint
 }
 
 func newAutonomousSwapDriver(h *harness) *driver {
