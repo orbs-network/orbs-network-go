@@ -68,6 +68,8 @@ type TransactionReceiptProofJSON struct {
 	RawPackedReceiptProof string
 }
 
+// this test currently just creates a json that we provide to Solidity unit tests that verify Solidity conforms to this contract
+// TODO(v1): figure out what's the best way to automatically bring this json to the Solidity project for automated testing (now it's manual)
 func TestTransactionReceiptProof(t *testing.T) {
 
 	// event
