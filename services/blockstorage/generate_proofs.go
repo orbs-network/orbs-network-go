@@ -40,19 +40,10 @@ func (s *service) GenerateReceiptProof(ctx context.Context, input *services.Gene
 }
 
 func generateProof(receipts []*protocol.TransactionReceipt, index int) (primitives.MerkleTreeProof, error) {
-	rptHashValues := make([]primitives.Sha256, len(receipts))
-	for i := 0; i < len(receipts); i++ {
-		rptHashValues[i] = digest.CalcReceiptHash(receipts[i])
-	}
-	proof, err := merkle.NewOrderedTree(rptHashValues).GetProof(index)
+	hashes := digest.CalcReceiptHashes(receipts)
+	proof, err := merkle.NewOrderedTree(hashes).GetProof(index)
 	if err != nil {
 		return nil, err
 	}
-
-	var arr []byte
-	for _, v := range proof {
-		arr = append(arr, v...)
-	}
-
-	return primitives.MerkleTreeProof(arr), nil
+	return merkle.FlattenOrderedTreeProof(proof), nil
 }
