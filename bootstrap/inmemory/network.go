@@ -35,7 +35,7 @@ type Network struct {
 	Nodes              []*Node
 	Logger             log.BasicLogger
 	Transport          adapter.Transport
-	ethereumConnection ethereumAdapter.EthereumConnection
+	EthereumConnection ethereumAdapter.EthereumConnection
 }
 
 type Node struct {
@@ -52,7 +52,7 @@ type Node struct {
 }
 
 func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
-	return Network{Logger: logger, Transport: transport, ethereumConnection: ethereumConnection}
+	return Network{Logger: logger, Transport: transport, EthereumConnection: ethereumConnection}
 }
 
 func (n *Network) AddNode(
@@ -93,7 +93,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
 			node.config,
-			n.ethereumConnection,
+			n.EthereumConnection,
 		)
 	}
 }

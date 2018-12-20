@@ -6,12 +6,21 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
+
+type ethereumConfig struct {
+	endpoint string
+}
+
+func (e *ethereumConfig) EthereumEndpoint() string {
+	return e.endpoint
+}
 
 func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory.NetworkDriver {
 	numNodes := 2
@@ -27,10 +36,13 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 	}
 
 	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
+	ethereumConfig := &ethereumConfig{}
+	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(ethereumConfig, logger)
 
 	network := &inmemory.Network{
-		Logger:    logger,
-		Transport: sharedTransport,
+		Logger:             logger,
+		Transport:          sharedTransport,
+		EthereumConnection: ethereumConnection,
 	}
 
 	for i := 0; i < numNodes; i++ {
@@ -42,6 +54,9 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 			leaderKeyPair.NodeAddress(),
 			consensusAlgo,
 		)
+
+		// This is awful
+		ethereumConfig.endpoint = cfg.EthereumEndpoint()
 
 		metricRegistry := metric.NewRegistry()
 		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))

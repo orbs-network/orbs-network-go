@@ -45,6 +45,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(METRICS_REPORT_INTERVAL, 30*time.Second)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
+	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
+
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
 	return cfg
 }
@@ -145,6 +147,8 @@ func ForGamma(
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 2500*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
+
+	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")
 
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetConstantConsensusLeader(constantConsensusLeader)
