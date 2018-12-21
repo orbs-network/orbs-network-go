@@ -12,22 +12,27 @@ import (
 	"strings"
 )
 
+var LogTag = log.Service("crosschain-connector")
+
 type service struct {
-	connection adapter.EthereumConnection
-	logger     log.BasicLogger
+	connection       adapter.EthereumConnection
+	logger           log.BasicLogger
+	timestampFetcher adapter.TimestampFetcher
 }
 
-func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, logger log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
+	logger := parent.WithTags(LogTag)
 	s := &service{
-		connection: connection,
-		logger:     logger,
+		connection:       connection,
+		timestampFetcher: adapter.NewTimestampFetcher(connection, logger),
+		logger:           logger,
 	}
 	return s
 }
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	referenceBlockNumber, err := s.connection.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	referenceBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
 	if err != nil {
 		return nil, err
 	}

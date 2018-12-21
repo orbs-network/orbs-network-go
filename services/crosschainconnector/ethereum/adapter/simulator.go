@@ -6,9 +6,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
 	"sync"
 )
@@ -21,6 +21,8 @@ type EthereumSimulator struct {
 		sync.Mutex
 		simClient *backends.SimulatedBackend
 	}
+
+	headerFetcher BlockHeaderFetcher
 }
 
 func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
@@ -46,10 +48,7 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 		return e.mu.simClient, nil
 	}
 
-	e.getBlockByTimestamp = func(context context.Context, nano primitives.TimestampNano) (i *big.Int, e error) {
-		// simulator only works on latest block. nil means latest
-		return nil, nil
-	}
+	e.headerFetcher = NewFakeBlockHeaderFetcher(logger)
 
 	return e
 }
@@ -71,4 +70,8 @@ func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
 
 func (es *EthereumSimulator) Commit() {
 	es.mu.simClient.Commit()
+}
+
+func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	return es.headerFetcher.HeaderByNumber(ctx, number)
 }
