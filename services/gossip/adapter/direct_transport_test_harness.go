@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -84,14 +84,14 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 	peersListeners := make([]net.Listener, NETWORK_SIZE-1)
 
 	for i := 0; i < NETWORK_SIZE-1; i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i + 1).PublicKey()
+		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i + 1).NodeAddress()
 		randomPort := test.RandomPort()
 
 		conn, err := net.Listen("tcp", fmt.Sprintf("127.0.0.01:%d", randomPort))
 		require.NoError(t, err, "test peer server could not listen")
 
 		peersListeners[i] = conn
-		gossipPeers[publicKey.KeyForMap()] = config.NewHardCodedGossipPeer(randomPort, "127.0.0.1")
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(randomPort, "127.0.0.1")
 	}
 	return gossipPeers, peersListeners
 }
@@ -128,12 +128,12 @@ func (h *directHarness) reconnect(listenerIndex int) error {
 	return err
 }
 
-func (h *directHarness) publicKeyForPeer(index int) primitives.Ed25519PublicKey {
-	return keys.Ed25519KeyPairForTests(index + 1).PublicKey()
+func (h *directHarness) nodeAddressForPeer(index int) primitives.NodeAddress {
+	return testKeys.EcdsaSecp256K1KeyPairForTests(index + 1).NodeAddress()
 }
 
 func (h *directHarness) portForPeer(index int) int {
-	peerPublicKey := h.publicKeyForPeer(index)
+	peerPublicKey := h.nodeAddressForPeer(index)
 	return h.config.GossipPeers(0)[peerPublicKey.KeyForMap()].GossipPort()
 }
 

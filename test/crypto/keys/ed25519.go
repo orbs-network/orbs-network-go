@@ -3,7 +3,6 @@ package keys
 import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type ed25519KeyPairHex struct {
@@ -40,14 +39,4 @@ func Ed25519KeyPairForTests(setIndex int) *keys.Ed25519KeyPair {
 	}
 
 	return keys.NewEd25519KeyPair(pub, pri)
-}
-
-func Ed25519PublicKeysForTests() []primitives.Ed25519PublicKey {
-	res := make([]primitives.Ed25519PublicKey, len(ed25519KeyPairs))
-	i := 0
-	for _, pair := range ed25519KeyPairs {
-		res[i] = primitives.Ed25519PublicKey(pair.publicKey)
-		i++
-	}
-	return res
 }

@@ -21,8 +21,11 @@ func TestGenerateProof(t *testing.T) {
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
-		block := builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).WithTransactions(3).WithReceiptsForTransactions().Build()
-		harness.commitBlock(ctx, block)
+		rxHash := hash.CalcSha256([]byte("just text"))
+		block := builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).WithTransactions(3).
+			WithReceiptsForTransactions().WithReceiptProofHash(rxHash).Build()
+		_, err := harness.commitBlock(ctx, block)
+		require.NoError(t, err)
 
 		txHash := digest.CalcTxHash(block.TransactionsBlock.SignedTransactions[2].Transaction())
 
@@ -39,6 +42,8 @@ func TestGenerateProof(t *testing.T) {
 		altProof := hashTwoRecpeits(block.ResultsBlock.TransactionReceipts, 0, 1)
 
 		require.EqualValues(t, altProof, merkleProof)
+		require.EqualValues(t, blockHeight, proof.Proof.Header().BlockHeight(), "wrong height")
+		require.EqualValues(t, rxHash, proof.Proof.BlockProof().TransactionsBlockHash(), "wrong height")
 	})
 }
 
@@ -49,7 +54,8 @@ func TestGenerateProof_WrongTxHash(t *testing.T) {
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
 		block := builders.BlockPair().WithHeight(blockHeight).WithBlockCreated(blockCreated).WithTransactions(3).Build()
-		harness.commitBlock(ctx, block)
+		_, err := harness.commitBlock(ctx, block)
+		require.NoError(t, err)
 
 		fakeTxHash := hash.CalcSha256([]byte("any text"))
 

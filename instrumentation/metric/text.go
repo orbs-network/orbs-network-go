@@ -39,7 +39,7 @@ func (t *Text) Update(value string) {
 }
 
 func (t *Text) String() string {
-	return fmt.Sprintf("metric %s: %d\n", t.name, t.value)
+	return fmt.Sprintf("metric %s: %s\n", t.name, t.value)
 }
 
 func (t *Text) Value() string {

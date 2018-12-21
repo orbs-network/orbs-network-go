@@ -18,7 +18,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		b1001 := aBlockFromLeader.WithHeight(1001).Build()
 		b1002 := aBlockFromLeader.WithHeight(1002).WithPrevBlock(b1001).Build()
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitBroadcastViaGossip(1002, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1002, h.config.NodeAddress())
 
 		err := h.handleBlockConsensus(ctx, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE, b1002, b1001)
 		if err != nil {
@@ -38,7 +38,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlockWithModeUpdateOnly(t *test
 
 		b1002 := aBlockFromLeader.WithHeight(1002).WithInvalidBenchmarkConsensusBlockProof(leaderKeyPair()).Build()
 		h.expectNewBlockProposalNotRequested()
-		h.expectCommitBroadcastViaGossip(1002, h.config.NodePublicKey())
+		h.expectCommitBroadcastViaGossip(1002, h.config.NodeAddress())
 
 		err := h.handleBlockConsensus(ctx, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY, b1002, nil)
 		if err != nil {
@@ -88,7 +88,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		t.Log("Leader commits height 1003, confirm height 1003")
 
 		b1003 := aBlockFromLeader.WithHeight(1003).WithPrevBlock(b1002).Build()
-		h.expectCommitSaveAndReply(b1003, 1003, h.config.ConstantConsensusLeader(), h.config.NodePublicKey())
+		h.expectCommitSaveAndReply(b1003, 1003, h.config.ConstantConsensusLeader(), h.config.NodeAddress())
 
 		h.receivedCommitViaGossip(ctx, b1003)
 		h.verifyCommitSaveAndReply(t)

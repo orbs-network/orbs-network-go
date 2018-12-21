@@ -38,9 +38,9 @@ func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *
 		return nil, err
 	}
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey: s.config.NodePublicKey(),
-		RecipientMode:   gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Payloads:        payloads,
+		SenderNodeAddress: s.config.NodeAddress(),
+		RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Payloads:          payloads,
 	})
 }
 
@@ -59,10 +59,10 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 
 func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:           gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:              gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
 	}).Build()
 	payloads, err := codec.EncodeBlockAvailabilityResponse(header, input.Message)
 	if err != nil {
@@ -70,10 +70,10 @@ func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey:     s.config.NodePublicKey(),
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
-		Payloads:            payloads,
+		SenderNodeAddress:      s.config.NodeAddress(),
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		Payloads:               payloads,
 	})
 }
 
@@ -92,10 +92,10 @@ func (s *service) receivedBlockSyncAvailabilityResponse(ctx context.Context, hea
 
 func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:           gossipmessages.BLOCK_SYNC_REQUEST,
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:              gossipmessages.BLOCK_SYNC_REQUEST,
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
 	}).Build()
 	payloads, err := codec.EncodeBlockSyncRequest(header, input.Message)
 	if err != nil {
@@ -103,10 +103,10 @@ func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey:     s.config.NodePublicKey(),
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
-		Payloads:            payloads,
+		SenderNodeAddress:      s.config.NodeAddress(),
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		Payloads:               payloads,
 	})
 }
 
@@ -125,10 +125,10 @@ func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipme
 
 func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:               gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:           gossipmessages.BLOCK_SYNC_RESPONSE,
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
+		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:              gossipmessages.BLOCK_SYNC_RESPONSE,
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
 	}).Build()
 	payloads, err := codec.EncodeBlockSyncResponse(header, input.Message)
 	if err != nil {
@@ -136,10 +136,10 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderPublicKey:     s.config.NodePublicKey(),
-		RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientPublicKeys: []primitives.Ed25519PublicKey{input.RecipientPublicKey},
-		Payloads:            payloads,
+		SenderNodeAddress:      s.config.NodeAddress(),
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		Payloads:               payloads,
 	})
 }
 

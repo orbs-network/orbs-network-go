@@ -3,7 +3,6 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -20,8 +19,8 @@ import (
 )
 
 type TransactionForwarderConfig interface {
-	NodePublicKey() primitives.Ed25519PublicKey
-	NodePrivateKey() primitives.Ed25519PrivateKey
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 }
@@ -36,17 +35,17 @@ func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossip
 	sender := input.Message.Sender
 	oneBigHash, _, err := HashTransactions(input.Message.SignedTransactions...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not create one hash, invalid signature in relay message from sender %s", sender.SenderPublicKey())
+		return nil, errors.Wrapf(err, "could not create one hash, invalid signature in relay message from sender %s", sender.SenderNodeAddress())
 	}
 
-	if !signature.VerifyEd25519(sender.SenderPublicKey(), oneBigHash, sender.Signature()) {
-		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderPublicKey())
+	if !digest.VerifyNodeSignature(sender.SenderNodeAddress(), oneBigHash, sender.Signature()) {
+		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderNodeAddress())
 	}
 
 	for _, tx := range input.Message.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
 		logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", tx), log.Transaction(txHash))
-		if _, err := s.pendingPool.add(tx, sender.SenderPublicKey()); err != nil {
+		if _, err := s.pendingPool.add(tx, sender.SenderNodeAddress()); err != nil {
 			logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), log.Transaction(txHash))
 		}
 	}
@@ -119,7 +118,7 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 		return
 	}
 
-	sig, err := signature.SignEd25519(f.config.NodePrivateKey(), oneBigHash)
+	sig, err := digest.SignAsNode(f.config.NodePrivateKey(), oneBigHash)
 	if err != nil {
 		logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
 		return
@@ -129,8 +128,8 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 		Message: &gossipmessages.ForwardedTransactionsMessage{
 			SignedTransactions: txs,
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: f.config.NodePublicKey(),
-				Signature:       sig,
+				SenderNodeAddress: f.config.NodeAddress(),
+				Signature:         sig,
 			}).Build(),
 		},
 	})
@@ -153,7 +152,7 @@ func (f *transactionForwarder) drainQueue() []*protocol.SignedTransaction {
 }
 
 func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, hashes []primitives.Sha256, err error) {
-	checksum := adler32.New()
+	checksum := adler32.New() // TODO(https://github.com/orbs-network/orbs-spec/issues/134): this needs to update to a bigger checksum/hash
 	for _, tx := range txs {
 		hash := digest.CalcTxHash(tx.Transaction())
 
@@ -165,6 +164,5 @@ func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, ha
 	}
 
 	oneBigHash = checksum.Sum(oneBigHash)
-
 	return
 }

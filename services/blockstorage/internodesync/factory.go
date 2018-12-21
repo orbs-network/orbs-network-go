@@ -109,7 +109,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
 		factory:      f,
-		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
+		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodeAddress),
 		createTimer:  f.createCollectTimeoutTimer,
 		logger:       f.logger,
 		conduit:      f.conduit,
@@ -126,16 +126,16 @@ func (f *stateFactory) CreateFinishedCARState(responses []*gossipmessages.BlockA
 	}
 }
 
-func (f *stateFactory) CreateWaitingForChunksState(sourceKey primitives.Ed25519PublicKey) syncState {
+func (f *stateFactory) CreateWaitingForChunksState(sourceNodeAddress primitives.NodeAddress) syncState {
 	return &waitingForChunksState{
-		sourceKey:    sourceKey,
-		factory:      f,
-		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodePublicKey),
-		createTimer:  f.createWaitForChunksTimeoutTimer,
-		logger:       f.logger,
-		abort:        make(chan struct{}),
-		conduit:      f.conduit,
-		metrics:      f.metrics.waitingStateMetrics,
+		sourceNodeAddress: sourceNodeAddress,
+		factory:           f,
+		gossipClient:      newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodeAddress),
+		createTimer:       f.createWaitForChunksTimeoutTimer,
+		logger:            f.logger,
+		abort:             make(chan struct{}),
+		conduit:           f.conduit,
+		metrics:           f.metrics.waitingStateMetrics,
 	}
 }
 

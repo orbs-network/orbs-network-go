@@ -75,10 +75,10 @@ func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 		defer h.cleanupConnectedPeers()
 
 		err := h.transport.Send(ctx, &TransportData{
-			SenderPublicKey:     h.config.NodePublicKey(),
-			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-			RecipientPublicKeys: nil,
-			Payloads:            [][]byte{{0x11}, {0x22, 0x33}},
+			SenderNodeAddress:      h.config.NodeAddress(),
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+			RecipientNodeAddresses: nil,
+			Payloads:               [][]byte{{0x11}, {0x22, 0x33}},
 		})
 		require.NoError(t, err, "adapter Send should not fail")
 
@@ -97,10 +97,10 @@ func TestDirectOutgoing_AdapterSendsUnicast(t *testing.T) {
 		defer h.cleanupConnectedPeers()
 
 		err := h.transport.Send(ctx, &TransportData{
-			SenderPublicKey:     h.config.NodePublicKey(),
-			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-			RecipientPublicKeys: []primitives.Ed25519PublicKey{h.publicKeyForPeer(1)},
-			Payloads:            [][]byte{{0x11}, {0x22, 0x33}},
+			SenderNodeAddress:      h.config.NodeAddress(),
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{h.nodeAddressForPeer(1)},
+			Payloads:               [][]byte{{0x11}, {0x22, 0x33}},
 		})
 		require.NoError(t, err, "adapter Send should not fail")
 
@@ -239,10 +239,10 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 		defer h.cleanupConnectedPeers()
 
 		err := h.transport.Send(ctx, &TransportData{
-			SenderPublicKey:     h.config.NodePublicKey(),
-			RecipientMode:       gossipmessages.RECIPIENT_LIST_MODE_LIST,
-			RecipientPublicKeys: []primitives.Ed25519PublicKey{h.publicKeyForPeer(1)},
-			Payloads:            [][]byte{{0x11}, {0x22, 0x33}},
+			SenderNodeAddress:      h.config.NodeAddress(),
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{h.nodeAddressForPeer(1)},
+			Payloads:               [][]byte{{0x11}, {0x22, 0x33}},
 		})
 		require.NoError(t, err, "adapter Send should not fail")
 

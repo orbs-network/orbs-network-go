@@ -27,7 +27,7 @@ type syncState interface {
 }
 
 type blockSyncConfig interface {
-	NodePublicKey() primitives.Ed25519PublicKey
+	NodeAddress() primitives.NodeAddress
 	BlockSyncBatchSize() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
