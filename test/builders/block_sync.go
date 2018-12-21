@@ -13,29 +13,29 @@ type basicSyncMessage struct {
 	lastCommittedBlockHeight primitives.BlockHeight
 	firstBlockHeight         primitives.BlockHeight
 	lastBlockHeight          primitives.BlockHeight
-	senderPublicKey          primitives.Ed25519PublicKey
-	recipientPublicKey       primitives.Ed25519PublicKey
+	senderNodeAddress        primitives.NodeAddress
+	recipientNodeAddress     primitives.NodeAddress
 }
 
 type availabilityResponse basicSyncMessage
 
 func BlockAvailabilityResponseInput() *availabilityResponse {
 	return &availabilityResponse{
-		recipientPublicKey:       keys.Ed25519KeyPairForTests(1).PublicKey(),
-		senderPublicKey:          keys.Ed25519KeyPairForTests(2).PublicKey(),
+		recipientNodeAddress:     keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
+		senderNodeAddress:        keys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress(),
 		lastBlockHeight:          100,
 		lastCommittedBlockHeight: 100,
 		firstBlockHeight:         10,
 	}
 }
 
-func (ar *availabilityResponse) WithSenderPublicKey(publicKey primitives.Ed25519PublicKey) *availabilityResponse {
-	ar.senderPublicKey = publicKey
+func (ar *availabilityResponse) WithSenderNodeAddress(nodeAddress primitives.NodeAddress) *availabilityResponse {
+	ar.senderNodeAddress = nodeAddress
 	return ar
 }
 
-func (ar *availabilityResponse) WithRecipientPublicKey(publicKey primitives.Ed25519PublicKey) *availabilityResponse {
-	ar.recipientPublicKey = publicKey
+func (ar *availabilityResponse) WithRecipientNodeAddress(nodeAddress primitives.NodeAddress) *availabilityResponse {
+	ar.recipientNodeAddress = nodeAddress
 	return ar
 }
 
@@ -56,7 +56,7 @@ func (ar *availabilityResponse) WithLastBlockHeight(h primitives.BlockHeight) *a
 
 func (ar *availabilityResponse) Build() *gossiptopics.BlockAvailabilityResponseInput {
 	return &gossiptopics.BlockAvailabilityResponseInput{
-		RecipientPublicKey: ar.recipientPublicKey,
+		RecipientNodeAddress: ar.recipientNodeAddress,
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -65,7 +65,7 @@ func (ar *availabilityResponse) Build() *gossiptopics.BlockAvailabilityResponseI
 				LastBlockHeight:          ar.lastBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: ar.senderPublicKey,
+				SenderNodeAddress: ar.senderNodeAddress,
 			}).Build(),
 		},
 	}
@@ -78,8 +78,8 @@ type blockChunk struct {
 
 func BlockSyncResponseInput() *blockChunk {
 	chunk := &blockChunk{}
-	chunk.recipientPublicKey = keys.Ed25519KeyPairForTests(1).PublicKey()
-	chunk.senderPublicKey = keys.Ed25519KeyPairForTests(2).PublicKey()
+	chunk.recipientNodeAddress = keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
+	chunk.senderNodeAddress = keys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress()
 	chunk.lastBlockHeight = 100
 	chunk.lastCommittedBlockHeight = 100
 	chunk.firstBlockHeight = 10
@@ -87,13 +87,13 @@ func BlockSyncResponseInput() *blockChunk {
 	return chunk
 }
 
-func (bc *blockChunk) WithSenderPublicKey(publicKey primitives.Ed25519PublicKey) *blockChunk {
-	bc.senderPublicKey = publicKey
+func (bc *blockChunk) WithSenderNodeAddress(nodeAddress primitives.NodeAddress) *blockChunk {
+	bc.senderNodeAddress = nodeAddress
 	return bc
 }
 
-func (bc *blockChunk) WithRecipientPublicKey(publicKey primitives.Ed25519PublicKey) *blockChunk {
-	bc.recipientPublicKey = publicKey
+func (bc *blockChunk) WithRecipientNodeAddress(nodeAddress primitives.NodeAddress) *blockChunk {
+	bc.recipientNodeAddress = nodeAddress
 	return bc
 }
 
@@ -128,7 +128,7 @@ func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
 				LastCommittedBlockHeight: bc.lastCommittedBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: bc.senderPublicKey,
+				SenderNodeAddress: bc.senderNodeAddress,
 			}).Build(),
 			BlockPairs: blocks,
 		},
@@ -139,8 +139,8 @@ type blockAvailabilityRequest basicSyncMessage
 
 func BlockAvailabilityRequestInput() *blockAvailabilityRequest {
 	availabilityRequest := &blockAvailabilityRequest{}
-	availabilityRequest.recipientPublicKey = keys.Ed25519KeyPairForTests(1).PublicKey()
-	availabilityRequest.senderPublicKey = keys.Ed25519KeyPairForTests(2).PublicKey()
+	availabilityRequest.recipientNodeAddress = keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
+	availabilityRequest.senderNodeAddress = keys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress()
 	availabilityRequest.lastBlockHeight = 100
 	availabilityRequest.lastCommittedBlockHeight = 100
 	availabilityRequest.firstBlockHeight = 10
@@ -148,13 +148,13 @@ func BlockAvailabilityRequestInput() *blockAvailabilityRequest {
 	return availabilityRequest
 }
 
-func (bar *blockAvailabilityRequest) WithSenderPublicKey(publicKey primitives.Ed25519PublicKey) *blockAvailabilityRequest {
-	bar.senderPublicKey = publicKey
+func (bar *blockAvailabilityRequest) WithSenderNodeAddress(nodeAddress primitives.NodeAddress) *blockAvailabilityRequest {
+	bar.senderNodeAddress = nodeAddress
 	return bar
 }
 
-func (bar *blockAvailabilityRequest) WithRecipientPublicKey(publicKey primitives.Ed25519PublicKey) *blockAvailabilityRequest {
-	bar.recipientPublicKey = publicKey
+func (bar *blockAvailabilityRequest) WithRecipientNodeAddress(nodeAddress primitives.NodeAddress) *blockAvailabilityRequest {
+	bar.recipientNodeAddress = nodeAddress
 	return bar
 }
 
@@ -183,7 +183,7 @@ func (bar *blockAvailabilityRequest) Build() *gossiptopics.BlockAvailabilityRequ
 				LastCommittedBlockHeight: bar.lastCommittedBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: bar.senderPublicKey,
+				SenderNodeAddress: bar.senderNodeAddress,
 			}).Build(),
 		},
 	}
@@ -193,8 +193,8 @@ type blockSyncRequest basicSyncMessage
 
 func BlockSyncRequestInput() *blockSyncRequest {
 	syncRequest := &blockSyncRequest{}
-	syncRequest.recipientPublicKey = keys.Ed25519KeyPairForTests(1).PublicKey()
-	syncRequest.senderPublicKey = keys.Ed25519KeyPairForTests(2).PublicKey()
+	syncRequest.recipientNodeAddress = keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
+	syncRequest.senderNodeAddress = keys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress()
 	syncRequest.lastBlockHeight = 100
 	syncRequest.lastCommittedBlockHeight = 100
 	syncRequest.firstBlockHeight = 10
@@ -202,13 +202,13 @@ func BlockSyncRequestInput() *blockSyncRequest {
 	return syncRequest
 }
 
-func (bsr *blockSyncRequest) WithSenderPublicKey(publicKey primitives.Ed25519PublicKey) *blockSyncRequest {
-	bsr.senderPublicKey = publicKey
+func (bsr *blockSyncRequest) WithSenderNodeAddress(nodeAddress primitives.NodeAddress) *blockSyncRequest {
+	bsr.senderNodeAddress = nodeAddress
 	return bsr
 }
 
-func (bsr *blockSyncRequest) WithRecipientPublicKey(publicKey primitives.Ed25519PublicKey) *blockSyncRequest {
-	bsr.recipientPublicKey = publicKey
+func (bsr *blockSyncRequest) WithRecipientNodeAddress(nodeAddress primitives.NodeAddress) *blockSyncRequest {
+	bsr.recipientNodeAddress = nodeAddress
 	return bsr
 }
 
@@ -237,7 +237,7 @@ func (bsr *blockSyncRequest) Build() *gossiptopics.BlockSyncRequestInput {
 				LastCommittedBlockHeight: bsr.lastCommittedBlockHeight,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: bsr.senderPublicKey,
+				SenderNodeAddress: bsr.senderNodeAddress,
 			}).Build(),
 		},
 	}

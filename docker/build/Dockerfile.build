@@ -14,6 +14,10 @@ ARG SKIP_TESTS
 
 ARG SKIP_DEVTOOLS
 
+ARG GIT_COMMIT
+
+ARG SEMVER
+
 RUN sh -x test.sh
 
 RUN sh -x build-binaries.sh

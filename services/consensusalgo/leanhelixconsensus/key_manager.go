@@ -1,37 +1,29 @@
 package leanhelixconsensus
 
 import (
-	"github.com/orbs-network/lean-helix-go"
-	lhprimitives "github.com/orbs-network/lean-helix-go/primitives"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
 type keyManager struct {
-	publicKey  primitives.Ed25519PublicKey
-	privateKey primitives.Ed25519PrivateKey
+	privateKey primitives.EcdsaSecp256K1PrivateKey
 	logger     log.BasicLogger
 }
 
-func NewKeyManager(logger log.BasicLogger, publicKey primitives.Ed25519PublicKey, privateKey primitives.Ed25519PrivateKey) *keyManager {
+func NewKeyManager(logger log.BasicLogger, privateKey primitives.EcdsaSecp256K1PrivateKey) *keyManager {
 	return &keyManager{
 		logger:     logger,
-		publicKey:  publicKey,
 		privateKey: privateKey,
 	}
 }
 
 func (k *keyManager) Sign(content []byte) []byte {
-	sig, _ := signature.SignEd25519(k.privateKey, content)
+	sig, _ := digest.SignAsNode(k.privateKey, content) // TODO(v1): handle error (log)
 	return sig
 }
 
-func (k *keyManager) Verify(content []byte, sender *leanhelix.SenderSignature) bool {
-
-	return signature.VerifyEd25519(primitives.Ed25519PublicKey(sender.SenderPublicKey()), content, primitives.Ed25519Sig(sender.Signature()))
-}
-
-func (k *keyManager) MyPublicKey() lhprimitives.Ed25519PublicKey {
-	return lhprimitives.Ed25519PublicKey(k.publicKey)
+func (k *keyManager) Verify(content []byte, sender *lhprotocol.SenderSignature) bool {
+	return digest.VerifyNodeSignature(primitives.NodeAddress(sender.MemberId()), content, primitives.EcdsaSecp256K1Sig(sender.Signature()))
 }

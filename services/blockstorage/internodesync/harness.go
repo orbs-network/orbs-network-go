@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -19,15 +19,15 @@ import (
 )
 
 type blockSyncConfigForTests struct {
-	pk               primitives.Ed25519PublicKey
+	nodeAddress      primitives.NodeAddress
 	batchSize        uint32
 	noCommit         time.Duration
 	collectResponses time.Duration
 	collectChunks    time.Duration
 }
 
-func (c *blockSyncConfigForTests) NodePublicKey() primitives.Ed25519PublicKey {
-	return c.pk
+func (c *blockSyncConfigForTests) NodeAddress() primitives.NodeAddress {
+	return c.nodeAddress
 }
 
 func (c *blockSyncConfigForTests) BlockSyncBatchSize() uint32 {
@@ -48,7 +48,7 @@ func (c *blockSyncConfigForTests) BlockSyncCollectChunksTimeout() time.Duration 
 
 func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	return &blockSyncConfigForTests{
-		pk:               keys.Ed25519KeyPairForTests(1).PublicKey(),
+		nodeAddress:      testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
 		batchSize:        10,
 		noCommit:         3 * time.Millisecond,
 		collectResponses: 3 * time.Millisecond,
@@ -58,7 +58,7 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 
 func newBlockSyncConfigForTestsWithInfiniteTimeouts() *blockSyncConfigForTests {
 	return &blockSyncConfigForTests{
-		pk:               keys.Ed25519KeyPairForTests(1).PublicKey(),
+		nodeAddress:      testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
 		batchSize:        10,
 		noCommit:         3 * time.Hour,
 		collectResponses: 3 * time.Hour,
@@ -130,8 +130,8 @@ func (h *blockSyncHarness) waitForState(bs *BlockSync, desiredState syncState) b
 	})
 }
 
-func (h *blockSyncHarness) withNodeKey(key primitives.Ed25519PublicKey) *blockSyncHarness {
-	h.config.pk = key
+func (h *blockSyncHarness) withNodeAddress(address primitives.NodeAddress) *blockSyncHarness {
+	h.config.nodeAddress = address
 	return h
 }
 

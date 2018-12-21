@@ -18,12 +18,12 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
 	logger.Info("creating development network")
 
-	leaderKeyPair := keys.Ed25519KeyPairForTests(0)
+	leaderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < int(numNodes); i++ {
-		publicKey := keys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
+		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
 	}
 
 	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
@@ -34,21 +34,21 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 	}
 
 	for i := 0; i < numNodes; i++ {
-		keyPair := keys.Ed25519KeyPairForTests(i)
+		keyPair := keys.EcdsaSecp256K1KeyPairForTests(i)
 		cfg := config.ForGamma(
 			federationNodes,
-			keyPair.PublicKey(),
+			keyPair.NodeAddress(),
 			keyPair.PrivateKey(),
-			leaderKeyPair.PublicKey(),
+			leaderKeyPair.NodeAddress(),
 			consensusAlgo,
 		)
 
 		metricRegistry := metric.NewRegistry()
-		nodeLogger := logger.WithTags(log.Node(cfg.NodePublicKey().String()))
+		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))
 		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
 		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
 
-		network.AddNode(keyPair, cfg, compiler, blockPersistence, metricRegistry, nodeLogger)
+		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, cfg, compiler, blockPersistence, metricRegistry, nodeLogger)
 	}
 
 	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network

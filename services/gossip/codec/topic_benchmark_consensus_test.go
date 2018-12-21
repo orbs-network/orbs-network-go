@@ -47,8 +47,8 @@ func TestBenchmarkConsensus_BenchmarkConsensusCommittedMessage(t *testing.T) {
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 	}
 
@@ -70,8 +70,8 @@ func TestBenchmarkConsensus_BenchmarkConsensusCommittedMessageDoNotFailWhenSende
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: nil,
-			Signature:       nil,
+			SenderNodeAddress: nil,
+			Signature:         nil,
 		}).Build(),
 	}
 

@@ -78,13 +78,8 @@ func toTxResponse(t *services.AddNewTransactionOutput) *txResponse {
 
 func toSendTxOutput(transactionOutput *txResponse) *services.SendTransactionOutput {
 	var receiptForClient *protocol.TransactionReceiptBuilder = nil
-
-	if receipt := transactionOutput.transactionReceipt; receipt != nil {
-		receiptForClient = &protocol.TransactionReceiptBuilder{
-			Txhash:              receipt.Txhash(),
-			ExecutionResult:     receipt.ExecutionResult(),
-			OutputArgumentArray: receipt.OutputArgumentArray(),
-		}
+	if transactionOutput.transactionReceipt != nil {
+		receiptForClient = protocol.TransactionReceiptBuilderFromRaw(transactionOutput.transactionReceipt.Raw())
 	}
 
 	response := &client.SendTransactionResponseBuilder{

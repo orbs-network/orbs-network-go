@@ -19,9 +19,9 @@ func SignEd25519(privateKey primitives.Ed25519PrivateKey, data []byte) (primitiv
 	return signedData, nil
 }
 
-func VerifyEd25519(publicKey primitives.Ed25519PublicKey, data []byte, signature primitives.Ed25519Sig) bool {
+func VerifyEd25519(publicKey primitives.Ed25519PublicKey, data []byte, sig primitives.Ed25519Sig) bool {
 	if len(publicKey) != keys.ED25519_PUBLIC_KEY_SIZE_BYTES {
 		return false
 	}
-	return ed25519.Verify([]byte(publicKey), data, signature)
+	return ed25519.Verify([]byte(publicKey), data, sig)
 }

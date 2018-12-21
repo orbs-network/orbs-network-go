@@ -92,13 +92,8 @@ func blockToTxResponse(bReceipt *services.GetTransactionReceiptOutput) *txRespon
 
 func toGetTxOutput(transactionOutput *txResponse) *services.GetTransactionStatusOutput {
 	var receiptForClient *protocol.TransactionReceiptBuilder = nil
-
-	if receipt := transactionOutput.transactionReceipt; receipt != nil {
-		receiptForClient = &protocol.TransactionReceiptBuilder{
-			Txhash:              receipt.Txhash(),
-			ExecutionResult:     receipt.ExecutionResult(),
-			OutputArgumentArray: receipt.OutputArgumentArray(),
-		}
+	if transactionOutput.transactionReceipt != nil {
+		receiptForClient = protocol.TransactionReceiptBuilderFromRaw(transactionOutput.transactionReceipt.Raw())
 	}
 
 	response := &client.GetTransactionStatusResponseBuilder{

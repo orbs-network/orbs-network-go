@@ -74,8 +74,8 @@ func NewTamperingTransport(logger log.BasicLogger, nested adapter.Transport) *Ta
 	return t
 }
 
-func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener, listenerPublicKey primitives.Ed25519PublicKey) {
-	t.nested.RegisterListener(listener, listenerPublicKey)
+func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
+	t.nested.RegisterListener(listener, listenerNodeAddress)
 }
 
 func (t *TamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
@@ -100,9 +100,7 @@ func (t *TamperingTransport) maybeTamper(ctx context.Context, data *adapter.Tran
 			return err, shouldReturn
 		}
 	}
-
 	return nil, false
-
 }
 
 func (t *TamperingTransport) Pause(predicate MessagePredicate) OngoingTamper {

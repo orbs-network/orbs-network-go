@@ -181,17 +181,17 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", b.numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", b.numNodes, consensusAlgo)
 
-	leaderKeyPair := testKeys.Ed25519KeyPairForTests(0)
+	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < int(b.numNodes); i++ {
-		publicKey := testKeys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
+		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
 	}
 
 	cfg := config.ForAcceptanceTestNetwork(
 		federationNodes,
-		leaderKeyPair.PublicKey(),
+		leaderKeyPair.NodeAddress(),
 		consensusAlgo,
 		b.maxTxPerBlock,
 		b.requiredQuorumPercentage,
@@ -208,15 +208,15 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	}
 
 	for i := 0; i < b.numNodes; i++ {
-		keyPair := testKeys.Ed25519KeyPairForTests(i)
+		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(i)
 
-		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
+		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.NodeAddress(), keyPair.PrivateKey())
 
 		metricRegistry := metric.NewRegistry()
-		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodePublicKey().String()))
+		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodeAddress().String()))
 		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
 
-		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, nodeLogger)
+		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, nodeLogger)
 	}
 
 	return network

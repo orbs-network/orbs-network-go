@@ -1,6 +1,7 @@
 package keys
 
 import (
+	cryptorand "crypto/rand"
 	"encoding/hex"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -38,8 +39,8 @@ func (k *Ed25519KeyPair) PrivateKeyHex() string {
 }
 
 func GenerateEd25519Key() (*Ed25519KeyPair, error) {
-	if pub, pri, err := ed25519.GenerateKey(nil); err != nil {
-		return nil, errors.Wrapf(err, "cannot create new signature from random keys")
+	if pub, pri, err := ed25519.GenerateKey(cryptorand.Reader); err != nil {
+		return nil, errors.Wrapf(err, "cannot create key pair")
 	} else {
 		return NewEd25519KeyPair(primitives.Ed25519PublicKey(pub), primitives.Ed25519PrivateKey(pri)), nil
 	}

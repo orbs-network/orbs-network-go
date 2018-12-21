@@ -49,22 +49,22 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 		for _, item := range nodeList {
 			kv := item.(map[string]interface{})
 
-			if publicKey, err := hex.DecodeString(kv["Key"].(string)); err != nil {
+			if nodeAddress, err := hex.DecodeString(kv["address"].(string)); err != nil {
 				return nodes, peers, err
 			} else {
-				nodePublicKey := primitives.Ed25519PublicKey(publicKey)
+				nodeAddress := primitives.NodeAddress(nodeAddress)
 
-				if i, err := parseUint32(kv["Port"].(float64)); err != nil {
+				if i, err := parseUint32(kv["port"].(float64)); err != nil {
 					return nodes, peers, err
 				} else {
 					gossipPort := int(i)
 
-					nodes[nodePublicKey.KeyForMap()] = &hardCodedFederationNode{
-						nodePublicKey: nodePublicKey,
+					nodes[nodeAddress.KeyForMap()] = &hardCodedFederationNode{
+						nodeAddress: nodeAddress,
 					}
 
-					peers[nodePublicKey.KeyForMap()] = &hardCodedGossipPeer{
-						gossipEndpoint: kv["IP"].(string),
+					peers[nodeAddress.KeyForMap()] = &hardCodedGossipPeer{
+						gossipEndpoint: kv["ip"].(string),
 						gossipPort:     gossipPort,
 					}
 				}
@@ -79,14 +79,19 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 	for key, value := range data {
 		var duration time.Duration
 		var numericValue uint32
-		var publicKey primitives.Ed25519PublicKey
+		var nodeAddress primitives.NodeAddress
+		var stringValue string
 		var err error
 
 		switch value.(type) {
 		case float64:
 			numericValue, err = parseUint32(value.(float64))
 		case string:
-			duration, err = time.ParseDuration(value.(string))
+			// Sometimes we try to parse duration, but sometimes it's not worth it, like with Ethereum endpoint
+			var decodeError error
+			if duration, decodeError = time.ParseDuration(value.(string)); decodeError != nil {
+				stringValue = value.(string)
+			}
 		}
 
 		if numericValue != 0 {
@@ -98,31 +103,36 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		}
 
 		if key == "constant-consensus-leader" {
-			publicKey, err = hex.DecodeString(value.(string))
-			cfg.SetConstantConsensusLeader(primitives.Ed25519PublicKey(publicKey))
+			nodeAddress, err = hex.DecodeString(value.(string))
+			cfg.SetConstantConsensusLeader(primitives.NodeAddress(nodeAddress))
+			continue
 		}
 
 		if key == "active-consensus-algo" {
 			var i uint32
 			i, err = parseUint32(value.(float64))
 			cfg.SetActiveConsensusAlgo(consensus.ConsensusAlgoType(i))
+			continue
 		}
 
-		if key == "node-public-key" {
-			publicKey, err = hex.DecodeString(value.(string))
-			cfg.SetNodePublicKey(primitives.Ed25519PublicKey(publicKey))
+		if key == "node-address" {
+			nodeAddress, err = hex.DecodeString(value.(string))
+			cfg.SetNodeAddress(primitives.NodeAddress(nodeAddress))
+			continue
 		}
 
 		if key == "node-private-key" {
-			var privateKey primitives.Ed25519PrivateKey
+			var privateKey primitives.EcdsaSecp256K1PrivateKey
 			privateKey, err = hex.DecodeString(value.(string))
-			cfg.SetNodePrivateKey(primitives.Ed25519PrivateKey(privateKey))
+			cfg.SetNodePrivateKey(primitives.EcdsaSecp256K1PrivateKey(privateKey))
+			continue
 		}
 
 		if key == "gossip-port" {
 			var gossipPort uint32
 			gossipPort, err = parseUint32(value.(float64))
 			cfg.SetUint32(GOSSIP_LISTEN_PORT, gossipPort)
+			continue
 		}
 
 		if key == "federation-nodes" {
@@ -132,6 +142,11 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 			nodes, peers, err = parseNodesAndPeers(value)
 			cfg.SetFederationNodes(nodes)
 			cfg.SetGossipPeers(peers)
+			continue
+		}
+
+		if stringValue != "" {
+			cfg.SetString(convertKeyName(key), stringValue)
 		}
 
 		if err != nil {

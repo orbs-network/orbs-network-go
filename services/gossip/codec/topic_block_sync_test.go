@@ -18,8 +18,8 @@ func TestBlockSync_BlockAvailabilityRequest(t *testing.T) {
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 	}
 
@@ -44,8 +44,8 @@ func TestBlockSync_BlockAvailabilityRequestDoNotFailWhenSenderContainsNil(t *tes
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: nil,
-			Signature:       nil,
+			SenderNodeAddress: nil,
+			Signature:         nil,
 		}).Build(),
 	}
 
@@ -66,8 +66,8 @@ func TestBlockSync_BlockAvailabilityResponse(t *testing.T) {
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 	}
 
@@ -92,8 +92,8 @@ func TestBlockSync_BlockAvailabilityResponseDoNotFailWhenSenderContainsNil(t *te
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: nil,
-			Signature:       nil,
+			SenderNodeAddress: nil,
+			Signature:         nil,
 		}).Build(),
 	}
 
@@ -114,8 +114,8 @@ func TestBlockSync_BlockSyncRequest(t *testing.T) {
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 	}
 
@@ -140,8 +140,8 @@ func TestBlockSync_BlockSyncRequestDoNotFailWhenSenderContainsNil(t *testing.T) 
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: nil,
-			Signature:       nil,
+			SenderNodeAddress: nil,
+			Signature:         nil,
 		}).Build(),
 	}
 
@@ -162,8 +162,8 @@ func TestBlockSync_BlockSyncResponse(t *testing.T) {
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 		BlockPairs: []*protocol.BlockPairContainer{
 			builders.BlockPair().WithTransactions(5).Build(),
@@ -192,8 +192,8 @@ func TestBlockSync_BlockSyncResponseDoNotFailWhenSenderContainsNil(t *testing.T)
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: nil,
-			Signature:       nil,
+			SenderNodeAddress: nil,
+			Signature:         nil,
 		}).Build(),
 		BlockPairs: []*protocol.BlockPairContainer{
 			builders.BlockPair().WithTransactions(5).Build(),
@@ -218,8 +218,8 @@ func TestBlockSync_BlockSyncResponseWithCorruptNumTransactions(t *testing.T) {
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 		BlockPairs: []*protocol.BlockPairContainer{
 			builders.BlockPair().WithCorruptNumTransactions(3).Build(),
@@ -242,8 +242,8 @@ func TestBlockSync_BlockSyncResponseWithCorruptBlockPair(t *testing.T) {
 			LastCommittedBlockHeight: 3001,
 		}).Build(),
 		Sender: (&gossipmessages.SenderSignatureBuilder{
-			SenderPublicKey: []byte{0x01, 0x02, 0x03},
-			Signature:       []byte{0x04, 0x05, 0x06},
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
 		BlockPairs: []*protocol.BlockPairContainer{
 			builders.CorruptBlockPair().Build(),
