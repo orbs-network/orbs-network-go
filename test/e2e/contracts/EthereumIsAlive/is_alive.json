@@ -1,5 +1,5 @@
 {
-  "ContractName": "RopstenIsAlive",
+  "ContractName": "EthereumIsAlive",
   "MethodName": "isAlive",
   "Arguments": []
 }

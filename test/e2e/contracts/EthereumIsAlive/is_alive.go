@@ -1,5 +1,7 @@
 package main
 
+// TODO(v1): by talkol: this file should not be here, it should be moved to ROOT/test/contracts
+
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/ethereum"
@@ -16,7 +18,6 @@ const ADDRESS = "0xC6CF4977465D1889507bed99f1bA20C050192ed7"
 
 func isAlive() string {
 	var out string
-
 	ethereum.CallMethod(ADDRESS, ABI, "getString", &out)
 	return out
 }
