@@ -14,14 +14,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-type ethereumConfig struct {
-	endpoint string
-}
-
-func (e *ethereumConfig) EthereumEndpoint() string {
-	return e.endpoint
-}
-
 func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory.NetworkDriver {
 	numNodes := 2
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
