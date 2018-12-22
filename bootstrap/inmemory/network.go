@@ -32,10 +32,9 @@ type NetworkDriver interface {
 }
 
 type Network struct {
-	Nodes              []*Node
-	Logger             log.BasicLogger
-	Transport          adapter.Transport
-	EthereumConnection ethereumAdapter.EthereumConnection
+	Nodes     []*Node
+	Logger    log.BasicLogger
+	Transport adapter.Transport
 }
 
 type Node struct {
@@ -47,20 +46,23 @@ type Node struct {
 	stateBlockHeightTracker           *synchronization.BlockTracker
 	transactionPoolBlockHeightTracker *synchronization.BlockTracker
 	nativeCompiler                    nativeProcessorAdapter.Compiler
+	ethereumConnection                ethereumAdapter.EthereumConnection
 	nodeLogic                         bootstrap.NodeLogic
 	metricRegistry                    metric.Registry
 }
 
-func NewNetwork(logger log.BasicLogger, transport adapter.Transport, ethereumConnection ethereumAdapter.EthereumConnection) Network {
-	return Network{Logger: logger, Transport: transport, EthereumConnection: ethereumConnection}
+func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
+	return Network{Logger: logger, Transport: transport}
 }
 
 func (n *Network) AddNode(
 	nodeKeyPair *keys.EcdsaSecp256K1KeyPair,
 	cfg config.NodeConfig,
-	compiler nativeProcessorAdapter.Compiler,
 	blockPersistence blockStorageAdapter.InMemoryBlockPersistence,
-	metricRegistry metric.Registry, logger log.BasicLogger) {
+	compiler nativeProcessorAdapter.Compiler,
+	ethereumConnection ethereumAdapter.EthereumConnection,
+	metricRegistry metric.Registry,
+	logger log.BasicLogger) {
 
 	node := &Node{}
 	node.index = len(n.Nodes)
@@ -71,6 +73,7 @@ func (n *Network) AddNode(
 	node.transactionPoolBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
 	node.blockPersistence = blockPersistence
 	node.nativeCompiler = compiler
+	node.ethereumConnection = ethereumConnection
 	node.metricRegistry = metricRegistry
 
 	n.Nodes = append(n.Nodes, node)
@@ -93,7 +96,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
 			node.config,
-			n.EthereumConnection,
+			node.ethereumConnection,
 		)
 	}
 }

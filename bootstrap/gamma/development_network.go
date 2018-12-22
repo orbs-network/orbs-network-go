@@ -36,13 +36,10 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 	}
 
 	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
-	ethereumConfig := &ethereumConfig{}
-	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(ethereumConfig, logger)
 
 	network := &inmemory.Network{
-		Logger:             logger,
-		Transport:          sharedTransport,
-		EthereumConnection: ethereumConnection,
+		Logger:    logger,
+		Transport: sharedTransport,
 	}
 
 	for i := 0; i < numNodes; i++ {
@@ -55,15 +52,13 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 			consensusAlgo,
 		)
 
-		// This is awful
-		ethereumConfig.endpoint = cfg.EthereumEndpoint()
-
 		metricRegistry := metric.NewRegistry()
 		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))
 		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
 		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
+		ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(cfg, logger)
 
-		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, cfg, compiler, blockPersistence, metricRegistry, nodeLogger)
+		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
 	}
 
 	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network
