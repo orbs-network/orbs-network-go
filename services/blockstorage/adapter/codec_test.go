@@ -15,7 +15,7 @@ func TestEncodesAndDecodes(t *testing.T) {
 
 	err := encode(block, rw)
 	require.NoError(t, err)
-	decodedBlock, err := decode(rw)
+	decodedBlock, _, err := decode(rw)
 
 	require.NoError(t, err)
 	test.RequireCmpEqual(t, block, decodedBlock)

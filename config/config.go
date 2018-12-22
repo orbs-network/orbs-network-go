@@ -37,6 +37,10 @@ type NodeConfig interface {
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 
+	// file system block storage
+	DataDir() string
+	BlocksFilename() string
+
 	// state storage
 	StateStorageHistorySnapshotNum() uint32
 
@@ -110,6 +114,11 @@ type BlockStorageConfig interface {
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
+}
+
+type FilesystemBlockPersistenceConfig interface {
+	DataDir() string
+	BlocksFilename() string
 }
 
 type GossipTransportConfig interface {

@@ -16,7 +16,6 @@ import (
 // therefore, this file is marked on top with a build flag ("memoryleak") meaning without this flag it won't build or run
 // to run this test, add to the go command "-tags memoryleak", this is done in test.sh while making sure it's the only test running
 func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
-
 	before, _ := os.Create("/tmp/mem-shutdown-before.prof")
 	defer before.Close()
 	after, _ := os.Create("/tmp/mem-shutdown-after.prof")

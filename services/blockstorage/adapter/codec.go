@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"io"
+	"unsafe"
 )
 
 // TODO write test for violation of: blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil
@@ -66,7 +67,7 @@ func writeMessage(writer io.Writer, message membuffers.Message) error {
 	return nil
 }
 
-func readChunk(reader io.Reader) ([]byte, error) {
+func readChunk(reader io.Reader, byteCounter *int) ([]byte, error) {
 	var chunkSize uint32
 	err := binary.Read(reader, binary.LittleEndian, &chunkSize)
 	if err != nil {
@@ -81,6 +82,8 @@ func readChunk(reader io.Reader) ([]byte, error) {
 	if n != len(chunk) {
 		return nil, fmt.Errorf("read %d bytes in block chuck while expecting %d", n, len(chunk))
 	}
+
+	*byteCounter += n + int(unsafe.Sizeof(chunkSize))
 	return chunk, nil
 }
 
@@ -160,73 +163,74 @@ func encode(block *protocol.BlockPairContainer, w io.Writer) error {
 	return nil
 }
 
-func decode(r io.Reader) (*protocol.BlockPairContainer, error) {
+func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	serializationHeader := &blockHeader{}
 	err := serializationHeader.read(r)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read block header")
+		return nil, 0, errors.Wrap(err, "failed to read block header")
 	}
 
-	tbHeaderChunk, err := readChunk(r)
+	byteCounter := int(unsafe.Sizeof(*serializationHeader))
+	tbHeaderChunk, err := readChunk(r, &byteCounter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read chunk")
+		return nil, byteCounter, errors.Wrap(err, "failed to read chunk")
 	}
 	tbHeader := protocol.TransactionsBlockHeaderReader(tbHeaderChunk)
 
-	tbMetadataChunk, err := readChunk(r)
+	tbMetadataChunk, err := readChunk(r, &byteCounter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read chunk")
+		return nil, byteCounter, errors.Wrap(err, "failed to read chunk")
 	}
 	tbMetadata := protocol.TransactionsBlockMetadataReader(tbMetadataChunk)
 
-	tbBlockProofChunk, err := readChunk(r)
+	tbBlockProofChunk, err := readChunk(r, &byteCounter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read chunk")
+		return nil, byteCounter, errors.Wrap(err, "failed to read chunk")
 	}
 	tbBlockProof := protocol.TransactionsBlockProofReader(tbBlockProofChunk)
 
-	rbHeaderChunk, err := readChunk(r)
+	rbHeaderChunk, err := readChunk(r, &byteCounter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read chunk")
+		return nil, byteCounter, errors.Wrap(err, "failed to read chunk")
 	}
 	rbHeader := protocol.ResultsBlockHeaderReader(rbHeaderChunk)
 
-	rbBlockProofChunk, err := readChunk(r)
+	rbBlockProofChunk, err := readChunk(r, &byteCounter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read chunk")
+		return nil, byteCounter, errors.Wrap(err, "failed to read chunk")
 	}
 	rbBlockProof := protocol.ResultsBlockProofReader(rbBlockProofChunk)
 
-	rbBloomChunk, err := readChunk(r)
+	rbBloomChunk, err := readChunk(r, &byteCounter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read chunk")
+		return nil, byteCounter, errors.Wrap(err, "failed to read chunk")
 	}
 	rbBloomFilter := protocol.TransactionsBloomFilterReader(rbBloomChunk)
 
 	// TODO V1 add validations : - 1) IsValid() on each membuff 2) check that num of bytes read match header 3) perform structural validations?
 	receipts := make([]*protocol.TransactionReceipt, 0, rbHeader.NumTransactionReceipts())
 	for i := 0; i < cap(receipts); i++ {
-		chunk, err := readChunk(r)
+		chunk, err := readChunk(r, &byteCounter)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read receipt chunk")
+			return nil, byteCounter, errors.Wrap(err, "failed to read receipt chunk")
 		}
 		receipts = append(receipts, protocol.TransactionReceiptReader(chunk))
 	}
 
 	stateDiffs := make([]*protocol.ContractStateDiff, 0, rbHeader.NumContractStateDiffs())
 	for i := 0; i < cap(stateDiffs); i++ {
-		chunk, err := readChunk(r)
+		chunk, err := readChunk(r, &byteCounter)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read contract state diff chunk")
+			return nil, byteCounter, errors.Wrap(err, "failed to read contract state diff chunk")
 		}
 		stateDiffs = append(stateDiffs, protocol.ContractStateDiffReader(chunk))
 	}
 
 	txs := make([]*protocol.SignedTransaction, 0, tbHeader.NumSignedTransactions())
 	for i := 0; i < cap(txs); i++ {
-		chunk, err := readChunk(r)
+		chunk, err := readChunk(r, &byteCounter)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read contract state diff chunk")
+			return nil, byteCounter, errors.Wrap(err, "failed to read contract state diff chunk")
 		}
 		txs = append(txs, protocol.SignedTransactionReader(chunk))
 	}
@@ -247,5 +251,5 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, error) {
 		},
 	}
 
-	return blockPair, nil
+	return blockPair, byteCounter, nil
 }

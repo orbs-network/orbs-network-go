@@ -77,6 +77,9 @@ const (
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 
 	ETHEREUM_ENDPOINT = "ETHEREUM_ENDPOINT"
+
+	BLOCK_STORAGE_DATA_DIR  = "BLOCK_STORAGE_DATA_DIR"
+	BLOCK_STORAGE_DATA_FILE = "BLOCK_STORAGE_DATA_FILE"
 )
 
 func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
@@ -316,4 +319,12 @@ func (c *config) ConsensusMinimumCommitteeSize() uint32 {
 
 func (c *config) EthereumEndpoint() string {
 	return c.kv[ETHEREUM_ENDPOINT].StringValue
+}
+
+func (c *config) DataDir() string {
+	return c.kv[BLOCK_STORAGE_DATA_DIR].StringValue
+}
+
+func (c *config) BlocksFilename() string {
+	return c.kv[BLOCK_STORAGE_DATA_FILE].StringValue
 }

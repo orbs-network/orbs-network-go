@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -18,7 +19,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 
 	proposedTransactions, err := s.fetchTransactions(ctx, input.BlockHeight, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch transactions for new block")
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
 

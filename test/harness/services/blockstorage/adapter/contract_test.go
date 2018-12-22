@@ -18,6 +18,11 @@ import (
 	"time"
 )
 
+func TestBlockPersistenceContract_GetLastBlockWhenNoneExistReturnsNilNoError(t *testing.T) {
+	t.Run("In Memory Adapter", testGetLastBlockWhenNoneExistReturnsNilNoError(anInMemoryAdapter))
+	t.Run("Filesystem Adapter", testGetLastBlockWhenNoneExistReturnsNilNoError(aFileSystemAdapter))
+}
+
 func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	for i := 1; i <= 10; i++ {
@@ -82,6 +87,16 @@ func testReturnsBlockByTx(factory func() (adapter.BlockPersistence, func())) fun
 	}
 }
 
+func testGetLastBlockWhenNoneExistReturnsNilNoError(factory func() (adapter.BlockPersistence, func())) func(t *testing.T) {
+	return func(t *testing.T) {
+		adapter, cleanup := factory()
+		defer cleanup()
+
+		lastBlock, err := adapter.GetLastBlock()
+		require.NoError(t, err)
+		require.Nil(t, lastBlock)
+	}
+}
 func testReturnsTransactionsAndResultsBlock(factory func() (adapter.BlockPersistence, func())) func(t *testing.T) {
 	return func(t *testing.T) {
 		adapter, cleanup := factory()
@@ -241,16 +256,36 @@ func anInMemoryAdapter() (adapter.BlockPersistence, func()) {
 }
 
 func aFileSystemAdapter() (adapter.BlockPersistence, func()) {
-	dirName, err := ioutil.TempDir("", "contract_test_block_persist")
-	if err != nil {
-		panic(err)
-	}
+	conf := newLocalConfig()
+	ctx, cancel := context.WithCancel(context.Background())
 	cleanup := func() {
-		os.RemoveAll(dirName)
+		cancel()
+		os.RemoveAll(conf.DataDir())
 	}
-	persistence, err := adapter.NewFilesystemBlockPersistence(dirName, log.GetLogger(), metric.NewRegistry())
+	persistence, err := adapter.NewFilesystemBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())
 	if err != nil {
 		panic(err)
 	}
 	return persistence, cleanup
+}
+
+type localConfig struct {
+	dir string
+}
+
+func newLocalConfig() *localConfig {
+	dirName, err := ioutil.TempDir("", "contract_test_block_persist")
+	if err != nil {
+		panic(err)
+	}
+	return &localConfig{
+		dir: dirName,
+	}
+}
+func (l *localConfig) DataDir() string {
+	return l.dir
+}
+
+func (_ *localConfig) BlocksFilename() string {
+	return "blocks"
 }

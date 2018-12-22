@@ -2,7 +2,9 @@ package adapter
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -11,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -18,29 +21,57 @@ type metrics struct {
 	size *metric.Gauge
 }
 
-func NewFilesystemBlockPersistence(dataDir string, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
+func NewFilesystemBlockPersistence(ctx context.Context, c config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	adapter := &FilesystemBlockPersistence{
-		bhIndex: &blockHeightIndex{
-			topHeight:            0,
-			heightOffset:         map[primitives.BlockHeight]int64{1: 0},
-			firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
-		},
-		dataDir:      dataDir,
-		metrics:      newMetrics(metricFactory),
-		blockTracker: synchronization.NewBlockTracker(logger, 0, 5),
-		logger:       logger,
+		bhIndex: newBlockHeightIndex(),
+		config:  c,
+		metrics: newMetrics(metricFactory),
+		logger:  logger,
 	}
 
-	file, err := os.OpenFile(adapter.blockFileName(), os.O_WRONLY|os.O_CREATE, 0600)
+	err := adapter.refreshIndex()
+	if err != nil {
+		return nil, err
+	}
+	adapter.blockTracker = synchronization.NewBlockTracker(logger, uint64(adapter.bhIndex.topBlockHeight), 5)
+
+	newTip, err := newWritingTip(ctx, c.DataDir(), adapter.blockFileName(), logger)
+	if err != nil {
+		return nil, err
+	}
+
+	adapter.tip = newTip
+	return adapter, nil
+}
+
+func newWritingTip(ctx context.Context, dir, filename string, logger log.BasicLogger) (*writingTip, error) {
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to verify data directory exists")
+	}
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open blocks file for writing")
 	}
-	adapter.tip = &writingTip{
+	result := &writingTip{
 		file: file,
 	}
 
-	return adapter, nil
+	go func() {
+		<-ctx.Done()
+		result.Lock()
+		defer result.Unlock()
+		err := file.Close()
+		if err != nil {
+			logger.Error("failed to close blocks file", log.String("filename", result.file.Name()))
+			return
+		}
+		logger.Info("closed blocks file", log.String("filename", result.file.Name()))
+
+	}()
+
+	return result, nil
 }
 
 type writingTip struct {
@@ -79,8 +110,8 @@ func (wh *writingTip) writeBlockAtOffset(pos int64, blockPair *protocol.BlockPai
 }
 
 type FilesystemBlockPersistence struct {
+	config       config.FilesystemBlockPersistenceConfig
 	bhIndex      *blockHeightIndex
-	dataDir      string
 	metrics      *metrics
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
@@ -89,7 +120,7 @@ type FilesystemBlockPersistence struct {
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInMB"),
+		size: m.NewGauge("BlockStorage.FilesystemBlockPersistence.SizeInBytes"),
 	}
 }
 
@@ -99,27 +130,29 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 
 	bh := blockPair.ResultsBlock.Header.BlockHeight()
 
-	currentTop := f.bhIndex.fetchTopHeight()
+	currentTop := f.bhIndex.getLastBlockHeight()
 	if bh != currentTop+1 {
 		return fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, currentTop)
 	}
 
-	startOffset, err := f.bhIndex.fetchBlockOffset(bh)
+	startPos, err := f.bhIndex.fetchBlockOffset(bh)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch top block offset")
 	}
 
-	newPos, err := f.tip.writeBlockAtOffset(startOffset, blockPair)
+	newPos, err := f.tip.writeBlockAtOffset(startPos, blockPair)
 	if err != nil {
 		return err
 	}
 
-	err = f.bhIndex.appendBlock(startOffset, newPos, blockPair.ResultsBlock.Header.NumTransactionReceipts(), blockPair.ResultsBlock.Header.Timestamp())
+	err = f.bhIndex.appendBlock(startPos, newPos, blockPair)
 	if err != nil {
 		return errors.Wrap(err, "failed to update index after writing block")
 	}
 
 	f.blockTracker.IncrementHeight()
+	f.metrics.size.Add(newPos - startPos)
+
 	return nil
 }
 
@@ -143,10 +176,10 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 	wantNext := true
 	lastHeightRead := primitives.BlockHeight(0)
 
-	for top := f.bhIndex.fetchTopHeight(); wantNext && top > lastHeightRead; {
+	for top := f.bhIndex.getLastBlockHeight(); wantNext && top > lastHeightRead; {
 		currentPage := make([]*protocol.BlockPairContainer, 0, pageSize)
-		for ; uint8(len(currentPage)) < pageSize && top > lastHeightRead; top = f.bhIndex.fetchTopHeight() {
-			aBlock, err := decode(file)
+		for ; uint8(len(currentPage)) < pageSize && top > lastHeightRead; top = f.bhIndex.getLastBlockHeight() {
+			aBlock, _, err := decode(file)
 			if err != nil {
 				return errors.Wrapf(err, "failed to decode block")
 			}
@@ -162,31 +195,11 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 }
 
 func (f *FilesystemBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
-	return f.bhIndex.topHeight, nil
+	return f.bhIndex.getLastBlockHeight(), nil
 }
 
 func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
-	offset, err := f.bhIndex.fetchTopOffest()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch last block")
-	}
-
-	file, err := os.Open(f.blockFileName())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open blocks file for reading")
-	}
-	defer file.Close()
-
-	newOffset, err := file.Seek(offset, io.SeekStart)
-	if newOffset != offset || err != nil {
-		return nil, errors.Wrapf(err, "failed to seek in blocks file to position %v", offset)
-	}
-
-	result, err := decode(file)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode block")
-	}
-	return result, nil
+	return f.bhIndex.getLastBlock(), nil
 }
 
 func (f *FilesystemBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
@@ -250,33 +263,66 @@ func (f *FilesystemBlockPersistence) GetBlockTracker() *synchronization.BlockTra
 }
 
 func (f *FilesystemBlockPersistence) blockFileName() string {
-	return f.dataDir + "/blocks"
+	return filepath.Join(f.config.DataDir(), f.config.BlocksFilename())
+}
+
+func (f *FilesystemBlockPersistence) refreshIndex() error {
+	f.bhIndex.reset()
+	offset := int64(0)
+
+	file, err := os.Open(f.blockFileName())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to open blocks file for reading")
+	}
+	defer file.Close()
+
+	for {
+		aBlock, blockSize, err := decode(file)
+		if err != nil {
+			return nil
+		}
+		f.bhIndex.appendBlock(offset, offset+int64(blockSize), aBlock)
+		offset = offset + int64(blockSize)
+	}
+
+	return nil
 }
 
 type blockHeightIndex struct {
 	sync.RWMutex
-	topHeight            primitives.BlockHeight
 	heightOffset         map[primitives.BlockHeight]int64
 	firstBlockInTsBucket map[uint32]primitives.BlockHeight
+	topBlock             *protocol.BlockPairContainer
+	topBlockHeight       primitives.BlockHeight
+}
+
+func newBlockHeightIndex() *blockHeightIndex {
+	i := &blockHeightIndex{}
+	i.reset()
+	return i
+}
+func (i *blockHeightIndex) reset() {
+	i.RLock()
+	defer i.RUnlock()
+
+	i.heightOffset = map[primitives.BlockHeight]int64{1: 0}
+	i.firstBlockInTsBucket = map[uint32]primitives.BlockHeight{}
+	i.topBlockHeight = 0
+	i.topBlock = nil
 }
 
 func (i *blockHeightIndex) fetchTopOffest() (int64, error) {
 	i.RLock()
 	defer i.RUnlock()
 
-	topHeight := i.topHeight
-	offset, ok := i.heightOffset[topHeight]
+	offset, ok := i.heightOffset[i.topBlockHeight]
 	if !ok {
-		return 0, fmt.Errorf("index missing offset for block height %d", topHeight)
+		return 0, fmt.Errorf("index missing offset for block height %d", i.topBlockHeight)
 	}
 	return offset, nil
-}
-
-func (i *blockHeightIndex) fetchTopHeight() (height primitives.BlockHeight) {
-	i.RLock()
-	defer i.RUnlock()
-
-	return i.topHeight
 }
 
 func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) (int64, error) {
@@ -306,28 +352,47 @@ func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primi
 
 }
 
-func (i *blockHeightIndex) appendBlock(prevTopOffset int64, newTopOffset int64, numTxReceipts uint32, blockTs primitives.TimestampNano) error {
+func (i *blockHeightIndex) appendBlock(prevTopOffset int64, newTopOffset int64, newBlock *protocol.BlockPairContainer) error {
 	i.Lock()
 	defer i.Unlock()
 
-	currentTopOffset, ok := i.heightOffset[i.topHeight+1]
+	newBlockHeight := newBlock.ResultsBlock.Header.BlockHeight()
+	numTxReceipts := newBlock.ResultsBlock.Header.NumTransactionReceipts()
+	blockTs := newBlock.ResultsBlock.Header.Timestamp()
+
+	currentTopOffset, ok := i.heightOffset[i.topBlockHeight+1]
 	if !ok {
-		return fmt.Errorf("index missing offset for block height %d", i.topHeight)
+		return fmt.Errorf("index missing offset for block height %d", i.topBlockHeight)
 	}
 	if currentTopOffset != prevTopOffset {
 		return fmt.Errorf("unexpected top block offest, may be a result of two processes writing concurrently. found offest %d while expecting %d", currentTopOffset, prevTopOffset)
 	}
-	i.topHeight++
-	i.heightOffset[i.topHeight+1] = newTopOffset
+
+	// update index
+	i.topBlock = newBlock
+	i.topBlockHeight = newBlock.ResultsBlock.Header.BlockHeight()
+	i.heightOffset[newBlockHeight+1] = newTopOffset
 
 	if numTxReceipts > 0 {
 		_, exists := i.firstBlockInTsBucket[blockTsBucketKey(blockTs)]
 		if !exists {
-			i.firstBlockInTsBucket[blockTsBucketKey(blockTs)] = i.topHeight
+			i.firstBlockInTsBucket[blockTsBucketKey(blockTs)] = newBlockHeight
 		}
 	}
 
 	return nil
+}
+
+func (i *blockHeightIndex) getLastBlock() *protocol.BlockPairContainer {
+	i.RLock()
+	defer i.RUnlock()
+	return i.topBlock
+}
+
+func (i *blockHeightIndex) getLastBlockHeight() primitives.BlockHeight {
+	i.RLock()
+	defer i.RUnlock()
+	return i.topBlockHeight
 }
 
 const minuteToNanoRatio = 60 * 1000 * 1000 * 1000

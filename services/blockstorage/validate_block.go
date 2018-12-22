@@ -140,7 +140,7 @@ func (s *service) validateWithConsensusAlgosWithMode(
 		})
 
 		// one of the consensus algos has validated the block, this means it's a valid block
-		if err == nil {
+		if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY && err == nil {
 			return nil
 		}
 	}

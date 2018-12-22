@@ -46,6 +46,9 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	cfg.SetString(BLOCK_STORAGE_DATA_DIR, "/tmp/orbs/data")
+	cfg.SetString(BLOCK_STORAGE_DATA_FILE, "blocks")
+
 	return cfg
 }
 
@@ -80,6 +83,8 @@ func ForE2E(
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 1000*time.Millisecond)
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 500*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 2*time.Second)
+	cfg.SetString(BLOCK_STORAGE_DATA_DIR, "/tmp/orbs/data")
+	cfg.SetString(BLOCK_STORAGE_DATA_FILE, "blocks")
 
 	cfg.SetGossipPeers(gossipPeers)
 	cfg.SetFederationNodes(federationNodes)
