@@ -86,7 +86,7 @@ func (h *harness) expectCommitBroadcastViaGossip(expectedBlockHeight primitives.
 			input.Message.BlockPair.TransactionsBlock.Header.BlockHeight().Equal(expectedBlockHeight) &&
 			input.Message.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedBlockHeight) &&
 			input.Message.BlockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() &&
-			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderNodeAddress().Equal(expectedSender)
+			input.Message.BlockPair.ResultsBlock.BlockProof.BenchmarkConsensus().NodesIterator().NextNodes().SenderNodeAddress().Equal(expectedSender)
 	}
 
 	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any, mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)

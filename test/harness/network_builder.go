@@ -201,7 +201,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
 
 	network := &acceptanceNetwork{
-		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport, sharedEthereumSimulator),
+		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
 		tamperingTransport: sharedTamperingTransport,
 		ethereumConnection: sharedEthereumSimulator,
 		description:        description,
@@ -216,7 +216,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodeAddress().String()))
 		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
 
-		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, nodeLogger)
+		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, nodeCfg, blockStorageAdapter, nativeProcessorAdapter.NewFakeCompiler(), sharedEthereumSimulator, metricRegistry, nodeLogger)
 	}
 
 	return network

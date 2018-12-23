@@ -90,7 +90,11 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 	}
 
 	// send committed back to leader via gossip
-	recipient := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().Sender().SenderNodeAddress()
+	signerIterator := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus().NodesIterator()
+	if !signerIterator.HasNext() {
+		return errors.New("proof does not have a signer, unclear who to reply to")
+	}
+	recipient := signerIterator.NextNodes().SenderNodeAddress()
 	logger.Info("replying committed with last committed height", log.BlockHeight(lastCommittedBlockHeight), log.Bytes("signed-data", status.Raw()))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientNodeAddress: recipient,
