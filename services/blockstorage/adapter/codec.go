@@ -12,30 +12,37 @@ import (
 
 // TODO V1 write test for violation of: blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil
 // TODO V1 write test for violation of: other nil values
+
+// TODO V1 write codec version in header or maybe file header?
+// TODO V1 remove unneeded fields from header.
+type chunkSize uint32
+
+const sizeOfChunkSize = 4
+
 type blockHeader struct {
-	FixedSize    uint32
-	ReceiptsSize uint32
-	DiffsSize    uint32
-	TxsSize      uint32
+	FixedSize    chunkSize
+	ReceiptsSize chunkSize
+	DiffsSize    chunkSize
+	TxsSize      chunkSize
 }
 
 func (h *blockHeader) addFixed(m membuffers.Message) {
-	h.FixedSize += 4 + uint32(len(m.Raw()))
+	h.FixedSize += sizeOfChunkSize + chunkSize(len(m.Raw()))
 }
 
 func (h *blockHeader) addReceipt(receipt *protocol.TransactionReceipt) {
-	h.ReceiptsSize += 4 + uint32(len(receipt.Raw()))
+	h.ReceiptsSize += sizeOfChunkSize + chunkSize(len(receipt.Raw()))
 }
 
 func (h *blockHeader) addDiff(diff *protocol.ContractStateDiff) {
-	h.DiffsSize += 4 + uint32(len(diff.Raw()))
+	h.DiffsSize += sizeOfChunkSize + chunkSize(len(diff.Raw()))
 }
 
 func (h *blockHeader) addTx(tx *protocol.SignedTransaction) {
-	h.TxsSize += 4 + uint32(len(tx.Raw()))
+	h.TxsSize += sizeOfChunkSize + chunkSize(len(tx.Raw()))
 }
 
-func (h *blockHeader) totalSize() uint32 {
+func (h *blockHeader) totalSize() chunkSize {
 	return h.FixedSize + h.DiffsSize + h.ReceiptsSize + h.TxsSize
 }
 
@@ -56,7 +63,7 @@ func (h *blockHeader) read(r io.Reader) error {
 }
 
 func writeMessage(writer io.Writer, message membuffers.Message) error {
-	err := binary.Write(writer, binary.LittleEndian, uint32(len(message.Raw())))
+	err := binary.Write(writer, binary.LittleEndian, chunkSize(len(message.Raw())))
 	if err != nil {
 		return err
 	}
@@ -68,7 +75,7 @@ func writeMessage(writer io.Writer, message membuffers.Message) error {
 }
 
 func readChunk(reader io.Reader, byteCounter *int) ([]byte, error) {
-	var chunkSize uint32
+	var chunkSize chunkSize
 	err := binary.Read(reader, binary.LittleEndian, &chunkSize)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read chunk size from disk")
@@ -83,7 +90,7 @@ func readChunk(reader io.Reader, byteCounter *int) ([]byte, error) {
 		return nil, fmt.Errorf("read %d bytes in block chuck while expecting %d", n, len(chunk))
 	}
 
-	*byteCounter += n + int(unsafe.Sizeof(chunkSize))
+	*byteCounter += n + sizeOfChunkSize
 	return chunk, nil
 }
 
@@ -207,7 +214,7 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	}
 	rbBloomFilter := protocol.TransactionsBloomFilterReader(rbBloomChunk)
 
-	// TODO V1 add validations : - 1) IsValid() on each membuff 2) check that num of bytes read match header 3) perform structural validations?
+	// TODO V1 add validations : - 1) IsValid() on each membuff 2) check that num of bytes read match header
 	receipts := make([]*protocol.TransactionReceipt, 0, rbHeader.NumTransactionReceipts())
 	for i := 0; i < cap(receipts); i++ {
 		chunk, err := readChunk(r, &byteCounter)

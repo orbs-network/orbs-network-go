@@ -35,6 +35,7 @@ type FilesystemBlockPersistence struct {
 	tip          *writingTip
 }
 
+// TODO V1 pass a validator to newBlockHeightIndex to perform block validity tests on initial scan?
 func NewFilesystemBlockPersistence(ctx context.Context, c config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
