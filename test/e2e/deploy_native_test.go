@@ -29,6 +29,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		printTestTime(t, "send deploy - start", &lt)
 
+		// TODO remove Eventually loop once node can handle requests at block height 0
 		require.True(t, test.Eventually(5*time.Second, func() bool {
 			dcExResult, dcTxStatus, dcErr := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
 			return dcErr == nil &&

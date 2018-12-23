@@ -16,6 +16,8 @@ func TestSimpleTransfer(t *testing.T) {
 	cli := test.GammaCliWithPort(h.port)
 
 	sendTxOutChan := make(chan string, 1)
+
+	// TODO remove Eventually loop once node can handle requests at block height 0
 	require.True(t, testUtils.Eventually(1*time.Second, func() bool {
 		out, err := cli.Run("send-tx", "-i", "transfer.json")
 		t.Log(out)
