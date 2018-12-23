@@ -13,8 +13,6 @@ import (
 
 // TODO(v1) implement all block checks
 func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
 		return nil, protocolVersionError
 	}
@@ -35,7 +33,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("block validation by consensus algo failed", log.Error(err))
+		return nil, err
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -121,10 +119,13 @@ func (s *service) notifyConsensusAlgos(
 	lastCommittedBlockPair *protocol.BlockPairContainer,
 	mode handlers.HandleBlockConsensusMode) error {
 
+	verifyMode := mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE ||
+		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
 
-	validationCount := 0
+	verifiedCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
@@ -133,19 +134,14 @@ func (s *service) notifyConsensusAlgos(
 			PrevCommittedBlockPair: prevBlockPair,
 		})
 
-		if err == nil {
-			validationCount++
+		if verifyMode && err == nil {
+			verifiedCount++
 		}
 	}
 
-	// in validate mode -> if none succeeded fail
-	if isValidationRequired(mode) && validationCount == 0 {
+	if verifyMode && verifiedCount == 0 {
 		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
 	}
 
 	return nil
-}
-
-func isValidationRequired(mode handlers.HandleBlockConsensusMode) bool {
-	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
 }
