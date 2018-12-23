@@ -219,4 +219,9 @@ func TestTransactionReceiptProof(t *testing.T) {
 
 	fmt.Printf("\nResultsBlockProof:\n")
 	resultsBlockProofBuilder.HexDump("", 0)
+
+	fmt.Printf("\nReceiptProof:\n")
+	receiptProofBuilder.HexDump("", 0)
+
+	fmt.Println()
 }
