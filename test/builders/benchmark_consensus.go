@@ -26,6 +26,7 @@ func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.Tr
 			&protocol.TransactionsBlockContainer{Header: txHeaderBuilt},
 			&protocol.ResultsBlockContainer{Header: rxHeaderBuilt}),
 	}
+	b.rxProof.TransactionsBlockHash = digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
 	sig, err := digest.SignAsNode(b.blockProofSigner, b.rxProof.BenchmarkConsensus.BlockRef.Build().Raw())
 	if err != nil {
 		panic(err)
