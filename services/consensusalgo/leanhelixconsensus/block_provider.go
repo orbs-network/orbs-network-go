@@ -53,10 +53,6 @@ func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHe
 	return true
 }
 
-func (p *blockProvider) ValidateBlock(block leanhelix.Block) bool {
-	panic("Replace this once BlockUtils interface in LH fixed")
-}
-
 func NewBlockProvider(
 	logger log.BasicLogger,
 	blockStorage services.BlockStorage,
