@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
@@ -34,16 +33,11 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	printTestTime(t, "first block committed", &lt)
 	d := newAutonomousSwapDriver(h)
 
-	etherAmountBefore := big.NewInt(200)
-	amountToTransfer := big.NewInt(55)
+	etherAmountBefore := 150
+	amountToTransfer := 65
 
 	d.generateOrbsAccount(t)
 
-	//	d.deployTokenContractToEthereum(t)
-	//	d.generateEthereumAccountAndAssignFunds(t, etherAmountBefore)
-
-	//d.deployAutonomousSwapBridgeToEthereum(t)
-	//d.deployASBToEthereumUsingTruffle(t)
 	d.deployToEthereumUsingTruffle(t)
 	d.etherGetAsbAddress(t)
 	d.bindOrbsAutonomousSwapBridgeToEthereum(t)
@@ -57,10 +51,11 @@ func TestAutonomousSwap_EthereumToOrbs(t *testing.T) {
 	d.transferInToOrbs(t, transferOutTxHash)
 
 	balanceAfterTransfer := d.getBalanceInOrbs(t)
-	require.EqualValues(t, amountToTransfer.Uint64(), balanceAfterTransfer, "wrong amount of tokens in orbs")
-
+	require.EqualValues(t, amountToTransfer, balanceAfterTransfer, "wrong amount of tokens in orbs")
+	t.Log(balanceAfterTransfer)
 	etherBalanceAfterTransfer := d.getBalanceInEthereum(t)
-	require.EqualValues(t, etherAmountBefore.Sub(etherAmountBefore, amountToTransfer).Uint64(), etherBalanceAfterTransfer, "wrong amount of tokens left in ethereum")
+	require.EqualValues(t, etherAmountBefore - amountToTransfer, etherBalanceAfterTransfer, "wrong amount of tokens left in ethereum")
+	t.Log(etherBalanceAfterTransfer)
 }
 
 type ethconfig struct{}
@@ -83,6 +78,7 @@ func newAutonomousSwapDriver(h *harness) *driver {
 		harness:                  h,
 		ethereum:                 ethereum,
 		addressInEthereum:        opts,
+		ethUserAddressHex:        "0x44AA79091FAD956d12086C5Ee782DDf3A8124549",
 		orbsASBContractName:      asb_ether.CONTRACT_NAME,
 		orbsContractOwnerAddress: testKeys.Ed25519KeyPairForTests(5),
 	}
@@ -94,16 +90,12 @@ type driver struct {
 	orbsContractOwnerAddress *keys.Ed25519KeyPair
 	orbsASBContractName      string
 	orbsUser                 *orbsclient.OrbsAccount
-	orbsUserAddress          [20]byte
-	orbsUserKeyPair          *keys.Ed25519KeyPair
+	orbsUserAddressHex       string
 
 	addressInEthereum *bind.TransactOpts // we use a single address for both the "admin" stuff like deploying the contracts and as our swapping user, so as to simplify setup - otherwise we'll need to create two PKs in the simulator
+	ethASBAddressHex string
+	ethUserAddressHex string
 
-	erc20contract   *bind.BoundContract
-	erc20address    *common.Address
-	ethASBAddress   *common.Address
-	ethASBAddresHex string
-	ethASBContract  *bind.BoundContract
 	harness         *harness
 }
 
@@ -112,9 +104,8 @@ func (d *driver) generateOrbsAccount(t *testing.T) {
 	orbsUser, err := orbsclient.CreateAccount()
 	require.NoError(t, err, "could not create orbs address")
 
-	copy(d.orbsUserAddress[:], orbsUser.RawAddress)
+	d.orbsUserAddressHex = hexutil.Encode(orbsUser.RawAddress)
 	d.orbsUser = orbsUser
-	d.orbsUserKeyPair = keys.NewEd25519KeyPair(orbsUser.PublicKey, orbsUser.PrivateKey)
 }
 
 func (d *driver) generateOrbsFunds(t *testing.T, amount *big.Int) {
@@ -123,8 +114,7 @@ func (d *driver) generateOrbsFunds(t *testing.T, amount *big.Int) {
 }
 
 func (d *driver) getBalanceInOrbs(t *testing.T) uint64 {
-	address, err := hexutil.Decode("0x3fced656aCBd6700cE7d546f6EFDCDd482D8142a")
-	response, err := d.harness.callMethod(d.orbsContractOwnerAddress, erc20proxy.CONTRACT_NAME, "balanceOf", address)
+	response, err := d.harness.callMethod(d.orbsContractOwnerAddress, erc20proxy.CONTRACT_NAME, "balanceOf", d.orbsUser.RawAddress)
 	require.NoError(t, err, "failed sending  to Orbs")
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult, "failed getting balance in Orbs")
 	return response.OutputArguments[0].(uint64)
@@ -136,7 +126,7 @@ func (d *driver) approveTransferInOrbsTokenContract(ctx context.Context, t *test
 }
 
 func (d *driver) bindOrbsAutonomousSwapBridgeToEthereum(t *testing.T) {
-	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, d.orbsASBContractName, "setAsbAddr", d.ethASBAddresHex /*d.ethASBAddress.Hex()*/)
+	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, d.orbsASBContractName, "setAsbAddr", d.ethASBAddressHex /*d.ethASBAddress.Hex()*/)
 	requireSuccess(t, err, response, "setAsbAddr transaction")
 }
 
@@ -159,7 +149,7 @@ func (d *driver) deployToEthereumUsingTruffle(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err, "could not compile")
 
-	cmd = exec.Command("truffle", "migrate")
+	cmd = exec.Command("truffle", "migrate", "--reset")
 	cmd.Dir = path
 	err = cmd.Run()
 	require.NoError(t, err, "could not run deploy script")
@@ -173,62 +163,36 @@ func (d *driver) etherGetAsbAddress(t *testing.T) {
 	bytes, _, err := bf.ReadLine()
 
 	require.NoError(t, err, "could not parse address")
-	d.ethASBAddresHex = string(bytes)
+	d.ethASBAddressHex = string(bytes)
 }
 
-func (d *driver) generateEthereumAccountAndAssignFunds(t *testing.T, amount *big.Int) {
-	runTruffleCommand(t, "assign.js")
-	//ethContractUserAuth := d.addressInEthereum
-	//// we don't REALLY care who is the user we transfer from, so for simplicity's sake we use the same mega-user defined when simulator is created
-	//_, err := d.erc20contract.Transact(d.addressInEthereum, "assign", ethContractUserAuth.From /*address of user*/, amount)
-	//// generate token in source address
-	//require.NoError(t, err, "could not assign token to sender")
+func (d *driver) generateEthereumAccountAndAssignFunds(t *testing.T, amount int) {
+	output := runTruffleCommand(t, "assign.js", d.ethUserAddressHex, strconv.Itoa(amount))
+	t.Log("YYY" + string(output))
 }
 
-func (d *driver) getBalanceInEthereum(t *testing.T) uint64 {
-	output := runTruffleCommand(t, "getBalance.js")
+func (d *driver) getBalanceInEthereum(t *testing.T) int {
+	output := runTruffleCommand(t, "getBalance.js", d.ethUserAddressHex)
 	bf := bufio.NewReader(strings.NewReader(string(output)))
 	bf.ReadLine()
 	bf.ReadLine()
 	bytes, _, err := bf.ReadLine()
 	i, err := strconv.Atoi(string(bytes))
 	require.NoError(t, err, "not a number")
-	return uint64(i)
-	//ethContractUserAuth := d.addressInEthereum
-	//// we don't REALLY care who is the user we transfer from, so for simplicity's sake we use the same mega-user defined when simulator is created
-	//var (
-	//	ret0 = new(*big.Int)
-	//)
-	//result := ret0
-	//err := d.erc20contract.Call(nil, result, "balanceOf", ethContractUserAuth.From /*address of user*/)
-	//// generate token in source address
-	//require.NoError(t, err, "could not get token balance of user")
-	//return (*result).Uint64()
+	return i
 }
 
-func (d *driver) approveTransferInEthereumTokenContract(t *testing.T, amount *big.Int) {
-	runTruffleCommand(t, "approve.js")
-	//tx, err := d.erc20contract.Transact(d.addressInEthereum, "approve", d.ethASBAddress, amount)
-	//require.NoError(t, err, "could not approve transfer")
-	//receipt, err := d.ethereum.Receipt(tx.Hash())
-	//require.NoError(t, err, "could not get receipt")
-	//require.EqualValues(t, types.ReceiptStatusSuccessful, receipt.Status, "call to approve on tet in Ethereum failed")
-
+func (d *driver) approveTransferInEthereumTokenContract(t *testing.T, amount int) {
+	runTruffleCommand(t, "approve.js", d.ethUserAddressHex, strconv.Itoa(amount))
 }
 
-func (d *driver) transferOutFromEthereum(t *testing.T, amount *big.Int) string {
-	output := runTruffleCommand(t, "transferOut.js")
+func (d *driver) transferOutFromEthereum(t *testing.T, amount int) string {
+	output := runTruffleCommand(t, "transferOut.js", d.ethUserAddressHex, d.orbsUserAddressHex, strconv.Itoa(amount))
 	bf := bufio.NewReader(strings.NewReader(string(output)))
 	bf.ReadLine()
 	bf.ReadLine()
 	bytes, _, _ := bf.ReadLine()
-	//transferOutTx, err := d.ethASBContract.Transact(d.addressInEthereum, "transferOut", d.orbsUserAddress, amount)
-	//require.NoError(t, err, "could not transfer out")
-	//
-	//receipt, err := d.ethereum.Receipt(transferOutTx.Hash())
-	//require.NoError(t, err, "could not get receipt")
-	//require.EqualValues(t, types.ReceiptStatusSuccessful, receipt.Status, "call to transferOut on ASB in Ethereum failed")
-	t.Log(string(bytes))
+	require.True(t, len(bytes) > 50, "missing a legal tx hash")
 	return string(bytes)
 }
 
@@ -237,8 +201,8 @@ func requireSuccess(t *testing.T, err error, response *codec.SendTransactionResp
 	require.EqualValues(t, string(codec.EXECUTION_RESULT_SUCCESS), string(response.ExecutionResult), description+" execution failed")
 }
 
-func runTruffleCommand(t *testing.T, script string) []byte {
-	cmd := exec.Command("truffle", "exec", script)
+func runTruffleCommand(t *testing.T, script string, args ...string) []byte {
+	cmd := exec.Command("truffle", append([]string{"exec", script}, args...)...)
 	path := "../../vendor/github.com/orbs-network/orbs-federation/asb"
 	cmd.Dir = path
 	output, err := cmd.CombinedOutput()
