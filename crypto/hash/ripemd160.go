@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	RIPMD160_HASH_SIZE_BYTES = 20
+	RIPEMD160_HASH_SIZE_BYTES = 20
 )
 
 func CalcRipemd160Sha256(data []byte) primitives.Ripemd160Sha256 {

@@ -21,7 +21,7 @@ func TestValidateTransactionBlock(t *testing.T) {
 	metricFactory := metric.NewRegistry()
 	cfg := config.ForConsensusContextTests(nil)
 	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.AddressForEd25519SignerForTests(6)).Build()
-	txRootHashForValidBlock, err := CalculateTransactionsRootHash([]*protocol.SignedTransaction{transaction})
+	txRootHashForValidBlock, err := calculateTransactionsRootHash([]*protocol.SignedTransaction{transaction})
 	prevBlock1 := builders.BlockPair().WithHeight(1001).Build()
 	prevBlock2 := builders.BlockPair().WithHeight(1002).Build()
 

@@ -10,8 +10,8 @@ import (
 	"unsafe"
 )
 
-// TODO write test for violation of: blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil
-// TODO write test for violation of: other nil values
+// TODO V1 write test for violation of: blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil
+// TODO V1 write test for violation of: other nil values
 type blockHeader struct {
 	FixedSize    uint32
 	ReceiptsSize uint32

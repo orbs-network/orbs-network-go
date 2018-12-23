@@ -173,7 +173,8 @@ func TestHttpServerGetReceipt_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.GetTransactionReceiptProofResponseBuilder{
 		RequestStatus:     protocol.REQUEST_STATUS_COMPLETED,
-		Proof:             nil,
+		PackedProof:       nil,
+		PackedReceipt:     nil,
 		TransactionStatus: protocol.TRANSACTION_STATUS_COMMITTED,
 		BlockHeight:       1,
 		BlockTimestamp:    primitives.TimestampNano(time.Now().Nanosecond()),

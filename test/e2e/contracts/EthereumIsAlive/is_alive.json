@@ -1,0 +1,5 @@
+{
+  "ContractName": "EthereumIsAlive",
+  "MethodName": "isAlive",
+  "Arguments": []
+}

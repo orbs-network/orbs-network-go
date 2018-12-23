@@ -13,8 +13,6 @@ import (
 
 // TODO(v1) implement all block checks
 func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
 		return nil, protocolVersionError
 	}
@@ -29,13 +27,13 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	if err := s.validateWithConsensusAlgosWithMode(
+	if err := s.notifyConsensusAlgos(
 		ctx,
 		lastCommittedBlock,
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("block validation by consensus algo failed", log.Error(err))
+		return nil, err
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -115,22 +113,19 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-func (s *service) validateWithConsensusAlgos(
-	ctx context.Context,
-	prevBlockPair *protocol.BlockPairContainer,
-	lastCommittedBlockPair *protocol.BlockPairContainer) error {
-
-	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
-}
-
-func (s *service) validateWithConsensusAlgosWithMode(
+func (s *service) notifyConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	lastCommittedBlockPair *protocol.BlockPairContainer,
 	mode handlers.HandleBlockConsensusMode) error {
 
+	verifyMode := mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE ||
+		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
+
+	verifiedCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
@@ -139,11 +134,14 @@ func (s *service) validateWithConsensusAlgosWithMode(
 			PrevCommittedBlockPair: prevBlockPair,
 		})
 
-		// one of the consensus algos has validated the block, this means it's a valid block
-		if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY && err == nil {
-			return nil
+		if verifyMode && err == nil {
+			verifiedCount++
 		}
 	}
 
-	return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
+	if verifyMode && verifiedCount == 0 {
+		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
+	}
+
+	return nil
 }

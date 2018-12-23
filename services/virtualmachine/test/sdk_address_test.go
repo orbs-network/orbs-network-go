@@ -56,7 +56,7 @@ func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T)
 			t.Log("GetSignerAddress in the first contract")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 			require.NoError(t, err, "handleSdkCall should succeed")
-			require.Equal(t, hash.RIPMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "signer address should be a valid address")
+			require.Equal(t, hash.RIPEMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "signer address should be a valid address")
 			signerAddressRes = res[0].BytesValue()
 
 			t.Log("CallMethod on a different contract")
@@ -69,7 +69,7 @@ func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T)
 			t.Log("GetSignerAddress in the second contract")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 			require.NoError(t, err, "handleSdkCall should succeed")
-			require.Equal(t, hash.RIPMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "signer address should be a valid address")
+			require.Equal(t, hash.RIPEMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "signer address should be a valid address")
 			require.Equal(t, signerAddressRes, res[0].BytesValue(), "signer address should be equal to the first call")
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
 		})
@@ -118,7 +118,7 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 			t.Log("GetCallerAddress in the first contract (1)")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 			require.NoError(t, err, "handleSdkCall should succeed")
-			require.Equal(t, hash.RIPMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
+			require.Equal(t, hash.RIPEMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 			initialCallerAddress = res[0].BytesValue()
 
 			t.Log("CallMethod on a different contract (1->1.2)")
@@ -135,7 +135,7 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 			t.Log("GetCallerAddress in the second contract (1.2)")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 			require.NoError(t, err, "handleSdkCall should succeed")
-			require.Equal(t, hash.RIPMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
+			require.Equal(t, hash.RIPEMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 			require.NotEqual(t, initialCallerAddress, res[0].BytesValue(), "called address should be different from the initial call")
 			firstCallerAddress = res[0].BytesValue()
 
@@ -149,7 +149,7 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 			t.Log("GetCallerAddress in the third contract (1.2.3)")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 			require.NoError(t, err, "handleSdkCall should succeed")
-			require.Equal(t, hash.RIPMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
+			require.Equal(t, hash.RIPEMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 			require.NotEqual(t, initialCallerAddress, res[0].BytesValue(), "called address should be different from the initial call")
 			require.NotEqual(t, firstCallerAddress, res[0].BytesValue(), "called address should be different from the first call")
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
@@ -158,7 +158,7 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 			t.Log("GetCallerAddress in the fourth contract (1.4)")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 			require.NoError(t, err, "handleSdkCall should succeed")
-			require.Equal(t, hash.RIPMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
+			require.Equal(t, hash.RIPEMD160_HASH_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 			require.NotEqual(t, initialCallerAddress, res[0].BytesValue(), "called address should be different from the initial call")
 			require.Equal(t, firstCallerAddress, res[0].BytesValue(), "called address should be equal to the first call")
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil

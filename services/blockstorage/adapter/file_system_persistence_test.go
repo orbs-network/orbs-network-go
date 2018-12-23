@@ -1,6 +1,6 @@
 package adapter
 
-// TODO table/property based tests - generate random blocks
+// TODO V1 table/property based tests - generate random blocks
 // TODO V1 check that we cannot open the same file twice for writing (flock?)
 // TODO V1 check that we can read concurrently from different places in the file
 // TODO V1 check that we don't use long locks - that concurrent reads don't wait on each other
