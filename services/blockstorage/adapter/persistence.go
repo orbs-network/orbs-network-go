@@ -6,24 +6,22 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-type BlockSearchRules struct {
-	StartGraceNano        int64
-	EndGraceNano          int64
-	TransactionExpireNano int64
-}
+// A Callback function provided by consumers of blocks from storage. Each invocation receives a single blocks page
+// of the requested size. Methods receiving this type will call this function
+// repeatedly until it returns false to signal no more pages are required or until there are no more blocks to fetch.
+type CursorFunc func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool)
 
 type BlockPersistence interface {
-	WriteNextBlock(blockPairs *protocol.BlockPairContainer) (bool, error)
+	WriteNextBlock(blockPair *protocol.BlockPairContainer) error
+
+	ScanBlocks(from primitives.BlockHeight, pageSize uint8, f CursorFunc) error
+
+	GetLastBlockHeight() (primitives.BlockHeight, error)
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 
-	// TODO(v1): this function has a hideous interface
-	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error)
-	GetNumBlocks() (primitives.BlockHeight, error)
-
-	GetBlockTracker() *synchronization.BlockTracker
 	GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error)
 	GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error)
+	GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error)
 
-	// TODO(v1): kill this function and move its logic into the adapter
-	GetBlocksRelevantToTxTimestamp(txTimeStamp primitives.TimestampNano, rules BlockSearchRules) []*protocol.BlockPairContainer
+	GetBlockTracker() *synchronization.BlockTracker
 }

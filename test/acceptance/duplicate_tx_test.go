@@ -42,7 +42,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.TestNetworkDriver, txHash primitives.Sha256) {
 	// wait for the tx to be seen as committed in state
 	network.WaitForTransactionInState(ctx, txHash)
-	txHeight, err := network.BlockPersistence(0).GetNumBlocks()
+	txHeight, err := network.BlockPersistence(0).GetLastBlockHeight()
 	require.NoError(t, err)
 
 	// wait for 5 more blocks to be committed
@@ -52,9 +52,13 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.T
 
 	// count receipts for txHash in leader block storage
 	receiptCount := 0
-	blocks, _, _, err := network.BlockPersistence(0).GetBlocks(1, height)
-	require.NoError(t, err, "GetBlocks should return blocks")
-	require.Len(t, blocks, int(height), "GetBlocks should return %d blocks", height)
+	var blocks []*BlockPairContainer
+	err = network.BlockPersistence(0).ScanBlocks(1, uint8(height), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
+		blocks = page
+		return false
+	})
+	require.NoError(t, err, "ScanBlocks should return blocks")
+	require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks", height)
 	for _, block := range blocks {
 		for _, r := range block.ResultsBlock.TransactionReceipts {
 			if bytes.Equal(r.Txhash(), txHash) {

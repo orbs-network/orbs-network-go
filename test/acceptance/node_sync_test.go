@@ -27,7 +27,7 @@ func TestInterNodeBlockSync(t *testing.T) {
 
 			}
 
-			numBlocks, err := network.BlockPersistence(1).GetNumBlocks()
+			numBlocks, err := network.BlockPersistence(1).GetLastBlockHeight()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
 		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {

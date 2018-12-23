@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -12,50 +13,57 @@ import (
 )
 
 type BlockPairCommitter interface {
-	commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error)
+	commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (next primitives.BlockHeight, err error)
 	getServiceName() string
 }
 
 type blockSource interface {
 	GetBlockTracker() *synchronization.BlockTracker
-	GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error)
+	ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 
-func syncOnce(ctx context.Context, source blockSource, committer BlockPairCommitter, logger log.BasicLogger) (primitives.BlockHeight, error) {
+func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPairCommitter, logger log.BasicLogger) (primitives.BlockHeight, error) {
 	topBlock, err := source.GetLastBlock()
 	if err != nil {
 		return 0, err
 	}
-	topBlockHeight := topBlock.ResultsBlock.Header.BlockHeight()
 
-	for i := topBlockHeight; i <= topBlockHeight; {
-		singleBlockArr, _, _, err := source.GetBlocks(i, i+1) // GetBlocks is 1 based for some strange reason
-		if err != nil {
-			return 0, err
-		}
-		bp := singleBlockArr[0]
+	// try to commit the top block
+	requestedHeight := syncOneBlock(ctx, topBlock, committer, logger)
 
-		// log transactions TODO(v1) - move this from here into the callback func or just relax logging / write under debug level when available
-		h := bp.ResultsBlock.Header.BlockHeight()
-		for _, tx := range bp.ResultsBlock.TransactionReceipts {
-			logger.Info("attempt service sync for block", log.BlockHeight(h), log.Transaction(tx.Txhash()))
-		}
-
-		// notify the receiving service of the new block
-		nextHeight, err := committer.commitBlockPair(ctx, bp)
-		if err != nil {
-			return 0, err
-		}
-
-		// if receiving service keep requesting the current height we are stuck
-		if i == nextHeight {
-			return 0, fmt.Errorf("failed to sync block at height %d", i)
-		}
-		i = nextHeight
+	// scan all available blocks starting the requested height
+	committedHeight := requestedHeight - 1
+	err = source.ScanBlocks(requestedHeight, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		requestedHeight = syncOneBlock(ctx, page[0], committer, logger)
+		committedHeight = h
+		return requestedHeight == h+1
+	})
+	if err != nil {
+		return 0, err
 	}
 
-	return topBlockHeight, nil
+	return committedHeight, nil
+}
+
+func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, committer BlockPairCommitter, logger log.BasicLogger) primitives.BlockHeight {
+	h := block.ResultsBlock.Header.BlockHeight()
+	// log transactions
+	for _, tx := range block.ResultsBlock.TransactionReceipts {
+		logger.Info("attempt service sync for block", log.BlockHeight(h), log.Transaction(tx.Txhash()))
+	}
+	// notify the receiving service of a new block
+	requestedHeight, err := committer.commitBlockPair(ctx, block)
+	if err != nil {
+		logger.Error("failed committing block", log.Error(err), log.BlockHeight(h))
+		panic(fmt.Sprintf("failed committing block at height %d", h))
+	}
+	// if receiving service keep requesting the current height we are stuck
+	if h == requestedHeight {
+		// TODO (https://github.com/orbs-network/orbs-network-go/issues/617)
+		logger.Error("committer requested same block height in response to commit", log.BlockHeight(h))
+	}
+	return requestedHeight
 }
 
 func NewServiceBlockSync(ctx context.Context, logger log.BasicLogger, source blockSource, committer BlockPairCommitter) {
@@ -71,7 +79,7 @@ func NewServiceBlockSync(ctx context.Context, logger log.BasicLogger, source blo
 				logger.Info("failed waiting for block", log.Error(err))
 				return
 			}
-			height, err = syncOnce(ctx, source, committer, logger)
+			height, err = syncToTopBlock(ctx, source, committer, logger)
 		}
 	})
 }
