@@ -19,9 +19,15 @@ func TestCalcSha256(t *testing.T) {
 	require.Equal(t, ExpectedSha256, h.String(), "result should match")
 }
 
+func TestCalcSha256_MultipleChunks(t *testing.T) {
+	h := CalcSha256(someData[:3], someData[3:])
+	require.Equal(t, SHA256_HASH_SIZE_BYTES, len(h))
+	require.Equal(t, ExpectedSha256, h.String(), "result should match")
+}
+
 func TestCalcRipemd160Sha256(t *testing.T) {
 	h := CalcRipemd160Sha256(someData)
-	require.Equal(t, RIPMD160_HASH_SIZE_BYTES, len(h))
+	require.Equal(t, RIPEMD160_HASH_SIZE_BYTES, len(h))
 	require.Equal(t, ExpectedSha256Ripmd160, h.String(), "result should match")
 }
 

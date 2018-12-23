@@ -16,6 +16,14 @@ type OrderedTree struct {
 	maxKey  int
 }
 
+func FlattenOrderedTreeProof(proof OrderedTreeProof) primitives.MerkleTreeProof {
+	var res []byte
+	for _, v := range proof {
+		res = append(res, v...)
+	}
+	return res
+}
+
 func getEmptyHash() primitives.Sha256 {
 	return make([]byte, 32) // TODO (issue https://github.com/orbs-network/orbs-spec/issues/121) need const
 }

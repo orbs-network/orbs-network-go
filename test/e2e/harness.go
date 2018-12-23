@@ -94,6 +94,15 @@ func (h *harness) getTransactionStatus(txId string) (response *codec.GetTransact
 	return
 }
 
+func (h *harness) getTransactionReceiptProof(txId string) (response *codec.GetTransactionReceiptProofResponse, err error) {
+	payload, err := h.client.CreateGetTransactionReceiptProofPayload(txId)
+	if err != nil {
+		return nil, err
+	}
+	response, err = h.client.GetTransactionReceiptProof(payload)
+	return
+}
+
 func (h *harness) absoluteUrlFor(endpoint string) string {
 	return getConfig().baseUrl + endpoint
 }

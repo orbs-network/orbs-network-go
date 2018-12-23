@@ -21,7 +21,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
 
-	merkleTransactionsRoot, err := CalculateTransactionsRootHash(proposedTransactions.SignedTransactions)
+	merkleTransactionsRoot, err := calculateTransactionsRootHash(proposedTransactions.SignedTransactions)
 	if err != nil {
 		return nil, err
 	}
@@ -48,23 +48,17 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	return txBlock, nil
 }
 
-func CalculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.Sha256, error) {
-	txHashValues := make([]primitives.Sha256, len(txs))
-	for i := 0; i < len(txs); i++ {
-		txHashValues[i] = digest.CalcTxHash(txs[i].Transaction())
-	}
-	return merkle.CalculateOrderedTreeRoot(txHashValues), nil
+func calculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.Sha256, error) {
+	hashes := digest.CalcSignedTxHashes(txs)
+	return merkle.CalculateOrderedTreeRoot(hashes), nil
 }
 
-func CalculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-	rptHashValues := make([]primitives.Sha256, len(receipts))
-	for i := 0; i < len(receipts); i++ {
-		rptHashValues[i] = digest.CalcReceiptHash(receipts[i])
-	}
-	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
+func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
+	hashes := digest.CalcReceiptHashes(receipts)
+	return merkle.CalculateOrderedTreeRoot(hashes), nil
 }
 
-func CalculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
+func calculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
 	return digest.CalcTransactionsBlockHash(txBlock)
 }
 
@@ -127,7 +121,6 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 	return rxBlock, nil
 }
 func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-
 	// TODO IMPL THIS https://tree.taiga.io/project/orbs-network/us/535
 	return hash.CalcSha256([]byte{1, 2, 3, 4, 5, 6, 6, 7, 8}), nil
 }
