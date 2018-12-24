@@ -1,4 +1,4 @@
-package adapter
+package ethereum
 
 import (
 	"context"
@@ -17,6 +17,7 @@ type FakeBlockAndTimestampGetter struct {
 	data   map[int64]int64
 	logger log.BasicLogger
 	// block number -> timestamp
+	TimesCalled int
 }
 
 func (f *FakeBlockAndTimestampGetter) ApproximateBlockAt(ctx context.Context, blockNumber *big.Int) (*BlockHeightAndTime, error) {
@@ -35,6 +36,8 @@ func (f *FakeBlockAndTimestampGetter) ApproximateBlockAt(ctx context.Context, bl
 	if h.Time == 0 {
 		return nil, errors.Errorf("search was done out of range, number: %d", blockNumber.Int64())
 	}
+
+	f.TimesCalled++
 
 	return h, nil
 }
