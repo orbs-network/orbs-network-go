@@ -1,10 +1,12 @@
 package adapter
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"math/big"
@@ -35,7 +37,7 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 	e.auth.GasLimit = 999999999
 	e.auth.GasPrice = big.NewInt(1)
 
-	e.logger = logger
+	e.logger = logger.WithTags(log.String("adapter", "ethereum-sim"))
 
 	e.getContractCaller = func() (EthereumCaller, error) {
 		e.mu.Lock()
@@ -67,4 +69,8 @@ func (es *EthereumSimulator) GetAuth() *bind.TransactOpts {
 
 func (es *EthereumSimulator) Commit() {
 	es.mu.simClient.Commit()
+}
+
+func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	return nil, nil
 }

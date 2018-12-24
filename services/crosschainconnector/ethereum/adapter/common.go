@@ -18,6 +18,7 @@ type ethereumAdapterConfig interface {
 type EthereumConnection interface {
 	CallContract(ctx context.Context, contractAddress []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error)
 	GetTransactionLogs(ctx context.Context, txHash primitives.Uint256, eventSignature []byte) ([]*TransactionLog, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 }
 
 type connectorCommon struct {
@@ -44,7 +45,7 @@ func (c *connectorCommon) CallContract(ctx context.Context, contractAddress []by
 	msg := ethereum.CallMsg{From: opts.From, To: &address, Data: packedInput}
 	output, err := client.CallContract(ctx, msg, blockNumber)
 	if err == nil && len(output) == 0 {
-		// Make sure we have a contract to operate on, and bail out otherwise.
+		// make sure we have a contract to operate on, and bail out otherwise.
 		if code, err := client.CodeAt(ctx, address, blockNumber); err != nil {
 			return nil, err
 		} else if len(code) == 0 {

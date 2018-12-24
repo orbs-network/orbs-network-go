@@ -16,7 +16,7 @@ export DOCKER_TAG_SHA256=$(docker images $DOCKER_IMAGE --digests --format '{{.Di
 
 #aws s3 sync s3://orbs-network-config-staging/nebula/cache/_terraform _terraform
 
-export REGIONS=us-east-1,eu-central-1,ap-northeast-1,ap-northeast-2,ap-southeast-2,ca-central-1
+export REGIONS=us-east-1,eu-central-1,ap-northeast-1,ap-northeast-2,sa-east-1,ca-central-1
 node deploy.js --regions $REGIONS --update-vchains --chain-version master@$DOCKER_TAG_SHA256
 
 #rm -rf _terraform/*/.terraform && aws s3 sync _terraform s3://orbs-network-config-staging/nebula/cache/_terraform

@@ -3,6 +3,7 @@ package blockstorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
 
 // TODO(v1): this function should return an error
@@ -16,7 +17,7 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Cont
 
 	if lastCommittedBlock != nil {
 		// passing nil on purpose, see spec
-		err := s.validateWithConsensusAlgos(ctx, nil, lastCommittedBlock)
+		err := s.notifyConsensusAlgos(ctx, nil, lastCommittedBlock, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 		if err != nil {
 			s.logger.Error(err.Error())
 			return
