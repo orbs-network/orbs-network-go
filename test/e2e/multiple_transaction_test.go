@@ -41,7 +41,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 		}
 
-		// get statuses
+		// get statuses and receipt proofs
 		for _, txId := range txIds {
 			printTestTime(t, "get status - start", &lt)
 			response, err := h.getTransactionStatus(txId)
@@ -50,6 +50,15 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 			require.NoError(t, err, "get status for txid %s should not return error", txId)
 			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
 			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+
+			printTestTime(t, "get receipt proof - start", &lt)
+			proofResponse, err := h.getTransactionReceiptProof(txId)
+			printTestTime(t, "get receipt proof - end", &lt)
+
+			require.NoError(t, err, "get receipt proof for txid %s should not return error", txId)
+			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, proofResponse.TransactionStatus)
+			require.True(t, len(proofResponse.PackedProof) > 20, "packed receipt proof for txid %s should return at least 20 bytes", txId)
+			require.True(t, len(proofResponse.PackedReceipt) > 10, "packed receipt for txid %s should return at least 10 bytes", txId)
 		}
 
 		// check balance

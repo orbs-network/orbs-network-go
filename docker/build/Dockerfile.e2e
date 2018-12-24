@@ -1,7 +1,0 @@
-FROM golang:1.10-alpine
-
-ADD ./_bin/e2e.test /opt/orbs/
-
-WORKDIR /opt/orbs
-
-CMD ./e2e.test -test.v

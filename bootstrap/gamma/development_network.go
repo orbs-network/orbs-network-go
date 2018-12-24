@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -47,8 +48,9 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))
 		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
 		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
+		ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(cfg, logger)
 
-		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, cfg, compiler, blockPersistence, metricRegistry, nodeLogger)
+		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
 	}
 
 	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network

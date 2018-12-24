@@ -154,6 +154,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
+		TransactionsBlockHash: digest.CalcTransactionsBlockHash(transactionsBlock),
 		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
 			BlockRef: consensus.BenchmarkConsensusBlockRefBuilderFromRaw(signedData),
