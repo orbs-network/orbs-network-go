@@ -226,10 +226,10 @@ func TestTreeNoValues(t *testing.T) {
 func hashTwoInTest(l, r []byte) primitives.Sha256 {
 	s, b := l, r
 	for i := range l {
-		if l[i] > r[i] {
+		if l[i] < r[i] {
 			break
 		}
-		if l[i] < r[i] {
+		if l[i] > r[i] {
 			s = r
 			b = l
 			break

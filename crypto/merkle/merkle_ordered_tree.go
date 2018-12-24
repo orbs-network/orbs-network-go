@@ -132,7 +132,7 @@ func Verify(value primitives.Sha256, proof OrderedTreeProof, root primitives.Sha
 }
 
 func hashTwo(left, right primitives.Sha256) primitives.Sha256 {
-	if bytes.Compare(left, right) < 0 {
+	if bytes.Compare(left, right) > 0 {
 		return hash.CalcSha256(append(right, left...))
 	}
 	return hash.CalcSha256(append(left, right...))
