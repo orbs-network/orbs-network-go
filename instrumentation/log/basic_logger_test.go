@@ -46,12 +46,13 @@ func TestBasicLogger_WithTags_ClonesLoggerFully(t *testing.T) {
 
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
+	log.GetLogger(log.Node("node1"), log.VirtualChainId(primitives.VirtualChainId(999)), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
 
 	jsonMap := parseOutput(b.String())
 
 	require.Equal(t, "info", jsonMap["level"])
 	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, 999.0, jsonMap["vcid"]) // because golang JSON parser decodes ints as float64
 	require.Equal(t, "public-api", jsonMap["service"])
 	require.Equal(t, "log_test.TestSimpleLogger", jsonMap["function"])
 	require.Equal(t, "Service initialized", jsonMap["message"])
