@@ -77,6 +77,9 @@ const (
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 
 	ETHEREUM_ENDPOINT = "ETHEREUM_ENDPOINT"
+
+	LOGGER_HTTP_ENDPOINT = "LOGGER_HTTP_ENDPOINT"
+	LOGGER_BULK_SIZE     = "LOGGER_BULK_SIZE"
 )
 
 func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
@@ -316,4 +319,12 @@ func (c *config) ConsensusMinimumCommitteeSize() uint32 {
 
 func (c *config) EthereumEndpoint() string {
 	return c.kv[ETHEREUM_ENDPOINT].StringValue
+}
+
+func (c *config) LoggerHttpEndpoint() string {
+	return c.kv[LOGGER_HTTP_ENDPOINT].StringValue
+}
+
+func (c *config) LoggerBulkSize() uint32 {
+	return c.kv[LOGGER_BULK_SIZE].Uint32Value
 }
