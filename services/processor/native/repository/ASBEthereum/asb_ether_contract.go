@@ -22,7 +22,7 @@ const CONTRACT_NAME = "asb_ether"
 
 var PUBLIC = sdk.Export(setAsbAddr /* TODO v1 should be system*/, getAsbAddr, getAsbAbi, getTokenContract, transferIn, transferOut)
 var SYSTEM = sdk.Export(_init, setAsbAbi, setTokenContract)
-var EVENTS = sdk.Export(OrbsTransferOut)
+var EVENTS = sdk.Export(OrbsTransferredOut)
 
 // defaults
 const TOKEN_CONTRACT_KEY = "_TOKEN_CONTRACT_KEY_"
@@ -30,7 +30,7 @@ const defaultTokenContract = erc20proxy.CONTRACT_NAME
 const ASB_ETH_ADDR_KEY = "_ASB_ETH_ADDR_KEY_"
 const defaultAsbAddr = "stam" // TODO v1 do we put a default asb_eth_contract here or force setting after init
 const ASB_ABI_KEY = "_ASB_ABI_KEY_"
-const defaultAsbAbi = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"bytes20"},{"indexed":false,"name":"value","type":"uint256"}],"name":"TransferredOut","type":"event"}]`
+const defaultAsbAbi = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"bytes20"},{"indexed":false,"name":"value","type":"uint256"}],"name":"EthTransferredOut","type":"event"}]`
 const OUT_TUID_KEY = "_OUT_TUID_KEY_"
 const IN_TUID_KEY = "_IN_TUID_KEY_"
 
@@ -41,25 +41,24 @@ func _init() {
 	setTokenContract(defaultTokenContract)
 }
 
-//event TransferredOut(uint256 indexed tuid, address indexed from, bytes20 indexed to, uint256 value);
-type TransferredOut struct {
+type EthTransferredOut struct {
 	Tuid  *big.Int
 	From  common.Address
 	To    [20]byte
 	Value *big.Int
 }
 
-func OrbsTransferOut(
+func OrbsTransferredOut(
 	tuid uint64,
-	ethAddress []byte,
 	orbsAddress []byte,
+	ethAddress []byte,
 	amount uint64) {
 }
 
 func transferIn(hexEncodedEthTxHash string) {
 	absAddr := getAsbAddr()
-	e := &TransferredOut{}
-	ethereum.GetTransactionLog(absAddr, getAsbAbi(), hexEncodedEthTxHash, "TransferredOut", e)
+	e := &EthTransferredOut{}
+	ethereum.GetTransactionLog(absAddr, getAsbAbi(), hexEncodedEthTxHash, "EthTransferredOut", e)
 
 	if e.Tuid == nil {
 		panic("Got nil tuid from logs")
@@ -88,7 +87,7 @@ func transferOut(ethAddr []byte, amount uint64) {
 	sourceOrbsAddress := address.GetSignerAddress()
 	service.CallMethod(getTokenContract(), "burn", sourceOrbsAddress, amount)
 
-	events.EmitEvent(OrbsTransferOut, tuid, ethAddr, sourceOrbsAddress, amount)
+	events.EmitEvent(OrbsTransferredOut, tuid, sourceOrbsAddress, ethAddr, amount)
 }
 
 func genInTuidKey(tuid string) string {
