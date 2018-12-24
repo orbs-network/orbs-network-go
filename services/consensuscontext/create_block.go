@@ -125,14 +125,6 @@ func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha
 	return hash.CalcSha256([]byte{1, 2, 3, 4, 5, 6, 6, 7, 8}), nil
 }
 
-func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-	rptHashValues := make([]primitives.Sha256, len(receipts))
-	for i := 0; i < len(receipts); i++ {
-		rptHashValues[i] = receipts[i].Txhash()
-	}
-	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
-}
-
 func calculateNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now primitives.TimestampNano) primitives.TimestampNano {
 	if now > prevBlockTimestamp {
 		return now + 1
