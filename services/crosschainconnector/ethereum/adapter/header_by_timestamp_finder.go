@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -10,40 +9,6 @@ import (
 	"math/big"
 	"time"
 )
-
-type BlockHeaderFetcher interface {
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
-}
-
-type BlockAndTimestampGetter interface {
-	GetBlockAt(ctx context.Context, blockNumber *big.Int) (*BlockHeightAndTime, error)
-}
-
-type BlockTimestampFetcher struct {
-	bhf BlockHeaderFetcher
-}
-
-func NewBlockTimestampFetcher(bhf BlockHeaderFetcher) *BlockTimestampFetcher {
-	return &BlockTimestampFetcher{bhf}
-}
-
-func (f *BlockTimestampFetcher) GetBlockAt(ctx context.Context, blockNumber *big.Int) (*BlockHeightAndTime, error) {
-	header, err := f.bhf.HeaderByNumber(ctx, blockNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	if header == nil { // simulator always returns nil block number
-		return nil, nil
-	}
-
-	return &BlockHeightAndTime{Time: header.Time.Int64(), Number: header.Number.Int64()}, nil
-}
-
-type BlockHeightAndTime struct {
-	Number int64
-	Time   int64
-}
 
 type TimestampFetcher interface {
 	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (*big.Int, error)
@@ -70,7 +35,7 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 		return nil, errors.New("cannot query before ethereum genesis")
 	}
 
-	latest, err := f.btg.GetBlockAt(ctx, nil)
+	latest, err := f.btg.ApproximateBlockAt(ctx, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get latest block")
 	}
@@ -85,7 +50,7 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 	if latestNum < 0 {
 		latestNum = 0
 	}
-	back10k, err := f.btg.GetBlockAt(ctx, big.NewInt(latestNum))
+	back10k, err := f.btg.ApproximateBlockAt(ctx, big.NewInt(latestNum))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get past reference block")
 	}
@@ -119,7 +84,7 @@ func (f *finder) findBlockByTimeStamp(ctx context.Context, timestamp int64, curr
 	blocksToJump := distanceToTargetFromCurrent / secondsPerBlock
 	f.logger.Info("eth block search delta", log.Int64("jump-backwards", blocksToJump))
 	guessBlockNumber := currentBlockNumber - blocksToJump
-	guess, err := f.btg.GetBlockAt(ctx, big.NewInt(guessBlockNumber))
+	guess, err := f.btg.ApproximateBlockAt(ctx, big.NewInt(guessBlockNumber))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get block by number")
 	}

@@ -19,7 +19,7 @@ type FakeBlockAndTimestampGetter struct {
 	// block number -> timestamp
 }
 
-func (f *FakeBlockAndTimestampGetter) GetBlockAt(ctx context.Context, blockNumber *big.Int) (*BlockHeightAndTime, error) {
+func (f *FakeBlockAndTimestampGetter) ApproximateBlockAt(ctx context.Context, blockNumber *big.Int) (*BlockHeightAndTime, error) {
 	if blockNumber == nil {
 		return &BlockHeightAndTime{
 			Number: FAKE_CLIENT_NUMBER_OF_BLOCKS,
