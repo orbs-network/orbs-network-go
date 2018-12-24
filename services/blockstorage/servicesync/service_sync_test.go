@@ -53,7 +53,7 @@ func TestSyncInitialState(t *testing.T) {
 		sourceMock := newBlockSourceMock(3)
 		sourceMock.When("GetLastBlock").Times(2)
 		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil).AtLeast(0)
-		sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).Times(2)
+		sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).AtLeast(0)
 
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
