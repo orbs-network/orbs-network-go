@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"math/big"
 	"strings"
 )
 
@@ -17,14 +18,14 @@ var LogTag = log.Service("crosschain-connector")
 type service struct {
 	connection       adapter.EthereumConnection
 	logger           log.BasicLogger
-	timestampFetcher adapter.TimestampFetcher
+	timestampFetcher TimestampFetcher
 }
 
 func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:       connection,
-		timestampFetcher: adapter.NewTimestampFetcher(adapter.NewBlockTimestampFetcher(connection), logger),
+		timestampFetcher: NewTimestampFetcher(NewBlockTimestampFetcher(connection), logger),
 		logger:           logger,
 	}
 	return s
@@ -32,10 +33,12 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, paren
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	referenceBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
-	if err != nil {
-		return nil, err
-	}
+	var referenceBlockNumber *big.Int //TODO (https://github.com/orbs-network/orbs-network-go/issues/648) re-integrate
+	//referenceBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	if referenceBlockNumber != nil {
 		logger.Info("calling contract from ethereum",
 			log.String("address", input.EthereumContractAddress),

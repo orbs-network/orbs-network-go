@@ -42,7 +42,7 @@ func TestCallContractWithoutArgs(t *testing.T) {
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
 		input := builders.EthereumCallContractInput().
-			WithTimestamp(adapter.LastTimestampInFake.Add(-24 * time.Hour)).
+			WithTimestamp(ethereum.LastTimestampInFake.Add(-24 * time.Hour)).
 			WithContractAddress(h.getAddress()).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).

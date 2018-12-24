@@ -1,4 +1,4 @@
-package adapter
+package ethereum
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"

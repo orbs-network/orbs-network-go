@@ -1,4 +1,4 @@
-package adapter
+package ethereum
 
 import (
 	"context"
@@ -51,10 +51,13 @@ func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 		require.NoError(t, err, "something went wrong while getting the block by timestamp of an older block")
 		require.EqualValues(t, 32599, block, "expected ts 1500198628 to return a specific block")
 
+		callsBefore := bfh.TimesCalled
 		// "realtime" - 200 seconds
 		blockBI, err = fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(1506108583000000000))
 		require.NoError(t, err, "something went wrong while getting the block by timestamp of a 'realtime' block")
 		newBlock := blockBI.Int64()
 		require.EqualValues(t, 999974, newBlock, "expected ts 1506108583 to return a specific block")
+
+		t.Log(bfh.TimesCalled - callsBefore)
 	})
 }
