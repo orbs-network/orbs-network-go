@@ -197,11 +197,12 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 		if shouldCreateGenesisBlock(blockPair) {
 			blockPair = s.blockProvider.GenerateGenesisBlock(ctx)
-			s.logger.Info("HandleBlockConsensus GenesisBlock", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
+			s.logger.Info("HandleBlockConsensus Update LeanHelix with GenesisBlock", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
 		} else { // we should have a block proof
+			s.logger.Info("HandleBlockConsensus Update LeanHelix with block", log.Stringable("mode", mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			/*blockProof*/ _ = blockPair.TransactionsBlock.BlockProof.Raw()
 		}
-		s.logger.Info("HandleBlockConsensus Update LeanHelix with block", log.Stringable("mode", mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+
 		// TODO Uncomment blockProof when UpdateState is implemented in LH
 		s.leanHelix.UpdateState(ToLeanHelixBlock(blockPair) /*, blockProof*/)
 		// TODO: Should we notify error?

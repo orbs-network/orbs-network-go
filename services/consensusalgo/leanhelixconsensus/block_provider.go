@@ -35,6 +35,7 @@ func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) leanhelix.Block {
 
 type blockProvider struct {
 	logger           log.BasicLogger
+	leanhelix        leanhelix.LeanHelix
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
 	nodeAddress      primitives.NodeAddress
@@ -176,6 +177,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	}
 
 	// TODO Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
+	_ := s.leanHelix.ValidateBlockConsensus(ToLeanHelixBlock(blockPair), nil, nil)
 	return nil
 }
 
