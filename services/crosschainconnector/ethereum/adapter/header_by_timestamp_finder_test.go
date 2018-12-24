@@ -13,7 +13,7 @@ import (
 func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		bfh := NewFakeBlockHeaderFetcher(logger)
+		bfh := NewFakeBlockAndTimestampGetter(logger)
 		fetcher := NewTimestampFetcher(bfh, logger)
 		// something before 2015/07/31
 		_, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(1438300700000000000))
@@ -24,7 +24,7 @@ func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		bfh := NewFakeBlockHeaderFetcher(logger)
+		bfh := NewFakeBlockAndTimestampGetter(logger)
 		fetcher := NewTimestampFetcher(bfh, logger)
 
 		// something in the future (sometime in 2031), it works on a fake database - which will never advance in time
@@ -36,7 +36,7 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		bfh := NewFakeBlockHeaderFetcher(logger)
+		bfh := NewFakeBlockAndTimestampGetter(logger)
 		fetcher := NewTimestampFetcher(bfh, logger)
 
 		// something recent

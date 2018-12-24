@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/pkg/errors"
 	"math/big"
@@ -14,34 +13,34 @@ const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED = 1506108783
 
 var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED, 0)
 
-type FakeBlockHeaderFetcher struct {
+type FakeBlockAndTimestampGetter struct {
 	data   map[int64]int64
 	logger log.BasicLogger
 	// block number -> timestamp
 }
 
-func (f *FakeBlockHeaderFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	if number == nil {
-		return &types.Header{
-			Number: big.NewInt(FAKE_CLIENT_NUMBER_OF_BLOCKS),
-			Time:   big.NewInt(f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS-1]),
+func (f *FakeBlockAndTimestampGetter) GetBlockAt(ctx context.Context, blockNumber *big.Int) (*BlockHeightAndTime, error) {
+	if blockNumber == nil {
+		return &BlockHeightAndTime{
+			Number: FAKE_CLIENT_NUMBER_OF_BLOCKS,
+			Time:   f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS-1],
 		}, nil
 	}
 
-	h := &types.Header{
-		Number: number,
-		Time:   big.NewInt(f.data[number.Int64()]),
+	h := &BlockHeightAndTime{
+		Number: blockNumber.Int64(),
+		Time:   f.data[blockNumber.Int64()],
 	}
 
-	if h.Time.Int64() == 0 {
-		return nil, errors.Errorf("search was done out of range, number: %d", number.Int64())
+	if h.Time == 0 {
+		return nil, errors.Errorf("search was done out of range, number: %d", blockNumber.Int64())
 	}
 
 	return h, nil
 }
 
-func NewFakeBlockHeaderFetcher(logger log.BasicLogger) *FakeBlockHeaderFetcher {
-	f := &FakeBlockHeaderFetcher{
+func NewFakeBlockAndTimestampGetter(logger log.BasicLogger) *FakeBlockAndTimestampGetter {
+	f := &FakeBlockAndTimestampGetter{
 		data: make(map[int64]int64),
 	}
 

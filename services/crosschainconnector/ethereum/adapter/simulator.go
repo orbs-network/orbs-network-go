@@ -21,8 +21,6 @@ type EthereumSimulator struct {
 		sync.Mutex
 		simClient *backends.SimulatedBackend
 	}
-
-	headerFetcher BlockHeaderFetcher
 }
 
 func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
@@ -47,8 +45,6 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 
 		return e.mu.simClient, nil
 	}
-
-	e.headerFetcher = NewFakeBlockHeaderFetcher(logger)
 
 	return e
 }

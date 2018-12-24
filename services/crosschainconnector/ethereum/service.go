@@ -24,7 +24,7 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, paren
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:       connection,
-		timestampFetcher: adapter.NewTimestampFetcher(connection, logger),
+		timestampFetcher: adapter.NewTimestampFetcher(adapter.NewBlockTimestampFetcher(connection), logger),
 		logger:           logger,
 	}
 	return s
