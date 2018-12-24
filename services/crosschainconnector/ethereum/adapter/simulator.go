@@ -34,6 +34,9 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 		auth: bind.NewKeyedTransactor(key),
 	}
 
+	e.auth.GasLimit = 999999999
+	e.auth.GasPrice = big.NewInt(1)
+
 	e.logger = logger.WithTags(log.String("adapter", "ethereum-sim"))
 
 	e.getContractCaller = func() (EthereumCaller, error) {
