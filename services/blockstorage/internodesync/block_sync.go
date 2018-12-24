@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -90,9 +89,9 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.config.BlockSyncBatchSize()))
 
-	supervised.GoForever(ctx, logger, func() {
-		bs.syncLoop(ctx)
-	})
+	//supervised.GoForever(ctx, logger, func() {
+	//	bs.syncLoop(ctx)
+	//})
 
 	return bs
 }

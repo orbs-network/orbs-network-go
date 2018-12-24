@@ -166,7 +166,7 @@ func sizeOfBlock(block *protocol.BlockPairContainer) int64 {
 	return int64(txBlockSize) + int64(rsBlockSize) + int64(pointers)
 }
 
-// TODO Replace with code form lh-outline once finalized
+// TODO (v1) Replace with code from branch lh-outline once that is finalized
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
@@ -176,8 +176,8 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 		return errors.Errorf("incorrect block proof type: %v", blockPair.ResultsBlock.BlockProof.Type())
 	}
 
-	// TODO Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
-	_ = s.leanHelix.ValidateBlockConsensus(ToLeanHelixBlock(blockPair), nil, nil)
+	// TODO (v1) Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
+	_ = s.leanHelix.ValidateBlockConsensus(ToLeanHelixBlock(blockPair), blockPair.TransactionsBlock.BlockProof.Raw())
 	return nil
 }
 
