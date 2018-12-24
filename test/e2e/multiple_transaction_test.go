@@ -57,7 +57,8 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 			require.NoError(t, err, "get receipt proof for txid %s should not return error", txId)
 			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, proofResponse.TransactionStatus)
-			require.True(t, len(proofResponse.PackedProof) > 20, "get receipt proof for txid %s should return at least 20 bytes", txId)
+			require.True(t, len(proofResponse.PackedProof) > 20, "packed receipt proof for txid %s should return at least 20 bytes", txId)
+			require.True(t, len(proofResponse.PackedReceipt) > 10, "packed receipt for txid %s should return at least 10 bytes", txId)
 		}
 
 		// check balance

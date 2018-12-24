@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"sync"
-	"time"
 	"unsafe"
 )
 
@@ -107,21 +106,21 @@ func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer
 	return bp.blockChain.blocks[count-1], nil
 }
 
-func (bp *inMemoryBlockPersistence) GetNumBlocks() (primitives.BlockHeight, error) {
+func (bp *inMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
 	return primitives.BlockHeight(len(bp.blockChain.blocks)), nil
 }
 
-func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 	if bp.failNextBlocks {
-		return false, errors.New("could not write a block")
+		return errors.New("could not write a block")
 	}
 
 	added, err := bp.validateAndAddNextBlock(blockPair)
 	if err != nil || !added {
-		return false, err
+		return err
 	}
 
 	bp.tracker.IncrementHeight()
@@ -129,7 +128,7 @@ func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
 
-	return true, nil
+	return nil
 }
 
 func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
@@ -141,39 +140,39 @@ func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	}
 
 	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 > blockPair.TransactionsBlock.Header.BlockHeight() {
-		bp.logger.Info("block persistence ignoring write next block with height %d when %d exist", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
+		bp.logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
 		return false, nil
 	}
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
 	return true, nil
 }
 
-func (bp *inMemoryBlockPersistence) GetBlocksRelevantToTxTimestamp(txTimeStamp primitives.TimestampNano, rules adapter.BlockSearchRules) []*protocol.BlockPairContainer {
-	start := txTimeStamp - primitives.TimestampNano(rules.StartGraceNano)
-	end := txTimeStamp + primitives.TimestampNano(rules.EndGraceNano+rules.TransactionExpireNano)
-
-	if end < start {
-		return nil
-	}
-	var relevantBlocks []*protocol.BlockPairContainer
-	interval := end - start
-	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
-	if interval > primitives.TimestampNano(time.Hour.Nanoseconds()) {
-		return nil
-	}
+func (bp *inMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {
 
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	blockPairs := bp.blockChain.blocks
-
-	for _, blockPair := range blockPairs {
-		delta := end - blockPair.TransactionsBlock.Header.Timestamp()
-		if delta > 0 && interval > delta {
-			relevantBlocks = append(relevantBlocks, blockPair)
+	allBlocks := bp.blockChain.blocks
+	var candidateBlocks []*protocol.BlockPairContainer
+	for _, blockPair := range allBlocks {
+		bts := blockPair.TransactionsBlock.Header.Timestamp()
+		if maxBlockTs > bts && minBlockTs < bts {
+			candidateBlocks = append(candidateBlocks, blockPair)
 		}
 	}
-	return relevantBlocks
+
+	if len(candidateBlocks) == 0 {
+		return nil, 0, nil
+	}
+
+	for _, b := range candidateBlocks {
+		for txi, txr := range b.ResultsBlock.TransactionReceipts {
+			if txr.Txhash().Equal(txHash) {
+				return b, txi, nil
+			}
+		}
+	}
+	return nil, 0, nil
 }
 
 func (bp *inMemoryBlockPersistence) getBlockPairAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
@@ -231,30 +230,24 @@ func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.Tra
 	}
 }
 
-// TODO(https://github.com/orbs-network/orbs-network-go/issues/174): better support for paging
-func (bp *inMemoryBlockPersistence) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-
+func (bp *inMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
 	allBlocks := bp.blockChain.blocks
 	allBlocksLength := primitives.BlockHeight(len(allBlocks))
 
-	if first > allBlocksLength {
-		return nil, 0, 0, nil
+	wantsMore := true
+	for from <= allBlocksLength && wantsMore {
+		fromIndex := from - 1
+		toIndex := fromIndex + primitives.BlockHeight(pageSize)
+		if toIndex > allBlocksLength {
+			toIndex = allBlocksLength
+		}
+		wantsMore = f(from, allBlocks[fromIndex:toIndex])
+		from = toIndex + 1
 	}
-	firstReturnedBlockHeight = first
-
-	lastReturnedBlockHeight = last
-	if last > allBlocksLength {
-		lastReturnedBlockHeight = allBlocksLength
-	}
-
-	for i := first - 1; i < lastReturnedBlockHeight; i++ {
-		blocks = append(blocks, allBlocks[i])
-	}
-
-	return blocks, firstReturnedBlockHeight, lastReturnedBlockHeight, nil
+	return nil
 }
 
 func sizeOfBlock(block *protocol.BlockPairContainer) int64 {

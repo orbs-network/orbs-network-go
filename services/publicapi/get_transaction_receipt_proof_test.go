@@ -53,8 +53,9 @@ func TestPublicApiGetTxProof_PrepareResponseNilProof(t *testing.T) {
 		}).Build(),
 	}, nil)
 
-	require.EqualValues(t, []byte{}, response.ClientResponse.Proof(), "Transaction receipt is not equal")
-	require.Equal(t, 0, len(response.ClientResponse.Proof()), "Transaction receipt is not equal") // different way
+	require.EqualValues(t, []byte{}, response.ClientResponse.PackedProof(), "Transaction proof is not equal")
+	require.Equal(t, 0, len(response.ClientResponse.PackedProof()), "Transaction proof is not equal") // different way
+	require.Equal(t, 0, len(response.ClientResponse.PackedReceipt()), "Transaction receipt is not equal")
 	require.EqualValues(t, 8, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, response.ClientResponse.TransactionStatus(), "status response is wrong")
@@ -63,8 +64,9 @@ func TestPublicApiGetTxProof_PrepareResponseNilProof(t *testing.T) {
 func TestPublicApiGetTxProof_EmptyResponse(t *testing.T) {
 	response := toGetReceiptOutput(nil, nil)
 
-	require.EqualValues(t, []byte{}, response.ClientResponse.Proof(), "Transaction proof is not equal")
-	require.Equal(t, 0, len(response.ClientResponse.Proof()), "Transaction proof is not equal") // different way
+	require.EqualValues(t, []byte{}, response.ClientResponse.PackedProof(), "Transaction proof is not equal")
+	require.Equal(t, 0, len(response.ClientResponse.PackedProof()), "Transaction proof is not equal") // different way
+	require.Equal(t, 0, len(response.ClientResponse.PackedReceipt()), "Transaction receipt is not equal")
 	require.EqualValues(t, 0, response.ClientResponse.BlockHeight(), "Block height response is wrong")
 	require.EqualValues(t, 0, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, response.ClientResponse.TransactionStatus(), "status response is wrong")

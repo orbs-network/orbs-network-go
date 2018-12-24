@@ -29,13 +29,14 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	if err := s.validateWithConsensusAlgosWithMode(
+	if err := s.notifyConsensusAlgos(
 		ctx,
 		lastCommittedBlock,
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
 		logger.Error("block validation by consensus algo failed", log.Error(err))
+		return nil, err
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -115,24 +116,19 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-func (s *service) validateWithConsensusAlgos(
-	ctx context.Context,
-	prevBlockPair *protocol.BlockPairContainer,
-	lastCommittedBlockPair *protocol.BlockPairContainer) error {
-
-	return s.validateWithConsensusAlgosWithMode(ctx, prevBlockPair, lastCommittedBlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
-}
-
-func (s *service) validateWithConsensusAlgosWithMode(
+func (s *service) notifyConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	lastCommittedBlockPair *protocol.BlockPairContainer,
 	mode handlers.HandleBlockConsensusMode) error {
 
+	verifyMode := mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE ||
+		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
-	validatedSuccessfully := 0
-	//  Note: genesis case (nil) is special no blockProof type - registered handlers cannot distinguish - should be handled here
+
+	verifiedCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
@@ -141,18 +137,27 @@ func (s *service) validateWithConsensusAlgosWithMode(
 			PrevCommittedBlockPair: prevBlockPair,
 		})
 
-		if blockValidatedSuccessfully(mode, err) {
-			validatedSuccessfully++
+		if verifyMode && err == nil {
+			verifiedCount++
 		}
 	}
 
-	if blockFailedValidationOnAllConsensusAlgos(mode, validatedSuccessfully) {
+	if verifyMode && verifiedCount == 0 {
 		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
 	}
 
 	return nil
-}
+	//}
+	//		if blockValidatedSuccessfully(mode, err) {
+	//			validatedSuccessfully++
+	//		}
+	//	}
+	//
+	//	if blockFailedValidationOnAllConsensusAlgos(mode, validatedSuccessfully) {
+	//		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
+	//	}
 
+}
 func blockValidatedSuccessfully(mode handlers.HandleBlockConsensusMode, validationError error) bool {
 	return (mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY) && validationError == nil
 }

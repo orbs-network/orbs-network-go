@@ -115,7 +115,7 @@ func (d *harness) commitBlock(ctx context.Context, blockPairContainer *protocol.
 }
 
 func (d *harness) numOfWrittenBlocks() int {
-	numBlocks, err := d.storageAdapter.GetNumBlocks()
+	numBlocks, err := d.storageAdapter.GetLastBlockHeight()
 	if err != nil {
 		panic(err)
 	}

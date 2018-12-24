@@ -57,11 +57,13 @@ func toGetReceiptOutput(status *services.GetTransactionStatusOutput, output *ser
 	txStatus := protocol.TRANSACTION_STATUS_NO_RECORD_FOUND
 	var txBlock primitives.BlockHeight
 	var txTime primitives.TimestampNano
+	var packedReceipt primitives.PackedReceipt
 
 	if status != nil {
 		txStatus = status.ClientResponse.TransactionStatus()
 		txBlock = status.ClientResponse.BlockHeight()
 		txTime = status.ClientResponse.BlockTimestamp()
+		packedReceipt = status.ClientResponse.RawTransactionReceipt()
 	}
 
 	var proofForClient primitives.PackedReceiptProof
@@ -71,10 +73,11 @@ func toGetReceiptOutput(status *services.GetTransactionStatusOutput, output *ser
 
 	response := client.GetTransactionReceiptProofResponseBuilder{
 		RequestStatus:     translateTxStatusToResponseCode(txStatus),
-		Proof:             proofForClient,
+		PackedProof:       proofForClient,
 		TransactionStatus: txStatus,
 		BlockHeight:       txBlock,
 		BlockTimestamp:    txTime,
+		PackedReceipt:     packedReceipt,
 	}
 
 	return &services.GetTransactionReceiptProofOutput{ClientResponse: response.Build()}
