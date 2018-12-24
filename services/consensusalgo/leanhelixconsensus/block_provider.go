@@ -177,7 +177,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	}
 
 	// TODO Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
-	_ := s.leanHelix.ValidateBlockConsensus(ToLeanHelixBlock(blockPair), nil, nil)
+	_ = s.leanHelix.ValidateBlockConsensus(ToLeanHelixBlock(blockPair), nil, nil)
 	return nil
 }
 
