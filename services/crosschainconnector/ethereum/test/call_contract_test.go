@@ -14,32 +14,35 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestContractCallBadNodeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-		config := &ethereumConnectorConfigForTests{"all your base"}
+		config := &ethereumConnectorConfigForTests{"all your base", ""}
 		conn := adapter.NewEthereumRpcConnection(config, logger)
 		connector := ethereum.NewEthereumCrosschainConnector(conn, logger)
 		input := builders.EthereumCallContractInput().Build() // don't care about specifics
 
 		_, err := connector.EthereumCallContract(ctx, input)
-		require.EqualError(t, err, "dial unix all your base: connect: no such file or directory", "expected invalid node in config")
+		require.Error(t, err, "expected call to fail")
+		require.Contains(t, err.Error(), "dial unix all your base: connect: no such file or directory", "expected invalid node in config")
 	})
 }
 
 func TestCallContractWithoutArgs(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newEthereumConnectorHarness()
+		h := newSimulatedEthereumConnectorHarness()
 		initText := "are belong to us"
 		methodToCall := "getValues"
-		h.deployStorageContract(ctx, initText)
+		h.deploySimulatorStorageContract(ctx, initText)
 
-		ethCallData, err := ethereumPackInputArguments(contract.SimpleStorageABI, methodToCall, nil)
+		ethCallData, err := h.packInputArgumentsForSampleStorage(methodToCall, nil)
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
 		input := builders.EthereumCallContractInput().
+			WithTimestamp(adapter.LastTimestampInFake.Add(-24 * time.Hour)).
 			WithContractAddress(h.getAddress()).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).

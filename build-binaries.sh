@@ -5,10 +5,6 @@ export CONFIG_PKG="github.com/orbs-network/orbs-network-go/config"
 
 time go build -o _bin/orbs-node -ldflags "-X $CONFIG_PKG.SemanticVersion=$SEMVER -X $CONFIG_PKG.CommitVersion=$GIT_COMMIT" -a main.go
 
-time go test -o _bin/e2e.test -a -c ./test/e2e
-
-time go test -o _bin/external.test -a -c ./test/external
-
 if [ "$SKIP_DEVTOOLS" == "" ]; then
     time go build -o _bin/gamma-server -ldflags "-X $CONFIG_PKG.SemanticVersion=$SEMVER -X $CONFIG_PKG.CommitVersion=$GIT_COMMIT" -a bootstrap/gamma/main/main.go
 fi
