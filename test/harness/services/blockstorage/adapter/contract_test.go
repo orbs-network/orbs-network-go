@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-func withAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.BlockPersistence)) {
+func withEachAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.BlockPersistence)) {
 	adapters := []*adapterUnderTest{
 		newInMemoryAdapter(),
 		newFilesystemAdapter(),
@@ -31,7 +31,7 @@ func withAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.Block
 }
 
 func TestBlockPersistenceContract_GetLastBlockWhenNoneExistReturnsNilNoError(t *testing.T) {
-	withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		lastBlock, err := adapter.GetLastBlock()
 		require.NoError(t, err)
 		require.Nil(t, lastBlock)
@@ -44,7 +44,7 @@ func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
 
 		blocks := buildRandomBlockChain(ctrlRand.Int31n(100)+1, ctrlRand)
 
-		withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+		withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 			for _, b := range blocks {
 				err := adapter.WriteNextBlock(b)
 				require.NoError(t, err)
@@ -69,14 +69,14 @@ func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_FailToWriteOutOfOrder(t *testing.T) {
-	withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		err := adapter.WriteNextBlock(builders.BlockPair().WithHeight(2).Build())
 		require.Error(t, err)
 	})
 }
 
 func TestBlockPersistenceContract_ReturnsTwoBlocks(t *testing.T) {
-	withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		block1 := builders.BlockPair().WithHeight(1).Build()
 		block2 := builders.BlockPair().WithHeight(2).WithPrevBlock(block1).Build()
 
@@ -95,7 +95,7 @@ func TestBlockPersistenceContract_ReturnsTwoBlocks(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *testing.T) {
-	withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 
 		// block until timeout before block is written
 		shortDeadlineCtx, _ := context.WithTimeout(context.Background(), 5*time.Millisecond)
@@ -114,7 +114,7 @@ func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *test
 }
 
 func TestBlockPersistenceContract_ReturnsLastBlockHeight(t *testing.T) {
-	withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		h, err := adapter.GetLastBlockHeight()
 		require.NoError(t, err)
 		require.EqualValues(t, 0, h)
@@ -130,7 +130,7 @@ func TestBlockPersistenceContract_ReturnsLastBlockHeight(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_ReturnsTransactionsAndResultsBlock(t *testing.T) {
-	withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(1).WithTransactions(1).WithReceiptsForTransactions().Build(),
 			builders.BlockPair().WithHeight(2).WithTransactions(2).WithReceiptsForTransactions().Build(),
@@ -157,7 +157,7 @@ func TestBlockPersistenceContract_ReturnsTransactionsAndResultsBlock(t *testing.
 }
 
 func TestBlockPersistenceContract_ReturnsBlockByTx(t *testing.T) {
-	withAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(1).WithTransactions(1).WithReceiptsForTransactions().Build(),
 			builders.BlockPair().WithHeight(2).WithTransactions(7).WithReceiptsForTransactions().Build(),
