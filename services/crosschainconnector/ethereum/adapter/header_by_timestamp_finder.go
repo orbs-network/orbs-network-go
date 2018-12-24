@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"math"
 	"math/big"
-	"sync"
 	"time"
 )
 
@@ -22,32 +21,16 @@ type TimestampFetcher interface {
 
 type finder struct {
 	bfh    BlockHeaderFetcher
-	cache  *EthBlocksSearchCache
 	logger log.BasicLogger
 }
 
 func NewTimestampFetcher(bfh BlockHeaderFetcher, logger log.BasicLogger) *finder {
 	f := &finder{
-		bfh: bfh,
-		cache: &EthBlocksSearchCache{
-			latest:  EthBlock{},
-			back10k: EthBlock{},
-		},
+		bfh:    bfh,
 		logger: logger,
 	}
 
 	return f
-}
-
-func (f *finder) getBlocksCacheAndRefreshIfNeeded(ctx context.Context, unixEpoch int64) (*EthBlocksSearchCache, error) {
-	if f.cache.latest.timestamp < unixEpoch-1000 {
-
-		if err := f.cache.refreshUsing(ctx, f.bfh); err != nil {
-			return nil, err
-		}
-	}
-
-	return f.cache, nil
 }
 
 func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (*big.Int, error) {
@@ -57,17 +40,27 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 		return nil, errors.New("cannot query before ethereum genesis")
 	}
 
-	cache, err := f.getBlocksCacheAndRefreshIfNeeded(ctx, timestampInSeconds)
+	latest, err := f.bfh.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get latest block")
 	}
 
-	// TODO: (v1) move cache refresh timeout to config
-	if cache.latest.timestamp+1000 < timestampInSeconds {
-		return nil, errors.New("invalid request to get block, trying to get a block in the future (sync issues?)")
+	if latest == nil { // simulator always returns nil block number
+		return nil, nil
 	}
 
-	theBlock, err := f.findBlockByTimeStamp(ctx, f.bfh, timestampInSeconds, cache.back10k.number, cache.back10k.timestamp, cache.latest.number, cache.latest.timestamp)
+	// this was added to support simulations and tests, should not be relevant for production
+	latestNum := latest.Number.Int64()
+	latestNum -= 10000
+	if latestNum < 0 {
+		latestNum = 0
+	}
+	back10k, err := f.bfh.HeaderByNumber(ctx, big.NewInt(latestNum))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get past reference block")
+	}
+
+	theBlock, err := f.findBlockByTimeStamp(ctx, f.bfh, timestampInSeconds, back10k.Number.Int64(), back10k.Time.Int64(), latest.Number.Int64(), latest.Time.Int64())
 	return theBlock, err
 }
 
@@ -104,47 +97,4 @@ func (f *finder) findBlockByTimeStamp(ctx context.Context, eth BlockHeaderFetche
 	guessTimestamp := guess.Time.Int64()
 
 	return f.findBlockByTimeStamp(ctx, eth, timestamp, guessBlockNumber, guessTimestamp, currentBlockNumber, currentTimestamp)
-}
-
-type EthBlock struct {
-	number    int64
-	timestamp int64
-}
-
-type EthBlocksSearchCache struct {
-	sync.Mutex
-	latest     EthBlock
-	back10k    EthBlock
-	lastUpdate time.Time
-}
-
-func (c *EthBlocksSearchCache) refreshUsing(ctx context.Context, headerFetcher BlockHeaderFetcher) error {
-	c.Lock()
-	defer c.Unlock()
-
-	latest, err := headerFetcher.HeaderByNumber(ctx, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to get latest block")
-	}
-
-	c.latest.timestamp = latest.Time.Int64()
-	c.latest.number = latest.Number.Int64()
-
-	// this was added to support simulations and tests, should not be relevant for production
-	latestNum := latest.Number.Int64()
-	latestNum -= 10000
-	if latestNum < 0 {
-		latestNum = 0
-	}
-	older, err := headerFetcher.HeaderByNumber(ctx, big.NewInt(latestNum))
-	if err != nil {
-		return errors.Wrap(err, "failed to get past reference block")
-	}
-
-	c.back10k.timestamp = older.Time.Int64()
-	c.back10k.number = older.Number.Int64()
-
-	c.lastUpdate = time.Now()
-
-	return nil
 }

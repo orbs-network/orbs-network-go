@@ -73,5 +73,5 @@ func (es *EthereumSimulator) Commit() {
 }
 
 func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	return es.headerFetcher.HeaderByNumber(ctx, number)
+	return nil, nil
 }

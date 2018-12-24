@@ -16,8 +16,7 @@ type EthereumRpcConnection struct {
 
 	mu struct {
 		sync.Mutex
-		client      *ethclient.Client
-		blocksCache *EthBlocksSearchCache
+		client *ethclient.Client
 	}
 }
 

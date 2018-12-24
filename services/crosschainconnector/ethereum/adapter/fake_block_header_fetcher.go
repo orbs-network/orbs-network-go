@@ -6,10 +6,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/pkg/errors"
 	"math/big"
+	"time"
 )
 
 const FAKE_CLIENT_NUMBER_OF_BLOCKS = 1000000
 const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED = 1506108783
+
+var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED, 0)
 
 type FakeBlockHeaderFetcher struct {
 	data   map[int64]int64

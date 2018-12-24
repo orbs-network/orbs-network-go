@@ -10,49 +10,6 @@ import (
 	"testing"
 )
 
-func TestEthBlockCacheInitAndRefresh(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-	bfh := NewFakeBlockHeaderFetcher(logger)
-	fetcher := NewTimestampFetcher(bfh, logger)
-	ctx := context.Background()
-
-	// because this is using a fake backend, do not use 'time.now()' but use predefined values that match the fake database
-
-	// get the cache populated
-	cache, err := fetcher.getBlocksCacheAndRefreshIfNeeded(ctx, FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED-200)
-	require.NoError(t, err, "something went wrong refreshing cache from nil state")
-	require.NotEqual(t, 0, cache.latest.number, "cache did not initialize correctly")
-	require.NotEqual(t, 0, cache.latest.timestamp, "cache did not initialize correctly")
-	require.NotEqual(t, 0, cache.back10k.number, "cache did not initialize correctly")
-	require.NotEqual(t, 0, cache.back10k.timestamp, "cache did not initialize correctly")
-
-	// mess up the data so it will refresh on next request
-	cache.latest.timestamp = fetcher.cache.latest.timestamp - 10000
-	messedUpCache := *cache
-
-	// attempt cache refresh
-	cache, err = fetcher.getBlocksCacheAndRefreshIfNeeded(ctx, FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED-200)
-	require.NoError(t, err, "something went wrong refreshing cache from older state")
-	require.True(t, messedUpCache.latest.timestamp < cache.latest.timestamp, "cache did not refresh correctly")
-	require.NotEqual(t, messedUpCache.lastUpdate, cache.lastUpdate, "cache did not refresh correctly")
-}
-
-func TestEtcBlockCacheRetrieval(t *testing.T) {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-	bfh := NewFakeBlockHeaderFetcher(logger)
-	fetcher := NewTimestampFetcher(bfh, logger)
-	ctx := context.Background()
-
-	// get the cache populated
-	original, err := fetcher.getBlocksCacheAndRefreshIfNeeded(ctx, FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED-200)
-	require.NoError(t, err, "something went wrong refreshing cache from nil state")
-
-	// attempt cache refresh (should not refresh)
-	noRefresh, err := fetcher.getBlocksCacheAndRefreshIfNeeded(ctx, FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED-200)
-	require.NoError(t, err, "something went wrong refreshing cache from older state")
-	require.Equal(t, original.lastUpdate, noRefresh.lastUpdate, "cache failed, a refresh probably happened")
-}
-
 func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))

@@ -14,6 +14,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestContractCallBadNodeConfig(t *testing.T) {
@@ -25,7 +26,8 @@ func TestContractCallBadNodeConfig(t *testing.T) {
 		input := builders.EthereumCallContractInput().Build() // don't care about specifics
 
 		_, err := connector.EthereumCallContract(ctx, input)
-		require.EqualError(t, err, "dial unix all your base: connect: no such file or directory", "expected invalid node in config")
+		require.Error(t, err, "expected call to fail")
+		require.Contains(t, err.Error(), "dial unix all your base: connect: no such file or directory", "expected invalid node in config")
 	})
 }
 
@@ -40,6 +42,7 @@ func TestCallContractWithoutArgs(t *testing.T) {
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
 		input := builders.EthereumCallContractInput().
+			WithTimestamp(adapter.LastTimestampInFake.Add(-24 * time.Hour)).
 			WithContractAddress(h.getAddress()).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).
