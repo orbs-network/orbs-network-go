@@ -152,7 +152,7 @@ func BlockHeight(value primitives.BlockHeight) *Field {
 }
 
 func VirtualChainId(value primitives.VirtualChainId) *Field {
-	return &Field{Key: "vcid", StringVal: value.String(), Type: StringType}
+	return &Field{Key: "vcid", Uint: uint64(value), Type: IntType}
 }
 
 func (f *Field) Value() interface{} {
