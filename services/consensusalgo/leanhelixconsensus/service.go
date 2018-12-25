@@ -172,14 +172,14 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	mode := input.Mode
 	blockPair := input.BlockPair
 	prevCommittedBlockPair := input.PrevCommittedBlockPair
-	//var blockProof []byte
+	var blockProof []byte
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
 		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
 	}
 
 	// validate the block consensus (block and proof)
 	if shouldVerify(mode) {
-		err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
+		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
 		if err != nil {
 			return nil, err
 		}
@@ -200,11 +200,11 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			s.logger.Info("HandleBlockConsensus Update LeanHelix with GenesisBlock", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
 		} else { // we should have a block proof
 			s.logger.Info("HandleBlockConsensus Update LeanHelix with block", log.Stringable("mode", mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-			/*blockProof*/ _ = blockPair.TransactionsBlock.BlockProof.Raw()
+			blockProof = blockPair.TransactionsBlock.BlockProof.LeanHelix()
 		}
 
 		// TODO Uncomment blockProof when UpdateState is implemented in LH
-		s.leanHelix.UpdateState(ToLeanHelixBlock(blockPair) /*, blockProof*/)
+		s.leanHelix.UpdateState(ToLeanHelixBlock(blockPair), blockProof)
 		// TODO: Should we notify error?
 	}
 
