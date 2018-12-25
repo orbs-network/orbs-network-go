@@ -41,12 +41,13 @@ type FilesystemBlockPersistence struct {
 func NewFilesystemBlockPersistence(ctx context.Context, c config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
+	// creates the file if missing
 	newTip, err := newWritingTip(ctx, c.BlockStorageDataDir(), blocksFileName(c), logger)
 	if err != nil {
 		return nil, err
 	}
 
-	bhIndex, err := newBlockHeightIndex(c, logger)
+	bhIndex, err := constructIndexForFile(blocksFileName(c), logger)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +62,34 @@ func NewFilesystemBlockPersistence(ctx context.Context, c config.FilesystemBlock
 	}
 
 	return adapter, nil
+}
+
+func constructIndexForFile(filename string, logger log.BasicLogger) (*blockHeightIndex, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open blocks file for reading")
+	}
+	defer closeSilently(file, logger)
+
+	bhIndex := newBlockHeightIndex()
+	offset := int64(0)
+	for {
+		aBlock, blockSize, err := decode(file) // TODO add block validation
+		if err != nil {
+			if err == io.EOF {
+				logger.Info("built index", log.Int64("valid-block-bytes", offset), log.String("stopped-on", err.Error()), log.BlockHeight(bhIndex.topBlockHeight))
+			} else {
+				logger.Error("built index reached invalid record", log.Int64("valid-block-bytes", offset), log.Error(err), log.BlockHeight(bhIndex.topBlockHeight))
+			}
+			break // index up to EOF or first invalid record.
+		}
+		err = bhIndex.appendBlock(offset, offset+int64(blockSize), aBlock)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed building block height index")
+		}
+		offset = offset + int64(blockSize)
+	}
+	return bhIndex, nil
 }
 
 func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
@@ -113,20 +142,24 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 	}
 
 	wantNext := true
-	lastHeightRead := primitives.BlockHeight(0)
+	eof := false
 
-	for top := f.bhIndex.getLastBlockHeight(); wantNext && top > lastHeightRead; {
-		currentPage := make([]*protocol.BlockPairContainer, 0, pageSize)
-		for ; uint8(len(currentPage)) < pageSize && top > lastHeightRead; top = f.bhIndex.getLastBlockHeight() {
+	for wantNext && !eof {
+		page := make([]*protocol.BlockPairContainer, 0, pageSize)
+
+		for uint8(len(page)) < pageSize {
 			aBlock, _, err := decode(file)
 			if err != nil {
+				if err == io.EOF {
+					eof = true
+					break
+				}
 				return errors.Wrapf(err, "failed to decode block")
 			}
-			currentPage = append(currentPage, aBlock)
-			lastHeightRead = aBlock.ResultsBlock.Header.BlockHeight()
+			page = append(page, aBlock)
 		}
-		if len(currentPage) > 0 {
-			wantNext = cursor(currentPage[0].ResultsBlock.Header.BlockHeight(), currentPage)
+		if len(page) > 0 {
+			wantNext = cursor(page[0].ResultsBlock.Header.BlockHeight(), page)
 		}
 	}
 

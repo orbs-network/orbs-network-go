@@ -2,13 +2,8 @@ package adapter
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/pkg/errors"
-	"io"
-	"os"
 	"sync"
 )
 
@@ -20,51 +15,12 @@ type blockHeightIndex struct {
 	topBlockHeight       primitives.BlockHeight
 }
 
-func newBlockHeightIndex(conf config.FilesystemBlockPersistenceConfig, logger log.BasicLogger) (*blockHeightIndex, error) {
-	i := &blockHeightIndex{}
-	i.reset()
-
-	file, err := os.Open(blocksFileName(conf))
-	if err != nil {
-		if os.IsNotExist(err) { // if file does not exist the index is already complete
-			return i, nil
-		}
-		return nil, errors.Wrap(err, "failed to open blocks file for reading")
-	}
-	defer closeSilently(file, logger)
-
-	err = i.rebuildIndex(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return i, nil
-}
-
-func (i *blockHeightIndex) reset() {
-	i.Lock()
-	defer i.Unlock()
-
-	i.heightOffset = map[primitives.BlockHeight]int64{1: 0}
-	i.firstBlockInTsBucket = map[uint32]primitives.BlockHeight{}
-	i.topBlockHeight = 0
-	i.topBlock = nil
-}
-
-func (i *blockHeightIndex) rebuildIndex(r io.Reader) error {
-	i.reset()
-	offset := int64(0)
-
-	for {
-		aBlock, blockSize, err := decode(r)
-		if err != nil {
-			return nil
-		}
-		err = i.appendBlock(offset, offset+int64(blockSize), aBlock)
-		if err != nil {
-			return err
-		}
-		offset = offset + int64(blockSize)
+func newBlockHeightIndex() *blockHeightIndex {
+	return &blockHeightIndex{
+		heightOffset:         map[primitives.BlockHeight]int64{1: 0},
+		firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
+		topBlock:             nil,
+		topBlockHeight:       0,
 	}
 }
 
