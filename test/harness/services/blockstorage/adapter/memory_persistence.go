@@ -48,7 +48,7 @@ type inMemoryBlockPersistence struct {
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInMB"),
+		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInBytes"),
 	}
 }
 
