@@ -20,9 +20,10 @@ import (
 )
 
 type E2EConfig struct {
-	bootstrap  bool
-	baseUrl    string
-	stressTest StressTestConfig
+	bootstrap        bool
+	baseUrl          string
+	stressTest       StressTestConfig
+	ethereumEndpoint string
 }
 
 type StressTestConfig struct {
@@ -160,9 +161,12 @@ func getConfig() E2EConfig {
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
 
+	ethereumEndpoint := "http://127.0.0.1:8545"
+
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
 		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
+		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 
 	if stressTestEnabled {
@@ -180,5 +184,6 @@ func getConfig() E2EConfig {
 			stressTestFailureRate,
 			stressTestTargetTPS,
 		},
+		ethereumEndpoint,
 	}
 }

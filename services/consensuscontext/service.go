@@ -99,6 +99,8 @@ func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.Re
 	}, nil
 }
 
+// Validates another node's proposed block.
+// Performed upon request from consensus algo when receiving a proposal during a live consensus round
 func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
 
 	checkedHeader := input.TransactionsBlock.Header

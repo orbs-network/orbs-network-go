@@ -55,3 +55,12 @@ func (c *connectorCommon) CallContract(ctx context.Context, contractAddress []by
 
 	return output, err
 }
+
+func (c *connectorCommon) Receipt(txHash common.Hash) (*types.Receipt, error) {
+	client, err := c.getContractCaller()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.TransactionReceipt(context.TODO(), txHash)
+}

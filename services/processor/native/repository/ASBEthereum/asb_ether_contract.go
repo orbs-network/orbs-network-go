@@ -22,7 +22,7 @@ const CONTRACT_NAME = "asb_ether"
 
 var PUBLIC = sdk.Export(setAsbAddr /* TODO v1 should be system*/, getAsbAddr, getAsbAbi, getTokenContract, transferIn, transferOut)
 var SYSTEM = sdk.Export(_init, setAsbAbi, setTokenContract)
-var EVENTS = sdk.Export(OrbsTransferOut)
+var EVENTS = sdk.Export(OrbsTransferredOut)
 
 // defaults
 const TOKEN_CONTRACT_KEY = "_TOKEN_CONTRACT_KEY_"
@@ -30,7 +30,7 @@ const defaultTokenContract = erc20proxy.CONTRACT_NAME
 const ASB_ETH_ADDR_KEY = "_ASB_ETH_ADDR_KEY_"
 const defaultAsbAddr = "stam" // TODO v1 do we put a default asb_eth_contract here or force setting after init
 const ASB_ABI_KEY = "_ASB_ABI_KEY_"
-const defaultAsbAbi = `[{"constant":true,"inputs":[],"name":"orbsASBContractName","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"federation","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"renounceOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"isOwner","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"","type":"uint256"}],"name":"spentOrbsTuids","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"virtualChainId","outputs":[{"name":"","type":"uint64"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"tuidCounter","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"networkType","outputs":[{"name":"","type":"uint32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"token","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"VERSION","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[{"name":"_networkType","type":"uint32"},{"name":"_virtualChainId","type":"uint64"},{"name":"_orbsASBContractName","type":"string"},{"name":"_token","type":"address"},{"name":"_federation","type":"address"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"bytes20"},{"indexed":false,"name":"value","type":"uint256"}],"name":"TransferredOut","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"bytes20"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"TransferredIn","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"previousOwner","type":"address"},{"indexed":true,"name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"constant":false,"inputs":[{"name":"_to","type":"bytes20"},{"name":"_value","type":"uint256"}],"name":"transferOut","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
+const defaultAsbAbi = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"bytes20"},{"indexed":false,"name":"value","type":"uint256"}],"name":"EthTransferredOut","type":"event"}]`
 const OUT_TUID_KEY = "_OUT_TUID_KEY_"
 const IN_TUID_KEY = "_IN_TUID_KEY_"
 
@@ -41,25 +41,24 @@ func _init() {
 	setTokenContract(defaultTokenContract)
 }
 
-//event TransferredOut(uint256 indexed tuid, address indexed from, bytes20 indexed to, uint256 value);
-type TransferredOut struct {
+type EthTransferredOut struct {
 	Tuid  *big.Int
 	From  common.Address
 	To    [20]byte
 	Value *big.Int
 }
 
-func OrbsTransferOut(
+func OrbsTransferredOut(
 	tuid uint64,
-	ethAddress []byte,
 	orbsAddress []byte,
+	ethAddress []byte,
 	amount uint64) {
 }
 
 func transferIn(hexEncodedEthTxHash string) {
 	absAddr := getAsbAddr()
-	e := &TransferredOut{}
-	ethereum.GetTransactionLog(absAddr, getAsbAbi(), hexEncodedEthTxHash, "TransferredOut", e)
+	e := &EthTransferredOut{}
+	ethereum.GetTransactionLog(absAddr, getAsbAbi(), hexEncodedEthTxHash, "EthTransferredOut", e)
 
 	if e.Tuid == nil {
 		panic("Got nil tuid from logs")
@@ -88,7 +87,7 @@ func transferOut(ethAddr []byte, amount uint64) {
 	sourceOrbsAddress := address.GetSignerAddress()
 	service.CallMethod(getTokenContract(), "burn", sourceOrbsAddress, amount)
 
-	events.EmitEvent(OrbsTransferOut, tuid, ethAddr, sourceOrbsAddress, amount)
+	events.EmitEvent(OrbsTransferredOut, tuid, sourceOrbsAddress, ethAddr, amount)
 }
 
 func genInTuidKey(tuid string) string {

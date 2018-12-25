@@ -78,9 +78,9 @@ func TestTransactionReceiptProof(t *testing.T) {
 	orbsAddress := common.FromHex("aa98846cd5b4979d68a8c58a9bdfeee657b34de7")
 	amount := uint64(1202)
 	eventBuilder := &protocol.EventBuilder{
-		ContractName:        "MyContract",
-		EventName:           "TransferredOut",
-		OutputArgumentArray: builders.PackedArgumentArrayEncode(tuid, ethAddress, orbsAddress, amount),
+		ContractName:        "asb_ether",
+		EventName:           "OrbsTransferredOut",
+		OutputArgumentArray: builders.PackedArgumentArrayEncode(tuid, orbsAddress, ethAddress, amount),
 	}
 
 	// transaction receipt

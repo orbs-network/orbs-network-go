@@ -10,6 +10,12 @@ import (
 func (s *service) fetchTransactions(ctx context.Context, blockHeight primitives.BlockHeight, maxNumberOfTransactions uint32,
 	minimumTransactionsInBlock uint32, minimalBlockDelay time.Duration) (*services.GetTransactionsForOrderingOutput, error) {
 
+	// TODO Is this acceptable for genesis block
+	if blockHeight == 0 {
+		return &services.GetTransactionsForOrderingOutput{
+			SignedTransactions: nil,
+		}, nil
+	}
 	input := &services.GetTransactionsForOrderingInput{
 		MaxNumberOfTransactions: maxNumberOfTransactions,
 		BlockHeight:             blockHeight,

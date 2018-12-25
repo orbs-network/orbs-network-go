@@ -22,6 +22,7 @@ func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, cons
 	if consensusContext == nil {
 		panic("consensusContext cannot be nil")
 	}
+	logger.Info("NewMembership()", log.Stringable("ID", memberId))
 	return &membership{
 		consensusContext: consensusContext,
 		logger:           logger,
@@ -40,10 +41,16 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 		m.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))
 		return nil
 	}
-	nodeAddresses := make([]lhprimitives.MemberId, 0, len(res.NodeAddresses))
-	for _, nodeAddress := range res.NodeAddresses {
-		nodeAddresses = append(nodeAddresses, lhprimitives.MemberId(nodeAddress))
-	}
+
+	nodeAddresses := toMemberIds(res.NodeAddresses)
 
 	return nodeAddresses
+}
+
+func toMemberIds(nodeAddresses []primitives.NodeAddress) []lhprimitives.MemberId {
+	memberIds := make([]lhprimitives.MemberId, 0, len(nodeAddresses))
+	for _, nodeAddress := range nodeAddresses {
+		memberIds = append(memberIds, lhprimitives.MemberId(nodeAddress))
+	}
+	return memberIds
 }

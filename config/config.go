@@ -78,6 +78,10 @@ type NodeConfig interface {
 
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
+
+	// Logger
+	LoggerHttpEndpoint() string
+	LoggerBulkSize() uint32
 }
 
 type OverridableConfig interface {
