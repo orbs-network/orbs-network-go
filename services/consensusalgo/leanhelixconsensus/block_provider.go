@@ -57,16 +57,12 @@ func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHe
 func NewBlockProvider(
 	logger log.BasicLogger,
 	blockStorage services.BlockStorage,
-	consensusContext services.ConsensusContext,
-	nodeAddress primitives.NodeAddress,
-	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) *blockProvider {
+	consensusContext services.ConsensusContext) *blockProvider {
 
 	return &blockProvider{
 		logger:           logger,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		nodeAddress:      nodeAddress,
-		nodePrivateKey:   nodePrivateKey,
 	}
 
 }

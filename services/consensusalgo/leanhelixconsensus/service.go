@@ -75,7 +75,7 @@ func NewLeanHelixConsensusAlgo(
 	membership := NewMembership(logger, config.NodeAddress(), consensusContext)
 	mgr := NewKeyManager(config.NodePrivateKey())
 
-	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodeAddress(), config.NodePrivateKey())
+	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
 	electionTimeout := config.LeanHelixConsensusRoundTimeoutInterval()
