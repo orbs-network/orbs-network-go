@@ -147,21 +147,4 @@ func (s *service) notifyConsensusAlgos(
 	}
 
 	return nil
-	//}
-	//		if blockValidatedSuccessfully(mode, err) {
-	//			validatedSuccessfully++
-	//		}
-	//	}
-	//
-	//	if blockFailedValidationOnAllConsensusAlgos(mode, validatedSuccessfully) {
-	//		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
-	//	}
-
-}
-func blockValidatedSuccessfully(mode handlers.HandleBlockConsensusMode, validationError error) bool {
-	return (mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY) && validationError == nil
-}
-
-func blockFailedValidationOnAllConsensusAlgos(mode handlers.HandleBlockConsensusMode, successfulValidations int) bool {
-	return (mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY) && successfulValidations == 0
 }
