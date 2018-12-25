@@ -181,41 +181,6 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	return nil
 }
 
-// Get an empty block from consensusContext - it will also hold ProtocolVersion and VirtualChainID
-// TODO: 2nd option is to pass virtual chain info to consensusAlgo
-//  TODO: handle errors
 func (p *blockProvider) GenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
-
-	//// get gensis tx
-	//txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-	//	BlockHeight:             0,
-	//	PrevBlockHash:           nil,
-	//	PrevBlockTimestamp:      0, // Genesis block timeStamp will be ~ time.Now() (max(prev,now)+1)
-	//	MaxNumberOfTransactions: 0,
-	//})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//// get gensis rx
-	//rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-	//	BlockHeight:        0,
-	//	PrevBlockHash:      nil,
-	//	PrevBlockTimestamp: 0, // Genesis block timeStamp will be ~ time.Now()
-	//	TransactionsBlock:  txOutput.TransactionsBlock,
-	//})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//p.logger.Info(fmt.Sprintf("Genesis VirtualChainID: %d; ", txOutput.TransactionsBlock.Header.VirtualChainId()))
-	//
-	//blockPair := &protocol.BlockPairContainer{
-	//	TransactionsBlock: txOutput.TransactionsBlock,
-	//	ResultsBlock:      rxOutput.ResultsBlock,
-	//}
-	//
-	//return blockPair
-
 	return nil
 }
