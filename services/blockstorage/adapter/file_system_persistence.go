@@ -20,6 +20,8 @@ type metrics struct {
 	size *metric.Gauge
 }
 
+const blocksFilename = "blocks"
+
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
 		size: m.NewGauge("BlockStorage.FilesystemBlockPersistence.SizeInBytes"),
@@ -39,7 +41,7 @@ type FilesystemBlockPersistence struct {
 func NewFilesystemBlockPersistence(ctx context.Context, c config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
-	newTip, err := newWritingTip(ctx, c.DataDir(), blocksFileName(c), logger)
+	newTip, err := newWritingTip(ctx, c.BlockStorageDataDir(), blocksFileName(c), logger)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +206,7 @@ func (f *FilesystemBlockPersistence) blockFileName() string {
 }
 
 func blocksFileName(config config.FilesystemBlockPersistenceConfig) string {
-	return filepath.Join(config.DataDir(), config.BlocksFilename())
+	return filepath.Join(config.BlockStorageDataDir(), blocksFilename)
 }
 
 func closeSilently(file *os.File, logger log.BasicLogger) {

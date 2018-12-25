@@ -222,7 +222,7 @@ func newFilesystemAdapter() *adapterUnderTest {
 	conf := newLocalConfig()
 	cleanup := func() {
 		cancel()
-		_ = os.RemoveAll(conf.DataDir()) // ignore errors - nothing to do
+		_ = os.RemoveAll(conf.BlockStorageDataDir()) // ignore errors - nothing to do
 	}
 
 	persistence, err := adapter.NewFilesystemBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())
@@ -250,10 +250,6 @@ func newLocalConfig() *localConfig {
 		dir: dirName,
 	}
 }
-func (l *localConfig) DataDir() string {
+func (l *localConfig) BlockStorageDataDir() string {
 	return l.dir
-}
-
-func (_ *localConfig) BlocksFilename() string {
-	return "blocks"
 }

@@ -38,8 +38,7 @@ type NodeConfig interface {
 	BlockSyncCollectChunksTimeout() time.Duration
 
 	// file system block storage
-	DataDir() string
-	BlocksFilename() string
+	BlockStorageDataDir() string
 
 	// state storage
 	StateStorageHistorySnapshotNum() uint32
@@ -117,8 +116,7 @@ type BlockStorageConfig interface {
 }
 
 type FilesystemBlockPersistenceConfig interface {
-	DataDir() string
-	BlocksFilename() string
+	BlockStorageDataDir() string
 }
 
 type GossipTransportConfig interface {

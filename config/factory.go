@@ -17,7 +17,7 @@ func (c *config) OverrideNodeSpecificValues(
 	cloned.SetNodeAddress(nodeAddress)
 	cloned.SetNodePrivateKey(nodePrivateKey)
 	cloned.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
-
+	cloned.SetString(BLOCK_STORAGE_DATA_DIR, "/tmp/orbs/e2e/"+nodeAddress.String())
 	return cloned
 }
 
