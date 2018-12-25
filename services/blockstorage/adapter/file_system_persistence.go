@@ -77,9 +77,9 @@ func constructIndexForFile(filename string, logger log.BasicLogger) (*blockHeigh
 		aBlock, blockSize, err := decode(file) // TODO add block validation
 		if err != nil {
 			if err == io.EOF {
-				logger.Info("built index", log.Int64("valid-block-bytes", offset), log.String("stopped-on", err.Error()), log.BlockHeight(bhIndex.topBlockHeight))
+				logger.Info("built index", log.Int64("valid-block-bytes", offset), log.BlockHeight(bhIndex.topBlockHeight))
 			} else {
-				logger.Error("built index reached invalid record", log.Int64("valid-block-bytes", offset), log.Error(err), log.BlockHeight(bhIndex.topBlockHeight))
+				logger.Error("built index, found and ignoring invalid block records", log.Int64("valid-block-bytes", offset), log.Error(err), log.BlockHeight(bhIndex.topBlockHeight))
 			}
 			break // index up to EOF or first invalid record.
 		}
