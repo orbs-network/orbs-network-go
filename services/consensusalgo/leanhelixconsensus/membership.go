@@ -9,16 +9,13 @@ import (
 )
 
 type membership struct {
+	memberId         primitives.NodeAddress
 	consensusContext services.ConsensusContext
 	logger           log.BasicLogger
-	memberId         primitives.NodeAddress
+	committeeSize    uint32
 }
 
-func (m *membership) MyMemberId() lhprimitives.MemberId {
-	return lhprimitives.MemberId(m.memberId)
-}
-
-func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, consensusContext services.ConsensusContext) *membership {
+func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, consensusContext services.ConsensusContext, committeeSize uint32) *membership {
 	if consensusContext == nil {
 		panic("consensusContext cannot be nil")
 	}
@@ -27,15 +24,19 @@ func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, cons
 		consensusContext: consensusContext,
 		logger:           logger,
 		memberId:         memberId,
+		committeeSize:    committeeSize,
 	}
 }
+func (m *membership) MyMemberId() lhprimitives.MemberId {
+	return lhprimitives.MemberId(m.memberId)
+}
 
-func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64, maxCommitteeSize uint32) []lhprimitives.MemberId {
+func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64) []lhprimitives.MemberId {
 
 	res, err := m.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
 		BlockHeight:      primitives.BlockHeight(blockHeight),
 		RandomSeed:       seed,
-		MaxCommitteeSize: maxCommitteeSize,
+		MaxCommitteeSize: m.committeeSize,
 	})
 	if err != nil {
 		m.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))
