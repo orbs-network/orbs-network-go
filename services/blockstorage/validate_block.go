@@ -13,6 +13,8 @@ import (
 
 // TODO(v1) implement all block checks
 func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
 		return nil, protocolVersionError
 	}
@@ -33,6 +35,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
+		logger.Error("block validation by consensus algo failed", log.Error(err))
 		return nil, err
 	}
 

@@ -15,13 +15,14 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Cont
 		return
 	}
 
-	if lastCommittedBlock != nil {
-		// passing nil on purpose, see spec
-		err := s.notifyConsensusAlgos(ctx, nil, lastCommittedBlock, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
-		if err != nil {
-			s.logger.Error(err.Error())
-			return
-		}
+	// passing nil on purpose, see spec
+	// TODO (v1) Do we want to check lastCommittedBlock=nil or not??
+
+	// If lastCommittedBlock is nil, it means this is the Genesis Block
+	err = s.notifyConsensusAlgos(ctx, nil, lastCommittedBlock, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
+	if err != nil {
+		s.logger.Error(err.Error())
+		return
 	}
 }
 

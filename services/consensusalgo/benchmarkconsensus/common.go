@@ -56,6 +56,11 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 }
 
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+
+	// TODO Handle nil as Genesis block https://github.com/orbs-network/orbs-network-go/issues/632
+	if blockPair == nil {
+		return errors.New("validateBlockConsensus received an empty block")
+	}
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeBenchmarkConsensus() {
 		return errors.Errorf("incorrect block proof type: %v", blockPair.TransactionsBlock.BlockProof.Type())
@@ -120,6 +125,10 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
 		lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
+		// TODO (v1): Tal handle genesis ack start (with nil) https://github.com/orbs-network/orbs-network-go/issues/632
+		if blockPair == nil {
+			return nil
+		}
 		if blockPair.TransactionsBlock.Header.BlockHeight() > lastCommittedBlockHeight {
 			err := s.setLastCommittedBlock(blockPair, lastCommittedBlock)
 			if err != nil {
