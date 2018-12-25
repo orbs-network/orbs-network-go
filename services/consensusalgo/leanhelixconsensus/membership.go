@@ -22,6 +22,7 @@ func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, cons
 	if consensusContext == nil {
 		panic("consensusContext cannot be nil")
 	}
+	logger.Info("NewMembership()", log.Stringable("ID", memberId))
 	return &membership{
 		consensusContext: consensusContext,
 		logger:           logger,
