@@ -16,12 +16,14 @@ func TestMain(m *testing.M) {
 
 	if bootstrap {
 		cleanNativeProcessorCache()
+		cleanBlockStorage()
 		n := newInProcessE2ENetwork()
 
 		exitCode = m.Run()
 		n.gracefulShutdown()
 
 		cleanNativeProcessorCache()
+		cleanBlockStorage()
 	} else {
 		exitCode = m.Run()
 	}
@@ -32,6 +34,10 @@ func TestMain(m *testing.M) {
 func cleanNativeProcessorCache() {
 	_, dirToCleanup := getProcessorArtifactPath()
 	os.RemoveAll(dirToCleanup)
+}
+
+func cleanBlockStorage() {
+	os.RemoveAll("/tmp/orbs/e2e/")
 }
 
 func runMultipleTimes(t *testing.T, f func(t *testing.T)) {

@@ -143,7 +143,7 @@ func (s *service) onCommit(ctx context.Context, block leanhelix.Block, blockProo
 	}).Build()
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
-		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
 		LeanHelix:             blockProof,
 	}).Build()

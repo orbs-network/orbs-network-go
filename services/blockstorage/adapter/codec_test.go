@@ -15,7 +15,7 @@ func TestEncodesAndDecodes(t *testing.T) {
 
 	err := encode(block, rw)
 	require.NoError(t, err)
-	decodedBlock, err := decode(rw)
+	decodedBlock, _, err := decode(rw)
 
 	require.NoError(t, err)
 	test.RequireCmpEqual(t, block, decodedBlock)
@@ -42,9 +42,9 @@ func TestEncodeHeader(t *testing.T) {
 	require.EqualValues(t, header, decodedHeader)
 
 	// enforce header structure
-	require.Equal(t, header.FixedSize, binary.LittleEndian.Uint32(bytes[0:4]))
-	require.Equal(t, header.ReceiptsSize, binary.LittleEndian.Uint32(bytes[4:8]))
-	require.Equal(t, header.DiffsSize, binary.LittleEndian.Uint32(bytes[8:12]))
-	require.Equal(t, header.TxsSize, binary.LittleEndian.Uint32(bytes[12:16]))
+	require.EqualValues(t, header.FixedSize, binary.LittleEndian.Uint32(bytes[0:4]))
+	require.EqualValues(t, header.ReceiptsSize, binary.LittleEndian.Uint32(bytes[4:8]))
+	require.EqualValues(t, header.DiffsSize, binary.LittleEndian.Uint32(bytes[8:12]))
+	require.EqualValues(t, header.TxsSize, binary.LittleEndian.Uint32(bytes[12:16]))
 
 }
