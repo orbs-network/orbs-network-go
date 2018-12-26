@@ -57,16 +57,12 @@ func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHe
 func NewBlockProvider(
 	logger log.BasicLogger,
 	blockStorage services.BlockStorage,
-	consensusContext services.ConsensusContext,
-	nodeAddress primitives.NodeAddress,
-	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) *blockProvider {
+	consensusContext services.ConsensusContext) *blockProvider {
 
 	return &blockProvider{
 		logger:           logger,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
-		nodeAddress:      nodeAddress,
-		nodePrivateKey:   nodePrivateKey,
 	}
 
 }
@@ -92,7 +88,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		prevBlockTimestamp = prevBlockWrapper.blockPair.TransactionsBlock.Header.Timestamp()
 	}
 
-	p.logger.Info("RequestNewBlock()", log.Stringable("new-block-height", newBlockHeight))
+	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", newBlockHeight))
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
@@ -119,11 +115,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		ResultsBlock:      rxOutput.ResultsBlock,
 	}
 
-	// TODO: this seems hacky here - we should be able to transfer block without proof on the wire - currently the "empty" blockProof build was moved to consensusContext.create_block
-	//blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{}).Build()
-	//blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{}).Build()
-
-	p.logger.Info("RequestNewBlock() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
+	p.logger.Info("RequestNewBlockProposal() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
 
 	blockHash := []byte(calculateBlockHash(blockPair))
 	blockPairWrapper := ToLeanHelixBlock(blockPair)
@@ -131,7 +123,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 }
 
-// TODO Ask Oded/Gad is this is the correct impl! Oded said not to use XOR
+// TODO v1 Ask Oded/Gad if this is the correct impl! Oded said not to use XOR
 func calculateBlockHash(blockPair *protocol.BlockPairContainer) primitives.Uint256 {
 	txHash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
 	rxHash := digest.CalcResultsBlockHash(blockPair.ResultsBlock)
@@ -166,8 +158,8 @@ func sizeOfBlock(block *protocol.BlockPairContainer) int64 {
 	return int64(txBlockSize) + int64(rsBlockSize) + int64(pointers)
 }
 
-// TODO (v1) Replace with code from branch lh-outline once that is finalized
-func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+// TODO (v1) Complete this https://tree.taiga.io/project/orbs-network/us/567
+func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
 		return errors.Errorf("incorrect block proof type: %v", blockPair.TransactionsBlock.BlockProof.Type())
@@ -177,7 +169,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	}
 
 	// TODO (v1) Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
-	_ = s.leanHelix.ValidateBlockConsensus(ToLeanHelixBlock(blockPair), blockPair.TransactionsBlock.BlockProof.Raw())
+	_ = s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockPair.TransactionsBlock.BlockProof.LeanHelix())
 	return nil
 }
 
