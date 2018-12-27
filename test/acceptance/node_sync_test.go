@@ -10,6 +10,7 @@ import (
 	"testing"
 )
 
+// TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
 func TestInterNodeBlockSync(t *testing.T) {
 
 	harness.Network(t).
@@ -21,6 +22,7 @@ func TestInterNodeBlockSync(t *testing.T) {
 		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
 			var prevBlock *protocol.BlockPairContainer
 			for i := 1; i <= 10; i++ {
+				//blockPair := builders.LeanHelixBlockPair().
 				blockPair := builders.BenchmarkConsensusBlockPair().
 					WithHeight(primitives.BlockHeight(i)).
 					WithTransactions(2).

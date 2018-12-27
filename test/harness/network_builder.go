@@ -44,12 +44,14 @@ type acceptanceTestNetworkBuilder struct {
 	requiredQuorumPercentage uint32
 }
 
+// TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
 func Network(f canFail) *acceptanceTestNetworkBuilder {
 	n := &acceptanceTestNetworkBuilder{f: f, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	return n.
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(2).
+		//WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 }
 
