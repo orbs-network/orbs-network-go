@@ -36,7 +36,7 @@ func TestTransferIn_AllGood(t *testing.T) {
 
 		// assert
 		m.VerifyMocks()
-		require.True(t, isInTuidExists(genInTuidKey("42")))
+		require.True(t, isInTuidExists(genInTuidKey(42)))
 	})
 
 }
@@ -125,7 +125,7 @@ func TestTransferIn_TuidAlreadyUsed(t *testing.T) {
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init() // start the asb contracat // todo  v1 open bug
-		setInTuid(genInTuidKey("42"))
+		setInTuid(genInTuidKey(42))
 
 		// prepare
 		m.MockEthereumLog(getAsbAddr(), getAsbAbi(), txid, "EthTransferredOut", func(out interface{}) {
@@ -165,5 +165,33 @@ func TestTransferOut_AllGood(t *testing.T) {
 		// assert
 		m.VerifyMocks()
 		require.Equal(t, uint64(1), getOutTuid())
+	})
+}
+
+func TestReset(t *testing.T) {
+	maxOut := uint64(500)
+	maxIn := uint64(200)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init() // start the asb contracat
+
+		setOutTuid(maxOut)
+		for i := uint64(0); i < maxIn; i++ {
+			if i%54 == 0 {
+				continue // just as not to have all of them
+			}
+			setInTuid(genInTuidKey(i))
+		}
+		setInTuidMax(maxIn)
+
+		// call
+		resetContract()
+
+		// assert
+		require.Equal(t, uint64(0), getOutTuid())
+		require.Equal(t, uint64(0), getInTuidMax())
+		for i := uint64(0); i < maxIn; i++ {
+			require.False(t, isInTuidExists(genInTuidKey(i)), "tuid should be empty %d", i)
+		}
 	})
 }

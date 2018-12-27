@@ -46,19 +46,19 @@ func balanceOf(targetAddress []byte) uint64 {
 	return state.ReadUint64ByAddress(targetAddress)
 }
 
+func _allowKey(addr1 []byte, addr2 []byte) string {
+	return string(append(addr1, addr2...))
+}
+
 func approve(targetAddress []byte, amount uint64) {
-	// create key
 	signerAddress := address.GetSignerAddress()
 	address.ValidateAddress(targetAddress)
-	allowKey := append(signerAddress, targetAddress...)
 
-	state.WriteUint64ByKey(string(allowKey), amount)
+	state.WriteUint64ByKey(_allowKey(signerAddress, targetAddress), amount)
 }
 
 func allowance(senderAddress []byte, targetAddress []byte) uint64 {
-	// create key
-	allowKey := append(senderAddress, targetAddress...)
-	return state.ReadUint64ByKey(string(allowKey))
+	return state.ReadUint64ByKey(_allowKey(senderAddress, targetAddress))
 }
 
 func transferFrom(senderAddress []byte, targetAddress []byte, amount uint64) {
@@ -70,6 +70,8 @@ func transferFrom(senderAddress []byte, targetAddress []byte, amount uint64) {
 		panic(fmt.Sprintf("transferFrom of %d from %x to %x failed since allowance balance is only %d", amount, senderAddress, targetAddress, allowanceBalance))
 	}
 
+	// reduce allowance
+	state.WriteUint64ByKey(_allowKey(senderAddress, targetAddress), allowanceBalance-amount)
 	// transfer
 	_transferImpl(senderAddress, targetAddress, amount)
 }
