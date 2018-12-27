@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -58,7 +59,8 @@ func (b *acceptanceTestNetworkBuilder) WithLogFilters(filters ...log.Filter) *ac
 }
 
 func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTestNetworkBuilder {
-	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	randNum := rand.Intn(1000000)
+	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
 	return b
 }
 
