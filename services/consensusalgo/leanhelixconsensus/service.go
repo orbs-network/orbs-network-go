@@ -22,7 +22,7 @@ import (
 var LogTag = log.Service("consensus-algo-lean-helix")
 
 // Temporary hack until leader election is fixed in LH
-var DISABLE_LEADER_ELECTION = true
+var DISABLE_LEADER_ELECTION = false
 
 type service struct {
 	blockStorage  services.BlockStorage
@@ -87,7 +87,7 @@ func NewLeanHelixConsensusAlgo(
 		logger.Info("*****>>> LEADER ELECTION DISABLED <<<***** NewLeanHelixConsensusAlgo()")
 		electionTimeout = time.Hour
 	}
-
+	logger.Info("Election trigger set", log.String("election-trigger-timeout", electionTimeout.String()))
 	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(electionTimeout)
 
 	s := &service{
@@ -206,7 +206,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		}
 
 		// TODO Uncomment blockProof when UpdateState is implemented in LH
-		s.leanHelix.UpdateState(ToLeanHelixBlock(blockPair), blockProof)
+		s.leanHelix.UpdateState(ctx, ToLeanHelixBlock(blockPair), blockProof)
 		// TODO: Should we notify error?
 	}
 
