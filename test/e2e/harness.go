@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -19,9 +20,9 @@ import (
 )
 
 type E2EConfig struct {
-	bootstrap  bool
-	baseUrl    string
-	stressTest StressTestConfig
+	bootstrap        bool
+	baseUrl          string
+	stressTest       StressTestConfig
 	ethereumEndpoint string
 }
 
@@ -49,6 +50,9 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
 	sendTxOut, txId, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to deploy native contract")
+	}
 
 	txStatus, executionResult := sendTxOut.TransactionStatus, sendTxOut.ExecutionResult
 
@@ -140,7 +144,7 @@ func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 		blockHeight := m["TransactionPool.BlockHeight"]["Value"].(float64)
 
 		return blockHeight > 0
-	}), "could not retrieve metrics")
+	}), "Timed out waiting for metric TransactionPool.BlockHeight > 0")
 }
 
 func printTestTime(t *testing.T, msg string, last *time.Time) {
