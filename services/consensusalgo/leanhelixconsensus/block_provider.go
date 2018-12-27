@@ -90,6 +90,8 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", newBlockHeight))
 
+	// TODO Add configurable maxNumTx and maxBlockSize (open Taiga)
+
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		BlockHeight:        newBlockHeight,
