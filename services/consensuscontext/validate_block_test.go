@@ -18,15 +18,6 @@ import (
 	"time"
 )
 
-func withTxBlock(block *protocol.BlockPairContainer) *services.ValidateTransactionsBlockInput {
-	input := &services.ValidateTransactionsBlockInput{
-		TransactionsBlock: block.TransactionsBlock,
-		PrevBlockHash:     block.TransactionsBlock.Header.PrevBlockHashPtr(),
-		BlockHeight:       block.TransactionsBlock.Header.BlockHeight(),
-	}
-	return input
-}
-
 func inputs(cfg config.ConsensusContextConfig) (*protocol.BlockPairContainer, *services.ValidateTransactionsBlockInput) {
 
 	currentBlockHeight := primitives.BlockHeight(1000)
@@ -37,8 +28,6 @@ func inputs(cfg config.ConsensusContextConfig) (*protocol.BlockPairContainer, *s
 	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
 	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
 	validPrevBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano() - 1000)
-	//prevBlock2 := builders.BlockPair().WithHeight(1002).Build()
-	//prev2Hash := digest.CalcTransactionsBlockHash(prevBlock2.TransactionsBlock)
 
 	// include only one transaction in block
 	block := builders.
@@ -65,7 +54,6 @@ func inputs(cfg config.ConsensusContextConfig) (*protocol.BlockPairContainer, *s
 	return block, input
 }
 
-// func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
 func TestValidateTransactionBlock(t *testing.T) {
 
 	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
