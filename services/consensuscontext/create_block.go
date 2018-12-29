@@ -3,8 +3,6 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -22,45 +20,32 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
 
-	merkleTransactionsRoot, err := calculateTransactionsRootHash(proposedTransactions.SignedTransactions)
+	merkleTransactionsRoot, err := calculateTransactionsMerkleRoot(proposedTransactions.SignedTransactions)
 	if err != nil {
 		return nil, err
 	}
 
 	timestamp := calculateNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
+	metaData := (&protocol.TransactionsBlockMetadataBuilder{}).Build()
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:       primitives.ProtocolVersion(s.config.ProtocolVersion()),
+			ProtocolVersion:       s.config.ProtocolVersion(),
 			VirtualChainId:        s.config.VirtualChainId(),
 			BlockHeight:           input.BlockHeight,
 			PrevBlockHashPtr:      input.PrevBlockHash,
 			Timestamp:             timestamp,
 			TransactionsRootHash:  primitives.MerkleSha256(merkleTransactionsRoot),
-			MetadataHash:          nil,
+			MetadataHash:          digest.CalcTransactionMetaDataHash(metaData),
 			NumSignedTransactions: uint32(txCount),
 		}).Build(),
-		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
+		Metadata:           metaData,
 		SignedTransactions: proposedTransactions.SignedTransactions,
 		BlockProof:         (&protocol.TransactionsBlockProofBuilder{}).Build(),
 	}
 
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
 	return txBlock, nil
-}
-
-func calculateTransactionsRootHash(txs []*protocol.SignedTransaction) (primitives.Sha256, error) {
-	hashes := digest.CalcSignedTxHashes(txs)
-	return merkle.CalculateOrderedTreeRoot(hashes), nil
-}
-
-func calculateReceiptsRootHash(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-	hashes := digest.CalcReceiptHashes(receipts)
-	return merkle.CalculateOrderedTreeRoot(hashes), nil
-}
-
-func calculatePrevBlockHashPtr(txBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
-	return digest.CalcTransactionsBlockHash(txBlock)
 }
 
 func (s *service) createResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*protocol.ResultsBlockContainer, error) {
@@ -75,7 +60,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		return nil, err
 	}
 
-	merkleReceiptsRoot, err := calculateReceiptsRootHash(output.TransactionReceipts)
+	merkleReceiptsRoot, err := calculateReceiptsMerkleRoot(output.TransactionReceipts)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +76,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		}
 	}
 
-	stateDiffHash, err := calculateStateDiffHash(output.ContractStateDiffs)
+	stateDiffHash, err := calculateStateDiffMerkleRoot(output.ContractStateDiffs)
 	if err != nil {
 		return nil, err
 	}
@@ -120,15 +105,4 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
 	}
 	return rxBlock, nil
-}
-func calculateStateDiffHash(diffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	// TODO IMPL THIS https://tree.taiga.io/project/orbs-network/us/535
-	return hash.CalcSha256([]byte{1, 2, 3, 4, 5, 6, 6, 7, 8}), nil
-}
-
-func calculateNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now primitives.TimestampNano) primitives.TimestampNano {
-	if now > prevBlockTimestamp {
-		return now + 1
-	}
-	return prevBlockTimestamp + 1
 }

@@ -141,6 +141,16 @@ func (b *blockPair) WithTransactionsRootHash(txRootHash []byte) *blockPair {
 	return b
 }
 
+func (b *blockPair) WithMetadata(txMetadata *protocol.TransactionsBlockMetadataBuilder) *blockPair {
+	b.txMetadata = txMetadata
+	return b
+}
+
+func (b *blockPair) WithMetadataHash(metadataHash primitives.Sha256) *blockPair {
+	b.txHeader.MetadataHash = metadataHash
+	return b
+}
+
 func (b *blockPair) WithTransactions(num uint32) *blockPair {
 	b.transactions = make([]*protocol.SignedTransaction, 0, num)
 	for i := uint32(0); i < num; i++ {
@@ -211,9 +221,9 @@ func (b *blockPair) WithTimestampNow() *blockPair {
 func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		TransactionsBlockHash: hash,
-		Type:               protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		BenchmarkConsensus: nil,
-		LeanHelix:          nil,
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		BenchmarkConsensus:    nil,
+		LeanHelix:             nil,
 	}
 	return b
 }

@@ -5,14 +5,12 @@ import (
 	"github.com/orbs-network/lean-helix-go"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/logic"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"time"
-	"unsafe"
 )
 
 type BlockPairWrapper struct {
@@ -119,45 +117,10 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	p.logger.Info("RequestNewBlockProposal() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
 
-	blockHash := []byte(calculateBlockHash(blockPair))
+	blockHash := []byte(digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock))
 	blockPairWrapper := ToLeanHelixBlock(blockPair)
 	return blockPairWrapper, blockHash
 
-}
-
-// TODO v1 Ask Oded/Gad if this is the correct impl! Oded said not to use XOR
-func calculateBlockHash(blockPair *protocol.BlockPairContainer) primitives.Uint256 {
-	txHash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
-	rxHash := digest.CalcResultsBlockHash(blockPair.ResultsBlock)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	return xorHash
-}
-
-func sizeOfBlock(block *protocol.BlockPairContainer) int64 {
-	txBlock := block.TransactionsBlock
-	txBlockSize := len(txBlock.Header.Raw()) + len(txBlock.BlockProof.Raw()) + len(txBlock.Metadata.Raw())
-
-	rsBlock := block.ResultsBlock
-	rsBlockSize := len(rsBlock.Header.Raw()) + len(rsBlock.BlockProof.Raw())
-
-	txBlockPointers := unsafe.Sizeof(txBlock) + unsafe.Sizeof(txBlock.Header) + unsafe.Sizeof(txBlock.Metadata) + unsafe.Sizeof(txBlock.BlockProof) + unsafe.Sizeof(txBlock.SignedTransactions)
-	rsBlockPointers := unsafe.Sizeof(rsBlock) + unsafe.Sizeof(rsBlock.Header) + unsafe.Sizeof(rsBlock.BlockProof) + unsafe.Sizeof(rsBlock.TransactionReceipts) + unsafe.Sizeof(rsBlock.ContractStateDiffs)
-
-	for _, tx := range txBlock.SignedTransactions {
-		txBlockSize += len(tx.Raw())
-		txBlockPointers += unsafe.Sizeof(tx)
-	}
-	for _, diff := range rsBlock.ContractStateDiffs {
-		rsBlockSize += len(diff.Raw())
-		rsBlockPointers += unsafe.Sizeof(diff)
-	}
-	for _, receipt := range rsBlock.TransactionReceipts {
-		rsBlockSize += len(receipt.Raw())
-		rsBlockPointers += unsafe.Sizeof(receipt)
-	}
-	pointers := unsafe.Sizeof(block) + txBlockPointers + rsBlockPointers
-
-	return int64(txBlockSize) + int64(rsBlockSize) + int64(pointers)
 }
 
 // TODO (v1) Complete this https://tree.taiga.io/project/orbs-network/us/567
