@@ -18,8 +18,8 @@ func CalcResultsBlockHash(resultsBlock *protocol.ResultsBlockContainer) primitiv
 	return hash.CalcSha256(resultsBlock.Header.Raw())
 }
 
-func CalcBlockHash(blockPair *protocol.BlockPairContainer) primitives.Sha256 {
-	transactionsBlockHash := CalcTransactionsBlockHash(blockPair.TransactionsBlock)
-	resultsBlockHash := CalcResultsBlockHash(blockPair.ResultsBlock)
+func CalcBlockHash(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) primitives.Sha256 {
+	transactionsBlockHash := CalcTransactionsBlockHash(transactionsBlock)
+	resultsBlockHash := CalcResultsBlockHash(resultsBlock)
 	return hash.CalcSha256(transactionsBlockHash, resultsBlockHash)
 }

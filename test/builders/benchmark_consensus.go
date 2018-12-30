@@ -22,10 +22,9 @@ func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.Tr
 		PlaceholderType: consensus.BENCHMARK_CONSENSUS_VALID,
 		BlockHeight:     b.txHeader.BlockHeight,
 		PlaceholderView: 1,
-		BlockHash: digest.CalcBlockHash(&protocol.BlockPairContainer{
-			TransactionsBlock: &protocol.TransactionsBlockContainer{Header: txHeaderBuilt},
-			ResultsBlock:      &protocol.ResultsBlockContainer{Header: rxHeaderBuilt},
-		}),
+		BlockHash: digest.CalcBlockHash(
+			&protocol.TransactionsBlockContainer{Header: txHeaderBuilt},
+			&protocol.ResultsBlockContainer{Header: rxHeaderBuilt}),
 	}
 	b.rxProof.TransactionsBlockHash = digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
 	sig, err := digest.SignAsNode(b.blockProofSigner, b.rxProof.BenchmarkConsensus.BlockRef.Build().Raw())
