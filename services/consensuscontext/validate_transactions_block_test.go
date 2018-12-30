@@ -93,7 +93,7 @@ func toValidatorContext(cfg config.ConsensusContextConfig) *validatorContext {
 	}
 }
 
-func TestTransactionBlockValidators(t *testing.T) {
+func TestTransactionsBlockValidators(t *testing.T) {
 	cfg := config.ForConsensusContextTests(nil)
 	empty32ByteHash := make([]byte, 32)
 	falsyValidateTransactionOrdering := func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (
@@ -125,7 +125,7 @@ func TestTransactionBlockValidators(t *testing.T) {
 			t.Error(err)
 		}
 
-		err := validateTransactionBlockMerkleRoot(context.Background(), vctx)
+		err := validateTransactionsBlockMerkleRoot(context.Background(), vctx)
 		require.Equal(t, ErrMismatchedTxMerkleRoot, errors.Cause(err), "validation should fail on incorrect transaction root hash", err)
 	})
 
@@ -155,7 +155,7 @@ func TestTransactionBlockValidators(t *testing.T) {
 	})
 }
 
-func TestValidateTransactionBlock(t *testing.T) {
+func TestValidateTransactionsBlock(t *testing.T) {
 	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	metricFactory := metric.NewRegistry()
 	cfg := config.ForConsensusContextTests(nil)
