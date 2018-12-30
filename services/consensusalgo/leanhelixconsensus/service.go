@@ -21,9 +21,6 @@ import (
 
 var LogTag = log.Service("consensus-algo-lean-helix")
 
-// Temporary hack until leader election is fixed in LH
-var DISABLE_LEADER_ELECTION = false
-
 type service struct {
 	blockStorage  services.BlockStorage
 	membership    *membership
@@ -80,15 +77,8 @@ func NewLeanHelixConsensusAlgo(
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
-	electionTimeout := config.LeanHelixConsensusRoundTimeoutInterval()
-
-	// TODO For happy-flow, disabling leader election (restore when this works https://tree.taiga.io/project/orbs-network/us/631)
-	if DISABLE_LEADER_ELECTION {
-		logger.Info("*****>>> LEADER ELECTION DISABLED <<<***** NewLeanHelixConsensusAlgo()")
-		electionTimeout = time.Hour
-	}
-	logger.Info("Election trigger set", log.String("election-trigger-timeout", electionTimeout.String()))
-	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(electionTimeout)
+	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
+	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 
 	s := &service{
 		com:           com,
