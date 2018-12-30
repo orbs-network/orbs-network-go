@@ -21,13 +21,10 @@ import (
 
 var LogTag = log.Service("consensus-algo-lean-helix")
 
-// Temporary hack until leader election is fixed in LH
-var DISABLE_LEADER_ELECTION = true
-
 type service struct {
 	blockStorage  services.BlockStorage
 	membership    *membership
-	comm          *communication
+	com           *communication
 	blockProvider *blockProvider
 	logger        log.BasicLogger
 	config        Config
@@ -48,6 +45,7 @@ type Config interface {
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+	VirtualChainId() primitives.VirtualChainId
 }
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
@@ -70,26 +68,20 @@ func NewLeanHelixConsensusAlgo(
 ) services.ConsensusAlgoLeanHelix {
 
 	logger := parentLogger.WithTags(LogTag)
-	logger.Info("NewLeanHelixConsensusAlgo() start")
-	comm := NewCommunication(logger, gossip)
-	membership := NewMembership(logger, config.NodeAddress(), consensusContext)
-	mgr := NewKeyManager(config.NodePrivateKey())
+	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("Node-address", config.NodeAddress().String()))
+	com := NewCommunication(logger, gossip)
+	committeeSize := uint32(len(config.FederationNodes(0)))
+	membership := NewMembership(logger, config.NodeAddress(), consensusContext, committeeSize)
+	mgr := NewKeyManager(logger, config.NodePrivateKey())
 
-	provider := NewBlockProvider(logger, blockStorage, consensusContext, config.NodeAddress(), config.NodePrivateKey())
+	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
-	electionTimeout := config.LeanHelixConsensusRoundTimeoutInterval()
-
-	// TODO For happy-flow, disabling leader election (restore when this works)
-	if DISABLE_LEADER_ELECTION {
-		logger.Info("*****>>> LEADER ELECTION DISABLED <<<***** NewLeanHelixConsensusAlgo()")
-		electionTimeout = time.Hour
-	}
-
-	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(electionTimeout)
+	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
+	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 
 	s := &service{
-		comm:          comm,
+		com:           com,
 		blockStorage:  blockStorage,
 		logger:        logger,
 		config:        config,
@@ -99,7 +91,7 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	leanHelixConfig := &leanhelix.Config{
-		Communication:   comm,
+		Communication:   com,
 		Membership:      membership,
 		BlockUtils:      provider,
 		KeyManager:      mgr,
@@ -124,7 +116,6 @@ func NewLeanHelixConsensusAlgo(
 	return s
 }
 
-// TODO Go over this carefully!!
 func (s *service) onCommit(ctx context.Context, block leanhelix.Block, blockProof []byte) {
 	// log
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
@@ -141,7 +132,7 @@ func (s *service) onCommit(ctx context.Context, block leanhelix.Block, blockProo
 	}).Build()
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
-		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
 		LeanHelix:             blockProof,
 	}).Build()
@@ -172,14 +163,14 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	mode := input.Mode
 	blockPair := input.BlockPair
 	prevCommittedBlockPair := input.PrevCommittedBlockPair
-	//var blockProof []byte
+	var blockProof []byte
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
 		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
 	}
 
 	// validate the block consensus (block and proof)
 	if shouldVerify(mode) {
-		err := s.validateBlockConsensus(blockPair, prevCommittedBlockPair)
+		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
 		if err != nil {
 			return nil, err
 		}
@@ -200,11 +191,10 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			s.logger.Info("HandleBlockConsensus Update LeanHelix with GenesisBlock", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
 		} else { // we should have a block proof
 			s.logger.Info("HandleBlockConsensus Update LeanHelix with block", log.Stringable("mode", mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-			/*blockProof*/ _ = blockPair.TransactionsBlock.BlockProof.Raw()
+			blockProof = blockPair.TransactionsBlock.BlockProof.LeanHelix()
 		}
 
-		// TODO Uncomment blockProof when UpdateState is implemented in LH
-		s.leanHelix.UpdateState(ToLeanHelixBlock(blockPair) /*, blockProof*/)
+		s.leanHelix.UpdateState(ctx, ToLeanHelixBlock(blockPair), blockProof)
 		// TODO: Should we notify error?
 	}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -43,12 +44,14 @@ type acceptanceTestNetworkBuilder struct {
 	requiredQuorumPercentage uint32
 }
 
+// TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
 func Network(f canFail) *acceptanceTestNetworkBuilder {
 	n := &acceptanceTestNetworkBuilder{f: f, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	return n.
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(2).
+		//WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 }
 
@@ -58,7 +61,8 @@ func (b *acceptanceTestNetworkBuilder) WithLogFilters(filters ...log.Filter) *ac
 }
 
 func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTestNetworkBuilder {
-	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	randNum := rand.Intn(1000000)
+	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
 	return b
 }
 
