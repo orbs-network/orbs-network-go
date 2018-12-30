@@ -17,7 +17,7 @@ func TestSdkState_ReadWithoutContext(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		_, err := h.handleSdkCall(ctx, 999, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
+		_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 		require.Error(t, err, "handleSdkCall should fail")
 	})
 }
