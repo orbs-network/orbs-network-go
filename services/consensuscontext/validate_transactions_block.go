@@ -3,7 +3,6 @@ package consensuscontext
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
