@@ -12,6 +12,10 @@ const (
 	TX_ID_SIZE_BYTES = 8 + 32
 )
 
+func CalcContractStateDiffHash(stateDiff *protocol.ContractStateDiff) primitives.Sha256 {
+	return hash.CalcSha256(stateDiff.Raw())
+}
+
 func CalcTxHash(transaction *protocol.Transaction) primitives.Sha256 {
 	return hash.CalcSha256(transaction.Raw())
 }

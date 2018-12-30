@@ -107,7 +107,7 @@ func ForAcceptanceTestNetwork(
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
-	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 100*time.Millisecond) // We are not interested in triggering a leader change in acceptance tests, keep this >100ms
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 100*time.Millisecond) // If this is lower than node-sync interval, then node-sync will be triggered unnecessarily
 	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 10*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)

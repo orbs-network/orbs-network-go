@@ -64,6 +64,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 	harness.Network(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		WithMaxTxPerBlock(1).
 		Start(func(parent context.Context, network harness.TestNetworkDriver) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
