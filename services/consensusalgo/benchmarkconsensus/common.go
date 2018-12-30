@@ -104,7 +104,7 @@ func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer
 		PlaceholderType: consensus.BENCHMARK_CONSENSUS_VALID,
 		BlockHeight:     blockPair.TransactionsBlock.Header.BlockHeight(),
 		PlaceholderView: 1,
-		BlockHash:       digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock),
+		BlockHash:       digest.CalcBlockHash(blockPair),
 	}).Build().Raw()
 }
 
