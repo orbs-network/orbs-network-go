@@ -75,7 +75,7 @@ func hashTwoRecpeits(list []*protocol.TransactionReceipt, index0, index1 int) pr
 	l0 := digest.CalcReceiptHash(list[index0])
 	l1 := digest.CalcReceiptHash(list[index1])
 	if bytes.Compare(l0, l1) > 0 {
-		return hash.CalcSha256(append(l1, l0...))
+		return hash.CalcSha256(l1, l0)
 	}
-	return hash.CalcSha256(append(l0, l1...))
+	return hash.CalcSha256(l0, l1)
 }
