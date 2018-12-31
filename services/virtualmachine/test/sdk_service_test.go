@@ -22,7 +22,7 @@ func TestSdkService_CallMethodFailingCall(t *testing.T) {
 			t.Log("CallMethod on failing contract")
 			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "FailingContract", "method1", builders.MethodArgumentsArray().Raw())
 			require.Error(t, err, "handleSdkCall should fail")
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+			return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.MethodArgumentsArray(), nil // this will fail since panics
 		})
 		h.expectNativeContractMethodCalled("FailingContract", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
 			return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.MethodArgumentsArray(), errors.New("call error")
