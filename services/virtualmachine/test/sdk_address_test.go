@@ -14,11 +14,13 @@ import (
 	"testing"
 )
 
+var EXAMPLE_CONTEXT_ID = []byte{0x22, 0x23}
+
 func TestSdkAddress_GetSignerAddressWithoutContext(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		_, err := h.handleSdkCall(ctx, 999, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
+		_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 		require.Error(t, err, "handleSdkCall should fail")
 	})
 }

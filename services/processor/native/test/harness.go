@@ -141,7 +141,7 @@ func (h *harness) expectSdkCallMadeWithExecutionContextId(expectedContextId sdkC
 	contextIdCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
-			input.ContextId == primitives.ExecutionContextId(expectedContextId)
+			bytes.Equal(input.ContextId, primitives.ExecutionContextId(expectedContextId))
 	}
 
 	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Execution context id matches", contextIdCallMatcher)).Return(nil, nil).Times(1)

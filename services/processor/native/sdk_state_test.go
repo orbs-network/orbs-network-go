@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-const EXAMPLE_CONTEXT = 0
+var EXAMPLE_CONTEXT = []byte{0x17, 0x18}
 
 func exampleKey() string {
 	return "example-key"

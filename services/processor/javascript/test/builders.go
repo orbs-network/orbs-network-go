@@ -17,7 +17,7 @@ type processCall struct {
 func processCallInput() *processCall {
 	p := &processCall{
 		input: &services.ProcessCallInput{
-			ContextId:              0,
+			ContextId:              []byte{0x0},
 			ContractName:           "BenchmarkContract",
 			MethodName:             "add",
 			InputArgumentArray:     (&protocol.MethodArgumentArrayBuilder{}).Build(),
