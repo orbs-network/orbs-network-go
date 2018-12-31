@@ -54,9 +54,13 @@ func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t
 		}()
 
 		require.EqualValues(t, 1, <-internalWaitChan, "did not block before the first increment")
-		tracker.IncrementHeight()
+		require.NotPanics(t, func() {
+			tracker.ReachedHeight(2)
+		})
 		require.EqualValues(t, 2, <-internalWaitChan, "did not block before the second increment")
-		tracker.IncrementHeight()
+		require.NotPanics(t, func() {
+			tracker.ReachedHeight(3)
+		})
 
 		require.NoError(t, <-doneWait, "did not return as expected")
 	})
@@ -84,9 +88,21 @@ func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 		selectIterationsBeforeIncrement = <-internalWaitChan
 		require.EqualValues(t, 2, selectIterationsBeforeIncrement, "did not enter select before returning")
 
-		tracker.IncrementHeight()
+		require.NotPanics(t, func() {
+			tracker.ReachedHeight(2)
+		})
 
 		require.NoError(t, <-doneWait, "first waiter did not return as expected")
 		require.NoError(t, <-doneWait, "second waiter did not return as expected")
+	})
+}
+
+func TestBlockTracker_ReachedHeight_RejectsWrongHeight(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
+
+		require.Panics(t, func() {
+			tracker.ReachedHeight(3)
+		}, "should have rejected non-sequential height")
 	})
 }

@@ -123,7 +123,7 @@ func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 		return err
 	}
 
-	bp.tracker.IncrementHeight()
+	bp.tracker.ReachedHeight(blockPair.ResultsBlock.Header.BlockHeight())
 	bp.metrics.size.Add(sizeOfBlock(blockPair))
 
 	bp.advertiseAllTransactions(blockPair.TransactionsBlock)

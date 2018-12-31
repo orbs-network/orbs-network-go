@@ -26,6 +26,7 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 		h.assumeBlockStorageAtHeight(1)
 		h.ignoringTransactionResults()
 		h.reportTransactionsAsCommitted(ctx, tx2)
+		blockHeightContainingTxs := h.lastBlockHeight
 
 		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
 			Txhash: digest.CalcTxHash(tx1.Transaction()),
@@ -34,11 +35,10 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, out.TransactionStatus, "did not return expected status")
 		require.Equal(t, h.lastBlockTimestamp, out.BlockTimestamp, "did not return expected timestamp")
-		require.Equal(t, h.lastBlockHeight, out.BlockHeight, "did not return expected block height")
+		require.Equal(t, blockHeightContainingTxs, out.BlockHeight, "did not return expected block height")
 
 		tsOfCommittedTx := h.lastBlockTimestamp
-		heightOfCommittedTx := h.lastBlockHeight
-		h.goToBlock(ctx, 5, tsOfCommittedTx+100000)
+		h.goToBlockAtTime(ctx, 5, tsOfCommittedTx+100000)
 
 		tx2hash := digest.CalcTxHash(tx2.Transaction())
 		out, err = h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
@@ -49,7 +49,7 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, out.TransactionStatus, "did not return expected status")
 		require.Equal(t, tx2hash, out.TransactionReceipt.Txhash(), "did not return expected receipt")
 		require.Equal(t, tsOfCommittedTx, out.BlockTimestamp, "did not return expected timestamp")
-		require.Equal(t, heightOfCommittedTx, out.BlockHeight, "did not return expected block height")
+		require.Equal(t, blockHeightContainingTxs, out.BlockHeight, "did not return expected block height")
 
 	})
 }

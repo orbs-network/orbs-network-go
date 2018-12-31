@@ -118,7 +118,7 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 		return errors.Wrap(err, "failed to update index after writing block")
 	}
 
-	f.blockTracker.IncrementHeight()
+	f.blockTracker.ReachedHeight(currentTop + 1)
 	f.metrics.size.Add(newPos - startPos)
 
 	return nil
