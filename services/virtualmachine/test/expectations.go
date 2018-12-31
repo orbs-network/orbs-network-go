@@ -22,7 +22,7 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 	}
 }
 
-func (h *harness) expectNativeContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId, *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error)) {
+func (h *harness) expectNativeContractMethodCalled(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId, *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error)) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
@@ -40,7 +40,7 @@ func (h *harness) expectNativeContractMethodCalled(expectedContractName primitiv
 	}).Times(1)
 }
 
-func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error)) {
+func (h *harness) expectNativeContractMethodCalledWithSystemPermissions(expectedContractName primitives.ContractName, expectedMethodName primitives.MethodName, contractFunction func(primitives.ExecutionContextId) (protocol.ExecutionResult, *protocol.ArgumentArray, error)) {
 	contractMethodMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.ProcessCallInput)
 		return ok &&
@@ -87,7 +87,7 @@ func (h *harness) expectSystemContractCalled(expectedContractName string, expect
 		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
 	}
 	outputToReturn := &services.ProcessCallOutput{
-		OutputArgumentArray: builders.MethodArgumentsArray(returnArgs...),
+		OutputArgumentArray: builders.ArgumentsArray(returnArgs...),
 		CallResult:          callResult,
 	}
 

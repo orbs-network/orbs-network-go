@@ -23,7 +23,7 @@ func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 		output, err := h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(balance), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(balance), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 	})
 }
@@ -47,7 +47,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 		output, err := h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 
 		t.Log("Runs BenchmarkToken.getBalance")
@@ -58,7 +58,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 		output, err = h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(callerBalance-amount), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(callerBalance-amount), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 	})
 }

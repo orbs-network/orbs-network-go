@@ -45,7 +45,7 @@ func (r *receipt) WithRandomHash(ctrlRand *test.ControlledRand) *receipt {
 	return r
 }
 
-func TransactionReceiptOutputArgumentsParse(r *protocol.TransactionReceipt) *protocol.MethodArgumentArrayArgumentsIterator {
-	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
+func TransactionReceiptOutputArgumentsParse(r *protocol.TransactionReceipt) *protocol.ArgumentArrayArgumentsIterator {
+	argsArray := protocol.ArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
 	return argsArray.ArgumentsIterator()
 }

@@ -15,10 +15,10 @@ func (s *service) SdkStateReadBytesByAddress(executionContextId sdkContext.Conte
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
 		MethodName:    "read",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:       "key",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// key
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: address,
 			}).Build(),
 		},
@@ -38,15 +38,15 @@ func (s *service) SdkStateWriteBytesByAddress(executionContextId sdkContext.Cont
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
 		MethodName:    "write",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:       "key",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// key
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: address,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:       "value",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+			(&protocol.ArgumentBuilder{
+				// value
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: value,
 			}).Build(),
 		},

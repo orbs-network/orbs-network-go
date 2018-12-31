@@ -44,21 +44,21 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: native.SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:        "serviceName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// serviceName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(systemContractName),
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:        "methodName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+			(&protocol.ArgumentBuilder{
+				// methodName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(systemMethodName),
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:       "inputArgs",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsToMethodArgumentArray(string(contractName)).Raw(),
+			(&protocol.ArgumentBuilder{
+				// inputArgs
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
+				BytesValue: argsToArgumentArray(string(contractName)).Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
@@ -69,8 +69,8 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
 		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
 	}
-	methodArgumentArray := protocol.MethodArgumentArrayReader(output.OutputArguments[0].BytesValue())
-	argIterator := methodArgumentArray.ArgumentsIterator()
+	argumentArray := protocol.ArgumentArrayReader(output.OutputArguments[0].BytesValue())
+	argIterator := argumentArray.ArgumentsIterator()
 	if !argIterator.HasNext() {
 		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
 	}
@@ -81,19 +81,19 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 	return arg0.BytesValue(), nil
 }
 
-func argsToMethodArgumentArray(args ...interface{}) *protocol.MethodArgumentArray {
-	res := []*protocol.MethodArgumentBuilder{}
+func argsToArgumentArray(args ...interface{}) *protocol.ArgumentArray {
+	res := []*protocol.ArgumentBuilder{}
 	for _, arg := range args {
 		switch arg.(type) {
 		case uint32:
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "uint32", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.(uint32)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.(uint32)})
 		case uint64:
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "uint64", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.(uint64)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.(uint64)})
 		case string:
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.(string)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.(string)})
 		case []byte:
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "bytes", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.([]byte)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.([]byte)})
 		}
 	}
-	return (&protocol.MethodArgumentArrayBuilder{Arguments: res}).Build()
+	return (&protocol.ArgumentArrayBuilder{Arguments: res}).Build()
 }

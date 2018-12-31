@@ -55,7 +55,7 @@ func (h *harness) expectSdkCallMadeWithStateRead(expectedKey []byte, returnValue
 	}
 
 	readReturn := &handlers.HandleSdkCallOutput{
-		OutputArguments: builders.MethodArguments(returnValue),
+		OutputArguments: builders.Arguments(returnValue),
 	}
 
 	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.State, method equals read and 1 arg matches", stateReadCallMatcher)).Return(readReturn, nil).Times(1)
@@ -75,7 +75,7 @@ func (h *harness) expectSdkCallMadeWithStateWrite(expectedKey []byte, expectedVa
 	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.State, method equals write and 2 args match", stateWriteCallMatcher)).Return(nil, nil).Times(1)
 }
 
-func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName string, expectedMethodName string, expectedArgArray *protocol.MethodArgumentArray, returnArgArray *protocol.MethodArgumentArray, returnError error) {
+func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName string, expectedMethodName string, expectedArgArray *protocol.ArgumentArray, returnArgArray *protocol.ArgumentArray, returnError error) {
 	serviceCallMethodCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
@@ -90,7 +90,7 @@ func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName st
 	var returnOutput *handlers.HandleSdkCallOutput
 	if returnArgArray != nil {
 		returnOutput = &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.MethodArguments(returnArgArray.Raw()),
+			OutputArguments: builders.Arguments(returnArgArray.Raw()),
 		}
 	}
 
@@ -106,13 +106,13 @@ func (h *harness) expectSdkCallMadeWithAddressGetCaller(returnAddress []byte) {
 	}
 
 	returnOutput := &handlers.HandleSdkCallOutput{
-		OutputArguments: builders.MethodArguments(returnAddress),
+		OutputArguments: builders.Arguments(returnAddress),
 	}
 
 	h.sdkCallHandler.When("HandleSdkCall", mock.Any, mock.AnyIf("Contract equals Sdk.Address, method equals getCallerAddress and 1 arg match", addressGetCallerCallMatcher)).Return(returnOutput, nil).Times(1)
 }
 
-func (h *harness) expectSdkCallMadeWithEventsEmit(expectedEventName string, expectedArgArray *protocol.MethodArgumentArray, returnError error) {
+func (h *harness) expectSdkCallMadeWithEventsEmit(expectedEventName string, expectedArgArray *protocol.ArgumentArray, returnError error) {
 	eventsEmitMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&

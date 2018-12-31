@@ -20,7 +20,7 @@ func TestBenchmarkContract_SimpleCalculation(t *testing.T) {
 		output, err := h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(uint64(12+27)), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(uint64(12+27)), output.OutputArgumentArray, "call return args should be equal")
 	})
 }
 
@@ -37,7 +37,7 @@ func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 		output, err := h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 
 		t.Log("Runs BenchmarkContract.get to read that value back from state")
@@ -48,7 +48,7 @@ func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 		output, err = h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(value), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(value), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 	})
 }
@@ -60,7 +60,7 @@ func TestBenchmarkContract_EmitEvent(t *testing.T) {
 		t.Log("Runs BenchmarkContract.giveBirth to emit an event")
 
 		call := processCallInput().WithMethod("BenchmarkContract", "giveBirth").WithArgs("John Snow").Build()
-		h.expectSdkCallMadeWithEventsEmit("BabyBorn", builders.MethodArgumentsArray("John Snow", uint32(3)), nil)
+		h.expectSdkCallMadeWithEventsEmit("BabyBorn", builders.ArgumentsArray("John Snow", uint32(3)), nil)
 
 		output, err := h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")

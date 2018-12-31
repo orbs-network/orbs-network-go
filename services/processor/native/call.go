@@ -31,7 +31,7 @@ func (s *service) retrieveContractAndMethodInstances(contractName string, method
 	return nil, nil, errors.Errorf("method '%s' not found on contract '%s'", methodName, contractName)
 }
 
-func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
+func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -59,11 +59,11 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.MethodArgumentArray) ([]reflect.Value, error) {
+func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray) ([]reflect.Value, error) {
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(methodInstance).Type()
 
-	var arg *protocol.MethodArgument
+	var arg *protocol.Argument
 	argsIterator := args.ArgumentsIterator()
 	for i := 0; i < methodType.NumIn(); i++ {
 
@@ -113,35 +113,35 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 	return res, nil
 }
 
-func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value) (*protocol.MethodArgumentArray, error) {
-	res := []*protocol.MethodArgumentBuilder{}
+func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value) (*protocol.ArgumentArray, error) {
+	res := []*protocol.ArgumentBuilder{}
 	for i, arg := range args {
 		k := arg.Kind()
 		switch k {
 		case reflect.Uint32:
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "uint32", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.Interface().(uint32)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.Interface().(uint32)})
 		case reflect.Uint64:
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "uint64", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.Interface().(uint64)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.Interface().(uint64)})
 		case reflect.String:
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Interface().(string)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Interface().(string)})
 		case reflect.Slice:
 			if arg.Type().Elem().Kind() != reflect.Uint8 {
 				return nil, errors.Errorf("method output arg %d slice type is not byte", i)
 			}
-			res = append(res, &protocol.MethodArgumentBuilder{Name: "bytes", Type: protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.Interface().([]byte)})
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.Interface().([]byte)})
 		default:
 			return nil, errors.Errorf("method output arg %d is of unknown type", i)
 		}
 	}
-	return (&protocol.MethodArgumentArrayBuilder{
+	return (&protocol.ArgumentArrayBuilder{
 		Arguments: res,
 	}).Build(), nil
 }
 
-func (s *service) createMethodOutputArgsWithString(str string) *protocol.MethodArgumentArray {
-	return (&protocol.MethodArgumentArrayBuilder{
-		Arguments: []*protocol.MethodArgumentBuilder{
-			{Name: "string", Type: protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE, StringValue: str},
+func (s *service) createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
+	return (&protocol.ArgumentArrayBuilder{
+		Arguments: []*protocol.ArgumentBuilder{
+			{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: str},
 		},
 	}).Build()
 }
