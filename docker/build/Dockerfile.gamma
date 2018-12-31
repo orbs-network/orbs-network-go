@@ -9,4 +9,3 @@ ADD ./_bin/gamma-server /opt/orbs/
 WORKDIR /opt/orbs
 
 CMD ./gamma-server
-du
