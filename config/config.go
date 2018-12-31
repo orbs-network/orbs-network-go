@@ -86,10 +86,7 @@ type NodeConfig interface {
 
 type OverridableConfig interface {
 	NodeConfig
-	OverrideNodeSpecificValues(
-		gossipListenPort int,
-		nodeAddress primitives.NodeAddress,
-		nodePrivateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
+	OverrideNodeSpecificValues(gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, blockStorageDataDirPrefix string) NodeConfig
 }
 
 type mutableNodeConfig interface {

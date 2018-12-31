@@ -48,7 +48,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
-	cfg.SetString(BLOCK_STORAGE_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to set to /var/lib/orbs on linux
+	cfg.SetString(BLOCK_STORAGE_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to replace with /var/lib/orbs for linux
 
 	return cfg
 }
@@ -159,5 +159,5 @@ func ForGamma(
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetConstantConsensusLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	return cfg.OverrideNodeSpecificValues(0, nodeAddress, nodePrivateKey)
+	return cfg.OverrideNodeSpecificValues(0, nodeAddress, nodePrivateKey, "")
 }
