@@ -126,8 +126,6 @@ func (h *harness) getMetrics() metrics {
 	}
 
 	readBytes, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(string(readBytes))
-
 	m := make(metrics)
 	json.Unmarshal(readBytes, &m)
 
