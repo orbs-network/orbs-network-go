@@ -19,9 +19,9 @@ var ErrMismatchedTxMerkleRoot = errors.New("mismatched transactions merkle root"
 var ErrMismatchedMetadataHash = errors.New("mismatched metadata hash")
 var ErrIncorrectTransactionOrdering = errors.New("incorrect transaction ordering")
 
-type validator func(ctx context.Context, vctx *validatorContext) error
+type txValidator func(ctx context.Context, vctx *txValidatorContext) error
 
-type validatorContext struct {
+type txValidatorContext struct {
 	protocolVersion        primitives.ProtocolVersion
 	virtualChainId         primitives.VirtualChainId
 	allowedTimestampJitter time.Duration
@@ -29,7 +29,7 @@ type validatorContext struct {
 	txOrderValidator       func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error)
 }
 
-func validateProtocolVersion(ctx context.Context, vctx *validatorContext) error {
+func validateTxProtocolVersion(ctx context.Context, vctx *txValidatorContext) error {
 	expectedProtocolVersion := vctx.protocolVersion
 	checkedProtocolVersion := vctx.input.TransactionsBlock.Header.ProtocolVersion()
 	if checkedProtocolVersion != expectedProtocolVersion {
@@ -38,7 +38,7 @@ func validateProtocolVersion(ctx context.Context, vctx *validatorContext) error 
 	return nil
 }
 
-func validateVirtualChainID(ctx context.Context, vctx *validatorContext) error {
+func validateTxVirtualChainID(ctx context.Context, vctx *txValidatorContext) error {
 	expectedVirtualChainId := vctx.virtualChainId
 	checkedVirtualChainId := vctx.input.TransactionsBlock.Header.VirtualChainId()
 	if checkedVirtualChainId != vctx.virtualChainId {
@@ -47,7 +47,7 @@ func validateVirtualChainID(ctx context.Context, vctx *validatorContext) error {
 	return nil
 }
 
-func validateBlockHeight(ctx context.Context, vctx *validatorContext) error {
+func validateTxBlockHeight(ctx context.Context, vctx *txValidatorContext) error {
 	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
 	expectedBlockHeight := vctx.input.BlockHeight
 	if checkedBlockHeight != expectedBlockHeight {
@@ -56,7 +56,7 @@ func validateBlockHeight(ctx context.Context, vctx *validatorContext) error {
 	return nil
 }
 
-func validatePrevBlockHashPtr(ctx context.Context, vctx *validatorContext) error {
+func validateTxPrevBlockHashPtr(ctx context.Context, vctx *txValidatorContext) error {
 	expectedPrevBlockHashPtr := vctx.input.PrevBlockHash
 	prevBlockHashPtr := vctx.input.TransactionsBlock.Header.PrevBlockHashPtr()
 	if !bytes.Equal(prevBlockHashPtr, expectedPrevBlockHashPtr) {
@@ -65,7 +65,7 @@ func validatePrevBlockHashPtr(ctx context.Context, vctx *validatorContext) error
 	return nil
 }
 
-func validateTransactionsBlockTimestamp(ctx context.Context, vctx *validatorContext) error {
+func validateTxTransactionsBlockTimestamp(ctx context.Context, vctx *txValidatorContext) error {
 	prevBlockTimestamp := vctx.input.PrevBlockTimestamp
 	currentBlockTimestamp := vctx.input.TransactionsBlock.Header.Timestamp()
 	allowedTimestampJitter := vctx.allowedTimestampJitter
@@ -77,7 +77,7 @@ func validateTransactionsBlockTimestamp(ctx context.Context, vctx *validatorCont
 	return nil
 }
 
-func validateTransactionsBlockMerkleRoot(ctx context.Context, vctx *validatorContext) error {
+func validateTxTransactionsBlockMerkleRoot(ctx context.Context, vctx *txValidatorContext) error {
 	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
 	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsRootHash()
 	if expectedTxMerkleRoot, err := calculateTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
@@ -88,7 +88,7 @@ func validateTransactionsBlockMerkleRoot(ctx context.Context, vctx *validatorCon
 	return nil
 }
 
-func validateMetadataHash(ctx context.Context, vctx *validatorContext) error {
+func validateTxMetadataHash(ctx context.Context, vctx *txValidatorContext) error {
 	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
 	expectedMetaDataHash := digest.CalcTransactionMetaDataHash(vctx.input.TransactionsBlock.Metadata)
 	metadataHash := vctx.input.TransactionsBlock.Header.MetadataHash()
@@ -98,7 +98,7 @@ func validateMetadataHash(ctx context.Context, vctx *validatorContext) error {
 	return nil
 }
 
-func validateTransactionOrdering(ctx context.Context, vctx *validatorContext) error {
+func validateTxTransactionOrdering(ctx context.Context, vctx *txValidatorContext) error {
 	validationInput := &services.ValidateTransactionsForOrderingInput{
 		BlockHeight:        vctx.input.TransactionsBlock.Header.BlockHeight(),
 		BlockTimestamp:     vctx.input.TransactionsBlock.Header.Timestamp(),
@@ -113,7 +113,7 @@ func validateTransactionOrdering(ctx context.Context, vctx *validatorContext) er
 
 func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
 
-	vctx := &validatorContext{
+	vctx := &txValidatorContext{
 		protocolVersion:        s.config.ProtocolVersion(),
 		virtualChainId:         s.config.VirtualChainId(),
 		allowedTimestampJitter: s.config.ConsensusContextSystemTimestampAllowedJitter(),
@@ -121,15 +121,15 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		txOrderValidator:       s.transactionPool.ValidateTransactionsForOrdering,
 	}
 
-	validators := []validator{
-		validateProtocolVersion,
-		validateVirtualChainID,
-		validateBlockHeight,
-		validatePrevBlockHashPtr,
-		validateTransactionsBlockTimestamp,
-		validateTransactionsBlockMerkleRoot,
-		validateMetadataHash,
-		validateTransactionOrdering,
+	validators := []txValidator{
+		validateTxProtocolVersion,
+		validateTxVirtualChainID,
+		validateTxBlockHeight,
+		validateTxPrevBlockHashPtr,
+		validateTxTransactionsBlockTimestamp,
+		validateTxTransactionsBlockMerkleRoot,
+		validateTxMetadataHash,
+		validateTxTransactionOrdering,
 	}
 
 	for _, v := range validators {
