@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func newEmptyFileConfig(source string) (mutableNodeConfig, error) {
@@ -76,6 +77,7 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 
 func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 	for key, value := range data {
+		var duration time.Duration
 		var numericValue uint32
 		var nodeAddress primitives.NodeAddress
 		var stringValue string
@@ -85,11 +87,19 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		case float64:
 			numericValue, err = parseUint32(value.(float64))
 		case string:
-			stringValue = value.(string)
+			// Sometimes we try to parse duration, but sometimes it's not worth it, like with Ethereum endpoint
+			var decodeError error
+			if duration, decodeError = time.ParseDuration(value.(string)); decodeError != nil {
+				stringValue = value.(string)
+			}
 		}
 
 		if numericValue != 0 {
 			cfg.SetUint32(convertKeyName(key), numericValue)
+		}
+
+		if duration != 0 {
+			cfg.SetDuration(convertKeyName(key), duration)
 		}
 
 		if key == "constant-consensus-leader" {

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"testing"
+	"time"
 )
 
 func TestFileConfigConstructor(t *testing.T) {
@@ -21,6 +22,14 @@ func TestFileConfigSetUint32(t *testing.T) {
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
 	require.EqualValues(t, 999, cfg.BlockSyncBatchSize())
+}
+
+func TestFileConfigSetDuration(t *testing.T) {
+	cfg, err := newEmptyFileConfig(`{"block-sync-collect-response-timeout": "10m"}`)
+
+	require.NotNil(t, cfg)
+	require.NoError(t, err)
+	require.EqualValues(t, 10*time.Minute, cfg.BlockSyncCollectResponseTimeout())
 }
 
 func TestSetNodeAddress(t *testing.T) {
