@@ -4,27 +4,39 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/stretchr/testify/require"
 	"os/exec"
+	"path/filepath"
 	"testing"
-	"time"
 )
 
-func TestAdvisoryLock_ExclusiveLock_ConcurrentProcesses(t *testing.T) {
+func TestAdvisoryLock_AdapterTakesExclusiveLock_ConcurrentProcesses(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
 
-	waitFunc1 := lockAndWaitInChildProcess(t)
+	c := newTempFileConfig()
+	defer c.cleanDir()
 
-	time.Sleep(200 * time.Millisecond) // give the first process a head start
+	waitFunc1 := createAdapterAndSleepInChildProcess(t, c.BlockStorageDataDir())
+	waitFunc2 := createAdapterAndSleepInChildProcess(t, c.BlockStorageDataDir())
 
-	waitFunc2 := lockAndWaitInChildProcess(t)
+	requireOneFailOnePass(t, waitFunc1(), waitFunc2())
 
-	require.NoError(t, waitFunc1(), "expected first process to lock successfully")
-	require.EqualError(t, waitFunc2(), "exit status 1", "expected accessing same file from different processes to fail %v", time.Now())
+	waitFunc3 := createAdapterAndSleepInChildProcess(t, c.BlockStorageDataDir())
+	require.NoError(t, waitFunc3(), "after locking process shuts down subsequent attempts should succeed")
 }
 
-func lockAndWaitInChildProcess(t *testing.T) func() error {
-	cmd := exec.Command("go", "test", "-run", "TestAdvisoryLock_ExclusiveLock_LockAndWaitForCollision")
+func requireOneFailOnePass(t *testing.T, err1 error, err2 error) {
+	if (err1 == nil) == (err2 == nil) {
+		if err1 == nil {
+			t.Fatal("expected one process to initialize successfully, and the other to fail. both succeeded.")
+		} else {
+			t.Fatalf("expected one process to initialize successfully, and the other to fail. both failed. err1: %s, err2: %s", err1, err2)
+		}
+	}
+}
+
+func createAdapterAndSleepInChildProcess(t *testing.T, dir string) func() error {
+	cmd := exec.Command("go", "run", filepath.Join(config.GetCurrentSourceFileDirPath(), "main", "create_adapter_and_sleep_main.go"), dir)
 	err := cmd.Start()
 	require.NoError(t, err)
 	return func() error {
@@ -32,23 +44,7 @@ func lockAndWaitInChildProcess(t *testing.T) func() error {
 	}
 }
 
-// invoked indirectly by lockAndWaitInChildProcess()
-func TestAdvisoryLock_ExclusiveLock_LockAndWaitForCollision(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping Integration tests in short mode")
-	}
-
-	c := newFixedPathConfig()
-	defer c.cleanDir()
-
-	release, err := lock(c)
-	require.NoError(t, err)
-
-	defer release()
-	time.Sleep(1 * time.Second)
-}
-
-func TestAdvisoryLock_CanReleaseLock(t *testing.T) {
+func TestAdvisoryLock_AdapterCanReleaseLock(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
@@ -62,14 +58,6 @@ func TestAdvisoryLock_CanReleaseLock(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func lock(c config.FilesystemBlockPersistenceConfig) (func(), error) {
-	_, cancel, err := NewFilesystemAdapterDriver(c)
-	if err != nil {
-		return nil, err
-	}
-	return cancel, nil
-}
-
 func lockAndRelease(c config.FilesystemBlockPersistenceConfig) error {
 	_, cancel, err := NewFilesystemAdapterDriver(c)
 	if err != nil {
@@ -77,10 +65,4 @@ func lockAndRelease(c config.FilesystemBlockPersistenceConfig) error {
 	}
 	cancel()
 	return nil
-}
-
-func newFixedPathConfig() *localConfig {
-	return &localConfig{
-		dir: "/tmp/orbs/tests/block_storage_adapter/advisory_lock_test",
-	}
 }
