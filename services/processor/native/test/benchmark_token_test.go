@@ -12,7 +12,7 @@ import (
 func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		targetAddress := builders.AddressForEd25519SignerForTests(1)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(1)
 		const balance = uint64(3)
 
 		t.Log("Runs BenchmarkToken.getBalance")
@@ -31,8 +31,8 @@ func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		callerAddress := builders.AddressForEd25519SignerForTests(0)
-		targetAddress := builders.AddressForEd25519SignerForTests(1)
+		callerAddress := builders.ClientAddressForEd25519SignerForTests(0)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(1)
 		const amount, callerBalance, targetBalance = uint64(3), uint64(20), uint64(10)
 
 		t.Log("Runs BenchmarkToken.transfer")
@@ -66,8 +66,8 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 func TestBenchmarkToken_TransferLargerThanAvailableFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		callerAddress := builders.AddressForEd25519SignerForTests(0)
-		targetAddress := builders.AddressForEd25519SignerForTests(1)
+		callerAddress := builders.ClientAddressForEd25519SignerForTests(0)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(1)
 		const amount, callerBalance = uint64(9999), uint64(20)
 
 		t.Log("Runs BenchmarkToken.transfer large amount")

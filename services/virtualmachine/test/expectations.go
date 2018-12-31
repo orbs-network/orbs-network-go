@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
@@ -173,7 +174,7 @@ func (h *harness) expectStateStorageRead(expectedHeight primitives.BlockHeight, 
 			input.BlockHeight == expectedHeight &&
 			input.ContractName == expectedContractName &&
 			len(input.Keys) == 1 &&
-			input.Keys[0].Equal(expectedKey)
+			bytes.Equal(input.Keys[0], expectedKey)
 	}
 
 	outputToReturn := &services.ReadKeysOutput{

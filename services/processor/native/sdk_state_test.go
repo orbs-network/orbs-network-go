@@ -3,7 +3,6 @@ package native
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
@@ -18,7 +17,7 @@ func exampleKey() string {
 }
 
 func exampleKeyAddress() []byte {
-	return hash.CalcRipemd160Sha256([]byte(exampleKey()))
+	return []byte(exampleKey())
 }
 
 func TestSdkState_WriteReadBytesByAddress(t *testing.T) {

@@ -105,7 +105,7 @@ func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.Co
 }
 
 type keyValuePair struct {
-	key   primitives.Ripemd160Sha256
+	key   []byte
 	value []byte
 }
 
