@@ -14,7 +14,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory.NetworkDriver {
+func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, metricRegistry metric.Registry) inmemory.NetworkDriver {
 	numNodes := 2
 	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
 	logger.Info("creating development network")
@@ -44,7 +44,6 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) inmemory
 			consensusAlgo,
 		)
 
-		metricRegistry := metric.NewRegistry()
 		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))
 		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
 		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)

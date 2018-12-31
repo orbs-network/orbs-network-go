@@ -22,10 +22,10 @@ func TestSdkUnknownOperation(t *testing.T) {
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			_, err := h.handleSdkCall(ctx, executionContextId, "Sdk.UnknownOperation", "read", protocol.PERMISSION_SCOPE_SERVICE)
 			require.Error(t, err, "handleSdkCall should fail")
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
 		h.runLocalMethod(ctx, "Contract1", "method1")

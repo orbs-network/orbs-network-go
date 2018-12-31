@@ -3,7 +3,6 @@ package native
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
@@ -11,14 +10,14 @@ import (
 	"testing"
 )
 
-const EXAMPLE_CONTEXT = 0
+var EXAMPLE_CONTEXT = []byte{0x17, 0x18}
 
 func exampleKey() string {
 	return "example-key"
 }
 
 func exampleKeyAddress() []byte {
-	return hash.CalcRipemd160Sha256([]byte(exampleKey()))
+	return []byte(exampleKey())
 }
 
 func TestSdkState_WriteReadBytesByAddress(t *testing.T) {
@@ -31,12 +30,12 @@ func TestSdkState_WriteReadBytesByAddress(t *testing.T) {
 
 func createStateSdk() *service {
 	return &service{sdkHandler: &contractSdkStateCallHandlerStub{
-		store: make(map[string]*protocol.MethodArgument),
+		store: make(map[string]*protocol.Argument),
 	}}
 }
 
 type contractSdkStateCallHandlerStub struct {
-	store map[string]*protocol.MethodArgument
+	store map[string]*protocol.Argument
 }
 
 func (c *contractSdkStateCallHandlerStub) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
@@ -46,7 +45,7 @@ func (c *contractSdkStateCallHandlerStub) HandleSdkCall(ctx context.Context, inp
 	switch input.MethodName {
 	case "read":
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: []*protocol.MethodArgument{c.store[string(input.InputArguments[0].BytesValue())]},
+			OutputArguments: []*protocol.Argument{c.store[string(input.InputArguments[0].BytesValue())]},
 		}, nil
 	case "write":
 		c.store[string(input.InputArguments[0].BytesValue())] = input.InputArguments[1]

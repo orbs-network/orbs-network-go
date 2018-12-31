@@ -21,7 +21,7 @@ import (
 func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsBlockInput {
 
 	currentBlockHeight := primitives.BlockHeight(1000)
-	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.AddressForEd25519SignerForTests(6)).Build()
+	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
 	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
 	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
@@ -57,7 +57,7 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 
 func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext {
 	currentBlockHeight := primitives.BlockHeight(1000)
-	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.AddressForEd25519SignerForTests(6)).Build()
+	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
 	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
 	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
@@ -90,7 +90,7 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 		protocolVersion:        cfg.ProtocolVersion(),
 		virtualChainId:         cfg.VirtualChainId(),
 		allowedTimestampJitter: cfg.ConsensusContextSystemTimestampAllowedJitter(),
-		input:                  input,
+		input: input,
 	}
 }
 

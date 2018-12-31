@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkEventsCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkEventsCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.Argument, error) {
 	switch methodName {
 
 	case "emitEvent":
@@ -15,7 +15,7 @@ func (s *service) handleSdkEventsCall(ctx context.Context, executionContext *exe
 		if err != nil {
 			return nil, err
 		}
-		return []*protocol.MethodArgument{}, nil
+		return []*protocol.Argument{}, nil
 
 	default:
 		return nil, errors.Errorf("unknown SDK events call method: %s", methodName)
@@ -23,13 +23,13 @@ func (s *service) handleSdkEventsCall(ctx context.Context, executionContext *exe
 }
 
 // inputArg0: eventName (string)
-// inputArg1: inputArgumentArray ([]byte of raw MethodArgumentArray)
-func (s *service) handleSdkEventsEmitEvent(ctx context.Context, executionContext *executionContext, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) error {
+// inputArg1: inputArgumentArray ([]byte of raw ArgumentArray)
+func (s *service) handleSdkEventsEmitEvent(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) error {
 	if len(args) != 2 || !args[0].IsTypeStringValue() || !args[1].IsTypeBytesValue() {
 		return errors.Errorf("invalid SDK events callMethod args: %v", args)
 	}
 	eventName := args[0].StringValue()
-	inputArgumentArray := protocol.MethodArgumentArrayReader(args[1].BytesValue())
+	inputArgumentArray := protocol.ArgumentArrayReader(args[1].BytesValue())
 
 	executionContext.eventListAdd(primitives.EventName(eventName), inputArgumentArray.RawArgumentsArray())
 

@@ -13,7 +13,7 @@ import (
 	"github.com/ry/v8worker2"
 )
 
-func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, code string, methodName primitives.MethodName, args *protocol.MethodArgumentArray) (contractOutputArgs *protocol.MethodArgumentArray, contractOutputErr error, err error) {
+func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, code string, methodName primitives.MethodName, args *protocol.ArgumentArray) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
 	worker := v8worker2.New(func(msg []byte) []byte {
 		s.logger.Info("bridge msg received", log.String("msg", hex.EncodeToString(msg)))
 		contractOutputArgs, err = s.createMethodOutputArgs(msg)
@@ -50,18 +50,18 @@ view.setUint32(0, res, true);
 V8Worker2.send(buffer);
 `
 
-func (s *service) wrapCodeForExecution(code string, methodName primitives.MethodName, args *protocol.MethodArgumentArray) string {
+func (s *service) wrapCodeForExecution(code string, methodName primitives.MethodName, args *protocol.ArgumentArray) string {
 	return fmt.Sprintf(EXECUTION_WRAP_TEMPLATE, SDK_JS_IMPLEMENTATION, code)
 }
 
-func (s *service) createMethodOutputArgs(msg []byte) (*protocol.MethodArgumentArray, error) {
+func (s *service) createMethodOutputArgs(msg []byte) (*protocol.ArgumentArray, error) {
 	if len(msg) != 4 {
 		return nil, errors.Errorf("msg len is %d instead of 4", len(msg))
 	}
-	res := []*protocol.MethodArgumentBuilder{
-		{Name: "uint64", Type: protocol.METHOD_ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: uint64(binary.LittleEndian.Uint32(msg))},
+	res := []*protocol.ArgumentBuilder{
+		{Type: protocol.ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: uint64(binary.LittleEndian.Uint32(msg))},
 	}
-	return (&protocol.MethodArgumentArrayBuilder{
+	return (&protocol.ArgumentArrayBuilder{
 		Arguments: res,
 	}).Build(), nil
 }

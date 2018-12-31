@@ -63,11 +63,11 @@ func (s *service) callGetInfoOfDeploymentSystemContract(ctx context.Context, exe
 	defer executionContext.serviceStackPop()
 
 	// execute the call
-	inputArgs := (&protocol.MethodArgumentArrayBuilder{
-		Arguments: []*protocol.MethodArgumentBuilder{
+	inputArgs := (&protocol.ArgumentArrayBuilder{
+		Arguments: []*protocol.ArgumentBuilder{
 			{
-				Name:        "serviceName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+				// serviceName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(serviceName),
 			},
 		},
@@ -104,21 +104,21 @@ func (s *service) callDeployServiceOfDeploymentSystemContract(ctx context.Contex
 	defer executionContext.serviceStackPop()
 
 	// execute the call
-	inputArgs := (&protocol.MethodArgumentArrayBuilder{
-		Arguments: []*protocol.MethodArgumentBuilder{
+	inputArgs := (&protocol.ArgumentArrayBuilder{
+		Arguments: []*protocol.ArgumentBuilder{
 			{
-				Name:        "serviceName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+				// serviceName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(serviceName),
 			},
 			{
-				Name:        "processorType",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_UINT_32_VALUE,
+				// processorType
+				Type:        protocol.ARGUMENT_TYPE_UINT_32_VALUE,
 				Uint32Value: uint32(protocol.PROCESSOR_TYPE_NATIVE),
 			},
 			{
-				Name:       "code",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+				// code
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: []byte{},
 			},
 		},

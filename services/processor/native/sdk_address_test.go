@@ -42,11 +42,11 @@ func (c *contractSdkAddressCallHandlerStub) HandleSdkCall(ctx context.Context, i
 	switch input.MethodName {
 	case "getSignerAddress":
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.MethodArguments(exampleAddress1),
+			OutputArguments: builders.Arguments(exampleAddress1),
 		}, nil
 	case "getCallerAddress":
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.MethodArguments(exampleAddress2),
+			OutputArguments: builders.Arguments(exampleAddress2),
 		}, nil
 	default:
 		return nil, errors.New("unknown method")

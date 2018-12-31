@@ -2,8 +2,8 @@ package asb_ether
 
 import (
 	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
-	. "github.com/orbs-network/orbs-contract-sdk/go/fake"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/safemath/safeuint64"
+	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
 	"github.com/stretchr/testify/require"
 	"math/big"
 	"testing"

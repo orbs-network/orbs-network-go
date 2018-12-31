@@ -118,7 +118,7 @@ func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFr
 		h.ignoringForwardMessages()
 
 		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().WithAmountAndTargetAddress(8, builders.AddressForEd25519SignerForTests(2)).Build()
+		tx2 := builders.TransferTransaction().WithAmountAndTargetAddress(8, builders.ClientAddressForEd25519SignerForTests(2)).Build()
 
 		h.addTransactions(ctx, tx1, tx2)
 

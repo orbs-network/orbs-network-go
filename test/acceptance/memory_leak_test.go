@@ -35,7 +35,7 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	memUsageBefore := getMemUsage()
 	pprof.WriteHeapProfile(before)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		t.Run("TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages)
 		t.Run("TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages)
 		t.Run("TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages)
@@ -43,14 +43,23 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 	runtime.GC()
+	time.Sleep(100 * time.Millisecond)
 	runtime.GC()
+	time.Sleep(100 * time.Millisecond)
 	runtime.GC()
+	time.Sleep(100 * time.Millisecond)
 	runtime.GC()
 
 	memUsageAfter := getMemUsage()
 	pprof.WriteHeapProfile(after)
 
-	require.InDelta(t, memUsageAfter, memUsageBefore, 0.1*float64(memUsageBefore), "added memory should be around than 10%, compare /tmp/mem-shutdown-before.prof and /tmp/mem-shutdown-after.prof to see memory consumers")
+	delta := memUsageAfter - memUsageBefore
+	expectedDeltaPct := uint64(0.1 * float64(memUsageBefore))
+	expectedMaxDeltaInBytes := uint64(512 * 1024)
+
+	require.Conditionf(t, func() bool {
+		return delta < expectedDeltaPct || delta < expectedMaxDeltaInBytes
+	}, "added memory should be around than 10% or less than %d but was actually %d , compare /tmp/mem-shutdown-before.prof and /tmp/mem-shutdown-after.prof to see memory consumers", expectedMaxDeltaInBytes, delta)
 }
 
 func getMemUsage() uint64 {

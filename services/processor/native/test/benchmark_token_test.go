@@ -12,7 +12,7 @@ import (
 func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		targetAddress := builders.AddressForEd25519SignerForTests(1)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(1)
 		const balance = uint64(3)
 
 		t.Log("Runs BenchmarkToken.getBalance")
@@ -23,7 +23,7 @@ func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 		output, err := h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(balance), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(balance), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 	})
 }
@@ -31,8 +31,8 @@ func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		callerAddress := builders.AddressForEd25519SignerForTests(0)
-		targetAddress := builders.AddressForEd25519SignerForTests(1)
+		callerAddress := builders.ClientAddressForEd25519SignerForTests(0)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(1)
 		const amount, callerBalance, targetBalance = uint64(3), uint64(20), uint64(10)
 
 		t.Log("Runs BenchmarkToken.transfer")
@@ -47,7 +47,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 		output, err := h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 
 		t.Log("Runs BenchmarkToken.getBalance")
@@ -58,7 +58,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 		output, err = h.service.ProcessCall(ctx, call)
 		require.NoError(t, err, "call should succeed")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.MethodArgumentsArray(callerBalance-amount), output.OutputArgumentArray, "call return args should be equal")
+		require.Equal(t, builders.ArgumentsArray(callerBalance-amount), output.OutputArgumentArray, "call return args should be equal")
 		h.verifySdkCallMade(t)
 	})
 }
@@ -66,8 +66,8 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 func TestBenchmarkToken_TransferLargerThanAvailableFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		callerAddress := builders.AddressForEd25519SignerForTests(0)
-		targetAddress := builders.AddressForEd25519SignerForTests(1)
+		callerAddress := builders.ClientAddressForEd25519SignerForTests(0)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(1)
 		const amount, callerBalance = uint64(9999), uint64(20)
 
 		t.Log("Runs BenchmarkToken.transfer large amount")

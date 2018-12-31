@@ -16,7 +16,7 @@ func (s *service) SdkAddressGetSignerAddress(executionContextId sdkContext.Conte
 		ContextId:       primitives.ExecutionContextId(executionContextId),
 		OperationName:   SDK_OPERATION_NAME_ADDRESS,
 		MethodName:      "getSignerAddress",
-		InputArguments:  []*protocol.MethodArgument{},
+		InputArguments:  []*protocol.Argument{},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
@@ -33,7 +33,7 @@ func (s *service) SdkAddressGetCallerAddress(executionContextId sdkContext.Conte
 		ContextId:       primitives.ExecutionContextId(executionContextId),
 		OperationName:   SDK_OPERATION_NAME_ADDRESS,
 		MethodName:      "getCallerAddress",
-		InputArguments:  []*protocol.MethodArgument{},
+		InputArguments:  []*protocol.Argument{},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {

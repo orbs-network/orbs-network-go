@@ -29,25 +29,25 @@ func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId,
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_ETHEREUM,
 		MethodName:    "callMethod",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:        "contractAddress",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// contractAddress
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: contractAddress,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:        "jsonAbi",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+			(&protocol.ArgumentBuilder{
+				// jsonAbi
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: jsonAbi,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:        "methodName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+			(&protocol.ArgumentBuilder{
+				// methodName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: methodName,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:       "ethereumPackedInputArguments",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+			(&protocol.ArgumentBuilder{
+				// ethereumPackedInputArguments
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: packedInput,
 			}).Build(),
 		},
@@ -81,25 +81,25 @@ func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.Con
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_ETHEREUM,
 		MethodName:    "getTransactionLog",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:        "contractAddress",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// contractAddress
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: contractAddress,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:        "jsonAbi",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+			(&protocol.ArgumentBuilder{
+				// jsonAbi
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: jsonAbi,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:       "ethereumTxhash",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+			(&protocol.ArgumentBuilder{
+				// ethereumTxhash
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: ethereumTxhash,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:        "eventName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+			(&protocol.ArgumentBuilder{
+				// eventName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: eventName,
 			}).Build(),
 		},
