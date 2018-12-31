@@ -2,6 +2,7 @@ package virtualmachine
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -61,6 +62,6 @@ func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionCo
 		return s.handleSdkAddressGetSignerAddress(executionContext, args)
 	} else {
 		// after a contract call, get the caller address
-		return addressContractCall(executionContext.serviceStackPeekCaller())
+		return digest.CalcClientAddressOfContract(executionContext.serviceStackPeekCaller())
 	}
 }

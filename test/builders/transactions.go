@@ -39,7 +39,7 @@ func TransferTransaction() *TransactionBuilder {
 			},
 		},
 	}
-	targetAddress := AddressForEd25519SignerForTests(2)
+	targetAddress := ClientAddressForEd25519SignerForTests(2)
 	return t.WithAmountAndTargetAddress(10, targetAddress)
 }
 
@@ -64,7 +64,7 @@ func GetBalanceTransaction() *TransactionBuilder {
 			},
 		},
 	}
-	targetAddress := AddressForEd25519SignerForTests(2)
+	targetAddress := ClientAddressForEd25519SignerForTests(2)
 	return t.WithTargetAddress(targetAddress)
 }
 

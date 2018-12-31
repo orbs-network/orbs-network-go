@@ -71,7 +71,7 @@ func (h *harness) expectTxPoolToReturnXTransactions(numTransactionsToReturn uint
 	}
 
 	for i := uint32(0); i < numTransactionsToReturn; i++ {
-		targetAddress := builders.AddressForEd25519SignerForTests(2)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(2)
 		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, targetAddress).Build())
 	}
 

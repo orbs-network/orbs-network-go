@@ -76,22 +76,22 @@ func newAutonomousSwapDriver(h *harness) *driver {
 	//opts.GasPrice = big.NewInt(1)
 
 	return &driver{
-		harness:                  h,
-		ethereum:                 ethereum,
-		addressInEthereum:        opts,
-		ethUserAddressHex:        "0x44AA79091FAD956d12086C5Ee782DDf3A8124549",
-		orbsASBContractName:      asb_ether.CONTRACT_NAME,
-		orbsContractOwnerAddress: testKeys.Ed25519KeyPairForTests(5),
+		harness:             h,
+		ethereum:            ethereum,
+		addressInEthereum:   opts,
+		ethUserAddressHex:   "0x44AA79091FAD956d12086C5Ee782DDf3A8124549",
+		orbsASBContractName: asb_ether.CONTRACT_NAME,
+		orbsOwner:           testKeys.Ed25519KeyPairForTests(5),
 	}
 }
 
 type driver struct {
 	ethereum *adapter.EthereumRpcConnection
 
-	orbsContractOwnerAddress *keys.Ed25519KeyPair
-	orbsASBContractName      string
-	orbsUser                 *orbsclient.OrbsAccount
-	orbsUserAddressHex       string
+	orbsOwner           *keys.Ed25519KeyPair
+	orbsASBContractName string
+	orbsUser            *orbsclient.OrbsAccount
+	orbsUserAddressHex  string
 
 	addressInEthereum *bind.TransactOpts // we use a single address for both the "admin" stuff like deploying the contracts and as our swapping user, so as to simplify setup - otherwise we'll need to create two PKs in the simulator
 	ethASBAddressHex  string
@@ -110,34 +110,34 @@ func (d *driver) generateOrbsAccount(t *testing.T) {
 }
 
 func (d *driver) generateOrbsFunds(t *testing.T, amount *big.Int) {
-	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, erc20proxy.CONTRACT_NAME, "mint", d.orbsUser.RawAddress, amount.Uint64())
+	response, _, err := d.harness.sendTransaction(d.orbsOwner.PublicKey(), d.orbsOwner.PrivateKey(), erc20proxy.CONTRACT_NAME, "mint", d.orbsUser.RawAddress, amount.Uint64())
 	requireSuccess(t, err, response, "mint transaction")
 }
 
 func (d *driver) getBalanceInOrbs(t *testing.T) uint64 {
-	response, err := d.harness.callMethod(d.orbsContractOwnerAddress, erc20proxy.CONTRACT_NAME, "balanceOf", d.orbsUser.RawAddress)
+	response, err := d.harness.callMethod(d.orbsOwner.PublicKey(), erc20proxy.CONTRACT_NAME, "balanceOf", d.orbsUser.RawAddress)
 	require.NoError(t, err, "failed sending  to Orbs")
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult, "failed getting balance in Orbs")
 	return response.OutputArguments[0].(uint64)
 }
 
 func (d *driver) approveTransferInOrbsTokenContract(ctx context.Context, t *testing.T, amount *big.Int) {
-	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, erc20proxy.CONTRACT_NAME, "approve", d.addressInEthereum.From, amount.Uint64())
+	response, _, err := d.harness.sendTransaction(d.orbsOwner.PublicKey(), d.orbsOwner.PrivateKey(), erc20proxy.CONTRACT_NAME, "approve", d.addressInEthereum.From, amount.Uint64())
 	requireSuccess(t, err, response, "approve transaction")
 }
 
 func (d *driver) bindOrbsAutonomousSwapBridgeToEthereum(t *testing.T) {
-	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, d.orbsASBContractName, "setAsbAddr", d.ethASBAddressHex /*d.ethASBAddress.Hex()*/)
+	response, _, err := d.harness.sendTransaction(d.orbsOwner.PublicKey(), d.orbsOwner.PrivateKey(), d.orbsASBContractName, "setAsbAddr", d.ethASBAddressHex)
 	requireSuccess(t, err, response, "setAsbAddr transaction")
 }
 
 func (d *driver) transferInToOrbs(t *testing.T, transferOutTxHash string) {
-	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, d.orbsASBContractName, "transferIn", transferOutTxHash)
+	response, _, err := d.harness.sendTransaction(d.orbsOwner.PublicKey(), d.orbsOwner.PrivateKey(), d.orbsASBContractName, "transferIn", transferOutTxHash)
 	requireSuccess(t, err, response, "transferIn in Orbs")
 }
 
 func (d *driver) transferOutFromOrbs(ctx context.Context, t *testing.T, amount *big.Int) {
-	response, _, err := d.harness.sendTransaction(d.orbsContractOwnerAddress, d.orbsASBContractName, "transferOut", d.addressInEthereum.From.Bytes(), amount.Uint64())
+	response, _, err := d.harness.sendTransaction(d.orbsOwner.PublicKey(), d.orbsOwner.PrivateKey(), d.orbsASBContractName, "transferOut", d.addressInEthereum.From.Bytes(), amount.Uint64())
 	requireSuccess(t, err, response, "transferOut in Orbs")
 }
 
