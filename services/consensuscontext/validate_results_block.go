@@ -1,7 +1,9 @@
 package consensuscontext
 
 import (
+	"bytes"
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
@@ -10,9 +12,11 @@ import (
 type rxValidator func(ctx context.Context, vcrx *rxValidatorContext) error
 
 type rxValidatorContext struct {
-	protocolVersion primitives.ProtocolVersion
-	virtualChainId  primitives.VirtualChainId
-	input           *services.ValidateResultsBlockInput
+	protocolVersion       primitives.ProtocolVersion
+	virtualChainId        primitives.VirtualChainId
+	input                 *services.ValidateResultsBlockInput
+	getStateHash          func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
+	processTransactionSet func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
 }
 
 func validateRxProtocolVersion(ctx context.Context, vcrx *rxValidatorContext) error {
@@ -24,25 +28,112 @@ func validateRxProtocolVersion(ctx context.Context, vcrx *rxValidatorContext) er
 	return nil
 }
 
+func validateRxVirtualChainID(ctx context.Context, vcrx *rxValidatorContext) error {
+	expectedVirtualChainId := vcrx.virtualChainId
+	checkedVirtualChainId := vcrx.input.ResultsBlock.Header.VirtualChainId()
+	if checkedVirtualChainId != expectedVirtualChainId {
+		return errors.Wrapf(ErrMismatchedVirtualChainID, "expected %v actual %v", expectedVirtualChainId, checkedVirtualChainId)
+	}
+	return nil
+}
+
+func validateRxBlockHeight(ctx context.Context, vcrx *rxValidatorContext) error {
+	expectedBlockHeight := vcrx.input.BlockHeight
+	checkedBlockHeight := vcrx.input.ResultsBlock.Header.BlockHeight()
+	if checkedBlockHeight != expectedBlockHeight {
+		return errors.Wrapf(ErrMismatchedBlockHeight, "expected %v actual %v", expectedBlockHeight, checkedBlockHeight)
+	}
+	txBlockHeight := vcrx.input.TransactionsBlock.Header.BlockHeight()
+	if checkedBlockHeight != txBlockHeight {
+		return errors.Wrapf(ErrMismatchedTxRxBlockHeight, "txBlock %v rxBlock %v", txBlockHeight, checkedBlockHeight)
+	}
+	return nil
+}
+
+func validateRxTxBlockPtrMatchesActualTxBlock(ctx context.Context, vcrx *rxValidatorContext) error {
+	txBlockHashPtr := vcrx.input.ResultsBlock.Header.TransactionsBlockHashPtr()
+	expectedTxBlockHashPtr := digest.CalcTransactionsBlockHash(vcrx.input.TransactionsBlock)
+	if !bytes.Equal(txBlockHashPtr, expectedTxBlockHashPtr) {
+		return errors.Wrapf(ErrMismatchedTxHashPtrToActualTxBlock, "expected %v actual %v", expectedTxBlockHashPtr, txBlockHashPtr)
+	}
+	return nil
+}
+
+func validateIdenticalTxRxTimestamp(ctx context.Context, vcrx *rxValidatorContext) error {
+	txTimestamp := vcrx.input.TransactionsBlock.Header.Timestamp()
+	rxTimestamp := vcrx.input.ResultsBlock.Header.Timestamp()
+	if rxTimestamp != txTimestamp {
+		return errors.Wrapf(ErrMismatchedTxRxTimestamps, "txTimestamp %v rxTimestamp %v", txTimestamp, rxTimestamp)
+	}
+	return nil
+}
+
+func validateRxPrevBlockHashPtr(ctx context.Context, vcrx *rxValidatorContext) error {
+	prevBlockHashPtr := vcrx.input.ResultsBlock.Header.PrevBlockHashPtr()
+	expectedPrevBlockHashPtr := vcrx.input.PrevBlockHash
+	if !bytes.Equal(prevBlockHashPtr, expectedPrevBlockHashPtr) {
+		return errors.Wrapf(ErrMismatchedPrevBlockHash, "expected %v actual %v", expectedPrevBlockHashPtr, prevBlockHashPtr)
+	}
+	return nil
+}
+
+func validateRxReceiptsRootHash(ctx context.Context, vcrx *rxValidatorContext) error {
+	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.RawReceiptsRootHash()
+	if calculatedReceiptMerkleRoot, err := calculateReceiptsMerkleRoot(vcrx.input.ResultsBlock.TransactionReceipts); err != nil {
+		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "ValidateResultsBlock error calculateReceiptsMerkleRoot(), %v", err)
+	} else if !bytes.Equal(expectedReceiptsMerkleRoot, []byte(calculatedReceiptMerkleRoot)) {
+		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "expected %v actual %v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
+	}
+	return nil
+}
+
+func validateRxStateDiffHash(ctx context.Context, vcrx *rxValidatorContext) error {
+	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.RawStateDiffHash()
+	if calculatedStateDiffMerkleRoot, err := calculateStateDiffMerkleRoot(vcrx.input.ResultsBlock.ContractStateDiffs); err != nil {
+		return errors.Wrapf(ErrMismatchedStateDiffHash, "ValidateResultsBlock error calculateStateDiffMerkleRoot(), %v", err)
+	} else if !bytes.Equal(expectedStateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
+		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
+	}
+	return nil
+}
+
+func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
+	expectedPreExecutionMerkleRoot := vcrx.input.ResultsBlock.Header.PreExecutionStateRootHash()
+	if getStateHashOut, err := vcrx.getStateHash(ctx, &services.GetStateHashInput{
+		BlockHeight: vcrx.input.ResultsBlock.Header.BlockHeight() - 1,
+	}); err != nil {
+		return errors.Wrapf(ErrMismatchedPreExecutionStateMerkleRoot, "ValidateResultsBlock error GetStateHash(), %v", err)
+	} else if !bytes.Equal(expectedPreExecutionMerkleRoot, getStateHashOut.StateRootHash) {
+		return errors.Wrapf(ErrMismatchedPreExecutionStateMerkleRoot, "expected %v actual %v", expectedPreExecutionMerkleRoot, getStateHashOut.StateRootHash)
+	}
+	return nil
+}
+
+func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
+	return nil
+}
+
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
 
 	vcrx := &rxValidatorContext{
-		protocolVersion: s.config.ProtocolVersion(),
-		virtualChainId:  s.config.VirtualChainId(),
-		input:           input,
+		protocolVersion:       s.config.ProtocolVersion(),
+		virtualChainId:        s.config.VirtualChainId(),
+		input:                 input,
+		getStateHash:          s.stateStorage.GetStateHash,
+		processTransactionSet: s.virtualMachine.ProcessTransactionSet,
 	}
 
 	validators := []rxValidator{
 		validateRxProtocolVersion,
-		//validateRxVirtualChainID,
-		//validateRxBlockHeight,
-		//validateIdenticalTxRxTimestamp,
-		//validateRxPrevBlockHashPtr,
-		//validateRxTxBlockPtrMatchesActualTxBlock,
-		//validateRxReceiptsRootHash,
-		//validateRxStateDiffHash,
-		//validatePreExecutionStateMerkleRoot,
-		//validateExecution,
+		validateRxVirtualChainID,
+		validateRxBlockHeight,
+		validateRxTxBlockPtrMatchesActualTxBlock,
+		validateIdenticalTxRxTimestamp,
+		validateRxPrevBlockHashPtr,
+		validateRxReceiptsRootHash,
+		validateRxStateDiffHash,
+		validatePreExecutionStateMerkleRoot,
+		validateExecution,
 	}
 
 	for _, v := range validators {

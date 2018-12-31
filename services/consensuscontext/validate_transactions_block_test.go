@@ -42,6 +42,7 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 		WithMetadata(txMetadata).
 		WithMetadataHash(validMetadataHash).
 		WithTransactionsRootHash(txRootHashForValidBlock).
+		ApplyValidResultsBlock().
 		Build()
 
 	input := &services.ValidateTransactionsBlockInput{

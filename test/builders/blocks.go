@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type blockPair struct {
 }
 
 func BlockPair() *blockPair {
+	// allocate size for empty fields or you'll get "size mismatch" errors from membuffers
+	empty32ByteHash := make([]byte, 32)
 	createdDate := time.Now()
 	transactions := []*protocol.SignedTransaction{
 		(TransferTransaction().WithAmountAndTargetAddress(10, AddressForEd25519SignerForTests(6))).Build(),
@@ -35,10 +38,10 @@ func BlockPair() *blockPair {
 			ProtocolVersion:       DEFAULT_TEST_PROTOCOL_VERSION,
 			VirtualChainId:        DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:           1,
-			PrevBlockHashPtr:      nil,
+			PrevBlockHashPtr:      empty32ByteHash,
 			Timestamp:             primitives.TimestampNano(createdDate.UnixNano()),
-			TransactionsRootHash:  nil,
-			MetadataHash:          nil,
+			TransactionsRootHash:  empty32ByteHash,
+			MetadataHash:          empty32ByteHash,
 			NumSignedTransactions: 1,
 		},
 		txMetadata:   &protocol.TransactionsBlockMetadataBuilder{},
@@ -48,13 +51,13 @@ func BlockPair() *blockPair {
 			ProtocolVersion:             DEFAULT_TEST_PROTOCOL_VERSION,
 			VirtualChainId:              DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:                 1,
-			PrevBlockHashPtr:            nil,
+			PrevBlockHashPtr:            empty32ByteHash,
 			Timestamp:                   primitives.TimestampNano(createdDate.UnixNano()),
-			ReceiptsRootHash:            nil,
-			StateDiffHash:               nil,
-			TransactionsBlockHashPtr:    nil,
-			PreExecutionStateRootHash:   nil,
-			TransactionsBloomFilterHash: nil,
+			ReceiptsRootHash:            empty32ByteHash,
+			StateDiffHash:               empty32ByteHash,
+			TransactionsBlockHashPtr:    empty32ByteHash,
+			PreExecutionStateRootHash:   empty32ByteHash,
+			TransactionsBloomFilterHash: empty32ByteHash,
 			NumContractStateDiffs:       1,
 			NumTransactionReceipts:      1,
 		},
@@ -243,6 +246,52 @@ func (b *blockPair) WithCorruptNumReceipts(num uint32) *blockPair {
 func (b *blockPair) WithCorruptNumStateDiffs(num uint32) *blockPair {
 	b.sdiffs = []*protocol.ContractStateDiff{}
 	b.rxHeader.NumContractStateDiffs = num
+	return b
+}
+
+func (b *blockPair) ApplyValidResultsBlock() *blockPair {
+	//rxBlock := &protocol.ResultsBlockContainer{
+
+	//transactionReceipts := make([]*protocol.TransactionReceipt, 1)
+	merkleReceiptsRoot := primitives.Sha256(nil) // calculateReceiptsMerkleRoot(transactionReceipts)
+
+	contractStateDiffs := make([]*protocol.ContractStateDiff, 1)
+	stateDiffHash := primitives.Sha256(nil) // calculateStateDiffMerkleRoot(contractStateDiffs)
+
+	preExecutionStateRootHash := &services.GetStateHashOutput{}
+
+	txBlockHash := digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{
+		Header:             b.txHeader.Build(),
+		Metadata:           nil,
+		SignedTransactions: b.transactions,
+		BlockProof:         nil,
+	})
+
+	rxHeader := &protocol.ResultsBlockHeaderBuilder{
+		ProtocolVersion:             b.txHeader.ProtocolVersion,
+		VirtualChainId:              b.txHeader.VirtualChainId,
+		BlockHeight:                 b.txHeader.BlockHeight,
+		PrevBlockHashPtr:            b.txHeader.PrevBlockHashPtr,
+		Timestamp:                   b.txHeader.Timestamp,
+		ReceiptsRootHash:            primitives.MerkleSha256(merkleReceiptsRoot),
+		StateDiffHash:               stateDiffHash,
+		TransactionsBlockHashPtr:    txBlockHash,
+		PreExecutionStateRootHash:   preExecutionStateRootHash.StateRootHash,
+		TransactionsBloomFilterHash: nil,
+		NumTransactionReceipts:      uint32(len(b.transactions)),
+		NumContractStateDiffs:       uint32(len(contractStateDiffs)),
+	}
+	b.rxHeader = rxHeader
+	//}).Build(),
+	//TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{
+	//	TxhashBloomFilter:    nil,
+	//	TimestampBloomFilter: nil,
+	//}).Build(),
+	//TransactionReceipts: output.TransactionReceipts,
+	//ContractStateDiffs:  output.ContractStateDiffs,
+	//BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
+	//}
+
 	return b
 }
 

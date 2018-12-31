@@ -19,6 +19,13 @@ var ErrMismatchedTxMerkleRoot = errors.New("mismatched transactions merkle root"
 var ErrMismatchedMetadataHash = errors.New("mismatched metadata hash")
 var ErrIncorrectTransactionOrdering = errors.New("incorrect transaction ordering")
 
+var ErrMismatchedTxRxBlockHeight = errors.New("mismatched block height between transactions and results")
+var ErrMismatchedTxRxTimestamps = errors.New("mismatched timestamp between transactions and results")
+var ErrMismatchedTxHashPtrToActualTxBlock = errors.New("mismatched tx block hash ptr to actual tx block hash")
+var ErrMismatchedReceiptsRootHash = errors.New("receipt merkleRoot is different between results block header and calculated transaction receipts")
+var ErrMismatchedStateDiffHash = errors.New("state diff merkleRoot is different between results block header and calculated transaction receipts")
+var ErrMismatchedPreExecutionStateMerkleRoot = errors.New("pre-execution state diff merkleRoot is different between results block header and extracted from state storage for previous block")
+
 type txValidator func(ctx context.Context, vctx *txValidatorContext) error
 
 type txValidatorContext struct {
