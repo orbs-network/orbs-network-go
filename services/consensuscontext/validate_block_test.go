@@ -54,20 +54,113 @@ func inputs(cfg config.ConsensusContextConfig) (*protocol.BlockPairContainer, *s
 	return block, input
 }
 
-func TestValidateTransactionBlock(t *testing.T) {
+func toValidatorContext(cfg config.ConsensusContextConfig) *validatorContext {
+	currentBlockHeight := primitives.BlockHeight(1000)
+	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.AddressForEd25519SignerForTests(6)).Build()
+	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
+	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
+	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
+	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
+	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
+	validPrevBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano() - 1000)
 
+	block := builders.
+		BlockPair().
+		WithHeight(currentBlockHeight).
+		WithProtocolVersion(cfg.ProtocolVersion()).
+		WithVirtualChainId(cfg.VirtualChainId()).
+		WithTransactions(0).
+		WithTransaction(transaction).
+		WithPrevBlock(validPrevBlock).
+		WithPrevBlockHash(validPrevBlockHash).
+		WithMetadata(txMetadata).
+		WithMetadataHash(validMetadataHash).
+		WithTransactionsRootHash(txRootHashForValidBlock).
+		Build()
+
+	input := &services.ValidateTransactionsBlockInput{
+		BlockHeight:        currentBlockHeight,
+		TransactionsBlock:  block.TransactionsBlock, // fill in each test
+		PrevBlockHash:      validPrevBlockHash,
+		PrevBlockTimestamp: validPrevBlockTimestamp,
+	}
+
+	return &validatorContext{
+		protocolVersion:        cfg.ProtocolVersion(),
+		virtualChainId:         cfg.VirtualChainId(),
+		allowedTimestampJitter: cfg.ConsensusContextSystemTimestampAllowedJitter(),
+		input:                  input,
+	}
+}
+
+func TestTransactionBlockValidators(t *testing.T) {
+	cfg := config.ForConsensusContextTests(nil)
+	empty32ByteHash := make([]byte, 32)
+	falsyValidateTransactionOrdering := func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (
+		*services.ValidateTransactionsForOrderingOutput, error) {
+		return &services.ValidateTransactionsForOrderingOutput{}, errors.New("Some error")
+	}
+
+	t.Run("should return error for block with incorrect protocol version", func(t *testing.T) {
+		vctx := toValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(999); err != nil {
+			t.Error(err)
+		}
+		err := validateProtocolVersion(context.Background(), vctx)
+		require.Equal(t, ErrMismatchedProtocolVersion, errors.Cause(err), "validation should fail on incorrect protocol version", err)
+	})
+
+	t.Run("should return error for block with incorrect virtual chain", func(t *testing.T) {
+		vctx := toValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateVirtualChainId(999); err != nil {
+			t.Error(err)
+		}
+		err := validateVirtualChainID(context.Background(), vctx)
+		require.Equal(t, ErrMismatchedVirtualChainID, errors.Cause(err), "validation should fail on incorrect virtual chain", err)
+	})
+
+	t.Run("should return error for block with incorrect merkle root", func(t *testing.T) {
+		vctx := toValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateTransactionsRootHash(empty32ByteHash); err != nil {
+			t.Error(err)
+		}
+
+		err := validateTransactionBlockMerkleRoot(context.Background(), vctx)
+		require.Equal(t, ErrMismatchedTxMerkleRoot, errors.Cause(err), "validation should fail on incorrect transaction root hash", err)
+	})
+
+	t.Run("should return error for block with incorrect prev block hash", func(t *testing.T) {
+		vctx := toValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutatePrevBlockHashPtr(empty32ByteHash); err != nil {
+			t.Error(err)
+		}
+		err := validatePrevBlockHashPtr(context.Background(), vctx)
+		require.Equal(t, ErrMismatchedPrevBlockHash, errors.Cause(err), "validation should fail on incorrect prev block hash", err)
+	})
+
+	t.Run("should return error for block with incorrect metadata hash", func(t *testing.T) {
+		vctx := toValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateMetadataHash(empty32ByteHash); err != nil {
+			t.Error(err)
+		}
+		err := validateMetadataHash(context.Background(), vctx)
+		require.Equal(t, ErrMismatchedMetadataHash, errors.Cause(err), "validation should fail on incorrect metadata hash", err)
+	})
+
+	t.Run("should return error for block with failing tx ordering validation", func(t *testing.T) {
+		vctx := toValidatorContext(cfg)
+		vctx.txOrderValidator = falsyValidateTransactionOrdering
+		err := validateTransactionOrdering(context.Background(), vctx)
+		require.Equal(t, ErrIncorrectTransactionOrdering, errors.Cause(err), "validation should fail on failing tx ordering validation", err)
+	})
+}
+
+func TestValidateTransactionBlock(t *testing.T) {
 	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	metricFactory := metric.NewRegistry()
 	cfg := config.ForConsensusContextTests(nil)
 	txPool := &services.MockTransactionPool{}
 	txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
-
-	empty32ByteHash := make([]byte, 32)
-
-	falsyValidateTransactionOrdering := func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (
-		*services.ValidateTransactionsForOrderingOutput, error) {
-		return &services.ValidateTransactionsForOrderingOutput{}, errors.New("Some error")
-	}
 
 	s := NewConsensusContext(
 		txPool,
@@ -77,73 +170,10 @@ func TestValidateTransactionBlock(t *testing.T) {
 		log,
 		metricFactory)
 
-	t.Run("should return ok for valid block", func(t *testing.T) {
-		block, input := inputs(cfg)
-		input.TransactionsBlock = block.TransactionsBlock
-		_, err := s.ValidateTransactionsBlock(context.Background(), input)
-		require.NoError(t, err, "validation should succeed on valid block")
-	})
-
-	t.Run("should return error for block with incorrect protocol version", func(t *testing.T) {
-		block, input := inputs(cfg)
-		if err := block.TransactionsBlock.Header.MutateProtocolVersion(999); err != nil {
-			t.Error(err)
-		}
-		input.TransactionsBlock = block.TransactionsBlock
-		_, err := s.ValidateTransactionsBlock(context.Background(), input)
-		require.Error(t, err, "validation should fail on incorrect protocol version")
-	})
-
-	t.Run("should return error for block with incorrect virtual chain", func(t *testing.T) {
-		block, input := inputs(cfg)
-		if err := block.TransactionsBlock.Header.MutateVirtualChainId(999); err != nil {
-			t.Error(err)
-		}
-		input.TransactionsBlock = block.TransactionsBlock
-		_, err := s.ValidateTransactionsBlock(context.Background(), input)
-		require.Error(t, err, "validation should fail on incorrect virtual chain")
-	})
-
-	t.Run("should return error for block with incorrect merkle root", func(t *testing.T) {
-		block, input := inputs(cfg)
-		if err := block.TransactionsBlock.Header.MutateTransactionsRootHash(empty32ByteHash); err != nil {
-			t.Error(err)
-		}
-
-		input.TransactionsBlock = block.TransactionsBlock
-		_, err := s.ValidateTransactionsBlock(context.Background(), input)
-		require.Error(t, err, "validation should fail on incorrect transaction root hash")
-	})
-
-	t.Run("should return error for block with incorrect prev block hash", func(t *testing.T) {
-		block, input := inputs(cfg)
-		if err := block.TransactionsBlock.Header.MutatePrevBlockHashPtr(empty32ByteHash); err != nil {
-			t.Error(err)
-		}
-		input.TransactionsBlock = block.TransactionsBlock
-		_, err := s.ValidateTransactionsBlock(context.Background(), input)
-		require.Error(t, err, "validation should fail on incorrect prev block hash")
-	})
-
-	t.Run("should return error for block with incorrect metadata hash", func(t *testing.T) {
-		block, input := inputs(cfg)
-		if err := block.TransactionsBlock.Header.MutateMetadataHash(empty32ByteHash); err != nil {
-			t.Error(err)
-		}
-		input.TransactionsBlock = block.TransactionsBlock
-		_, err := s.ValidateTransactionsBlock(context.Background(), input)
-		require.Error(t, err, "validation should fail on incorrect metadata hash")
-	})
-
-	t.Run("should return error for block with failing tx ordering validation", func(t *testing.T) {
-		block, input := inputs(cfg)
-		input.TransactionsBlock = block.TransactionsBlock
-		err := ValidateTransactionsBlockInternal(
-			context.Background(),
-			input, cfg.ProtocolVersion(), cfg.VirtualChainId(), cfg.ConsensusContextSystemTimestampAllowedJitter(),
-			falsyValidateTransactionOrdering)
-		require.Error(t, err, "validation should fail on failing tx ordering validation")
-	})
+	block, input := inputs(cfg)
+	input.TransactionsBlock = block.TransactionsBlock
+	_, err := s.ValidateTransactionsBlock(context.Background(), input)
+	require.NoError(t, err, "validation should succeed on valid block")
 }
 
 func TestIsValidBlockTimestamp(t *testing.T) {

@@ -88,7 +88,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", newBlockHeight))
 
-	// TODO Add configurable maxNumTx and maxBlockSize (open Taiga)
+	// TODO https://tree.taiga.io/project/orbs-network/us/642 Add configurable maxNumTx and maxBlockSize
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{

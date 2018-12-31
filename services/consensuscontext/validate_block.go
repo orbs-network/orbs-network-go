@@ -11,84 +11,134 @@ import (
 	"time"
 )
 
-// TODO Write tests in validate_block_test.go
+var ErrMismatchedProtocolVersion = errors.New("mismatched protocol version")
+var ErrMismatchedVirtualChainID = errors.New("mismatched virtual chain ID")
+var ErrMismatchedBlockHeight = errors.New("mismatched block height")
+var ErrMismatchedPrevBlockHash = errors.New("mismatched previous block hash")
+var ErrInvalidBlockTimestamp = errors.New("invalid current block timestamp")
+var ErrMismatchedTxMerkleRoot = errors.New("mismatched transactions merkle root")
+var ErrMismatchedMetadataHash = errors.New("mismatched metadata hash")
+var ErrIncorrectTransactionOrdering = errors.New("incorrect transaction ordering")
 
-func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (
-	*services.ValidateTransactionsBlockOutput, error) {
-	err := ValidateTransactionsBlockInternal(ctx, input,
-		s.config.ProtocolVersion(), s.config.VirtualChainId(), s.config.ConsensusContextSystemTimestampAllowedJitter(),
-		s.transactionPool.ValidateTransactionsForOrdering)
-	return &services.ValidateTransactionsBlockOutput{}, err
+type validator func(ctx context.Context, vctx *validatorContext) error
+
+type validatorContext struct {
+	protocolVersion        primitives.ProtocolVersion
+	virtualChainId         primitives.VirtualChainId
+	allowedTimestampJitter time.Duration
+	input                  *services.ValidateTransactionsBlockInput
+	txOrderValidator       func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error)
 }
 
-func ValidateTransactionsBlockInternal(
-	ctx context.Context,
-	input *services.ValidateTransactionsBlockInput,
-	expectedProtocolVersion primitives.ProtocolVersion,
-	expectedVirtualChainId primitives.VirtualChainId,
-	allowedTimestampJitter time.Duration,
-	validateTransactionsForOrdering func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (
-		*services.ValidateTransactionsForOrderingOutput, error)) error {
-
-	checkedBlockHeight := input.TransactionsBlock.Header.BlockHeight()
-	expectedBlockHeight := input.BlockHeight
-	if checkedBlockHeight != expectedBlockHeight {
-		return fmt.Errorf("ValidateTransactionsBlock mismatching blockHeight: expected %v actual %v", expectedBlockHeight, checkedBlockHeight)
-	}
-
-	checkedProtocolVersion := input.TransactionsBlock.Header.ProtocolVersion()
+func validateProtocolVersion(ctx context.Context, vctx *validatorContext) error {
+	expectedProtocolVersion := vctx.protocolVersion
+	checkedProtocolVersion := vctx.input.TransactionsBlock.Header.ProtocolVersion()
 	if checkedProtocolVersion != expectedProtocolVersion {
-		return fmt.Errorf("ValidateTransactionsBlock incorrect protocol version: expected %v actual %v", expectedProtocolVersion, checkedProtocolVersion)
-	}
-
-	checkedVirtualChainId := input.TransactionsBlock.Header.VirtualChainId()
-	if checkedVirtualChainId != expectedVirtualChainId {
-		return fmt.Errorf("ValidateTransactionsBlock incorrect virtualChainId: expected %v actual %v", expectedVirtualChainId, checkedVirtualChainId)
-	}
-
-	prevBlockHashPtr := input.TransactionsBlock.Header.PrevBlockHashPtr()
-	expectedPrevBlockHashPtr := input.PrevBlockHash
-	if !bytes.Equal(prevBlockHashPtr, expectedPrevBlockHashPtr) {
-		return fmt.Errorf("ValidateTransactionsBlock mismatching previous block pointer: expected %v actual %v", expectedPrevBlockHashPtr, prevBlockHashPtr)
-	}
-
-	prevBlockTimestamp := input.PrevBlockTimestamp
-	currentBlockTimestamp := input.TransactionsBlock.Header.Timestamp()
-	now := time.Now()
-	if !isValidBlockTimestamp(currentBlockTimestamp, prevBlockTimestamp, now, allowedTimestampJitter) {
-		return fmt.Errorf("ValidateTransactionsBlock current block timestamp is invalid. currentTimestamp %v prevTimestamp %v now %v allowed jitter %v",
-			currentBlockTimestamp, prevBlockTimestamp, now, allowedTimestampJitter)
-	}
-
-	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
-	txMerkleRoot := input.TransactionsBlock.Header.TransactionsRootHash()
-	if expectedTxMerkleRoot, err := calculateTransactionsMerkleRoot(input.TransactionsBlock.SignedTransactions); err != nil {
-		return errors.Wrapf(err, "ValidateTransactionsBlock error calculateTransactionsMerkleRoot")
-	} else if !bytes.Equal(txMerkleRoot, expectedTxMerkleRoot) {
-		return fmt.Errorf("ValidateTransactionsBlock mismatching transaction merkleRoot: expected %v actual %v", expectedTxMerkleRoot, txMerkleRoot)
-	}
-
-	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
-	metadataHash := input.TransactionsBlock.Header.MetadataHash()
-	expectedMetaDataHash := digest.CalcTransactionMetaDataHash(input.TransactionsBlock.Metadata)
-	if !bytes.Equal(metadataHash, expectedMetaDataHash) {
-		return fmt.Errorf("ValidateTransactionsBlock mismatching transaction metadataHash: expected %v actual %v", expectedMetaDataHash, metadataHash)
-	}
-
-	// TODO v1 "Check timestamp is within configurable allowed jitter of system timestamp, and later than previous block"
-
-	validationInput := &services.ValidateTransactionsForOrderingInput{
-		BlockHeight:        input.TransactionsBlock.Header.BlockHeight(),
-		BlockTimestamp:     input.TransactionsBlock.Header.Timestamp(),
-		SignedTransactions: input.TransactionsBlock.SignedTransactions,
-	}
-
-	_, err := validateTransactionsForOrdering(ctx, validationInput)
-	if err != nil {
-		return err
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "expected %v actual %v", expectedProtocolVersion, checkedProtocolVersion)
 	}
 	return nil
+}
 
+func validateVirtualChainID(ctx context.Context, vctx *validatorContext) error {
+	expectedVirtualChainId := vctx.virtualChainId
+	checkedVirtualChainId := vctx.input.TransactionsBlock.Header.VirtualChainId()
+	if checkedVirtualChainId != vctx.virtualChainId {
+		return errors.Wrapf(ErrMismatchedVirtualChainID, "expected %v actual %v", expectedVirtualChainId, checkedVirtualChainId)
+	}
+	return nil
+}
+
+func validateBlockHeight(ctx context.Context, vctx *validatorContext) error {
+	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
+	expectedBlockHeight := vctx.input.BlockHeight
+	if checkedBlockHeight != expectedBlockHeight {
+		return ErrMismatchedBlockHeight
+	}
+	return nil
+}
+
+func validatePrevBlockHashPtr(ctx context.Context, vctx *validatorContext) error {
+	expectedPrevBlockHashPtr := vctx.input.PrevBlockHash
+	prevBlockHashPtr := vctx.input.TransactionsBlock.Header.PrevBlockHashPtr()
+	if !bytes.Equal(prevBlockHashPtr, expectedPrevBlockHashPtr) {
+		return errors.Wrapf(ErrMismatchedPrevBlockHash, "expected %v actual %v", expectedPrevBlockHashPtr, prevBlockHashPtr)
+	}
+	return nil
+}
+
+func validateTransactionBlockTimestamp(ctx context.Context, vctx *validatorContext) error {
+	prevBlockTimestamp := vctx.input.PrevBlockTimestamp
+	currentBlockTimestamp := vctx.input.TransactionsBlock.Header.Timestamp()
+	allowedTimestampJitter := vctx.allowedTimestampJitter
+	now := time.Now()
+	if !isValidBlockTimestamp(currentBlockTimestamp, prevBlockTimestamp, now, allowedTimestampJitter) {
+		return errors.Wrapf(ErrInvalidBlockTimestamp, "currentTimestamp %v prevTimestamp %v now %v allowed jitter %v",
+			currentBlockTimestamp, prevBlockTimestamp, now, allowedTimestampJitter)
+	}
+	return nil
+}
+
+func validateTransactionBlockMerkleRoot(ctx context.Context, vctx *validatorContext) error {
+	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
+	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsRootHash()
+	if expectedTxMerkleRoot, err := calculateTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
+		return err
+	} else if !bytes.Equal(txMerkleRoot, expectedTxMerkleRoot) {
+		return errors.Wrapf(ErrMismatchedTxMerkleRoot, "expected %v actual %v", expectedTxMerkleRoot, txMerkleRoot)
+	}
+	return nil
+}
+
+func validateMetadataHash(ctx context.Context, vctx *validatorContext) error {
+	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
+	expectedMetaDataHash := digest.CalcTransactionMetaDataHash(vctx.input.TransactionsBlock.Metadata)
+	metadataHash := vctx.input.TransactionsBlock.Header.MetadataHash()
+	if !bytes.Equal(metadataHash, expectedMetaDataHash) {
+		return errors.Wrapf(ErrMismatchedMetadataHash, "expected %v actual %v", expectedMetaDataHash, metadataHash)
+	}
+	return nil
+}
+
+func validateTransactionOrdering(ctx context.Context, vctx *validatorContext) error {
+	validationInput := &services.ValidateTransactionsForOrderingInput{
+		BlockHeight:        vctx.input.TransactionsBlock.Header.BlockHeight(),
+		BlockTimestamp:     vctx.input.TransactionsBlock.Header.Timestamp(),
+		SignedTransactions: vctx.input.TransactionsBlock.SignedTransactions,
+	}
+	_, err := vctx.txOrderValidator(ctx, validationInput)
+	if err != nil {
+		return ErrIncorrectTransactionOrdering
+	}
+	return nil
+}
+
+func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
+
+	vctx := &validatorContext{
+		protocolVersion:        s.config.ProtocolVersion(),
+		virtualChainId:         s.config.VirtualChainId(),
+		allowedTimestampJitter: s.config.ConsensusContextSystemTimestampAllowedJitter(),
+		input:                  input,
+		txOrderValidator:       s.transactionPool.ValidateTransactionsForOrdering,
+	}
+
+	validators := []validator{
+		validateProtocolVersion,
+		validateVirtualChainID,
+		validateBlockHeight,
+		validatePrevBlockHashPtr,
+		validateTransactionBlockTimestamp,
+		validateTransactionBlockMerkleRoot,
+		validateMetadataHash,
+		validateTransactionOrdering,
+	}
+
+	for _, v := range validators {
+		if err := v(ctx, vctx); err != nil {
+			return &services.ValidateTransactionsBlockOutput{}, err
+		}
+	}
+	return &services.ValidateTransactionsBlockOutput{}, nil
 }
 
 func isValidBlockTimestamp(currentBlockTimestamp primitives.TimestampNano, prevBlockTimestamp primitives.TimestampNano, now time.Time, allowedTimestampJitter time.Duration) bool {
@@ -132,23 +182,28 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 	checkedHeader := input.ResultsBlock.Header
 	blockProtocolVersion := checkedHeader.ProtocolVersion()
 	blockVirtualChainId := checkedHeader.VirtualChainId()
+
 	if blockProtocolVersion != expectedProtocolVersion {
 		return fmt.Errorf("incorrect protocol version: expected %v but block has %v", expectedProtocolVersion, blockProtocolVersion)
 	}
+
 	if blockVirtualChainId != expectedVirtualChainId {
 		return fmt.Errorf("incorrect virtual chain ID: expected %v but block has %v", expectedVirtualChainId, blockVirtualChainId)
 	}
+
 	if input.BlockHeight != checkedHeader.BlockHeight() {
 		return fmt.Errorf("mismatching blockHeight: input %v checkedHeader %v", input.BlockHeight, checkedHeader.BlockHeight())
 	}
-	fmt.Println("ValidateResultsBlock1 ")
+
 	prevBlockHashPtr := input.ResultsBlock.Header.PrevBlockHashPtr()
 	if !bytes.Equal(input.PrevBlockHash, prevBlockHashPtr) {
 		return errors.New("incorrect previous results block hash")
 	}
+
 	if checkedHeader.Timestamp() != input.TransactionsBlock.Header.Timestamp() {
 		return fmt.Errorf("mismatching timestamps: txBlock=%v rxBlock=%v", checkedHeader.Timestamp(), input.TransactionsBlock.Header.Timestamp())
 	}
+
 	// Check the receipts merkle root matches the receipts.
 	receipts := input.ResultsBlock.TransactionReceipts
 	calculatedReceiptsRoot, err := calculateReceiptsMerkleRoot(receipts)
@@ -160,7 +215,7 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 		fmt.Println("ValidateResultsBlock122 ", calculatedReceiptsRoot, checkedHeader)
 		return errors.New("incorrect receipts root hash")
 	}
-	fmt.Println("ValidateResultsBlock2 ", checkedHeader.BlockHeight())
+
 	// Check the hash of the state diff in the block.
 	// TODO Statediff not impl - pending https://tree.taiga.io/project/orbs-network/us/535
 
@@ -176,12 +231,11 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 	if err != nil {
 		return err
 	}
-	fmt.Println("ValidateResultsBlock3 ", checkedHeader.BlockHeight())
+
 	if !bytes.Equal(checkedHeader.PreExecutionStateRootHash(), calculatedPreExecutionStateRootHash.StateRootHash) {
 		return fmt.Errorf("mismatching PreExecutionStateRootHash: expected %v but results block hash %v",
 			calculatedPreExecutionStateRootHash, checkedHeader.PreExecutionStateRootHash())
 	}
-	fmt.Println("ValidateResultsBlock4 ", checkedHeader.BlockHeight())
 
 	// Check transaction id bloom filter (see block format for structure).
 	// TODO Pending spec https://github.com/orbs-network/orbs-spec/issues/118
@@ -212,148 +266,3 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 	return nil
 
 }
-
-// OLD WORKING CODE
-
-// Validates another node's proposed block.
-// Performed upon request from consensus algo when receiving a proposal during a live consensus round
-//func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
-//
-//	checkedHeader := input.TransactionsBlock.Header
-//	expectedProtocolVersion := s.config.ProtocolVersion()
-//	expectedVirtualChainId := s.config.VirtualChainId()
-//
-//	txs := input.TransactionsBlock.SignedTransactions
-//	txMerkleRootHash := checkedHeader.TransactionsRootHash()
-//
-//	prevBlockHashPtr := checkedHeader.PrevBlockHashPtr()
-//
-//	blockProtocolVersion := checkedHeader.ProtocolVersion()
-//	blockVirtualChainId := checkedHeader.VirtualChainId()
-//
-//	if blockProtocolVersion != expectedProtocolVersion {
-//		return nil, fmt.Errorf("incorrect protocol version: expected %v but block has %v", expectedProtocolVersion, blockProtocolVersion)
-//	}
-//	if blockVirtualChainId != expectedVirtualChainId {
-//		return nil, fmt.Errorf("incorrect virtual chain ID: expected %v but block has %v", expectedVirtualChainId, blockVirtualChainId)
-//	}
-//	if input.BlockHeight != checkedHeader.BlockHeight() {
-//		return nil, fmt.Errorf("mismatching blockHeight: input %v checkedHeader %v", input.BlockHeight, checkedHeader.BlockHeight())
-//	}
-//	calculatedTxRoot, err := calculateTransactionsRootHash(txs)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if !bytes.Equal(txMerkleRootHash, calculatedTxRoot) {
-//		return nil, errors.New("incorrect transactions root hash")
-//	}
-//	calculatedPrevBlockHashPtr := calculatePrevBlockHashPtr(input.TransactionsBlock)
-//	if !bytes.Equal(prevBlockHashPtr, calculatedPrevBlockHashPtr) {
-//		return nil, errors.New("incorrect previous block hash")
-//	}
-//
-//	// TODO v1 "Check timestamp is within configurable allowed jitter of system timestamp, and later than previous block"
-//
-//	// TODO "Check transaction merkle root hash" https://github.com/orbs-network/orbs-spec/issues/118
-//
-//	// TODO "Check metadata hash" https://tree.taiga.io/project/orbs-network/us/535
-//
-//	validationInput := &services.ValidateTransactionsForOrderingInput{
-//		BlockHeight:        input.BlockHeight,
-//		BlockTimestamp:     input.TransactionsBlock.Header.Timestamp(),
-//		SignedTransactions: input.TransactionsBlock.SignedTransactions,
-//	}
-//
-//	_, err = s.transactionPool.ValidateTransactionsForOrdering(ctx, validationInput)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return &services.ValidateTransactionsBlockOutput{}, nil
-//
-//}
-//
-//func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
-//	expectedProtocolVersion := s.config.ProtocolVersion()
-//	expectedVirtualChainId := s.config.VirtualChainId()
-//
-//	checkedHeader := input.ResultsBlock.Header
-//	blockProtocolVersion := checkedHeader.ProtocolVersion()
-//	blockVirtualChainId := checkedHeader.VirtualChainId()
-//	if blockProtocolVersion != expectedProtocolVersion {
-//		return nil, fmt.Errorf("incorrect protocol version: expected %v but block has %v", expectedProtocolVersion, blockProtocolVersion)
-//	}
-//	if blockVirtualChainId != expectedVirtualChainId {
-//		return nil, fmt.Errorf("incorrect virtual chain ID: expected %v but block has %v", expectedVirtualChainId, blockVirtualChainId)
-//	}
-//	if input.BlockHeight != checkedHeader.BlockHeight() {
-//		return nil, fmt.Errorf("mismatching blockHeight: input %v checkedHeader %v", input.BlockHeight, checkedHeader.BlockHeight())
-//	}
-//
-//	prevBlockHashPtr := input.ResultsBlock.Header.PrevBlockHashPtr()
-//	if !bytes.Equal(input.PrevBlockHash, prevBlockHashPtr) {
-//		return nil, errors.New("incorrect previous results block hash")
-//	}
-//	if checkedHeader.Timestamp() != input.TransactionsBlock.Header.Timestamp() {
-//		return nil, fmt.Errorf("mismatching timestamps: txBlock=%v rxBlock=%v", checkedHeader.Timestamp(), input.TransactionsBlock.Header.Timestamp())
-//	}
-//	// Check the receipts merkle root matches the receipts.
-//	receipts := input.ResultsBlock.TransactionReceipts
-//	calculatedReceiptsRoot, err := calculateReceiptsRootHash(receipts)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if !bytes.Equal(checkedHeader.ReceiptsRootHash(), calculatedReceiptsRoot) {
-//		return nil, errors.New("incorrect receipts root hash")
-//	}
-//
-//	// Check the hash of the state diff in the block.
-//	// TODO Statediff not impl - pending https://tree.taiga.io/project/orbs-network/us/535
-//
-//	// Check hash pointer to the Transactions block of the same height.
-//	if checkedHeader.BlockHeight() != input.TransactionsBlock.Header.BlockHeight() {
-//		return nil, fmt.Errorf("mismatching block height: txBlock=%v rxBlock=%v", checkedHeader.BlockHeight(), input.TransactionsBlock.Header.BlockHeight())
-//	}
-//
-//	// Check merkle root of the state prior to the block execution, retrieved by calling `StateStorage.GetStateHash`.
-//
-//	calculatedPreExecutionStateRootHash, err := s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-//		BlockHeight: checkedHeader.BlockHeight(),
-//	})
-//	if err != nil {
-//		return nil, err
-//	}
-//	if !bytes.Equal(checkedHeader.PreExecutionStateRootHash(), calculatedPreExecutionStateRootHash.StateRootHash) {
-//		return nil, fmt.Errorf("mismatching PreExecutionStateRootHash: expected %v but results block hash %v",
-//			calculatedPreExecutionStateRootHash, checkedHeader.PreExecutionStateRootHash())
-//	}
-//
-//	// Check transaction id bloom filter (see block format for structure).
-//	// TODO Pending spec https://github.com/orbs-network/orbs-spec/issues/118
-//
-//	// Check transaction timestamp bloom filter (see block format for structure).
-//	// TODO Pending spec https://github.com/orbs-network/orbs-spec/issues/118
-//
-//	// Validate transaction execution
-//
-//	// Execute the ordered transactions set by calling VirtualMachine.ProcessTransactionSet
-//	// (creating receipts and state diff). Using the provided header timestamp as a reference timestamp.
-//	_, err = s.virtualMachine.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
-//		BlockHeight:        checkedHeader.BlockHeight(),
-//		SignedTransactions: input.TransactionsBlock.SignedTransactions,
-//	})
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// Compare the receipts merkle root hash to the one in the block
-//
-//	// Compare the state diff hash to the one in the block (supports only deterministic execution).
-//
-//	// TODO https://tree.taiga.io/project/orbs-network/us/535 How to calculate receipts merkle hash root and state diff hash
-//	// See https://github.com/orbs-network/orbs-spec/issues/111
-//	//blockMerkleRootHash := checkedHeader.ReceiptsRootHash()
-//
-//	return &services.ValidateResultsBlockOutput{}, nil
-//
-//}

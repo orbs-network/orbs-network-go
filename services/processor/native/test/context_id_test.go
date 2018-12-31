@@ -14,7 +14,7 @@ func TestContextId_Simple(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
-		const CONTEXT_ID = 17
+		var CONTEXT_ID = []byte{0x17, 0x18}
 
 		call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
 		h.expectSdkCallMadeWithExecutionContextId(CONTEXT_ID)
@@ -32,7 +32,7 @@ func TestContextId_MultipleGoroutines(t *testing.T) {
 
 		for i := 0; i < 20; i++ {
 			wg.Add(1)
-			var CONTEXT_ID = sdkContext.ContextId(i + 17)
+			var CONTEXT_ID = sdkContext.ContextId([]byte{0x17, byte(i + 17)})
 
 			go func() {
 				call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()

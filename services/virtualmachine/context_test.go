@@ -15,6 +15,8 @@ func TestContext_Load(t *testing.T) {
 	contextId2, _ := cp.allocateExecutionContext(2, 0x333, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer cp.destroyExecutionContext(contextId1)
 
+	t.Logf("%s\n", contextId1)
+	t.Logf("%s\n", contextId2)
 	require.NotEqual(t, contextId1, contextId2, "contextId1 should be different from contextId2")
 
 	c1 := cp.loadExecutionContext(contextId1)

@@ -7,10 +7,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-//******************************************
-// 				Inner
-//******************************************
-
 func calculateTransactionsMerkleRoot(txs []*protocol.SignedTransaction) (primitives.Sha256, error) {
 	txHashValues := make([]primitives.Sha256, len(txs))
 	for i := 0; i < len(txs); i++ {
