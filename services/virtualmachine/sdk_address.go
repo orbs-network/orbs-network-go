@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.Argument, error) {
 	switch methodName {
 
 	case "getSignerAddress":
@@ -15,9 +15,9 @@ func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *ex
 		if err != nil {
 			return nil, err
 		}
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "value",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: value,
 		}).Build()}, nil
 
@@ -26,9 +26,9 @@ func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *ex
 		if err != nil {
 			return nil, err
 		}
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "value",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: value,
 		}).Build()}, nil
 
@@ -38,7 +38,7 @@ func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *ex
 }
 
 // outputArg0: value ([]byte)
-func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
 	if len(args) != 0 {
 		return nil, errors.Errorf("invalid SDK address getSignerAddress args: %v", args)
 	}
@@ -51,7 +51,7 @@ func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionCo
 }
 
 // outputArg0: value ([]byte)
-func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
 	if len(args) != 0 {
 		return nil, errors.Errorf("invalid SDK address getCallerAddress args: %v", args)
 	}

@@ -30,7 +30,7 @@ func (c *contractSdkServiceCallHandlerStub) HandleSdkCall(ctx context.Context, i
 	switch input.MethodName {
 	case "callMethod":
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: []*protocol.MethodArgument{input.InputArguments[2]},
+			OutputArguments: []*protocol.Argument{input.InputArguments[2]},
 		}, nil
 	default:
 		return nil, errors.New("unknown method")

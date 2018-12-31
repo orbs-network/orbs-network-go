@@ -99,7 +99,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 
 	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray)
 	if outputArgs == nil {
-		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
 	if err != nil {
 		logger.Info("contract execution failed", log.Error(err))
