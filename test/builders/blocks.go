@@ -27,7 +27,7 @@ type blockPair struct {
 func BlockPair() *blockPair {
 	createdDate := time.Now()
 	transactions := []*protocol.SignedTransaction{
-		(TransferTransaction().WithAmountAndTargetAddress(10, AddressForEd25519SignerForTests(6))).Build(),
+		(TransferTransaction().WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6))).Build(),
 	}
 
 	b := &blockPair{
@@ -154,7 +154,7 @@ func (b *blockPair) WithMetadataHash(metadataHash primitives.Sha256) *blockPair 
 func (b *blockPair) WithTransactions(num uint32) *blockPair {
 	b.transactions = make([]*protocol.SignedTransaction, 0, num)
 	for i := uint32(0); i < num; i++ {
-		b.transactions = append(b.transactions, TransferTransaction().WithAmountAndTargetAddress(uint64(10*num), AddressForEd25519SignerForTests(6)).Build())
+		b.transactions = append(b.transactions, TransferTransaction().WithAmountAndTargetAddress(uint64(10*num), ClientAddressForEd25519SignerForTests(6)).Build())
 	}
 	b.txHeader.NumSignedTransactions = num
 	return b
@@ -221,9 +221,9 @@ func (b *blockPair) WithTimestampNow() *blockPair {
 func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		TransactionsBlockHash: hash,
-		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		BenchmarkConsensus:    nil,
-		LeanHelix:             nil,
+		Type:               protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		BenchmarkConsensus: nil,
+		LeanHelix:          nil,
 	}
 	return b
 }

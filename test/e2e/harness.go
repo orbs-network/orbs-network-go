@@ -49,7 +49,7 @@ func newHarness() *harness {
 func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
-	sendTxOut, txId, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to deploy native contract")
 	}
@@ -72,8 +72,8 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 	return executionResult, txStatus, err
 }
 
-func (h *harness) sendTransaction(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
-	payload, txId, err := h.client.CreateSendTransactionPayload(sender.PublicKey(), sender.PrivateKey(), contractName, methodName, args...)
+func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
+	payload, txId, err := h.client.CreateSendTransactionPayload(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, txId, err
 	}
@@ -81,8 +81,8 @@ func (h *harness) sendTransaction(sender *keys.Ed25519KeyPair, contractName stri
 	return
 }
 
-func (h *harness) callMethod(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.CallMethodResponse, err error) {
-	payload, err := h.client.CreateCallMethodPayload(sender.PublicKey(), contractName, methodName, args...)
+func (h *harness) callMethod(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.CallMethodResponse, err error) {
+	payload, err := h.client.CreateCallMethodPayload(senderPublicKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, err
 	}
