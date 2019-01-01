@@ -6,4 +6,4 @@ docker run -ti \
     -e STRESS_TEST_FAILURE_RATE=20 \
     -e STRESS_TEST_TARGET_TPS=200 \
     -e STRESS_TEST=true \
-    orbs:e2e
+    orbs:build
