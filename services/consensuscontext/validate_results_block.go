@@ -11,11 +11,15 @@ import (
 
 type rxValidator func(ctx context.Context, vcrx *rxValidatorContext) error
 
+type GetStateHashAdapter interface {
+	GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
+}
+
 type rxValidatorContext struct {
 	protocolVersion       primitives.ProtocolVersion
 	virtualChainId        primitives.VirtualChainId
 	input                 *services.ValidateResultsBlockInput
-	getStateHash          func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
+	getStateHashAdapter   GetStateHashAdapter
 	processTransactionSet func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
 }
 
@@ -99,10 +103,10 @@ func validateRxStateDiffHash(ctx context.Context, vcrx *rxValidatorContext) erro
 
 func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
 	expectedPreExecutionMerkleRoot := vcrx.input.ResultsBlock.Header.PreExecutionStateRootHash()
-	if getStateHashOut, err := vcrx.getStateHash(ctx, &services.GetStateHashInput{
+	if getStateHashOut, err := vcrx.getStateHashAdapter.GetStateHash(ctx, &services.GetStateHashInput{
 		BlockHeight: vcrx.input.ResultsBlock.Header.BlockHeight() - 1,
 	}); err != nil {
-		return errors.Wrapf(ErrMismatchedPreExecutionStateMerkleRoot, "ValidateResultsBlock error GetStateHash(), %v", err)
+		return errors.Wrapf(ErrGetStateHash, "ValidateResultsBlock error GetStateHash(), %v", err)
 	} else if !bytes.Equal(expectedPreExecutionMerkleRoot, getStateHashOut.StateRootHash) {
 		return errors.Wrapf(ErrMismatchedPreExecutionStateMerkleRoot, "expected %v actual %v", expectedPreExecutionMerkleRoot, getStateHashOut.StateRootHash)
 	}
@@ -113,13 +117,27 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	return nil
 }
 
+type realGetStateHashAdapter struct {
+	getStateHash func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
+}
+
+func (r *realGetStateHashAdapter) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+	return r.getStateHash(ctx, input)
+}
+
+func NewRealGetStateHashAdapter(f func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)) GetStateHashAdapter {
+	return &realGetStateHashAdapter{
+		getStateHash: f,
+	}
+}
+
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
 
 	vcrx := &rxValidatorContext{
 		protocolVersion:       s.config.ProtocolVersion(),
 		virtualChainId:        s.config.VirtualChainId(),
 		input:                 input,
-		getStateHash:          s.stateStorage.GetStateHash,
+		getStateHashAdapter:   NewRealGetStateHashAdapter(s.stateStorage.GetStateHash),
 		processTransactionSet: s.virtualMachine.ProcessTransactionSet,
 	}
 

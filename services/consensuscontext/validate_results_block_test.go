@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -17,7 +18,7 @@ import (
 func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockInput {
 
 	currentBlockHeight := primitives.BlockHeight(1000)
-	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.AddressForEd25519SignerForTests(6)).Build()
+	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
 	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
 	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
@@ -55,7 +56,7 @@ func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext
 
 	empty32ByteHash := make([]byte, 32)
 	currentBlockHeight := primitives.BlockHeight(1000)
-	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.AddressForEd25519SignerForTests(6)).Build()
+	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
 	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
 	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
@@ -103,15 +104,28 @@ func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext
 
 }
 
+type mockGetStateHashAdapter struct {
+	getStateHash func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
+}
+
+func NewMockGetStateHashThatReturns(stateRootHash primitives.MerkleSha256, err error) GetStateHashAdapter {
+	return &mockGetStateHashAdapter{
+		getStateHash: func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+			return &services.GetStateHashOutput{
+				StateRootHash: stateRootHash,
+			}, err
+		},
+	}
+}
+
+func (m *mockGetStateHashAdapter) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+	return m.getStateHash(ctx, input)
+}
+
 func TestResultsBlockValidators(t *testing.T) {
 	cfg := config.ForConsensusContextTests(nil)
 	empty32ByteHash := make([]byte, 32)
 
-	truthyGetStateHash := func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-		return &services.GetStateHashOutput{
-			StateRootHash: empty32ByteHash,
-		}, nil
-	}
 	//falsyGetStateHash := func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
 	//	return &services.GetStateHashOutput{}, errors.New("Some error")
 	//}
@@ -228,16 +242,31 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error when state's pre-execution merkle root is different between the results block and state storage", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
-		vcrx.getStateHash = truthyGetStateHash
-		err := validatePreExecutionStateMerkleRoot(context.Background(), vcrx)
-		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutatePreExecutionStateRootHash(empty32ByteHash); err != nil {
+		manualPreExecutionStateRootHash1 := hash.CalcSha256([]byte{1})
+		manualPreExecutionStateRootHash2 := hash.CalcSha256([]byte{2})
+
+		// success case - setup the results block and GetStateHash() to return same hash
+		successfulGetStateHash := NewMockGetStateHashThatReturns(primitives.MerkleSha256(manualPreExecutionStateRootHash1), nil)
+		if err := vcrx.input.ResultsBlock.Header.MutatePreExecutionStateRootHash(primitives.MerkleSha256(manualPreExecutionStateRootHash1)); err != nil {
 			t.Error(err)
 		}
-		//vcrx.getStateHash = falsyGetStateHash
+		vcrx.getStateHashAdapter = successfulGetStateHash
+		err := validatePreExecutionStateMerkleRoot(context.Background(), vcrx)
+		require.Nil(t, err, "results block holds the same pre-execution merkle root that is returned from state storage")
 
+		// GetStateHash returns error
+		errorGetStateHash := NewMockGetStateHashThatReturns(vcrx.input.ResultsBlock.Header.PreExecutionStateRootHash(), errors.New("Some error"))
+		vcrx.getStateHashAdapter = errorGetStateHash
 		err = validatePreExecutionStateMerkleRoot(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedPreExecutionStateMerkleRoot, errors.Cause(err), "validation should fail on incorrect pre-execution state root hash", err)
+		require.Equal(t, ErrGetStateHash, errors.Cause(err), "validation should fail if failed to read the pre-execution merkle root from state storage", err)
+
+		// GetStateHash returns successfully but a mismatching hash
+		vcrx.getStateHashAdapter = successfulGetStateHash
+		if err := vcrx.input.ResultsBlock.Header.MutatePreExecutionStateRootHash(primitives.MerkleSha256(manualPreExecutionStateRootHash2)); err != nil {
+			t.Error(err)
+		}
+		err = validatePreExecutionStateMerkleRoot(context.Background(), vcrx)
+		require.Equal(t, ErrMismatchedPreExecutionStateMerkleRoot, errors.Cause(err), "validation should fail if results block holds a different pre-execution merkle root than is returned from state storage", err)
 	})
 
 	t.Run("should return error when receipts or state merkle roots are different between calculated execution result and those stored in block", func(t *testing.T) {
