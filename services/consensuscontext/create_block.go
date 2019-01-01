@@ -14,7 +14,9 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	start := time.Now()
 	defer s.metrics.createTxBlockTime.RecordSince(start)
 
-	proposedTransactions, err := s.fetchTransactions(ctx, input.BlockHeight, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
+	newBlockTimestamp := calculateNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
+
+	proposedTransactions, err := s.fetchTransactions(ctx, input.CurrentBlockHeight, newBlockTimestamp, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch transactions for new block")
 	}
@@ -25,16 +27,15 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 		return nil, err
 	}
 
-	timestamp := calculateNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
 	metaData := (&protocol.TransactionsBlockMetadataBuilder{}).Build()
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
 			ProtocolVersion:            s.config.ProtocolVersion(),
 			VirtualChainId:             s.config.VirtualChainId(),
-			BlockHeight:                input.BlockHeight,
+			BlockHeight:                input.CurrentBlockHeight,
 			PrevBlockHashPtr:           input.PrevBlockHash,
-			Timestamp:                  timestamp,
+			Timestamp:                  newBlockTimestamp,
 			TransactionsMerkleRootHash: merkleTransactionsRoot,
 			MetadataHash:               digest.CalcTransactionMetaDataHash(metaData),
 			NumSignedTransactions:      uint32(txCount),
@@ -53,8 +54,9 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 	defer s.metrics.createResultsBlockTime.RecordSince(start)
 
 	output, err := s.virtualMachine.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		BlockHeight:        input.BlockHeight,
-		SignedTransactions: input.TransactionsBlock.SignedTransactions,
+		SignedTransactions:    input.TransactionsBlock.SignedTransactions,
+		CurrentBlockHeight:    input.CurrentBlockHeight,
+		CurrentBlockTimestamp: input.TransactionsBlock.Header.Timestamp(),
 	})
 	if err != nil {
 		return nil, err
@@ -65,15 +67,17 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		return nil, err
 	}
 
-	// TODO: handle genesis block at height 0
+	if input.CurrentBlockHeight == 0 {
+		panic("CurrentBlockHeight, the block being closed, cannot be at height zero")
+	}
+
 	preExecutionStateRootHash := &services.GetStateHashOutput{}
-	if input.BlockHeight > 0 {
-		preExecutionStateRootHash, err = s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
-			BlockHeight: input.BlockHeight - 1,
-		})
-		if err != nil {
-			return nil, err
-		}
+
+	preExecutionStateRootHash, err = s.stateStorage.GetStateHash(ctx, &services.GetStateHashInput{
+		BlockHeight: input.CurrentBlockHeight - 1,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	stateDiffHash, err := calculateStateDiffMerkleRoot(output.ContractStateDiffs)
@@ -85,7 +89,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		Header: (&protocol.ResultsBlockHeaderBuilder{
 			ProtocolVersion:                 primitives.ProtocolVersion(s.config.ProtocolVersion()),
 			VirtualChainId:                  s.config.VirtualChainId(),
-			BlockHeight:                     input.BlockHeight,
+			BlockHeight:                     input.CurrentBlockHeight,
 			PrevBlockHashPtr:                input.PrevBlockHash,
 			Timestamp:                       input.TransactionsBlock.Header.Timestamp(),
 			ReceiptsMerkleRootHash:          merkleReceiptsRoot,

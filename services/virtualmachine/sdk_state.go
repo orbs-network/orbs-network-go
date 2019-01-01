@@ -61,7 +61,7 @@ func (s *service) handleSdkStateRead(ctx context.Context, executionContext *exec
 
 	// cache miss to state storage
 	output, err := s.stateStorage.ReadKeys(ctx, &services.ReadKeysInput{
-		BlockHeight:  executionContext.blockHeight,
+		BlockHeight:  executionContext.lastCommittedBlockHeight,
 		ContractName: currentService,
 		Keys:         [][]byte{key},
 	})

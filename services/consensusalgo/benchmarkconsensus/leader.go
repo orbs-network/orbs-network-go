@@ -111,8 +111,11 @@ func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   lastCommittedBlockHeight + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
+		CurrentBlockHeight:      lastCommittedBlockHeight + 1,
+		MaxBlockSizeKb:          0, // TODO(v1): fill in or remove from spec
+		MaxNumberOfTransactions: 0,
+		PrevBlockHash:           digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
+		PrevBlockTimestamp:      lastCommittedBlock.TransactionsBlock.Header.Timestamp(),
 	})
 	if err != nil {
 		return nil, err
@@ -120,9 +123,10 @@ func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       lastCommittedBlockHeight + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
-		TransactionsBlock: txOutput.TransactionsBlock,
+		CurrentBlockHeight: lastCommittedBlockHeight + 1,
+		PrevBlockHash:      digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
+		TransactionsBlock:  txOutput.TransactionsBlock,
+		PrevBlockTimestamp: lastCommittedBlock.ResultsBlock.Header.Timestamp(),
 	})
 	if err != nil {
 		return nil, err

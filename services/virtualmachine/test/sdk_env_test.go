@@ -24,8 +24,7 @@ func TestSdkEnv_GetBlockDetails_InTransaction(t *testing.T) {
 			t.Log("getBlockHeight")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockHeight")
 			require.NoError(t, err, "handleSdkCall should not fail")
-			require.Equal(t, uint64(currentBlockHeight-1), res[0].Uint64Value(), "handleSdkCall result should be equal")
-			// TODO(https://github.com/orbs-network/orbs-spec/issues/123): this should return 12 and not 11! , fix and remove the minus 1 when we resolve the current height prev height mess
+			require.Equal(t, uint64(currentBlockHeight), res[0].Uint64Value(), "handleSdkCall result should be equal")
 
 			t.Log("getBlockTimestamp")
 			res, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockTimestamp")

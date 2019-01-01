@@ -43,7 +43,7 @@ func (s *service) handleSdkEnvGetBlockHeight(executionContext *executionContext,
 		return 0, errors.Errorf("invalid SDK env getBlockHeight args: %v", args)
 	}
 
-	return uint64(executionContext.blockHeight), nil
+	return uint64(executionContext.currentBlockHeight), nil
 }
 
 // outputArg0: value (uint64)
@@ -52,5 +52,5 @@ func (s *service) handleSdkEnvGetBlockTimestamp(executionContext *executionConte
 		return 0, errors.Errorf("invalid SDK env getBlockTimestamp args: %v", args)
 	}
 
-	return uint64(executionContext.blockTimestamp), nil
+	return uint64(executionContext.currentBlockTimestamp), nil
 }

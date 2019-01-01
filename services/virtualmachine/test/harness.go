@@ -132,9 +132,9 @@ func (h *harness) processTransactionSetAtHeightAndTimestamp(ctx context.Context,
 	}
 
 	output, _ := h.service.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		BlockHeight:        currentBlockHeight,
-		BlockTimestamp:     currentBlockTimestamp,
-		SignedTransactions: transactions,
+		SignedTransactions:    transactions,
+		CurrentBlockHeight:    currentBlockHeight,
+		CurrentBlockTimestamp: currentBlockTimestamp,
 	})
 
 	results := []protocol.ExecutionResult{}
@@ -164,8 +164,9 @@ func (h *harness) processTransactionSetAtHeightAndTimestamp(ctx context.Context,
 
 func (h *harness) transactionSetPreOrder(ctx context.Context, signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {
 	output, err := h.service.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		BlockHeight:        12,
-		SignedTransactions: signedTransactions,
+		SignedTransactions:    signedTransactions,
+		CurrentBlockHeight:    12,
+		CurrentBlockTimestamp: 0x777,
 	})
 	return output.PreOrderResults, err
 }

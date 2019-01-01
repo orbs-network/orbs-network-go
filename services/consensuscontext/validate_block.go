@@ -50,7 +50,7 @@ func validateVirtualChainID(ctx context.Context, vctx *validatorContext) error {
 
 func validateBlockHeight(ctx context.Context, vctx *validatorContext) error {
 	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
-	expectedBlockHeight := vctx.input.BlockHeight
+	expectedBlockHeight := vctx.input.CurrentBlockHeight
 	if checkedBlockHeight != expectedBlockHeight {
 		return ErrMismatchedBlockHeight
 	}
@@ -101,9 +101,9 @@ func validateMetadataHash(ctx context.Context, vctx *validatorContext) error {
 
 func validateTransactionOrdering(ctx context.Context, vctx *validatorContext) error {
 	validationInput := &services.ValidateTransactionsForOrderingInput{
-		BlockHeight:        vctx.input.TransactionsBlock.Header.BlockHeight(),
-		BlockTimestamp:     vctx.input.TransactionsBlock.Header.Timestamp(),
-		SignedTransactions: vctx.input.TransactionsBlock.SignedTransactions,
+		SignedTransactions:    vctx.input.TransactionsBlock.SignedTransactions,
+		CurrentBlockHeight:    vctx.input.TransactionsBlock.Header.BlockHeight(),
+		CurrentBlockTimestamp: vctx.input.TransactionsBlock.Header.Timestamp(),
 	}
 	_, err := vctx.txOrderValidator(ctx, validationInput)
 	if err != nil {
@@ -191,8 +191,8 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 		return fmt.Errorf("incorrect virtual chain ID: expected %v but block has %v", expectedVirtualChainId, blockVirtualChainId)
 	}
 
-	if input.BlockHeight != checkedHeader.BlockHeight() {
-		return fmt.Errorf("mismatching blockHeight: input %v checkedHeader %v", input.BlockHeight, checkedHeader.BlockHeight())
+	if input.CurrentBlockHeight != checkedHeader.BlockHeight() {
+		return fmt.Errorf("mismatching blockHeight: input %v checkedHeader %v", input.CurrentBlockHeight, checkedHeader.BlockHeight())
 	}
 
 	prevBlockHashPtr := input.ResultsBlock.Header.PrevBlockHashPtr()
@@ -208,8 +208,7 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 	receipts := input.ResultsBlock.TransactionReceipts
 	calculatedReceiptsRoot, err := calculateReceiptsMerkleRoot(receipts)
 	if err != nil {
-		fmt.Errorf("error in calculatedReceiptsRoot  blockheight=%v", input.BlockHeight)
-		return err
+		return errors.Wrapf(err, "error in calculatedReceiptsRoot blockheight=%v", input.CurrentBlockHeight)
 	}
 	if !bytes.Equal(checkedHeader.ReceiptsMerkleRootHash(), calculatedReceiptsRoot) {
 		fmt.Println("ValidateResultsBlock122 ", calculatedReceiptsRoot, checkedHeader)
@@ -248,8 +247,9 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 	// Execute the ordered transactions set by calling VirtualMachine.ProcessTransactionSet
 	// (creating receipts and state diff). Using the provided header timestamp as a reference timestamp.
 	_, err = processTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		BlockHeight:        checkedHeader.BlockHeight(),
-		SignedTransactions: input.TransactionsBlock.SignedTransactions,
+		SignedTransactions:    input.TransactionsBlock.SignedTransactions,
+		CurrentBlockHeight:    checkedHeader.BlockHeight(),
+		CurrentBlockTimestamp: checkedHeader.Timestamp(),
 	})
 	if err != nil {
 		return err
