@@ -20,15 +20,15 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndIsPreBuiltNativeContrac
 		// first transaction should deploy to transient state
 		h.expectPreBuiltContractNotToBeDeployed()
 		h.expectDeployToWriteDeploymentDataToState(t, ctx)
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
 		// second transaction should read deployment data from transient state
 		h.expectContractToBeDeployedByReadingDeploymentDataFromState(t, ctx)
 		h.expectStateStorageNotRead() // we expect the read to come from transient state, not the state storage service
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
 		results, _, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
@@ -53,27 +53,27 @@ var DEPLOYMENT_DATA_STATE_KEY_NAME = []byte{0x01}  // some value to represent it
 var DEPLOYMENT_DATA_STATE_KEY_VALUE = []byte{0x02} // some value to represent it
 
 func (h *harness) expectPreBuiltContractNotToBeDeployed() {
-	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_GET_INFO_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
-		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.MethodArgumentsArray(), errors.New("not deployed")
+	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_GET_INFO_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+		return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.ArgumentsArray(), errors.New("not deployed")
 	})
 	h.expectNativeContractInfoRequested("Contract1", nil)
 }
 
 func (h *harness) expectDeployToWriteDeploymentDataToState(t *testing.T, ctx context.Context) {
-	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_DEPLOY_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_DEPLOY_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 		t.Log("Transaction: deploy writes deployment data to state")
 		_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "write", DEPLOYMENT_DATA_STATE_KEY_NAME, DEPLOYMENT_DATA_STATE_KEY_VALUE)
 		require.NoError(t, err, "handleSdkCall should succeed")
-		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil
+		return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil
 	})
 }
 
 func (h *harness) expectContractToBeDeployedByReadingDeploymentDataFromState(t *testing.T, ctx context.Context) {
-	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_GET_INFO_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_GET_INFO_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 		t.Log("Transaction: read should return the deployment data")
 		res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "read", DEPLOYMENT_DATA_STATE_KEY_NAME)
 		require.NoError(t, err, "handleSdkCall should not fail")
 		require.Equal(t, DEPLOYMENT_DATA_STATE_KEY_VALUE, res[0].BytesValue(), "handleSdkCall result should be equal")
-		return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil
+		return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil
 	})
 }

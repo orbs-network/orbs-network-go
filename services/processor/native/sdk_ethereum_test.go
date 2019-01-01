@@ -47,11 +47,11 @@ func (c *contractSdkEthereumCallHandlerStub) HandleSdkCall(ctx context.Context, 
 	switch input.MethodName {
 	case "callMethod":
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.MethodArguments(examplePackedOutput),
+			OutputArguments: builders.Arguments(examplePackedOutput),
 		}, nil
 	case "getTransactionLog":
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.MethodArguments(examplePackedOutput),
+			OutputArguments: builders.Arguments(examplePackedOutput),
 		}, nil
 	default:
 		return nil, errors.New("unknown method")

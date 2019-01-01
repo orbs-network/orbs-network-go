@@ -2,9 +2,8 @@ package e2e
 
 import (
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -24,15 +23,14 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		h.waitUntilTransactionPoolIsReady(t)
 		printTestTime(t, "first block committed", &lt)
 
-		transferTo, _ := keys.GenerateEd25519Key()
-		targetAddress := builders.AddressFor(transferTo)
+		transferTo, _ := orbsclient.CreateAccount()
 
 		// send 3 transactions with total of 70
 		amounts := []uint64{15, 22, 33}
 		txIds := []string{}
 		for _, amount := range amounts {
 			printTestTime(t, "send transaction - start", &lt)
-			response, txId, err := h.sendTransaction(OwnerOfAllSupply, "BenchmarkToken", "transfer", uint64(amount), []byte(targetAddress))
+			response, txId, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), transferTo.RawAddress)
 			printTestTime(t, "send transaction - end", &lt)
 
 			txIds = append(txIds, txId)
@@ -64,7 +62,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		// check balance
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
 			printTestTime(t, "call method - start", &lt)
-			response, err := h.callMethod(transferTo, "BenchmarkToken", "getBalance", []byte(targetAddress))
+			response, err := h.callMethod(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.RawAddress)
 			printTestTime(t, "call method - end", &lt)
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {

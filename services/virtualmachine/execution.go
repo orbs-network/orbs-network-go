@@ -17,7 +17,7 @@ func (s *service) runMethod(
 	transaction *protocol.Transaction,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
-) (protocol.ExecutionResult, *protocol.MethodArgumentArray, *protocol.EventsArray, error) {
+) (protocol.ExecutionResult, *protocol.ArgumentArray, *protocol.EventsArray, error) {
 
 	// create execution context
 	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockTimestamp, accessScope, transaction)
@@ -36,7 +36,7 @@ func (s *service) runMethod(
 	defer executionContext.serviceStackPop()
 
 	// execute the call
-	inputArgs := protocol.MethodArgumentArrayReader(transaction.RawInputArgumentArrayWithHeader())
+	inputArgs := protocol.ArgumentArrayReader(transaction.RawInputArgumentArrayWithHeader())
 	output, err := processor.ProcessCall(ctx, &services.ProcessCallInput{
 		ContextId:              executionContextId,
 		ContractName:           transaction.ContractName(),
@@ -80,7 +80,7 @@ func (s *service) processTransactionSet(
 		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(blockHeight))
 		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, blockHeight, blockTimestamp, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
-			outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+			outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 		}
 		if outputEvents == nil {
 			outputEvents = (&protocol.EventsArrayBuilder{}).Build()
@@ -102,7 +102,7 @@ func (s *service) getRecentBlockHeight(ctx context.Context) (primitives.BlockHei
 	return output.LastCommittedBlockHeight, output.LastCommittedBlockTimestamp, nil
 }
 
-func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.MethodArgumentArray, outputEvents *protocol.EventsArray) *protocol.TransactionReceipt {
+func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.ArgumentArray, outputEvents *protocol.EventsArray) *protocol.TransactionReceipt {
 	return (&protocol.TransactionReceiptBuilder{
 		Txhash:              digest.CalcTxHash(transaction),
 		ExecutionResult:     result,
@@ -113,7 +113,7 @@ func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, re
 
 func (s *service) encodeBatchTransientStateToStateDiffs(batchTransientState *transientState) []*protocol.ContractStateDiff {
 	res := []*protocol.ContractStateDiff{}
-	for contractName, _ := range batchTransientState.contracts {
+	for _, contractName := range batchTransientState.contractSortOrder {
 		stateDiffs := []*protocol.StateRecordBuilder{}
 		batchTransientState.forDirty(contractName, func(key []byte, value []byte) {
 			stateDiffs = append(stateDiffs, &protocol.StateRecordBuilder{

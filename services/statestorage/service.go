@@ -88,8 +88,8 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.metrics.writeKeys.Measure(int64(len(input.ContractStateDiffs)))
 
-	s.blockTracker.IncrementHeight()
-	s.heightReporter.IncrementHeight()
+	s.blockTracker.IncrementTo(commitBlockHeight)
+	s.heightReporter.IncrementTo(commitBlockHeight)
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
@@ -117,7 +117,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 
 	records := make([]*protocol.StateRecord, 0, len(input.Keys))
 	for _, key := range input.Keys {
-		record, ok, err := s.revisions.getRevisionRecord(input.BlockHeight, input.ContractName, key.KeyForMap())
+		record, ok, err := s.revisions.getRevisionRecord(input.BlockHeight, input.ContractName, string(key))
 		if err != nil {
 			return nil, errors.Wrap(err, "persistence layer error")
 		}
@@ -168,7 +168,7 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
-	output := &services.GetStateHashOutput{StateRootHash: primitives.MerkleSha256(value)}
+	output := &services.GetStateHashOutput{StateMerkleRootHash: value}
 
 	return output, nil
 }
@@ -184,7 +184,7 @@ func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
 		}
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
 			r := i.NextStateDiffs()
-			contractMap[r.Key().KeyForMap()] = r
+			contractMap[string(r.Key())] = r
 		}
 	}
 	return result

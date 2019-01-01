@@ -19,7 +19,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	blockCount := primitives.BlockHeight(10)
 	txBuilders := make([]*builders.TransactionBuilder, blockCount)
 	for i := 0; i < int(blockCount); i++ {
-		txBuilders[i] = builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, builders.AddressForEd25519SignerForTests(6))
+		txBuilders[i] = builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, builders.ClientAddressForEd25519SignerForTests(6))
 	}
 
 	harness.Network(t).

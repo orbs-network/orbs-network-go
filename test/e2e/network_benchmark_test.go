@@ -3,9 +3,8 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 	"sync"
@@ -59,11 +58,10 @@ func TestE2EStress(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				targetKey, _ := keys.GenerateEd25519Key()
-				targetAddress := builders.AddressFor(targetKey)
+				target, _ := orbsclient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
-				_, _, err2 := h.sendTransaction(OwnerOfAllSupply, "BenchmarkToken", "transfer", uint64(amount), []byte(targetAddress))
+				_, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.RawAddress)
 
 				if err2 != nil {
 					errors = append(errors, err2)

@@ -9,11 +9,13 @@ type keyValuePair struct {
 }
 
 type contractTransientState struct {
-	pairs map[string]*keyValuePair
+	pairs        map[string]*keyValuePair
+	keySortOrder []string
 }
 
 type transientState struct {
-	contracts map[primitives.ContractName]*contractTransientState
+	contracts         map[primitives.ContractName]*contractTransientState
+	contractSortOrder []primitives.ContractName
 }
 
 func newTransientState() *transientState {
@@ -43,6 +45,7 @@ func (t *transientState) setValue(contract primitives.ContractName, key []byte, 
 			pairs: make(map[string]*keyValuePair),
 		}
 		t.contracts[contract] = c
+		t.contractSortOrder = append(t.contractSortOrder, contract)
 	}
 	k := keyForMap(key)
 	pair, found := c.pairs[k]
@@ -51,13 +54,15 @@ func (t *transientState) setValue(contract primitives.ContractName, key []byte, 
 		pair.isDirty = isDirty
 	} else {
 		c.pairs[k] = &keyValuePair{key, value, isDirty}
+		c.keySortOrder = append(c.keySortOrder, k)
 	}
 }
 
 func (t *transientState) forDirty(contract primitives.ContractName, f func(key []byte, value []byte)) {
 	c, found := t.contracts[contract]
 	if found {
-		for _, pair := range c.pairs {
+		for _, key := range c.keySortOrder {
+			pair := c.pairs[key]
 			if pair.isDirty {
 				f(pair.key, pair.value)
 			}
@@ -66,7 +71,7 @@ func (t *transientState) forDirty(contract primitives.ContractName, f func(key [
 }
 
 func (t *transientState) mergeIntoTransientState(masterTransientState *transientState) {
-	for contractName, _ := range t.contracts {
+	for _, contractName := range t.contractSortOrder {
 		t.forDirty(contractName, func(key []byte, value []byte) {
 			masterTransientState.setValue(contractName, key, value, true)
 		})

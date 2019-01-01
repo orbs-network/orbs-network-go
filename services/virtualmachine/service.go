@@ -62,7 +62,7 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 	logger.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
 	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, blockHeight, blockTimestamp, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
-		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
 	if outputEvents == nil {
 		outputEvents = (&protocol.EventsArrayBuilder{}).Build()
@@ -122,7 +122,7 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 }
 
 func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
-	var output []*protocol.MethodArgument
+	var output []*protocol.Argument
 	var err error
 
 	executionContext := s.contexts.loadExecutionContext(input.ContextId)

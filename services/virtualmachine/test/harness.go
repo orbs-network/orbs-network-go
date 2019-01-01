@@ -63,12 +63,12 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) handleSdkCall(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+func (h *harness) handleSdkCall(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.Argument, error) {
 	output, err := h.service.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:       executionContextId,
 		OperationName:   contractName,
 		MethodName:      methodName,
-		InputArguments:  builders.MethodArguments(args...),
+		InputArguments:  builders.Arguments(args...),
 		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	})
 	if err != nil {
@@ -77,12 +77,12 @@ func (h *harness) handleSdkCall(ctx context.Context, executionContextId primitiv
 	return output.OutputArguments, nil
 }
 
-func (h *harness) handleSdkCallWithSystemPermissions(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.MethodArgument, error) {
+func (h *harness) handleSdkCallWithSystemPermissions(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.Argument, error) {
 	output, err := h.service.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:       executionContextId,
 		OperationName:   contractName,
 		MethodName:      methodName,
-		InputArguments:  builders.MethodArguments(args...),
+		InputArguments:  builders.Arguments(args...),
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
 	})
 	if err != nil {
@@ -105,7 +105,7 @@ func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.Co
 }
 
 type keyValuePair struct {
-	key   primitives.Ripemd160Sha256
+	key   []byte
 	value []byte
 }
 

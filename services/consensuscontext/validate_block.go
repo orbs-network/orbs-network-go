@@ -80,7 +80,7 @@ func validateTransactionBlockTimestamp(ctx context.Context, vctx *validatorConte
 
 func validateTransactionBlockMerkleRoot(ctx context.Context, vctx *validatorContext) error {
 	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
-	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsRootHash()
+	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsMerkleRootHash()
 	if expectedTxMerkleRoot, err := calculateTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
 		return err
 	} else if !bytes.Equal(txMerkleRoot, expectedTxMerkleRoot) {
@@ -211,7 +211,7 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 		fmt.Errorf("error in calculatedReceiptsRoot  blockheight=%v", input.BlockHeight)
 		return err
 	}
-	if !bytes.Equal(checkedHeader.ReceiptsRootHash(), calculatedReceiptsRoot) {
+	if !bytes.Equal(checkedHeader.ReceiptsMerkleRootHash(), calculatedReceiptsRoot) {
 		fmt.Println("ValidateResultsBlock122 ", calculatedReceiptsRoot, checkedHeader)
 		return errors.New("incorrect receipts root hash")
 	}
@@ -232,9 +232,9 @@ func ValidateResultsBlockInternal(ctx context.Context, input *services.ValidateR
 		return err
 	}
 
-	if !bytes.Equal(checkedHeader.PreExecutionStateRootHash(), calculatedPreExecutionStateRootHash.StateRootHash) {
+	if !bytes.Equal(checkedHeader.PreExecutionStateMerkleRootHash(), calculatedPreExecutionStateRootHash.StateMerkleRootHash) {
 		return fmt.Errorf("mismatching PreExecutionStateRootHash: expected %v but results block hash %v",
-			calculatedPreExecutionStateRootHash, checkedHeader.PreExecutionStateRootHash())
+			calculatedPreExecutionStateRootHash, checkedHeader.PreExecutionStateMerkleRootHash())
 	}
 
 	// Check transaction id bloom filter (see block format for structure).
