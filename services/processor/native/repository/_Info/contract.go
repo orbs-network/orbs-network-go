@@ -11,7 +11,11 @@ const CONTRACT_NAME = "_Info"
 /////////////////////////////////////////////////////////////////
 // contract starts here
 
-var PUBLIC = sdk.Export(getSignerAddress)
+var PUBLIC = sdk.Export(isAlive, getSignerAddress)
+
+func isAlive() string {
+	return "alive"
+}
 
 func getSignerAddress() []byte {
 	return address.GetSignerAddress()
