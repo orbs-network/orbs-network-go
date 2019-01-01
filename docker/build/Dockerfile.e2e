@@ -1,4 +1,3 @@
 FROM orbs:export
 
-ENV BLOCK_STORAGE_DATA_DIR=/var/lib/orbs/e2e
-COPY ./test/e2e/blocks $BLOCK_STORAGE_DATA_DIR/blocks
+COPY ./test/e2e/blocks /usr/local/var/orbs/blocks
