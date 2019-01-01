@@ -6,6 +6,7 @@ import (
 )
 
 func TestInitialBlockHeight(t *testing.T) {
+	const expectedBlocks = 500
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
 	}
@@ -14,6 +15,6 @@ func TestInitialBlockHeight(t *testing.T) {
 
 		h := newHarness()
 		blockHeight := h.getMetrics()["BlockStorage.BlockHeight"]["Value"].(float64)
-		require.Truef(t, blockHeight >= 0x5a, "expected e2e network to launch with some blocks, found only %d", blockHeight)
+		require.Truef(t, blockHeight >= expectedBlocks, "expected e2e network to launch with %v blocks, found only %v", expectedBlocks, blockHeight)
 	})
 }
