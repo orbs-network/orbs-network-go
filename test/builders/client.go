@@ -5,14 +5,14 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 )
 
-func ClientCallMethodResponseOutputArgumentsDecode(r *client.CallMethodResponse) *protocol.MethodArgumentArrayArgumentsIterator {
-	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
+func ClientCallMethodResponseOutputArgumentsDecode(r *client.CallMethodResponse) *protocol.ArgumentArrayArgumentsIterator {
+	argsArray := protocol.ArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
 	return argsArray.ArgumentsIterator()
 }
 
-// encode MethodArgumentsOpaque with PackedArgumentArrayEncode
+// encode ArgumentsOpaque with PackedArgumentArrayEncode
 
 func ClientCallMethodResponseOutputArgumentsPrint(r *client.CallMethodResponse) string {
-	argsArray := protocol.MethodArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
+	argsArray := protocol.ArgumentArrayReader(r.RawOutputArgumentArrayWithHeader())
 	return argsArray.String()
 }

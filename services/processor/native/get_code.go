@@ -92,21 +92,21 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:        "serviceName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// serviceName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(systemContractName),
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:        "methodName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+			(&protocol.ArgumentBuilder{
+				// methodName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: string(systemMethodName),
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:       "inputArgs",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsToMethodArgumentArray(string(contractName)).Raw(),
+			(&protocol.ArgumentBuilder{
+				// inputArgs
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
+				BytesValue: argsToArgumentArray(string(contractName)).Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
@@ -117,8 +117,8 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
 		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
 	}
-	methodArgumentArray := protocol.MethodArgumentArrayReader(output.OutputArguments[0].BytesValue())
-	argIterator := methodArgumentArray.ArgumentsIterator()
+	ArgumentArray := protocol.ArgumentArrayReader(output.OutputArguments[0].BytesValue())
+	argIterator := ArgumentArray.ArgumentsIterator()
 	if !argIterator.HasNext() {
 		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
 	}

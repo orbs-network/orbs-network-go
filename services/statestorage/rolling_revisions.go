@@ -97,7 +97,7 @@ func toMerkleInput(diff adapter.ChainState) merkle.TrieDiffs {
 	for contractName, contractState := range diff {
 		for _, r := range contractState {
 			result = append(result, &merkle.TrieDiff{
-				Key:   hash.CalcSha256(append([]byte(contractName), r.Key()...)),
+				Key:   hash.CalcSha256([]byte(contractName), r.Key()),
 				Value: hash.CalcSha256(r.Value()),
 			})
 		}

@@ -42,7 +42,7 @@ func (c *contractSdkServiceCallHandlerStub) HandleSdkCall(ctx context.Context, i
 		}
 		// all other contracts should succeed
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: []*protocol.MethodArgument{input.InputArguments[2]},
+			OutputArguments: []*protocol.Argument{input.InputArguments[2]},
 		}, nil
 	default:
 		return nil, errors.New("unknown method")
