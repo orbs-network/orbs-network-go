@@ -108,7 +108,7 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 func (h *harness) expectStateHashToReturn(hash []byte) {
 
 	stateHashOutput := &services.GetStateHashOutput{
-		StateRootHash: hash,
+		StateMerkleRootHash: hash,
 	}
 	h.stateStorage.When("GetStateHash", mock.Any, mock.Any).Return(stateHashOutput, nil)
 

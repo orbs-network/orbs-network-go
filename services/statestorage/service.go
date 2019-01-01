@@ -168,7 +168,7 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
-	output := &services.GetStateHashOutput{StateRootHash: primitives.MerkleSha256(value)}
+	output := &services.GetStateHashOutput{StateMerkleRootHash: value}
 
 	return output, nil
 }

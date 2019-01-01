@@ -108,7 +108,6 @@ func encode(block *protocol.BlockPairContainer, w io.Writer) error {
 	serializationHeader.addFixed(tb.BlockProof)
 	serializationHeader.addFixed(rb.Header)
 	serializationHeader.addFixed(rb.BlockProof)
-	serializationHeader.addFixed(rb.TransactionsBloomFilter)
 	for _, receipt := range rb.TransactionReceipts {
 		serializationHeader.addReceipt(receipt)
 	}
@@ -143,10 +142,6 @@ func encode(block *protocol.BlockPairContainer, w io.Writer) error {
 		return err
 	}
 	err = writeMessage(w, rb.BlockProof)
-	if err != nil {
-		return err
-	}
-	err = writeMessage(w, rb.TransactionsBloomFilter)
 	if err != nil {
 		return err
 	}
@@ -211,12 +206,6 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	}
 	rbBlockProof := protocol.ResultsBlockProofReader(rbBlockProofChunk)
 
-	rbBloomChunk, err := readChunk(r, &byteCounter)
-	if err != nil {
-		return nil, byteCounter, err
-	}
-	rbBloomFilter := protocol.TransactionsBloomFilterReader(rbBloomChunk)
-
 	// TODO V1 add validations : - 1) IsValid() on each membuff 2) check that num of bytes read match header
 	receipts := make([]*protocol.TransactionReceipt, 0, rbHeader.NumTransactionReceipts())
 	for i := 0; i < cap(receipts); i++ {
@@ -253,11 +242,10 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 			BlockProof:         tbBlockProof,
 		},
 		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:                  rbHeader,
-			TransactionsBloomFilter: rbBloomFilter,
-			TransactionReceipts:     receipts,
-			ContractStateDiffs:      stateDiffs,
-			BlockProof:              rbBlockProof,
+			Header:              rbHeader,
+			TransactionReceipts: receipts,
+			ContractStateDiffs:  stateDiffs,
+			BlockProof:          rbBlockProof,
 		},
 	}
 

@@ -16,7 +16,7 @@ func TestGetStateHashReturnsNonZeroValue(t *testing.T) {
 
 		root, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{})
 		require.NoError(t, err, "unexpected error")
-		require.NotEqual(t, len(root.StateRootHash), 0, "uninitialized hash code result")
+		require.NotEqual(t, len(root.StateMerkleRootHash), 0, "uninitialized hash code result")
 	})
 }
 
@@ -51,7 +51,7 @@ func TestGetStateHashMerkleRootChangesOnStateChange(t *testing.T) {
 
 		root2, err1 := d.service.GetStateHash(ctx, &services.GetStateHashInput{BlockHeight: primitives.BlockHeight(1)})
 		require.NoError(t, err1, "unexpected error")
-		require.NotEqual(t, len(root2.StateRootHash), 0, "uninitialized hash code result after state change")
-		require.NotEqual(t, root2.StateRootHash, root1.StateRootHash, "merkle root identical after state change")
+		require.NotEqual(t, len(root2.StateMerkleRootHash), 0, "uninitialized hash code result after state change")
+		require.NotEqual(t, root2.StateMerkleRootHash, root1.StateMerkleRootHash, "merkle root identical after state change")
 	})
 }
