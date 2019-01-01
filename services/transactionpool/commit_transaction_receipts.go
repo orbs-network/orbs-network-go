@@ -62,12 +62,14 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 }
 
 func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.mu.lastCommittedBlockHeight = header.BlockHeight()
 	s.mu.lastCommittedBlockTimestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
+
+	s.logger.Info("transaction pool reached block height", log.BlockHeight(header.BlockHeight()))
 
 	return header.BlockHeight(), header.Timestamp()
 }
