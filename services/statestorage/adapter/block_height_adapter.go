@@ -3,5 +3,5 @@ package adapter
 import "github.com/orbs-network/orbs-spec/types/go/primitives"
 
 type BlockHeightReporter interface {
-	ReachedHeight(height primitives.BlockHeight)
+	IncrementTo(height primitives.BlockHeight)
 }

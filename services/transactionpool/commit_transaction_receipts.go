@@ -37,8 +37,8 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 	}
 
-	s.blockTracker.ReachedHeight(bh)
-	s.blockHeightReporter.ReachedHeight(bh)
+	s.blockTracker.IncrementTo(bh)
+	s.blockHeightReporter.IncrementTo(bh)
 
 	if len(myReceipts) > 0 {
 		for _, handler := range s.transactionResultsHandlers {

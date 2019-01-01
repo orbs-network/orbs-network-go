@@ -56,7 +56,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 
 		blockHeight := primitives.BlockHeight(3)
 		blockTime := primitives.TimestampNano(time.Now().UnixNano())
-		h.goToBlockAtTime(ctx, blockHeight, blockTime)
+		h.fastForwardToHeightAndTime(ctx, blockHeight, blockTime)
 
 		out, err := h.addNewTransaction(ctx, tx)
 

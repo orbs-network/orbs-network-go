@@ -33,21 +33,17 @@ func NewBlockTracker(parent log.BasicLogger, startingHeight uint64, graceDist ui
 	}
 }
 
-func (t *BlockTracker) incrementHeight() {
+func (t *BlockTracker) IncrementTo(height primitives.BlockHeight) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
+	if uint64(height) != t.currentHeight+1 {
+		panic(errors.Errorf("Block Tracker expected height %d but got height %d", t.currentHeight+1, height))
+	}
 
 	t.currentHeight++
 	prevLatch := t.latch
 	t.latch = make(chan struct{})
 	close(prevLatch)
-}
-
-func (t *BlockTracker) ReachedHeight(height primitives.BlockHeight) {
-	if uint64(height) != t.currentHeight+1 {
-		panic(errors.Errorf("Block Tracker expected height %d but got height %d", t.currentHeight+1, height))
-	}
-	t.incrementHeight()
 }
 
 func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
@@ -88,5 +84,4 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 // shim for BlockWriter
 type NopHeightReporter struct{}
 
-func (_ NopHeightReporter) IncrementHeight()                            {}
-func (_ NopHeightReporter) ReachedHeight(height primitives.BlockHeight) {}
+func (_ NopHeightReporter) IncrementTo(height primitives.BlockHeight) {}

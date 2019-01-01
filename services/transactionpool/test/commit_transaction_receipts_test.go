@@ -12,8 +12,6 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(ctx)
 
-		h.goToBlock(ctx, 1)
-
 		h.assumeBlockStorageAtHeight(0) // so that we report transactions for block 1
 		out, err := h.reportTransactionsAsCommitted(ctx)
 		require.NoError(t, err, "CommitTransactionReceipts returned an error when expecting next desired block height")
@@ -43,7 +41,7 @@ func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *tes
 		h.addNewTransaction(ctx, myTx2)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, otherTx)
 
-		h.goToBlock(ctx, 2)
+		h.fastForwardTo(ctx, 2)
 		h.expectTransactionResultsCallbackFor(myTx1, myTx2)
 		h.reportTransactionsAsCommitted(ctx, myTx1, myTx2, otherTx)
 

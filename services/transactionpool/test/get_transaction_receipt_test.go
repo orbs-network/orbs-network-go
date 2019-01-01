@@ -38,7 +38,7 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 		require.Equal(t, blockHeightContainingTxs, out.BlockHeight, "did not return expected block height")
 
 		tsOfCommittedTx := h.lastBlockTimestamp
-		h.goToBlockAtTime(ctx, 5, tsOfCommittedTx+100000)
+		h.fastForwardToHeightAndTime(ctx, 5, tsOfCommittedTx+100000)
 
 		tx2hash := digest.CalcTxHash(tx2.Transaction())
 		out, err = h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{

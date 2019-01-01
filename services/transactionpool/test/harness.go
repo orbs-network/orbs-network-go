@@ -174,11 +174,11 @@ func (h *harness) passAllPreOrderChecks() {
 	})
 }
 
-func (h *harness) goToBlock(ctx context.Context, height primitives.BlockHeight) {
-	h.goToBlockAtTime(ctx, height, primitives.TimestampNano(time.Now().UnixNano()))
+func (h *harness) fastForwardTo(ctx context.Context, height primitives.BlockHeight) {
+	h.fastForwardToHeightAndTime(ctx, height, primitives.TimestampNano(time.Now().UnixNano()))
 }
 
-func (h *harness) goToBlockAtTime(ctx context.Context, height primitives.BlockHeight, timestamp primitives.TimestampNano) {
+func (h *harness) fastForwardToHeightAndTime(ctx context.Context, height primitives.BlockHeight, timestamp primitives.TimestampNano) {
 	h.ignoringTransactionResults()
 	currentBlock := primitives.BlockHeight(0)
 	for currentBlock <= height {
@@ -232,7 +232,7 @@ func newHarnessWithSizeLimit(ctx context.Context, sizeLimit uint32) *harness {
 		config:             cfg,
 	}
 
-	h.goToBlock(ctx, 1)
+	h.fastForwardTo(ctx, 1)
 
 	h.passAllPreOrderChecks()
 
