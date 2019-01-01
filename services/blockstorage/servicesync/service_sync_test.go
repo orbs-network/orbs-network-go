@@ -61,8 +61,8 @@ func TestSyncInitialState(t *testing.T) {
 		targetTracker := synchronization.NewBlockTracker(log.GetLogger(), 0, 10)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+1 {
-				targetTracker.IncrementHeight()
 				targetCurrentHeight++
+				targetTracker.IncrementTo(targetCurrentHeight)
 			}
 			return targetCurrentHeight + 1, nil
 		}).Times(5)
@@ -75,7 +75,7 @@ func TestSyncInitialState(t *testing.T) {
 
 		// push another block
 		sourceMock.setLastBlockHeight(4)
-		sourceTracker.IncrementHeight()
+		sourceTracker.IncrementTo(4)
 
 		// Wait for second sync
 		err = targetTracker.WaitForBlock(ctx, 4)

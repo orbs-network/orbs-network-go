@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
@@ -19,14 +20,25 @@ const METHOD_DEPLOY_SERVICE = "deployService"
 var PUBLIC = sdk.Export(getInfo, getCode, deployService)
 
 func getInfo(serviceName string) uint32 {
-	if serviceName == CONTRACT_NAME { // getInfo on self
+	if isImplicitlyDeployed(serviceName) {
 		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
 	}
+
 	processorType := _readProcessor(serviceName)
 	if processorType == 0 {
 		panic("contract not deployed")
 	}
 	return processorType
+}
+
+func isImplicitlyDeployed(serviceName string) bool {
+	switch serviceName {
+	case
+		CONTRACT_NAME,
+		info_systemcontract.CONTRACT_NAME:
+		return true
+	}
+	return false
 }
 
 func getCode(serviceName string) []byte {

@@ -88,8 +88,8 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.metrics.writeKeys.Measure(int64(len(input.ContractStateDiffs)))
 
-	s.blockTracker.IncrementHeight()
-	s.heightReporter.IncrementHeight()
+	s.blockTracker.IncrementTo(commitBlockHeight)
+	s.heightReporter.IncrementTo(commitBlockHeight)
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
@@ -168,7 +168,7 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not find a merkle root for block height %d", input.BlockHeight)
 	}
-	output := &services.GetStateHashOutput{StateRootHash: primitives.MerkleSha256(value)}
+	output := &services.GetStateHashOutput{StateMerkleRootHash: value}
 
 	return output, nil
 }

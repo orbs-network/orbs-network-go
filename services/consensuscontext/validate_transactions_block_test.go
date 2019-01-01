@@ -42,7 +42,6 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 		WithMetadata(txMetadata).
 		WithMetadataHash(validMetadataHash).
 		WithTransactionsRootHash(txRootHashForValidBlock).
-		ApplyValidResultsBlock().
 		Build()
 
 	input := &services.ValidateTransactionsBlockInput{
@@ -121,8 +120,8 @@ func TestTransactionsBlockValidators(t *testing.T) {
 	})
 
 	t.Run("should return error for transaction block with incorrect merkle root", func(t *testing.T) {
-		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateTransactionsRootHash(empty32ByteHash); err != nil {
+		vctx := toValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateTransactionsMerkleRootHash(empty32ByteHash); err != nil {
 			t.Error(err)
 		}
 

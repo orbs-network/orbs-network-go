@@ -1,7 +1,6 @@
 package builders
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/bloom"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -22,7 +21,6 @@ type blockPair struct {
 	sdiffs           []*protocol.ContractStateDiff
 	rxProof          *protocol.ResultsBlockProofBuilder
 	blockProofSigner primitives.EcdsaSecp256K1PrivateKey
-	txBloomFilter    *protocol.TransactionsBloomFilterBuilder
 }
 
 func BlockPair() *blockPair {
@@ -35,35 +33,30 @@ func BlockPair() *blockPair {
 
 	b := &blockPair{
 		txHeader: &protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:       DEFAULT_TEST_PROTOCOL_VERSION,
-			VirtualChainId:        DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-			BlockHeight:           1,
-			PrevBlockHashPtr:      empty32ByteHash,
-			Timestamp:             primitives.TimestampNano(createdDate.UnixNano()),
-			TransactionsRootHash:  empty32ByteHash,
-			MetadataHash:          empty32ByteHash,
-			NumSignedTransactions: 1,
+			ProtocolVersion:            DEFAULT_TEST_PROTOCOL_VERSION,
+			VirtualChainId:             DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+			BlockHeight:                1,
+			PrevBlockHashPtr:           empty32ByteHash,
+			Timestamp:                  primitives.TimestampNano(createdDate.UnixNano()),
+			TransactionsMerkleRootHash: empty32ByteHash,
+			MetadataHash:               empty32ByteHash,
+			NumSignedTransactions:      1,
 		},
 		txMetadata:   &protocol.TransactionsBlockMetadataBuilder{},
 		transactions: transactions,
 		txProof:      nil,
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:             DEFAULT_TEST_PROTOCOL_VERSION,
-			VirtualChainId:              DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-			BlockHeight:                 1,
-			PrevBlockHashPtr:            empty32ByteHash,
-			Timestamp:                   primitives.TimestampNano(createdDate.UnixNano()),
-			ReceiptsRootHash:            empty32ByteHash,
-			StateDiffHash:               empty32ByteHash,
-			TransactionsBlockHashPtr:    empty32ByteHash,
-			PreExecutionStateRootHash:   empty32ByteHash,
-			TransactionsBloomFilterHash: empty32ByteHash,
-			NumContractStateDiffs:       1,
-			NumTransactionReceipts:      1,
-		},
-		txBloomFilter: &protocol.TransactionsBloomFilterBuilder{
-			TxhashBloomFilter:    nil,
-			TimestampBloomFilter: nil,
+			ProtocolVersion:                 DEFAULT_TEST_PROTOCOL_VERSION,
+			VirtualChainId:                  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+			BlockHeight:                     1,
+			PrevBlockHashPtr:                empty32ByteHash,
+			Timestamp:                       primitives.TimestampNano(createdDate.UnixNano()),
+			ReceiptsMerkleRootHash:          empty32ByteHash,
+			StateDiffHash:                   empty32ByteHash,
+			TransactionsBlockHashPtr:        empty32ByteHash,
+			PreExecutionStateMerkleRootHash: empty32ByteHash,
+			NumContractStateDiffs:           1,
+			NumTransactionReceipts:          1,
 		},
 		receipts: []*protocol.TransactionReceipt{
 			(TransactionReceipt().Build()),
@@ -92,11 +85,10 @@ func (b *blockPair) Build() *protocol.BlockPairContainer {
 			BlockProof:         b.txProof.Build(),
 		},
 		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:                  rxHeaderBuilt,
-			TransactionReceipts:     b.receipts,
-			ContractStateDiffs:      b.sdiffs,
-			BlockProof:              b.rxProof.Build(),
-			TransactionsBloomFilter: b.txBloomFilter.Build(),
+			Header:              rxHeaderBuilt,
+			TransactionReceipts: b.receipts,
+			ContractStateDiffs:  b.sdiffs,
+			BlockProof:          b.rxProof.Build(),
 		},
 	}
 }
@@ -140,7 +132,7 @@ func (b *blockPair) WithVirtualChainId(virtualChainId primitives.VirtualChainId)
 }
 
 func (b *blockPair) WithTransactionsRootHash(txRootHash []byte) *blockPair {
-	b.txHeader.TransactionsRootHash = txRootHash
+	b.txHeader.TransactionsMerkleRootHash = txRootHash
 	return b
 }
 
@@ -204,16 +196,6 @@ func (b *blockPair) WithStateDiffs(num uint32) *blockPair {
 	return b
 }
 
-func (b *blockPair) WithTransactionsBloomFilter() *blockPair {
-	bf := bloom.New(len(b.transactions))
-	for _, t := range b.transactions {
-		bf.Add(t.Transaction().Timestamp())
-	}
-
-	b.txBloomFilter.TimestampBloomFilter = bf.Raw()
-	return b
-}
-
 func (b *blockPair) WithTimestampNow() *blockPair {
 	timeToUse := primitives.TimestampNano(time.Now().UnixNano())
 	b.txHeader.Timestamp = timeToUse
@@ -224,9 +206,9 @@ func (b *blockPair) WithTimestampNow() *blockPair {
 func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		TransactionsBlockHash: hash,
-		Type:               protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		BenchmarkConsensus: nil,
-		LeanHelix:          nil,
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		BenchmarkConsensus:    nil,
+		LeanHelix:             nil,
 	}
 	return b
 }
@@ -246,52 +228,6 @@ func (b *blockPair) WithCorruptNumReceipts(num uint32) *blockPair {
 func (b *blockPair) WithCorruptNumStateDiffs(num uint32) *blockPair {
 	b.sdiffs = []*protocol.ContractStateDiff{}
 	b.rxHeader.NumContractStateDiffs = num
-	return b
-}
-
-func (b *blockPair) ApplyValidResultsBlock() *blockPair {
-	//rxBlock := &protocol.ResultsBlockContainer{
-
-	//transactionReceipts := make([]*protocol.TransactionReceipt, 1)
-	merkleReceiptsRoot := primitives.Sha256(nil) // calculateReceiptsMerkleRoot(transactionReceipts)
-
-	contractStateDiffs := make([]*protocol.ContractStateDiff, 1)
-	stateDiffHash := primitives.Sha256(nil) // calculateStateDiffMerkleRoot(contractStateDiffs)
-
-	preExecutionStateRootHash := &services.GetStateHashOutput{}
-
-	txBlockHash := digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{
-		Header:             b.txHeader.Build(),
-		Metadata:           nil,
-		SignedTransactions: b.transactions,
-		BlockProof:         nil,
-	})
-
-	rxHeader := &protocol.ResultsBlockHeaderBuilder{
-		ProtocolVersion:             b.txHeader.ProtocolVersion,
-		VirtualChainId:              b.txHeader.VirtualChainId,
-		BlockHeight:                 b.txHeader.BlockHeight,
-		PrevBlockHashPtr:            b.txHeader.PrevBlockHashPtr,
-		Timestamp:                   b.txHeader.Timestamp,
-		ReceiptsRootHash:            primitives.MerkleSha256(merkleReceiptsRoot),
-		StateDiffHash:               stateDiffHash,
-		TransactionsBlockHashPtr:    txBlockHash,
-		PreExecutionStateRootHash:   preExecutionStateRootHash.StateRootHash,
-		TransactionsBloomFilterHash: nil,
-		NumTransactionReceipts:      uint32(len(b.transactions)),
-		NumContractStateDiffs:       uint32(len(contractStateDiffs)),
-	}
-	b.rxHeader = rxHeader
-	//}).Build(),
-	//TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{
-	//	TxhashBloomFilter:    nil,
-	//	TimestampBloomFilter: nil,
-	//}).Build(),
-	//TransactionReceipts: output.TransactionReceipts,
-	//ContractStateDiffs:  output.ContractStateDiffs,
-	//BlockProof:          (&protocol.ResultsBlockProofBuilder{}).Build(),
-	//}
-
 	return b
 }
 

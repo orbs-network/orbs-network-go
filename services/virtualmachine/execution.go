@@ -113,7 +113,7 @@ func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, re
 
 func (s *service) encodeBatchTransientStateToStateDiffs(batchTransientState *transientState) []*protocol.ContractStateDiff {
 	res := []*protocol.ContractStateDiff{}
-	for contractName, _ := range batchTransientState.contracts {
+	for _, contractName := range batchTransientState.contractSortOrder {
 		stateDiffs := []*protocol.StateRecordBuilder{}
 		batchTransientState.forDirty(contractName, func(key []byte, value []byte) {
 			stateDiffs = append(stateDiffs, &protocol.StateRecordBuilder{
