@@ -20,7 +20,7 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 			withValidateConsensusAlgos(1).
 			start(ctx)
 
-		block := builders.BlockPair().WithTransactionsBloomFilter().Build()
+		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)
 
 		out, err := harness.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
@@ -45,11 +45,11 @@ func TestReturnTransactionReceipt(t *testing.T) {
 			withValidateConsensusAlgos(1).
 			start(ctx)
 
-		block := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTransactionsBloomFilter().WithTimestampNow().Build()
+		block := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampNow().Build()
 		harness.commitBlock(ctx, block)
 
 		// it will be similar data transactions, but with different time stamps (and hashes..)
-		block2 := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTransactionsBloomFilter().WithTimestampNow().Build()
+		block2 := builders.BlockPair().WithTransactions(10).WithReceiptsForTransactions().WithTimestampNow().Build()
 		harness.commitBlock(ctx, block2)
 
 		// taking a transaction at 'random' (they were created at random)
