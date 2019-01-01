@@ -1,8 +1,8 @@
 package ethereum_caller
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/ethereum"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 )
 

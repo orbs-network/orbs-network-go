@@ -3,13 +3,13 @@ package asb_ether
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/address"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/ethereum"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/events"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/safemath/safeuint64"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/service"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ERC20Proxy"
 	"math/big"
 )
@@ -25,14 +25,16 @@ var SYSTEM = sdk.Export(_init, setAsbAbi, setTokenContract)
 var EVENTS = sdk.Export(OrbsTransferredOut)
 
 // defaults
-const TOKEN_CONTRACT_KEY = "_TOKEN_CONTRACT_KEY_"
 const defaultTokenContract = erc20proxy.CONTRACT_NAME
-const ASB_ETH_ADDR_KEY = "_ASB_ETH_ADDR_KEY_"
 const defaultAsbAddr = "stam" // TODO v1 do we put a default asb_eth_contract here or force setting after init
-const ASB_ABI_KEY = "_ASB_ABI_KEY_"
 const defaultAsbAbi = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"bytes20"},{"indexed":false,"name":"value","type":"uint256"}],"name":"EthTransferredOut","type":"event"}]`
-const OUT_TUID_KEY = "_OUT_TUID_KEY_"
-const IN_TUID_KEY = "_IN_TUID_KEY_"
+
+// state keys
+var TOKEN_CONTRACT_KEY = []byte("_TOKEN_CONTRACT_KEY_")
+var ASB_ETH_ADDR_KEY = []byte("_ASB_ETH_ADDR_KEY_")
+var ASB_ABI_KEY = []byte("_ASB_ABI_KEY_")
+var OUT_TUID_KEY = []byte("_OUT_TUID_KEY_")
+var IN_TUID_KEY = []byte("_IN_TUID_KEY_")
 
 func _init() {
 	setOutTuid(0)
@@ -70,7 +72,7 @@ func transferIn(hexEncodedEthTxHash string) {
 
 	address.ValidateAddress(e.To[:])
 
-	inTuidKey := genInTuidKey(e.Tuid.String())
+	inTuidKey := genInTuidKey(e.Tuid.Bytes())
 	if isInTuidExists(inTuidKey) {
 		panic(fmt.Errorf("transfer of %d to address %x failed since inbound-tuid %d has already been spent", e.Value, e.To, e.Tuid))
 	}
@@ -90,46 +92,46 @@ func transferOut(ethAddr []byte, amount uint64) {
 	events.EmitEvent(OrbsTransferredOut, tuid, sourceOrbsAddress, ethAddr, amount)
 }
 
-func genInTuidKey(tuid string) string {
-	return IN_TUID_KEY + tuid
+func genInTuidKey(tuid []byte) []byte {
+	return append(IN_TUID_KEY, tuid...)
 }
 
-func isInTuidExists(tuid string) bool {
-	return state.ReadUint32ByKey(tuid) != 0
+func isInTuidExists(tuidKey []byte) bool {
+	return state.ReadUint32(tuidKey) != 0
 }
 
-func setInTuid(tuid string) {
-	state.WriteUint32ByKey(tuid, 1)
+func setInTuid(tuidKey []byte) {
+	state.WriteUint32(tuidKey, 1)
 }
 
 func getOutTuid() uint64 {
-	return state.ReadUint64ByKey(OUT_TUID_KEY)
+	return state.ReadUint64(OUT_TUID_KEY)
 }
 
 func setOutTuid(next uint64) {
-	state.WriteUint64ByKey(OUT_TUID_KEY, next)
+	state.WriteUint64(OUT_TUID_KEY, next)
 }
 
 func getAsbAddr() string {
-	return state.ReadStringByKey(ASB_ETH_ADDR_KEY)
+	return state.ReadString(ASB_ETH_ADDR_KEY)
 }
 
 func setAsbAddr(absAddr string) { // upgrade
-	state.WriteStringByKey(ASB_ETH_ADDR_KEY, absAddr)
+	state.WriteString(ASB_ETH_ADDR_KEY, absAddr)
 }
 
 func getAsbAbi() string {
-	return state.ReadStringByKey(ASB_ABI_KEY)
+	return state.ReadString(ASB_ABI_KEY)
 }
 
 func setAsbAbi(absAbi string) { // upgrade
-	state.WriteStringByKey(ASB_ABI_KEY, absAbi)
+	state.WriteString(ASB_ABI_KEY, absAbi)
 }
 
 func getTokenContract() string {
-	return state.ReadStringByKey(TOKEN_CONTRACT_KEY)
+	return state.ReadString(TOKEN_CONTRACT_KEY)
 }
 
 func setTokenContract(erc20Proxy string) { // upgrade
-	state.WriteStringByKey(TOKEN_CONTRACT_KEY, erc20Proxy)
+	state.WriteString(TOKEN_CONTRACT_KEY, erc20Proxy)
 }
