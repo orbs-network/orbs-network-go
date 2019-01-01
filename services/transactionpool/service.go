@@ -15,7 +15,7 @@ import (
 var LogTag = log.Service("transaction-pool")
 
 type BlockHeightReporter interface {
-	IncrementHeight()
+	IncrementTo(height primitives.BlockHeight)
 }
 
 type service struct {

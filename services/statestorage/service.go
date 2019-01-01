@@ -88,8 +88,8 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.metrics.writeKeys.Measure(int64(len(input.ContractStateDiffs)))
 
-	s.blockTracker.IncrementHeight()
-	s.heightReporter.IncrementHeight()
+	s.blockTracker.IncrementTo(commitBlockHeight)
+	s.heightReporter.IncrementTo(commitBlockHeight)
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
