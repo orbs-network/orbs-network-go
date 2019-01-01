@@ -77,15 +77,17 @@ func TestTransientState_Merge(t *testing.T) {
 	s1 := newTransientState()
 	s1.setValue("Contract1", []byte{0x01}, []byte{0x22, 0x33}, true)
 	s1.setValue("Contract1", []byte{0x02}, []byte{0x44, 0x55}, true)
+	s1.setValue("Contract4", []byte{0x04}, []byte{0xff, 0xff}, true)
 
 	s2 := newTransientState()
 	s2.setValue("Contract1", []byte{0x02}, []byte{0x66, 0x77, 0x88}, true)
 	s2.setValue("Contract1", []byte{0x03}, []byte{0x99}, true)
 	s2.setValue("Contract2", []byte{0x01}, []byte{0xaa}, true)
+	s2.setValue("Contract3", []byte{0x01}, []byte{0x11}, true)
 
 	s2.mergeIntoTransientState(s1)
 
-	require.EqualValues(t, []primitives.ContractName{"Contract1", "Contract2"}, s1.contractSortOrder, "contract sort order should match")
+	require.EqualValues(t, []primitives.ContractName{"Contract1", "Contract4", "Contract2", "Contract3"}, s1.contractSortOrder, "contract sort order should match")
 	requireDirtyPairs(t, s1, "Contract1", []keyValuePair{
 		{[]byte{0x01}, []byte{0x22, 0x33}, true},
 		{[]byte{0x02}, []byte{0x66, 0x77, 0x88}, true},
@@ -93,6 +95,12 @@ func TestTransientState_Merge(t *testing.T) {
 	})
 	requireDirtyPairs(t, s1, "Contract2", []keyValuePair{
 		{[]byte{0x01}, []byte{0xaa}, true},
+	})
+	requireDirtyPairs(t, s1, "Contract3", []keyValuePair{
+		{[]byte{0x01}, []byte{0x11}, true},
+	})
+	requireDirtyPairs(t, s1, "Contract4", []keyValuePair{
+		{[]byte{0x04}, []byte{0xff, 0xff}, true},
 	})
 }
 

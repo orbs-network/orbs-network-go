@@ -71,7 +71,7 @@ func (t *transientState) forDirty(contract primitives.ContractName, f func(key [
 }
 
 func (t *transientState) mergeIntoTransientState(masterTransientState *transientState) {
-	for contractName, _ := range t.contracts {
+	for _, contractName := range t.contractSortOrder {
 		t.forDirty(contractName, func(key []byte, value []byte) {
 			masterTransientState.setValue(contractName, key, value, true)
 		})
