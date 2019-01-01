@@ -84,9 +84,14 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 				leaderKeyPair.NodeAddress(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				ethereumEndpoint).
-			OverrideNodeSpecificValues(firstRandomPort+i, nodeKeyPair.NodeAddress(), nodeKeyPair.PrivateKey(), blockStorageDataDirPrefix)
+			OverrideNodeSpecificValues(
+				firstRandomPort+i,
+				nodeKeyPair.NodeAddress(),
+				nodeKeyPair.PrivateKey(),
+				blockStorageDataDirPrefix)
 
-		deployBlockStorageFiles(cfg.BlockStorageDataDir())
+		deployBlockStorageFiles(cfg.BlockStorageDataDir(), logger)
+
 		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
 
 		nodes = append(nodes, node)
@@ -108,13 +113,18 @@ func cleanBlockStorage() {
 	_ = os.RemoveAll(blockStorageDataDirPrefix)
 }
 
-func deployBlockStorageFiles(targetDir string) {
+func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
 	os.MkdirAll(targetDir, os.ModePerm)
-	rawBlocks, err := ioutil.ReadFile(filepath.Join(config.GetCurrentSourceFileDirPath(), "blocks"))
+	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "blocks")
+	targetBlocksFilePath := filepath.Join(targetDir, "blocks")
+
+	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))
+
+	rawBlocks, err := ioutil.ReadFile(sourceBlocksFilePath)
 	if err != nil {
 		panic("failed loading blocks file")
 	}
-	err = ioutil.WriteFile(filepath.Join(targetDir, "blocks"), rawBlocks, 0644)
+	err = ioutil.WriteFile(targetBlocksFilePath, rawBlocks, 0644)
 	if err != nil {
 		panic(fmt.Sprintf("failed deploying blocks file to %s", targetDir))
 	}

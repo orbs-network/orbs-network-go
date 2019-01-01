@@ -3,3 +3,4 @@ docker-*
 _logs
 *.log
 _tmp
+vendor/github.com/ethereum/go-ethereum/tests
