@@ -97,7 +97,7 @@ func validateRxPrevBlockHashPtr(ctx context.Context, vcrx *rxValidatorContext) e
 }
 
 func validateRxReceiptsRootHash(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.RawReceiptsRootHash()
+	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
 	calculatedReceiptMerkleRoot, err := vcrx.calculateReceiptsMerkleRootAdapter.CalculateReceiptsMerkleRoot(vcrx.input.ResultsBlock.TransactionReceipts)
 	if err != nil {
 		return errors.Wrapf(ErrCalculateReceiptsMerkleRoot, "ValidateResultsBlock error calculateReceiptsMerkleRoot(), %v", err)
@@ -109,7 +109,7 @@ func validateRxReceiptsRootHash(ctx context.Context, vcrx *rxValidatorContext) e
 }
 
 func validateRxStateDiffHash(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.RawStateDiffHash()
+	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.StateDiffHash()
 	calculatedStateDiffMerkleRoot, err := vcrx.calculateStateDiffMerkleRootAdapter.CalculateStateDiffMerkleRoot(vcrx.input.ResultsBlock.ContractStateDiffs)
 	if err != nil {
 		return errors.Wrapf(ErrCalculateStateDiffMerkleRoot, "ValidateResultsBlock error calculateStateDiffMerkleRoot(), %v", err)
@@ -121,15 +121,15 @@ func validateRxStateDiffHash(ctx context.Context, vcrx *rxValidatorContext) erro
 }
 
 func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedPreExecutionMerkleRoot := vcrx.input.ResultsBlock.Header.PreExecutionStateRootHash()
+	expectedPreExecutionMerkleRoot := vcrx.input.ResultsBlock.Header.PreExecutionStateMerkleRootHash()
 	getStateHashOut, err := vcrx.getStateHashAdapter.GetStateHash(ctx, &services.GetStateHashInput{
 		BlockHeight: vcrx.input.ResultsBlock.Header.BlockHeight() - 1,
 	})
 	if err != nil {
 		return errors.Wrapf(ErrGetStateHash, "ValidateResultsBlock.validatePreExecutionStateMerkleRoot() error GetStateHash(), %v", err)
 	}
-	if !bytes.Equal(expectedPreExecutionMerkleRoot, getStateHashOut.StateRootHash) {
-		return errors.Wrapf(ErrMismatchedPreExecutionStateMerkleRoot, "expected %v actual %v", expectedPreExecutionMerkleRoot, getStateHashOut.StateRootHash)
+	if !bytes.Equal(expectedPreExecutionMerkleRoot, getStateHashOut.StateMerkleRootHash) {
+		return errors.Wrapf(ErrMismatchedPreExecutionStateMerkleRoot, "expected %v actual %v", expectedPreExecutionMerkleRoot, getStateHashOut.StateMerkleRootHash)
 	}
 	return nil
 }
@@ -147,7 +147,7 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 		return errors.Wrapf(ErrProcessTransactionSet, "ValidateResultsBlock.validateExecution() error ProcessTransactionSet")
 	}
 	// Compare the receipts merkle root hash to the one in the block.
-	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsRootHash()
+	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
 	calculatedReceiptMerkleRoot, err := vcrx.calculateReceiptsMerkleRootAdapter.CalculateReceiptsMerkleRoot(processTxsOut.TransactionReceipts) // TODO wrap with adapter
 	if err != nil {
 		return errors.Wrapf(ErrCalculateReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")

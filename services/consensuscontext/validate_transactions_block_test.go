@@ -89,7 +89,7 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 		protocolVersion:        cfg.ProtocolVersion(),
 		virtualChainId:         cfg.VirtualChainId(),
 		allowedTimestampJitter: cfg.ConsensusContextSystemTimestampAllowedJitter(),
-		input: input,
+		input:                  input,
 	}
 }
 
@@ -120,7 +120,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 	})
 
 	t.Run("should return error for transaction block with incorrect merkle root", func(t *testing.T) {
-		vctx := toValidatorContext(cfg)
+		vctx := toTxValidatorContext(cfg)
 		if err := vctx.input.TransactionsBlock.Header.MutateTransactionsMerkleRootHash(empty32ByteHash); err != nil {
 			t.Error(err)
 		}
