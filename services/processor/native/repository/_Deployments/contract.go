@@ -20,17 +20,25 @@ const METHOD_DEPLOY_SERVICE = "deployService"
 var PUBLIC = sdk.Export(getInfo, getCode, deployService)
 
 func getInfo(serviceName string) uint32 {
-	switch serviceName {
-	case CONTRACT_NAME:
-		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
-	case info_systemcontract.CONTRACT_NAME:
+	if isImplicitlyDeployed(serviceName) {
 		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
 	}
+
 	processorType := _readProcessor(serviceName)
 	if processorType == 0 {
 		panic("contract not deployed")
 	}
 	return processorType
+}
+
+func isImplicitlyDeployed(serviceName string) bool {
+	switch serviceName {
+	case
+		CONTRACT_NAME,
+		info_systemcontract.CONTRACT_NAME:
+		return true
+	}
+	return false
 }
 
 func getCode(serviceName string) []byte {
