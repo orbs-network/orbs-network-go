@@ -141,6 +141,8 @@ func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCa
 		output, err = s.handleSdkEthereumCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	case native.SDK_OPERATION_NAME_ADDRESS:
 		output, err = s.handleSdkAddressCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
+	case native.SDK_OPERATION_NAME_ENV:
+		output, err = s.handleSdkEnvCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	default:
 		return nil, errors.Errorf("unknown SDK call operation: %s", input.OperationName)
 	}

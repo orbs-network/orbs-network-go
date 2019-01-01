@@ -33,6 +33,17 @@ func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *ex
 			BytesValue: value,
 		}).Build()}, nil
 
+	case "getOwnAddress":
+		value, err := s.handleSdkAddressGetOwnAddress(executionContext, args)
+		if err != nil {
+			return nil, err
+		}
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
+			BytesValue: value,
+		}).Build()}, nil
+
 	default:
 		return nil, errors.Errorf("unknown SDK address call method: %s", methodName)
 	}
@@ -64,4 +75,13 @@ func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionCo
 		// after a contract call, get the caller address
 		return digest.CalcClientAddressOfContract(executionContext.serviceStackPeekCaller())
 	}
+}
+
+// outputArg0: value ([]byte)
+func (s *service) handleSdkAddressGetOwnAddress(executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
+	if len(args) != 0 {
+		return nil, errors.Errorf("invalid SDK address getOwnAddress args: %v", args)
+	}
+
+	return digest.CalcClientAddressOfContract(executionContext.serviceStackPeekCurrent())
 }
