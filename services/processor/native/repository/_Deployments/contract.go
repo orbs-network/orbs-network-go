@@ -4,7 +4,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
-	"github.com/orbs-network/orbs-network-go18/services/processor/native/repository/_Info"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
