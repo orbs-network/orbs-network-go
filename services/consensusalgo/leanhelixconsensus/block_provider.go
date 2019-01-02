@@ -67,32 +67,32 @@ func NewBlockProvider(
 
 func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock leanhelix.Block) (leanhelix.Block, lhprimitives.BlockHash) {
 
-	var newBlockHeight primitives.BlockHeight
+	var currentBlockHeight primitives.BlockHeight
 	var prevTxBlockHash primitives.Sha256
 	var prevRxBlockHash primitives.Sha256
 	var prevBlockTimestamp primitives.TimestampNano
 
 	if prevBlock == nil {
-		newBlockHeight = 1
+		currentBlockHeight = 1
 		prevTxBlockHash = nil
 		prevRxBlockHash = nil
 		prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano() - 1)
 
 	} else {
 		prevBlockWrapper := prevBlock.(*BlockPairWrapper)
-		newBlockHeight = primitives.BlockHeight(prevBlock.Height() + 1)
+		currentBlockHeight = primitives.BlockHeight(prevBlock.Height() + 1)
 		prevTxBlockHash = digest.CalcTransactionsBlockHash(prevBlockWrapper.blockPair.TransactionsBlock)
 		prevRxBlockHash = digest.CalcResultsBlockHash(prevBlockWrapper.blockPair.ResultsBlock)
 		prevBlockTimestamp = prevBlockWrapper.blockPair.TransactionsBlock.Header.Timestamp()
 	}
 
-	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", newBlockHeight))
+	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", currentBlockHeight))
 
 	// TODO https://tree.taiga.io/project/orbs-network/us/642 Add configurable maxNumTx and maxBlockSize
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		CurrentBlockHeight:      newBlockHeight,
+		CurrentBlockHeight:      currentBlockHeight,
 		MaxBlockSizeKb:          0, // TODO(v1): fill in or remove from spec
 		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           prevTxBlockHash,
@@ -104,7 +104,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		CurrentBlockHeight: newBlockHeight,
+		CurrentBlockHeight: currentBlockHeight,
 		PrevBlockHash:      prevRxBlockHash,
 		TransactionsBlock:  txOutput.TransactionsBlock,
 		PrevBlockTimestamp: prevBlockTimestamp,
