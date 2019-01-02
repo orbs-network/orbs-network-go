@@ -1,7 +1,7 @@
 package globalpreorder_systemcontract
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 )
 
 // helpers for avoiding reliance on strings throughout the system

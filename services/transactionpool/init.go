@@ -58,7 +58,7 @@ func NewTransactionPool(ctx context.Context,
 }
 
 func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
-	bh, ts := s.currentBlockHeightAndTime()
+	bh, ts := s.lastCommittedBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		for _, trh := range s.transactionResultsHandlers {
 			_, err := trh.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{

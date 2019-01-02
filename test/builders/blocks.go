@@ -23,6 +23,8 @@ type blockPair struct {
 }
 
 func BlockPair() *blockPair {
+	// allocate size for empty fields or you'll get "size mismatch" errors from membuffers
+	empty32ByteHash := make([]byte, 32)
 	createdDate := time.Now()
 	transactions := []*protocol.SignedTransaction{
 		(TransferTransaction().WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6))).Build(),
@@ -33,10 +35,10 @@ func BlockPair() *blockPair {
 			ProtocolVersion:            DEFAULT_TEST_PROTOCOL_VERSION,
 			VirtualChainId:             DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:                1,
-			PrevBlockHashPtr:           nil,
+			PrevBlockHashPtr:           empty32ByteHash,
 			Timestamp:                  primitives.TimestampNano(createdDate.UnixNano()),
-			TransactionsMerkleRootHash: nil,
-			MetadataHash:               nil,
+			TransactionsMerkleRootHash: empty32ByteHash,
+			MetadataHash:               empty32ByteHash,
 			NumSignedTransactions:      1,
 		},
 		txMetadata:   &protocol.TransactionsBlockMetadataBuilder{},
@@ -46,12 +48,12 @@ func BlockPair() *blockPair {
 			ProtocolVersion:                 DEFAULT_TEST_PROTOCOL_VERSION,
 			VirtualChainId:                  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:                     1,
-			PrevBlockHashPtr:                nil,
+			PrevBlockHashPtr:                empty32ByteHash,
 			Timestamp:                       primitives.TimestampNano(createdDate.UnixNano()),
-			ReceiptsMerkleRootHash:          nil,
-			StateDiffHash:                   nil,
-			TransactionsBlockHashPtr:        nil,
-			PreExecutionStateMerkleRootHash: nil,
+			ReceiptsMerkleRootHash:          empty32ByteHash,
+			StateDiffHash:                   empty32ByteHash,
+			TransactionsBlockHashPtr:        empty32ByteHash,
+			PreExecutionStateMerkleRootHash: empty32ByteHash,
 			NumContractStateDiffs:           1,
 			NumTransactionReceipts:          1,
 		},

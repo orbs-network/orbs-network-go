@@ -13,7 +13,9 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
-	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight); err != nil {
+	// we're validating transactions for a new proposed block at input.CurrentBlockHeight
+	// wait for previous block height to be synced to avoid processing any tx that was already committed a second time.
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.CurrentBlockHeight-1); err != nil {
 		return nil, err
 	}
 
@@ -30,17 +32,20 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 		}
 	}
 
-	//TODO(v1) handle error from vm
-	bh, _ := s.currentBlockHeightAndTime()
-	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		SignedTransactions: input.SignedTransactions,
-		BlockHeight:        bh,
+	output, err := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
+		SignedTransactions:    input.SignedTransactions,
+		CurrentBlockHeight:    input.CurrentBlockHeight,
+		CurrentBlockTimestamp: input.CurrentBlockTimestamp,
 	})
 
-	for i, tx := range input.SignedTransactions {
-		if status := preOrderResults.PreOrderResults[i]; status != protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
-			return nil, errors.Errorf("transaction with hash %s failed pre-order checks with status %s", digest.CalcTxHash(tx.Transaction()), status)
+	// go over the results first if we have them
+	if len(output.PreOrderResults) == len(input.SignedTransactions) {
+		for i, tx := range input.SignedTransactions {
+			if status := output.PreOrderResults[i]; status != protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
+				return nil, errors.Errorf("transaction with hash %s failed pre-order checks with status %s", digest.CalcTxHash(tx.Transaction()), status)
+			}
 		}
 	}
-	return &services.ValidateTransactionsForOrderingOutput{}, nil
+
+	return &services.ValidateTransactionsForOrderingOutput{}, err
 }

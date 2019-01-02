@@ -16,11 +16,11 @@ import (
 func (h *harness) expectNewBlockProposalRequestedAndSaved(expectedBlockHeight primitives.BlockHeight) {
 	txRequestMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.RequestNewTransactionsBlockInput)
-		return ok && input.BlockHeight.Equal(expectedBlockHeight)
+		return ok && input.CurrentBlockHeight.Equal(expectedBlockHeight)
 	}
 	rxRequestMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.RequestNewResultsBlockInput)
-		return ok && input.BlockHeight.Equal(expectedBlockHeight)
+		return ok && input.CurrentBlockHeight.Equal(expectedBlockHeight)
 	}
 	blockHeightMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.CommitBlockInput)

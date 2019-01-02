@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -121,6 +122,7 @@ func (h *harness) handleForwardFrom(ctx context.Context, sender *testKeys.TestEc
 		},
 	})
 }
+
 func (h *harness) expectTransactionResultsCallbackFor(transactions ...*protocol.SignedTransaction) {
 	h.trh.When("HandleTransactionResults", mock.Any, mock.AnyIf("input has the specified receipts and block height", func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleTransactionResultsInput)
@@ -141,18 +143,18 @@ func (h *harness) ignoringTransactionResults() {
 	h.trh.When("HandleTransactionError", mock.Any, mock.Any)
 }
 
-func (h *harness) getTransactionsForOrdering(ctx context.Context, height primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHeight primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		BlockHeight:             height,
+		CurrentBlockHeight:      currentBlockHeight,
+		CurrentBlockTimestamp:   0,
 		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
-		if input.BlockHeight != h.lastBlockHeight {
-			log.GetLogger().Error("Invalid block height", log.Uint64("expected-block-height", h.lastBlockHeight.KeyForMap()), log.Uint64("actual-block-height", input.BlockHeight.KeyForMap()))
-			panic("Invalid block height")
+		if input.CurrentBlockHeight != h.lastBlockHeight+1 {
+			panic(fmt.Sprintf("invalid block height, current is %d and last committed is %d", input.CurrentBlockHeight, h.lastBlockHeight))
 		}
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 		for i, tx := range input.SignedTransactions {
@@ -198,8 +200,9 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 
 func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
 	_, err := h.txpool.ValidateTransactionsForOrdering(ctx, &services.ValidateTransactionsForOrderingInput{
-		BlockHeight:        blockHeight,
-		SignedTransactions: txs,
+		SignedTransactions:    txs,
+		CurrentBlockHeight:    blockHeight,
+		CurrentBlockTimestamp: 0,
 	})
 
 	return err

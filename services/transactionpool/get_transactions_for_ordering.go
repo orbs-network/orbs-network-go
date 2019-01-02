@@ -12,14 +12,14 @@ import (
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 
 	//TODO(v1) fail if requested block height is in the past
-	s.logger.Info("GetTransactionsForOrdering called for block height", trace.LogFieldFrom(ctx), log.BlockHeight(input.BlockHeight))
+	s.logger.Info("GetTransactionsForOrdering called for block height", trace.LogFieldFrom(ctx), log.BlockHeight(input.CurrentBlockHeight))
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
-	// we're collecting transactions for a new proposed block at input.BlockHeight.
+	// we're collecting transactions for a new proposed block at input.CurrentBlockHeight
 	// wait for previous block height to be synced to avoid processing any tx that was already committed a second time.
-	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.BlockHeight-1); err != nil {
+	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.CurrentBlockHeight-1); err != nil {
 		return nil, err
 	}
 
@@ -42,23 +42,25 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		}
 	}
 
-	//TODO(v1) handle error from vm
-	bh, _ := s.currentBlockHeightAndTime()
-	preOrderResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		SignedTransactions: transactionsForPreOrder,
-		BlockHeight:        bh,
+	output, err := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
+		SignedTransactions:    transactionsForPreOrder,
+		CurrentBlockHeight:    input.CurrentBlockHeight,
+		CurrentBlockTimestamp: input.CurrentBlockTimestamp,
 	})
 
-	for i := range transactionsForPreOrder {
-		tx := transactionsForPreOrder[i]
-		if preOrderResults.PreOrderResults[i] == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
-			out.SignedTransactions = append(out.SignedTransactions, tx)
-		} else {
-			txHash := digest.CalcTxHash(tx.Transaction())
-			s.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Transaction(txHash))
-			s.pendingPool.remove(ctx, txHash, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
+	// even on error we want to reject transactions first to their senders before exiting
+	if len(output.PreOrderResults) == len(transactionsForPreOrder) {
+		for i := range transactionsForPreOrder {
+			tx := transactionsForPreOrder[i]
+			if output.PreOrderResults[i] == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
+				out.SignedTransactions = append(out.SignedTransactions, tx)
+			} else {
+				txHash := digest.CalcTxHash(tx.Transaction())
+				s.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Transaction(txHash))
+				s.pendingPool.remove(ctx, txHash, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
+			}
 		}
 	}
 
-	return out, nil
+	return out, err
 }

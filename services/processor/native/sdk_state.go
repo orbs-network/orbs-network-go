@@ -10,7 +10,7 @@ import (
 
 const SDK_OPERATION_NAME_STATE = "Sdk.State"
 
-func (s *service) SdkStateReadBytesByAddress(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, address []byte) []byte {
+func (s *service) SdkStateReadBytes(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, key []byte) []byte {
 	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
@@ -19,7 +19,7 @@ func (s *service) SdkStateReadBytesByAddress(executionContextId sdkContext.Conte
 			(&protocol.ArgumentBuilder{
 				// key
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: address,
+				BytesValue: key,
 			}).Build(),
 		},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
@@ -33,7 +33,7 @@ func (s *service) SdkStateReadBytesByAddress(executionContextId sdkContext.Conte
 	return output.OutputArguments[0].BytesValue()
 }
 
-func (s *service) SdkStateWriteBytesByAddress(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, address []byte, value []byte) {
+func (s *service) SdkStateWriteBytes(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, key []byte, value []byte) {
 	_, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_STATE,
@@ -42,7 +42,7 @@ func (s *service) SdkStateWriteBytesByAddress(executionContextId sdkContext.Cont
 			(&protocol.ArgumentBuilder{
 				// key
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: address,
+				BytesValue: key,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// value

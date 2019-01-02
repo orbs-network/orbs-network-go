@@ -12,50 +12,64 @@ import (
 	"testing"
 )
 
-func TestSdkEthereum_CallMethod(t *testing.T) {
+func TestSdkEnv_GetBlockDetails_InTransaction(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
+		const currentBlockHeight = primitives.BlockHeight(12)
+		const currentBlockTimestamp = primitives.TimestampNano(0x777)
+
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-			t.Log("Ethereum callMethod")
-			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "callMethod", "EthContractAddress", "EthJsonAbi", "EthMethodName", []byte{0x01, 0x02, 0x03})
+			t.Log("getBlockHeight")
+			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockHeight")
 			require.NoError(t, err, "handleSdkCall should not fail")
-			require.Equal(t, []byte{0x04, 0x05, 0x06}, res[0].BytesValue(), "handleSdkCall result should be equal")
+			require.Equal(t, uint64(currentBlockHeight), res[0].Uint64Value(), "handleSdkCall result should be equal")
+
+			t.Log("getBlockTimestamp")
+			res, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockTimestamp")
+			require.NoError(t, err, "handleSdkCall should not fail")
+			require.Equal(t, uint64(currentBlockTimestamp), res[0].Uint64Value(), "handleSdkCall result should be equal")
+
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
-		h.expectEthereumConnectorMethodCalled("EthContractAddress", "EthMethodName", nil, []byte{0x04, 0x05, 0x06})
 
-		h.processTransactionSet(ctx, []*contractAndMethod{
+		h.processTransactionSetAtHeightAndTimestamp(ctx, currentBlockHeight, currentBlockTimestamp, []*contractAndMethod{
 			{"Contract1", "method1"},
 		})
 
 		h.verifySystemContractCalled(t)
 		h.verifyNativeContractMethodCalled(t)
-		h.verifyEthereumConnectorMethodCalled(t)
 	})
 }
 
-func TestSdkEthereum_GetTransactionLog(t *testing.T) {
+func TestSdkEnv_GetBlockDetails_InCallMethod(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
+		const lastCommittedBlockHeight = primitives.BlockHeight(12)
+		const lastCommittedBlockTimestamp = primitives.TimestampNano(0x777)
+
+		h.expectStateStorageBlockHeightAndTimestampRequested(lastCommittedBlockHeight, lastCommittedBlockTimestamp)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-			t.Log("Ethereum getTransactionLog")
-			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "getTransactionLog", "EthContractAddress", "EthJsonAbi", []byte{0x01, 0x02, 0x03}, "EthEventName")
+			t.Log("getBlockHeight")
+			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockHeight")
 			require.NoError(t, err, "handleSdkCall should not fail")
-			require.Equal(t, []byte{0x04, 0x05, 0x06}, res[0].BytesValue(), "handleSdkCall result should be equal")
+			require.Equal(t, uint64(lastCommittedBlockHeight), res[0].Uint64Value(), "handleSdkCall result should be equal")
+
+			t.Log("getBlockTimestamp")
+			res, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockTimestamp")
+			require.NoError(t, err, "handleSdkCall should not fail")
+			require.Equal(t, uint64(lastCommittedBlockTimestamp), res[0].Uint64Value(), "handleSdkCall result should be equal")
+
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
-		h.expectEthereumConnectorGetTransactionLogs("EthContractAddress", "EthEventName", nil, []byte{0x04, 0x05, 0x06})
 
-		h.processTransactionSet(ctx, []*contractAndMethod{
-			{"Contract1", "method1"},
-		})
+		h.runLocalMethod(ctx, "Contract1", "method1")
 
 		h.verifySystemContractCalled(t)
+		h.verifyStateStorageBlockHeightRequested(t)
 		h.verifyNativeContractMethodCalled(t)
-		h.verifyEthereumConnectorMethodCalled(t)
 	})
 }

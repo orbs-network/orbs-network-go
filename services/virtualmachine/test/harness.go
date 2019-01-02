@@ -93,7 +93,7 @@ func (h *harness) handleSdkCallWithSystemPermissions(ctx context.Context, execut
 
 func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, []byte, error) {
 	output, err := h.service.RunLocalMethod(ctx, &services.RunLocalMethodInput{
-		BlockHeight: 0,
+		BlockHeight: 0, // recent
 		Transaction: (&protocol.TransactionBuilder{
 			Signer:             nil,
 			ContractName:       contractName,
@@ -115,6 +115,10 @@ type contractAndMethod struct {
 }
 
 func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
+	return h.processTransactionSetAtHeightAndTimestamp(ctx, 12, 0x777, contractAndMethods, additionalExpectedStateDiffContracts...)
+}
+
+func (h *harness) processTransactionSetAtHeightAndTimestamp(ctx context.Context, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
@@ -128,8 +132,9 @@ func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods 
 	}
 
 	output, _ := h.service.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		BlockHeight:        12,
-		SignedTransactions: transactions,
+		SignedTransactions:    transactions,
+		CurrentBlockHeight:    currentBlockHeight,
+		CurrentBlockTimestamp: currentBlockTimestamp,
 	})
 
 	results := []protocol.ExecutionResult{}
@@ -159,8 +164,9 @@ func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods 
 
 func (h *harness) transactionSetPreOrder(ctx context.Context, signedTransactions []*protocol.SignedTransaction) ([]protocol.TransactionStatus, error) {
 	output, err := h.service.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		BlockHeight:        12,
-		SignedTransactions: signedTransactions,
+		SignedTransactions:    signedTransactions,
+		CurrentBlockHeight:    12,
+		CurrentBlockTimestamp: 0x777,
 	})
 	return output.PreOrderResults, err
 }

@@ -41,10 +41,11 @@ type harness struct {
 
 func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.TransactionsBlockContainer, error) {
 	output, err := h.service.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:             1,
+		CurrentBlockHeight:      1,
 		MaxBlockSizeKb:          0,
 		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           hash.CalcSha256([]byte{1}),
+		PrevBlockTimestamp:      0,
 	})
 	if err != nil {
 		return nil, err
@@ -54,9 +55,10 @@ func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.Trans
 
 func (h *harness) requestResultsBlock(ctx context.Context, txBlockContainer *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
 	output, err := h.service.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       1,
-		PrevBlockHash:     hash.CalcSha256([]byte{1}),
-		TransactionsBlock: txBlockContainer,
+		CurrentBlockHeight: 1,
+		PrevBlockHash:      hash.CalcSha256([]byte{1}),
+		TransactionsBlock:  txBlockContainer,
+		PrevBlockTimestamp: 0,
 	})
 	if err != nil {
 		return nil, err

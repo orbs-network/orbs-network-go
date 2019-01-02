@@ -37,9 +37,9 @@ func TestCommitteeSizeVSTotalNodesCount(t *testing.T) {
 func TestChooseRandomCommitteeIndices(t *testing.T) {
 	nodeAddresses := testKeys.NodeAddressesForTests()
 	input := &services.RequestCommitteeInput{
-		BlockHeight:      1,
-		RandomSeed:       123456789,
-		MaxCommitteeSize: 5,
+		CurrentBlockHeight: 1,
+		RandomSeed:         123456789,
+		MaxCommitteeSize:   5,
 	}
 
 	t.Run("Receive same number of indices as requested", func(t *testing.T) {
