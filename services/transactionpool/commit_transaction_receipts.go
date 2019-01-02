@@ -14,7 +14,7 @@ import (
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	if bh, _ := s.currentBlockHeightAndTime(); input.LastCommittedBlockHeight != bh+1 {
+	if bh, _ := s.lastCommittedBlockHeightAndTime(); input.LastCommittedBlockHeight != bh+1 {
 		return &services.CommitTransactionReceiptsOutput{
 			NextDesiredBlockHeight:   bh + 1,
 			LastCommittedBlockHeight: bh,

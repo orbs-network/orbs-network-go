@@ -1,8 +1,8 @@
 package info_systemcontract
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/address"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"
 )
 
 // helpers for avoiding reliance on strings throughout the system

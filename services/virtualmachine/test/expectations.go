@@ -162,6 +162,15 @@ func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.
 	h.stateStorage.When("GetStateStorageBlockHeight", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
 }
 
+func (h *harness) expectStateStorageBlockHeightAndTimestampRequested(returnHeight primitives.BlockHeight, returnTimestamp primitives.TimestampNano) {
+	outputToReturn := &services.GetStateStorageBlockHeightOutput{
+		LastCommittedBlockHeight:    returnHeight,
+		LastCommittedBlockTimestamp: returnTimestamp,
+	}
+
+	h.stateStorage.When("GetStateStorageBlockHeight", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
+}
+
 func (h *harness) verifyStateStorageBlockHeightRequested(t *testing.T) {
 	ok, err := h.stateStorage.Verify()
 	require.True(t, ok, "did not read from state storage: %v", err)

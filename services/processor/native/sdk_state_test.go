@@ -12,19 +12,15 @@ import (
 
 var EXAMPLE_CONTEXT = []byte{0x17, 0x18}
 
-func exampleKey() string {
-	return "example-key"
-}
-
-func exampleKeyAddress() []byte {
-	return []byte(exampleKey())
+func exampleKey() []byte {
+	return []byte("example-key")
 }
 
 func TestSdkState_WriteReadBytesByAddress(t *testing.T) {
 	s := createStateSdk()
-	s.SdkStateWriteBytesByAddress(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE, exampleKeyAddress(), []byte{0x01, 0x02, 0x03})
+	s.SdkStateWriteBytes(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE, exampleKey(), []byte{0x01, 0x02, 0x03})
 
-	bytes := s.SdkStateReadBytesByAddress(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE, exampleKeyAddress())
+	bytes := s.SdkStateReadBytes(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE, exampleKey())
 	require.Equal(t, []byte{0x01, 0x02, 0x03}, bytes, "read should return what was written")
 }
 

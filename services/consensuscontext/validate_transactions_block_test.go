@@ -45,7 +45,7 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 		Build()
 
 	input := &services.ValidateTransactionsBlockInput{
-		BlockHeight:        currentBlockHeight,
+		CurrentBlockHeight: currentBlockHeight,
 		TransactionsBlock:  block.TransactionsBlock,
 		PrevBlockHash:      validPrevBlockHash,
 		PrevBlockTimestamp: validPrevBlockTimestamp,
@@ -79,7 +79,7 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 		Build()
 
 	input := &services.ValidateTransactionsBlockInput{
-		BlockHeight:        currentBlockHeight,
+		CurrentBlockHeight: currentBlockHeight,
 		TransactionsBlock:  block.TransactionsBlock, // fill in each test
 		PrevBlockHash:      validPrevBlockHash,
 		PrevBlockTimestamp: validPrevBlockTimestamp,

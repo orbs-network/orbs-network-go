@@ -92,9 +92,11 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:        newBlockHeight,
-		PrevBlockHash:      prevTxBlockHash,
-		PrevBlockTimestamp: prevBlockTimestamp,
+		CurrentBlockHeight:      newBlockHeight,
+		MaxBlockSizeKb:          0, // TODO(v1): fill in or remove from spec
+		MaxNumberOfTransactions: 0,
+		PrevBlockHash:           prevTxBlockHash,
+		PrevBlockTimestamp:      prevBlockTimestamp,
 	})
 	if err != nil {
 		return nil, nil
@@ -102,9 +104,10 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       newBlockHeight,
-		PrevBlockHash:     prevRxBlockHash,
-		TransactionsBlock: txOutput.TransactionsBlock,
+		CurrentBlockHeight: newBlockHeight,
+		PrevBlockHash:      prevRxBlockHash,
+		TransactionsBlock:  txOutput.TransactionsBlock,
+		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
 		return nil, nil

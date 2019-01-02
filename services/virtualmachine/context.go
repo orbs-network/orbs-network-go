@@ -15,15 +15,16 @@ var BIG_INT_ONE = big.NewInt(1)
 var EXECUTION_CONTEXT_ID_BIGINT_RANGE = new(big.Int).Lsh(BIG_INT_ONE, 8*EXECUTION_CONTEXT_ID_SIZE_BYTES)
 
 type executionContext struct {
-	contextId           primitives.ExecutionContextId
-	blockHeight         primitives.BlockHeight
-	blockTimestamp      primitives.TimestampNano
-	serviceStack        []primitives.ContractName
-	transientState      *transientState
-	accessScope         protocol.ExecutionAccessScope
-	batchTransientState *transientState
-	transaction         *protocol.Transaction
-	eventList           []*protocol.EventBuilder
+	contextId                primitives.ExecutionContextId
+	lastCommittedBlockHeight primitives.BlockHeight
+	currentBlockHeight       primitives.BlockHeight
+	currentBlockTimestamp    primitives.TimestampNano
+	serviceStack             []primitives.ContractName
+	transientState           *transientState
+	accessScope              protocol.ExecutionAccessScope
+	batchTransientState      *transientState
+	transaction              *protocol.Transaction
+	eventList                []*protocol.EventBuilder
 }
 
 func (c *executionContext) serviceStackTop() primitives.ContractName {
@@ -93,17 +94,18 @@ func newExecutionContextProvider() *executionContextProvider {
 	}
 }
 
-func (cp *executionContextProvider) allocateExecutionContext(blockHeight primitives.BlockHeight, blockTimestamp primitives.TimestampNano, accessScope protocol.ExecutionAccessScope, transaction *protocol.Transaction) (primitives.ExecutionContextId, *executionContext) {
+func (cp *executionContextProvider) allocateExecutionContext(lastCommittedBlockHeight primitives.BlockHeight, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, accessScope protocol.ExecutionAccessScope, transaction *protocol.Transaction) (primitives.ExecutionContextId, *executionContext) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
 	newContext := &executionContext{
-		blockHeight:    blockHeight,
-		blockTimestamp: blockTimestamp,
-		serviceStack:   []primitives.ContractName{},
-		transientState: newTransientState(),
-		accessScope:    accessScope,
-		transaction:    transaction,
+		lastCommittedBlockHeight: lastCommittedBlockHeight,
+		currentBlockHeight:       currentBlockHeight,
+		currentBlockTimestamp:    currentBlockTimestamp,
+		serviceStack:             []primitives.ContractName{},
+		transientState:           newTransientState(),
+		accessScope:              accessScope,
+		transaction:              transaction,
 	}
 
 	cp.lastContextIdCounter.Add(cp.lastContextIdCounter, BIG_INT_ONE)

@@ -26,7 +26,7 @@ func toNodeAddresses(nodes map[string]config.FederationNode) []primitives.NodeAd
 }
 
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	federationNodes := s.config.FederationNodes(uint64(input.BlockHeight))
+	federationNodes := s.config.FederationNodes(uint64(input.CurrentBlockHeight))
 	federationNodesAddresses := toNodeAddresses(federationNodes)
 	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.ConsensusMinimumCommitteeSize(), uint32(len(federationNodesAddresses)))
 	indices, err := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed, federationNodesAddresses)

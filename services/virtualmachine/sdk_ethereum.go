@@ -50,7 +50,7 @@ func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionCont
 	ethereumPackedInputArguments := args[3].BytesValue()
 
 	// get block timeatamp
-	blockTimestamp := executionContext.blockTimestamp
+	blockTimestamp := executionContext.currentBlockTimestamp
 
 	// execute the call
 	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]

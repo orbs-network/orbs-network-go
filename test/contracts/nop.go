@@ -4,7 +4,7 @@ const NOP_SOURCE_CODE = `
 package main
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 )
 
 var PUBLIC = sdk.Export()
