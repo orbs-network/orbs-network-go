@@ -42,7 +42,7 @@ func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockI
 		Build()
 
 	input := &services.ValidateResultsBlockInput{
-		BlockHeight:        currentBlockHeight,
+		CurrentBlockHeight: currentBlockHeight,
 		TransactionsBlock:  block.TransactionsBlock,
 		ResultsBlock:       block.ResultsBlock,
 		PrevBlockHash:      validPrevBlockHash,
@@ -94,7 +94,7 @@ func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext
 		protocolVersion: cfg.ProtocolVersion(),
 		virtualChainId:  cfg.VirtualChainId(),
 		input: &services.ValidateResultsBlockInput{
-			BlockHeight:        currentBlockHeight,
+			CurrentBlockHeight: currentBlockHeight,
 			ResultsBlock:       block.ResultsBlock,
 			PrevBlockHash:      validPrevBlockHash,
 			TransactionsBlock:  block.TransactionsBlock,

@@ -57,7 +57,7 @@ func validateRxVirtualChainID(ctx context.Context, vcrx *rxValidatorContext) err
 }
 
 func validateRxBlockHeight(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedBlockHeight := vcrx.input.BlockHeight
+	expectedBlockHeight := vcrx.input.CurrentBlockHeight
 	checkedBlockHeight := vcrx.input.ResultsBlock.Header.BlockHeight()
 	if checkedBlockHeight != expectedBlockHeight {
 		return errors.Wrapf(ErrMismatchedBlockHeight, "expected %v actual %v", expectedBlockHeight, checkedBlockHeight)
@@ -139,9 +139,9 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	//Validate transaction execution
 	// Execute the ordered transactions set by calling VirtualMachine.ProcessTransactionSet creating receipts and state diff. Using the provided header timestamp as a reference timestamp.
 	processTxsOut, err := vcrx.processTransactionSetAdapter.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{ // TODO wrap with adapter
-		BlockHeight:        vcrx.input.TransactionsBlock.Header.BlockHeight(),
-		BlockTimestamp:     vcrx.input.TransactionsBlock.Header.Timestamp(),
-		SignedTransactions: vcrx.input.TransactionsBlock.SignedTransactions,
+		CurrentBlockHeight:    vcrx.input.TransactionsBlock.Header.BlockHeight(),
+		CurrentBlockTimestamp: vcrx.input.TransactionsBlock.Header.Timestamp(),
+		SignedTransactions:    vcrx.input.TransactionsBlock.SignedTransactions,
 	})
 	if err != nil {
 		return errors.Wrapf(ErrProcessTransactionSet, "ValidateResultsBlock.validateExecution() error ProcessTransactionSet")

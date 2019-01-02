@@ -60,7 +60,7 @@ func validateTxVirtualChainID(ctx context.Context, vctx *txValidatorContext) err
 
 func validateTxBlockHeight(ctx context.Context, vctx *txValidatorContext) error {
 	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
-	expectedBlockHeight := vctx.input.BlockHeight
+	expectedBlockHeight := vctx.input.CurrentBlockHeight
 	if checkedBlockHeight != expectedBlockHeight {
 		return ErrMismatchedBlockHeight
 	}
@@ -111,9 +111,9 @@ func validateTxMetadataHash(ctx context.Context, vctx *txValidatorContext) error
 
 func validateTxTransactionOrdering(ctx context.Context, vctx *txValidatorContext) error {
 	validationInput := &services.ValidateTransactionsForOrderingInput{
-		BlockHeight:        vctx.input.TransactionsBlock.Header.BlockHeight(),
-		BlockTimestamp:     vctx.input.TransactionsBlock.Header.Timestamp(),
-		SignedTransactions: vctx.input.TransactionsBlock.SignedTransactions,
+		CurrentBlockHeight:    vctx.input.TransactionsBlock.Header.BlockHeight(),
+		CurrentBlockTimestamp: vctx.input.TransactionsBlock.Header.Timestamp(),
+		SignedTransactions:    vctx.input.TransactionsBlock.SignedTransactions,
 	}
 	_, err := vctx.txOrderValidator(ctx, validationInput)
 	if err != nil {
