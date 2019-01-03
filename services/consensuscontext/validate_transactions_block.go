@@ -133,19 +133,28 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 
 func isValidBlockTimestamp(currentBlockTimestamp primitives.TimestampNano, prevBlockTimestamp primitives.TimestampNano, now time.Time, allowedTimestampJitter time.Duration) bool {
 
-	// TODO v1 decide on this: No, we do not handle gracefully dates before 1970
-	if now.UnixNano() < 0 {
-		panic("we don't handle dates before 1970")
+	if allowedTimestampJitter < 0 {
+		panic("allowedTimestampJitter cannot be negative")
+	}
+
+	upperJitterLimit := now.Add(allowedTimestampJitter).UnixNano()
+	lowerJitterLimit := now.Add(-allowedTimestampJitter).UnixNano()
+
+	if upperJitterLimit < 0 {
+		panic("upperJitterLimit cannot be negative")
+	}
+	if lowerJitterLimit < 0 {
+		panic("lowerJitterLimit cannot be negative")
 	}
 
 	if prevBlockTimestamp >= currentBlockTimestamp {
 		return false
 	}
-	if uint64(currentBlockTimestamp) > uint64(now.Add(allowedTimestampJitter).UnixNano()) {
+	if uint64(currentBlockTimestamp) > uint64(upperJitterLimit) {
 		return false
 	}
 
-	if uint64(currentBlockTimestamp) < uint64(now.Add(-allowedTimestampJitter).UnixNano()) {
+	if uint64(currentBlockTimestamp) < uint64(lowerJitterLimit) {
 		return false
 	}
 	return true
