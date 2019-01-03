@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestAdvisoryLock_AdapterTakesExclusiveLock_ConcurrentProcesses(t *testing.T) {
@@ -53,6 +54,8 @@ func TestAdvisoryLock_AdapterCanReleaseLock(t *testing.T) {
 
 	err := lockAndRelease(c)
 	require.NoError(t, err)
+
+	time.Sleep(500 * time.Millisecond)
 
 	err = lockAndRelease(c)
 	require.NoError(t, err)
