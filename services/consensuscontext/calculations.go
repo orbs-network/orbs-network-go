@@ -23,6 +23,9 @@ func calculateReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primi
 	return merkle.CalculateOrderedTreeRoot(rptHashValues), nil
 }
 
+// TODO v1 Rewrite without Merkle tree and then rename the function
+// See https://tree.taiga.io/project/orbs-network/us/651
+
 func calculateStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
 	stdHashValues := make([]primitives.Sha256, len(stateDiffs))
 	for i := 0; i < len(stateDiffs); i++ {
