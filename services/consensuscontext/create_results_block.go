@@ -22,7 +22,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		return nil, err
 	}
 
-	merkleReceiptsRoot, err := calculateReceiptsMerkleRoot(output.TransactionReceipts)
+	merkleReceiptsRoot, err := digest.CalcReceiptsMerkleRoot(output.TransactionReceipts)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		return nil, err
 	}
 
-	stateDiffHash, err := calculateStateDiffMerkleRoot(output.ContractStateDiffs)
+	stateDiffHash, err := digest.CalcStateDiffMerkleRoot(output.ContractStateDiffs)
 	if err != nil {
 		return nil, err
 	}

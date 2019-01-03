@@ -14,7 +14,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	start := time.Now()
 	defer s.metrics.createTxBlockTime.RecordSince(start)
 
-	newBlockTimestamp := calculateNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
+	newBlockTimestamp := digest.CalcNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
 
 	proposedTransactions, err := s.fetchTransactions(ctx, input.CurrentBlockHeight, newBlockTimestamp, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
 	if err != nil {
@@ -22,7 +22,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	}
 	txCount := len(proposedTransactions.SignedTransactions)
 
-	merkleTransactionsRoot, err := calculateTransactionsMerkleRoot(proposedTransactions.SignedTransactions)
+	merkleTransactionsRoot, err := digest.CalcTransactionsMerkleRoot(proposedTransactions.SignedTransactions)
 	if err != nil {
 		return nil, err
 	}

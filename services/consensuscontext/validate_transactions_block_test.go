@@ -23,7 +23,7 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 	currentBlockHeight := primitives.BlockHeight(1000)
 	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
-	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
+	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
 	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
 	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
 	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
@@ -58,7 +58,7 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 	currentBlockHeight := primitives.BlockHeight(1000)
 	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
-	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
+	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
 	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
 	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
 	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)

@@ -32,6 +32,16 @@ func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) lh.Block {
 	}
 }
 
+func FromLeanHelixBlock(lhBlock lh.Block) *protocol.BlockPairContainer {
+	if lhBlock != nil {
+		block, ok := lhBlock.(*BlockPairWrapper)
+		if ok {
+			return block.blockPair
+		}
+	}
+	return nil
+}
+
 type blockProvider struct {
 	logger           log.BasicLogger
 	leanhelix        leanhelix.LeanHelix
@@ -130,7 +140,7 @@ func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 	}
 
 	// TODO (v1) Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
-	isBlockProofValid := true //isBlockProofValid := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockPair.TransactionsBlock.BlockProof.LeanHelix(), prevBlockPair.TransactionsBlock.BlockProof.LeanHelix())
+	isBlockProofValid := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockPair.TransactionsBlock.BlockProof.LeanHelix() /*, prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()*/)
 	if !isBlockProofValid {
 		return errors.Errorf("LeanHelix ValidateBlockConsensus - block proof is not valid!!")
 	}

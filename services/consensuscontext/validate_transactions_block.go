@@ -71,7 +71,7 @@ func validateTxTransactionsBlockTimestamp(ctx context.Context, vctx *txValidator
 func validateTxTransactionsBlockMerkleRoot(ctx context.Context, vctx *txValidatorContext) error {
 	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
 	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsMerkleRootHash()
-	if expectedTxMerkleRoot, err := calculateTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
+	if expectedTxMerkleRoot, err := digest.CalcTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
 		return err
 	} else if !bytes.Equal(txMerkleRoot, expectedTxMerkleRoot) {
 		return errors.Wrapf(ErrMismatchedTxMerkleRoot, "expected %v actual %v", expectedTxMerkleRoot, txMerkleRoot)

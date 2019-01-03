@@ -19,5 +19,5 @@ var ErrMismatchedStateDiffHash = errors.New("state diff merkleRoot is different 
 var ErrGetStateHash = errors.New("failed in GetStateHash() so cannot retrieve pre-execution state diff merkleRoot from previous block")
 var ErrMismatchedPreExecutionStateMerkleRoot = errors.New("pre-execution state diff merkleRoot is different between results block header and extracted from state storage for previous block")
 var ErrProcessTransactionSet = errors.New("failed in ProcessTransactionSet()")
-var ErrCalculateReceiptsMerkleRoot = errors.New("failed in CalculateReceiptsMerkleRoot()")
-var ErrCalculateStateDiffMerkleRoot = errors.New("failed in ErrCalculateStateDiffMerkleRoot()")
+var ErrCalcReceiptsMerkleRoot = errors.New("failed in CalcReceiptsMerkleRoot()")
+var ErrCalcStateDiffMerkleRoot = errors.New("failed in ErrCalcStateDiffMerkleRoot()")
