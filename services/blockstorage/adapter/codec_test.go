@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestEncodesAndDecodes(t *testing.T) {
+func TestCodec_EncodesAndDecodes(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 	rw := new(bytes.Buffer)
@@ -22,7 +22,7 @@ func TestEncodesAndDecodes(t *testing.T) {
 	test.RequireCmpEqual(t, block, decodedBlock)
 }
 
-func TestDetectsCorruption(t *testing.T) {
+func TestCodec_DetectsDataCorruption(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
