@@ -27,28 +27,31 @@ func TestDetectsCorruption(t *testing.T) {
 
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 
+	// serialize
 	encodedBlock := new(bytes.Buffer)
 	err := encode(block, encodedBlock)
 	blockBytes := encodedBlock.Bytes()
 	require.NoError(t, err)
 
+	// decode ok
 	_, _, err = decode(encodedBlock)
 	require.NoError(t, err, "expected uncorrupted bytes to decode successfully")
 
-	// corrupt random bits
+	// decode fail with random bit flips
 	corruptBlock := new(bytes.Buffer)
-	for i := 0; i < len(blockBytes); i += ctrlRand.Intn(len(blockBytes) / 20) {
+	for ri := 0; ri < len(blockBytes); ri += ctrlRand.Intn(len(blockBytes) / 20) {
+		// clone block reader
 		corruptBlock.Reset()
 		corruptBlock.Write(blockBytes)
-		raw := corruptBlock.Bytes()
 
 		// flip one bit
 		bitFlip := byte(1) << uintptr(ctrlRand.Intn(8))
-		raw[i] = raw[i] ^ bitFlip
+		raw := corruptBlock.Bytes()
+		raw[ri] = raw[ri] ^ bitFlip
 
 		_, _, err = decode(corruptBlock)
-		require.Error(t, err, "expected codec to detect data corruption when flipping bit %08b in byte %v/%v", bitFlip, i, len(blockBytes))
-		t.Logf("flipping bit %08b in byte %v/%v", bitFlip, i, len(blockBytes))
+		require.Error(t, err, "expected codec to detect data corruption when flipping bit %08b in byte %v/%v", bitFlip, ri, len(blockBytes))
+		t.Logf("flipping bit %08b in byte %v/%v", bitFlip, ri, len(blockBytes))
 	}
 }
 
