@@ -81,7 +81,8 @@ const (
 	LOGGER_HTTP_ENDPOINT = "LOGGER_HTTP_ENDPOINT"
 	LOGGER_BULK_SIZE     = "LOGGER_BULK_SIZE"
 
-	BLOCK_STORAGE_DATA_DIR = "BLOCK_STORAGE_DATA_DIR"
+	BLOCK_STORAGE_DATA_DIR       = "BLOCK_STORAGE_DATA_DIR"
+	BLOCK_STORAGE_MAX_BLOCK_SIZE = "BLOCK_STORAGE_MAX_BLOCK_SIZE"
 )
 
 func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
@@ -333,4 +334,8 @@ func (c *config) LoggerBulkSize() uint32 {
 
 func (c *config) BlockStorageDataDir() string {
 	return c.kv[BLOCK_STORAGE_DATA_DIR].StringValue
+}
+
+func (c *config) BlockStorageMaxBlockSize() uint32 {
+	return c.kv[BLOCK_STORAGE_MAX_BLOCK_SIZE].Uint32Value
 }

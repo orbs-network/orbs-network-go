@@ -35,36 +35,39 @@ type FilesystemBlockPersistence struct {
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
 	tip          *writingTip
+	codec        *codec
 }
 
-// TODO V1 pass a validator to newBlockHeightIndex to perform block validity tests on initial scan?
-func NewFilesystemBlockPersistence(ctx context.Context, c config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
+func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
+	codec := newCodec(conf.BlockStorageMaxBlockSize())
+
 	// creates the file if missing
-	newTip, err := newWritingTip(ctx, c.BlockStorageDataDir(), blocksFileName(c), logger)
+	newTip, err := newWritingTip(ctx, conf.BlockStorageDataDir(), blocksFileName(conf), codec, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	bhIndex, err := constructIndexForFile(blocksFileName(c), logger)
+	bhIndex, err := constructIndexForFile(blocksFileName(conf), logger, codec)
 	if err != nil {
 		return nil, err
 	}
 
 	adapter := &FilesystemBlockPersistence{
 		bhIndex:      bhIndex,
-		config:       c,
+		config:       conf,
 		blockTracker: synchronization.NewBlockTracker(logger, uint64(bhIndex.topBlockHeight), 5),
 		metrics:      newMetrics(metricFactory),
 		logger:       logger,
 		tip:          newTip,
+		codec:        codec,
 	}
 
 	return adapter, nil
 }
 
-func constructIndexForFile(filename string, logger log.BasicLogger) (*blockHeightIndex, error) {
+func constructIndexForFile(filename string, logger log.BasicLogger, c *codec) (*blockHeightIndex, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open blocks file for reading")
@@ -74,7 +77,7 @@ func constructIndexForFile(filename string, logger log.BasicLogger) (*blockHeigh
 	bhIndex := newBlockHeightIndex()
 	offset := int64(0)
 	for {
-		aBlock, blockSize, err := decode(file) // TODO add block validation
+		aBlock, blockSize, err := c.decode(file) // TODO add block validation
 		if err != nil {
 			if err == io.EOF {
 				logger.Info("built index", log.Int64("valid-block-bytes", offset), log.BlockHeight(bhIndex.topBlockHeight))
@@ -148,7 +151,7 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
 
 		for uint8(len(page)) < pageSize {
-			aBlock, _, err := decode(file)
+			aBlock, _, err := f.codec.decode(file)
 			if err != nil {
 				if err == io.EOF {
 					eof = true

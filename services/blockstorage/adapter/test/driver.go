@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // TODO V1 check that we can read concurrently from different places in the file
@@ -40,6 +41,7 @@ func NewFilesystemAdapterDriver(conf config.FilesystemBlockPersistenceConfig) (a
 
 	closeAdapter := func() {
 		cancelCtx()
+		time.Sleep(500 * time.Millisecond) // time to release any lock
 	}
 
 	return persistence, closeAdapter, nil
@@ -60,6 +62,10 @@ func newTempFileConfig() *localConfig {
 }
 func (l *localConfig) BlockStorageDataDir() string {
 	return l.dir
+}
+
+func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+	return 64 * 1024 * 1024
 }
 
 func (l *localConfig) cleanDir() {

@@ -39,6 +39,7 @@ type NodeConfig interface {
 
 	// file system block storage
 	BlockStorageDataDir() string
+	BlockStorageMaxBlockSize() uint32
 
 	// state storage
 	StateStorageHistorySnapshotNum() uint32
@@ -118,6 +119,7 @@ type BlockStorageConfig interface {
 
 type FilesystemBlockPersistenceConfig interface {
 	BlockStorageDataDir() string
+	BlockStorageMaxBlockSize() uint32
 }
 
 type GossipTransportConfig interface {

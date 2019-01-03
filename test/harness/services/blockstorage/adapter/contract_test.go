@@ -229,3 +229,7 @@ func newLocalConfig() *localConfig {
 func (l *localConfig) BlockStorageDataDir() string {
 	return l.dir
 }
+
+func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+	return 64 * 1024 * 1024
+}
