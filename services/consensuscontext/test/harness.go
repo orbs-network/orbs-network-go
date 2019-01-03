@@ -41,10 +41,11 @@ type harness struct {
 
 func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.TransactionsBlockContainer, error) {
 	output, err := h.service.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:             1,
+		CurrentBlockHeight:      1,
 		MaxBlockSizeKb:          0,
 		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           hash.CalcSha256([]byte{1}),
+		PrevBlockTimestamp:      0,
 	})
 	if err != nil {
 		return nil, err
@@ -54,9 +55,10 @@ func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.Trans
 
 func (h *harness) requestResultsBlock(ctx context.Context, txBlockContainer *protocol.TransactionsBlockContainer) (*protocol.ResultsBlockContainer, error) {
 	output, err := h.service.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       1,
-		PrevBlockHash:     hash.CalcSha256([]byte{1}),
-		TransactionsBlock: txBlockContainer,
+		CurrentBlockHeight: 1,
+		PrevBlockHash:      hash.CalcSha256([]byte{1}),
+		TransactionsBlock:  txBlockContainer,
+		PrevBlockTimestamp: 0,
 	})
 	if err != nil {
 		return nil, err
@@ -71,7 +73,7 @@ func (h *harness) expectTxPoolToReturnXTransactions(numTransactionsToReturn uint
 	}
 
 	for i := uint32(0); i < numTransactionsToReturn; i++ {
-		targetAddress := builders.AddressForEd25519SignerForTests(2)
+		targetAddress := builders.ClientAddressForEd25519SignerForTests(2)
 		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, targetAddress).Build())
 	}
 
@@ -108,7 +110,7 @@ func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 func (h *harness) expectStateHashToReturn(hash []byte) {
 
 	stateHashOutput := &services.GetStateHashOutput{
-		StateRootHash: hash,
+		StateMerkleRootHash: hash,
 	}
 	h.stateStorage.When("GetStateHash", mock.Any, mock.Any).Return(stateHashOutput, nil)
 

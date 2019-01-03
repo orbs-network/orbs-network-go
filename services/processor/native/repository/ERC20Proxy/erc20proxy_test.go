@@ -2,8 +2,8 @@ package erc20proxy
 
 import (
 	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
-	. "github.com/orbs-network/orbs-contract-sdk/go/fake"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -14,7 +14,7 @@ func TestBalance_AllGood(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 1")
 
 	InServiceScope(owner.RawAddress, nil, func(m Mockery) {
-		state.WriteUint64ByAddress(owner.RawAddress, userHave)
+		state.WriteUint64(owner.RawAddress, userHave)
 		// call
 		balance := balanceOf(owner.RawAddress)
 		require.Equal(t, userHave, balance)
@@ -68,15 +68,15 @@ func TestTransferImpl_AllGood(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 2")
 
 	InServiceScope(owner.RawAddress, owner.RawAddress, func(m Mockery) {
-		state.WriteUint64ByAddress(owner.RawAddress, userHave)
-		state.WriteUint64ByAddress(target.RawAddress, targetHave)
+		state.WriteUint64(owner.RawAddress, userHave)
+		state.WriteUint64(target.RawAddress, targetHave)
 
 		// call
 		_transferImpl(owner.RawAddress, target.RawAddress, userTransfer)
 
 		// assert
-		require.Equal(t, userHave-userTransfer, state.ReadUint64ByAddress(owner.RawAddress))
-		require.Equal(t, targetHave+userTransfer, state.ReadUint64ByAddress(target.RawAddress))
+		require.Equal(t, userHave-userTransfer, state.ReadUint64(owner.RawAddress))
+		require.Equal(t, targetHave+userTransfer, state.ReadUint64(target.RawAddress))
 	})
 }
 
@@ -91,8 +91,8 @@ func TestTransferImpl_NotEnough(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 2")
 
 	InServiceScope(owner.RawAddress, nil, func(m Mockery) {
-		state.WriteUint64ByAddress(owner.RawAddress, userHave)
-		state.WriteUint64ByAddress(target.RawAddress, targetHave)
+		state.WriteUint64(owner.RawAddress, userHave)
+		state.WriteUint64(target.RawAddress, targetHave)
 
 		// call
 		require.Panics(t, func() {
@@ -118,7 +118,7 @@ func TestApproveAllow_AllGood(t *testing.T) {
 		allowKey := append(caller.RawAddress, spender.RawAddress...)
 
 		// assert
-		require.Equal(t, approveAmount, state.ReadUint64ByKey(string(allowKey)))
+		require.Equal(t, approveAmount, state.ReadUint64(allowKey))
 		require.Equal(t, approveAmount, allowance(caller.RawAddress, spender.RawAddress))
 	})
 }
@@ -223,16 +223,16 @@ func TestMint(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 2")
 
 	InServiceScope(owner.RawAddress, asbcontract.RawAddress, func(m Mockery) {
-		state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, total)
-		state.WriteUint64ByAddress(target.RawAddress, startWith)
-		state.WriteBytesByKey(ASB_ADDR_KEY, asbcontract.RawAddress)
+		state.WriteUint64(TOTAL_SUPPLY_KEY, total)
+		state.WriteUint64(target.RawAddress, startWith)
+		state.WriteBytes(ASB_ADDR_KEY, asbcontract.RawAddress)
 
 		// call
 		asbMint(target.RawAddress, mintAmount)
 
 		// assert
-		require.Equal(t, total+mintAmount, state.ReadUint64ByKey(TOTAL_SUPPLY_KEY))
-		require.Equal(t, startWith+mintAmount, state.ReadUint64ByAddress(target.RawAddress))
+		require.Equal(t, total+mintAmount, state.ReadUint64(TOTAL_SUPPLY_KEY))
+		require.Equal(t, startWith+mintAmount, state.ReadUint64(target.RawAddress))
 	})
 }
 
@@ -243,7 +243,7 @@ func TestMint_BadAddress(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 1")
 
 	InServiceScope(owner.RawAddress, asbcontract.RawAddress, func(m Mockery) {
-		state.WriteBytesByKey(ASB_ADDR_KEY, asbcontract.RawAddress)
+		state.WriteBytes(ASB_ADDR_KEY, asbcontract.RawAddress)
 		// call
 		require.Panics(t, func() {
 			asbMint([]byte{0, 0, 4, 5}, 10)
@@ -264,16 +264,16 @@ func TestBurn_AllGood(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 2")
 
 	InServiceScope(owner.RawAddress, asbcontract.RawAddress, func(m Mockery) {
-		state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, total)
-		state.WriteUint64ByAddress(target.RawAddress, startWith)
-		state.WriteBytesByKey(ASB_ADDR_KEY, asbcontract.RawAddress)
+		state.WriteUint64(TOTAL_SUPPLY_KEY, total)
+		state.WriteUint64(target.RawAddress, startWith)
+		state.WriteBytes(ASB_ADDR_KEY, asbcontract.RawAddress)
 
 		// call
 		asbBurn(target.RawAddress, burnAmount)
 
 		// assert
-		require.Equal(t, total-burnAmount, state.ReadUint64ByKey(TOTAL_SUPPLY_KEY))
-		require.Equal(t, startWith-burnAmount, state.ReadUint64ByAddress(target.RawAddress))
+		require.Equal(t, total-burnAmount, state.ReadUint64(TOTAL_SUPPLY_KEY))
+		require.Equal(t, startWith-burnAmount, state.ReadUint64(target.RawAddress))
 	})
 }
 
@@ -290,9 +290,9 @@ func TestBurn_NotEnough(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 2")
 
 	InServiceScope(owner.RawAddress, asbcontract.RawAddress, func(m Mockery) {
-		state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, total)
-		state.WriteUint64ByAddress(target.RawAddress, startWith)
-		state.WriteBytesByKey(ASB_ADDR_KEY, asbcontract.RawAddress)
+		state.WriteUint64(TOTAL_SUPPLY_KEY, total)
+		state.WriteUint64(target.RawAddress, startWith)
+		state.WriteBytes(ASB_ADDR_KEY, asbcontract.RawAddress)
 
 		// call
 		require.Panics(t, func() {
@@ -308,7 +308,7 @@ func TestBurn_BadAddress(t *testing.T) {
 	require.NoError(t, err, "could not create orbs address 1")
 
 	InServiceScope(owner.RawAddress, asbcontract.RawAddress, func(m Mockery) {
-		state.WriteBytesByKey(ASB_ADDR_KEY, asbcontract.RawAddress)
+		state.WriteBytes(ASB_ADDR_KEY, asbcontract.RawAddress)
 		// call
 		require.Panics(t, func() {
 			asbBurn([]byte{0, 0, 4, 5}, 10)
@@ -329,7 +329,7 @@ func TestBindAsb_AllGood(t *testing.T) {
 		asbBind(asbcontract.RawAddress)
 
 		// assert
-		require.Equal(t, asbcontract.RawAddress, state.ReadBytesByKey(ASB_ADDR_KEY))
+		require.Equal(t, asbcontract.RawAddress, state.ReadBytes(ASB_ADDR_KEY))
 	})
 }
 

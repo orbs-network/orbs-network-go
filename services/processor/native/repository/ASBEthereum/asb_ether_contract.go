@@ -2,13 +2,14 @@ package asb_ether
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/address"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/ethereum"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/events"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/safemath/safeuint64"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/service"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ERC20Proxy"
 	"math/big"
 )
 
@@ -23,14 +24,16 @@ var SYSTEM = sdk.Export(_init, setAsbAbi)
 var EVENTS = sdk.Export(OrbsTransferredOut)
 
 // defaults
-const TOKEN_CONTRACT_KEY = "_TOKEN_CONTRACT_KEY_"
-const defaultTokenContract = "erc20proxy"
-const ASB_ETH_ADDR_KEY = "_ASB_ETH_ADDR_KEY_"
-const ASB_ABI_KEY = "_ASB_ABI_KEY_"
+const defaultTokenContract = erc20proxy.CONTRACT_NAME
 const defaultAsbAbi = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"bytes20"},{"indexed":false,"name":"value","type":"uint256"}],"name":"EthTransferredOut","type":"event"}]`
-const OUT_TUID_KEY = "_OUT_TUID_KEY_"
-const IN_TUID_KEY = "_IN_TUID_KEY_"
-const IN_TUID_MAX_KEY = "_IN_TUID_MAX_KEY_"
+
+// state keys
+var TOKEN_CONTRACT_KEY = []byte("_TOKEN_CONTRACT_KEY_")
+var ASB_ETH_ADDR_KEY = []byte("_ASB_ETH_ADDR_KEY_")
+var ASB_ABI_KEY = []byte("_ASB_ABI_KEY_")
+var OUT_TUID_KEY = []byte("_OUT_TUID_KEY_")
+var IN_TUID_KEY = []byte("_IN_TUID_KEY_")
+var IN_TUID_MAX_KEY = []byte("_IN_TUID_KEY_")
 
 func _init() {
 	setAsbAbi(defaultAsbAbi)
@@ -67,7 +70,7 @@ func transferIn(hexEncodedEthTxHash string) {
 
 	address.ValidateAddress(e.To[:])
 
-	inTuidKey := genInTuidKey(e.Tuid.Uint64())
+	inTuidKey := genInTuidKey(e.Tuid.Bytes())
 	if isInTuidExists(inTuidKey) {
 		panic(fmt.Errorf("transfer of %d to address %x failed since inbound-tuid %d has already been spent", e.Value, e.To, e.Tuid))
 	}
@@ -88,63 +91,63 @@ func transferOut(ethAddr []byte, amount uint64) {
 	events.EmitEvent(OrbsTransferredOut, tuid, sourceOrbsAddress, ethAddr, amount)
 }
 
-func genInTuidKey(tuid uint64) string {
-	return fmt.Sprintf("%s%d", IN_TUID_KEY, tuid)
+func genInTuidKey(tuid []byte) []byte {
+	return append(IN_TUID_KEY, tuid...)
 }
 
-func isInTuidExists(tuid string) bool {
-	return state.ReadUint32ByKey(tuid) != 0
+func isInTuidExists(tuidKey []byte) bool {
+	return state.ReadUint32(tuidKey) != 0
 }
 
-func setInTuid(tuid string) {
-	state.WriteUint32ByKey(tuid, 1)
+func setInTuid(tuidKey []byte) {
+	state.WriteUint32(tuidKey, 1)
 }
 
 func getInTuidMax() uint64 {
-	return state.ReadUint64ByKey(IN_TUID_MAX_KEY)
+	return state.ReadUint64(IN_TUID_MAX_KEY)
 }
 
 func setInTuidMax(next uint64) {
-	state.WriteUint64ByKey(IN_TUID_MAX_KEY, next)
+	state.WriteUint64(IN_TUID_MAX_KEY, next)
 }
 
 func getOutTuid() uint64 {
-	return state.ReadUint64ByKey(OUT_TUID_KEY)
+	return state.ReadUint64(OUT_TUID_KEY)
 }
 
 func setOutTuid(next uint64) {
-	state.WriteUint64ByKey(OUT_TUID_KEY, next)
+	state.WriteUint64(OUT_TUID_KEY, next)
 }
 
 func getAsbAddr() string {
-	return state.ReadStringByKey(ASB_ETH_ADDR_KEY)
+	return state.ReadString(ASB_ETH_ADDR_KEY)
 }
 
 func setAsbAddr(asbAddr string) { // upgrade
-	state.WriteStringByKey(ASB_ETH_ADDR_KEY, asbAddr)
+	state.WriteString(ASB_ETH_ADDR_KEY, asbAddr)
 }
 
 func getAsbAbi() string {
-	return state.ReadStringByKey(ASB_ABI_KEY)
+	return state.ReadString(ASB_ABI_KEY)
 }
 
 func setAsbAbi(asbAbi string) { // upgrade
-	state.WriteStringByKey(ASB_ABI_KEY, asbAbi)
+	state.WriteString(ASB_ABI_KEY, asbAbi)
 }
 
 func getTokenContract() string {
-	return state.ReadStringByKey(TOKEN_CONTRACT_KEY)
+	return state.ReadString(TOKEN_CONTRACT_KEY)
 }
 
 func setTokenContract(erc20Proxy string) { // upgrade
-	state.WriteStringByKey(TOKEN_CONTRACT_KEY, erc20Proxy)
+	state.WriteString(TOKEN_CONTRACT_KEY, erc20Proxy)
 }
 
 func resetContract() {
 	setOutTuid(0)
-	max := getInTuidMax()
-	for i := uint64(0); i <= max; i++ {
-		state.ClearByKey(genInTuidKey(i))
+	max := int64(getInTuidMax())
+	for i := int64(0); i <= max; i++ {
+		state.Clear(genInTuidKey(big.NewInt(i).Bytes()))
 	}
 	setInTuidMax(0)
 }

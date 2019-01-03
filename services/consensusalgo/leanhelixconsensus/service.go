@@ -21,9 +21,6 @@ import (
 
 var LogTag = log.Service("consensus-algo-lean-helix")
 
-// Temporary hack until leader election is fixed in LH
-var DISABLE_LEADER_ELECTION = true
-
 type service struct {
 	blockStorage  services.BlockStorage
 	membership    *membership
@@ -80,15 +77,8 @@ func NewLeanHelixConsensusAlgo(
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
-	electionTimeout := config.LeanHelixConsensusRoundTimeoutInterval()
-
-	// TODO For happy-flow, disabling leader election (restore when this works https://tree.taiga.io/project/orbs-network/us/631)
-	if DISABLE_LEADER_ELECTION {
-		logger.Info("*****>>> LEADER ELECTION DISABLED <<<***** NewLeanHelixConsensusAlgo()")
-		electionTimeout = time.Hour
-	}
-
-	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(electionTimeout)
+	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
+	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 
 	s := &service{
 		com:           com,
@@ -126,7 +116,6 @@ func NewLeanHelixConsensusAlgo(
 	return s
 }
 
-// TODO Go over this carefully!!
 func (s *service) onCommit(ctx context.Context, block leanhelix.Block, blockProof []byte) {
 	// log
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
@@ -143,7 +132,7 @@ func (s *service) onCommit(ctx context.Context, block leanhelix.Block, blockProo
 	}).Build()
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
-		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
 		LeanHelix:             blockProof,
 	}).Build()
@@ -205,8 +194,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			blockProof = blockPair.TransactionsBlock.BlockProof.LeanHelix()
 		}
 
-		// TODO Uncomment blockProof when UpdateState is implemented in LH
-		s.leanHelix.UpdateState(ToLeanHelixBlock(blockPair), blockProof)
+		s.leanHelix.UpdateState(ctx, ToLeanHelixBlock(blockPair), blockProof)
 		// TODO: Should we notify error?
 	}
 

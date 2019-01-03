@@ -1,9 +1,9 @@
 package benchmarkcontract
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/events"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
 // helpers for avoiding reliance on strings throughout the system
@@ -21,7 +21,7 @@ var PRIVATE = sdk.Export(nop) // needed to avoid lint error since this private f
 func BabyBorn(name string, weight uint32) {}
 
 func _init() {
-	state.WriteUint64ByKey("initialized", 1)
+	state.WriteUint64([]byte("initialized"), 1)
 }
 
 func nop() {
@@ -32,11 +32,11 @@ func add(a uint64, b uint64) uint64 {
 }
 
 func set(a uint64) {
-	state.WriteUint64ByKey("example-key", a)
+	state.WriteUint64([]byte("example-key"), a)
 }
 
 func get() uint64 {
-	return state.ReadUint64ByKey("example-key")
+	return state.ReadUint64([]byte("example-key"))
 }
 
 func argTypes(a1 uint32, a2 uint64, a3 string, a4 []byte) (uint32, uint64, string, []byte) {

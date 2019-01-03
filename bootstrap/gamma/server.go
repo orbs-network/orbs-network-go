@@ -29,11 +29,10 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 			log.IgnoreMessagesMatching("finished waiting for responses"),
 			log.IgnoreMessagesMatching("no responses received"),
 		)
-
-	network := NewDevelopmentNetwork(ctx, testLogger)
-	testLogger.Info("finished creating development network")
-
 	metricRegistry := metric.NewRegistry()
+
+	network := NewDevelopmentNetwork(ctx, testLogger, metricRegistry)
+	testLogger.Info("finished creating development network")
 
 	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0), metricRegistry)
 

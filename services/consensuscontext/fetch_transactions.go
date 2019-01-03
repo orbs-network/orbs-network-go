@@ -7,18 +7,14 @@ import (
 	"time"
 )
 
-func (s *service) fetchTransactions(ctx context.Context, blockHeight primitives.BlockHeight, maxNumberOfTransactions uint32,
+func (s *service) fetchTransactions(ctx context.Context, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, maxNumberOfTransactions uint32,
 	minimumTransactionsInBlock uint32, minimalBlockDelay time.Duration) (*services.GetTransactionsForOrderingOutput, error) {
 
-	// TODO Is this acceptable for genesis block
-	if blockHeight == 0 {
-		return &services.GetTransactionsForOrderingOutput{
-			SignedTransactions: nil,
-		}, nil
-	}
 	input := &services.GetTransactionsForOrderingInput{
-		MaxNumberOfTransactions: maxNumberOfTransactions,
-		BlockHeight:             blockHeight,
+		MaxTransactionsSetSizeKb: 0, // TODO(v1): either fill in or delete from spec
+		MaxNumberOfTransactions:  maxNumberOfTransactions,
+		CurrentBlockHeight:       currentBlockHeight,
+		CurrentBlockTimestamp:    currentBlockTimestamp,
 	}
 
 	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(ctx, input)

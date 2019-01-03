@@ -79,11 +79,11 @@ func (sp *InMemoryStatePersistence) _writeOneRecord(c primitives.ContractName, r
 	}
 
 	if isZeroValue(r.Value()) {
-		delete(sp.fullState[c], r.Key().KeyForMap())
+		delete(sp.fullState[c], string(r.Key()))
 		return
 	}
 
-	sp.fullState[c][r.Key().KeyForMap()] = r
+	sp.fullState[c][string(r.Key())] = r
 }
 
 func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {

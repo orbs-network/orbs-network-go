@@ -2,6 +2,8 @@ package test
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -27,8 +29,6 @@ type harness struct {
 	lastBlockTimestamp primitives.TimestampNano
 	config             config.TransactionPoolConfig
 }
-
-var now = primitives.TimestampNano(time.Now().UnixNano())
 
 var (
 	thisNodeKeyPair  = testKeys.EcdsaSecp256K1KeyPairForTests(8)
@@ -71,12 +71,21 @@ func (h *harness) addTransactions(ctx context.Context, txs ...*protocol.SignedTr
 }
 
 func (h *harness) reportTransactionsAsCommitted(ctx context.Context, transactions ...*protocol.SignedTransaction) (*services.CommitTransactionReceiptsOutput, error) {
-	return h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
-		LastCommittedBlockHeight: h.lastBlockHeight + 1,
-		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: h.lastBlockTimestamp, BlockHeight: h.lastBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto, see issue #121
+	nextBlockHeight := h.lastBlockHeight + 1
+	nextTimestamp := primitives.TimestampNano(time.Now().UnixNano())
+
+	out, err := h.txpool.CommitTransactionReceipts(ctx, &services.CommitTransactionReceiptsInput{
+		LastCommittedBlockHeight: nextBlockHeight,
+		ResultsBlockHeader:       (&protocol.ResultsBlockHeaderBuilder{Timestamp: nextTimestamp, BlockHeight: nextBlockHeight}).Build(), //TODO ResultsBlockHeader is too much info here, awaiting change in proto, see issue #121
 		TransactionReceipts:      asReceipts(transactions),
 	})
 
+	if err == nil && out.NextDesiredBlockHeight == nextBlockHeight+1 {
+		h.lastBlockHeight = nextBlockHeight
+		h.lastBlockTimestamp = nextTimestamp
+	}
+
+	return out, err
 }
 
 func (h *harness) verifyMocks() error {
@@ -113,12 +122,12 @@ func (h *harness) handleForwardFrom(ctx context.Context, sender *testKeys.TestEc
 		},
 	})
 }
+
 func (h *harness) expectTransactionResultsCallbackFor(transactions ...*protocol.SignedTransaction) {
-	h.trh.When("HandleTransactionResults", mock.Any, &handlers.HandleTransactionResultsInput{
-		BlockHeight:         h.lastBlockHeight,
-		Timestamp:           h.lastBlockTimestamp,
-		TransactionReceipts: asReceipts(transactions),
-	}).Times(1).Return(&handlers.HandleTransactionResultsOutput{}, nil)
+	h.trh.When("HandleTransactionResults", mock.Any, mock.AnyIf("input has the specified receipts and block height", func(i interface{}) bool {
+		input, ok := i.(*handlers.HandleTransactionResultsInput)
+		return ok && input.BlockHeight == h.lastBlockHeight+1 && cmp.Equal(input.TransactionReceipts, asReceipts(transactions))
+	})).Times(1).Return(&handlers.HandleTransactionResultsOutput{}, nil)
 }
 
 func (h *harness) expectTransactionErrorCallbackFor(tx *protocol.SignedTransaction, status protocol.TransactionStatus) {
@@ -134,23 +143,18 @@ func (h *harness) ignoringTransactionResults() {
 	h.trh.When("HandleTransactionError", mock.Any, mock.Any)
 }
 
-func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
-	h.lastBlockHeight = height
-	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
-}
-
-func (h *harness) getTransactionsForOrdering(ctx context.Context, height primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHeight primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		BlockHeight:             height,
+		CurrentBlockHeight:      currentBlockHeight,
+		CurrentBlockTimestamp:   0,
 		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
-		if input.BlockHeight != h.lastBlockHeight {
-			log.GetLogger().Error("Invalid block height", log.Uint64("expected-block-height", h.lastBlockHeight.KeyForMap()), log.Uint64("actual-block-height", input.BlockHeight.KeyForMap()))
-			panic("Invalid block height")
+		if input.CurrentBlockHeight != h.lastBlockHeight+1 {
+			panic(fmt.Sprintf("invalid block height, current is %d and last committed is %d", input.CurrentBlockHeight, h.lastBlockHeight))
 		}
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 		for i, tx := range input.SignedTransactions {
@@ -171,7 +175,12 @@ func (h *harness) passAllPreOrderChecks() {
 		return false
 	})
 }
-func (h *harness) goToBlock(ctx context.Context, height primitives.BlockHeight, timestamp primitives.TimestampNano) {
+
+func (h *harness) fastForwardTo(ctx context.Context, height primitives.BlockHeight) {
+	h.fastForwardToHeightAndTime(ctx, height, primitives.TimestampNano(time.Now().UnixNano()))
+}
+
+func (h *harness) fastForwardToHeightAndTime(ctx context.Context, height primitives.BlockHeight, timestamp primitives.TimestampNano) {
 	h.ignoringTransactionResults()
 	currentBlock := primitives.BlockHeight(0)
 	for currentBlock <= height {
@@ -184,10 +193,16 @@ func (h *harness) goToBlock(ctx context.Context, height primitives.BlockHeight, 
 	h.lastBlockHeight = height
 }
 
+func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
+	h.lastBlockHeight = height
+	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
+}
+
 func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
 	_, err := h.txpool.ValidateTransactionsForOrdering(ctx, &services.ValidateTransactionsForOrderingInput{
-		BlockHeight:        blockHeight,
-		SignedTransactions: txs,
+		SignedTransactions:    txs,
+		CurrentBlockHeight:    blockHeight,
+		CurrentBlockTimestamp: 0,
 	})
 
 	return err
@@ -220,9 +235,9 @@ func newHarnessWithSizeLimit(ctx context.Context, sizeLimit uint32) *harness {
 		config:             cfg,
 	}
 
-	h.passAllPreOrderChecks()
+	h.fastForwardTo(ctx, 1)
 
-	h.goToBlock(ctx, 1, now)
+	h.passAllPreOrderChecks()
 
 	return h
 }

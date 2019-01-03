@@ -6,6 +6,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
+func CalcTransactionMetaDataHash(metaData *protocol.TransactionsBlockMetadata) primitives.Sha256 {
+	return hash.CalcSha256(metaData.Raw())
+}
+
 func CalcTransactionsBlockHash(transactionsBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
 	return hash.CalcSha256(transactionsBlock.Header.Raw())
 }

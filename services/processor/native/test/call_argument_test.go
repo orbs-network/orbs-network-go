@@ -16,14 +16,14 @@ func TestProcessCall_Arguments(t *testing.T) {
 		input          *services.ProcessCallInput
 		expectedError  bool
 		expectedResult protocol.ExecutionResult
-		expectedOutput *protocol.MethodArgumentArray
+		expectedOutput *protocol.ArgumentArray
 	}{
 		{
 			name:           "WithAllArgTypes",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}).Build(),
 			expectedError:  false,
 			expectedResult: protocol.EXECUTION_RESULT_SUCCESS,
-			expectedOutput: builders.MethodArgumentsArray(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01}),
+			expectedOutput: builders.ArgumentsArray(uint32(12), uint64(13), "hello1", []byte{0x01, 0x02, 0x03, 0x01}),
 		},
 		{
 			name:           "WithIncorrectArgTypeFails",

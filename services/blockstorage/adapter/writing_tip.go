@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"syscall"
 )
 
 type writingTip struct {
@@ -22,10 +23,17 @@ func newWritingTip(ctx context.Context, dir, filename string, logger log.BasicLo
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to verify data directory exists")
 	}
+
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open blocks file for writing")
 	}
+
+	err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to obtain exclusive lock for writing")
+	}
+
 	result := &writingTip{
 		file:   file,
 		logger: logger,

@@ -24,7 +24,7 @@ func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 		// we use forward rather than add to simulate a scenario where a byzantine node submitted invalid transactions
 		h.handleForwardFrom(ctx, otherNodeKeyPair, validTx, expiredTx)
 
-		txSet, err := h.getTransactionsForOrdering(ctx, 1, 2)
+		txSet, err := h.getTransactionsForOrdering(ctx, 2, 2)
 
 		require.NoError(t, err, "expected transaction set but got an error")
 		require.Equal(t, []*protocol.SignedTransaction{validTx}, txSet.SignedTransactions, "got an expired transaction")
@@ -49,7 +49,7 @@ func TestGetTransactionsForOrderingDropTransactionsThatFailPreOrderValidation(t 
 
 		h.ignoringTransactionResults()
 
-		txSet, err := h.getTransactionsForOrdering(ctx, 1, 4)
+		txSet, err := h.getTransactionsForOrdering(ctx, 2, 4)
 
 		require.NoError(t, err, "expected transaction set but got an error")
 		require.ElementsMatch(t, transactionpool.Transactions{tx2, tx4}, txSet.SignedTransactions, "got transactions that failed pre-order validation")
@@ -73,7 +73,7 @@ func TestGetTransactionsForOrderingDropsTransactionsThatAreAlreadyCommitted(t *t
 		h.handleForwardFrom(ctx, otherNodeKeyPair, tx1) // now we add the same transaction again as well as a new transaction
 		h.addTransactions(ctx, tx2)
 
-		txSet, err := h.getTransactionsForOrdering(ctx, 1, 2)
+		txSet, err := h.getTransactionsForOrdering(ctx, 3, 2)
 
 		require.NoError(t, err, "failed getting transactions unexpectedly")
 		require.ElementsMatch(t, transactionpool.Transactions{tx2}, txSet.SignedTransactions, "got a transaction that has already been committed")
@@ -99,12 +99,12 @@ func TestGetTransactionsForOrderingRemovesCommittedTransactionsFromPool(t *testi
 
 		h.expectTransactionErrorCallbackFor(tx1, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED)
 
-		txSet, err := h.getTransactionsForOrdering(ctx, 1, 1)
+		txSet, err := h.getTransactionsForOrdering(ctx, 3, 1)
 
 		require.NoError(t, err, "failed getting transactions unexpectedly")
 		require.Empty(t, txSet.SignedTransactions, "got a transaction that has already been committed")
 
-		txSet, _ = h.getTransactionsForOrdering(ctx, 1, 1)
+		txSet, _ = h.getTransactionsForOrdering(ctx, 3, 1)
 		require.Len(t, txSet.SignedTransactions, 1, "did not get a valid transaction from the pool")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not executed as expected")
@@ -118,7 +118,7 @@ func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFr
 		h.ignoringForwardMessages()
 
 		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().WithAmountAndTargetAddress(8, builders.AddressForEd25519SignerForTests(2)).Build()
+		tx2 := builders.TransferTransaction().WithAmountAndTargetAddress(8, builders.ClientAddressForEd25519SignerForTests(2)).Build()
 
 		h.addTransactions(ctx, tx1, tx2)
 
@@ -128,12 +128,12 @@ func TestGetTransactionsForOrderingRemovesTransactionsThatFailedPreOrderChecksFr
 
 		h.expectTransactionErrorCallbackFor(tx1, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
 
-		txSet, err := h.getTransactionsForOrdering(ctx, 1, 1)
+		txSet, err := h.getTransactionsForOrdering(ctx, 2, 1)
 
 		require.NoError(t, err, "failed getting transactions unexpectedly")
 		require.Empty(t, txSet.SignedTransactions, "got a transaction that failed pre-order checks")
 
-		txSet, _ = h.getTransactionsForOrdering(ctx, 1, 1)
+		txSet, _ = h.getTransactionsForOrdering(ctx, 2, 1)
 		require.Len(t, txSet.SignedTransactions, 1, "did not get a valid transaction from the pool")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not executed as expected")
@@ -152,11 +152,11 @@ func TestGetTransactionsForOrderingRemovesInvalidTransactionsFromPool(t *testing
 
 		h.expectTransactionErrorCallbackFor(expiredTx, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME)
 
-		txSet, err := h.getTransactionsForOrdering(ctx, 1, 1)
+		txSet, err := h.getTransactionsForOrdering(ctx, 2, 1)
 		require.NoError(t, err)
 		require.Empty(t, txSet.SignedTransactions, "got an invalid transaction")
 
-		txSet, _ = h.getTransactionsForOrdering(ctx, 1, 1)
+		txSet, _ = h.getTransactionsForOrdering(ctx, 2, 1)
 		require.Len(t, txSet.SignedTransactions, 1, "did not get a valid transaction from the pool")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not executed as expected")
@@ -168,7 +168,8 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 		h := newHarness(ctx)
 
 		_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockHeight:             3,
+			CurrentBlockHeight:      3,
+			CurrentBlockTimestamp:   0,
 			MaxNumberOfTransactions: 1,
 		})
 
@@ -180,18 +181,19 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(ctx)
 
+		h.assumeBlockStorageAtHeight(1)
+		h.ignoringTransactionResults()
+		h.reportTransactionsAsCommitted(ctx)
+
 		doneWait := make(chan error)
 		go func() {
 			_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-				BlockHeight:             1,
+				CurrentBlockHeight:      3,
+				CurrentBlockTimestamp:   0,
 				MaxNumberOfTransactions: 1,
 			})
 			doneWait <- err
 		}()
-
-		h.assumeBlockStorageAtHeight(1)
-		h.ignoringTransactionResults()
-		h.reportTransactionsAsCommitted(ctx)
 
 		require.NoError(t, <-doneWait, "did not resolve after block has been committed")
 	})

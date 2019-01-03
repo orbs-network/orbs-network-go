@@ -15,13 +15,15 @@ type processCall struct {
 	input *services.ProcessCallInput
 }
 
+var EXAMPLE_CONTEXT_ID = []byte{0x17, 0x18}
+
 func processCallInput() *processCall {
 	p := &processCall{
 		input: &services.ProcessCallInput{
-			ContextId:              0,
+			ContextId:              EXAMPLE_CONTEXT_ID,
 			ContractName:           "BenchmarkContract",
 			MethodName:             "add",
-			InputArgumentArray:     (&protocol.MethodArgumentArrayBuilder{}).Build(),
+			InputArgumentArray:     (&protocol.ArgumentArrayBuilder{}).Build(),
 			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 			CallingService:         "",
@@ -87,7 +89,7 @@ func (p *processCall) WithSystemPermissions() *processCall {
 }
 
 func (p *processCall) WithArgs(args ...interface{}) *processCall {
-	p.input.InputArgumentArray = builders.MethodArgumentsArray(args...)
+	p.input.InputArgumentArray = builders.ArgumentsArray(args...)
 	return p
 }
 

@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"testing"
 	"time"
 )
@@ -160,4 +161,13 @@ func TestConfig_EthereumEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	require.EqualValues(t, "http://172.31.1.100:8545", cfg.EthereumEndpoint())
+}
+
+func TestConfig_E2EConfigFile(t *testing.T) {
+	content, err := ioutil.ReadFile("../docker/test/e2e-config/node1.json")
+	require.NoError(t, err, "failed reading config file")
+	cfg, err := newEmptyFileConfig(string(content))
+	require.NoError(t, err, "failed parsing config file")
+
+	require.EqualValues(t, "a328846cd5b4979d68a8c58a9bdfeee657b34de7", cfg.NodeAddress().String())
 }

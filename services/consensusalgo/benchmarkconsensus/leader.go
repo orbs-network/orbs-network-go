@@ -91,11 +91,10 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 		BlockProof:         nil, // will be generated in a minute when signed
 	}
 	resultsBlock := &protocol.ResultsBlockContainer{
-		Header:                  (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
-		TransactionsBloomFilter: (&protocol.TransactionsBloomFilterBuilder{}).Build(),
-		TransactionReceipts:     []*protocol.TransactionReceipt{},
-		ContractStateDiffs:      []*protocol.ContractStateDiff{},
-		BlockProof:              nil, // will be generated in a minute when signed
+		Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		TransactionReceipts: []*protocol.TransactionReceipt{},
+		ContractStateDiffs:  []*protocol.ContractStateDiff{},
+		BlockProof:          nil, // will be generated in a minute when signed
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
@@ -112,8 +111,11 @@ func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-		BlockHeight:   lastCommittedBlockHeight + 1,
-		PrevBlockHash: digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
+		CurrentBlockHeight:      lastCommittedBlockHeight + 1,
+		MaxBlockSizeKb:          0, // TODO(v1): fill in or remove from spec
+		MaxNumberOfTransactions: 0,
+		PrevBlockHash:           digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
+		PrevBlockTimestamp:      lastCommittedBlock.TransactionsBlock.Header.Timestamp(),
 	})
 	if err != nil {
 		return nil, err
@@ -121,9 +123,10 @@ func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		BlockHeight:       lastCommittedBlockHeight + 1,
-		PrevBlockHash:     digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
-		TransactionsBlock: txOutput.TransactionsBlock,
+		CurrentBlockHeight: lastCommittedBlockHeight + 1,
+		PrevBlockHash:      digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
+		TransactionsBlock:  txOutput.TransactionsBlock,
+		PrevBlockTimestamp: lastCommittedBlock.ResultsBlock.Header.Timestamp(),
 	})
 	if err != nil {
 		return nil, err
@@ -155,7 +158,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 	// generate rx block proof
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		TransactionsBlockHash: digest.CalcTransactionsBlockHash(transactionsBlock),
-		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{
 			BlockRef: consensus.BenchmarkConsensusBlockRefBuilderFromRaw(signedData),
 			Nodes: []*consensus.BenchmarkConsensusSenderSignatureBuilder{{

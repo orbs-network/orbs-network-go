@@ -34,9 +34,9 @@ func (m *membership) MyMemberId() lhprimitives.MemberId {
 func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64) []lhprimitives.MemberId {
 
 	res, err := m.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
-		BlockHeight:      primitives.BlockHeight(blockHeight),
-		RandomSeed:       seed,
-		MaxCommitteeSize: m.committeeSize,
+		CurrentBlockHeight: primitives.BlockHeight(blockHeight),
+		RandomSeed:         seed,
+		MaxCommitteeSize:   m.committeeSize,
 	})
 	if err != nil {
 		m.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))

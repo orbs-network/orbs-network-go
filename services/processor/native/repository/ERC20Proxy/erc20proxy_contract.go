@@ -3,9 +3,9 @@ package erc20proxy
 import (
 	"bytes"
 	"fmt"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/address"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
 // helpers for avoiding reliance on strings throughout the system
@@ -18,18 +18,22 @@ var PUBLIC = sdk.Export(totalSupply, balanceOf, transfer, approve, allowance, tr
 var SYSTEM = sdk.Export(_init)
 
 // defaults
-const OWNER_KEY = "_OWNER_KEY_"
-const TOTAL_SUPPLY_KEY = "_TOTAL_SUPPLY_KEY_"
-const ASB_ADDR_KEY = "_ASB_ADDR_KEY_"
+const TOTAL_SUPPLY = 0
+
+// state keys
+var OWNER_KEY = []byte("_OWNER_KEY_")
+var TOTAL_SUPPLY_KEY = []byte("_TOTAL_SUPPLY_KEY_")
+var ASB_ADDR_KEY = []byte("_ASB_ADDR_KEY_")
 
 func _init() {
 	ownerAddress := address.GetSignerAddress()
-	//state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, 0)
-	state.WriteBytesByKey(OWNER_KEY, ownerAddress)
+	state.WriteBytes(OWNER_KEY, ownerAddress)
+	// state.WriteUint64(TOTAL_SUPPLY_KEY, TOTAL_SUPPLY)
+	// state.WriteUint64(ownerAddress, TOTAL_SUPPLY)
 }
 
 func totalSupply() uint64 {
-	return state.ReadUint64ByKey(TOTAL_SUPPLY_KEY)
+	return state.ReadUint64(TOTAL_SUPPLY_KEY)
 }
 
 func transfer(to []byte, amount uint64) {
@@ -43,22 +47,22 @@ func transfer(to []byte, amount uint64) {
 
 func balanceOf(addr []byte) uint64 {
 	address.ValidateAddress(addr)
-	return state.ReadUint64ByAddress(addr)
+	return state.ReadUint64(addr)
 }
 
-func _allowKey(addr1 []byte, addr2 []byte) string {
-	return string(append(addr1, addr2...))
+func _allowKey(addr1 []byte, addr2 []byte) []byte {
+	return append(addr1, addr2...)
 }
 
 func approve(spenderAddress []byte, amount uint64) {
 	callerAddress := address.GetCallerAddress()
 	address.ValidateAddress(spenderAddress)
 
-	state.WriteUint64ByKey(_allowKey(callerAddress, spenderAddress), amount)
+	state.WriteUint64(_allowKey(callerAddress, spenderAddress), amount)
 }
 
 func allowance(from []byte, spenderAddress []byte) uint64 {
-	return state.ReadUint64ByKey(_allowKey(from, spenderAddress))
+	return state.ReadUint64(_allowKey(from, spenderAddress))
 }
 
 func transferFrom(from []byte, to []byte, amount uint64) {
@@ -72,22 +76,22 @@ func transferFrom(from []byte, to []byte, amount uint64) {
 	}
 
 	// reduce allowance
-	state.WriteUint64ByKey(_allowKey(from, spenderAddress), allowanceBalance-amount)
+	state.WriteUint64(_allowKey(from, spenderAddress), allowanceBalance-amount)
 	// transfer
 	_transferImpl(from, to, amount)
 }
 
 func _transferImpl(from []byte, to []byte, amount uint64) {
 	// sender
-	balance := state.ReadUint64ByAddress(from)
+	balance := state.ReadUint64(from)
 	if balance < amount {
 		panic(fmt.Sprintf("transfer of %d from %x to %x failed since balance is only %d", amount, from, to, balance))
 	}
-	state.WriteUint64ByAddress(from, balance-amount)
+	state.WriteUint64(from, balance-amount)
 
 	// recipient
-	targetBalance := state.ReadUint64ByAddress(to)
-	state.WriteUint64ByAddress(to, targetBalance+amount)
+	targetBalance := state.ReadUint64(to)
+	state.WriteUint64(to, targetBalance+amount)
 }
 
 func asbMint(targetAddress []byte, amount uint64) {
@@ -95,10 +99,10 @@ func asbMint(targetAddress []byte, amount uint64) {
 		panic("only asb contract can call asbMint")
 	}
 	address.ValidateAddress(targetAddress)
-	targetBalance := state.ReadUint64ByAddress(targetAddress)
-	state.WriteUint64ByAddress(targetAddress, targetBalance+amount)
-	total := state.ReadUint64ByKey(TOTAL_SUPPLY_KEY)
-	state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, total+amount)
+	targetBalance := state.ReadUint64(targetAddress)
+	state.WriteUint64(targetAddress, targetBalance+amount)
+	total := state.ReadUint64(TOTAL_SUPPLY_KEY)
+	state.WriteUint64(TOTAL_SUPPLY_KEY, total+amount)
 }
 
 func asbBurn(targetAddress []byte, amount uint64) {
@@ -106,24 +110,24 @@ func asbBurn(targetAddress []byte, amount uint64) {
 		panic("only asb contract can call asbBurn")
 	}
 	address.ValidateAddress(targetAddress)
-	targetBalance := state.ReadUint64ByAddress(targetAddress)
+	targetBalance := state.ReadUint64(targetAddress)
 	if targetBalance < amount {
 		panic(fmt.Sprintf("burn of %d from %x failed since balance is only %d", amount, targetAddress, targetBalance))
 	}
-	state.WriteUint64ByAddress(targetAddress, targetBalance-amount)
-	total := state.ReadUint64ByKey(TOTAL_SUPPLY_KEY)
-	state.WriteUint64ByKey(TOTAL_SUPPLY_KEY, total-amount)
+	state.WriteUint64(targetAddress, targetBalance-amount)
+	total := state.ReadUint64(TOTAL_SUPPLY_KEY)
+	state.WriteUint64(TOTAL_SUPPLY_KEY, total-amount)
 }
 
 func asbBind(asbAddress []byte) {
-	owner := state.ReadBytesByKey(OWNER_KEY)
+	owner := state.ReadBytes(OWNER_KEY)
 	caller := address.GetCallerAddress()
 	if !bytes.Equal(owner, caller) {
 		panic("only owner can call asbBind")
 	}
-	state.WriteBytesByKey(ASB_ADDR_KEY, asbAddress)
+	state.WriteBytes(ASB_ADDR_KEY, asbAddress)
 }
 
 func asbGetAddress() []byte {
-	return state.ReadBytesByKey(ASB_ADDR_KEY)
+	return state.ReadBytes(ASB_ADDR_KEY)
 }

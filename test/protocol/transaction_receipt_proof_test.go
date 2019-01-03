@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -101,18 +100,17 @@ func TestTransactionReceiptProof(t *testing.T) {
 	interestingReceiptIndex := 2
 	receiptsRootHash := merkle.CalculateOrderedTreeRoot(digest.CalcReceiptHashes(severalReceipts))
 	resultsBlockHeaderBuilder := &protocol.ResultsBlockHeaderBuilder{
-		ProtocolVersion:             1,
-		VirtualChainId:              42,
-		BlockHeight:                 8234,
-		PrevBlockHashPtr:            hash.CalcSha256([]byte{0x11}),
-		Timestamp:                   15527734,
-		ReceiptsRootHash:            primitives.MerkleSha256(receiptsRootHash),
-		StateDiffHash:               hash.CalcSha256([]byte{0x33}),
-		TransactionsBlockHashPtr:    hash.CalcSha256([]byte{0x44}),
-		PreExecutionStateRootHash:   primitives.MerkleSha256(hash.CalcSha256([]byte{0x55})),
-		TransactionsBloomFilterHash: hash.CalcSha256([]byte{0x55}),
-		NumTransactionReceipts:      12,
-		NumContractStateDiffs:       34,
+		ProtocolVersion:                 1,
+		VirtualChainId:                  42,
+		BlockHeight:                     8234,
+		PrevBlockHashPtr:                hash.CalcSha256([]byte{0x11}),
+		Timestamp:                       15527734,
+		ReceiptsMerkleRootHash:          receiptsRootHash,
+		StateDiffHash:                   hash.CalcSha256([]byte{0x33}),
+		TransactionsBlockHashPtr:        hash.CalcSha256([]byte{0x44}),
+		PreExecutionStateMerkleRootHash: hash.CalcSha256([]byte{0x55}),
+		NumTransactionReceipts:          12,
+		NumContractStateDiffs:           34,
 	}
 
 	// results block proof
@@ -146,8 +144,8 @@ func TestTransactionReceiptProof(t *testing.T) {
 	}
 	resultsBlockProofBuilder := &protocol.ResultsBlockProofBuilder{
 		TransactionsBlockHash: resultsBlockHeaderBuilder.TransactionsBlockHashPtr,
-		Type:      protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix: leanHelixBlockProofBuilder.Build().Raw(),
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		LeanHelix:             leanHelixBlockProofBuilder.Build().Raw(),
 	}
 
 	// receipt merkle proof
@@ -180,7 +178,7 @@ func TestTransactionReceiptProof(t *testing.T) {
 			ProtocolVersion:  numberToJSON(resultsBlockHeaderBuilder.ProtocolVersion),
 			VirtualChainId:   numberToJSON(resultsBlockHeaderBuilder.VirtualChainId),
 			Timestamp:        numberToJSON(resultsBlockHeaderBuilder.Timestamp),
-			ReceiptsRootHash: bytesToJSON(resultsBlockHeaderBuilder.ReceiptsRootHash),
+			ReceiptsRootHash: bytesToJSON(resultsBlockHeaderBuilder.ReceiptsMerkleRootHash),
 		},
 		RawResultsBlockHeader: bytesToJSON(resultsBlockHeaderBuilder.Build().Raw()),
 		BlockRef: &BlockRefJSON{

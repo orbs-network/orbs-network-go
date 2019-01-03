@@ -12,19 +12,19 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(ctx)
 
-		h.assumeBlockStorageAtHeight(3)
+		h.assumeBlockStorageAtHeight(0) // so that we report transactions for block 1
 		out, err := h.reportTransactionsAsCommitted(ctx)
+		require.NoError(t, err, "CommitTransactionReceipts returned an error when expecting next desired block height")
+		require.EqualValues(t, 2, out.NextDesiredBlockHeight, "expected next desired block height to be 2")
+
+		h.assumeBlockStorageAtHeight(3) // so that we report transactions for block 4
+		out, err = h.reportTransactionsAsCommitted(ctx)
 		require.NoError(t, err, "CommitTransactionReceipts returned an error when expecting next desired block height")
 		require.EqualValues(t, 2, out.NextDesiredBlockHeight, "expected next desired block height to be 2")
 
 		h.ignoringTransactionResults()
 
-		h.assumeBlockStorageAtHeight(1)
-		out, err = h.reportTransactionsAsCommitted(ctx)
-		require.NoError(t, err, "CommitTransactionReceipts returned an error when expecting next desired block height")
-		require.EqualValues(t, 2, out.NextDesiredBlockHeight, "expected next desired block height to be 2")
-
-		h.verifyMocks()
+		require.NoError(t, h.verifyMocks())
 	})
 }
 
@@ -41,7 +41,7 @@ func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *tes
 		h.addNewTransaction(ctx, myTx2)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, otherTx)
 
-		h.assumeBlockStorageAtHeight(1)
+		h.fastForwardTo(ctx, 2)
 		h.expectTransactionResultsCallbackFor(myTx1, myTx2)
 		h.reportTransactionsAsCommitted(ctx, myTx1, myTx2, otherTx)
 

@@ -2,12 +2,13 @@ package virtualmachine
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.Argument, error) {
 	switch methodName {
 
 	case "getSignerAddress":
@@ -15,9 +16,9 @@ func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *ex
 		if err != nil {
 			return nil, err
 		}
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "value",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: value,
 		}).Build()}, nil
 
@@ -26,9 +27,20 @@ func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *ex
 		if err != nil {
 			return nil, err
 		}
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "value",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
+			BytesValue: value,
+		}).Build()}, nil
+
+	case "getOwnAddress":
+		value, err := s.handleSdkAddressGetOwnAddress(executionContext, args)
+		if err != nil {
+			return nil, err
+		}
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: value,
 		}).Build()}, nil
 
@@ -38,7 +50,7 @@ func (s *service) handleSdkAddressCall(ctx context.Context, executionContext *ex
 }
 
 // outputArg0: value ([]byte)
-func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
 	if len(args) != 0 {
 		return nil, errors.Errorf("invalid SDK address getSignerAddress args: %v", args)
 	}
@@ -51,7 +63,7 @@ func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionCo
 }
 
 // outputArg0: value ([]byte)
-func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
 	if len(args) != 0 {
 		return nil, errors.Errorf("invalid SDK address getCallerAddress args: %v", args)
 	}
@@ -61,6 +73,15 @@ func (s *service) handleSdkAddressGetCallerAddress(executionContext *executionCo
 		return s.handleSdkAddressGetSignerAddress(executionContext, args)
 	} else {
 		// after a contract call, get the caller address
-		return addressContractCall(executionContext.serviceStackPeekCaller())
+		return digest.CalcClientAddressOfContract(executionContext.serviceStackPeekCaller())
 	}
+}
+
+// outputArg0: value ([]byte)
+func (s *service) handleSdkAddressGetOwnAddress(executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
+	if len(args) != 0 {
+		return nil, errors.Errorf("invalid SDK address getOwnAddress args: %v", args)
+	}
+
+	return digest.CalcClientAddressOfContract(executionContext.serviceStackPeekCurrent())
 }

@@ -1,80 +1,31 @@
 package main
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
-var CONTRACT = sdk.ContractInfo{
-	Name:       "CounterFrom100",
-	Permission: sdk.PERMISSION_SCOPE_SERVICE,
-	Methods: map[string]sdk.MethodInfo{
-		METHOD_INIT.Name:  METHOD_INIT,
-		METHOD_ADD.Name:   METHOD_ADD,
-		METHOD_GET.Name:   METHOD_GET,
-		METHOD_START.Name: METHOD_START,
-	},
-	InitSingleton: newContract,
+const COUNTER_CONTRACT_START_FROM = uint64(100)
+
+var PUBLIC = sdk.Export(add, get, start)
+var SYSTEM = sdk.Export(_init)
+
+var COUNTER_KEY = []byte("count")
+
+func _init() {
+	state.WriteUint64(COUNTER_KEY, COUNTER_CONTRACT_START_FROM)
 }
 
-func newContract(base *sdk.BaseContract) sdk.ContractInstance {
-	return &contract{base}
-}
-
-type contract struct{ *sdk.BaseContract }
-
-///////////////////////////////////////////////////////////////////////////
-
-var METHOD_INIT = sdk.MethodInfo{
-	Name:           "_init",
-	External:       false,
-	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
-	Implementation: (*contract)._init,
-}
-
-func (c *contract) _init(ctx sdk.Context) error {
-	return c.State.WriteUint64ByKey(ctx, "count", 100)
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-var METHOD_ADD = sdk.MethodInfo{
-	Name:           "add",
-	External:       true,
-	Access:         sdk.ACCESS_SCOPE_READ_WRITE,
-	Implementation: (*contract).add,
-}
-
-func (c *contract) add(ctx sdk.Context, amount uint64) error {
-	count, err := c.State.ReadUint64ByKey(ctx, "count")
-	if err != nil {
-		return err
-	}
+func add(amount uint64) {
+	count := state.ReadUint64(COUNTER_KEY)
 	count += amount
-	return c.State.WriteUint64ByKey(ctx, "count", count)
+	state.WriteUint64(COUNTER_KEY, count)
 }
 
-///////////////////////////////////////////////////////////////////////////
-
-var METHOD_GET = sdk.MethodInfo{
-	Name:           "get",
-	External:       true,
-	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
-	Implementation: (*contract).get,
+func get() uint64 {
+	return state.ReadUint64(COUNTER_KEY)
 }
 
-func (c *contract) get(ctx sdk.Context) (uint64, error) {
-	return c.State.ReadUint64ByKey(ctx, "count")
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-var METHOD_START = sdk.MethodInfo{
-	Name:           "start",
-	External:       true,
-	Access:         sdk.ACCESS_SCOPE_READ_ONLY,
-	Implementation: (*contract).start,
-}
-
-func (c *contract) start(ctx sdk.Context) (uint64, error) {
-	return 100, nil
+func start() uint64 {
+	return COUNTER_CONTRACT_START_FROM
 }
