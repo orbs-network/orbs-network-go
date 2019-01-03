@@ -59,10 +59,24 @@ func CalcNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now prim
 	return prevBlockTimestamp + 1
 }
 
+// CalcStateDiffMerkleRoot
 type CalcStateDiffMerkleRootAdapter interface {
 	CalcStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
 }
+type realCalcStateDiffMerkleRootAdapter struct {
+	calcStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+}
 
+func (r *realCalcStateDiffMerkleRootAdapter) CalcStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+	return r.calcStateDiffMerkleRoot(stateDiffs)
+}
+func NewRealCalcStateDiffMerkleRootAdapter(f func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)) CalcStateDiffMerkleRootAdapter {
+	return &realCalcStateDiffMerkleRootAdapter{
+		calcStateDiffMerkleRoot: f,
+	}
+}
+
+// CalcReceiptsMerkleRoot
 type CalcReceiptsMerkleRootAdapter interface {
 	CalcReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
 }
@@ -77,18 +91,5 @@ func (r *realCalcReceiptsMerkleRootAdapter) CalcReceiptsMerkleRoot(receipts []*p
 func NewRealCalcReceiptsMerkleRootAdapter(f func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)) CalcReceiptsMerkleRootAdapter {
 	return &realCalcReceiptsMerkleRootAdapter{
 		calcReceiptsMerkleRoot: f,
-	}
-}
-
-type realCalcStateDiffMerkleRootAdapter struct {
-	calcStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
-}
-
-func (r *realCalcStateDiffMerkleRootAdapter) CalcStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	return r.CalcStateDiffMerkleRoot(stateDiffs)
-}
-func NewRealCalcStateDiffMerkleRootAdapter(f func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)) CalcStateDiffMerkleRootAdapter {
-	return &realCalcStateDiffMerkleRootAdapter{
-		calcStateDiffMerkleRoot: f,
 	}
 }

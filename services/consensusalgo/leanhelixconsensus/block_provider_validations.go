@@ -7,7 +7,10 @@ import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
 func validateBlockNotNil(block *protocol.BlockPairContainer) error {
@@ -33,6 +36,53 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 
 	// Validate Block Hash
 
+	newBlockHeight := primitives.BlockHeight(1)
+	var prevTxBlockHash primitives.Sha256 = nil
+	var prevRxBlockHash primitives.Sha256 = nil
+	//var prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) - 1
+	var prevBlockTimestamp primitives.TimestampNano = 0
+
+	if prevBlock != nil {
+		prevBlockPair := FromLeanHelixBlock(prevBlock)
+		newBlockHeight = primitives.BlockHeight(prevBlock.Height() + 1)
+		prevTxBlock := prevBlockPair.TransactionsBlock
+		prevTxBlockHash = digest.CalcTransactionsBlockHash(prevTxBlock)
+		prevBlockTimestamp = prevTxBlock.Header.Timestamp()
+		prevRxBlockHash = digest.CalcResultsBlockHash(prevBlockPair.ResultsBlock)
+	}
+
+	// also inner hashPointers are checked
+	_, err := p.consensusContext.ValidateTransactionsBlock(ctx, &services.ValidateTransactionsBlockInput{
+		CurrentBlockHeight: newBlockHeight,
+		TransactionsBlock:  blockPair.TransactionsBlock,
+		PrevBlockHash:      prevTxBlockHash,
+		PrevBlockTimestamp: prevBlockTimestamp,
+	})
+	if err != nil {
+		p.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock", log.Error(err))
+		return false
+	}
+
+	// also inner hashPointers are checked
+	_, err = p.consensusContext.ValidateResultsBlock(ctx, &services.ValidateResultsBlockInput{
+		CurrentBlockHeight: newBlockHeight,
+		ResultsBlock:       blockPair.ResultsBlock,
+		PrevBlockHash:      prevRxBlockHash,
+		TransactionsBlock:  blockPair.TransactionsBlock,
+		PrevBlockTimestamp: prevBlockTimestamp,
+	})
+	if err != nil {
+		p.logger.Error("ValidateBlockProposal failed ValidateResultsBlock", log.Int("block-height", int(newBlockHeight)), log.Error(err))
+		return false
+	}
+
+	// validate blockHash
+	calcBlockHash := []byte(digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock))
+	if !bytes.Equal([]byte(blockHash), calcBlockHash) {
+		p.logger.Error("ValidateBlockProposal blockHash mismatch")
+		return false
+	}
+	p.logger.Info("ValidateBlockProposal passed", log.Int("block-height", int(newBlockHeight)))
 	return true
 }
 
@@ -45,6 +95,7 @@ func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHe
 	}
 
 	// *validate tx hash pointers*
+	// TODO Unit tests
 	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
 	txMerkleRoot := blockPair.TransactionsBlock.Header.RawTransactionsMerkleRootHash()
 	if calculatedTxMerkleRoot, err := digest.CalcTransactionsMerkleRoot(blockPair.TransactionsBlock.SignedTransactions); err != nil {
@@ -55,11 +106,41 @@ func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHe
 		return false
 	}
 
+	// TODO Unit tests
+
 	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
 	metadataHash := blockPair.TransactionsBlock.Header.RawMetadataHash()
 	calculatedMetaDataHash := digest.CalcTransactionMetaDataHash(blockPair.TransactionsBlock.Metadata)
 	if !bytes.Equal(metadataHash, []byte(calculatedMetaDataHash)) {
 		p.logger.Error("ValidateBlockCommitment error transaction metadataHash in header do not match metadata")
+		return false
+	}
+
+	// *validate rx hash pointers*
+	//Check the block's receipts_root_hash: Calculate the merkle root hash of the block's receipts and verify the hash in the header.
+	recieptsMerkleRoot := blockPair.ResultsBlock.Header.RawReceiptsMerkleRootHash()
+	if calculatedRecieptMerkleRoot, err := digest.CalcReceiptsMerkleRoot(blockPair.ResultsBlock.TransactionReceipts); err != nil {
+		p.logger.Error("ValidateBlockCommitment error calculateReceiptsMerkleRoot")
+		return false
+	} else if !bytes.Equal(recieptsMerkleRoot, []byte(calculatedRecieptMerkleRoot)) {
+		p.logger.Error("ValidateBlockCommitment error receipt merkleRoot in header do not match txs receipts")
+		return false
+	}
+
+	//Check the block's state_diff_hash: Calculate the hash of the block's state diff and verify the hash in the header.
+	stateDiffMerkleRoot := blockPair.ResultsBlock.Header.RawStateDiffHash()
+	if calculatedStateDiffMerkleRoot, err := digest.CalcStateDiffMerkleRoot(blockPair.ResultsBlock.ContractStateDiffs); err != nil {
+		p.logger.Error("ValidateBlockCommitment error calculateStateDiffMerkleRoot")
+		return false
+	} else if !bytes.Equal(stateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
+		p.logger.Error("ValidateBlockCommitment error state diff merkleRoot in header do not match state diffs")
+		return false
+	}
+
+	// validate blockHash
+	calcBlockHash := []byte(digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock))
+	if !bytes.Equal([]byte(blockHash), calcBlockHash) {
+		p.logger.Error("ValidateBlockCommitment blockHash mismatch")
 		return false
 	}
 
