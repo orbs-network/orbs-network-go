@@ -167,3 +167,31 @@ func TestTransferOut_AllGood(t *testing.T) {
 		require.Equal(t, uint64(1), getOutTuid())
 	})
 }
+
+func TestReset(t *testing.T) {
+	maxOut := uint64(500)
+	maxIn := int64(200)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init() // start the asb contracat
+
+		setOutTuid(maxOut)
+		for i := int64(0); i < maxIn; i++ {
+			if i%54 == 0 {
+				continue // just as not to have all of them
+			}
+			setInTuid(genInTuidKey(big.NewInt(i).Bytes()))
+		}
+		setInTuidMax(uint64(maxIn))
+
+		// call
+		resetContract()
+
+		// assert
+		require.Equal(t, uint64(0), getOutTuid())
+		require.Equal(t, uint64(0), getInTuidMax())
+		for i := int64(0); i < maxIn; i++ {
+			require.False(t, isInTuidExists(genInTuidKey(big.NewInt(i).Bytes())), "tuid should be empty %d", i)
+		}
+	})
+}
