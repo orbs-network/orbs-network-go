@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -187,7 +188,9 @@ func (b *blockPair) WithReceipt(receipt *protocol.TransactionReceipt) *blockPair
 func (b *blockPair) WithStateDiffs(num uint32) *blockPair {
 	b.sdiffs = make([]*protocol.ContractStateDiff, 0, num)
 	for i := uint32(0); i < num; i++ {
-		b.sdiffs = append(b.sdiffs, ContractStateDiff().Build())
+		k := fmt.Sprintf("k_%d", i)
+		v := fmt.Sprintf("v_%d", i)
+		b.sdiffs = append(b.sdiffs, ContractStateDiff().WithStringRecord(k, v).Build())
 	}
 	b.rxHeader.NumContractStateDiffs = num
 	return b

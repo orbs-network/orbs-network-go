@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/pkg/errors"
+	"hash/crc32"
 	"io"
 	"unsafe"
 )
@@ -118,89 +120,100 @@ func encode(block *protocol.BlockPairContainer, w io.Writer) error {
 		serializationHeader.addTx(tx)
 	}
 
-	err := serializationHeader.write(w)
-
+	checkSum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+	sw := newChecksumWriter(w, checkSum)
+	err := serializationHeader.write(sw)
 	if err != nil {
 		return err
 	}
 
 	// write buffers
-	err = writeMessage(w, tb.Header)
+	err = writeMessage(sw, tb.Header)
 	if err != nil {
 		return err
 	}
-	err = writeMessage(w, tb.Metadata)
+	err = writeMessage(sw, tb.Metadata)
 	if err != nil {
 		return err
 	}
-	err = writeMessage(w, tb.BlockProof)
+	err = writeMessage(sw, tb.BlockProof)
 	if err != nil {
 		return err
 	}
-	err = writeMessage(w, rb.Header)
+	err = writeMessage(sw, rb.Header)
 	if err != nil {
 		return err
 	}
-	err = writeMessage(w, rb.BlockProof)
+	err = writeMessage(sw, rb.BlockProof)
 	if err != nil {
 		return err
 	}
 
 	for _, receipt := range rb.TransactionReceipts {
-		err = writeMessage(w, receipt)
+		err = writeMessage(sw, receipt)
 		if err != nil {
 			return err
 		}
 
 	}
 	for _, diff := range rb.ContractStateDiffs {
-		err = writeMessage(w, diff)
+		err = writeMessage(sw, diff)
 		if err != nil {
 			return err
 		}
 	}
 	for _, tx := range tb.SignedTransactions {
-		err = writeMessage(w, tx)
+		err = writeMessage(sw, tx)
 		if err != nil {
 			return err
 		}
 	}
+
+	// checksum
+	err = binary.Write(w, binary.LittleEndian, checkSum.Sum32())
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
+	checkSum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+	tr := io.TeeReader(r, checkSum)
+
 	serializationHeader := &blockHeader{}
-	err := serializationHeader.read(r)
+	err := serializationHeader.read(tr)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	byteCounter := int(unsafe.Sizeof(*serializationHeader))
-	tbHeaderChunk, err := readChunk(r, &byteCounter)
+	tbHeaderChunk, err := readChunk(tr, &byteCounter)
 	if err != nil {
 		return nil, byteCounter, err
 	}
 	tbHeader := protocol.TransactionsBlockHeaderReader(tbHeaderChunk)
 
-	tbMetadataChunk, err := readChunk(r, &byteCounter)
+	tbMetadataChunk, err := readChunk(tr, &byteCounter)
 	if err != nil {
 		return nil, byteCounter, err
 	}
 	tbMetadata := protocol.TransactionsBlockMetadataReader(tbMetadataChunk)
 
-	tbBlockProofChunk, err := readChunk(r, &byteCounter)
+	tbBlockProofChunk, err := readChunk(tr, &byteCounter)
 	if err != nil {
 		return nil, byteCounter, err
 	}
 	tbBlockProof := protocol.TransactionsBlockProofReader(tbBlockProofChunk)
 
-	rbHeaderChunk, err := readChunk(r, &byteCounter)
+	rbHeaderChunk, err := readChunk(tr, &byteCounter)
 	if err != nil {
 		return nil, byteCounter, err
 	}
 	rbHeader := protocol.ResultsBlockHeaderReader(rbHeaderChunk)
 
-	rbBlockProofChunk, err := readChunk(r, &byteCounter)
+	rbBlockProofChunk, err := readChunk(tr, &byteCounter)
 	if err != nil {
 		return nil, byteCounter, err
 	}
@@ -209,7 +222,7 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	// TODO V1 add validations : - 1) IsValid() on each membuff 2) check that num of bytes read match header
 	receipts := make([]*protocol.TransactionReceipt, 0, rbHeader.NumTransactionReceipts())
 	for i := 0; i < cap(receipts); i++ {
-		chunk, err := readChunk(r, &byteCounter)
+		chunk, err := readChunk(tr, &byteCounter)
 		if err != nil {
 			return nil, byteCounter, err
 		}
@@ -218,7 +231,7 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 
 	stateDiffs := make([]*protocol.ContractStateDiff, 0, rbHeader.NumContractStateDiffs())
 	for i := 0; i < cap(stateDiffs); i++ {
-		chunk, err := readChunk(r, &byteCounter)
+		chunk, err := readChunk(tr, &byteCounter)
 		if err != nil {
 			return nil, byteCounter, err
 		}
@@ -227,7 +240,7 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 
 	txs := make([]*protocol.SignedTransaction, 0, tbHeader.NumSignedTransactions())
 	for i := 0; i < cap(txs); i++ {
-		chunk, err := readChunk(r, &byteCounter)
+		chunk, err := readChunk(tr, &byteCounter)
 		if err != nil {
 			return nil, byteCounter, err
 		}
@@ -249,5 +262,31 @@ func decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 		},
 	}
 
+	var readCheckSum uint32
+	err = binary.Read(r, binary.LittleEndian, &readCheckSum)
+	if err != nil {
+		return nil, byteCounter, err
+	}
+	byteCounter += int(unsafe.Sizeof(readCheckSum))
+
+	if readCheckSum != checkSum.Sum32() {
+		return nil, byteCounter, fmt.Errorf("block checksum mismatch. computed: %v recorded: %v", checkSum.Sum32(), readCheckSum)
+	}
 	return blockPair, byteCounter, nil
+}
+
+type checksumWriter struct {
+	w, checksum io.Writer
+}
+
+func newChecksumWriter(w, checksum io.Writer) *checksumWriter {
+	return &checksumWriter{w: w, checksum: checksum}
+}
+
+func (cw *checksumWriter) Write(p []byte) (int, error) {
+	_, err := cw.checksum.Write(p)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed adding to checksum")
+	}
+	return cw.w.Write(p)
 }
