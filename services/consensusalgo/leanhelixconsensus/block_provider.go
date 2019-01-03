@@ -3,6 +3,7 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
+	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -10,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type BlockPairWrapper struct {
@@ -21,7 +21,7 @@ func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
 	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
 }
 
-func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) leanhelix.Block {
+func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) lh.Block {
 
 	if blockPair == nil {
 		return nil
@@ -40,18 +40,6 @@ type blockProvider struct {
 	nodePrivateKey   primitives.EcdsaSecp256K1PrivateKey
 }
 
-func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash, prevBlock leanhelix.Block) bool {
-	// TODO Implement me
-
-	return true
-}
-
-func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash) bool {
-	// TODO Implement me
-
-	return true
-}
-
 func NewBlockProvider(
 	logger log.BasicLogger,
 	blockStorage services.BlockStorage,
@@ -65,20 +53,14 @@ func NewBlockProvider(
 
 }
 
-func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock leanhelix.Block) (leanhelix.Block, lhprimitives.BlockHash) {
+func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock lh.Block) (lh.Block, lhprimitives.BlockHash) {
 
-	var currentBlockHeight primitives.BlockHeight
-	var prevTxBlockHash primitives.Sha256
-	var prevRxBlockHash primitives.Sha256
-	var prevBlockTimestamp primitives.TimestampNano
+	currentBlockHeight := primitives.BlockHeight(1)
+	var prevTxBlockHash primitives.Sha256 = nil
+	var prevRxBlockHash primitives.Sha256 = nil
+	var prevBlockTimestamp primitives.TimestampNano = 0
 
-	if prevBlock == nil {
-		currentBlockHeight = 1
-		prevTxBlockHash = nil
-		prevRxBlockHash = nil
-		prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano() - 1)
-
-	} else {
+	if prevBlock != nil {
 		prevBlockWrapper := prevBlock.(*BlockPairWrapper)
 		currentBlockHeight = primitives.BlockHeight(prevBlock.Height() + 1)
 		prevTxBlockHash = digest.CalcTransactionsBlockHash(prevBlockWrapper.blockPair.TransactionsBlock)
@@ -89,14 +71,16 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", currentBlockHeight))
 
 	// TODO https://tree.taiga.io/project/orbs-network/us/642 Add configurable maxNumTx and maxBlockSize
+	maxNumOfTransactions := uint32(10000)
+	maxBlockSize := uint32(1000000)
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		CurrentBlockHeight:      currentBlockHeight,
-		MaxBlockSizeKb:          0, // TODO(v1): fill in or remove from spec
-		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           prevTxBlockHash,
 		PrevBlockTimestamp:      prevBlockTimestamp,
+		MaxNumberOfTransactions: maxNumOfTransactions,
+		MaxBlockSizeKb:          maxBlockSize,
 	})
 	if err != nil {
 		return nil, nil
@@ -141,6 +125,7 @@ func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 	return nil
 }
 
-func (p *blockProvider) GenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
-	return nil
+// Genesis is defined to be nil
+func (p *blockProvider) GenerateGenesisBlockProposal(ctx context.Context) (lh.Block, lhprimitives.BlockHash) {
+	return nil, nil
 }
