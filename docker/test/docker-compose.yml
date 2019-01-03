@@ -2,7 +2,7 @@ version: '2.1'
 
 services:
   orbs-network-node-1:
-    image: orbs:export
+    image: orbs:export_e2e
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -21,7 +21,7 @@ services:
         ipv4_address: 192.168.199.2
 
   orbs-network-node-2:
-    image: orbs:export
+    image: orbs:export_e2e
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -39,7 +39,7 @@ services:
         ipv4_address: 192.168.199.3
 
   orbs-network-node-3:
-    image: orbs:export
+    image: orbs:export_e2e
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT

@@ -220,7 +220,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	for i := 0; i < b.numNodes; i++ {
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(i)
 
-		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.NodeAddress(), keyPair.PrivateKey())
+		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.NodeAddress(), keyPair.PrivateKey(), "")
 
 		metricRegistry := metric.NewRegistry()
 		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodeAddress().String()))

@@ -72,6 +72,12 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 		servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr)
 	}
 
+	height, err := persistence.GetLastBlockHeight()
+	if err != nil {
+		logger.Error("could not read block height from adapter", log.Error(err))
+	}
+	s.metrics.blockHeight.Update(int64(height))
+
 	return s
 }
 
