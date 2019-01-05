@@ -17,17 +17,11 @@ import (
 	"time"
 )
 
-// TODO V1 check that we can read concurrently from different places in the file
-// TODO V1 check that we don't use long locks - that concurrent reads don't wait on each other
+// TODO V1 TBD - do we want to fuss with simulating io errors? (tampering FS)
 // TODO V1 init flow - build indexes
-// TODO V1 error during persistence
-// TODO V1 tampering FS?
-// TODO V1 checks and validations
-// TODO V1 codec version
-// TODO V1 file format header and version
 // TODO V1 test that if writing a block while scanning is ongoing we will receive the new
-// TODO V1 write test for recovering from a corrupt writing file handle
-// TODO V1 file format includes a version, and if the version not supported don't run
+// TODO V1 can we detect errors that indicate we need to open a writing file handle?
+// TODO V1 file format includes a file version, vchain id, network id, and if it doesn't match don't run!
 
 const blocksFilename = "blocks"
 

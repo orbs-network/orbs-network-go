@@ -124,7 +124,6 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 200*time.Millisecond) // should be a factor more than average block time
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
-	cfg.SetUint32(BLOCK_STORAGE_MAX_BLOCK_SIZE, 64*1024*1024)
 
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetConstantConsensusLeader(constantConsensusLeader)

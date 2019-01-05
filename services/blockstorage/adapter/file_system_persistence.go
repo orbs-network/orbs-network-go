@@ -77,7 +77,7 @@ func constructIndexForFile(filename string, logger log.BasicLogger, c *codec) (*
 	bhIndex := newBlockHeightIndex()
 	offset := int64(0)
 	for {
-		aBlock, blockSize, err := c.decode(file) // TODO add block validation
+		aBlock, blockSize, err := c.decode(file)
 		if err != nil {
 			if err == io.EOF {
 				logger.Info("built index", log.Int64("valid-block-bytes", offset), log.BlockHeight(bhIndex.topBlockHeight))
