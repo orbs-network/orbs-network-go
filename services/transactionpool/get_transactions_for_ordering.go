@@ -16,13 +16,54 @@ type rejectedTransaction struct {
 	status protocol.TransactionStatus
 }
 
-type ongoingResult struct {
+type transactionBatch struct {
 	incomingTransactions    Transactions
 	transactionsToReject    []*rejectedTransaction
 	transactionsForPreOrder Transactions
 	validTransactions       Transactions
 
 	logger log.BasicLogger
+}
+
+type batchValidator interface {
+	validateTransaction(tx *protocol.SignedTransaction) *ErrTransactionRejected
+}
+
+type committedTransactionChecker interface {
+	has(txHash primitives.Sha256) bool
+}
+
+type preOrderValidator interface {
+	preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) ([]protocol.TransactionStatus, error)
+}
+
+type vmPreOrderValidator struct {
+	vm services.VirtualMachine
+}
+
+type txRemover interface {
+	remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction
+}
+
+func (v *vmPreOrderValidator) preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) ([]protocol.TransactionStatus, error) {
+	output, err := v.vm.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
+		SignedTransactions:    txs,
+		CurrentBlockHeight:    currentBlockHeight,
+		CurrentBlockTimestamp: currentBlockTimestamp,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return output.PreOrderResults, nil
+}
+
+func newTransactionBatch(logger log.BasicLogger, transactions Transactions) *transactionBatch {
+	return &transactionBatch{
+		logger:               logger,
+		incomingTransactions: transactions,
+	}
 }
 
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
@@ -40,17 +81,15 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	}
 
 	vctx := s.createValidationContext()
+	pov := &vmPreOrderValidator{vm: s.virtualMachine}
 
 	transactions := s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
 
-	ongoing := &ongoingResult{
-		logger:               s.logger,
-		incomingTransactions: transactions,
-	}
+	ongoing := newTransactionBatch(s.logger, transactions)
 
 	ongoing.filterInvalidTransactions(ctx, vctx, s.committedPool)
 
-	err := ongoing.runPreOrderValidations(ctx, s.virtualMachine, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
+	err := ongoing.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 
 	if !ongoing.hasEnoughTransactions(1) {
 		timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second) // TODO (v1) move to config
@@ -60,7 +99,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		if hasNewTransactions {
 			ongoing.incomingTransactions = s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
 			ongoing.filterInvalidTransactions(ctx, vctx, s.committedPool)
-			err = ongoing.runPreOrderValidations(ctx, s.virtualMachine, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
+			err = ongoing.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 		}
 	}
 
@@ -70,13 +109,13 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	return out, err
 }
 
-func (r *ongoingResult) filterInvalidTransactions(ctx context.Context, vctx *validationContext, committedTransactions *committedTxPool) {
+func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, validator batchValidator, committedTransactions committedTransactionChecker) {
 	for _, tx := range r.incomingTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		if err := vctx.validateTransaction(tx); err != nil {
+		if err := validator.validateTransaction(tx); err != nil {
 			r.logger.Info("dropping invalid transaction", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
 			r.reject(txHash, err.TransactionStatus)
-		} else if alreadyCommitted := committedTransactions.get(txHash); alreadyCommitted != nil {
+		} else if committedTransactions.has(txHash) {
 			r.logger.Info("dropping committed transaction", log.String("flow", "checkpoint"), log.Transaction(txHash))
 			r.reject(txHash, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED)
 		} else {
@@ -89,35 +128,32 @@ func (r *ongoingResult) filterInvalidTransactions(ctx context.Context, vctx *val
 	return
 }
 
-func (r *ongoingResult) reject(txHash primitives.Sha256, transactionStatus protocol.TransactionStatus) {
+func (r *transactionBatch) reject(txHash primitives.Sha256, transactionStatus protocol.TransactionStatus) {
 	r.transactionsToReject = append(r.transactionsToReject, &rejectedTransaction{txHash, transactionStatus})
 }
 
-func (r *ongoingResult) queueForPreOrderValidation(transaction *protocol.SignedTransaction) {
+func (r *transactionBatch) queueForPreOrderValidation(transaction *protocol.SignedTransaction) {
 	r.transactionsForPreOrder = append(r.transactionsForPreOrder, transaction)
 }
 
-func (r *ongoingResult) notifyRejections(ctx context.Context, pendingPool *pendingTxPool) {
+func (r *transactionBatch) notifyRejections(ctx context.Context, remover txRemover) {
 	for _, rejected := range r.transactionsToReject {
-		pendingPool.remove(ctx, rejected.hash, rejected.status) // TODO(v1) make it a single call
+		remover.remove(ctx, rejected.hash, rejected.status) // TODO(v1) make it a single call
 	}
+	r.transactionsToReject = nil
 }
 
-func (r *ongoingResult) accept(transaction *protocol.SignedTransaction) {
+func (r *transactionBatch) accept(transaction *protocol.SignedTransaction) {
 	r.validTransactions = append(r.validTransactions, transaction)
 }
 
-func (r *ongoingResult) runPreOrderValidations(ctx context.Context, vm services.VirtualMachine, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) error {
-	output, err := vm.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		SignedTransactions:    r.transactionsForPreOrder,
-		CurrentBlockHeight:    currentBlockHeight,
-		CurrentBlockTimestamp: currentBlockTimestamp,
-	})
+func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator preOrderValidator, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) error {
+	preOrderResults, err := validator.preOrderCheck(ctx, r.transactionsForPreOrder, currentBlockHeight, currentBlockTimestamp)
 
 	// even on error we want to reject transactions first to their senders before exiting
 	//TODO (v1) what if I got back a different number of transactions than what I sent
 	for i, tx := range r.transactionsForPreOrder {
-		if output.PreOrderResults[i] == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
+		if preOrderResults[i] == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
 			r.accept(tx)
 		} else {
 			txHash := digest.CalcTxHash(tx.Transaction())
@@ -126,9 +162,11 @@ func (r *ongoingResult) runPreOrderValidations(ctx context.Context, vm services.
 		}
 	}
 
+	r.transactionsForPreOrder = nil
+
 	return err
 }
 
-func (r *ongoingResult) hasEnoughTransactions(numOfTransactions int) bool {
+func (r *transactionBatch) hasEnoughTransactions(numOfTransactions int) bool {
 	return len(r.validTransactions) >= numOfTransactions
 }
