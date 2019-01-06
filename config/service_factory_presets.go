@@ -72,5 +72,6 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 1)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
+	cfg.SetDuration(TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY, 1*time.Millisecond)
 	return cfg
 }

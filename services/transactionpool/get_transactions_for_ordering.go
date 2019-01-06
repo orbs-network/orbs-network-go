@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"time"
 )
 
 type rejectedTransaction struct {
@@ -92,7 +91,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	err := ongoing.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 
 	if !ongoing.hasEnoughTransactions(1) {
-		timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second) // TODO (v1) move to config
+		timeoutCtx, cancel := context.WithTimeout(ctx, s.config.TransactionPoolMaxWaitTimeForFullBlockCapacity()) // TODO (v1) move to config
 		defer cancel()
 		hasNewTransactions := <-s.transactionWaiter.waitFor(timeoutCtx, 1)
 

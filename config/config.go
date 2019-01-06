@@ -59,6 +59,7 @@ type NodeConfig interface {
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
+	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -160,6 +161,7 @@ type TransactionPoolConfig interface {
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
+	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
 }
 
 type FederationNode interface {
