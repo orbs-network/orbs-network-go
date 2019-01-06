@@ -48,8 +48,6 @@ type NodeConfig interface {
 	BlockTrackerGraceTimeout() time.Duration
 
 	// consensus context
-	ConsensusContextMinimalBlockTime() time.Duration
-	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 
@@ -133,8 +131,6 @@ type ConsensusContextConfig interface {
 	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
-	ConsensusContextMinimumTransactionsInBlock() uint32
-	ConsensusContextMinimalBlockTime() time.Duration
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	ConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration

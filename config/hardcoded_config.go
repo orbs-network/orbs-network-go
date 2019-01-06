@@ -227,14 +227,6 @@ func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
 }
 
-func (c *config) ConsensusContextMinimalBlockTime() time.Duration {
-	return c.kv[CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME].DurationValue
-}
-
-func (c *config) ConsensusContextMinimumTransactionsInBlock() uint32 {
-	return c.kv[CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK].Uint32Value
-}
-
 func (c *config) ConsensusContextMaximumTransactionsInBlock() uint32 {
 	return c.kv[CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK].Uint32Value
 }
