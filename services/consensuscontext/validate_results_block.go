@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
@@ -88,27 +89,19 @@ func validateRxPrevBlockHashPtr(ctx context.Context, vcrx *rxValidatorContext) e
 }
 
 func validateRxReceiptsRootHash(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
-	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRootAdapter.CalcReceiptsMerkleRoot(vcrx.input.ResultsBlock.TransactionReceipts)
-	if err != nil {
-		return errors.Wrapf(ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error calculateReceiptsMerkleRoot(), %v", err)
-	}
-	if !bytes.Equal(expectedReceiptsMerkleRoot, []byte(calculatedReceiptMerkleRoot)) {
-		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "expected %v actual %v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
-	}
-	return nil
+	return validators.ValidateReceiptsMerkleRoot(&validators.BlockValidatorContext{
+		TransactionsBlock:      vcrx.input.TransactionsBlock,
+		ResultsBlock:           vcrx.input.ResultsBlock,
+		CalcReceiptsMerkleRoot: vcrx.calcReceiptsMerkleRootAdapter.CalcReceiptsMerkleRoot,
+	})
 }
 
 func validateRxStateDiffHash(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.StateDiffHash()
-	calculatedStateDiffMerkleRoot, err := vcrx.calcStateDiffMerkleRootAdapter.CalcStateDiffMerkleRoot(vcrx.input.ResultsBlock.ContractStateDiffs)
-	if err != nil {
-		return errors.Wrapf(ErrCalcStateDiffMerkleRoot, "ValidateResultsBlock error calculateStateDiffMerkleRoot(), %v", err)
-	}
-	if !bytes.Equal(expectedStateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
-		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
-	}
-	return nil
+	return validators.ValidateResultsBlockStateDiffHash(&validators.BlockValidatorContext{
+		TransactionsBlock:       vcrx.input.TransactionsBlock,
+		ResultsBlock:            vcrx.input.ResultsBlock,
+		CalcStateDiffMerkleRoot: vcrx.calcStateDiffMerkleRootAdapter.CalcStateDiffMerkleRoot,
+	})
 }
 
 func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
@@ -140,20 +133,20 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
 	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRootAdapter.CalcReceiptsMerkleRoot(processTxsOut.TransactionReceipts) // TODO wrap with adapter
 	if err != nil {
-		return errors.Wrapf(ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")
+		return errors.Wrapf(validators.ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")
 	}
 	if !bytes.Equal(expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot) {
-		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "ValidateResultsBlock error receipt merkleRoot in header does not match processed txs receipts")
+		return errors.Wrapf(validators.ErrMismatchedReceiptsRootHash, "ValidateResultsBlock error receipt merkleRoot in header does not match processed txs receipts")
 	}
 
 	// Compare the state diff hash to the one in the block (supports only deterministic execution).
 	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.RawStateDiffHash()
 	calculatedStateDiffMerkleRoot, err := vcrx.calcStateDiffMerkleRootAdapter.CalcStateDiffMerkleRoot(processTxsOut.ContractStateDiffs) // TODO wrap with adapter
 	if err != nil {
-		return errors.Wrapf(ErrCalcStateDiffMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffMerkleRoot")
+		return errors.Wrapf(validators.ErrCalcStateDiffMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffMerkleRoot")
 	}
 	if !bytes.Equal(expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot) {
-		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
+		return errors.Wrapf(validators.ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
 	}
 
 	return nil

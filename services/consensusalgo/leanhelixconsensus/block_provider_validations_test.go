@@ -6,6 +6,19 @@ import (
 	"testing"
 )
 
+//// Mock for ValidateBlockFailsOnNil
+//type mockValidateBlockFailsOnNilAdapter struct {
+//	validateBlockFailsOnNil func(ctx context.Context, vc *validatorContext) error
+//}
+//
+//func NewMockValidateBlockFailsOnNilThatReturns(err error) ValidateBlockFailsOnNilAdapter {
+//	return &mockValidateBlockFailsOnNilAdapter{
+//		validateBlockFailsOnNil: func(ctx context.Context, vc *validatorContext) error {
+//			return err
+//		},
+//	}
+//}
+
 func TestValidateBlockFailsOnNil(t *testing.T) {
 	require.Error(t, validateBlockNotNil(nil, &validatorContext{}), "fail when BlockPair is nil")
 
@@ -18,4 +31,14 @@ func TestValidateBlockFailsOnNil(t *testing.T) {
 	require.Nil(t, validateBlockNotNil(block, &validatorContext{}), "ok when blockPair's transaction and results blocks are not nil")
 	block.ResultsBlock = nil
 	require.Error(t, validateBlockNotNil(block, &validatorContext{}), "fail when results block is nil")
+}
+
+func TestValidateBlockHash(t *testing.T) {
+	t.Skip("Cannot set TransactionBlock to empty - crashes the test - fix.")
+	block := &protocol.BlockPairContainer{
+		TransactionsBlock: &protocol.TransactionsBlockContainer{},
+		ResultsBlock:      &protocol.ResultsBlockContainer{},
+	}
+
+	require.Error(t, validateBlockHash(block, &validatorContext{}))
 }

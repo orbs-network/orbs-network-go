@@ -122,7 +122,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 }
 
 // TODO (v1) Complete this including unit tests, see: https://tree.taiga.io/project/orbs-network/us/567
-func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, revBlockPair *protocol.BlockPairContainer) error {
 	if blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
 		return errors.New("nil block proof")
 	}

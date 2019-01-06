@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testDigest "github.com/orbs-network/orbs-network-go/test/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -149,10 +150,6 @@ func NewMockProcessTransactionSetThatReturns(err error) ProcessTransactionSetAda
 func TestResultsBlockValidators(t *testing.T) {
 	cfg := config.ForConsensusContextTests(nil)
 	empty32ByteHash := make([]byte, 32)
-
-	//falsyGetStateHash := func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	//	return &services.GetStateHashOutput{}, errors.New("Some error")
-	//}
 	t.Run("should return error for results block with incorrect protocol version", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
 		err := validateRxProtocolVersion(context.Background(), vcrx)
@@ -223,9 +220,10 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error for block with incorrect prev block hash", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
+		hash2 := hash.CalcSha256([]byte{2})
 		err := validateRxPrevBlockHashPtr(context.Background(), vcrx)
 		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutatePrevBlockHashPtr(empty32ByteHash); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutatePrevBlockHashPtr(hash2); err != nil {
 			t.Error(err)
 		}
 		err = validateRxPrevBlockHashPtr(context.Background(), vcrx)
@@ -247,7 +245,7 @@ func TestResultsBlockValidators(t *testing.T) {
 			t.Error(err)
 		}
 		err = validateRxReceiptsRootHash(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect receipts root hash", err)
+		require.Equal(t, validators.ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect receipts root hash", err)
 	})
 
 	t.Run("should return error for block with incorrect state diff hash", func(t *testing.T) {
@@ -265,7 +263,7 @@ func TestResultsBlockValidators(t *testing.T) {
 			t.Error(err)
 		}
 		err = validateRxStateDiffHash(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect state diff hash", err)
+		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect state diff hash", err)
 	})
 
 	t.Run("should return error when state's pre-execution merkle root is different between the results block and state storage", func(t *testing.T) {
@@ -330,13 +328,13 @@ func TestResultsBlockValidators(t *testing.T) {
 		vcrx.processTransactionSetAdapter = successfulProcessTransactionSet
 		vcrx.calcReceiptsMerkleRootAdapter = errorCalcReceiptsMerkleRoot
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrCalcReceiptsMerkleRoot, errors.Cause(err), "validation should fail if failed to calculate receipts merkle root", err)
+		require.Equal(t, validators.ErrCalcReceiptsMerkleRoot, errors.Cause(err), "validation should fail if failed to calculate receipts merkle root", err)
 
 		// CalcStateDiffMerkleRoot returns error
 		vcrx.calcReceiptsMerkleRootAdapter = successfulCalcReceiptsMerkleRoot
 		vcrx.calcStateDiffMerkleRootAdapter = errorCalcStateDiffMerkleRoot
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrCalcStateDiffMerkleRoot, errors.Cause(err), "validation should fail if failed to calculate state diff merkle root", err)
+		require.Equal(t, validators.ErrCalcStateDiffMerkleRoot, errors.Cause(err), "validation should fail if failed to calculate state diff merkle root", err)
 
 		// Test the only case where everything is fine - collaborators don't return errors, and there are no mismatches
 		vcrx.calcStateDiffMerkleRootAdapter = successfulCalcStateDiffMerkleRoot
@@ -349,7 +347,7 @@ func TestResultsBlockValidators(t *testing.T) {
 			t.Error(err)
 		}
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect post-execution receipts hash", err)
+		require.Equal(t, validators.ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect post-execution receipts hash", err)
 
 		// Restore good receipts hash
 		if err := vcrx.input.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot1); err != nil {
@@ -360,7 +358,7 @@ func TestResultsBlockValidators(t *testing.T) {
 			t.Error(err)
 		}
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
+		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
 	})
 
 }

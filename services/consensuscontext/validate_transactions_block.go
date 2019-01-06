@@ -3,7 +3,7 @@ package consensuscontext
 import (
 	"bytes"
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
@@ -39,8 +39,8 @@ func validateTxVirtualChainID(ctx context.Context, vctx *txValidatorContext) err
 }
 
 func validateTxBlockHeight(ctx context.Context, vctx *txValidatorContext) error {
-	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
 	expectedBlockHeight := vctx.input.CurrentBlockHeight
+	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
 	if checkedBlockHeight != expectedBlockHeight {
 		return ErrMismatchedBlockHeight
 	}
@@ -68,25 +68,16 @@ func validateTxTransactionsBlockTimestamp(ctx context.Context, vctx *txValidator
 	return nil
 }
 
-func validateTxTransactionsBlockMerkleRoot(ctx context.Context, vctx *txValidatorContext) error {
-	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
-	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsMerkleRootHash()
-	if expectedTxMerkleRoot, err := digest.CalcTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
-		return err
-	} else if !bytes.Equal(txMerkleRoot, expectedTxMerkleRoot) {
-		return errors.Wrapf(ErrMismatchedTxMerkleRoot, "expected %v actual %v", expectedTxMerkleRoot, txMerkleRoot)
-	}
-	return nil
+func validateTransactionsBlockMerkleRoot(ctx context.Context, vctx *txValidatorContext) error {
+	return validators.ValidateTransactionsBlockMerkleRoot(&validators.BlockValidatorContext{
+		TransactionsBlock: vctx.input.TransactionsBlock,
+	})
 }
 
-func validateTxMetadataHash(ctx context.Context, vctx *txValidatorContext) error {
-	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
-	expectedMetaDataHash := digest.CalcTransactionMetaDataHash(vctx.input.TransactionsBlock.Metadata)
-	metadataHash := vctx.input.TransactionsBlock.Header.MetadataHash()
-	if !bytes.Equal(metadataHash, expectedMetaDataHash) {
-		return errors.Wrapf(ErrMismatchedMetadataHash, "expected %v actual %v", expectedMetaDataHash, metadataHash)
-	}
-	return nil
+func validateTransactionsBlockMetadataHash(ctx context.Context, vctx *txValidatorContext) error {
+	return validators.ValidateTransactionsBlockMetadataHash(&validators.BlockValidatorContext{
+		TransactionsBlock: vctx.input.TransactionsBlock,
+	})
 }
 
 func validateTxTransactionOrdering(ctx context.Context, vctx *txValidatorContext) error {
@@ -118,8 +109,8 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		validateTxBlockHeight,
 		validateTxPrevBlockHashPtr,
 		validateTxTransactionsBlockTimestamp,
-		validateTxTransactionsBlockMerkleRoot,
-		validateTxMetadataHash,
+		validateTransactionsBlockMerkleRoot,
+		validateTransactionsBlockMetadataHash,
 		validateTxTransactionOrdering,
 	}
 
