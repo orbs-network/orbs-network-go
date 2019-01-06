@@ -16,12 +16,19 @@ type rejectedTransaction struct {
 }
 
 type transactionBatch struct {
+	maxNumOfTransactions uint32
+	sizeLimit            uint32
+	logger               log.BasicLogger
+
 	incomingTransactions    Transactions
 	transactionsToReject    []*rejectedTransaction
 	transactionsForPreOrder Transactions
 	validTransactions       Transactions
+	totalFetched            int
+}
 
-	logger log.BasicLogger
+type batchFetcher interface {
+	getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions
 }
 
 type batchValidator interface {
@@ -81,24 +88,25 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	vctx := s.createValidationContext()
 	pov := &vmPreOrderValidator{vm: s.virtualMachine}
+	ongoing := &transactionBatch{
+		logger:               s.logger,
+		maxNumOfTransactions: input.MaxNumberOfTransactions,
+		//sizeLimit: input.MaxTransactionsSetSizeKb*1024, TODO(v1) add size limit test case
+	}
 
-	transactions := s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
+	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolMaxWaitTimeForFullBlockCapacity())
+	defer cancel()
 
-	ongoing := newTransactionBatch(s.logger, transactions)
+	runBatch := func() error {
+		ongoing.fetchUsing(s.pendingPool)
+		ongoing.filterInvalidTransactions(ctx, vctx, s.committedPool)
+		return ongoing.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
+	}
 
-	ongoing.filterInvalidTransactions(ctx, vctx, s.committedPool)
-
-	err := ongoing.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
-
+	err := runBatch()
 	if !ongoing.hasEnoughTransactions(1) {
-		timeoutCtx, cancel := context.WithTimeout(ctx, s.config.TransactionPoolMaxWaitTimeForFullBlockCapacity()) // TODO (v1) move to config
-		defer cancel()
-		hasNewTransactions := <-s.transactionWaiter.waitFor(timeoutCtx, 1)
-
-		if hasNewTransactions {
-			ongoing.incomingTransactions = s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
-			ongoing.filterInvalidTransactions(ctx, vctx, s.committedPool)
-			err = ongoing.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
+		if <-s.transactionWaiter.waitFor(timeoutCtx, 1) {
+			err = runBatch()
 		}
 	}
 
@@ -137,7 +145,7 @@ func (r *transactionBatch) queueForPreOrderValidation(transaction *protocol.Sign
 
 func (r *transactionBatch) notifyRejections(ctx context.Context, remover txRemover) {
 	for _, rejected := range r.transactionsToReject {
-		remover.remove(ctx, rejected.hash, rejected.status) // TODO(v1) make it a single call
+		remover.remove(ctx, rejected.hash, rejected.status) // TODO(v1) make it a single call and asynchronous - it might speed up the system
 	}
 	r.transactionsToReject = nil
 }
@@ -168,4 +176,11 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 
 func (r *transactionBatch) hasEnoughTransactions(numOfTransactions int) bool {
 	return len(r.validTransactions) >= numOfTransactions
+}
+
+func (r *transactionBatch) fetchUsing(fetcher batchFetcher) {
+	txs := fetcher.getBatch(r.maxNumOfTransactions-uint32(r.totalFetched), r.sizeLimit)
+	r.incomingTransactions = append(r.incomingTransactions, txs...)
+	r.totalFetched += len(txs)
+
 }
