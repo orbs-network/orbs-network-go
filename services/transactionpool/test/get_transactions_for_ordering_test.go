@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+//TODO move to unit test
 func TestGetTransactionsForOrderingDropsExpiredTransactions(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(ctx)
