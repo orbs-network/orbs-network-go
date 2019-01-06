@@ -7,15 +7,15 @@ import (
 )
 
 func TestValidateBlockFailsOnNil(t *testing.T) {
-	require.Error(t, validateBlockNotNil(nil), "fail when BlockPair is nil")
+	require.Error(t, validateBlockNotNil(nil, &validatorContext{}), "fail when BlockPair is nil")
 
 	block := &protocol.BlockPairContainer{
 		TransactionsBlock: nil,
 		ResultsBlock:      &protocol.ResultsBlockContainer{},
 	}
-	require.Error(t, validateBlockNotNil(block), "fail when transactions block is nil")
+	require.Error(t, validateBlockNotNil(block, &validatorContext{}), "fail when transactions block is nil")
 	block.TransactionsBlock = &protocol.TransactionsBlockContainer{}
-	require.Nil(t, validateBlockNotNil(block), "ok when blockPair's transaction and results blocks are not nil")
+	require.Nil(t, validateBlockNotNil(block, &validatorContext{}), "ok when blockPair's transaction and results blocks are not nil")
 	block.ResultsBlock = nil
-	require.Error(t, validateBlockNotNil(block), "fail when results block is nil")
+	require.Error(t, validateBlockNotNil(block, &validatorContext{}), "fail when results block is nil")
 }

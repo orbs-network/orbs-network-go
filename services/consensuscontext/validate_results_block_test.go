@@ -299,7 +299,6 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error when receipts or state merkle roots are different between calculated execution result and those stored in block", func(t *testing.T) {
 
-		// TODO Add mismatching receipts and state diff checks
 		vcrx := toRxValidatorContext(cfg)
 		manualReceiptsMerkleRoot1 := hash.CalcSha256([]byte{1})
 		manualReceiptsMerkleRoot2 := hash.CalcSha256([]byte{2})

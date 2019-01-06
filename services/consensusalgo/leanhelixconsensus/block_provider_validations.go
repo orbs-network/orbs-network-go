@@ -13,7 +13,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-func validateBlockNotNil(block *protocol.BlockPairContainer) error {
+type blockValidator func(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error
+type validatorContext struct{}
+
+func validateBlockNotNil(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error {
 	if block == nil || block.TransactionsBlock == nil || block.ResultsBlock == nil {
 		return errors.New("BlockPair or either transactions or results block are nil")
 	}
@@ -26,8 +29,17 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 	// Validate Not Nil
 	blockPair := FromLeanHelixBlock(block)
 
-	if err := validateBlockNotNil(blockPair); err != nil {
-		return false
+	validators := []blockValidator{
+		validateBlockNotNil,
+	}
+
+	vcx := &validatorContext{}
+
+	for _, validator := range validators {
+		if err := validator(blockPair, vcx); err != nil {
+			p.logger.Info("Error in ValidateBlockProposal()", log.Error(err))
+			return false
+		}
 	}
 
 	// Validate Tx Block
@@ -86,63 +98,93 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 	return true
 }
 
+//func validateTxTransactionsBlockMerkleRoot(ctx context.Context, vctx *txValidatorContext) error {
+//	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
+//	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsMerkleRootHash()
+//	if expectedTxMerkleRoot, err := digest.CalcTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
+//		return err
+//	} else if !bytes.Equal(txMerkleRoot, expectedTxMerkleRoot) {
+//		return errors.Wrapf(ErrMismatchedTxMerkleRoot, "expected %v actual %v", expectedTxMerkleRoot, txMerkleRoot)
+//	}
+//	return nil
+//}
+//
+//func validateTxMetadataHash(ctx context.Context, vctx *txValidatorContext) error {
+//	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
+//	expectedMetaDataHash := digest.CalcTransactionMetaDataHash(vctx.input.TransactionsBlock.Metadata)
+//	metadataHash := vctx.input.TransactionsBlock.Header.MetadataHash()
+//	if !bytes.Equal(metadataHash, expectedMetaDataHash) {
+//		return errors.Wrapf(ErrMismatchedMetadataHash, "expected %v actual %v", expectedMetaDataHash, metadataHash)
+//	}
+//	return nil
+//}
+
 func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash) bool {
 
 	blockPair := FromLeanHelixBlock(block)
 
-	if err := validateBlockNotNil(blockPair); err != nil {
-		return false
+	validators := []blockValidator{
+		validateBlockNotNil,
 	}
 
-	// *validate tx hash pointers*
-	// TODO Unit tests
-	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
-	txMerkleRoot := blockPair.TransactionsBlock.Header.RawTransactionsMerkleRootHash()
-	if calculatedTxMerkleRoot, err := digest.CalcTransactionsMerkleRoot(blockPair.TransactionsBlock.SignedTransactions); err != nil {
-		p.logger.Error("ValidateBlockCommitment error calculateTransactionsMerkleRoot")
-		return false
-	} else if !bytes.Equal(txMerkleRoot, []byte(calculatedTxMerkleRoot)) {
-		p.logger.Error("ValidateBlockCommitment error transaction merkleRoot in header do not match txs")
-		return false
+	vcx := &validatorContext{}
+
+	for _, validator := range validators {
+		if err := validator(blockPair, vcx); err != nil {
+			p.logger.Info("Error in ValidateBlockCommitment()", log.Error(err))
+			return false
+		}
 	}
 
-	// TODO Unit tests
-
-	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
-	metadataHash := blockPair.TransactionsBlock.Header.RawMetadataHash()
-	calculatedMetaDataHash := digest.CalcTransactionMetaDataHash(blockPair.TransactionsBlock.Metadata)
-	if !bytes.Equal(metadataHash, []byte(calculatedMetaDataHash)) {
-		p.logger.Error("ValidateBlockCommitment error transaction metadataHash in header do not match metadata")
-		return false
-	}
-
-	// *validate rx hash pointers*
-	//Check the block's receipts_root_hash: Calculate the merkle root hash of the block's receipts and verify the hash in the header.
-	recieptsMerkleRoot := blockPair.ResultsBlock.Header.RawReceiptsMerkleRootHash()
-	if calculatedRecieptMerkleRoot, err := digest.CalcReceiptsMerkleRoot(blockPair.ResultsBlock.TransactionReceipts); err != nil {
-		p.logger.Error("ValidateBlockCommitment error calculateReceiptsMerkleRoot")
-		return false
-	} else if !bytes.Equal(recieptsMerkleRoot, []byte(calculatedRecieptMerkleRoot)) {
-		p.logger.Error("ValidateBlockCommitment error receipt merkleRoot in header do not match txs receipts")
-		return false
-	}
-
-	//Check the block's state_diff_hash: Calculate the hash of the block's state diff and verify the hash in the header.
-	stateDiffMerkleRoot := blockPair.ResultsBlock.Header.RawStateDiffHash()
-	if calculatedStateDiffMerkleRoot, err := digest.CalcStateDiffMerkleRoot(blockPair.ResultsBlock.ContractStateDiffs); err != nil {
-		p.logger.Error("ValidateBlockCommitment error calculateStateDiffMerkleRoot")
-		return false
-	} else if !bytes.Equal(stateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
-		p.logger.Error("ValidateBlockCommitment error state diff merkleRoot in header do not match state diffs")
-		return false
-	}
-
-	// validate blockHash
-	calcBlockHash := []byte(digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock))
-	if !bytes.Equal([]byte(blockHash), calcBlockHash) {
-		p.logger.Error("ValidateBlockCommitment blockHash mismatch")
-		return false
-	}
+	//// *validate tx hash pointers*
+	//// TODO Unit tests
+	////Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
+	//txMerkleRoot := blockPair.TransactionsBlock.Header.RawTransactionsMerkleRootHash()
+	//if calculatedTxMerkleRoot, err := digest.CalcTransactionsMerkleRoot(blockPair.TransactionsBlock.SignedTransactions); err != nil {
+	//	p.logger.Error("ValidateBlockCommitment error calculateTransactionsMerkleRoot")
+	//	return false
+	//} else if !bytes.Equal(txMerkleRoot, []byte(calculatedTxMerkleRoot)) {
+	//	p.logger.Error("ValidateBlockCommitment error transaction merkleRoot in header do not match txs")
+	//	return false
+	//}
+	//
+	//// TODO Unit tests
+	//
+	////	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
+	//metadataHash := blockPair.TransactionsBlock.Header.RawMetadataHash()
+	//calculatedMetaDataHash := digest.CalcTransactionMetaDataHash(blockPair.TransactionsBlock.Metadata)
+	//if !bytes.Equal(metadataHash, []byte(calculatedMetaDataHash)) {
+	//	p.logger.Error("ValidateBlockCommitment error transaction metadataHash in header do not match metadata")
+	//	return false
+	//}
+	//
+	//// *validate rx hash pointers*
+	////Check the block's receipts_root_hash: Calculate the merkle root hash of the block's receipts and verify the hash in the header.
+	//recieptsMerkleRoot := blockPair.ResultsBlock.Header.RawReceiptsMerkleRootHash()
+	//if calculatedRecieptMerkleRoot, err := digest.CalcReceiptsMerkleRoot(blockPair.ResultsBlock.TransactionReceipts); err != nil {
+	//	p.logger.Error("ValidateBlockCommitment error calculateReceiptsMerkleRoot")
+	//	return false
+	//} else if !bytes.Equal(recieptsMerkleRoot, []byte(calculatedRecieptMerkleRoot)) {
+	//	p.logger.Error("ValidateBlockCommitment error receipt merkleRoot in header do not match txs receipts")
+	//	return false
+	//}
+	//
+	////Check the block's state_diff_hash: Calculate the hash of the block's state diff and verify the hash in the header.
+	//stateDiffMerkleRoot := blockPair.ResultsBlock.Header.RawStateDiffHash()
+	//if calculatedStateDiffMerkleRoot, err := digest.CalcStateDiffMerkleRoot(blockPair.ResultsBlock.ContractStateDiffs); err != nil {
+	//	p.logger.Error("ValidateBlockCommitment error calculateStateDiffMerkleRoot")
+	//	return false
+	//} else if !bytes.Equal(stateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
+	//	p.logger.Error("ValidateBlockCommitment error state diff merkleRoot in header do not match state diffs")
+	//	return false
+	//}
+	//
+	//// validate blockHash
+	//calcBlockHash := []byte(digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock))
+	//if !bytes.Equal([]byte(blockHash), calcBlockHash) {
+	//	p.logger.Error("ValidateBlockCommitment blockHash mismatch")
+	//	return false
+	//}
 
 	return true
 }
