@@ -24,8 +24,8 @@ func NewTransactionPool(ctx context.Context,
 	if blockHeightReporter == nil {
 		blockHeightReporter = synchronization.NopHeightReporter{}
 	}
-
-	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory)
+	waiter := newTransactionWaiter()
+	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory, waiter.inc)
 	committedPool := NewCommittedPool(metricFactory)
 
 	logger := parent.WithTags(LogTag)
@@ -43,6 +43,7 @@ func NewTransactionPool(ctx context.Context,
 		blockTracker:         synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
 		blockHeightReporter:  blockHeightReporter,
 		transactionForwarder: txForwarder,
+		transactionWaiter:    waiter,
 	}
 
 	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed

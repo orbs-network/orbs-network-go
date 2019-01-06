@@ -13,12 +13,13 @@ import (
 
 type transactionRemovedListener func(ctx context.Context, txHash primitives.Sha256, reason protocol.TransactionStatus)
 
-func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.Factory) *pendingTxPool {
+func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.Factory, onNewTransaction func()) *pendingTxPool {
 	return &pendingTxPool{
 		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
 		transactionsByHash:     make(map[string]*pendingTransaction),
 		transactionList:        list.New(),
 		lock:                   &sync.RWMutex{},
+		onNewTransaction:       onNewTransaction,
 
 		metrics: newPendingPoolMetrics(metricFactory),
 	}
@@ -51,6 +52,7 @@ type pendingTxPool struct {
 	currentSizeInBytes uint32
 	transactionsByHash map[string]*pendingTransaction
 	transactionList    *list.List
+	onNewTransaction   func()
 	lock               *sync.RWMutex
 
 	pendingPoolSizeInBytes func() uint32
@@ -85,6 +87,8 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayNode
 	p.metrics.transactionCountGauge.Inc()
 	p.metrics.poolSizeInBytesGauge.AddUint32(size)
 	p.metrics.transactionRatePerSecond.Measure(1)
+
+	p.onNewTransaction()
 
 	return key, nil
 }

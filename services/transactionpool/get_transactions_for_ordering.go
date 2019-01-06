@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type rejectedTransaction struct {
@@ -38,8 +39,9 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		return nil, err
 	}
 
-	transactions := s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
 	vctx := s.createValidationContext()
+
+	transactions := s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
 
 	ongoing := &ongoingResult{
 		logger:               s.logger,
@@ -50,8 +52,19 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	err := ongoing.runPreOrderValidations(ctx, s.virtualMachine, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 
-	ongoing.notifyRejections(ctx, s.pendingPool)
+	if !ongoing.hasEnoughTransactions(1) {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second) // TODO (v1) move to config
+		defer cancel()
+		hasNewTransactions := <-s.transactionWaiter.waitFor(timeoutCtx, 1)
 
+		if hasNewTransactions {
+			ongoing.incomingTransactions = s.pendingPool.getBatch(input.MaxNumberOfTransactions, input.MaxTransactionsSetSizeKb*1024)
+			ongoing.filterInvalidTransactions(ctx, vctx, s.committedPool)
+			err = ongoing.runPreOrderValidations(ctx, s.virtualMachine, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
+		}
+	}
+
+	ongoing.notifyRejections(ctx, s.pendingPool)
 	out := &services.GetTransactionsForOrderingOutput{SignedTransactions: ongoing.validTransactions}
 
 	return out, err
@@ -114,4 +127,8 @@ func (r *ongoingResult) runPreOrderValidations(ctx context.Context, vm services.
 	}
 
 	return err
+}
+
+func (r *ongoingResult) hasEnoughTransactions(numOfTransactions int) bool {
+	return len(r.validTransactions) >= numOfTransactions
 }

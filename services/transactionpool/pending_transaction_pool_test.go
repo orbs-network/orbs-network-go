@@ -169,6 +169,17 @@ func TestPendingTransactionPoolCallsRemovalListenerWhenRemovingTransaction(t *te
 	})
 }
 
+func TestPendingPoolNotifiesOnNewTransactions(t *testing.T) {
+	var called bool
+	p := NewPendingPool(func() uint32 { return 100000 }, metric.NewRegistry(), func() {
+		called = true
+	})
+
+	p.add(builders.Transaction().Build(), nodeAddress)
+
+	require.True(t, called, "pending transaction pool did not notify onNewTransaction")
+}
+
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
 		p.add(tx, nodeAddress)
@@ -177,5 +188,5 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 
 func makePendingPool() *pendingTxPool {
 	metricFactory := metric.NewRegistry()
-	return NewPendingPool(func() uint32 { return 100000 }, metricFactory)
+	return NewPendingPool(func() uint32 { return 100000 }, metricFactory, func() {})
 }

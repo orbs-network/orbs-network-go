@@ -199,3 +199,21 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 		require.NoError(t, <-doneWait, "did not resolve after block has been committed")
 	})
 }
+
+func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(ctx)
+
+		ch := make(chan int)
+
+		go func() {
+			out, err := h.getTransactionsForOrdering(ctx, 2, 1)
+			require.NoError(t, err)
+			ch <- len(out.SignedTransactions)
+		}()
+
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
+
+		require.EqualValues(t, 1, <-ch, "did not wait for transaction to reach pool")
+	})
+}
