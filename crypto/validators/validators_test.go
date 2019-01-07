@@ -4,9 +4,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/crypto/validators"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
@@ -25,6 +27,8 @@ func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
 
 }
 
+// TODO(v1) at least think about it - some kind of mutation testing should be done here as every tampered bit of block data should throw an error
+// Suggestion: table test: Start with validBlockValidatorContext(), running a mutator() that modifies a single property, then require(error).
 func TestValidateBlockHash(t *testing.T) {
 
 	t.Run("should return error on nil transaction or results block", func(t *testing.T) {
@@ -33,6 +37,18 @@ func TestValidateBlockHash(t *testing.T) {
 			ResultsBlock:      nil,
 		}
 		require.Error(t, ValidateBlockHash(emptyBlock), "should return error on nil transaction or results block")
+	})
+
+	t.Run("should return error on tampered transactions block", func(t *testing.T) {
+		ctxToTest := validBlockValidatorContext()
+		ctxToTest.TransactionsBlock.Header.MutateTimestamp(primitives.TimestampNano(time.Now().UnixNano() + 1000))
+		require.Error(t, ValidateBlockHash(ctxToTest), "hash validation of tampered transaction block should return error")
+	})
+
+	t.Run("should return error on tampered results block", func(t *testing.T) {
+		ctxToTest := validBlockValidatorContext()
+		ctxToTest.ResultsBlock.Header.MutateTimestamp(primitives.TimestampNano(time.Now().UnixNano() + 1000))
+		require.Error(t, ValidateBlockHash(ctxToTest), "hash validation of tampered results block should return error")
 	})
 
 	t.Run("should return nil on block with valid hashes", func(t *testing.T) {
