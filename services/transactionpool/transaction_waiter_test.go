@@ -39,7 +39,7 @@ func TestTransactionWaiterDoesNotReturnIfIncrementedLessThanExpected(t *testing.
 		waiter := newTransactionWaiter()
 
 		ch := waiter.waitFor(cancellableContext, 2)
-		waiter.inc()
+		waiter.inc(parent)
 		cancelWaitingContext()
 
 		select {
@@ -60,8 +60,8 @@ func TestTransactionWaiterReturnsAfterThresholdIsMet(t *testing.T) {
 
 		ch := waiter.waitFor(ctx, 2)
 
-		waiter.inc()
-		waiter.inc()
+		waiter.inc(ctx)
+		waiter.inc(ctx)
 
 		select {
 		case endCond := <-ch:
@@ -81,7 +81,7 @@ func TestTransactionWaiterDoesNotBlockIncWhenNoOneIsWaiting(t *testing.T) {
 		ch := make(chan struct{})
 
 		go func() {
-			waiter.inc()
+			waiter.inc(parent)
 			close(ch)
 		}()
 

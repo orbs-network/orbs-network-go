@@ -33,12 +33,15 @@ func (w *transactionWaiter) waitFor(ctx context.Context, numOfNotificationsToWai
 	return ch
 }
 
-func (w *transactionWaiter) inc() {
+func (w *transactionWaiter) inc(ctx context.Context) {
 	if !w.waiting {
 		return
 	}
 	go func() { // so that we don't block anyone incrementing
-		w.incremented <- struct{}{}
+		select {
+		case w.incremented <- struct{}{}:
+		case <-ctx.Done():
+		}
 	}()
 }
 

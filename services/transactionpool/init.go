@@ -25,7 +25,8 @@ func NewTransactionPool(ctx context.Context,
 		blockHeightReporter = synchronization.NopHeightReporter{}
 	}
 	waiter := newTransactionWaiter()
-	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory, waiter.inc)
+	onNewTransaction := func() { waiter.inc(ctx) }
+	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory, onNewTransaction)
 	committedPool := NewCommittedPool(metricFactory)
 
 	logger := parent.WithTags(LogTag)
