@@ -131,7 +131,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	}
 
 	// validate the lhBlock consensus (lhBlock and proof)
-	if shouldVerify(input.Mode) {
+	if shouldValidate(input.Mode) {
 		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
 		if err != nil {
 			return nil, err
@@ -219,7 +219,7 @@ func shouldCreateGenesisBlock(blockPair *protocol.BlockPairContainer) bool {
 	return blockPair == nil
 }
 
-func shouldVerify(mode handlers.HandleBlockConsensusMode) bool {
+func shouldValidate(mode handlers.HandleBlockConsensusMode) bool {
 	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
 }
 

@@ -123,6 +123,27 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 // TODO (v1) Complete this including unit tests, see: https://tree.taiga.io/project/orbs-network/us/567
 func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+
+	if err := validLeanHelixBlockPair(blockPair); err != nil {
+		return err
+	}
+
+	var (
+		blockProof     = blockPair.TransactionsBlock.BlockProof.LeanHelix()
+		prevBlockProof = prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
+	)
+
+	isBlockProofValid := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, prevBlockProof)
+	if !isBlockProofValid {
+		return errors.Errorf("LeanHelix ValidateBlockConsensus - block proof is not valid!!")
+	}
+	return nil
+}
+
+func validLeanHelixBlockPair(blockPair *protocol.BlockPairContainer) error {
+	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
+		return errors.New("nil blockPair or its TransactionsBlock or ResultsBlock")
+	}
 	if blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
 		return errors.New("nil block proof")
 	}
@@ -133,16 +154,9 @@ func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 	if !blockPair.ResultsBlock.BlockProof.IsTypeLeanHelix() {
 		return errors.Errorf("incorrect block proof type for results block: %v", blockPair.ResultsBlock.BlockProof.Type())
 	}
-
 	// same block proof in txBlock and rxBlock
 	if !bytes.Equal(blockPair.TransactionsBlock.BlockProof.LeanHelix(), blockPair.ResultsBlock.BlockProof.LeanHelix()) {
 		return errors.Errorf("TransactionsBlock LeanHelix block proof and  ResultsBlock LeanHelix block proof do not match")
-	}
-
-	// TODO (v1) Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
-	isBlockProofValid := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockPair.TransactionsBlock.BlockProof.LeanHelix(), prevBlockPair.TransactionsBlock.BlockProof.LeanHelix())
-	if !isBlockProofValid {
-		return errors.Errorf("LeanHelix ValidateBlockConsensus - block proof is not valid!!")
 	}
 	return nil
 }
