@@ -61,7 +61,7 @@ func TestTransactionBatchRejectsTransactionsFailingStaticValidation(t *testing.T
 		tx2 := builders.TransferTransaction().Build()
 
 		b := newTransactionBatch(log.GetLogger(), Transactions{tx1, tx2})
-		b.filterInvalidTransactions(ctx, &fakeValidator{Transactions{tx2}}, &fakeCommittedChecker{})
+		b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{})
 
 		require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
 
@@ -97,7 +97,7 @@ func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing
 		tx2 := builders.TransferTransaction().Build()
 
 		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.GetLogger()}
-		err := b.runPreOrderValidations(ctx, &fakeValidator{Transactions{tx2}}, 0, 0)
+		err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER}}, 0, 0)
 
 		require.NoError(t, err, "this should really never happen")
 		require.Empty(t, b.transactionsForPreOrder, "did not empty transaction for preorder list")
@@ -107,6 +107,18 @@ func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing
 
 		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER, b.transactionsToReject[0].status, "invalid transaction was not rejected")
 		require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
+	})
+}
+
+func TestTransactionBatchPanicsIfPreOrderResultsHasDifferentLengthThanSent(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		tx1 := builders.TransferTransaction().Build()
+		tx2 := builders.TransferTransaction().Build()
+
+		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.GetLogger()}
+		require.Panics(t, func() {
+			b.runPreOrderValidations(ctx, &fakeValidator{}, 0, 0)
+		}, "pre order validation returning statuses with length that differs from number of txs sent did not panic")
 	})
 }
 
@@ -131,20 +143,12 @@ func TestTransactionBatchNotifiesOnRejectedTransactions(t *testing.T) {
 }
 
 type fakeValidator struct {
-	invalid Transactions
+	statuses []protocol.TransactionStatus
+	invalid  Transactions
 }
 
-func (v *fakeValidator) preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) (result []protocol.TransactionStatus, err error) {
-	for _, txToValidate := range txs {
-		for _, tx := range v.invalid {
-			if tx.Equal(txToValidate) {
-				result = append(result, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
-			}
-		}
-		result = append(result, protocol.TRANSACTION_STATUS_PRE_ORDER_VALID)
-	}
-
-	return
+func (v *fakeValidator) preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) ([]protocol.TransactionStatus, error) {
+	return v.statuses, nil
 }
 
 type fakeCommittedChecker struct {

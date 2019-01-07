@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 )
 
 type rejectedTransaction struct {
@@ -109,6 +110,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		}
 	}
 
+	// even on error we want to reject transactions first to their senders before exiting
 	batch.notifyRejections(ctx, s.pendingPool)
 	out := &services.GetTransactionsForOrderingOutput{SignedTransactions: batch.validTransactions}
 
@@ -156,8 +158,10 @@ func (r *transactionBatch) accept(transaction *protocol.SignedTransaction) {
 func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator preOrderValidator, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) error {
 	preOrderResults, err := validator.preOrderCheck(ctx, r.transactionsForPreOrder, currentBlockHeight, currentBlockTimestamp)
 
-	// even on error we want to reject transactions first to their senders before exiting
-	//TODO (v1) what if I got back a different number of transactions than what I sent
+	if len(preOrderResults) != len(r.transactionsForPreOrder) {
+		panic(errors.Errorf("BUG: sent %d transactions for pre-order check and got %d statuses", len(r.transactionsForPreOrder), len(preOrderResults)))
+	}
+
 	for i, tx := range r.transactionsForPreOrder {
 		if preOrderResults[i] == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
 			r.accept(tx)

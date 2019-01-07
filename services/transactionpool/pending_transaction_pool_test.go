@@ -17,7 +17,6 @@ import (
 var nodeAddress = keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
 
 func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		p := makePendingPool()
 		require.Zero(t, p.currentSizeInBytes, "New pending pool created with non-zero size")
@@ -39,7 +38,6 @@ func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testi
 }
 
 func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		p := makePendingPool()
 		tx1 := builders.TransferTransaction().Build()
@@ -59,7 +57,6 @@ func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing
 }
 
 func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransaction(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	add(p, builders.TransferTransaction().Build(), builders.TransferTransaction().Build())
@@ -70,7 +67,6 @@ func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransa
 }
 
 func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimitInBytes(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	tx1 := builders.TransferTransaction().Build()
@@ -84,7 +80,6 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimitInBytes(t *testing.
 }
 
 func TestPendingTransactionPoolGetBatchDoesNotExceedLengthLimit(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	tx1 := builders.TransferTransaction().Build()
@@ -98,7 +93,6 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedLengthLimit(t *testing.T) {
 }
 
 func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	// create 50 transactions so as to minimize the chance of randomly returning transactions in the expected order
@@ -114,7 +108,6 @@ func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
 }
 
 func TestPendingTransactionPoolClearsExpiredTransactions(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		p := makePendingPool()
 
@@ -189,8 +182,4 @@ func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 func makePendingPool() *pendingTxPool {
 	metricFactory := metric.NewRegistry()
 	return NewPendingPool(func() uint32 { return 100000 }, metricFactory, func() {})
-}
-
-func txsOf(txs Transactions, sizeInBytes uint32) Transactions {
-	return txs
 }
