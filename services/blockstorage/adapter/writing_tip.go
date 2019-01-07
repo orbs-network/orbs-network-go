@@ -16,9 +16,10 @@ type writingTip struct {
 	file       *os.File
 	currentPos int64
 	logger     log.BasicLogger
+	codec      blockCodec
 }
 
-func newWritingTip(ctx context.Context, dir, filename string, logger log.BasicLogger) (*writingTip, error) {
+func newWritingTip(ctx context.Context, dir, filename string, codec blockCodec, logger log.BasicLogger) (*writingTip, error) {
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to verify data directory exists")
@@ -37,6 +38,7 @@ func newWritingTip(ctx context.Context, dir, filename string, logger log.BasicLo
 	result := &writingTip{
 		file:   file,
 		logger: logger,
+		codec:  codec,
 	}
 
 	go func() {
@@ -58,7 +60,7 @@ func (wt *writingTip) writeBlockAtOffset(pos int64, blockPair *protocol.BlockPai
 		}
 	}
 
-	err := encode(blockPair, wt.file)
+	err := wt.codec.encode(blockPair, wt.file)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to write block")
 	}
