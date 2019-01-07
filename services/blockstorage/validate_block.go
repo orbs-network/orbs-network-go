@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO(v1) implement all block checks
+// TODO Implement optimization for full structural validation here (https://github.com/orbs-network/orbs-network-go/issues/684)
 func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
