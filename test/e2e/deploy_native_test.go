@@ -33,12 +33,12 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		var dcExResult codec.ExecutionResult
 		var dcTxStatus codec.TransactionStatus
 		var dcErr error
-		require.True(t, test.Eventually(5*time.Second, func() bool {
+		require.True(t, test.Eventually(20*time.Second, func() bool {
 			dcExResult, dcTxStatus, dcErr = h.deployNativeContract(OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
 			return dcErr == nil &&
 				dcTxStatus == codec.TRANSACTION_STATUS_COMMITTED &&
 				dcExResult == codec.EXECUTION_RESULT_SUCCESS
-		}), "expected contract to deploy successfully within 5 seconds, got error=%s, status=%s, execution result=%s", dcErr, dcTxStatus, dcExResult)
+		}), "expected contract to deploy successfully within 20 seconds, got error=%s, status=%s, execution result=%s", dcErr, dcTxStatus, dcExResult)
 		printTestTime(t, "send deploy - end", &lt)
 
 		// check counter

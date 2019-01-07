@@ -2,7 +2,6 @@ package asb_ether
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
@@ -20,13 +19,12 @@ const CONTRACT_NAME = "asb_ether"
 /////////////////////////////////////////////////////////////////
 // contract starts here
 
-var PUBLIC = sdk.Export(setAsbAddr /* TODO v1 should be system*/, getAsbAddr, getAsbAbi, getTokenContract, transferIn, transferOut)
-var SYSTEM = sdk.Export(_init, setAsbAbi, setTokenContract)
+var PUBLIC = sdk.Export(setAsbAddr, setTokenContract, resetContract /* TODO V1 security issue*/, getAsbAddr, getAsbAbi, getTokenContract, transferIn, transferOut)
+var SYSTEM = sdk.Export(_init, setAsbAbi)
 var EVENTS = sdk.Export(OrbsTransferredOut)
 
 // defaults
 const defaultTokenContract = erc20proxy.CONTRACT_NAME
-const defaultAsbAddr = "stam" // TODO v1 do we put a default asb_eth_contract here or force setting after init
 const defaultAsbAbi = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"tuid","type":"uint256"},{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"bytes20"},{"indexed":false,"name":"value","type":"uint256"}],"name":"EthTransferredOut","type":"event"}]`
 
 // state keys
@@ -35,17 +33,17 @@ var ASB_ETH_ADDR_KEY = []byte("_ASB_ETH_ADDR_KEY_")
 var ASB_ABI_KEY = []byte("_ASB_ABI_KEY_")
 var OUT_TUID_KEY = []byte("_OUT_TUID_KEY_")
 var IN_TUID_KEY = []byte("_IN_TUID_KEY_")
+var IN_TUID_MAX_KEY = []byte("_IN_TUID_KEY_")
 
 func _init() {
-	setOutTuid(0)
-	setAsbAddr(defaultAsbAddr)
 	setAsbAbi(defaultAsbAbi)
 	setTokenContract(defaultTokenContract)
+	// TODO v1 do we have someway to start with a real asbEthAddress ?
 }
 
 type EthTransferredOut struct {
 	Tuid  *big.Int
-	From  common.Address
+	From  [20]byte
 	To    [20]byte
 	Value *big.Int
 }
@@ -58,9 +56,9 @@ func OrbsTransferredOut(
 }
 
 func transferIn(hexEncodedEthTxHash string) {
-	absAddr := getAsbAddr()
+	asbAddr := getAsbAddr()
 	e := &EthTransferredOut{}
-	ethereum.GetTransactionLog(absAddr, getAsbAbi(), hexEncodedEthTxHash, "EthTransferredOut", e)
+	ethereum.GetTransactionLog(asbAddr, getAsbAbi(), hexEncodedEthTxHash, "EthTransferredOut", e)
 
 	if e.Tuid == nil {
 		panic("Got nil tuid from logs")
@@ -80,6 +78,7 @@ func transferIn(hexEncodedEthTxHash string) {
 	service.CallMethod(getTokenContract(), "mint", e.To[:], e.Value.Uint64())
 
 	setInTuid(inTuidKey)
+	setInTuidMax(e.Tuid.Uint64())
 }
 
 func transferOut(ethAddr []byte, amount uint64) {
@@ -104,6 +103,14 @@ func setInTuid(tuidKey []byte) {
 	state.WriteUint32(tuidKey, 1)
 }
 
+func getInTuidMax() uint64 {
+	return state.ReadUint64(IN_TUID_MAX_KEY)
+}
+
+func setInTuidMax(next uint64) {
+	state.WriteUint64(IN_TUID_MAX_KEY, next)
+}
+
 func getOutTuid() uint64 {
 	return state.ReadUint64(OUT_TUID_KEY)
 }
@@ -116,16 +123,16 @@ func getAsbAddr() string {
 	return state.ReadString(ASB_ETH_ADDR_KEY)
 }
 
-func setAsbAddr(absAddr string) { // upgrade
-	state.WriteString(ASB_ETH_ADDR_KEY, absAddr)
+func setAsbAddr(asbAddr string) { // upgrade
+	state.WriteString(ASB_ETH_ADDR_KEY, asbAddr)
 }
 
 func getAsbAbi() string {
 	return state.ReadString(ASB_ABI_KEY)
 }
 
-func setAsbAbi(absAbi string) { // upgrade
-	state.WriteString(ASB_ABI_KEY, absAbi)
+func setAsbAbi(asbAbi string) { // upgrade
+	state.WriteString(ASB_ABI_KEY, asbAbi)
 }
 
 func getTokenContract() string {
@@ -134,4 +141,13 @@ func getTokenContract() string {
 
 func setTokenContract(erc20Proxy string) { // upgrade
 	state.WriteString(TOKEN_CONTRACT_KEY, erc20Proxy)
+}
+
+func resetContract() {
+	setOutTuid(0)
+	max := int64(getInTuidMax())
+	for i := int64(0); i <= max; i++ {
+		state.Clear(genInTuidKey(big.NewInt(i).Bytes()))
+	}
+	setInTuidMax(0)
 }

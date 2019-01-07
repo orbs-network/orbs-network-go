@@ -19,4 +19,5 @@ rm -rf _bin
 docker cp orbs_build:$SRC/_bin .
 
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
+docker build -f ./docker/build/Dockerfile.e2e -t orbs:export_e2e .
 docker build -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
