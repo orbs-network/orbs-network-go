@@ -24,16 +24,11 @@ func TestTransactionBatchFetchesUpToMaxNumOfTransactions(t *testing.T) {
 		}
 
 		f := &fakeFetcher{
-			transactions: Transactions{tx1},
+			transactions: Transactions{tx1, tx2, tx3},
 		}
 
 		b.fetchUsing(f)
 
-		f.transactions = Transactions{tx2, tx3}
-
-		b.fetchUsing(f)
-
-		require.Equal(t, 2, b.totalFetched, "did not fetch exactly 2 transactions")
 		require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
 	})
 }
@@ -51,17 +46,12 @@ func TestTransactionBatchFetchesUpToSizeLimit(t *testing.T) {
 		}
 
 		f := &fakeFetcher{
-			transactions: Transactions{tx1},
+			transactions: Transactions{tx1, tx2, tx3},
 		}
 
 		b.fetchUsing(f)
 
-		f.transactions = Transactions{tx2, tx3}
-
-		b.fetchUsing(f)
-
 		require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
-		require.Equal(t, sizeOf(tx1, tx2), b.totalSize, "did not fetch exactly 2 transactions")
 	})
 }
 
@@ -194,7 +184,8 @@ type fakeFetcher struct {
 	transactions Transactions
 }
 
-func (f *fakeFetcher) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions, totalSize uint32) {
+func (f *fakeFetcher) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions) {
+	var totalSize uint32
 	for i, tx := range f.transactions {
 		if sizeLimitInBytes > 0 && totalSize+sizeOf(tx) > sizeLimitInBytes {
 			break

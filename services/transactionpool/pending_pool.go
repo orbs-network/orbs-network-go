@@ -124,9 +124,11 @@ func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, re
 	return nil
 }
 
-func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions, sizeInBytes uint32) {
+func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+
+	var sizeInBytes uint32
 
 	e := p.transactionList.Back()
 	for {

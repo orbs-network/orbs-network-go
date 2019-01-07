@@ -46,11 +46,11 @@ func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing
 
 		k, _ := p.add(tx1, nodeAddress)
 		require.True(t, p.has(tx1), "has() returned false for an added item")
-		require.Len(t, txsOf(p.getBatch(1, 0)), 1, "getBatch() did not return an added item")
+		require.Len(t, p.getBatch(1, 0), 1, "getBatch() did not return an added item")
 
 		p.remove(ctx, k, 0)
 		require.False(t, p.has(tx1), "has() returned true for removed item")
-		require.Empty(t, txsOf(p.getBatch(1, 0)), "getBatch() returned a removed item")
+		require.Empty(t, p.getBatch(1, 0), "getBatch() returned a removed item")
 
 		require.NotPanics(t, func() {
 			p.remove(ctx, k, 0)
@@ -64,7 +64,7 @@ func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransa
 
 	add(p, builders.TransferTransaction().Build(), builders.TransferTransaction().Build())
 
-	txSet := txsOf(p.getBatch(3, 0))
+	txSet := p.getBatch(3, 0)
 
 	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
 }
@@ -78,12 +78,9 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimitInBytes(t *testing.
 	add(p, tx1, tx2, builders.TransferTransaction().Build())
 
 	slightlyMoreThanTwoTransactionsInBytes := uint32(len(tx1.Raw()) + len(tx2.Raw()) + 1)
-	txSet, size := p.getBatch(3, slightlyMoreThanTwoTransactionsInBytes)
+	txSet := p.getBatch(3, slightlyMoreThanTwoTransactionsInBytes)
 
 	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
-	require.Condition(t, func() bool {
-		return size > 0 && size <= slightlyMoreThanTwoTransactionsInBytes
-	}, "size was not within expected range, expected 0 < %d <= %d", size, slightlyMoreThanTwoTransactionsInBytes)
 }
 
 func TestPendingTransactionPoolGetBatchDoesNotExceedLengthLimit(t *testing.T) {
@@ -95,7 +92,7 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedLengthLimit(t *testing.T) {
 	tx3 := builders.TransferTransaction().Build()
 	add(p, tx1, tx2, tx3)
 
-	txSet := txsOf(p.getBatch(2, 0))
+	txSet := p.getBatch(2, 0)
 
 	require.Len(t, txSet, 2, "expected 2 transactions but got %v transactions: %s", len(txSet), txSet)
 }
@@ -111,7 +108,7 @@ func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
 		add(p, transactions[i])
 	}
 
-	txSet := txsOf(p.getBatch(uint32(len(transactions)), 0))
+	txSet := p.getBatch(uint32(len(transactions)), 0)
 
 	require.Equal(t, transactions, txSet, "got transactions in wrong order")
 }
