@@ -103,9 +103,10 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 	}
 
+	minNumOfTransactions := 1
 	batch, err := runBatch()
-	if !batch.hasEnoughTransactions(1) {
-		if <-s.transactionWaiter.waitFor(timeoutCtx, 1) {
+	if !batch.hasEnoughTransactions(minNumOfTransactions) {
+		if <-s.transactionWaiter.waitFor(timeoutCtx, minNumOfTransactions) {
 			batch, err = runBatch()
 		}
 	}
