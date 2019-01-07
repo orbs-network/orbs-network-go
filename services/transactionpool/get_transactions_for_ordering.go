@@ -92,7 +92,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	ongoing := &transactionBatch{
 		logger:               s.logger,
 		maxNumOfTransactions: input.MaxNumberOfTransactions,
-		//sizeLimit: input.MaxTransactionsSetSizeKb*1024, TODO(v1) add size limit test case
+		sizeLimit:            input.MaxTransactionsSetSizeKb * 1024,
 	}
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolMaxWaitTimeForFullBlockCapacity())
