@@ -10,7 +10,7 @@ import (
 
 func TestCodec_EnforcesBlockSizeLimit(t *testing.T) {
 	largeBlock := builders.BlockPair().WithHeight(1).WithTransactions(6).Build()
-	c := newCodec(5)
+	c := newSimpleCodec(5)
 	err := c.encode(largeBlock, new(bytes.Buffer))
 
 	require.Error(t, err)
@@ -20,7 +20,7 @@ func TestCodec_EncodesAndDecodes(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 	rw := new(bytes.Buffer)
-	c := newCodec(1024 * 1024)
+	c := newSimpleCodec(1024 * 1024)
 
 	err := c.encode(block, rw)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestCodec_DetectsDataCorruption(t *testing.T) {
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 
 	// serialize
-	c := newCodec(1024 * 1024)
+	c := newSimpleCodec(1024 * 1024)
 	encodedBlock := new(bytes.Buffer)
 	err := c.encode(block, encodedBlock)
 	blockBytes := encodedBlock.Bytes()

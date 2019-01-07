@@ -18,8 +18,6 @@ import (
 )
 
 // TODO V1 TBD - do we want to fuss with simulating io errors? (tampering FS)
-// TODO V1 init flow - build indexes
-// TODO V1 test that if writing a block while scanning is ongoing we will receive the new
 // TODO V1 can we detect errors that indicate we need to open a writing file handle?
 // TODO V1 file format includes a file version, vchain id, network id, and if it doesn't match don't run!
 
