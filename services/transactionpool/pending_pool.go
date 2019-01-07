@@ -124,10 +124,7 @@ func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, re
 	return nil
 }
 
-func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions {
-	txs := make(Transactions, 0, maxNumOfTransactions)
-	accumulatedSize := uint32(0)
-
+func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions, sizeInBytes uint32) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -143,11 +140,12 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 
 		tx := e.Value.(*protocol.SignedTransaction)
 		//
-		accumulatedSize += sizeOfSignedTransaction(tx)
-		if sizeLimitInBytes > 0 && accumulatedSize > sizeLimitInBytes {
+		txSize := sizeOfSignedTransaction(tx)
+		if sizeLimitInBytes > 0 && sizeInBytes+txSize > sizeLimitInBytes {
 			break
 		}
 
+		sizeInBytes += txSize
 		txs = append(txs, tx)
 
 		e = e.Prev()
@@ -155,7 +153,7 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 		p.transactionPickedFromQueueUnderMutex(tx)
 	}
 
-	return txs
+	return
 }
 
 func (p *pendingTxPool) get(txHash primitives.Sha256) *protocol.SignedTransaction {

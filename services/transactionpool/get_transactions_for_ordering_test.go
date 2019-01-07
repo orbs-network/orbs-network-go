@@ -33,8 +33,35 @@ func TestTransactionBatchFetchesUpToMaxNumOfTransactions(t *testing.T) {
 
 		b.fetchUsing(f)
 
-		require.Equal(t, b.totalFetched, 2, "did not fetch exactly 2 transactions")
+		require.Equal(t, 2, b.totalFetched, "did not fetch exactly 2 transactions")
 		require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
+	})
+}
+
+func TestTransactionBatchFetchesUpToSizeLimit(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		tx1 := builders.TransferTransaction().Build()
+		tx2 := builders.TransferTransaction().Build()
+		tx3 := builders.TransferTransaction().Build()
+
+		b := &transactionBatch{
+			logger:               log.GetLogger(),
+			sizeLimit:            sizeOf(tx1, tx2) + 1,
+			maxNumOfTransactions: 100,
+		}
+
+		f := &fakeFetcher{
+			transactions: Transactions{tx1},
+		}
+
+		b.fetchUsing(f)
+
+		f.transactions = Transactions{tx2, tx3}
+
+		b.fetchUsing(f)
+
+		require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
+		require.Equal(t, sizeOf(tx1, tx2), b.totalSize, "did not fetch exactly 2 transactions")
 	})
 }
 
@@ -167,12 +194,25 @@ type fakeFetcher struct {
 	transactions Transactions
 }
 
-func (f *fakeFetcher) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions {
-	max := maxNumOfTransactions
-	if uint32(len(f.transactions)) < max {
-		max = uint32(len(f.transactions))
+func (f *fakeFetcher) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions, totalSize uint32) {
+	for i, tx := range f.transactions {
+		if sizeLimitInBytes > 0 && totalSize+sizeOf(tx) > sizeLimitInBytes {
+			break
+		}
+		if uint32(i) == maxNumOfTransactions {
+			break
+		}
+		txs = append(txs, tx)
+		totalSize += sizeOfSignedTransaction(tx)
 	}
-	txs := f.transactions[:max]
-	f.transactions = f.transactions[max:]
-	return txs
+
+	f.transactions = f.transactions[:len(txs)]
+	return
+}
+
+func sizeOf(transactions ...*protocol.SignedTransaction) (size uint32) {
+	for _, tx := range transactions {
+		size += sizeOfSignedTransaction(tx)
+	}
+	return
 }

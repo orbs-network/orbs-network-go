@@ -25,10 +25,11 @@ type transactionBatch struct {
 	transactionsForPreOrder Transactions
 	validTransactions       Transactions
 	totalFetched            int
+	totalSize               uint32
 }
 
 type batchFetcher interface {
-	getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions
+	getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions, sizeInBytes uint32)
 }
 
 type batchValidator interface {
@@ -179,8 +180,9 @@ func (r *transactionBatch) hasEnoughTransactions(numOfTransactions int) bool {
 }
 
 func (r *transactionBatch) fetchUsing(fetcher batchFetcher) {
-	txs := fetcher.getBatch(r.maxNumOfTransactions-uint32(r.totalFetched), r.sizeLimit)
+	txs, batchSize := fetcher.getBatch(r.maxNumOfTransactions-uint32(r.totalFetched), r.sizeLimit-r.totalSize)
 	r.incomingTransactions = append(r.incomingTransactions, txs...)
 	r.totalFetched += len(txs)
+	r.totalSize += batchSize
 
 }
