@@ -2,7 +2,6 @@ package publicapi
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
@@ -17,19 +16,18 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
 
 	if input.ClientRequest == nil {
-		err := errors.Errorf("error missing input (client request is nil)")
-		s.logger.Info("send transaction received missing input", log.Error(err), trace.LogFieldFrom(ctx))
+		err := errors.Errorf("client request is nil")
+		s.logger.Info("send transaction received missing input", log.Error(err))
 		return nil, err
 	}
 
-	tx := input.ClientRequest.SignedTransaction()
-	txHash := digest.CalcTxHash(tx.Transaction())
+	tx := input.ClientRequest.SignedTransaction().Transaction()
+	txHash := digest.CalcTxHash(tx)
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
 
-	if txStatus := isTransactionRequestValid(s.config, tx.Transaction()); txStatus != protocol.TRANSACTION_STATUS_RESERVED {
-		err := errors.Errorf("error input %s", txStatus.String())
+	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
 		logger.Info("send transaction received input failed", log.Error(err))
-		return toSendTxOutput(&txResponse{transactionStatus: txStatus}), err
+		return toSendTxOutput(&txOutput{transactionStatus: txStatus}), err
 	}
 
 	logger.Info("send transaction request received")
@@ -39,21 +37,23 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
-	addResp, err := s.transactionPool.AddNewTransaction(ctx, &services.AddNewTransactionInput{SignedTransaction: tx})
+	addResp, err := s.transactionPool.AddNewTransaction(ctx, &services.AddNewTransactionInput{
+		SignedTransaction: input.ClientRequest.SignedTransaction(),
+	})
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
 		logger.Info("adding transaction to TransactionPool failed", log.Error(err))
-		return toSendTxOutput(toTxResponse(addResp)), errors.Wrap(err, fmt.Sprintf("error '%s' for transaction result", addResp))
+		return toSendTxOutput(addOutputToTxOutput(addResp)), err
 	}
 
 	if addResp.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED {
 		s.waiter.deleteByChannel(waitResult)
-		return toSendTxOutput(toTxResponse(addResp)), nil
+		return toSendTxOutput(addOutputToTxOutput(addResp)), nil
 	}
 
 	if input.ReturnImmediately != 0 {
 		s.waiter.deleteByChannel(waitResult)
-		return toSendTxOutput(toTxResponse(addResp)), nil
+		return toSendTxOutput(addOutputToTxOutput(addResp)), nil
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, s.config.SendTransactionTimeout())
@@ -62,13 +62,13 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 	obj, err := s.waiter.wait(ctx, waitResult)
 	if err != nil {
 		logger.Info("waiting for transaction to be processed failed")
-		return toSendTxOutput(toTxResponse(addResp)), err
+		return toSendTxOutput(addOutputToTxOutput(addResp)), err
 	}
-	return toSendTxOutput(obj.(*txResponse)), nil
+	return toSendTxOutput(obj.(*txOutput)), nil
 }
 
-func toTxResponse(t *services.AddNewTransactionOutput) *txResponse {
-	return &txResponse{
+func addOutputToTxOutput(t *services.AddNewTransactionOutput) *txOutput {
+	return &txOutput{
 		transactionStatus:  t.TransactionStatus,
 		transactionReceipt: t.TransactionReceipt,
 		blockHeight:        t.BlockHeight,
@@ -76,19 +76,19 @@ func toTxResponse(t *services.AddNewTransactionOutput) *txResponse {
 	}
 }
 
-func toSendTxOutput(transactionOutput *txResponse) *services.SendTransactionOutput {
-	var receiptForClient *protocol.TransactionReceiptBuilder = nil
-	if transactionOutput.transactionReceipt != nil {
-		receiptForClient = protocol.TransactionReceiptBuilderFromRaw(transactionOutput.transactionReceipt.Raw())
-	}
-
+func toSendTxOutput(out *txOutput) *services.SendTransactionOutput {
 	response := &client.SendTransactionResponseBuilder{
-		RequestStatus:      translateTxStatusToResponseCode(transactionOutput.transactionStatus),
-		TransactionReceipt: receiptForClient,
-		TransactionStatus:  transactionOutput.transactionStatus,
-		BlockHeight:        transactionOutput.blockHeight,
-		BlockTimestamp:     transactionOutput.blockTimestamp,
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  translateTransactionStatusToRequestStatus(out.transactionStatus, protocol.EXECUTION_RESULT_RESERVED),
+			BlockHeight:    out.blockHeight,
+			BlockTimestamp: out.blockTimestamp,
+		},
+		TransactionStatus:  out.transactionStatus,
+		TransactionReceipt: nil,
 	}
-
+	if out.transactionReceipt != nil {
+		response.RequestResult.RequestStatus = translateTransactionStatusToRequestStatus(out.transactionStatus, out.transactionReceipt.ExecutionResult())
+		response.TransactionReceipt = protocol.TransactionReceiptBuilderFromRaw(out.transactionReceipt.Raw())
+	}
 	return &services.SendTransactionOutput{ClientResponse: response.Build()}
 }

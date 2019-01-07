@@ -55,11 +55,11 @@ func (s *service) handleSdkAddressGetSignerAddress(executionContext *executionCo
 		return nil, errors.Errorf("invalid SDK address getSignerAddress args: %v", args)
 	}
 
-	if executionContext.transaction == nil {
-		return nil, errors.New("operation does not contain a transaction")
+	if executionContext.transactionOrQuery == nil {
+		return nil, errors.New("operation does not contain a transaction or query")
 	}
 
-	return s.getSignerAddress(executionContext.transaction.Signer())
+	return s.getSignerAddress(executionContext.transactionOrQuery.Signer())
 }
 
 // outputArg0: value ([]byte)

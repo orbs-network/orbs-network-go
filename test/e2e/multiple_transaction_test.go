@@ -61,9 +61,9 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 		// check balance
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "call method - start", &lt)
-			response, err := h.callMethod(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.RawAddress)
-			printTestTime(t, "call method - end", &lt)
+			printTestTime(t, "run query - start", &lt)
+			response, err := h.runQuery(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.RawAddress)
+			printTestTime(t, "run query - end", &lt)
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0] == uint64(70)

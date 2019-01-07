@@ -135,15 +135,15 @@ func (d *driver) generateOrbsFunds(ctx context.Context, t *testing.T, amount *bi
 }
 
 func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
-	balanceResponse := d.network.CallMethod(ctx, builders.Transaction().
+	balanceResponse := d.network.RunQuery(ctx, builders.Query().
 		WithEd25519Signer(d.orbsContractOwnerAddress).
 		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "balanceOf").
 		WithArgs(d.orbsUser.RawAddress).
-		Builder().Transaction, 0)
-	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, balanceResponse.CallMethodResult())
+		Builder(), 0)
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, balanceResponse.QueryResult().ExecutionResult())
 	// check that the tokens got there.
-	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(balanceResponse)
-	value := outputArgsIterator.NextArguments().Uint64Value()
+	argsArray := builders.PackedArgumentArrayDecode(balanceResponse.QueryResult().RawOutputArgumentArrayWithHeader())
+	value := argsArray.ArgumentsIterator().NextArguments().Uint64Value()
 	return value
 }
 

@@ -115,7 +115,7 @@ func (d *driver) generateOrbsFunds(t *testing.T, amount *big.Int) {
 }
 
 func (d *driver) getBalanceInOrbs(t *testing.T) uint64 {
-	response, err := d.harness.callMethod(d.orbsOwner.PublicKey(), erc20proxy.CONTRACT_NAME, "balanceOf", d.orbsUser.RawAddress)
+	response, err := d.harness.runQuery(d.orbsOwner.PublicKey(), erc20proxy.CONTRACT_NAME, "balanceOf", d.orbsUser.RawAddress)
 	require.NoError(t, err, "failed sending  to Orbs")
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult, "failed getting balance in Orbs")
 	return response.OutputArguments[0].(uint64)

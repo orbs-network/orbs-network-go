@@ -58,8 +58,7 @@ func waitForTransactionStatusCommitted(ctx context.Context, network harness.Test
 	return test.Eventually(5*time.Second, func() bool {
 		txStatusOut, err := network.PublicApi(nodeIndex).GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
-				TransactionTimestamp: 0,
-				Txhash:               txHash,
+				TransactionRef: builders.TransactionRef().WithTxHash(txHash).Builder(),
 			}).Build(),
 		})
 		if err != nil {
@@ -85,23 +84,23 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 			var mostRecentTxHash primitives.Sha256
 
 			// generate some blocks with state
-			contract := network.GetBenchmarkTokenContract()
+			contract := network.BenchmarkTokenContract()
 			for i := 0; i < transfers; i++ {
-				_, txHash := contract.SendTransfer(ctx, 0, transferAmount, 0, 1)
+				_, txHash := contract.Transfer(ctx, 0, transferAmount, 0, 1)
 				mostRecentTxHash = txHash
 			}
 
 			network.WaitForTransactionInState(ctx, mostRecentTxHash)
 
 			network = restartPreservingBlocks()
-			contract = network.GetBenchmarkTokenContract()
+			contract = network.BenchmarkTokenContract()
 
 			// wait for the most recent block height with transactions to reach state storage:
 			network.WaitForTransactionInState(ctx, mostRecentTxHash)
 
 			// verify state in both nodes
-			balanceNode0 := contract.CallGetBalance(ctx, 0, 1)
-			balanceNode1 := contract.CallGetBalance(ctx, 1, 1)
+			balanceNode0 := contract.GetBalance(ctx, 0, 1)
+			balanceNode1 := contract.GetBalance(ctx, 1, 1)
 
 			require.EqualValues(t, totalAmount, balanceNode0, "expected transfers to reflect in leader state")
 			require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")

@@ -63,7 +63,6 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	s.sdkHandler = handler
 }
 
-// TODO(v1): input.CallingService is probably not needed, can remove from protos
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -73,7 +72,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
-			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED,
 		}, err
 	}
 
@@ -87,7 +86,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
-			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}
 
@@ -107,7 +106,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
 			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
-			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}
 

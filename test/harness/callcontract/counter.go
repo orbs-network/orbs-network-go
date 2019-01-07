@@ -1,4 +1,4 @@
-package contracts
+package callcontract
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 )
 
 type CounterClient interface {
-	SendDeployCounterContract(ctx context.Context, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256)
-	SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) (*client.SendTransactionResponse, primitives.Sha256)
-	CallCounterGet(ctx context.Context, nodeIndex int) uint64
+	DeployCounterContract(ctx context.Context, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256)
+	CounterAdd(ctx context.Context, nodeIndex int, amount uint64) (*client.SendTransactionResponse, primitives.Sha256)
+	CounterGet(ctx context.Context, nodeIndex int) uint64
 }
 
-func (c *contractClient) SendDeployCounterContract(ctx context.Context, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
+func (c *contractClient) DeployCounterContract(ctx context.Context, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.Transaction().
@@ -30,7 +30,7 @@ func (c *contractClient) SendDeployCounterContract(ctx context.Context, nodeInde
 	return c.API.SendTransaction(ctx, tx, nodeIndex)
 }
 
-func (c *contractClient) SendCounterAdd(ctx context.Context, nodeIndex int, amount uint64) (*client.SendTransactionResponse, primitives.Sha256) {
+func (c *contractClient) CounterAdd(ctx context.Context, nodeIndex int, amount uint64) (*client.SendTransactionResponse, primitives.Sha256) {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.Transaction().
@@ -41,14 +41,15 @@ func (c *contractClient) SendCounterAdd(ctx context.Context, nodeIndex int, amou
 	return c.API.SendTransaction(ctx, tx, nodeIndex)
 }
 
-func (c *contractClient) CallCounterGet(ctx context.Context, nodeIndex int) uint64 {
+func (c *contractClient) CounterGet(ctx context.Context, nodeIndex int) uint64 {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
-	tx := builders.NonSignedTransaction().
+	query := builders.Query().
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get").
+		WithArgs().
 		Builder()
 
-	r := c.API.CallMethod(ctx, tx, nodeIndex)
-	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(r)
-	return outputArgsIterator.NextArguments().Uint64Value()
+	out := c.API.RunQuery(ctx, query, nodeIndex)
+	argsArray := builders.PackedArgumentArrayDecode(out.QueryResult().RawOutputArgumentArrayWithHeader())
+	return argsArray.ArgumentsIterator().NextArguments().Uint64Value()
 }

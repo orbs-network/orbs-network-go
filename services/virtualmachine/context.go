@@ -23,7 +23,7 @@ type executionContext struct {
 	transientState           *transientState
 	accessScope              protocol.ExecutionAccessScope
 	batchTransientState      *transientState
-	transaction              *protocol.Transaction
+	transactionOrQuery       TransactionOrQuery
 	eventList                []*protocol.EventBuilder
 }
 
@@ -94,7 +94,7 @@ func newExecutionContextProvider() *executionContextProvider {
 	}
 }
 
-func (cp *executionContextProvider) allocateExecutionContext(lastCommittedBlockHeight primitives.BlockHeight, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, accessScope protocol.ExecutionAccessScope, transaction *protocol.Transaction) (primitives.ExecutionContextId, *executionContext) {
+func (cp *executionContextProvider) allocateExecutionContext(lastCommittedBlockHeight primitives.BlockHeight, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, accessScope protocol.ExecutionAccessScope, transactionOrQuery TransactionOrQuery) (primitives.ExecutionContextId, *executionContext) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
@@ -105,7 +105,7 @@ func (cp *executionContextProvider) allocateExecutionContext(lastCommittedBlockH
 		serviceStack:             []primitives.ContractName{},
 		transientState:           newTransientState(),
 		accessScope:              accessScope,
-		transaction:              transaction,
+		transactionOrQuery:       transactionOrQuery,
 	}
 
 	cp.lastContextIdCounter.Add(cp.lastContextIdCounter, BIG_INT_ONE)

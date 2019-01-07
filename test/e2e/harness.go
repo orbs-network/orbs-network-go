@@ -81,12 +81,12 @@ func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byt
 	return
 }
 
-func (h *harness) callMethod(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.CallMethodResponse, err error) {
-	payload, err := h.client.CreateCallMethodPayload(senderPublicKey, contractName, methodName, args...)
+func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+	payload, err := h.client.CreateRunQueryPayload(senderPublicKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, err
 	}
-	response, err = h.client.CallMethod(payload)
+	response, err = h.client.RunQuery(payload)
 	return
 }
 

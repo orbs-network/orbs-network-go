@@ -66,7 +66,7 @@ func TestSdkEnv_GetBlockDetails_InCallMethod(t *testing.T) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
-		h.runLocalMethod(ctx, "Contract1", "method1")
+		h.processQuery(ctx, "Contract1", "method1")
 
 		h.verifySystemContractCalled(t)
 		h.verifyStateStorageBlockHeightRequested(t)

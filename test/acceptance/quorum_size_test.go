@@ -19,10 +19,10 @@ func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks(t *testing.T) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 
-			contract := network.GetBenchmarkTokenContract()
+			contract := network.BenchmarkTokenContract()
 			contract.DeployBenchmarkToken(ctx, 5)
 
-			out, _ := contract.SendTransfer(ctx, 0, uint64(23), 5, 6)
+			out, _ := contract.Transfer(ctx, 0, uint64(23), 5, 6)
 			require.NotNil(t, out)
 		})
 }
