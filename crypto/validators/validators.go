@@ -13,6 +13,7 @@ type BlockValidatorContext struct {
 	ResultsBlock            *protocol.ResultsBlockContainer
 	CalcReceiptsMerkleRoot  func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
 	CalcStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+	ExpectedBlockHash       primitives.Sha256
 }
 
 var ErrMismatchedTxMerkleRoot = errors.New("ErrMismatchedTxMerkleRoot mismatched transactions merkle root")
@@ -64,6 +65,17 @@ func ValidateResultsBlockStateDiffHash(bvcx *BlockValidatorContext) error {
 	}
 	if !bytes.Equal(expectedStateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
 		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
+	}
+	return nil
+}
+
+func ValidateBlockHash(bvcx *BlockValidatorContext) error {
+	if bvcx.TransactionsBlock == nil || bvcx.ResultsBlock == nil {
+		return errors.New("nil block")
+	}
+	calculatedBlockHash := []byte(digest.CalcBlockHash(bvcx.TransactionsBlock, bvcx.ResultsBlock))
+	if !bytes.Equal(bvcx.ExpectedBlockHash, calculatedBlockHash) {
+		return errors.Wrapf(ErrMismatchedBlockHash, "expected %v actual %v", bvcx.ExpectedBlockHash, calculatedBlockHash)
 	}
 	return nil
 }

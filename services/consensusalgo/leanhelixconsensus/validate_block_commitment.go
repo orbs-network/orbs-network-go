@@ -1,12 +1,10 @@
 package leanhelixconsensus
 
 import (
-	"bytes"
 	"context"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -58,14 +56,12 @@ func validateResultsBlockStateDiffHash(block *protocol.BlockPairContainer, vcx *
 	})
 }
 
-// TODO Consider moving to crypto/validators even though it's only used in this package
 func validateBlockHash(block *protocol.BlockPairContainer, vcx *validatorContext) error {
-	expectedBlockHash := vcx.blockHash
-	calculatedBlockHash := []byte(digest.CalcBlockHash(block.TransactionsBlock, block.ResultsBlock))
-	if !bytes.Equal(expectedBlockHash, calculatedBlockHash) {
-		return errors.Wrapf(validators.ErrMismatchedBlockHash, "expected %v actual %v", expectedBlockHash, calculatedBlockHash)
-	}
-	return nil
+	return validators.ValidateBlockHash(&validators.BlockValidatorContext{
+		TransactionsBlock: block.TransactionsBlock,
+		ResultsBlock:      block.ResultsBlock,
+		ExpectedBlockHash: vcx.blockHash,
+	})
 }
 
 func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash) bool {

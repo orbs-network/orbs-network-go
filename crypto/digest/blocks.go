@@ -12,14 +12,23 @@ func CalcTransactionMetaDataHash(metaData *protocol.TransactionsBlockMetadata) p
 }
 
 func CalcTransactionsBlockHash(transactionsBlock *protocol.TransactionsBlockContainer) primitives.Sha256 {
+	if transactionsBlock == nil || transactionsBlock.Header == nil {
+		return nil
+	}
 	return hash.CalcSha256(transactionsBlock.Header.Raw())
 }
 
 func CalcResultsBlockHash(resultsBlock *protocol.ResultsBlockContainer) primitives.Sha256 {
+	if resultsBlock == nil || resultsBlock.Header == nil {
+		return nil
+	}
 	return hash.CalcSha256(resultsBlock.Header.Raw())
 }
 
 func CalcBlockHash(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) primitives.Sha256 {
+	if transactionsBlock == nil || resultsBlock == nil {
+		return nil
+	}
 	transactionsBlockHash := CalcTransactionsBlockHash(transactionsBlock)
 	resultsBlockHash := CalcResultsBlockHash(resultsBlock)
 	return hash.CalcSha256(transactionsBlockHash, resultsBlockHash)

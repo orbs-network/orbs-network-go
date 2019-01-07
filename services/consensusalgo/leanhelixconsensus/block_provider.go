@@ -121,7 +121,6 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 }
 
-// TODO (v1) Complete this including unit tests, see: https://tree.taiga.io/project/orbs-network/us/567
 func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
 
 	if err := validLeanHelixBlockPair(blockPair); err != nil {
