@@ -16,10 +16,10 @@ type writingTip struct {
 	file       *os.File
 	currentPos int64
 	logger     log.BasicLogger
-	codec      blocksCodec
+	codec      blockCodec
 }
 
-func newWritingTip(ctx context.Context, dir, filename string, codec blocksCodec, logger log.BasicLogger) (*writingTip, error) {
+func newWritingTip(ctx context.Context, dir, filename string, codec blockCodec, logger log.BasicLogger) (*writingTip, error) {
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to verify data directory exists")

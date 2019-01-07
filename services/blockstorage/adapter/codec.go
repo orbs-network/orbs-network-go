@@ -13,12 +13,12 @@ import (
 
 const codecVersion = 0
 
-type simpleCodec struct {
+type codec struct {
 	maxBlockSize int
 }
 
-func newSimpleCodec(maxBlockSize uint32) *simpleCodec {
-	return &simpleCodec{
+func newCodec(maxBlockSize uint32) *codec {
+	return &codec{
 		maxBlockSize: int(maxBlockSize),
 	}
 }
@@ -83,7 +83,7 @@ func writeMessage(writer io.Writer, message membuffers.Message) error {
 	return nil
 }
 
-func (c *simpleCodec) encode(block *protocol.BlockPairContainer, w io.Writer) error {
+func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) error {
 	tb := block.TransactionsBlock
 	rb := block.ResultsBlock
 
@@ -166,7 +166,7 @@ func (c *simpleCodec) encode(block *protocol.BlockPairContainer, w io.Writer) er
 	return nil
 }
 
-func (c *simpleCodec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
+func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	checkSum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
 	tr := io.TeeReader(r, checkSum)
 

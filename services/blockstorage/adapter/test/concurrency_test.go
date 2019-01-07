@@ -23,38 +23,44 @@ func TestCanWriteAndScanConcurrently(t *testing.T) {
 	require.NoError(t, err)
 	defer closeAdapter()
 
-	// write one block
-	err = fsa.WriteNextBlock(blocks[0])
+	err = fsa.WriteNextBlock(blocks[0]) // write only the first block in the chain
 	require.NoError(t, err)
 
-	// scan blocks - signal after first block received, pause and wait for signal to continue, then signal when finish
-	topHeightRead := 0
-	wroteNextBlockSignal, midScanSignal, finishedScanSignal := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	var topHeightRead primitives.BlockHeight
+	secondBlockWritten, midScan, finishedScan := newSignalChan(), newSignalChan(), newSignalChan()
 	go func() {
-		err := fsa.ScanBlocks(1, 1, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
-			if first == 1 {
-				close(midScanSignal)
+		err := fsa.ScanBlocks(1, 1, func(height primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+			if height == 1 {
+				signal(midScan)
 			}
-			<-wroteNextBlockSignal
-			topHeightRead = int(first)
+			waitFor(secondBlockWritten)
+			topHeightRead = height
 			return true
 		})
-		require.NoError(t, err)
-		close(finishedScanSignal)
+		require.NoError(t, err, "expected scan to complete with no error")
+		signal(finishedScan)
 	}()
 
-	// wait for scan to begin
-	<-midScanSignal
+	waitFor(midScan)
 
-	// write another block while scanning is ongoing
-	err = fsa.WriteNextBlock(blocks[1])
+	err = fsa.WriteNextBlock(blocks[1]) // write the second block while a block scan is ongoing
 	require.NoError(t, err, "should be able to write block while scanning")
 
-	// signal scan to proceed
-	close(wroteNextBlockSignal)
+	signal(secondBlockWritten)
 
-	// wait for scan to finish
-	<-finishedScanSignal
+	waitFor(finishedScan)
 
-	require.EqualValues(t, 2, topHeightRead)
+	require.EqualValues(t, 2, topHeightRead, "expected a block scan which began before the last write operation to return the last block written")
+}
+
+func newSignalChan() chan struct{} {
+	return make(chan struct{})
+}
+
+func signal(ch chan struct{}) {
+	close(ch)
+}
+
+func waitFor(ch chan struct{}) {
+	<-ch
 }

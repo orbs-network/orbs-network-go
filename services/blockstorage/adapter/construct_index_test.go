@@ -16,35 +16,30 @@ import (
 func TestConstructIndexFromReader(t *testing.T) {
 	numBlocks := int32(17)
 	ctrlRand := test.NewControlledRand(t)
-	blocks := builders.RandomizedBlockChain(numBlocks, ctrlRand)
+	blocksQueue := builders.RandomizedBlockChain(numBlocks, ctrlRand)
+	lastBlockInChain := blocksQueue[len(blocksQueue)-1]
 
 	rw := new(bytes.Buffer)
 	codec := &mockCodec{}
 
-	// init simulated block sizes
-	blocksSizes := make([]byte, len(blocks))
-	_, _ = ctrlRand.Read(blocksSizes)
-	totalSize := 0
-	for _, s := range blocksSizes {
-		totalSize += int(s)
-	}
-
-	currentBlockIdx := 0
+	totalBytesRead := 0
 	codec.When("decode", mock.Any).Call(func(r io.Reader) (*protocol.BlockPairContainer, int, error) {
-		if currentBlockIdx > len(blocks)-1 {
+		if len(blocksQueue) == 0 {
 			return nil, 0, io.EOF
 		}
-		block, bytes := blocks[currentBlockIdx], int(blocksSizes[currentBlockIdx])
-		currentBlockIdx++
+		randBlockSize := ctrlRand.Intn(500) + 1
+		totalBytesRead += randBlockSize
+		block, bytes := blocksQueue[0], randBlockSize
+		blocksQueue = blocksQueue[1:]
 		return block, bytes, nil
 	})
 
 	blockHeightIndex, err := constructIndexFromReader(rw, log.GetLogger(), codec)
 
-	require.NoError(t, err)
-	require.EqualValues(t, numBlocks, blockHeightIndex.topBlockHeight)
-	test.RequireCmpEqual(t, blockHeightIndex.topBlock, blocks[len(blocks)-1])
-	require.EqualValues(t, totalSize, blockHeightIndex.heightOffset[primitives.BlockHeight(len(blocks))+1])
+	require.NoError(t, err, "expected index to construct with no error")
+	require.EqualValues(t, numBlocks, blockHeightIndex.topBlockHeight, "expected index to reach top block height")
+	test.RequireCmpEqual(t, blockHeightIndex.topBlock, lastBlockInChain, "expected index to cache last block")
+	require.EqualValues(t, totalBytesRead, blockHeightIndex.heightOffset[primitives.BlockHeight(numBlocks)+1], "expected next block offset to be the buffer size")
 
 }
 

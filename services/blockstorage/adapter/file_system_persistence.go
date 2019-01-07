@@ -28,7 +28,7 @@ func newMetrics(m metric.Factory) *metrics {
 	}
 }
 
-type blocksCodec interface {
+type blockCodec interface {
 	encode(block *protocol.BlockPairContainer, w io.Writer) error
 	decode(r io.Reader) (*protocol.BlockPairContainer, int, error)
 }
@@ -40,13 +40,13 @@ type FilesystemBlockPersistence struct {
 	blockTracker *synchronization.BlockTracker
 	logger       log.BasicLogger
 	tip          *writingTip
-	codec        blocksCodec
+	codec        blockCodec
 }
 
 func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
-	codec := newSimpleCodec(conf.BlockStorageMaxBlockSize())
+	codec := newCodec(conf.BlockStorageMaxBlockSize())
 
 	// creates the file if missing
 	newTip, err := newWritingTip(ctx, conf.BlockStorageDataDir(), blocksFileName(conf), codec, logger)
@@ -72,7 +72,7 @@ func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBl
 	return adapter, nil
 }
 
-func constructIndexFromFile(filename string, logger log.BasicLogger, c blocksCodec) (*blockHeightIndex, error) {
+func constructIndexFromFile(filename string, logger log.BasicLogger, c blockCodec) (*blockHeightIndex, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open blocks file for reading")
@@ -82,7 +82,7 @@ func constructIndexFromFile(filename string, logger log.BasicLogger, c blocksCod
 	return constructIndexFromReader(file, logger, c)
 }
 
-func constructIndexFromReader(r io.Reader, logger log.BasicLogger, c blocksCodec) (*blockHeightIndex, error) {
+func constructIndexFromReader(r io.Reader, logger log.BasicLogger, c blockCodec) (*blockHeightIndex, error) {
 	bhIndex := newBlockHeightIndex()
 	offset := int64(0)
 	for {

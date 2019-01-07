@@ -53,12 +53,12 @@ func TestAdvisoryLock_AdapterCanReleaseLock(t *testing.T) {
 	defer c.cleanDir()
 
 	err := lockAndRelease(c)
-	require.NoError(t, err)
+	require.NoError(t, err, "should succeed in creating an adapter for a non-existing temp file")
 
 	time.Sleep(500 * time.Millisecond)
 
 	err = lockAndRelease(c)
-	require.NoError(t, err)
+	require.NoError(t, err, "should succeed in creating a second adapter for same file after closing first adapter")
 }
 
 func lockAndRelease(c config.FilesystemBlockPersistenceConfig) error {

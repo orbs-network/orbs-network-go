@@ -10,17 +10,17 @@ import (
 
 func TestCodec_EnforcesBlockSizeLimit(t *testing.T) {
 	largeBlock := builders.BlockPair().WithHeight(1).WithTransactions(6).Build()
-	c := newSimpleCodec(5)
+	c := newCodec(5)
 	err := c.encode(largeBlock, new(bytes.Buffer))
 
-	require.Error(t, err)
+	require.Error(t, err, "expected to fail encoding a block larger than maxBlockSize")
 }
 
 func TestCodec_EncodesAndDecodes(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 	rw := new(bytes.Buffer)
-	c := newSimpleCodec(1024 * 1024)
+	c := newCodec(1024 * 1024)
 
 	err := c.encode(block, rw)
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func TestCodec_EncodesAndDecodes(t *testing.T) {
 	blockLen := rw.Len()
 
 	decodedBlock, readSize, err := c.decode(rw)
-	require.NoError(t, err)
+	require.NoError(t, err, "expected to decode block record successfully")
 	require.EqualValues(t, blockLen, readSize, "expected to read entire buffer")
 	test.RequireCmpEqual(t, block, decodedBlock, "expected to decode an identical block as encoded")
 }
@@ -39,11 +39,11 @@ func TestCodec_DetectsDataCorruption(t *testing.T) {
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 
 	// serialize
-	c := newSimpleCodec(1024 * 1024)
+	c := newCodec(1024 * 1024)
 	encodedBlock := new(bytes.Buffer)
 	err := c.encode(block, encodedBlock)
 	blockBytes := encodedBlock.Bytes()
-	require.NoError(t, err)
+	require.NoError(t, err, "expected to encode block successfully")
 
 	// decode ok
 	_, _, err = c.decode(encodedBlock)
@@ -77,14 +77,14 @@ func TestEncodeHeader(t *testing.T) {
 		TxsSize:      4,
 	}
 	err := header.write(rw)
-	require.NoError(t, err)
+	require.NoError(t, err, "expected to encode header successfully")
 
 	bytes := rw.Bytes()
-	require.Len(t, bytes, 5*4)
+	require.Len(t, bytes, 5*4, "expected header size to be 4 bytes per header field")
 
 	decodedHeader := &blockHeader{}
 	err = decodedHeader.read(rw)
-	require.NoError(t, err)
+	require.NoError(t, err, "expected to decode header successfully")
 
-	require.EqualValues(t, header, decodedHeader)
+	require.EqualValues(t, header, decodedHeader, "expected decoded header to match original")
 }
