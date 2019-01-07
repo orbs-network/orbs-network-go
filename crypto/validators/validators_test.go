@@ -27,33 +27,58 @@ func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
 
 }
 
-// TODO(v1) at least think about it - some kind of mutation testing should be done here as every tampered bit of block data should throw an error
-// Suggestion: table test: Start with validBlockValidatorContext(), running a mutator() that modifies a single property, then require(error).
 func TestValidateBlockHash(t *testing.T) {
 
-	t.Run("should return error on nil transaction or results block", func(t *testing.T) {
-		emptyBlock := &BlockValidatorContext{
-			TransactionsBlock: nil,
-			ResultsBlock:      nil,
-		}
-		require.Error(t, ValidateBlockHash(emptyBlock), "should return error on nil transaction or results block")
-	})
+	tamperedTimestamp := primitives.TimestampNano(time.Now().UnixNano() + 1000)
+	tamperedPrevBlockHash := hash.CalcSha256([]byte{9, 9, 9})
+	tamperedMetadataHash := hash.CalcSha256([]byte{9, 9, 7})
+	tamperedTxMerkleRoot := hash.CalcSha256([]byte{9, 9, 6})
+	tamperedHash := hash.CalcSha256([]byte{6, 6, 6})
+	var mutations = []struct {
+		name          string
+		mutate        func(*BlockValidatorContext)
+		expectSuccess bool
+	}{
+		{name: "valid block", mutate: func(c *BlockValidatorContext) {}, expectSuccess: true},
+		{name: "nil transaction block", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock = nil }, expectSuccess: false},
+		{name: "nil results block", mutate: func(c *BlockValidatorContext) { c.ResultsBlock = nil }, expectSuccess: false},
+		{name: "tampered transactions block protocolVersion", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateProtocolVersion(1234) }, expectSuccess: false},
+		{name: "tampered transactions block virtual chain ID", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateVirtualChainId(3456) }, expectSuccess: false},
+		{name: "tampered transactions block height", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateBlockHeight(999) }, expectSuccess: false},
+		{name: "tampered transactions prev block hash", mutate: func(c *BlockValidatorContext) {
+			c.TransactionsBlock.Header.MutatePrevBlockHashPtr(tamperedPrevBlockHash)
+		}, expectSuccess: false},
+		{name: "tampered transactions metadata hash", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateMetadataHash(tamperedMetadataHash) }, expectSuccess: false},
+		{name: "tampered transactions merkle root hash", mutate: func(c *BlockValidatorContext) {
+			c.TransactionsBlock.Header.MutateTransactionsMerkleRootHash(tamperedTxMerkleRoot)
+		}, expectSuccess: false},
+		{name: "tampered transactions block timestamp", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateTimestamp(tamperedTimestamp) }, expectSuccess: false},
+		{name: "tampered results block protocolVersion", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateProtocolVersion(1234) }, expectSuccess: false},
+		{name: "tampered results block virtual chain ID", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateVirtualChainId(4567) }, expectSuccess: false},
+		{name: "tampered results block height", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateBlockHeight(998) }, expectSuccess: false},
+		{name: "tampered results prev block hash", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutatePrevBlockHashPtr(tamperedPrevBlockHash) }, expectSuccess: false},
+		{name: "tampered results block timestamp", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateTimestamp(tamperedTimestamp) }, expectSuccess: false},
+		{name: "tampered results block transactions block hash ptr", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateTransactionsBlockHashPtr(tamperedHash) }, expectSuccess: false},
+		{name: "tampered results block receipts merkle root hash", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateReceiptsMerkleRootHash(tamperedHash) }, expectSuccess: false},
+		{name: "tampered results block state diff hash", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateStateDiffHash(tamperedHash) }, expectSuccess: false},
+		{name: "tampered results block pre-execution state merkle root hash", mutate: func(c *BlockValidatorContext) {
+			c.ResultsBlock.Header.MutatePreExecutionStateMerkleRootHash(tamperedHash)
+		}, expectSuccess: false},
+		{name: "tampered results block num transactions receipts", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateNumTransactionReceipts(999) }, expectSuccess: false},
+		{name: "tampered results block num contract diffs", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateNumContractStateDiffs(888) }, expectSuccess: false},
+	}
 
-	t.Run("should return error on tampered transactions block", func(t *testing.T) {
-		ctxToTest := validBlockValidatorContext()
-		ctxToTest.TransactionsBlock.Header.MutateTimestamp(primitives.TimestampNano(time.Now().UnixNano() + 1000))
-		require.Error(t, ValidateBlockHash(ctxToTest), "hash validation of tampered transaction block should return error")
-	})
-
-	t.Run("should return error on tampered results block", func(t *testing.T) {
-		ctxToTest := validBlockValidatorContext()
-		ctxToTest.ResultsBlock.Header.MutateTimestamp(primitives.TimestampNano(time.Now().UnixNano() + 1000))
-		require.Error(t, ValidateBlockHash(ctxToTest), "hash validation of tampered results block should return error")
-	})
-
-	t.Run("should return nil on block with valid hashes", func(t *testing.T) {
-		require.Nil(t, ValidateBlockHash(validBlockValidatorContext()), "should return nil on block with valid hashes")
-	})
+	for _, m := range mutations {
+		t.Run(m.name, func(t *testing.T) {
+			blockUnderTest := validBlockValidatorContext()
+			m.mutate(blockUnderTest)
+			if m.expectSuccess {
+				require.Nil(t, ValidateBlockHash(blockUnderTest), m.name)
+			} else {
+				require.Error(t, ValidateBlockHash(blockUnderTest), m.name)
+			}
+		})
+	}
 }
 
 func validBlockValidatorContext() *BlockValidatorContext {
