@@ -17,43 +17,6 @@ import (
 	"time"
 )
 
-func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockInput {
-
-	currentBlockHeight := primitives.BlockHeight(1000)
-	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
-	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
-	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
-	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
-	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
-	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
-	validPrevBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano() - 1000)
-
-	// include only one transaction in block
-	block := builders.
-		BlockPair().
-		WithHeight(currentBlockHeight).
-		WithProtocolVersion(cfg.ProtocolVersion()).
-		WithVirtualChainId(cfg.VirtualChainId()).
-		WithTransactions(0).
-		WithTransaction(transaction).
-		WithPrevBlock(validPrevBlock).
-		WithPrevBlockHash(validPrevBlockHash).
-		WithMetadata(txMetadata).
-		WithMetadataHash(validMetadataHash).
-		WithTransactionsRootHash(txRootHashForValidBlock).
-		Build()
-
-	input := &services.ValidateResultsBlockInput{
-		CurrentBlockHeight: currentBlockHeight,
-		TransactionsBlock:  block.TransactionsBlock,
-		ResultsBlock:       block.ResultsBlock,
-		PrevBlockHash:      validPrevBlockHash,
-		PrevBlockTimestamp: validPrevBlockTimestamp,
-	}
-
-	return input
-}
-
 func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext {
 
 	empty32ByteHash := make([]byte, 32)
@@ -149,7 +112,6 @@ func NewMockProcessTransactionSetThatReturns(err error) ProcessTransactionSetAda
 
 func TestResultsBlockValidators(t *testing.T) {
 	cfg := config.ForConsensusContextTests(nil)
-	empty32ByteHash := make([]byte, 32)
 	t.Run("should return error for results block with incorrect protocol version", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
 		err := validateRxProtocolVersion(context.Background(), vcrx)
@@ -198,9 +160,10 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error for results block which points to a different transactions block than the one it has", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
+		someRandomHash := hash.CalcSha256([]byte{2})
 		err := validateRxTxBlockPtrMatchesActualTxBlock(context.Background(), vcrx)
 		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutateTransactionsBlockHashPtr(empty32ByteHash); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutateTransactionsBlockHashPtr(someRandomHash); err != nil {
 			t.Error(err)
 		}
 		err = validateRxTxBlockPtrMatchesActualTxBlock(context.Background(), vcrx)
@@ -220,10 +183,10 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error for block with incorrect prev block hash", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
-		hash2 := hash.CalcSha256([]byte{2})
+		someRandomHash := hash.CalcSha256([]byte{2})
 		err := validateRxPrevBlockHashPtr(context.Background(), vcrx)
 		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutatePrevBlockHashPtr(hash2); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutatePrevBlockHashPtr(someRandomHash); err != nil {
 			t.Error(err)
 		}
 		err = validateRxPrevBlockHashPtr(context.Background(), vcrx)

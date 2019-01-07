@@ -15,13 +15,13 @@ type BlockValidatorContext struct {
 	CalcStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
 }
 
-var ErrMismatchedTxMerkleRoot = errors.New("mismatched transactions merkle root")
-var ErrMismatchedMetadataHash = errors.New("mismatched metadata hash")
-var ErrMismatchedReceiptsRootHash = errors.New("receipt merkleRoot is different between results block header and calculated transaction receipts")
-var ErrCalcReceiptsMerkleRoot = errors.New("failed in CalcReceiptsMerkleRoot()")
-var ErrMismatchedStateDiffHash = errors.New("state diff merkleRoot is different between results block header and calculated transaction receipts")
-var ErrCalcStateDiffMerkleRoot = errors.New("failed in ErrCalcStateDiffMerkleRoot()")
-var ErrMismatchedBlockHash = errors.New("mismatched calculated block hash")
+var ErrMismatchedTxMerkleRoot = errors.New("ErrMismatchedTxMerkleRoot mismatched transactions merkle root")
+var ErrMismatchedMetadataHash = errors.New("ErrMismatchedMetadataHash mismatched metadata hash")
+var ErrMismatchedReceiptsRootHash = errors.New("ErrMismatchedReceiptsRootHash receipt merkleRoot is different between results block header and calculated transaction receipts")
+var ErrCalcReceiptsMerkleRoot = errors.New("ErrCalcReceiptsMerkleRoot failed in CalcReceiptsMerkleRoot()")
+var ErrMismatchedStateDiffHash = errors.New("ErrMismatchedStateDiffHash state diff merkleRoot is different between results block header and calculated transaction receipts")
+var ErrCalcStateDiffMerkleRoot = errors.New("ErrCalcStateDiffMerkleRoot failed in ErrCalcStateDiffMerkleRoot()")
+var ErrMismatchedBlockHash = errors.New("ErrMismatchedBlockHash mismatched calculated block hash")
 
 func ValidateTransactionsBlockMerkleRoot(bvcx *BlockValidatorContext) error {
 	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.

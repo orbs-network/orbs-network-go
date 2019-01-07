@@ -121,7 +121,7 @@ func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorC
 func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	//Validate transaction execution
 	// Execute the ordered transactions set by calling VirtualMachine.ProcessTransactionSet creating receipts and state diff. Using the provided header timestamp as a reference timestamp.
-	processTxsOut, err := vcrx.processTransactionSetAdapter.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{ // TODO wrap with adapter
+	processTxsOut, err := vcrx.processTransactionSetAdapter.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
 		CurrentBlockHeight:    vcrx.input.TransactionsBlock.Header.BlockHeight(),
 		CurrentBlockTimestamp: vcrx.input.TransactionsBlock.Header.Timestamp(),
 		SignedTransactions:    vcrx.input.TransactionsBlock.SignedTransactions,
@@ -131,17 +131,17 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	}
 	// Compare the receipts merkle root hash to the one in the block.
 	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
-	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRootAdapter.CalcReceiptsMerkleRoot(processTxsOut.TransactionReceipts) // TODO wrap with adapter
+	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRootAdapter.CalcReceiptsMerkleRoot(processTxsOut.TransactionReceipts)
 	if err != nil {
 		return errors.Wrapf(validators.ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")
 	}
 	if !bytes.Equal(expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot) {
-		return errors.Wrapf(validators.ErrMismatchedReceiptsRootHash, "ValidateResultsBlock error receipt merkleRoot in header does not match processed txs receipts")
+		return errors.Wrapf(validators.ErrMismatchedReceiptsRootHash, "expected %v actual %v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
 	}
 
 	// Compare the state diff hash to the one in the block (supports only deterministic execution).
-	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.RawStateDiffHash()
-	calculatedStateDiffMerkleRoot, err := vcrx.calcStateDiffMerkleRootAdapter.CalcStateDiffMerkleRoot(processTxsOut.ContractStateDiffs) // TODO wrap with adapter
+	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.StateDiffHash()
+	calculatedStateDiffMerkleRoot, err := vcrx.calcStateDiffMerkleRootAdapter.CalcStateDiffMerkleRoot(processTxsOut.ContractStateDiffs)
 	if err != nil {
 		return errors.Wrapf(validators.ErrCalcStateDiffMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffMerkleRoot")
 	}
