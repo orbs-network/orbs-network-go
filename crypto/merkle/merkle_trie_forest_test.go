@@ -257,7 +257,7 @@ func TestRemoveValue_ParentWithSingleChild(t *testing.T) {
 	root2 := generalKeyUpdateEntries(f, root1, "ab", "")
 
 	p := generalKeyGetProofRequireHeight(t, f, root2, "abcd", 1)
-	require.EqualValues(t, "1010101111001101" /*"abcd"*/, bytesToBinaryString(p[0].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "1010101111001101" /*"abcd"*/, bytesToBinaryString(p[0].path()), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_NonBranchingNonLeaf1(t *testing.T) {
@@ -272,8 +272,8 @@ func TestRemoveValue_NonBranchingNonLeaf1(t *testing.T) {
 	generalKeyGetProofRequireHeight(t, f, fullTree, "abcdef", 3)
 	generalKeyGetProofRequireHeight(t, f, afterRemove, "abcdef", 2)
 
-	require.EqualValues(t, "1001101" /* "cd" without first bit*/, bytesToBinaryString(p1[1].path), "full tree proof for and does not end with expected node path")
-	require.EqualValues(t, "100110111101111" /*"cdef" without first bit*/, bytesToBinaryString(p2[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "1001101" /* "cd" without first bit*/, bytesToBinaryString(p1[1].path()), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "100110111101111" /*"cdef" without first bit*/, bytesToBinaryString(p2[1].path()), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_BranchingNonLeaf_NodeStructureUnchanged(t *testing.T) {
@@ -288,8 +288,8 @@ func TestRemoveValue_BranchingNonLeaf_NodeStructureUnchanged(t *testing.T) {
 	generalKeyGetProofRequireHeight(t, f, fullTree, "abcd", 2)
 	generalKeyGetProofRequireHeight(t, f, afterRemove, "abcd", 2)
 
-	require.EqualValues(t, "0010010" /* missing first bit of "12"*/, bytesToBinaryString(p1[1].path), "full tree proof for and does not end with expected node path")
-	require.EqualValues(t, "1001101" /* missing first bit of "cd" */, bytesToBinaryString(p2[1].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "0010010" /* missing first bit of "12"*/, bytesToBinaryString(p1[1].path()), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "1001101" /* missing first bit of "cd" */, bytesToBinaryString(p2[1].path()), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_BranchingNonLeaf_CollapseRoot(t *testing.T) {
@@ -299,12 +299,12 @@ func TestRemoveValue_BranchingNonLeaf_CollapseRoot(t *testing.T) {
 	root2 := generalKeyUpdateEntries(f, root1, "ab", "")
 
 	p0 := generalKeyGetProofRequireHeight(t, f, root1, "abcd", 3)
-	require.EqualValues(t, "10101011" /*"ab"*/, bytesToBinaryString(p0[0].path), "unexpected proof structure")
+	require.EqualValues(t, "10101011" /*"ab"*/, bytesToBinaryString(p0[0].path()), "unexpected proof structure")
 
 	p := generalKeyGetProofRequireHeight(t, f, root2, "abcd", 2)
-	require.EqualValues(t, zeroValueHash, p[0].value, "unexpected proof structure")
+	require.EqualValues(t, zeroValueHash, p[0].value(), "unexpected proof structure")
 
-	require.EqualValues(t, "10101011110011" /*"abc"+first two bits of d/e*/, bytesToBinaryString(p[0].path), "unexpected proof structure")
+	require.EqualValues(t, "10101011110011" /*"abc"+first two bits of d/e*/, bytesToBinaryString(p[0].path()), "unexpected proof structure")
 }
 
 func TestRemoveValue_OneOfTwoChildren(t *testing.T) {
@@ -315,7 +315,7 @@ func TestRemoveValue_OneOfTwoChildren(t *testing.T) {
 
 	p := generalKeyGetProofRequireHeight(t, f, root2, "abcdef", 2)
 	generalKeyGetProofRequireHeight(t, f, root2, "ab1234", 1)
-	require.EqualValues(t, "10101011" /*"ab"*/, bytesToBinaryString(p[0].path), "full tree proof for and does not end with expected node path")
+	require.EqualValues(t, "10101011" /*"ab"*/, bytesToBinaryString(p[0].path()), "full tree proof for and does not end with expected node path")
 }
 
 func TestRemoveValue_OneOfTwoChildrenCollapsingParent(t *testing.T) {
@@ -326,7 +326,7 @@ func TestRemoveValue_OneOfTwoChildrenCollapsingParent(t *testing.T) {
 
 	p := generalKeyGetProofRequireHeight(t, f, root2, "abcd", 1)
 	generalKeyGetProofRequireHeight(t, f, root2, "abc4", 1)
-	require.EqualValues(t, "1010101111001101" /*"abcd"*/, bytesToBinaryString(p[0].path), "unexpected proof structure")
+	require.EqualValues(t, "1010101111001101" /*"abcd"*/, bytesToBinaryString(p[0].path()), "unexpected proof structure")
 }
 
 func TestRemoveValue_MissingKey(t *testing.T) {

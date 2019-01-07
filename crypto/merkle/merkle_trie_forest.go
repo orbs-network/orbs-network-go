@@ -2,46 +2,85 @@ package merkle
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"sync"
 )
 
-//const trieRadix = 16
+// TrieProof code
+type TrieProofNode [][]byte
+type TrieProof []TrieProofNode
 
-type TrieProof []*TrieProofNode
-
-// TODO replace proofNode with membuf/proto
-type TrieProofNode struct {
-	path  []byte // TODO parity bool?
-	value primitives.Sha256
-	left  primitives.Sha256
-	right primitives.Sha256
+func (pn TrieProofNode) hash() primitives.Sha256 {
+	return hash.CalcSha256(pn...)
+}
+func (pn TrieProofNode) path() []byte {
+	return pn[0]
+}
+func (pn TrieProofNode) value() []byte {
+	return pn[1]
 }
 
-func newProofNode(n *node) *TrieProofNode {
-	pn := &TrieProofNode{
-		path:  n.path,
-		value: n.value,
-		left:  primitives.Sha256{},
-		right: primitives.Sha256{},
+func generateNodeOrLeafProof(n *node) TrieProofNode {
+	if n.isLeaf() {
+		return generateLeafProof(n)
+	} else {
+		return generateNodeProof(n)
 	}
-	if n.left != nil {
-		pn.left = n.left.hash
-	}
-	if n.right != nil {
-		pn.right = n.right.hash
-	}
-	return pn
 }
 
-func (pn *TrieProofNode) hash() primitives.Sha256 {
-	serializedNode := fmt.Sprintf("%+v", pn)
-	return hash.CalcSha256([]byte(serializedNode))
+func generateLeafProof(n *node) TrieProofNode {
+	res := make(TrieProofNode, 2)
+	res[0] = fromBin(n.path)
+	res[1] = make([]byte, hash.SHA256_HASH_SIZE_BYTES)
+	copy(res[1], n.value[0:hash.SHA256_HASH_SIZE_BYTES-1])
+	res[1][hash.SHA256_HASH_SIZE_BYTES-1] = byte(len(n.path))
+	return res
 }
 
+func generateNodeProof(n *node) TrieProofNode {
+	res := make(TrieProofNode, 3)
+	prefixSize := byte(len(n.path))
+	res[0] = fromBin(n.path)
+	res[1] = generateNodeChildHash(n.left, prefixSize)
+	res[2] = generateNodeChildHash(n.right, prefixSize)
+	return res
+}
+
+func generateNodeChildHash(n *node, prefixSize byte) []byte {
+	res := make([]byte, hash.SHA256_HASH_SIZE_BYTES)
+	if n != nil {
+		copy(res, n.hash[0:hash.SHA256_HASH_SIZE_BYTES-1])
+	}
+	res[hash.SHA256_HASH_SIZE_BYTES-1] = prefixSize
+	return res
+}
+
+func fromBin(s []byte) []byte {
+	res := make([]byte, hash.SHA256_HASH_SIZE_BYTES)
+	fullbytes := len(s) / 8
+	length := fullbytes * 8
+
+	for i := 0; i < length; i = i + 8 {
+		res[i/8] = s[i]<<7 |
+			s[i+1]<<6 |
+			s[i+2]<<5 |
+			s[i+3]<<4 |
+			s[i+4]<<3 |
+			s[i+5]<<2 |
+			s[i+6]<<1 |
+			s[i+7]
+	}
+	leftover := len(s) - length
+	for i := 0; i < leftover; i++ {
+		res[fullbytes] = res[fullbytes] | s[length+i]<<uint(7-leftover)
+	}
+
+	return res
+}
+
+// Forest Code
 func createEmptyTrieNode() *node {
 	tmp := createNode([]byte{}, zeroValueHash)
 	tmp.hash = hashTrieNode(tmp)
@@ -85,7 +124,7 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (TrieProof, e
 	}
 
 	proof := make(TrieProof, 0, 10)
-	proof = append(proof, newProofNode(current))
+	proof = append(proof, generateNodeOrLeafProof(current))
 
 	path = toBin(path)
 	for p := path; bytes.HasPrefix(p, current.path); {
@@ -93,7 +132,7 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (TrieProof, e
 
 		if len(p) != 0 {
 			if current = current.getChild(p[0]); current != nil {
-				proof = append(proof, newProofNode(current))
+				proof = append(proof, generateNodeOrLeafProof(current))
 				p = p[1:]
 			} else {
 				break
@@ -112,25 +151,29 @@ func (f *Forest) Verify(rootHash primitives.Sha256, proof TrieProof, path []byte
 
 	for i, currentNode := range proof {
 		calcHash := currentNode.hash()
-		if !calcHash.Equal(currentHash) { // validate current node against expected hash
+		//calcHash[hash.SHA256_HASH_SIZE_BYTES-1] = byte(len(n.path))
+		if !calcHash[0:31].Equal(currentHash[0:31]) { // validate current node against expected hash
 			return false, errors.Errorf("proof hash mismatch at node %d", i)
 		}
-		if bytes.Equal(path, currentNode.path) {
-			return value.Equal(currentNode.value), nil
+		currentPath := toBin(currentNode[0])
+		if bytes.Equal(path, currentPath) {
+			return value.Equal(currentNode[1]), nil
 		}
-		if len(path) <= len(currentNode.path) {
+		if len(path) <= len(currentPath) {
 			return value.Equal(zeroValueHash), nil
 		}
-		if !bytes.HasPrefix(path, currentNode.path) {
+		if !bytes.HasPrefix(path, currentPath) {
 			return value.Equal(zeroValueHash), nil
 		}
 
-		if path[len(currentNode.path)] == 0 {
-			currentHash = currentNode.left
+		if path[len(currentPath)] == 0 {
+			currentHash = currentNode[1]
+		} else if len(currentNode) == 3 {
+			currentHash = currentNode[2]
 		} else {
-			currentHash = currentNode.right
+			return false, errors.Errorf("proof terminated unexpectedly")
 		}
-		path = path[len(currentNode.path)+1:]
+		path = path[len(currentPath)+1:]
 
 		if emptyMerkleHash.Equal(currentHash) {
 			return value.Equal(zeroValueHash), nil
@@ -189,7 +232,7 @@ func (f *Forest) Update(rootMerkle primitives.Sha256, diffs TrieDiffs) (primitiv
 }
 
 func hashTrieNode(n *node) primitives.Sha256 {
-	return newProofNode(n).hash()
+	return hash.CalcSha256(generateNodeOrLeafProof(n)...)
 }
 
 func toBin(s []byte) []byte {
