@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -62,7 +62,7 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 }
 
 func anOrbsAddress() [20]byte {
-	orbsUser, _ := orbsclient.CreateAccount()
+	orbsUser, _ := orbsClient.CreateAccount()
 	var orbsUserAddress [20]byte
 	copy(orbsUserAddress[:], orbsUser.AddressAsBytes())
 	return orbsUserAddress

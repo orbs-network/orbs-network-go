@@ -3,7 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
@@ -58,7 +58,7 @@ func TestE2EStress(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				target, _ := orbsclient.CreateAccount()
+				target, _ := orbsClient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
 				_, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())

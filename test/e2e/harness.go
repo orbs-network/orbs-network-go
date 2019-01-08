@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -37,12 +37,12 @@ const VITRUAL_CHAIN_ID = 42
 const START_HTTP_PORT = 8090
 
 type harness struct {
-	client *orbsclient.OrbsClient
+	client *orbsClient.OrbsClient
 }
 
 func newHarness() *harness {
 	return &harness{
-		client: orbsclient.NewOrbsClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
+		client: orbsClient.NewClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
 	}
 }
 

@@ -1,7 +1,7 @@
 package asb_ether
 
 import (
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/safemath/safeuint64"
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
 	"github.com/stretchr/testify/require"
@@ -189,7 +189,7 @@ func TestReset(t *testing.T) {
 
 // TODO(v1): talkol - I will move this to be part of the test framework
 func createOrbsAccount() [20]byte {
-	orbsUser, err := orbsclient.CreateAccount()
+	orbsUser, err := orbsClient.CreateAccount()
 	if err != nil {
 		panic(err.Error())
 	}

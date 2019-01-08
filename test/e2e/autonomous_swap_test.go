@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -102,7 +102,7 @@ type driver struct {
 
 // orbs side funcs
 func (d *driver) generateOrbsAccount(t *testing.T) {
-	orbsUser, err := orbsclient.CreateAccount()
+	orbsUser, err := orbsClient.CreateAccount()
 	require.NoError(t, err, "could not create orbs address")
 
 	d.orbsUserAddressRaw = orbsUser.AddressAsBytes()

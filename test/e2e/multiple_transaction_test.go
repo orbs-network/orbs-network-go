@@ -2,7 +2,7 @@ package e2e
 
 import (
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -23,7 +23,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		h.waitUntilTransactionPoolIsReady(t)
 		printTestTime(t, "first block committed", &lt)
 
-		transferTo, _ := orbsclient.CreateAccount()
+		transferTo, _ := orbsClient.CreateAccount()
 
 		// send 3 transactions with total of 70
 		amounts := []uint64{15, 22, 33}
