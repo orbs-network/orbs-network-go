@@ -161,7 +161,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "service=public-api", out)
 	require.Regexp(t, "block-height=270f", out)
 	require.Regexp(t, "vchainId=7b", out)
-	require.Regexp(t, "bytes=gDp", out)
+	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
 	require.Regexp(t, "function=log_test.TestCustomLogFormatter", out)
 	require.Regexp(t, "source=instrumentation/log/basic_logger_test.go", out)

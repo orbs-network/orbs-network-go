@@ -259,7 +259,6 @@ func translateRequestStatusToHttpCode(responseCode protocol.RequestStatus) int {
 
 func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, requestResult *client.RequestResult, errorForVerbosity error) {
 	httpCode := translateRequestStatusToHttpCode(requestResult.RequestStatus())
-	w.WriteHeader(httpCode)
 	w.Header().Set("Content-Type", "application/membuffers")
 	w.Header().Set("X-ORBS-REQUEST-RESULT", requestResult.RequestStatus().String())
 	w.Header().Set("X-ORBS-BLOCK-HEIGHT", fmt.Sprintf("%d", requestResult.BlockHeight()))
@@ -267,6 +266,7 @@ func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.
 	if errorForVerbosity != nil {
 		w.Header().Set("X-ORBS-ERROR-DETAILS", errorForVerbosity.Error())
 	}
+	w.WriteHeader(httpCode)
 	_, err := w.Write(message.Raw())
 	if err != nil {
 		s.logger.Info("error writing response", log.Error(err))
