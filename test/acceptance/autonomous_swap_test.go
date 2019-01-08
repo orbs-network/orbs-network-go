@@ -22,6 +22,7 @@ import (
 	"testing"
 )
 
+// LH: Can only use after enabling Jonathan's (also Noam) feature for finding a block on Eth based on timestamp (find Taiga)
 func TestTransferFromEthereumToOrbs(t *testing.T) {
 	t.Skip()
 	harness.Network(t).

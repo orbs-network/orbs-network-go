@@ -40,7 +40,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		return nil, err
 	}
 
-	stateDiffHash, err := digest.CalcStateDiffMerkleRoot(output.ContractStateDiffs)
+	stateDiffHash, err := digest.CalcStateDiffHash(output.ContractStateDiffs)
 	if err != nil {
 		return nil, err
 	}

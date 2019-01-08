@@ -107,7 +107,7 @@ func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockI
 	block.ResultsBlock.Header.MutateTransactionsBlockHashPtr(digest.CalcTransactionsBlockHash(block.TransactionsBlock))
 	txReceiptsMerkleRoot, _ := digest.CalcReceiptsMerkleRoot(block.ResultsBlock.TransactionReceipts)
 	block.ResultsBlock.Header.MutateReceiptsMerkleRootHash(txReceiptsMerkleRoot)
-	stateDiffHash, _ := digest.CalcStateDiffMerkleRoot(block.ResultsBlock.ContractStateDiffs)
+	stateDiffHash, _ := digest.CalcStateDiffHash(block.ResultsBlock.ContractStateDiffs)
 	block.ResultsBlock.Header.MutateStateDiffHash(stateDiffHash)
 	block.ResultsBlock.Header.MutatePreExecutionStateMerkleRootHash(mockedPreExecutionStateMerkleRoot)
 

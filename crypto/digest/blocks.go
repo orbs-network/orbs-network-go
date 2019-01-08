@@ -53,12 +53,13 @@ func CalcReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primitives
 // TODO v1 Rewrite without Merkle tree and then rename the function
 // See https://tree.taiga.io/project/orbs-network/us/651
 
-func CalcStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	stdHashValues := make([]primitives.Sha256, len(stateDiffs))
+func CalcStateDiffHash(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+	stdHashValues := make([][]byte, len(stateDiffs))
 	for i := 0; i < len(stateDiffs); i++ {
 		stdHashValues[i] = CalcContractStateDiffHash(stateDiffs[i])
 	}
-	return merkle.CalculateOrderedTreeRoot(stdHashValues), nil
+	//return merkle.CalculateOrderedTreeRoot(stdHashValues), nil
+	return hash.CalcSha256(stdHashValues...), nil
 }
 
 func CalcNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now primitives.TimestampNano) primitives.TimestampNano {
@@ -68,20 +69,20 @@ func CalcNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now prim
 	return prevBlockTimestamp + 1
 }
 
-// CalcStateDiffMerkleRoot
-type CalcStateDiffMerkleRootAdapter interface {
-	CalcStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+// CalcStateDiffHash
+type CalcStateDiffHashAdapter interface {
+	CalcStateDiffHash(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
 }
-type realCalcStateDiffMerkleRootAdapter struct {
-	calcStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+type realCalcStateDiffHashAdapter struct {
+	calcStateDiffHash func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
 }
 
-func (r *realCalcStateDiffMerkleRootAdapter) CalcStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	return r.calcStateDiffMerkleRoot(stateDiffs)
+func (r *realCalcStateDiffHashAdapter) CalcStateDiffHash(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+	return r.calcStateDiffHash(stateDiffs)
 }
-func NewRealCalcStateDiffMerkleRootAdapter(f func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)) CalcStateDiffMerkleRootAdapter {
-	return &realCalcStateDiffMerkleRootAdapter{
-		calcStateDiffMerkleRoot: f,
+func NewRealCalcStateDiffHashAdapter(f func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)) CalcStateDiffHashAdapter {
+	return &realCalcStateDiffHashAdapter{
+		calcStateDiffHash: f,
 	}
 }
 

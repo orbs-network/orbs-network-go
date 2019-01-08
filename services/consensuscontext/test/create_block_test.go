@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// TODO v1 consider if this entire folder is necessary, or whether these flows are covered elsewhere
-
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()

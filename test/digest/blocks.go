@@ -24,18 +24,18 @@ func NewMockCalcReceiptsMerkleRootThatReturns(root primitives.Sha256, err error)
 	}
 }
 
-// Mock for CalcStateDiffMerkleRoot
-type mockCalcStateDiffMerkleRoot struct {
-	calcStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+// Mock for CalcStateDiffHash
+type mockCalcStateDiffHash struct {
+	calcStateDiffHash func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
 }
 
-func (m *mockCalcStateDiffMerkleRoot) CalcStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	return m.calcStateDiffMerkleRoot(stateDiffs)
+func (m *mockCalcStateDiffHash) CalcStateDiffHash(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+	return m.calcStateDiffHash(stateDiffs)
 }
 
-func NewMockCalcStateDiffMerkleRootThatReturns(root primitives.Sha256, err error) digest.CalcStateDiffMerkleRootAdapter {
-	return &mockCalcStateDiffMerkleRoot{
-		calcStateDiffMerkleRoot: func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+func NewMockCalcStateDiffHashThatReturns(root primitives.Sha256, err error) digest.CalcStateDiffHashAdapter {
+	return &mockCalcStateDiffHash{
+		calcStateDiffHash: func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
 			return root, err
 		},
 	}

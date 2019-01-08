@@ -9,10 +9,12 @@ import (
 	"testing"
 )
 
-func TestNonLeaderDeploysNativeContract(t *testing.T) {
+// LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config (remove "NonLeader")
+func TestDeploysNativeContract(t *testing.T) {
 	harness.Network(t).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+		t.Log("testing", network.Description())
+		// in BC leader is nodeIndex 0, validator is nodeIndex 1, in LH leadership is randomized
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 		network.MockContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))

@@ -9,11 +9,11 @@ import (
 )
 
 type BlockValidatorContext struct {
-	TransactionsBlock       *protocol.TransactionsBlockContainer
-	ResultsBlock            *protocol.ResultsBlockContainer
-	CalcReceiptsMerkleRoot  func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
-	CalcStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
-	ExpectedBlockHash       primitives.Sha256
+	TransactionsBlock      *protocol.TransactionsBlockContainer
+	ResultsBlock           *protocol.ResultsBlockContainer
+	CalcReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
+	CalcStateDiffHash      func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+	ExpectedBlockHash      primitives.Sha256
 }
 
 var ErrMismatchedTxMerkleRoot = errors.New("ErrMismatchedTxMerkleRoot mismatched transactions merkle root")
@@ -21,7 +21,7 @@ var ErrMismatchedMetadataHash = errors.New("ErrMismatchedMetadataHash mismatched
 var ErrMismatchedReceiptsRootHash = errors.New("ErrMismatchedReceiptsRootHash receipt merkleRoot is different between results block header and calculated transaction receipts")
 var ErrCalcReceiptsMerkleRoot = errors.New("ErrCalcReceiptsMerkleRoot failed in CalcReceiptsMerkleRoot()")
 var ErrMismatchedStateDiffHash = errors.New("ErrMismatchedStateDiffHash state diff merkleRoot is different between results block header and calculated transaction receipts")
-var ErrCalcStateDiffMerkleRoot = errors.New("ErrCalcStateDiffMerkleRoot failed in ErrCalcStateDiffMerkleRoot()")
+var ErrCalcStateDiffHash = errors.New("ErrCalcStateDiffHash failed in ErrCalcStateDiffHash()")
 var ErrMismatchedBlockHash = errors.New("ErrMismatchedBlockHash mismatched calculated block hash")
 
 func ValidateTransactionsBlockMerkleRoot(bvcx *BlockValidatorContext) error {
@@ -58,13 +58,13 @@ func ValidateReceiptsMerkleRoot(bvcx *BlockValidatorContext) error {
 }
 
 func ValidateResultsBlockStateDiffHash(bvcx *BlockValidatorContext) error {
-	expectedStateDiffMerkleRoot := bvcx.ResultsBlock.Header.StateDiffHash()
-	calculatedStateDiffMerkleRoot, err := bvcx.CalcStateDiffMerkleRoot(bvcx.ResultsBlock.ContractStateDiffs)
+	expectedStateDiffHash := bvcx.ResultsBlock.Header.StateDiffHash()
+	calculatedStateDiffHash, err := bvcx.CalcStateDiffHash(bvcx.ResultsBlock.ContractStateDiffs)
 	if err != nil {
-		return errors.Wrapf(ErrCalcStateDiffMerkleRoot, "ValidateResultsBlock error calculateStateDiffMerkleRoot(), %v", err)
+		return errors.Wrapf(ErrCalcStateDiffHash, "ValidateResultsBlock error calculateStateDiffHash(), %v", err)
 	}
-	if !bytes.Equal(expectedStateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
-		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
+	if !bytes.Equal(expectedStateDiffHash, []byte(calculatedStateDiffHash)) {
+		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffHash, calculatedStateDiffHash)
 	}
 	return nil
 }
