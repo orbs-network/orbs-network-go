@@ -127,10 +127,8 @@ func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 		return err
 	}
 
-	var (
-		blockProof     = blockPair.TransactionsBlock.BlockProof.LeanHelix()
-		prevBlockProof = prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
-	)
+	blockProof := blockPair.TransactionsBlock.BlockProof.LeanHelix()
+	prevBlockProof := prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
 
 	isBlockProofValid := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, prevBlockProof)
 	if !isBlockProofValid {
