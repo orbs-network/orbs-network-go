@@ -51,8 +51,8 @@ func (h *blockHeader) addTx(tx *protocol.SignedTransaction) {
 	h.TxsSize += diskChunkSize(tx.Raw())
 }
 
-func (h *blockHeader) totalSize() uint32 {
-	return h.FixedSize + h.DiffsSize + h.ReceiptsSize + h.TxsSize
+func (h *blockHeader) totalSize() int {
+	return int(h.FixedSize + h.DiffsSize + h.ReceiptsSize + h.TxsSize)
 }
 
 func (h *blockHeader) write(w io.Writer) error {
@@ -83,7 +83,7 @@ func writeMessage(writer io.Writer, message membuffers.Message) error {
 	return nil
 }
 
-func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) error {
+func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) (int, error) {
 	tb := block.TransactionsBlock
 	rb := block.ResultsBlock
 
@@ -108,62 +108,62 @@ func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) error {
 	sw := newChecksumWriter(w, checkSum)
 	err := serializationHeader.write(sw)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// write buffers
 	err = writeMessage(sw, tb.Header)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, tb.Metadata)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, tb.BlockProof)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, rb.Header)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, rb.BlockProof)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, receipt := range rb.TransactionReceipts {
 		err = writeMessage(sw, receipt)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 	}
 	for _, diff := range rb.ContractStateDiffs {
 		err = writeMessage(sw, diff)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	for _, tx := range tb.SignedTransactions {
 		err = writeMessage(sw, tx)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	if sw.bytesWritten > c.maxBlockSize {
-		return fmt.Errorf("block size exceeds max limit")
+		return 0, fmt.Errorf("block size exceeds max limit")
 	}
 
 	// checksum
 	err = binary.Write(w, binary.LittleEndian, checkSum.Sum32())
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return int(unsafe.Sizeof(serializationHeader)+unsafe.Sizeof(uint32(0))) + serializationHeader.totalSize(), nil
 }
 
 func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {

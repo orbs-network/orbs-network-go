@@ -11,7 +11,7 @@ import (
 func TestCodec_EnforcesBlockSizeLimit(t *testing.T) {
 	largeBlock := builders.BlockPair().WithHeight(1).WithTransactions(6).Build()
 	c := newCodec(5)
-	err := c.encode(largeBlock, new(bytes.Buffer))
+	_, err := c.encode(largeBlock, new(bytes.Buffer))
 
 	require.Error(t, err, "expected to fail encoding a block larger than maxBlockSize")
 }
@@ -22,13 +22,14 @@ func TestCodec_EncodesAndDecodes(t *testing.T) {
 	rw := new(bytes.Buffer)
 	c := newCodec(1024 * 1024)
 
-	err := c.encode(block, rw)
+	writeSize, err := c.encode(block, rw)
 	require.NoError(t, err)
 
 	blockLen := rw.Len()
 
 	decodedBlock, readSize, err := c.decode(rw)
 	require.NoError(t, err, "expected to decode block record successfully")
+	require.EqualValues(t, writeSize, readSize, "expected to read same number of bytes as written")
 	require.EqualValues(t, blockLen, readSize, "expected to read entire buffer")
 	test.RequireCmpEqual(t, block, decodedBlock, "expected to decode an identical block as encoded")
 }
@@ -41,7 +42,7 @@ func TestCodec_DetectsDataCorruption(t *testing.T) {
 	// serialize
 	c := newCodec(1024 * 1024)
 	encodedBlock := new(bytes.Buffer)
-	err := c.encode(block, encodedBlock)
+	_, err := c.encode(block, encodedBlock)
 	blockBytes := encodedBlock.Bytes()
 	require.NoError(t, err, "expected to encode block successfully")
 

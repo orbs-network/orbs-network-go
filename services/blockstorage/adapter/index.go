@@ -15,9 +15,9 @@ type blockHeightIndex struct {
 	topBlockHeight       primitives.BlockHeight
 }
 
-func newBlockHeightIndex() *blockHeightIndex {
+func newBlockHeightIndex(firstBlockOffset int64) *blockHeightIndex {
 	return &blockHeightIndex{
-		heightOffset:         map[primitives.BlockHeight]int64{1: 0},
+		heightOffset:         map[primitives.BlockHeight]int64{1: firstBlockOffset},
 		firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
 		topBlock:             nil,
 		topBlockHeight:       0,

@@ -34,7 +34,7 @@ func TestConstructIndexFromReader(t *testing.T) {
 		return block, bytes, nil
 	})
 
-	blockHeightIndex, err := constructIndexFromReader(rw, log.GetLogger(), codec)
+	blockHeightIndex, err := buildIndex(rw, 0, log.GetLogger(), codec)
 
 	require.NoError(t, err, "expected index to construct with no error")
 	require.EqualValues(t, numBlocks, blockHeightIndex.topBlockHeight, "expected index to reach top block height")
@@ -47,8 +47,9 @@ type mockCodec struct {
 	mock.Mock
 }
 
-func (mc *mockCodec) encode(block *protocol.BlockPairContainer, w io.Writer) error {
-	return mc.Called(block, w).Error(0)
+func (mc *mockCodec) encode(block *protocol.BlockPairContainer, w io.Writer) (int, error) {
+	ret := mc.Called(block, w)
+	return ret.Int(0), ret.Error(1)
 }
 
 func (mc *mockCodec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
