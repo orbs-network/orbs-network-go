@@ -56,9 +56,8 @@ func CalcReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primitives
 func CalcStateDiffHash(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
 	stdHashValues := make([][]byte, len(stateDiffs))
 	for i := 0; i < len(stateDiffs); i++ {
-		stdHashValues[i] = CalcContractStateDiffHash(stateDiffs[i])
+		stdHashValues[i] = stateDiffs[i].Raw()
 	}
-	//return merkle.CalculateOrderedTreeRoot(stdHashValues), nil
 	return hash.CalcSha256(stdHashValues...), nil
 }
 
