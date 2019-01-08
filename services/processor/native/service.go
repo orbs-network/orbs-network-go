@@ -2,6 +2,7 @@ package native
 
 import (
 	"context"
+	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -96,7 +97,8 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	// execute
 	logger.Info("processor executing contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName))
 
-	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray)
+	functionNameForErrors := fmt.Sprintf("%s.%s", input.ContractName, input.MethodName)
+	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
 	if outputArgs == nil {
 		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
