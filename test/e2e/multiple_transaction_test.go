@@ -30,7 +30,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		txIds := []string{}
 		for _, amount := range amounts {
 			printTestTime(t, "send transaction - start", &lt)
-			response, txId, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), transferTo.RawAddress)
+			response, txId, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), transferTo.AddressAsBytes())
 			printTestTime(t, "send transaction - end", &lt)
 
 			txIds = append(txIds, txId)
@@ -55,14 +55,14 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 			require.NoError(t, err, "get receipt proof for txid %s should not return error", txId)
 			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, proofResponse.TransactionStatus)
+			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, proofResponse.ExecutionResult)
 			require.True(t, len(proofResponse.PackedProof) > 20, "packed receipt proof for txid %s should return at least 20 bytes", txId)
-			require.True(t, len(proofResponse.PackedReceipt) > 10, "packed receipt for txid %s should return at least 10 bytes", txId)
 		}
 
 		// check balance
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
 			printTestTime(t, "run query - start", &lt)
-			response, err := h.runQuery(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.RawAddress)
+			response, err := h.runQuery(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.AddressAsBytes())
 			printTestTime(t, "run query - end", &lt)
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {

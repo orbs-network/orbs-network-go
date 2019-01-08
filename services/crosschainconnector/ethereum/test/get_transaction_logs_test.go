@@ -64,6 +64,6 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 func anOrbsAddress() [20]byte {
 	orbsUser, _ := orbsclient.CreateAccount()
 	var orbsUserAddress [20]byte
-	copy(orbsUserAddress[:], orbsUser.RawAddress)
+	copy(orbsUserAddress[:], orbsUser.AddressAsBytes())
 	return orbsUserAddress
 }
