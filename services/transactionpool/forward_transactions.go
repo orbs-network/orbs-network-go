@@ -163,6 +163,6 @@ func HashTransactions(txs ...*protocol.SignedTransaction) (oneBigHash []byte, ha
 		}
 	}
 
-	oneBigHash = checksum.Sum(oneBigHash)
+	oneBigHash = checksum.Sum(nil)
 	return
 }

@@ -42,7 +42,7 @@ func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	for i := 1; i <= 10; i++ {
 
-		blocks := buildRandomBlockChain(ctrlRand.Int31n(100)+1, ctrlRand)
+		blocks := builders.RandomizedBlockChain(ctrlRand.Int31n(100)+1, ctrlRand)
 
 		withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 			for _, b := range blocks {
@@ -178,30 +178,6 @@ func TestBlockPersistenceContract_ReturnsBlockByTx(t *testing.T) {
 	})
 }
 
-func buildRandomBlockChain(numBlocks int32, ctrlRand *test.ControlledRand) []*protocol.BlockPairContainer {
-	blocks := make([]*protocol.BlockPairContainer, 0, numBlocks)
-
-	var prev *protocol.BlockPairContainer
-	for bi := 1; bi <= cap(blocks); bi++ {
-		newBlock := buildRandomBlock(primitives.BlockHeight(bi), ctrlRand, prev)
-		blocks = append(blocks, newBlock)
-		prev = newBlock
-	}
-	return blocks
-}
-
-func buildRandomBlock(h primitives.BlockHeight, ctrlRand *test.ControlledRand, prev *protocol.BlockPairContainer) *protocol.BlockPairContainer {
-	builder := builders.BlockPair().
-		WithHeight(h).
-		WithTransactions(ctrlRand.Uint32() % 100).
-		WithReceiptsForTransactions().
-		WithLeanHelixBlockProof()
-	if prev != nil {
-		builder.WithPrevBlock(prev)
-	}
-	return builder.Build()
-}
-
 type adapterUnderTest struct {
 	name    string
 	adapter adapter.BlockPersistence
@@ -252,4 +228,8 @@ func newLocalConfig() *localConfig {
 }
 func (l *localConfig) BlockStorageDataDir() string {
 	return l.dir
+}
+
+func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+	return 64 * 1024 * 1024
 }

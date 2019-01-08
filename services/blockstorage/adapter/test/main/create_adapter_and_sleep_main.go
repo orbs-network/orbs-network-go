@@ -29,9 +29,14 @@ func createLockingAdapter() (func(), error) {
 }
 
 type localConfig struct {
-	dir string
+	dir          string
+	maxBlockSize uint32
 }
 
 func (l *localConfig) BlockStorageDataDir() string {
 	return l.dir
+}
+
+func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+	return 1024
 }

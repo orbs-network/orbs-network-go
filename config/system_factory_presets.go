@@ -49,6 +49,7 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
 	cfg.SetString(BLOCK_STORAGE_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to replace with /var/lib/orbs for linux
+	cfg.SetUint32(BLOCK_STORAGE_MAX_BLOCK_SIZE, 64*1024*1024)
 
 	return cfg
 }
@@ -86,6 +87,7 @@ func ForE2E(
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 500*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 2*time.Second)
 	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
+	cfg.SetUint32(BLOCK_STORAGE_MAX_BLOCK_SIZE, 64*1024*1024)
 
 	cfg.SetGossipPeers(gossipPeers)
 	cfg.SetFederationNodes(federationNodes)
@@ -153,6 +155,7 @@ func ForGamma(
 	cfg.SetDuration(BLOCK_SYNC_INTERVAL, 2500*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
+	cfg.SetUint32(BLOCK_STORAGE_MAX_BLOCK_SIZE, 64*1024*1024)
 
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")
 
