@@ -1,42 +1,30 @@
 package digest
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-// Mock for CalcReceiptsMerkleRoot
-type mockCalcReceiptsMerkleRoot struct {
-	calcReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
-}
-
-func (m *mockCalcReceiptsMerkleRoot) CalcReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-	return m.calcReceiptsMerkleRoot(receipts)
-}
-
-func NewMockCalcReceiptsMerkleRootThatReturns(root primitives.Sha256, err error) digest.CalcReceiptsMerkleRootAdapter {
-	return &mockCalcReceiptsMerkleRoot{
-
-		calcReceiptsMerkleRoot: func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-			return root, err
-		},
+func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+	someEmptyTxSetThatWeReturnOnlyToPreventErrors := &services.ProcessTransactionSetOutput{
+		TransactionReceipts: nil,
+		ContractStateDiffs:  nil,
+	}
+	return func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+		return someEmptyTxSetThatWeReturnOnlyToPreventErrors, err
 	}
 }
 
-// Mock for CalcStateDiffHash
-type mockCalcStateDiffHash struct {
-	calcStateDiffHash func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+func MockCalcReceiptsMerkleRootThatReturns(root primitives.Sha256, err error) func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
+	return func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
+		return root, err
+	}
 }
 
-func (m *mockCalcStateDiffHash) CalcStateDiffHash(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	return m.calcStateDiffHash(stateDiffs)
-}
-
-func NewMockCalcStateDiffHashThatReturns(root primitives.Sha256, err error) digest.CalcStateDiffHashAdapter {
-	return &mockCalcStateDiffHash{
-		calcStateDiffHash: func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-			return root, err
-		},
+func MockCalcStateDiffHashThatReturns(root primitives.Sha256, err error) func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+	return func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+		return root, err
 	}
 }

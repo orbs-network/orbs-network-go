@@ -1,7 +1,6 @@
 package leanhelixconsensus
 
 import (
-	"context"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 
@@ -15,10 +14,6 @@ type blockValidator func(block *protocol.BlockPairContainer, validatorCtx *valid
 
 type validatorContext struct {
 	blockHash primitives.Sha256
-}
-
-type ValidateBlockFailsOnNilAdapter interface {
-	ValidateBlockFailsOnNil(ctx context.Context, vc *validatorContext) error
 }
 
 func validateBlockNotNil(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error {

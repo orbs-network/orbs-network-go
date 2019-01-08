@@ -6,28 +6,21 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 )
 
 type rxValidator func(ctx context.Context, vcrx *rxValidatorContext) error
 
-type GetStateHashAdapter interface {
-	GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
-}
-
-type ProcessTransactionSetAdapter interface {
-	ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
-}
-
 type rxValidatorContext struct {
-	protocolVersion               primitives.ProtocolVersion
-	virtualChainId                primitives.VirtualChainId
-	input                         *services.ValidateResultsBlockInput
-	getStateHashAdapter           GetStateHashAdapter
-	processTransactionSetAdapter  ProcessTransactionSetAdapter
-	calcReceiptsMerkleRootAdapter digest.CalcReceiptsMerkleRootAdapter
-	calcStateDiffHashAdapter      digest.CalcStateDiffHashAdapter
+	protocolVersion        primitives.ProtocolVersion
+	virtualChainId         primitives.VirtualChainId
+	input                  *services.ValidateResultsBlockInput
+	getStateHash           func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
+	processTransactionSet  func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
+	calcReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
+	calcStateDiffHash      func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
 }
 
 func validateRxProtocolVersion(ctx context.Context, vcrx *rxValidatorContext) error {
@@ -92,7 +85,7 @@ func validateRxReceiptsRootHash(ctx context.Context, vcrx *rxValidatorContext) e
 	return validators.ValidateReceiptsMerkleRoot(&validators.BlockValidatorContext{
 		TransactionsBlock:      vcrx.input.TransactionsBlock,
 		ResultsBlock:           vcrx.input.ResultsBlock,
-		CalcReceiptsMerkleRoot: vcrx.calcReceiptsMerkleRootAdapter.CalcReceiptsMerkleRoot,
+		CalcReceiptsMerkleRoot: vcrx.calcReceiptsMerkleRoot,
 	})
 }
 
@@ -100,13 +93,13 @@ func validateRxStateDiffHash(ctx context.Context, vcrx *rxValidatorContext) erro
 	return validators.ValidateResultsBlockStateDiffHash(&validators.BlockValidatorContext{
 		TransactionsBlock: vcrx.input.TransactionsBlock,
 		ResultsBlock:      vcrx.input.ResultsBlock,
-		CalcStateDiffHash: vcrx.calcStateDiffHashAdapter.CalcStateDiffHash,
+		CalcStateDiffHash: vcrx.calcStateDiffHash,
 	})
 }
 
 func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
 	expectedPreExecutionMerkleRoot := vcrx.input.ResultsBlock.Header.PreExecutionStateMerkleRootHash()
-	getStateHashOut, err := vcrx.getStateHashAdapter.GetStateHash(ctx, &services.GetStateHashInput{
+	getStateHashOut, err := vcrx.getStateHash(ctx, &services.GetStateHashInput{
 		BlockHeight: vcrx.input.ResultsBlock.Header.BlockHeight() - 1,
 	})
 	if err != nil {
@@ -121,7 +114,7 @@ func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorC
 func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	//Validate transaction execution
 	// Execute the ordered transactions set by calling VirtualMachine.ProcessTransactionSet creating receipts and state diff. Using the provided header timestamp as a reference timestamp.
-	processTxsOut, err := vcrx.processTransactionSetAdapter.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
+	processTxsOut, err := vcrx.processTransactionSet(ctx, &services.ProcessTransactionSetInput{
 		CurrentBlockHeight:    vcrx.input.TransactionsBlock.Header.BlockHeight(),
 		CurrentBlockTimestamp: vcrx.input.TransactionsBlock.Header.Timestamp(),
 		SignedTransactions:    vcrx.input.TransactionsBlock.SignedTransactions,
@@ -131,7 +124,7 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	}
 	// Compare the receipts merkle root hash to the one in the block.
 	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
-	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRootAdapter.CalcReceiptsMerkleRoot(processTxsOut.TransactionReceipts)
+	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRoot(processTxsOut.TransactionReceipts)
 	if err != nil {
 		return errors.Wrapf(validators.ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")
 	}
@@ -141,7 +134,7 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 
 	// Compare the state diff hash to the one in the block (supports only deterministic execution).
 	expectedStateDiffHash := vcrx.input.ResultsBlock.Header.StateDiffHash()
-	calculatedStateDiffHash, err := vcrx.calcStateDiffHashAdapter.CalcStateDiffHash(processTxsOut.ContractStateDiffs)
+	calculatedStateDiffHash, err := vcrx.calcStateDiffHash(processTxsOut.ContractStateDiffs)
 	if err != nil {
 		return errors.Wrapf(validators.ErrCalcStateDiffHash, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffHash")
 	}
@@ -152,42 +145,16 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	return nil
 }
 
-type realGetStateHashAdapter struct {
-	getStateHash func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
-}
-
-func (r *realGetStateHashAdapter) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	return r.getStateHash(ctx, input)
-}
-func NewRealGetStateHashAdapter(f func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)) GetStateHashAdapter {
-	return &realGetStateHashAdapter{
-		getStateHash: f,
-	}
-}
-
-type realProcessTransactionSetAdapter struct {
-	processTransactionSet func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
-}
-
-func (r *realProcessTransactionSetAdapter) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	return r.processTransactionSet(ctx, input)
-}
-func NewRealProcessTransactionSetAdapter(f func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)) ProcessTransactionSetAdapter {
-	return &realProcessTransactionSetAdapter{
-		processTransactionSet: f,
-	}
-}
-
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
 
 	vcrx := &rxValidatorContext{
-		protocolVersion:               s.config.ProtocolVersion(),
-		virtualChainId:                s.config.VirtualChainId(),
-		input:                         input,
-		getStateHashAdapter:           NewRealGetStateHashAdapter(s.stateStorage.GetStateHash),
-		processTransactionSetAdapter:  NewRealProcessTransactionSetAdapter(s.virtualMachine.ProcessTransactionSet),
-		calcReceiptsMerkleRootAdapter: digest.NewRealCalcReceiptsMerkleRootAdapter(digest.CalcReceiptsMerkleRoot),
-		calcStateDiffHashAdapter:      digest.NewRealCalcStateDiffHashAdapter(digest.CalcStateDiffHash),
+		protocolVersion:        s.config.ProtocolVersion(),
+		virtualChainId:         s.config.VirtualChainId(),
+		input:                  input,
+		getStateHash:           s.stateStorage.GetStateHash,
+		processTransactionSet:  s.virtualMachine.ProcessTransactionSet,
+		calcReceiptsMerkleRoot: digest.CalcReceiptsMerkleRoot,
+		calcStateDiffHash:      digest.CalcStateDiffHash,
 	}
 
 	validators := []rxValidator{
