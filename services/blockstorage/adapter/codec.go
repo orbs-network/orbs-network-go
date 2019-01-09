@@ -12,6 +12,9 @@ import (
 )
 
 const codecVersion = 0
+const blockHeaderSize = int(unsafe.Sizeof(blockHeader{}))
+const checksumSize = int(unsafe.Sizeof(uint32(0)))
+const chunkLengthSize = int(unsafe.Sizeof(uint32(0)))
 
 type codec struct {
 	maxBlockSize int
@@ -32,7 +35,7 @@ type blockHeader struct {
 }
 
 func diskChunkSize(bytes []byte) uint32 {
-	return uint32(unsafe.Sizeof(uint32(0))) + uint32(len(bytes))
+	return uint32(chunkLengthSize) + uint32(len(bytes))
 }
 
 func (h *blockHeader) addFixed(m membuffers.Message) {
@@ -154,7 +157,7 @@ func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) (int, er
 	}
 
 	if sw.bytesWritten > c.maxBlockSize {
-		return 0, fmt.Errorf("block size exceeds max limit")
+		return 0, fmt.Errorf("block size exceeds max limit. wrote %d bytes", sw.bytesWritten)
 	}
 
 	// checksum
@@ -163,7 +166,7 @@ func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) (int, er
 		return 0, err
 	}
 
-	return int(unsafe.Sizeof(serializationHeader)+unsafe.Sizeof(uint32(0))) + serializationHeader.totalSize(), nil
+	return blockHeaderSize + serializationHeader.totalSize() + checksumSize, nil
 }
 
 func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
@@ -176,13 +179,12 @@ func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 		return nil, 0, err
 	}
 
-	headerSize := int(unsafe.Sizeof(*serializationHeader))
 	budget := newReadingBudget(
-		int(serializationHeader.totalSize())+headerSize,
-		headerSize)
+		int(serializationHeader.totalSize())+blockHeaderSize,
+		blockHeaderSize)
 
 	if budget.limit > c.maxBlockSize {
-		return nil, budget.bytesRead, fmt.Errorf("block size exceeds max limit")
+		return nil, budget.bytesRead, fmt.Errorf("block size exceeds max limit. block header %#v", serializationHeader)
 	}
 
 	if serializationHeader.Version != codecVersion {
@@ -273,10 +275,10 @@ func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	}
 
 	if readCheckSum != checkSum.Sum32() {
-		return nil, budget.bytesRead + int(unsafe.Sizeof(readCheckSum)), fmt.Errorf("block checksum mismatch. computed: %v recorded: %v", checkSum.Sum32(), readCheckSum)
+		return nil, budget.bytesRead + checksumSize, fmt.Errorf("block checksum mismatch. computed: %v recorded: %v", checkSum.Sum32(), readCheckSum)
 	}
 
-	return blockPair, budget.bytesRead + int(unsafe.Sizeof(readCheckSum)), nil
+	return blockPair, budget.bytesRead + checksumSize, nil
 }
 
 type checksumWriter struct {
@@ -311,19 +313,19 @@ func newReadingBudget(limit int, bytesRead int) *readingBudget {
 }
 
 func readChunk(reader io.Reader, budget *readingBudget) ([]byte, error) {
-	var chunkSize uint32
-	err := binary.Read(reader, binary.LittleEndian, &chunkSize)
+	var chunkLength uint32
+	err := binary.Read(reader, binary.LittleEndian, &chunkLength)
 	if err != nil {
 		return nil, err
 	}
-	budget.bytesRead += int(unsafe.Sizeof(chunkSize))
+	budget.bytesRead += chunkLengthSize
 
 	// check budget
-	if budget.limit < budget.bytesRead+int(chunkSize) {
+	if budget.limit < budget.bytesRead+int(chunkLength) {
 		return nil, fmt.Errorf("invalid block. size exceeds limit (%d)", budget.limit)
 	}
 
-	chunk := make([]byte, chunkSize)
+	chunk := make([]byte, chunkLength)
 	n, err := reader.Read(chunk)
 	if err != nil {
 		return nil, err
