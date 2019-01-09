@@ -60,7 +60,7 @@ func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBl
 		return nil, err
 	}
 
-	newTip, err := newFileBlockWriter(file, codec, logger, bhIndex.fetchTopOffest())
+	newTip, err := newFileBlockWriter(file, codec, bhIndex.fetchTopOffest())
 	if err != nil {
 		closeSilently(file, logger)
 		return nil, err
@@ -93,7 +93,7 @@ func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceC
 	}
 	closeOnContextDone(ctx, file, logger)
 
-	err = advisoryLockExclusive(err, file)
+	err = advisoryLockExclusive(file)
 	if err != nil {
 		closeSilently(file, logger)
 		return nil, 0, errors.Wrap(err, "failed to obtain exclusive lock for writing")
@@ -172,11 +172,11 @@ func closeOnContextDone(ctx context.Context, file *os.File, logger log.BasicLogg
 	}()
 }
 
-func advisoryLockExclusive(err error, file *os.File) error {
+func advisoryLockExclusive(file *os.File) error {
 	return syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 }
 
-func newFileBlockWriter(file *os.File, codec blockCodec, logger log.BasicLogger, nextBlockOffset int64) (*blockWriter, error) {
+func newFileBlockWriter(file *os.File, codec blockCodec, nextBlockOffset int64) (*blockWriter, error) {
 	newOffset, err := file.Seek(nextBlockOffset, io.SeekStart)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to seek to next block offset %d", nextBlockOffset)
@@ -223,19 +223,19 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 		return fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, currentTop)
 	}
 
-	bytes, err := f.blockWriter.writeBlock(blockPair)
+	n, err := f.blockWriter.writeBlock(blockPair)
 	if err != nil {
 		return err
 	}
 
 	startPos := f.bhIndex.fetchBlockOffset(bh)
-	err = f.bhIndex.appendBlock(startPos, startPos+int64(bytes), blockPair)
+	err = f.bhIndex.appendBlock(startPos, startPos+int64(n), blockPair)
 	if err != nil {
 		return errors.Wrap(err, "failed to update index after writing block")
 	}
 
 	f.blockTracker.IncrementTo(currentTop + 1)
-	f.metrics.size.Add(int64(bytes))
+	f.metrics.size.Add(int64(n))
 
 	return nil
 }
