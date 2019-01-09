@@ -53,7 +53,7 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 	})
 }
 
-func TestSdkEvents_EmitEvent_InRunLocalMethod(t *testing.T) {
+func TestSdkEvents_EmitEvent_InProcessQuery(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
@@ -66,7 +66,7 @@ func TestSdkEvents_EmitEvent_InRunLocalMethod(t *testing.T) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
-		result, _, _, outputEvents, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, _, _, outputEvents, err := h.processQuery(ctx, "Contract1", "method1")
 		require.NoError(t, err, "run local method should not fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
 

@@ -14,7 +14,7 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/harness/contracts"
+	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -25,7 +25,7 @@ import (
 )
 
 type NetworkDriver interface {
-	contracts.ContractAPI
+	callcontract.CallContractAPI
 	PublicApi(nodeIndex int) services.PublicApi
 	Size() int
 	WaitUntilReadyForTransactions(ctx context.Context)
@@ -118,12 +118,17 @@ func (n *Node) WaitForTransactionInState(ctx context.Context, txHash primitives.
 	}
 	return blockHeight
 }
+
 func (n *Node) Started() bool {
 	return n.nodeLogic != nil
 }
 
 func (n *Node) Destroy() {
 	n.nodeLogic = nil
+}
+
+func (n *Node) GetTransactionPoolBlockHeightTracker() *synchronization.BlockTracker {
+	return n.transactionPoolBlockHeightTracker
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
@@ -142,11 +147,11 @@ func (n *Network) Size() int {
 	return len(n.Nodes)
 }
 
-func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
+func (n *Network) SendTransaction(ctx context.Context, builder *protocol.SignedTransactionBuilder, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	n.assertStarted(nodeIndex)
 	ch := make(chan *client.SendTransactionResponse)
 
-	transactionRequestBuilder := &client.SendTransactionRequestBuilder{SignedTransaction: tx}
+	transactionRequestBuilder := &client.SendTransactionRequestBuilder{SignedTransaction: builder}
 	txHash := digest.CalcTxHash(transactionRequestBuilder.SignedTransaction.Transaction.Build())
 
 	go func() {
@@ -168,13 +173,13 @@ func (n *Network) SendTransaction(ctx context.Context, tx *protocol.SignedTransa
 	return <-ch, txHash
 }
 
-func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.SignedTransactionBuilder, nodeIndex int) {
+func (n *Network) SendTransactionInBackground(ctx context.Context, builder *protocol.SignedTransactionBuilder, nodeIndex int) {
 	n.assertStarted(nodeIndex)
 
 	go func() {
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: tx}).Build(),
+			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: builder}).Build(),
 			ReturnImmediately: 1,
 		})
 		if output == nil {
@@ -183,15 +188,15 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, tx *protocol.
 	}()
 }
 
-func (n *Network) CallMethod(ctx context.Context, tx *protocol.TransactionBuilder, nodeIndex int) *client.CallMethodResponse {
+func (n *Network) RunQuery(ctx context.Context, builder *protocol.SignedQueryBuilder, nodeIndex int) *client.RunQueryResponse {
 	n.assertStarted(nodeIndex)
 
-	ch := make(chan *client.CallMethodResponse)
+	ch := make(chan *client.RunQueryResponse)
 	go func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
-		output, err := publicApi.CallMethod(ctx, &services.CallMethodInput{
-			ClientRequest: (&client.CallMethodRequestBuilder{Transaction: tx}).Build(),
+		output, err := publicApi.RunQuery(ctx, &services.RunQueryInput{
+			ClientRequest: (&client.RunQueryRequestBuilder{SignedQuery: builder}).Build(),
 		})
 		if output == nil {
 			panic(fmt.Sprintf("error calling method: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve

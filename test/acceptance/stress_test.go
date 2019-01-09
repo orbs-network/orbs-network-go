@@ -102,7 +102,7 @@ func AnyNthMessage(n int) MessagePredicate {
 func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.TestNetworkDriver, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
-	contract := network.GetBenchmarkTokenContract()
+	contract := network.BenchmarkTokenContract()
 
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256
@@ -110,7 +110,7 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.Tes
 		amount := uint64(ctrlRand.Int63n(100))
 		expectedSum += amount
 
-		txHash := contract.SendTransferInBackground(ctx, ctrlRand.Intn(network.Size()), amount, fromAddress, toAddress)
+		txHash := contract.TransferInBackground(ctx, ctrlRand.Intn(network.Size()), amount, fromAddress, toAddress)
 		txHashes = append(txHashes, txHash)
 	}
 	for _, txHash := range txHashes {
@@ -118,10 +118,10 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.Tes
 	}
 
 	for i := 0; i < network.Size(); i++ {
-		actualSum := contract.CallGetBalance(ctx, i, toAddress)
+		actualSum := contract.GetBalance(ctx, i, toAddress)
 		require.EqualValuesf(t, expectedSum, actualSum, "recipient balance did not equal expected balance in node %d", i)
 
-		actualRemainder := contract.CallGetBalance(ctx, i, fromAddress)
+		actualRemainder := contract.GetBalance(ctx, i, fromAddress)
 		require.EqualValuesf(t, benchmarktoken.TOTAL_SUPPLY-expectedSum, actualRemainder, "sender balance did not equal expected balance in node %d", i)
 	}
 }

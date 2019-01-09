@@ -84,6 +84,5 @@ _logs/
 
 # binaries
 _bin
-orbs-*
 .deploy.json
 devtools/test/json/*.json

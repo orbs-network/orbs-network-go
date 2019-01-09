@@ -39,6 +39,7 @@ type NodeConfig interface {
 
 	// file system block storage
 	BlockStorageDataDir() string
+	BlockStorageMaxBlockSize() uint32
 
 	// state storage
 	StateStorageHistorySnapshotNum() uint32
@@ -48,8 +49,6 @@ type NodeConfig interface {
 	BlockTrackerGraceTimeout() time.Duration
 
 	// consensus context
-	ConsensusContextMinimalBlockTime() time.Duration
-	ConsensusContextMinimumTransactionsInBlock() uint32
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 
@@ -61,6 +60,7 @@ type NodeConfig interface {
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
+	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -118,6 +118,7 @@ type BlockStorageConfig interface {
 
 type FilesystemBlockPersistenceConfig interface {
 	BlockStorageDataDir() string
+	BlockStorageMaxBlockSize() uint32
 }
 
 type GossipTransportConfig interface {
@@ -133,8 +134,6 @@ type ConsensusContextConfig interface {
 	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
-	ConsensusContextMinimumTransactionsInBlock() uint32
-	ConsensusContextMinimalBlockTime() time.Duration
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	ConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
@@ -164,6 +163,7 @@ type TransactionPoolConfig interface {
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
+	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
 }
 
 type FederationNode interface {

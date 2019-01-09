@@ -81,7 +81,7 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
-		test.RequireStatus(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, result.ClientResponse, "got wrong status")
+		require.EqualValues(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, result.ClientResponse.TransactionStatus(), "got wrong status")
 	})
 }
 
@@ -131,6 +131,6 @@ func TestSendTransaction_ReturnImmediately(t *testing.T) {
 
 		// value test
 		require.WithinDuration(t, time.Now(), start, 1*time.Millisecond, "timeout duration exceeded")
-		test.RequireStatus(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse, "should be pending")
+		require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "should be pending")
 	})
 }

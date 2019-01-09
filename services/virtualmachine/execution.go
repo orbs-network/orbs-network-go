@@ -10,45 +10,52 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+type TransactionOrQuery interface {
+	String() string
+	ContractName() primitives.ContractName
+	MethodName() primitives.MethodName
+	RawInputArgumentArrayWithHeader() []byte
+	Signer() *protocol.Signer
+}
+
 func (s *service) runMethod(
 	ctx context.Context,
 	lastCommittedBlockHeight primitives.BlockHeight,
 	currentBlockHeight primitives.BlockHeight,
 	currentBlockTimestamp primitives.TimestampNano,
-	transaction *protocol.Transaction,
+	transactionOrQuery TransactionOrQuery,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
 ) (protocol.ExecutionResult, *protocol.ArgumentArray, *protocol.EventsArray, error) {
 
 	// create execution context
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, accessScope, transaction)
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, accessScope, transactionOrQuery)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 	executionContext.batchTransientState = batchTransientState
 
 	// get deployment info
-	processor, err := s.getServiceDeployment(ctx, executionContext, transaction.ContractName())
+	processor, err := s.getServiceDeployment(ctx, executionContext, transactionOrQuery.ContractName())
 	if err != nil {
-		s.logger.Info("get deployment info for contract failed", log.Error(err), log.Stringable("transaction", transaction))
+		s.logger.Info("get deployment info for contract failed", log.Error(err), log.Stringable("transaction-or-query", transactionOrQuery))
 		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, nil, err
 	}
 
 	// modify execution context
-	executionContext.serviceStackPush(transaction.ContractName())
+	executionContext.serviceStackPush(transactionOrQuery.ContractName())
 	defer executionContext.serviceStackPop()
 
 	// execute the call
-	inputArgs := protocol.ArgumentArrayReader(transaction.RawInputArgumentArrayWithHeader())
+	inputArgs := protocol.ArgumentArrayReader(transactionOrQuery.RawInputArgumentArrayWithHeader())
 	output, err := processor.ProcessCall(ctx, &services.ProcessCallInput{
 		ContextId:              executionContextId,
-		ContractName:           transaction.ContractName(),
-		MethodName:             transaction.MethodName(),
+		ContractName:           transactionOrQuery.ContractName(),
+		MethodName:             transactionOrQuery.MethodName(),
 		InputArgumentArray:     inputArgs,
 		AccessScope:            accessScope,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
-		CallingService:         transaction.ContractName(),
 	})
 	if err != nil {
-		s.logger.Info("transaction execution failed", log.Stringable("result", output.CallResult), log.Error(err), log.Stringable("transaction", transaction))
+		s.logger.Info("transaction execution failed", log.Stringable("result", output.CallResult), log.Error(err), log.Stringable("transaction-or-query", transactionOrQuery))
 	}
 
 	if batchTransientState != nil && output.CallResult == protocol.EXECUTION_RESULT_SUCCESS {

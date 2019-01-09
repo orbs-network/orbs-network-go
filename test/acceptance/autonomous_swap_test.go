@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ASBEthereum"
@@ -110,7 +110,6 @@ type driver struct {
 
 	orbsContractOwnerAddress *keys.Ed25519KeyPair
 	orbsASBContractName      string
-	orbsUser                 *orbsclient.OrbsAccount
 	orbsUserAddress          [20]byte
 	orbsUserKeyPair          *keys.Ed25519KeyPair
 
@@ -126,11 +125,10 @@ type driver struct {
 
 // orbs side funcs
 func (d *driver) generateOrbsAccount(t *testing.T) {
-	orbsUser, err := orbsclient.CreateAccount()
+	orbsUser, err := orbsClient.CreateAccount()
 	require.NoError(t, err, "could not create orbs address")
 
-	copy(d.orbsUserAddress[:], orbsUser.RawAddress)
-	d.orbsUser = orbsUser
+	copy(d.orbsUserAddress[:], orbsUser.AddressAsBytes())
 	d.orbsUserKeyPair = keys.NewEd25519KeyPair(orbsUser.PublicKey, orbsUser.PrivateKey)
 }
 
@@ -138,22 +136,22 @@ func (d *driver) generateOrbsFunds(ctx context.Context, t *testing.T, amount *bi
 	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
 		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "mint").
 		WithEd25519Signer(d.orbsContractOwnerAddress).
-		WithArgs(d.orbsUser.RawAddress, amount.Uint64()).
+		WithArgs(d.orbsUserAddress[:], amount.Uint64()).
 		Builder(), 0)
 	d.network.WaitForTransactionInState(ctx, txHash)
 	test.RequireSuccess(t, response, "failed setting minting tokens at orbs")
 }
 
 func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
-	balanceResponse := d.network.CallMethod(ctx, builders.Transaction().
+	balanceResponse := d.network.RunQuery(ctx, builders.Query().
 		WithEd25519Signer(d.orbsContractOwnerAddress).
 		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "balanceOf").
-		WithArgs(d.orbsUser.RawAddress).
-		Builder().Transaction, 0)
-	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, balanceResponse.CallMethodResult())
+		WithArgs(d.orbsUserAddress[:]).
+		Builder(), 0)
+	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, balanceResponse.QueryResult().ExecutionResult())
 	// check that the tokens got there.
-	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(balanceResponse)
-	value := outputArgsIterator.NextArguments().Uint64Value()
+	argsArray := builders.PackedArgumentArrayDecode(balanceResponse.QueryResult().RawOutputArgumentArrayWithHeader())
+	value := argsArray.ArgumentsIterator().NextArguments().Uint64Value()
 	return value
 }
 

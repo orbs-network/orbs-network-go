@@ -1,9 +1,9 @@
 package log
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"github.com/go-playground/ansi"
-	"github.com/orbs-network/orbs-network-go/crypto/base58"
 	"strconv"
 	"strings"
 	"time"
@@ -92,7 +92,7 @@ func printParam(builder *strings.Builder, param *Field) {
 	case UintType:
 		value = strconv.FormatUint(param.Uint, 10)
 	case BytesType:
-		value = string(base58.Encode(param.Bytes))
+		value = hex.EncodeToString(param.Bytes)
 	case FloatType:
 		value = strconv.FormatFloat(param.Float, 'f', -1, 64)
 	case ErrorType:

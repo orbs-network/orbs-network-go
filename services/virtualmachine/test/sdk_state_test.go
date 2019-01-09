@@ -43,7 +43,7 @@ func TestSdkState_ReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 		})
 		h.expectStateStorageRead(12, "Contract1", []byte{0x01}, []byte{0x02})
 
-		h.runLocalMethod(ctx, "Contract1", "method1")
+		h.processQuery(ctx, "Contract1", "method1")
 
 		h.verifySystemContractCalled(t)
 		h.verifyStateStorageBlockHeightRequested(t)
@@ -65,7 +65,7 @@ func TestSdkState_WriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 			return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.ArgumentsArray(), errors.New("unexpected error")
 		})
 
-		h.runLocalMethod(ctx, "Contract1", "method1")
+		h.processQuery(ctx, "Contract1", "method1")
 
 		h.verifySystemContractCalled(t)
 		h.verifyStateStorageBlockHeightRequested(t)

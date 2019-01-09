@@ -43,9 +43,9 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		// check counter
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "call method - start", &lt)
-			response, err2 := h.callMethod(OwnerOfAllSupply.PublicKey(), contractName, "get")
-			printTestTime(t, "call method - end", &lt)
+			printTestTime(t, "run query - start", &lt)
+			response, err2 := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
+			printTestTime(t, "run query - end", &lt)
 
 			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0] == counterStart
@@ -67,7 +67,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		// check counter
 		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			response, err := h.callMethod(OwnerOfAllSupply.PublicKey(), contractName, "get")
+			response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0] == counterStart+amount

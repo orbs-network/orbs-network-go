@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-const DEFAULT_TEST_PROTOCOL_VERSION = primitives.ProtocolVersion(1)
-const DEFAULT_TEST_VIRTUAL_CHAIN_ID = primitives.VirtualChainId(42)
+/// Test builders for: protocol.SignedTransaction
 
+// do not create this struct directly although it's exported
 type TransactionBuilder struct {
 	signer  primitives.Ed25519PrivateKey
 	builder *protocol.SignedTransactionBuilder
@@ -41,31 +41,6 @@ func TransferTransaction() *TransactionBuilder {
 	}
 	targetAddress := ClientAddressForEd25519SignerForTests(2)
 	return t.WithAmountAndTargetAddress(10, targetAddress)
-}
-
-func GetBalanceTransaction() *TransactionBuilder {
-	keyPair := testKeys.Ed25519KeyPairForTests(1)
-	t := &TransactionBuilder{
-		signer: keyPair.PrivateKey(),
-		builder: &protocol.SignedTransactionBuilder{
-			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
-				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-				ContractName:    "BenchmarkToken",
-				MethodName:      "getBalance",
-				Signer: &protocol.SignerBuilder{
-					Scheme: protocol.SIGNER_SCHEME_EDDSA,
-					Eddsa: &protocol.EdDSA01SignerBuilder{
-						NetworkType:     protocol.NETWORK_TYPE_TEST_NET,
-						SignerPublicKey: keyPair.PublicKey(),
-					},
-				},
-				Timestamp: primitives.TimestampNano(time.Now().UnixNano()),
-			},
-		},
-	}
-	targetAddress := ClientAddressForEd25519SignerForTests(2)
-	return t.WithTargetAddress(targetAddress)
 }
 
 func Transaction() *TransactionBuilder {
