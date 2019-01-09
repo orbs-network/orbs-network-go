@@ -16,7 +16,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 
 	newBlockTimestamp := digest.CalcNewBlockTimestamp(input.PrevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
 
-	proposedTransactions, err := s.fetchTransactions(ctx, input.CurrentBlockHeight, newBlockTimestamp, s.config.ConsensusContextMaximumTransactionsInBlock(), s.config.ConsensusContextMinimumTransactionsInBlock(), s.config.ConsensusContextMinimalBlockTime())
+	proposedTransactions, err := s.fetchTransactions(ctx, input.CurrentBlockHeight, newBlockTimestamp, s.config.ConsensusContextMaximumTransactionsInBlock())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch transactions for new block")
 	}
