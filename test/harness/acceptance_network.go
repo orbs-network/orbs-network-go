@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -22,6 +23,7 @@ type TestNetworkDriver interface {
 	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
 	DumpState()
 	WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int)
+	GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker
 	MockContract(fakeContractInfo *sdkContext.ContractInfo, code string)
 }
 
@@ -40,6 +42,10 @@ func (n *acceptanceNetwork) Start(ctx context.Context, numOfNodesToStart int) {
 
 func (n *acceptanceNetwork) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
 	n.Nodes[nodeIndex].WaitForTransactionInState(ctx, txHash)
+}
+
+func (n *acceptanceNetwork) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
+	return n.Nodes[nodeIndex].GetTransactionPoolBlockHeightTracker()
 }
 
 func (n *acceptanceNetwork) Description() string {
@@ -76,6 +82,7 @@ func (n *acceptanceNetwork) MockContract(fakeContractInfo *sdkContext.ContractIn
 		}
 	}
 }
+
 func (n *acceptanceNetwork) Destroy() {
 	for _, node := range n.Nodes {
 		node.Destroy()

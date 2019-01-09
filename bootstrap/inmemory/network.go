@@ -118,12 +118,17 @@ func (n *Node) WaitForTransactionInState(ctx context.Context, txHash primitives.
 	}
 	return blockHeight
 }
+
 func (n *Node) Started() bool {
 	return n.nodeLogic != nil
 }
 
 func (n *Node) Destroy() {
 	n.nodeLogic = nil
+}
+
+func (n *Node) GetTransactionPoolBlockHeightTracker() *synchronization.BlockTracker {
+	return n.transactionPoolBlockHeightTracker
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {

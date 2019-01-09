@@ -28,28 +28,21 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 
-		var txHashes []primitives.Sha256
+		var topBlockHeight primitives.BlockHeight
 		for _, builder := range txBuilders {
-			resp, txHash := network.SendTransaction(ctx, builder.Builder(), 0)
+			resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
 			require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
-			txHashes = append(txHashes, txHash)
+			topBlockHeight = resp.RequestResult().BlockHeight()
 		}
 
 		network = restartPreservingBlocks()
 
-		for _, txHash := range txHashes { // require full txpool sync
-			require.True(t, waitForTransactionStatusCommitted(ctx, network, txHash, 0),
-				"expected tx to be committed to leader tx pool")
-			require.True(t, waitForTransactionStatusCommitted(ctx, network, txHash, 1),
-				"expected tx to be committed to non leader tx pool")
-		}
+		_ = network.GetTransactionPoolBlockHeightTracker(0).WaitForBlock(ctx, topBlockHeight)
+		_ = network.GetTransactionPoolBlockHeightTracker(1).WaitForBlock(ctx, topBlockHeight)
 
 		// Resend an already committed transaction to Leader
-		leaderTxResponse, txh1 := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
-		nonLeaderTxResponse, txh2 := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
-
-		require.Equal(t, txh1, txHashes[0], "expected txHash to match previously sent txHash")
-		require.Equal(t, txh2, txHashes[0], "expected txHash to match previously sent txHash")
+		leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+		nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus(),
 			"expected a stale tx sent to leader to be rejected")
