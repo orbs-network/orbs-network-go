@@ -37,7 +37,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 
 		network = restartPreservingBlocks()
 
-		for _, txHash := range txHashes {
+		for _, txHash := range txHashes { // require full txpool sync
 			require.True(t, waitForTransactionStatusCommitted(ctx, network, txHash, 0),
 				"expected tx to be committed to leader tx pool")
 			require.True(t, waitForTransactionStatusCommitted(ctx, network, txHash, 1),
@@ -45,8 +45,11 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		}
 
 		// Resend an already committed transaction to Leader
-		leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
-		nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+		leaderTxResponse, txh1 := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+		nonLeaderTxResponse, txh2 := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+
+		require.Equal(t, txh1, txHashes[0], "expected txHash to match previously sent txHash")
+		require.Equal(t, txh2, txHashes[0], "expected txHash to match previously sent txHash")
 
 		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus(),
 			"expected a stale tx sent to leader to be rejected")
