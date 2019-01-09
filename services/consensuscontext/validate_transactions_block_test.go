@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	testValidators "github.com/orbs-network/orbs-network-go/test/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -61,16 +60,6 @@ func TestTransactionsBlockValidators(t *testing.T) {
 		require.Equal(t, ErrMismatchedVirtualChainID, errors.Cause(err), "validation should fail on incorrect virtual chain", err)
 	})
 
-	t.Run("should return error for transaction block with incorrect merkle root", func(t *testing.T) {
-		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateTransactionsMerkleRootHash(hash2); err != nil {
-			t.Error(err)
-		}
-
-		err := validateTransactionsBlockMerkleRoot(context.Background(), vctx)
-		require.Equal(t, validators.ErrMismatchedTxMerkleRoot, errors.Cause(err), "validation should fail on incorrect transaction root hash", err)
-	})
-
 	t.Run("should return error for transaction block with incorrect block height", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
 		if err := vctx.input.TransactionsBlock.Header.MutateBlockHeight(1); err != nil {
@@ -88,15 +77,6 @@ func TestTransactionsBlockValidators(t *testing.T) {
 		}
 		err := validateTxPrevBlockHashPtr(context.Background(), vctx)
 		require.Equal(t, ErrMismatchedPrevBlockHash, errors.Cause(err), "validation should fail on incorrect prev block hash", err)
-	})
-
-	t.Run("should return error for transaction block with incorrect metadata hash", func(t *testing.T) {
-		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateMetadataHash(hash2); err != nil {
-			t.Error(err)
-		}
-		err := validateTransactionsBlockMetadataHash(context.Background(), vctx)
-		require.Equal(t, validators.ErrMismatchedMetadataHash, errors.Cause(err), "validation should fail on incorrect metadata hash", err)
 	})
 
 	t.Run("should return error for transaction block with failing tx ordering validation", func(t *testing.T) {

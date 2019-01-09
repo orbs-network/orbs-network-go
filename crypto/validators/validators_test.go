@@ -12,18 +12,78 @@ import (
 )
 
 func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
-	txMerkleRoot1 := hash.CalcSha256([]byte{1})
+	wrongHash := hash.CalcSha256([]byte{1})
 	block := validators.BuildValidTestBlock()
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
 	}
-	if err := bvcx.TransactionsBlock.Header.MutateTransactionsMerkleRootHash(txMerkleRoot1); err != nil {
+	if err := bvcx.TransactionsBlock.Header.MutateTransactionsMerkleRootHash(wrongHash); err != nil {
 		t.Error(err)
 	}
 
 	err := ValidateTransactionsBlockMerkleRoot(bvcx)
 	require.Equal(t, ErrMismatchedTxMerkleRoot, errors.Cause(err), "validation should fail on incorrect transaction root hash", err)
+}
+
+func TestValidateTransactionsBlockMetadataHash(t *testing.T) {
+	wrongHash := hash.CalcSha256([]byte{1})
+	block := validators.BuildValidTestBlock()
+	bvcx := &BlockValidatorContext{
+		TransactionsBlock: block.TransactionsBlock,
+		ResultsBlock:      block.ResultsBlock,
+	}
+	if err := bvcx.TransactionsBlock.Header.MutateMetadataHash(wrongHash); err != nil {
+		t.Error(err)
+	}
+
+	err := ValidateTransactionsBlockMetadataHash(bvcx)
+	require.Equal(t, ErrMismatchedMetadataHash, errors.Cause(err), "validation should fail on incorrect transaction root hash", err)
+}
+
+func TestValidateReceiptsMerkleRoot(t *testing.T) {
+	manualReceiptsMerkleRoot1 := hash.CalcSha256([]byte{1})
+	manualReceiptsMerkleRoot2 := hash.CalcSha256([]byte{2})
+	successfulCalculateReceiptsMerkleRoot := validators.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
+
+	block := validators.BuildValidTestBlock()
+	bvcx := &BlockValidatorContext{
+		TransactionsBlock: block.TransactionsBlock,
+		ResultsBlock:      block.ResultsBlock,
+	}
+	bvcx.CalcReceiptsMerkleRoot = successfulCalculateReceiptsMerkleRoot
+	if err := bvcx.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot1); err != nil {
+		t.Error(err)
+	}
+	err := ValidateReceiptsMerkleRoot(bvcx)
+	require.Nil(t, err)
+	if err := block.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot2); err != nil {
+		t.Error(err)
+	}
+	err = ValidateReceiptsMerkleRoot(bvcx)
+	require.Equal(t, ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect receipts root hash", err)
+}
+
+func TestValidateResultsBlockStateDiffHash(t *testing.T) {
+	manualStateDiffHash1 := hash.CalcSha256([]byte{10})
+	manualStateDiffHash2 := hash.CalcSha256([]byte{20})
+	block := validators.BuildValidTestBlock()
+	successfulCalcStateDiffHash := validators.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
+	bvcx := &BlockValidatorContext{
+		TransactionsBlock: block.TransactionsBlock,
+		ResultsBlock:      block.ResultsBlock,
+	}
+	bvcx.CalcStateDiffHash = successfulCalcStateDiffHash
+	if err := bvcx.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffHash1); err != nil {
+		t.Error(err)
+	}
+	err := ValidateResultsBlockStateDiffHash(bvcx)
+	require.Nil(t, err)
+	if err := bvcx.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffHash2); err != nil {
+		t.Error(err)
+	}
+	err = ValidateResultsBlockStateDiffHash(bvcx)
+	require.Equal(t, ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect state diff hash", err)
 
 }
 

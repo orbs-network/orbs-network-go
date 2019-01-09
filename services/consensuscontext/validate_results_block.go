@@ -81,7 +81,7 @@ func validateRxPrevBlockHashPtr(ctx context.Context, vcrx *rxValidatorContext) e
 	return nil
 }
 
-func validateRxReceiptsRootHash(ctx context.Context, vcrx *rxValidatorContext) error {
+func validateReceiptsMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
 	return validators.ValidateReceiptsMerkleRoot(&validators.BlockValidatorContext{
 		TransactionsBlock:      vcrx.input.TransactionsBlock,
 		ResultsBlock:           vcrx.input.ResultsBlock,
@@ -164,7 +164,7 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 		validateRxTxBlockPtrMatchesActualTxBlock,
 		validateIdenticalTxRxTimestamp,
 		validateRxPrevBlockHashPtr,
-		validateRxReceiptsRootHash,
+		validateReceiptsMerkleRoot,
 		validateRxStateDiffHash,
 		validatePreExecutionStateMerkleRoot,
 		validateExecution,

@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	testDigest "github.com/orbs-network/orbs-network-go/test/digest"
+	testValidators "github.com/orbs-network/orbs-network-go/test/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -160,42 +160,6 @@ func TestResultsBlockValidators(t *testing.T) {
 		require.Equal(t, ErrMismatchedPrevBlockHash, errors.Cause(err), "validation should fail on incorrect prev block hash", err)
 	})
 
-	t.Run("should return error for block with incorrect receipts root hash", func(t *testing.T) {
-		vcrx := toRxValidatorContext(cfg)
-		manualReceiptsMerkleRoot1 := hash.CalcSha256([]byte{1})
-		manualReceiptsMerkleRoot2 := hash.CalcSha256([]byte{2})
-		successfulCalculateReceiptsMerkleRoot := testDigest.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
-		vcrx.calcReceiptsMerkleRoot = successfulCalculateReceiptsMerkleRoot
-		if err := vcrx.input.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot1); err != nil {
-			t.Error(err)
-		}
-		err := validateRxReceiptsRootHash(context.Background(), vcrx)
-		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot2); err != nil {
-			t.Error(err)
-		}
-		err = validateRxReceiptsRootHash(context.Background(), vcrx)
-		require.Equal(t, validators.ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect receipts root hash", err)
-	})
-
-	t.Run("should return error for block with incorrect state diff hash", func(t *testing.T) {
-		vcrx := toRxValidatorContext(cfg)
-		manualStateDiffHash1 := hash.CalcSha256([]byte{10})
-		manualStateDiffHash2 := hash.CalcSha256([]byte{20})
-		successfulCalcStateDiffHash := testDigest.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
-		vcrx.calcStateDiffHash = successfulCalcStateDiffHash
-		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffHash1); err != nil {
-			t.Error(err)
-		}
-		err := validateRxStateDiffHash(context.Background(), vcrx)
-		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffHash2); err != nil {
-			t.Error(err)
-		}
-		err = validateRxStateDiffHash(context.Background(), vcrx)
-		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect state diff hash", err)
-	})
-
 	t.Run("should return error when state's pre-execution merkle root is different between the results block and state storage", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
 		manualPreExecutionStateMerkleRootHash1 := hash.CalcSha256([]byte{1})
@@ -242,12 +206,12 @@ func TestResultsBlockValidators(t *testing.T) {
 			t.Error(err)
 		}
 
-		successfulProcessTransactionSet := testDigest.MockProcessTransactionSetThatReturns(nil)
-		successfulCalcReceiptsMerkleRoot := testDigest.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
-		successfulCalcStateDiffHash := testDigest.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
-		errorProcessTransactionSet := testDigest.MockProcessTransactionSetThatReturns(errors.New("Some error"))
-		errorCalcReceiptsMerkleRoot := testDigest.MockCalcReceiptsMerkleRootThatReturns(nil, errors.New("Some error"))
-		errorCalcStateDiffHash := testDigest.MockCalcStateDiffHashThatReturns(nil, errors.New("Some error"))
+		successfulProcessTransactionSet := MockProcessTransactionSetThatReturns(nil)
+		successfulCalcReceiptsMerkleRoot := testValidators.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
+		successfulCalcStateDiffHash := testValidators.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
+		errorProcessTransactionSet := MockProcessTransactionSetThatReturns(errors.New("Some error"))
+		errorCalcReceiptsMerkleRoot := testValidators.MockCalcReceiptsMerkleRootThatReturns(nil, errors.New("Some error"))
+		errorCalcStateDiffHash := testValidators.MockCalcStateDiffHashThatReturns(nil, errors.New("Some error"))
 
 		// ProcessTransactionSet returns an error - returns ErrProcessTransactionSet
 		vcrx.processTransactionSet = errorProcessTransactionSet
@@ -291,4 +255,14 @@ func TestResultsBlockValidators(t *testing.T) {
 		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
 	})
 
+}
+
+func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+	someEmptyTxSetThatWeReturnOnlyToPreventErrors := &services.ProcessTransactionSetOutput{
+		TransactionReceipts: nil,
+		ContractStateDiffs:  nil,
+	}
+	return func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+		return someEmptyTxSetThatWeReturnOnlyToPreventErrors, err
+	}
 }
