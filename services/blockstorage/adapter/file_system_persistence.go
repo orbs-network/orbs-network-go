@@ -49,21 +49,20 @@ func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBl
 
 	codec := newCodec(conf.BlockStorageMaxBlockSize())
 
-	// creates the file if missing, check version is supported
-	file, blocksOffset, err := openBlocksFile(ctx, conf.BlockStorageDataDir(), blocksFileName(conf), logger)
+	file, blocksOffset, err := openBlocksFile(ctx, conf, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	bhIndex, err := buildIndex(file, blocksOffset, logger, codec)
 	if err != nil {
+		closeSilently(file, logger)
 		return nil, err
 	}
 
-	topOffset, err := bhIndex.fetchBlockOffset(bhIndex.topBlockHeight + 1)
+	newTip, err := newFileBlockWriter(file, codec, logger, bhIndex.fetchTopOffest())
 	if err != nil {
-		return nil, err
-	}
-
-	newTip, err := newFileBlockWriter(file, codec, logger, topOffset)
-	if err != nil {
+		closeSilently(file, logger)
 		return nil, err
 	}
 
@@ -80,7 +79,9 @@ func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBl
 	return adapter, nil
 }
 
-func openBlocksFile(ctx context.Context, dir, filename string, logger log.BasicLogger) (*os.File, int64, error) {
+func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, logger log.BasicLogger) (*os.File, int64, error) {
+	dir := conf.BlockStorageDataDir()
+	filename := blocksFileName(conf)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to verify data directory exists")
@@ -90,12 +91,76 @@ func openBlocksFile(ctx context.Context, dir, filename string, logger log.BasicL
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to open blocks file for writing")
 	}
+	closeOnContextDone(ctx, file, logger)
 
-	err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	err = advisoryLockExclusive(err, file)
 	if err != nil {
+		closeSilently(file, logger)
 		return nil, 0, errors.Wrap(err, "failed to obtain exclusive lock for writing")
 	}
 
+	firstBlockOffset, err := validateFileHeader(file, conf, logger)
+	if err != nil {
+		closeSilently(file, logger)
+		return nil, 0, errors.Wrap(err, "failed to obtain exclusive lock for writing")
+	}
+
+	return file, firstBlockOffset, nil
+}
+
+func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceConfig, logger log.BasicLogger) (int64, error) {
+
+	info, err := file.Stat()
+	if err != nil {
+		return 0, err
+	}
+	if info.Size() == 0 { // write header
+		header := newBlocksFileHeader(0, uint32(conf.VirtualChainId()))
+		logger.Info("creating new blocks file")
+		err = header.write(file)
+		if err != nil {
+			return 0, errors.Wrapf(err, "error writing blocks file header")
+		}
+		err = file.Sync()
+		if err != nil {
+			return 0, errors.Wrapf(err, "error writing blocks file header")
+		}
+	} else { // validate header
+
+		offset, err := file.Seek(0, io.SeekStart)
+		if err != nil {
+			return 0, errors.Wrapf(err, "error reading blocks file header")
+		}
+		if offset != 0 {
+			return 0, fmt.Errorf("error reading blocks file header")
+		}
+
+		header := newBlocksFileHeader(0, 0)
+		err = header.read(file)
+		if err != nil {
+			return 0, errors.Wrapf(err, "error reading blocks file header")
+		}
+
+		// TODO V1 TBD
+		//if header.networkId != conf.NetworkId() {
+		//	return 0, fmt.Errorf("blocks file network id mismatch. found netowrk id %d expected %d",header.networkId, conf.NetworkId())
+		//}
+
+		if header.ChainId != uint32(conf.VirtualChainId()) {
+			return 0, fmt.Errorf("blocks file virtual chain id mismatch. found vchain id %d expected %d", header.ChainId, conf.VirtualChainId())
+		}
+
+	}
+
+	offset, err := file.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return 0, errors.Wrapf(err, "error reading blocks file header")
+	}
+
+	return offset, nil
+}
+
+func closeOnContextDone(ctx context.Context, file *os.File, logger log.BasicLogger) {
 	go func() {
 		<-ctx.Done()
 		err := file.Close()
@@ -105,10 +170,10 @@ func openBlocksFile(ctx context.Context, dir, filename string, logger log.BasicL
 		}
 		logger.Info("closed blocks file", log.String("filename", file.Name()))
 	}()
+}
 
-	// TODO NOW - Add the file header when opening a file and it's empty. If it's not empty, validate the header and throw exception. return the header size so we can update index
-
-	return file, 0, nil
+func advisoryLockExclusive(err error, file *os.File) error {
+	return syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 }
 
 func newFileBlockWriter(file *os.File, codec blockCodec, logger log.BasicLogger, nextBlockOffset int64) (*blockWriter, error) {
@@ -120,7 +185,7 @@ func newFileBlockWriter(file *os.File, codec blockCodec, logger log.BasicLogger,
 		return nil, fmt.Errorf("failed to seek to next block offset. requested offset %d, but new reached %d", nextBlockOffset, newOffset)
 	}
 
-	result := newBlockWriter(file, logger, codec)
+	result := newBlockWriter(file, codec)
 
 	return result, nil
 }
@@ -158,16 +223,12 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 		return fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, currentTop)
 	}
 
-	startPos, err := f.bhIndex.fetchBlockOffset(bh)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch top block offset")
-	}
-
 	bytes, err := f.blockWriter.writeBlock(blockPair)
 	if err != nil {
 		return err
 	}
 
+	startPos := f.bhIndex.fetchBlockOffset(bh)
 	err = f.bhIndex.appendBlock(startPos, startPos+int64(bytes), blockPair)
 	if err != nil {
 		return errors.Wrap(err, "failed to update index after writing block")
@@ -180,20 +241,15 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 }
 
 func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor CursorFunc) error {
-	offset, err := f.bhIndex.fetchBlockOffset(from)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch last block")
-	}
-
 	file, err := os.Open(f.blockFileName())
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for reading")
 	}
 	defer closeSilently(file, f.logger)
 
-	newOffset, err := file.Seek(offset, io.SeekStart)
-	if newOffset != offset || err != nil {
-		return errors.Wrapf(err, "failed to seek in blocks file to position %v", offset)
+	newOffset, err := file.Seek(f.bhIndex.fetchBlockOffset(from), io.SeekStart)
+	if newOffset != f.bhIndex.fetchBlockOffset(from) || err != nil {
+		return errors.Wrapf(err, "failed to seek in blocks file to position %v", f.bhIndex.fetchBlockOffset(from))
 	}
 
 	wantNext := true

@@ -1,7 +1,6 @@
 package adapter
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"io"
@@ -15,16 +14,14 @@ type writerSyncer interface {
 
 type blockWriter struct {
 	sync.Mutex
-	ws     writerSyncer
-	logger log.BasicLogger
-	codec  blockCodec
+	ws    writerSyncer
+	codec blockCodec
 }
 
-func newBlockWriter(ws writerSyncer, logger log.BasicLogger, codec blockCodec) *blockWriter {
+func newBlockWriter(ws writerSyncer, codec blockCodec) *blockWriter {
 	return &blockWriter{
-		ws:     ws,
-		logger: logger,
-		codec:  codec,
+		ws:    ws,
+		codec: codec,
 	}
 }
 

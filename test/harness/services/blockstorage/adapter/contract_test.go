@@ -234,3 +234,7 @@ func (l *localConfig) BlockStorageDataDir() string {
 func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
 	return 64 * 1024 * 1024
 }
+
+func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
+	return 0xFF
+}

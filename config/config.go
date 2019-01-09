@@ -120,6 +120,7 @@ type BlockStorageConfig interface {
 type FilesystemBlockPersistenceConfig interface {
 	BlockStorageDataDir() string
 	BlockStorageMaxBlockSize() uint32
+	VirtualChainId() primitives.VirtualChainId
 }
 
 type GossipTransportConfig interface {
