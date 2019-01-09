@@ -12,7 +12,7 @@ func EncodeHex(data []byte) string { // EIP-55 'complaint', but using sha2 and n
 	hashed := hash.CalcSha256(data)
 
 	for i := 0; i < len(result); i++ {
-		hashByte := hashed[i/2]
+		hashByte := hashed[(i/2)%hash.SHA256_HASH_SIZE_BYTES]
 		if i%2 == 0 {
 			hashByte = hashByte >> 4
 		} else {
