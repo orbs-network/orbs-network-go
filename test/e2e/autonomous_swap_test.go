@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -90,7 +90,7 @@ type driver struct {
 
 	orbsOwner           *keys.Ed25519KeyPair
 	orbsASBContractName string
-	orbsUser            *orbsclient.OrbsAccount
+	orbsUserAddressRaw  []byte
 	orbsUserAddressHex  string
 
 	addressInEthereum *bind.TransactOpts // we use a single address for both the "admin" stuff like deploying the contracts and as our swapping user, so as to simplify setup - otherwise we'll need to create two PKs in the simulator
@@ -102,20 +102,20 @@ type driver struct {
 
 // orbs side funcs
 func (d *driver) generateOrbsAccount(t *testing.T) {
-	orbsUser, err := orbsclient.CreateAccount()
+	orbsUser, err := orbsClient.CreateAccount()
 	require.NoError(t, err, "could not create orbs address")
 
-	d.orbsUserAddressHex = hexutil.Encode(orbsUser.RawAddress)
-	d.orbsUser = orbsUser
+	d.orbsUserAddressRaw = orbsUser.AddressAsBytes()
+	d.orbsUserAddressHex = hexutil.Encode(d.orbsUserAddressRaw)
 }
 
 func (d *driver) generateOrbsFunds(t *testing.T, amount *big.Int) {
-	response, _, err := d.harness.sendTransaction(d.orbsOwner.PublicKey(), d.orbsOwner.PrivateKey(), erc20proxy.CONTRACT_NAME, "mint", d.orbsUser.RawAddress, amount.Uint64())
+	response, _, err := d.harness.sendTransaction(d.orbsOwner.PublicKey(), d.orbsOwner.PrivateKey(), erc20proxy.CONTRACT_NAME, "mint", d.orbsUserAddressRaw, amount.Uint64())
 	requireSuccess(t, err, response, "mint transaction")
 }
 
 func (d *driver) getBalanceInOrbs(t *testing.T) uint64 {
-	response, err := d.harness.callMethod(d.orbsOwner.PublicKey(), erc20proxy.CONTRACT_NAME, "balanceOf", d.orbsUser.RawAddress)
+	response, err := d.harness.runQuery(d.orbsOwner.PublicKey(), erc20proxy.CONTRACT_NAME, "balanceOf", d.orbsUserAddressRaw)
 	require.NoError(t, err, "failed sending  to Orbs")
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult, "failed getting balance in Orbs")
 	return response.OutputArguments[0].(uint64)

@@ -26,7 +26,6 @@ func processCallInput() *processCall {
 			InputArgumentArray:     (&protocol.ArgumentArrayBuilder{}).Build(),
 			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
-			CallingService:         "",
 		},
 	}
 	return p

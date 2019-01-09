@@ -85,7 +85,7 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 }
 
 func sendTransactionAndWaitUntilInState(ctx context.Context, network harness.NetworkDriver) {
-	tx := network.SendTransfer(ctx, 0, 1, 5, 6)
+	tx := network.Transfer(ctx, 0, 1, 5, 6)
 	network.WaitForTransactionInState(ctx, 0, tx.TransactionReceipt().Txhash())
 	network.WaitForTransactionInState(ctx, 1, tx.TransactionReceipt().Txhash())
 }

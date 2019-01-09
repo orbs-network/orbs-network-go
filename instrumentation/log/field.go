@@ -78,6 +78,10 @@ func Transaction(txHash primitives.Sha256) *Field {
 	return Stringable("txHash", txHash)
 }
 
+func Query(queryHash primitives.Sha256) *Field {
+	return Stringable("queryHash", queryHash)
+}
+
 func StringableSlice(key string, values interface{}) *Field {
 	var strings []string
 	switch reflect.TypeOf(values).Kind() {

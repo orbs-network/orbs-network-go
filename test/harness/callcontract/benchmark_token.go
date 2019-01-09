@@ -1,4 +1,4 @@
-package contracts
+package callcontract
 
 import (
 	"context"
@@ -12,21 +12,21 @@ import (
 
 type BenchmarkTokenClient interface {
 	DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int)
-	SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256)
-	SendTransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256
-	SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse
-	CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64
+	Transfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256)
+	TransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256
+	InvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse
+	GetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64
 }
 
 func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int) {
-	txHash := c.SendTransferInBackground(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
+	txHash := c.TransferInBackground(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	c.API.WaitForTransactionInState(timeoutCtx, txHash)
 }
 
-func (c *contractClient) SendTransfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
+func (c *contractClient) Transfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	tx := builders.TransferTransaction().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(fromAddressIndex)).
 		WithAmountAndTargetAddress(amount, builders.ClientAddressForEd25519SignerForTests(toAddressIndex)).
@@ -36,7 +36,7 @@ func (c *contractClient) SendTransfer(ctx context.Context, nodeIndex int, amount
 }
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/434): when publicApi supports returning as soon as SendTransaction is in the pool, switch to blocking implementation that waits for this
-func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256 {
+func (c *contractClient) TransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256 {
 	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
 	targetAddress := builders.ClientAddressForEd25519SignerForTests(toAddressIndex)
 	tx := builders.TransferTransaction().
@@ -51,7 +51,7 @@ func (c *contractClient) SendTransferInBackground(ctx context.Context, nodeIndex
 	return txHash
 }
 
-func (c *contractClient) SendInvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse {
+func (c *contractClient) InvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse {
 	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
 	targetAddress := builders.ClientAddressForEd25519SignerForTests(toAddressIndex)
 	tx := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithInvalidAmount(targetAddress).Builder()
@@ -60,13 +60,13 @@ func (c *contractClient) SendInvalidTransfer(ctx context.Context, nodeIndex int,
 	return out
 }
 
-func (c *contractClient) CallGetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64 {
-	tx := builders.GetBalanceTransaction().
+func (c *contractClient) GetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64 {
+	query := builders.GetBalanceQuery().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(forAddressIndex)).
 		WithTargetAddress(builders.ClientAddressForEd25519SignerForTests(forAddressIndex)).
-		Builder().Transaction
+		Builder()
 
-	r := c.API.CallMethod(ctx, tx, nodeIndex)
-	outputArgsIterator := builders.ClientCallMethodResponseOutputArgumentsDecode(r)
-	return outputArgsIterator.NextArguments().Uint64Value()
+	out := c.API.RunQuery(ctx, query, nodeIndex)
+	argsArray := builders.PackedArgumentArrayDecode(out.QueryResult().RawOutputArgumentArrayWithHeader())
+	return argsArray.ArgumentsIterator().NextArguments().Uint64Value()
 }

@@ -29,31 +29,31 @@ func TestProcessCall_Arguments(t *testing.T) {
 			name:           "WithIncorrectArgTypeFails",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint64(12), uint32(11), []byte{0x01, 0x02, 0x03}, "hello").Build(),
 			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			expectedResult: protocol.EXECUTION_RESULT_ERROR_INPUT,
 		},
 		{
 			name:           "WithTooLittleArgsFails",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello").Build(),
 			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			expectedResult: protocol.EXECUTION_RESULT_ERROR_INPUT,
 		},
 		{
 			name:           "WithTooManyArgsFails",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}, uint32(11)).Build(),
 			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			expectedResult: protocol.EXECUTION_RESULT_ERROR_INPUT,
 		},
 		{
 			name:           "WithUnknownArgSliceTypeFails",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(uint32(11), uint64(12), "hello", []int{0x01, 0x02, 0x03}).Build(),
 			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			expectedResult: protocol.EXECUTION_RESULT_ERROR_INPUT,
 		},
 		{
 			name:           "WithUnknownArgTypeFails",
 			input:          processCallInput().WithMethod("BenchmarkContract", "argTypes").WithArgs(float32(11), uint64(12), "hello", []byte{0x01, 0x02, 0x03}).Build(),
 			expectedError:  true,
-			expectedResult: protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			expectedResult: protocol.EXECUTION_RESULT_ERROR_INPUT,
 		},
 	}
 	for _, tt := range tests {

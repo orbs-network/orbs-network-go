@@ -1,6 +1,8 @@
 package publicapi
 
 import (
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -10,64 +12,76 @@ import (
 	"time"
 )
 
-func TestPublicApiGetTxProof_PrepareResponse(t *testing.T) {
+func TestGetTransactionReceiptProof_PrepareResponse(t *testing.T) {
+	ctrlRand := test.NewControlledRand(t)
 	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
-	status := &services.GetTransactionStatusOutput{
+	receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Builder()
+
+	txStatusOutput := &services.GetTransactionStatusOutput{
 		ClientResponse: (&client.GetTransactionStatusResponseBuilder{
-			RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
-			TransactionReceipt: nil, // doesn't matter here
+			RequestResult: &client.RequestResultBuilder{
+				RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+				BlockHeight:    126,
+				BlockTimestamp: blockTime,
+			},
 			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-			BlockHeight:        126,
-			BlockTimestamp:     blockTime,
+			TransactionReceipt: receipt,
 		}).Build(),
 	}
 
-	// TODO issue 67 raw data builder ?
-	proof := &services.GenerateReceiptProofOutput{
-		Proof: (&protocol.ReceiptProofBuilder{
-			Header:       nil,
-			BlockProof:   nil,
-			ReceiptProof: nil,
-		}).Build(),
+	proof := (&protocol.ReceiptProofBuilder{
+		Header:       &protocol.ResultsBlockHeaderBuilder{},
+		BlockProof:   &protocol.ResultsBlockProofBuilder{},
+		ReceiptProof: primitives.MerkleTreeProof([]byte{0x01, 0x02}),
+	}).Build()
+	proofOutput := &services.GenerateReceiptProofOutput{
+		Proof: proof,
 	}
 
-	response := toGetReceiptOutput(status, proof)
+	response := toGetTxProofOutput(txStatusOutput, proofOutput)
 
-	// TODO issue 67 raw data
-	//test.RequireCmpEqual(t, receipt, response.ClientResponse.Proof(), "Transaction receipt is not equal")
-	require.EqualValues(t, 126, response.ClientResponse.BlockHeight(), "Block height response is wrong")
-	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	require.EqualValues(t, protocol.REQUEST_STATUS_COMPLETED, response.ClientResponse.RequestResult().RequestStatus(), "Request status is wrong")
+	require.EqualValues(t, 126, response.ClientResponse.RequestResult().BlockHeight(), "Block height response is wrong")
+	require.EqualValues(t, blockTime, response.ClientResponse.RequestResult().BlockTimestamp(), "Block time response is wrong")
+
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, response.ClientResponse.TransactionStatus(), "txStatus response is wrong")
+	test.RequireCmpEqual(t, receipt.Build(), response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
+
+	require.EqualValues(t, proof.Raw(), response.ClientResponse.PackedProof(), "Packed proof is not equal")
 }
 
-func TestPublicApiGetTxProof_PrepareResponseNilProof(t *testing.T) {
+func TestGetTransactionReceiptProof_PrepareResponse_NilProof(t *testing.T) {
 	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
 
-	response := toGetReceiptOutput(&services.GetTransactionStatusOutput{
+	txStatusOutput := &services.GetTransactionStatusOutput{
 		ClientResponse: (&client.GetTransactionStatusResponseBuilder{
-			RequestStatus:      protocol.REQUEST_STATUS_IN_PROCESS,
-			TransactionReceipt: nil,
+			RequestResult: &client.RequestResultBuilder{
+				RequestStatus:  protocol.REQUEST_STATUS_IN_PROCESS,
+				BlockHeight:    8,
+				BlockTimestamp: blockTime,
+			},
 			TransactionStatus:  protocol.TRANSACTION_STATUS_PENDING,
-			BlockHeight:        8,
-			BlockTimestamp:     blockTime,
+			TransactionReceipt: nil,
 		}).Build(),
-	}, nil)
+	}
 
+	response := toGetTxProofOutput(txStatusOutput, nil)
+
+	require.EqualValues(t, protocol.REQUEST_STATUS_IN_PROCESS, response.ClientResponse.RequestResult().RequestStatus(), "Request status is wrong")
+	require.EqualValues(t, 8, response.ClientResponse.RequestResult().BlockHeight(), "Block height response is wrong")
+	require.EqualValues(t, blockTime, response.ClientResponse.RequestResult().BlockTimestamp(), "Block time response is wrong")
+
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, response.ClientResponse.TransactionStatus(), "txStatus response is wrong")
+	require.Equal(t, 0, len(response.ClientResponse.TransactionReceipt().Raw()), "Transaction receipt is not equal")
+	test.RequireCmpEqual(t, (*protocol.TransactionReceiptBuilder)(nil).Build(), response.ClientResponse.TransactionReceipt(), "Transaction receipt is not equal")
+
+	require.Equal(t, 0, len(response.ClientResponse.PackedProof()), "Transaction proof is not equal")
 	require.EqualValues(t, []byte{}, response.ClientResponse.PackedProof(), "Transaction proof is not equal")
-	require.Equal(t, 0, len(response.ClientResponse.PackedProof()), "Transaction proof is not equal") // different way
-	require.Equal(t, 0, len(response.ClientResponse.PackedReceipt()), "Transaction receipt is not equal")
-	require.EqualValues(t, 8, response.ClientResponse.BlockHeight(), "Block height response is wrong")
-	require.EqualValues(t, blockTime, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, response.ClientResponse.TransactionStatus(), "status response is wrong")
 }
 
-func TestPublicApiGetTxProof_EmptyResponse(t *testing.T) {
-	response := toGetReceiptOutput(nil, nil)
+func TestGetTransactionReceiptProof_EmptyResponse(t *testing.T) {
+	response := toGetTxProofOutput(nil, nil)
 
-	require.EqualValues(t, []byte{}, response.ClientResponse.PackedProof(), "Transaction proof is not equal")
-	require.Equal(t, 0, len(response.ClientResponse.PackedProof()), "Transaction proof is not equal") // different way
-	require.Equal(t, 0, len(response.ClientResponse.PackedReceipt()), "Transaction receipt is not equal")
-	require.EqualValues(t, 0, response.ClientResponse.BlockHeight(), "Block height response is wrong")
-	require.EqualValues(t, 0, response.ClientResponse.BlockTimestamp(), "Block time response is wrong")
-	require.EqualValues(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, response.ClientResponse.TransactionStatus(), "status response is wrong")
+	require.EqualValues(t, protocol.REQUEST_STATUS_BAD_REQUEST, response.ClientResponse.RequestResult().RequestStatus(), "Request status is wrong")
+	require.EqualValues(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, response.ClientResponse.TransactionStatus(), "txStatus response is wrong")
 }

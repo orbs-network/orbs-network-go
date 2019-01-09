@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -37,12 +37,12 @@ const VITRUAL_CHAIN_ID = 42
 const START_HTTP_PORT = 8090
 
 type harness struct {
-	client *orbsclient.OrbsClient
+	client *orbsClient.OrbsClient
 }
 
 func newHarness() *harness {
 	return &harness{
-		client: orbsclient.NewOrbsClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
+		client: orbsClient.NewClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
 	}
 }
 
@@ -73,7 +73,7 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 }
 
 func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
-	payload, txId, err := h.client.CreateSendTransactionPayload(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, txId, err
 	}
@@ -81,30 +81,22 @@ func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byt
 	return
 }
 
-func (h *harness) callMethod(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.CallMethodResponse, err error) {
-	payload, err := h.client.CreateCallMethodPayload(senderPublicKey, contractName, methodName, args...)
+func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+	payload, err := h.client.CreateQuery(senderPublicKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, err
 	}
-	response, err = h.client.CallMethod(payload)
+	response, err = h.client.SendQuery(payload)
 	return
 }
 
 func (h *harness) getTransactionStatus(txId string) (response *codec.GetTransactionStatusResponse, err error) {
-	payload, err := h.client.CreateGetTransactionStatusPayload(txId)
-	if err != nil {
-		return nil, err
-	}
-	response, err = h.client.GetTransactionStatus(payload)
+	response, err = h.client.GetTransactionStatus(txId)
 	return
 }
 
 func (h *harness) getTransactionReceiptProof(txId string) (response *codec.GetTransactionReceiptProofResponse, err error) {
-	payload, err := h.client.CreateGetTransactionReceiptProofPayload(txId)
-	if err != nil {
-		return nil, err
-	}
-	response, err = h.client.GetTransactionReceiptProof(payload)
+	response, err = h.client.GetTransactionReceiptProof(txId)
 	return
 }
 

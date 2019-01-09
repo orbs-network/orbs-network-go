@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestRunLocalMethod_Success(t *testing.T) {
+func TestProcessQuery_Success(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
@@ -22,7 +22,7 @@ func TestRunLocalMethod_Success(t *testing.T) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(uint32(17), "hello", []byte{0x01, 0x02}), nil
 		})
 
-		result, outputArgs, refHeight, outputEvents, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, outputArgs, refHeight, outputEvents, err := h.processQuery(ctx, "Contract1", "method1")
 		require.NoError(t, err, "run local method should not fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
 		require.EqualValues(t, builders.PackedArgumentArrayEncode(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "run local method should return matching output args")
@@ -35,7 +35,7 @@ func TestRunLocalMethod_Success(t *testing.T) {
 	})
 }
 
-func TestRunLocalMethod_ContractError(t *testing.T) {
+func TestProcessQuery_ContractError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
@@ -45,7 +45,7 @@ func TestRunLocalMethod_ContractError(t *testing.T) {
 			return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.ArgumentsArray(), errors.New("contract error")
 		})
 
-		result, outputArgs, refHeight, _, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")
 		require.Error(t, err, "run local method should fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, result, "run local method should return contract error")
 		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
@@ -57,7 +57,7 @@ func TestRunLocalMethod_ContractError(t *testing.T) {
 	})
 }
 
-func TestRunLocalMethod_UnexpectedError(t *testing.T) {
+func TestProcessQuery_UnexpectedError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
@@ -67,7 +67,7 @@ func TestRunLocalMethod_UnexpectedError(t *testing.T) {
 			return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.ArgumentsArray(), errors.New("unexpected error")
 		})
 
-		result, outputArgs, refHeight, _, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")
 		require.Error(t, err, "run local method should fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
 		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
