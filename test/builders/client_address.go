@@ -7,6 +7,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
+/// Test builders for: primitives.ClientAddress
+
 func ClientAddressForEd25519SignerForTests(setIndex int) primitives.ClientAddress {
 	keyPair := testKeys.Ed25519KeyPairForTests(setIndex)
 	signer := (&protocol.SignerBuilder{

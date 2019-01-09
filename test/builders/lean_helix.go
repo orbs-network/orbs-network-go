@@ -4,7 +4,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-// protocol.BlockPairContainer
+/// protocol.BlockPairContainer
 
 func LeanHelixBlockPair() *blockPair {
 	return BlockPair().WithLeanHelixBlockProof()

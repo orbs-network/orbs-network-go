@@ -32,22 +32,23 @@ func TestHttpServer_Robots(t *testing.T) {
 	rec := httptest.NewRecorder()
 	s.(*server).robots(rec, req)
 
-	expectedResponse := `User-agent: *
-Disallow: /`
+	expectedResponse := "User-agent: *\nDisallow: /\n"
 
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 	require.Equal(t, "text/plain", rec.Header().Get("Content-Type"), "should have our content type")
 	require.Equal(t, expectedResponse, rec.Body.String(), "should have text value")
 }
 
-func TestHttpServerSendTxHandler_Basic(t *testing.T) {
+func TestHttpServerSendTransaction_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.SendTransactionResponseBuilder{
-		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
-		TransactionReceipt: nil,
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+			BlockHeight:    1,
+			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+		},
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-		BlockHeight:        1,
-		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
+		TransactionReceipt: nil,
 	}
 
 	papiMock.When("SendTransaction", mock.Any, mock.Any).Times(1).Return(&services.SendTransactionOutput{ClientResponse: response.Build()})
@@ -65,7 +66,7 @@ func TestHttpServerSendTxHandler_Basic(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 }
 
-func TestHttpServerSendTxHandler_Error(t *testing.T) {
+func TestHttpServerSendTransaction_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("SendTransaction", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
@@ -83,59 +84,66 @@ func TestHttpServerSendTxHandler_Error(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 }
 
-func TestHttpServerCallMethod_Basic(t *testing.T) {
+func TestHttpServerRunQuery_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
-	response := &client.CallMethodResponseBuilder{
-		RequestStatus:       protocol.REQUEST_STATUS_COMPLETED,
-		OutputArgumentArray: nil,
-		CallMethodResult:    protocol.EXECUTION_RESULT_SUCCESS,
-		BlockHeight:         1,
-		BlockTimestamp:      primitives.TimestampNano(time.Now().Nanosecond()),
+	response := &client.RunQueryResponseBuilder{
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+			BlockHeight:    1,
+			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+		},
+		QueryResult: &protocol.QueryResultBuilder{
+			ExecutionResult:     protocol.EXECUTION_RESULT_SUCCESS,
+			OutputArgumentArray: nil,
+			OutputEventsArray:   nil,
+		},
 	}
 
-	papiMock.When("CallMethod", mock.Any, mock.Any).Times(1).Return(&services.CallMethodOutput{ClientResponse: response.Build()})
+	papiMock.When("RunQuery", mock.Any, mock.Any).Times(1).Return(&services.RunQueryOutput{ClientResponse: response.Build()})
 
 	s := makeServer(papiMock)
 
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: &protocol.TransactionBuilder{},
+	request := (&client.RunQueryRequestBuilder{
+		SignedQuery: &protocol.SignedQueryBuilder{},
 	}).Build()
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).callMethodHandler(rec, req)
+	s.(*server).runQueryHandler(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
 }
 
-func TestHttpServerCallMethod_Error(t *testing.T) {
+func TestHttpServerRunQuery_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
-	papiMock.When("CallMethod", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
+	papiMock.When("RunQuery", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
 	s := makeServer(papiMock)
 
-	request := (&client.CallMethodRequestBuilder{
-		Transaction: &protocol.TransactionBuilder{},
+	request := (&client.RunQueryRequestBuilder{
+		SignedQuery: &protocol.SignedQueryBuilder{},
 	}).Build()
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).callMethodHandler(rec, req)
+	s.(*server).runQueryHandler(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
 }
 
-func TestHttpServerGetTx_Basic(t *testing.T) {
+func TestHttpServerGetTransactionStatus_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.GetTransactionStatusResponseBuilder{
-		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
-		TransactionReceipt: nil,
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+			BlockHeight:    1,
+			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+		},
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-		BlockHeight:        1,
-		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
+		TransactionReceipt: nil,
 	}
 
 	papiMock.When("GetTransactionStatus", mock.Any, mock.Any).Times(1).Return(&services.GetTransactionStatusOutput{ClientResponse: response.Build()})
@@ -152,7 +160,7 @@ func TestHttpServerGetTx_Basic(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
 }
 
-func TestHttpServerGetTx_Error(t *testing.T) {
+func TestHttpServerGetTransactionStatus_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("GetTransactionStatus", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
@@ -169,15 +177,17 @@ func TestHttpServerGetTx_Error(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
 }
 
-func TestHttpServerGetReceipt_Basic(t *testing.T) {
+func TestHttpServerGetTransactionReceiptProof_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.GetTransactionReceiptProofResponseBuilder{
-		RequestStatus:     protocol.REQUEST_STATUS_COMPLETED,
-		PackedProof:       nil,
-		PackedReceipt:     nil,
-		TransactionStatus: protocol.TRANSACTION_STATUS_COMMITTED,
-		BlockHeight:       1,
-		BlockTimestamp:    primitives.TimestampNano(time.Now().Nanosecond()),
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+			BlockHeight:    1,
+			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+		},
+		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+		TransactionReceipt: nil,
+		PackedProof:        nil,
 	}
 
 	papiMock.When("GetTransactionReceiptProof", mock.Any, mock.Any).Times(1).Return(&services.GetTransactionReceiptProofOutput{ClientResponse: response.Build()})
@@ -194,7 +204,7 @@ func TestHttpServerGetReceipt_Basic(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
 }
 
-func TestHttpServerGetReceipt_Error(t *testing.T) {
+func TestHttpServerGetTransactionReceiptProof_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("GetTransactionReceiptProof", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))

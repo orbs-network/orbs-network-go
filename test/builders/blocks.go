@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// protocol.BlockPairContainer
+/// Test builders for: protocol.BlockPairContainer
 
 type blockPair struct {
 	txHeader         *protocol.TransactionsBlockHeaderBuilder

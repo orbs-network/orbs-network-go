@@ -23,16 +23,12 @@ func processCallInput() *processCall {
 			InputArgumentArray:     (&protocol.ArgumentArrayBuilder{}).Build(),
 			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
-			CallingService:         "",
 		},
 	}
 	return p
 }
 
 func (p *processCall) Build() *services.ProcessCallInput {
-	if p.input.CallingService == "" {
-		p.WithSameCallingService()
-	}
 	return p.input
 }
 
@@ -76,16 +72,6 @@ func (p *processCall) WithExternalWriteMethod() *processCall {
 	p.input.ContractName = "BenchmarkContract"
 	p.input.MethodName = "set"
 	return p.WithArgs(uint64(3))
-}
-
-func (p *processCall) WithSameCallingService() *processCall {
-	p.input.CallingService = p.input.ContractName
-	return p
-}
-
-func (p *processCall) WithDifferentCallingService() *processCall {
-	p.input.CallingService = "DifferentFrom" + p.input.ContractName
-	return p
 }
 
 func (p *processCall) WithSystemPermissions() *processCall {

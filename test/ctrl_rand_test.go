@@ -26,6 +26,7 @@ func TestWithRandLogsCorrectSeedAndTestName(t *testing.T) {
 	expectedRandUint := rand.New(rand.NewSource(loggedSeed)).Uint64()
 	require.Equal(t, expectedRandUint, randUint, "expected ControlledRand to log the random seed used for random source")
 }
+
 func TestWithExplicitRand(t *testing.T) {
 	seedPreference.seed = 1
 	seedPreference.mode = randModeExplicitSeed
@@ -60,6 +61,7 @@ func TestWithLaunchClock(t *testing.T) {
 	_, err := nlMock1.Verify()
 	require.NoError(t, err)
 }
+
 func TestWithInvocationClock(t *testing.T) {
 	seedPreference.mode = randModeTestClockSeed
 	var loggedSeeds []int64
@@ -126,6 +128,7 @@ func NewNamedLoggerMock(name string) *namedLoggerMock {
 func (t *namedLoggerMock) Log(args ...interface{}) {
 	t.Mock.Called(args...)
 }
+
 func (t *namedLoggerMock) Name() string {
 	return t.name
 }
