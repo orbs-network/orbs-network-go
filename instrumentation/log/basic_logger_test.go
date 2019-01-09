@@ -136,8 +136,8 @@ func TestStringableSlice(t *testing.T) {
 	jsonMap := parseOutput(b.String())
 
 	require.Equal(t, []interface{}{
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
+		"{Txhash:ab2eccdf91e87771d6a8a5a37a6d26a9a220f78b3aa0662842b682a869e0819a,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
+		"{Txhash:ab2eccdf91e87771d6a8a5a37a6d26a9a220f78b3aa0662842b682a869e0819a,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
 	}, jsonMap["a-collection"])
 }
 
@@ -161,7 +161,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "service=public-api", out)
 	require.Regexp(t, "block-height=270f", out)
 	require.Regexp(t, "vchainId=7b", out)
-	require.Regexp(t, "bytes=gDp", out)
+	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
 	require.Regexp(t, "function=log_test.TestCustomLogFormatter", out)
 	require.Regexp(t, "source=instrumentation/log/basic_logger_test.go", out)

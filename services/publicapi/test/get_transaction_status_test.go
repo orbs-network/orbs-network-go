@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -13,17 +12,14 @@ import (
 	"time"
 )
 
-func TestGetTransactionStatus_GetCommitStatusFromTxPool(t *testing.T) {
+func TestGetTransactionStatus_GetCommittedStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
 
-		txb := builders.Transaction().Builder()
-		txHash := digest.CalcTxHash(txb.Build().Transaction())
-
-		harness.transactionIsCommitedInPool()
+		harness.transactionIsCommittedInPool()
 		result, err := harness.papi.GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
-				Txhash: txHash,
+				TransactionRef: builders.TransactionRef().Builder(),
 			}).Build(),
 		})
 
@@ -41,13 +37,10 @@ func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
 
-		txb := builders.Transaction().Builder()
-		txHash := digest.CalcTxHash(txb.Build().Transaction())
-
 		harness.transactionIsPendingInPool()
 		result, err := harness.papi.GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
-				Txhash: txHash,
+				TransactionRef: builders.TransactionRef().Builder(),
 			}).Build(),
 		})
 
@@ -65,13 +58,10 @@ func TestGetTransactionStatus_GetTxFromBlockStorage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
 
-		txb := builders.Transaction().Builder()
-		txHash := digest.CalcTxHash(txb.Build().Transaction())
-
 		harness.transactionIsNotInPoolIsInBlockStorage()
 		result, err := harness.papi.GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
-				Txhash: txHash,
+				TransactionRef: builders.TransactionRef().Builder(),
 			}).Build(),
 		})
 

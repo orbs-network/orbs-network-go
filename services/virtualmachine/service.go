@@ -45,7 +45,7 @@ func NewVirtualMachine(
 	return s
 }
 
-func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
+func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQueryInput) (*services.ProcessQueryOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if input.BlockHeight != 0 {
@@ -54,7 +54,7 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 
 	committedBlockHeight, committedBlockTimestamp, err := s.getRecentCommittedBlockHeight(ctx)
 	if err != nil {
-		return &services.RunLocalMethodOutput{
+		return &services.ProcessQueryOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 			OutputArgumentArray:     []byte{},
 			ReferenceBlockHeight:    committedBlockHeight,
@@ -62,8 +62,8 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 		}, err
 	}
 
-	logger.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(committedBlockHeight))
-	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), log.BlockHeight(committedBlockHeight))
+	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
@@ -71,7 +71,7 @@ func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMe
 		outputEvents = (&protocol.EventsArrayBuilder{}).Build()
 	}
 
-	return &services.RunLocalMethodOutput{
+	return &services.ProcessQueryOutput{
 		CallResult:              callResult,
 		OutputEventsArray:       outputEvents.RawEventsArray(),
 		OutputArgumentArray:     outputArgs.RawArgumentsArray(),
@@ -94,7 +94,6 @@ func (s *service) ProcessTransactionSet(ctx context.Context, input *services.Pro
 
 func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	// TODO(v1) sometimes we get block height value of 0 or -1 (it's because tx-pool is passing lastCommitted and not current)
 
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 

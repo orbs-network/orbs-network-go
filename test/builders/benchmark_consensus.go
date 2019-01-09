@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
 
-// protocol.BlockPairContainer
+/// Test builders for: protocol.BlockPairContainer
 
 func BenchmarkConsensusBlockPair() *blockPair {
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)

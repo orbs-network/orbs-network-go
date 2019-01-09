@@ -91,14 +91,16 @@ func (h *harness) handleSdkCallWithSystemPermissions(ctx context.Context, execut
 	return output.OutputArguments, nil
 }
 
-func (h *harness) runLocalMethod(ctx context.Context, contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, []byte, error) {
-	output, err := h.service.RunLocalMethod(ctx, &services.RunLocalMethodInput{
+func (h *harness) processQuery(ctx context.Context, contractName primitives.ContractName, methodName primitives.MethodName) (protocol.ExecutionResult, []byte, primitives.BlockHeight, []byte, error) {
+	output, err := h.service.ProcessQuery(ctx, &services.ProcessQueryInput{
 		BlockHeight: 0, // recent
-		Transaction: (&protocol.TransactionBuilder{
-			Signer:             nil,
-			ContractName:       contractName,
-			MethodName:         methodName,
-			InputArgumentArray: []byte{},
+		SignedQuery: (&protocol.SignedQueryBuilder{
+			Query: &protocol.QueryBuilder{
+				Signer:             nil,
+				ContractName:       contractName,
+				MethodName:         methodName,
+				InputArgumentArray: []byte{},
+			},
 		}).Build(),
 	})
 	return output.CallResult, output.OutputArgumentArray, output.ReferenceBlockHeight, output.OutputEventsArray, err

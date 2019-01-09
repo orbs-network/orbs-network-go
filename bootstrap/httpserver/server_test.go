@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/pkg/errors"
@@ -13,7 +12,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestHttpServerReadInput_EmptyPost(t *testing.T) {
@@ -37,7 +35,7 @@ func (errReader) Read(p []byte) (n int, err error) {
 }
 
 func TestHttpServerIsValid_BadMembuff(t *testing.T) {
-	m := client.CallMethodRequestReader([]byte("Random Bytes"))
+	m := client.RunQueryRequestReader([]byte("Random Bytes"))
 	e := validate(m)
 
 	require.Equal(t, http.StatusBadRequest, e.code, "bad input in body should cause bad request error")
@@ -52,8 +50,7 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 		{"REQUEST_STATUS_RESERVED", http.StatusInternalServerError, protocol.REQUEST_STATUS_RESERVED},
 		{"REQUEST_STATUS_COMPLETED", http.StatusOK, protocol.REQUEST_STATUS_COMPLETED},
 		{"REQUEST_STATUS_IN_PROCESS", http.StatusAccepted, protocol.REQUEST_STATUS_IN_PROCESS},
-		{"REQUEST_STATUS_NOT_FOUND", http.StatusNotFound, protocol.REQUEST_STATUS_NOT_FOUND},
-		{"REQUEST_STATUS_REJECTED", http.StatusBadRequest, protocol.REQUEST_STATUS_REJECTED},
+		{"REQUEST_STATUS_BAD_REQUEST", http.StatusBadRequest, protocol.REQUEST_STATUS_BAD_REQUEST},
 		{"REQUEST_STATUS_CONGESTION", http.StatusServiceUnavailable, protocol.REQUEST_STATUS_CONGESTION},
 		{"REQUEST_STATUS_SYSTEM_ERROR", http.StatusInternalServerError, protocol.REQUEST_STATUS_SYSTEM_ERROR},
 	}
@@ -61,7 +58,7 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 		cTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
 		t.Run(cTest.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, cTest.expect, translateStatusToHttpCode(cTest.status), fmt.Sprintf("%s was translated to %d", cTest.name, cTest.expect))
+			require.Equal(t, cTest.expect, translateRequestStatusToHttpCode(cTest.status), fmt.Sprintf("%s was translated to %d", cTest.name, cTest.expect))
 		})
 	}
 }
@@ -75,20 +72,25 @@ func mockServer() *server {
 
 func TestHttpServerWriteMembuffResponse(t *testing.T) {
 	expectedResponse := (&client.SendTransactionResponseBuilder{
-		RequestStatus:      protocol.REQUEST_STATUS_COMPLETED,
-		TransactionReceipt: nil,
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+			BlockHeight:    1234,
+			BlockTimestamp: 1546858355859000000,
+		},
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-		BlockHeight:        1,
-		BlockTimestamp:     primitives.TimestampNano(time.Now().Nanosecond()),
+		TransactionReceipt: nil,
 	}).Build()
 
 	s := mockServer()
 	rec := httptest.NewRecorder()
-	s.writeMembuffResponse(rec, expectedResponse, http.StatusOK, "hello")
+	s.writeMembuffResponse(rec, expectedResponse, expectedResponse.RequestResult(), errors.New("example error"))
 
 	require.Equal(t, http.StatusOK, rec.Code, "code value is not equal")
-	require.Equal(t, "application/vnd.membuffers", rec.Header().Get("Content-Type"), "should have our content type")
-	require.Equal(t, "hello", rec.Header().Get("X-ORBS-CODE-NAME"), "should have correct x-orbs")
+	require.Equal(t, "application/membuffers", rec.Header().Get("Content-Type"), "should have our content type")
+	require.Equal(t, "REQUEST_STATUS_COMPLETED", rec.Header().Get("X-ORBS-REQUEST-RESULT"), "should have correct X-ORBS-REQUEST-RESULT")
+	require.Equal(t, "1234", rec.Header().Get("X-ORBS-BLOCK-HEIGHT"), "should have correct X-ORBS-BLOCK-HEIGHT")
+	require.Equal(t, "2019-01-07T10:52:35.859Z", rec.Header().Get("X-ORBS-BLOCK-TIMESTAMP"), "should have correct X-ORBS-BLOCK-TIMESTAMP")
+	require.Equal(t, "example error", rec.Header().Get("X-ORBS-ERROR-DETAILS"), "should have correct X-ORBS-ERROR-DETAILS")
 	responseFromBody := client.SendTransactionResponseReader(rec.Body.Bytes())
 	test.RequireCmpEqual(t, expectedResponse, responseFromBody, "body response and pre-done response are not equal")
 }

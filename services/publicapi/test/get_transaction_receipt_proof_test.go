@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -13,20 +12,14 @@ import (
 	"time"
 )
 
-func TestGetTransactionReceipt_GetCommitStatusFromTxPool(t *testing.T) {
+func TestGetTransactionReceiptProof_GetCommitStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
-
-		txb := builders.Transaction().Builder()
-		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		harness.transactionHasProof()
 		result, err := harness.papi.GetTransactionReceiptProof(ctx, &services.GetTransactionReceiptProofInput{
 			ClientRequest: (&client.GetTransactionReceiptProofRequestBuilder{
-				ProtocolVersion:      txb.Transaction.ProtocolVersion,
-				VirtualChainId:       txb.Transaction.VirtualChainId,
-				TransactionTimestamp: txb.Transaction.Timestamp,
-				Txhash:               txHash,
+				TransactionRef: builders.TransactionRef().Builder(),
 			}).Build(),
 		})
 
@@ -36,25 +29,19 @@ func TestGetTransactionReceipt_GetCommitStatusFromTxPool(t *testing.T) {
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "get transaction receipt returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, result.ClientResponse.TransactionStatus(), "got wrong status")
-		require.NotNil(t, result.ClientResponse.PackedProof(), "got empty receipt proof")
-		require.NotNil(t, result.ClientResponse.PackedReceipt(), "got empty receipt")
+		require.NotEmpty(t, result.ClientResponse.TransactionReceipt().Txhash(), "got empty receipt")
+		require.NotEmpty(t, result.ClientResponse.PackedProof(), "got empty receipt proof")
 	})
 }
 
-func TestGetTransactionReceipt_GetPendingStatusFromTxPool(t *testing.T) {
+func TestGetTransactionReceiptProof_GetPendingStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
-
-		txb := builders.Transaction().Builder()
-		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		harness.transactionPendingNoProofCalled()
 		result, err := harness.papi.GetTransactionReceiptProof(ctx, &services.GetTransactionReceiptProofInput{
 			ClientRequest: (&client.GetTransactionReceiptProofRequestBuilder{
-				ProtocolVersion:      txb.Transaction.ProtocolVersion,
-				VirtualChainId:       txb.Transaction.VirtualChainId,
-				TransactionTimestamp: txb.Transaction.Timestamp,
-				Txhash:               txHash,
+				TransactionRef: builders.TransactionRef().Builder(),
 			}).Build(),
 		})
 
@@ -64,25 +51,19 @@ func TestGetTransactionReceipt_GetPendingStatusFromTxPool(t *testing.T) {
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "get transaction receipt returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "got wrong status")
-		require.Equal(t, 0, len(result.ClientResponse.PackedProof()), "Transaction proof is not equal")
-		require.Equal(t, 0, len(result.ClientResponse.PackedReceipt()), "Transaction receipt is not equal")
+		require.Empty(t, result.ClientResponse.TransactionReceipt().Txhash(), "receipt is not empty")
+		require.Empty(t, result.ClientResponse.PackedProof(), "receipt proof is not empty")
 	})
 }
 
-func TestGetTransactionReceipt_NoRecordsFound(t *testing.T) {
+func TestGetTransactionReceiptProof_NoRecordsFound(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newPublicApiHarness(ctx, 1*time.Second)
-
-		txb := builders.Transaction().Builder()
-		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		harness.getTransactionStatusFailed()
 		result, err := harness.papi.GetTransactionReceiptProof(ctx, &services.GetTransactionReceiptProofInput{
 			ClientRequest: (&client.GetTransactionReceiptProofRequestBuilder{
-				ProtocolVersion:      txb.Transaction.ProtocolVersion,
-				VirtualChainId:       txb.Transaction.VirtualChainId,
-				TransactionTimestamp: txb.Transaction.Timestamp,
-				Txhash:               txHash,
+				TransactionRef: builders.TransactionRef().Builder(),
 			}).Build(),
 		})
 
@@ -92,7 +73,7 @@ func TestGetTransactionReceipt_NoRecordsFound(t *testing.T) {
 		require.Error(t, err, "error did not happen when it should")
 		require.NotNil(t, result, "get transaction receipt returned nil instead of object")
 		require.Equal(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, result.ClientResponse.TransactionStatus(), "got wrong status")
-		require.Equal(t, 0, len(result.ClientResponse.PackedProof()), "Transaction proof is not equal")
-		require.Equal(t, 0, len(result.ClientResponse.PackedReceipt()), "Transaction receipt is not equal")
+		require.Empty(t, result.ClientResponse.TransactionReceipt().Txhash(), "receipt is not empty")
+		require.Empty(t, result.ClientResponse.PackedProof(), "receipt proof is not empty")
 	})
 }

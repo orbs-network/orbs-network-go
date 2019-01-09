@@ -1,4 +1,4 @@
-package ethereum_caller
+package ethereum_caller_mock
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
