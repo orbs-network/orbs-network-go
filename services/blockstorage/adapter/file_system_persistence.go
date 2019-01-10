@@ -60,7 +60,7 @@ func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBl
 		return nil, err
 	}
 
-	newTip, err := newFileBlockWriter(file, codec, bhIndex.fetchTopOffest())
+	newTip, err := newFileBlockWriter(file, codec, bhIndex.fetchTopOffset())
 	if err != nil {
 		closeSilently(file, logger)
 		return nil, err

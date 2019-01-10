@@ -24,7 +24,7 @@ func newBlockHeightIndex(firstBlockOffset int64) *blockHeightIndex {
 	}
 }
 
-func (i *blockHeightIndex) fetchTopOffest() int64 {
+func (i *blockHeightIndex) fetchTopOffset() int64 {
 	i.RLock()
 	defer i.RUnlock()
 
