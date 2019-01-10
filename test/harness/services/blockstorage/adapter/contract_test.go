@@ -31,6 +31,9 @@ func withEachAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.B
 }
 
 func TestBlockPersistenceContract_GetLastBlockWhenNoneExistReturnsNilNoError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		lastBlock, err := adapter.GetLastBlock()
 		require.NoError(t, err)
@@ -39,6 +42,9 @@ func TestBlockPersistenceContract_GetLastBlockWhenNoneExistReturnsNilNoError(t *
 }
 
 func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	ctrlRand := test.NewControlledRand(t)
 	for i := 1; i <= 10; i++ {
 
@@ -70,6 +76,9 @@ func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_FailToWriteOutOfOrder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		err := adapter.WriteNextBlock(builders.BlockPair().WithHeight(2).Build())
 		require.Error(t, err)
@@ -77,6 +86,9 @@ func TestBlockPersistenceContract_FailToWriteOutOfOrder(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_ReturnsTwoBlocks(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		block1 := builders.BlockPair().WithHeight(1).Build()
 		block2 := builders.BlockPair().WithHeight(2).WithPrevBlock(block1).Build()
@@ -96,6 +108,9 @@ func TestBlockPersistenceContract_ReturnsTwoBlocks(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 
 		// block until timeout before block is written
@@ -115,6 +130,9 @@ func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *test
 }
 
 func TestBlockPersistenceContract_ReturnsLastBlockHeight(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		h, err := adapter.GetLastBlockHeight()
 		require.NoError(t, err)
@@ -131,6 +149,9 @@ func TestBlockPersistenceContract_ReturnsLastBlockHeight(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_ReturnsTransactionsAndResultsBlock(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(1).WithTransactions(1).WithReceiptsForTransactions().Build(),
@@ -158,6 +179,9 @@ func TestBlockPersistenceContract_ReturnsTransactionsAndResultsBlock(t *testing.
 }
 
 func TestBlockPersistenceContract_ReturnsBlockByTx(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(1).WithTransactions(1).WithReceiptsForTransactions().Build(),
