@@ -60,6 +60,10 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
-		require.EqualValues(t, 1, <-ch, "did not wait for transaction to reach pool")
+		select {
+		case numOfTxs := <-ch: // required so that if the require.NoError in the goroutine fails, we don't wait on reading from a channel that will never be written to
+			require.EqualValues(t, 1, numOfTxs, "did not wait for transaction to reach pool")
+		case <-ctx.Done():
+		}
 	})
 }
