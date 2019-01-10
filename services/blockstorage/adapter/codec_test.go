@@ -2,9 +2,11 @@ package adapter
 
 import (
 	"bytes"
+	"encoding/binary"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
+	"hash/crc32"
 	"testing"
 )
 
@@ -191,4 +193,51 @@ func TestFileHeaderCodec_RejectDecodingBadChecksum(t *testing.T) {
 	decodedHeader := &blocksFileHeader{}
 	err = decodedHeader.read(rw)
 	require.Error(t, err, "expected to fail parsing a header with corrupt data")
+}
+
+func TestDynamicSectionChecksum(t *testing.T) {
+	ctrlRand := test.NewControlledRand(t)
+
+	rw := new(bytes.Buffer)
+	codec := newCodec(10000000)
+
+	block := builders.RandomizedBlock(1, ctrlRand, nil)
+	err := codec.writeDynamicBlockSectionWithChecksum(rw, transactionReceiptsToMessages(block.ResultsBlock.TransactionReceipts))
+	require.NoError(t, err, "expected to encode receipts successfully")
+
+	encodedChecksum := binary.LittleEndian.Uint32(rw.Bytes()[rw.Len()-4:])
+
+	calcChecksum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+	_, _ = calcChecksum.Write(rw.Bytes()[:rw.Len()-4])
+
+	require.EqualValues(t, calcChecksum.Sum32(), encodedChecksum, "expected encoded section to end correct checksum")
+
+	_, readChecksum, err := codec.readDynamicBlockSection(rw, &readingBudget{limit: 10000000}, uint32(len(block.ResultsBlock.TransactionReceipts)))
+
+	require.NoError(t, err, "expected to decode successfully")
+	require.EqualValues(t, readChecksum, encodedChecksum, "expected read method to return encoded checksum")
+}
+
+func TestFixedSectionChecksum(t *testing.T) {
+	ctrlRand := test.NewControlledRand(t)
+
+	rw := new(bytes.Buffer)
+	codec := newCodec(10000)
+
+	block := builders.RandomizedBlock(1, ctrlRand, nil)
+	err := codec.writeFixedBlockSectionWithChecksum(rw, block)
+	require.NoError(t, err, "expected to encode fixed section successfully")
+
+	encodedChecksum := binary.LittleEndian.Uint32(rw.Bytes()[rw.Len()-4:])
+
+	calcChecksum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+	_, _ = calcChecksum.Write(rw.Bytes()[:rw.Len()-4])
+
+	require.EqualValues(t, calcChecksum.Sum32(), encodedChecksum, "expected encoded section to end correct checksum")
+
+	_, _, _, _, _, readChecksum, err := codec.readFixedSection(rw, &readingBudget{limit: 10000})
+
+	require.NoError(t, err, "expected to decode successfully")
+	require.EqualValues(t, readChecksum, encodedChecksum, "expected read method to return encoded checksum")
+
 }
