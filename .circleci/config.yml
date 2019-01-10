@@ -13,6 +13,9 @@ jobs:
       - run: docker push $DOCKER_IMAGE
       - store_artifacts:
           path: _logs
+      - store_test_results:
+          path: /tmp/test-results
+
 
   flakiness:
     machine: true
