@@ -6,6 +6,8 @@ ADD ./vendor/github.com/orbs-network/orbs-contract-sdk/go/ /go/src/github.com/or
 
 ADD ./_bin/orbs-node /opt/orbs/
 
+VOLUME /usr/local/var/orbs/
+
 WORKDIR /opt/orbs
 
 CMD ./orbs-node
