@@ -17,6 +17,7 @@ const chunkLengthSize = int(unsafe.Sizeof(uint32(0)))
 
 const orbsFormatMagic = uint32(0x5342524f) // "ORBS"
 const orbsFormatVersion = 0
+const blockMagic = uint32(0x4b434c42) // "BLCK"
 const blockVersion = 0
 
 type codec struct {
@@ -30,13 +31,14 @@ func newCodec(maxBlockSize uint32) *codec {
 }
 
 type blocksFileHeader struct {
-	ORBS        uint32
+	Magic       uint32
 	FileVersion uint32
 	NetworkId   uint32
 	ChainId     uint32
 }
 
 type blockHeader struct {
+	Magic        uint32
 	Version      uint32
 	FixedSize    uint32
 	ReceiptsSize uint32
@@ -46,6 +48,13 @@ type blockHeader struct {
 
 func diskChunkSize(bytes []byte) uint32 {
 	return uint32(chunkLengthSize) + uint32(len(bytes))
+}
+
+func newBlockHeader() *blockHeader {
+	return &blockHeader{
+		Magic:   blockMagic,
+		Version: blockVersion,
+	}
 }
 
 func (bh *blockHeader) addFixed(m membuffers.Message) {
@@ -81,12 +90,21 @@ func (bh *blockHeader) read(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+
+	if bh.Magic != blockMagic {
+		return fmt.Errorf("invalid magic number %v", bh.Magic)
+	}
+
+	if bh.Version != orbsFormatVersion {
+		return fmt.Errorf("invalid version %d", bh.Version)
+	}
+
 	return nil
 }
 
 func newBlocksFileHeader(networkId, vchainId uint32) *blocksFileHeader {
 	return &blocksFileHeader{
-		ORBS:        orbsFormatMagic,
+		Magic:       orbsFormatMagic,
 		FileVersion: orbsFormatVersion,
 		NetworkId:   networkId,
 		ChainId:     vchainId,
@@ -112,8 +130,8 @@ func (bfh *blocksFileHeader) read(r io.Reader) error {
 		return fmt.Errorf("invalid header, bad checksum")
 	}
 
-	if bfh.ORBS != orbsFormatMagic {
-		return fmt.Errorf("invalid magic number %v", orbsFormatMagic)
+	if bfh.Magic != orbsFormatMagic {
+		return fmt.Errorf("invalid magic number %v", bfh.Magic)
 	}
 	if bfh.FileVersion != orbsFormatVersion {
 		return fmt.Errorf("invalid version %d", bfh.FileVersion)
@@ -156,7 +174,7 @@ func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) (int, er
 	rb := block.ResultsBlock
 
 	// write header
-	serializationHeader := &blockHeader{}
+	serializationHeader := newBlockHeader()
 	serializationHeader.addFixed(tb.Header)
 	serializationHeader.addFixed(tb.Metadata)
 	serializationHeader.addFixed(tb.BlockProof)

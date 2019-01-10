@@ -68,26 +68,61 @@ func TestCodec_DetectsDataCorruption(t *testing.T) {
 	}
 }
 
-func TestBlockHeaderCodec(t *testing.T) {
+func TestBlockHeaderCodec_EncodeAndDecode(t *testing.T) {
 	rw := new(bytes.Buffer)
-	header := &blockHeader{
-		Version:      0,
-		FixedSize:    1,
-		ReceiptsSize: 2,
-		DiffsSize:    3,
-		TxsSize:      4,
-	}
+	ctrlRand := test.NewControlledRand(t)
+	header := newBlockHeader()
+	header.FixedSize = ctrlRand.Uint32()
+	header.ReceiptsSize = ctrlRand.Uint32()
+	header.DiffsSize = ctrlRand.Uint32()
+	header.TxsSize = ctrlRand.Uint32()
+
 	err := header.write(rw)
 	require.NoError(t, err, "expected to encode header successfully")
-
-	bytes := rw.Bytes()
-	require.Len(t, bytes, 5*4, "expected header size to be 4 bytes per header field")
 
 	decodedHeader := &blockHeader{}
 	err = decodedHeader.read(rw)
 	require.NoError(t, err, "expected to decode header successfully")
 
 	require.EqualValues(t, header, decodedHeader, "expected decoded header to match original")
+}
+
+func TestBlockHeaderCodec_Magic(t *testing.T) {
+	rw := new(bytes.Buffer)
+	header := newBlockHeader()
+
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	require.EqualValues(t, "BLCK", rw.Bytes()[:4], "expected header to begin with `BLCK`")
+}
+
+func TestBlockHeaderCodec_RejectDecodingWrongMagic(t *testing.T) {
+	header := newBlockHeader()
+
+	header.Magic++ // fake wrong magic
+
+	rw := new(bytes.Buffer)
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	decodedHeader := &blockHeader{}
+	err = decodedHeader.read(rw)
+	require.Error(t, err, "expected to fail parsing block header with wrong magic")
+}
+
+func TestBlockHeaderCodec_RejectDecodingWrongVersion(t *testing.T) {
+	header := newBlockHeader()
+
+	header.Version++ // fake wrong version
+
+	rw := new(bytes.Buffer)
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	decodedHeader := &blockHeader{}
+	err = decodedHeader.read(rw)
+	require.Error(t, err, "expected to fail parsing block header with wrong version")
 }
 
 func TestFileHeaderCodec_Magic(t *testing.T) {
@@ -118,7 +153,7 @@ func TestFileHeaderCodec_EncodesAndDecodesHeader(t *testing.T) {
 func TestFileHeaderCodec_RejectDecodingWrongVersion(t *testing.T) {
 	header := newBlocksFileHeader(0, 0)
 
-	header.FileVersion++ // fake incompatible version
+	header.FileVersion++ // fake wrong version
 
 	rw := new(bytes.Buffer)
 	err := header.write(rw)
@@ -132,7 +167,7 @@ func TestFileHeaderCodec_RejectDecodingWrongVersion(t *testing.T) {
 func TestFileHeaderCodec_RejectDecodingWrongMagic(t *testing.T) {
 	header := newBlocksFileHeader(0, 0)
 
-	header.ORBS++ // fake wrong magic
+	header.Magic++ // fake wrong magic
 
 	rw := new(bytes.Buffer)
 	err := header.write(rw)
@@ -140,7 +175,7 @@ func TestFileHeaderCodec_RejectDecodingWrongMagic(t *testing.T) {
 
 	decodedHeader := &blocksFileHeader{}
 	err = decodedHeader.read(rw)
-	require.Error(t, err, "expected to fail parsing a header with wrong magic")
+	require.Error(t, err, "expected to fail parsing file header with wrong magic")
 }
 
 func TestFileHeaderCodec_RejectDecodingBadChecksum(t *testing.T) {
