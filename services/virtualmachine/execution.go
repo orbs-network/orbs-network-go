@@ -37,7 +37,7 @@ func (s *service) runMethod(
 	processor, err := s.getServiceDeployment(ctx, executionContext, transactionOrQuery.ContractName())
 	if err != nil {
 		s.logger.Info("get deployment info for contract failed", log.Error(err), log.Stringable("transaction-or-query", transactionOrQuery))
-		return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, nil, nil, err
+		return protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, nil, nil, err
 	}
 
 	// modify execution context
