@@ -116,7 +116,7 @@ func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 	}
 	if info.Size() == 0 { // write header
 		header := newBlocksFileHeader(0, uint32(conf.VirtualChainId()))
-		logger.Info("creating new blocks file")
+		logger.Info("creating new blocks file", log.String("path", blocksFileName(conf)))
 		err = header.write(file)
 		if err != nil {
 			return 0, errors.Wrapf(err, "error writing blocks file header")
