@@ -75,7 +75,7 @@ func transferIn(hexEncodedEthTxHash string) {
 		panic(fmt.Errorf("transfer of %d to address %x failed since inbound-tuid %d has already been spent", e.Value, e.To, e.Tuid))
 	}
 
-	service.CallMethod(getTokenContract(), "mint", e.To[:], e.Value.Uint64())
+	service.CallMethod(getTokenContract(), "asbMint", e.To[:], e.Value.Uint64())
 
 	setInTuid(inTuidKey)
 	setInTuidMax(e.Tuid.Uint64())
@@ -86,7 +86,7 @@ func transferOut(ethAddr []byte, amount uint64) {
 	setOutTuid(tuid)
 
 	sourceOrbsAddress := address.GetSignerAddress()
-	service.CallMethod(getTokenContract(), "burn", sourceOrbsAddress, amount)
+	service.CallMethod(getTokenContract(), "asbBurn", sourceOrbsAddress, amount)
 
 	events.EmitEvent(OrbsTransferredOut, tuid, sourceOrbsAddress, ethAddr, amount)
 }
