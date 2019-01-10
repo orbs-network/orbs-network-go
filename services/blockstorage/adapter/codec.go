@@ -15,7 +15,7 @@ const blockHeaderSize = int(unsafe.Sizeof(blockHeader{}))
 const checksumSize = int(unsafe.Sizeof(uint32(0)))
 const chunkLengthSize = int(unsafe.Sizeof(uint32(0)))
 
-const orbsFormatMagic = uint32(0x5342524f)
+const orbsFormatMagic = uint32(0x5342524f) // "ORBS"
 const orbsFormatVersion = 0
 const blockVersion = 0
 
