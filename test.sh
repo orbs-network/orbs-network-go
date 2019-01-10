@@ -4,7 +4,7 @@ ulimit -S -n 20000
 
 source ./test.common.sh
 
-go test -timeout 7m ./... -failfast -v 2>&1 | tee >(go-junit-report > report.xml) > test.out
+go test -timeout 7m ./... -failfast -v 2>&1 | tee >(go-junit-report > ./report.xml) > test.out
 check_exit_code_and_report
 
 # this test must run separately since zero parallel package tests are allowed concurrently
