@@ -14,27 +14,18 @@ import (
 
 func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) bool {
 
-	// Validate Not Nil
 	blockPair := FromLeanHelixBlock(block)
 
-	validators := []blockValidator{
-		validateBlockNotNil,
-	}
-
-	vcx := &validatorContext{}
-
-	for _, validator := range validators {
-		if err := validator(blockPair, vcx); err != nil {
-			p.logger.Info("Error in ValidateBlockProposal()", log.Error(err))
-			return false
-		}
+	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
+		p.logger.Info("Error in ValidateBlockProposal()")
+		return false
 	}
 
 	newBlockHeight := primitives.BlockHeight(1)
-	var prevTxBlockHash primitives.Sha256 = nil
-	var prevRxBlockHash primitives.Sha256 = nil
+	var prevTxBlockHash primitives.Sha256
+	var prevRxBlockHash primitives.Sha256
 	//var prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) - 1
-	var prevBlockTimestamp primitives.TimestampNano = 0
+	var prevBlockTimestamp primitives.TimestampNano
 
 	if prevBlock != nil {
 		prevBlockPair := FromLeanHelixBlock(prevBlock)
