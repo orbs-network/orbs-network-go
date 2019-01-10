@@ -9,7 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-func BuildValidTestBlock() *protocol.BlockPairContainer {
+func AStructurallyValidBlock() *protocol.BlockPairContainer {
 
 	protocolVersion := primitives.ProtocolVersion(1)
 	virtualChainId := primitives.VirtualChainId(1)

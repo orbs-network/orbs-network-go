@@ -13,7 +13,7 @@ import (
 
 func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
 	wrongHash := hash.CalcSha256([]byte{1})
-	block := validators.BuildValidTestBlock()
+	block := validators.AStructurallyValidBlock()
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -28,7 +28,7 @@ func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
 
 func TestValidateTransactionsBlockMetadataHash(t *testing.T) {
 	wrongHash := hash.CalcSha256([]byte{1})
-	block := validators.BuildValidTestBlock()
+	block := validators.AStructurallyValidBlock()
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -46,7 +46,7 @@ func TestValidateReceiptsMerkleRoot(t *testing.T) {
 	manualReceiptsMerkleRoot2 := hash.CalcSha256([]byte{2})
 	successfulCalculateReceiptsMerkleRoot := validators.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
 
-	block := validators.BuildValidTestBlock()
+	block := validators.AStructurallyValidBlock()
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -67,7 +67,7 @@ func TestValidateReceiptsMerkleRoot(t *testing.T) {
 func TestValidateResultsBlockStateDiffHash(t *testing.T) {
 	manualStateDiffHash1 := hash.CalcSha256([]byte{10})
 	manualStateDiffHash2 := hash.CalcSha256([]byte{20})
-	block := validators.BuildValidTestBlock()
+	block := validators.AStructurallyValidBlock()
 	successfulCalcStateDiffHash := validators.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
@@ -142,7 +142,7 @@ func TestValidateBlockHash(t *testing.T) {
 }
 
 func validBlockValidatorContext() *BlockValidatorContext {
-	validBlock := validators.BuildValidTestBlock()
+	validBlock := validators.AStructurallyValidBlock()
 	calculatedHashOfValidBlock := []byte(digest.CalcBlockHash(validBlock.TransactionsBlock, validBlock.ResultsBlock))
 	return &BlockValidatorContext{
 		TransactionsBlock: validBlock.TransactionsBlock,

@@ -15,7 +15,7 @@ import (
 
 func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext {
 
-	block := testValidators.BuildValidTestBlock()
+	block := testValidators.AStructurallyValidBlock()
 	prevBlockHashCopy := make([]byte, 32)
 	copy(prevBlockHashCopy, block.TransactionsBlock.Header.PrevBlockHashPtr())
 
@@ -23,7 +23,6 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 		CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
 		TransactionsBlock:  block.TransactionsBlock, // fill in each test
 		PrevBlockHash:      prevBlockHashCopy,
-		//PrevBlockTimestamp: block.TransactionsBlock.,
 	}
 
 	return &txValidatorContext{
