@@ -41,7 +41,8 @@ func NewFilesystemAdapterDriver(conf config.FilesystemBlockPersistenceConfig) (a
 }
 
 type localConfig struct {
-	dir string
+	dir     string
+	chainId primitives.VirtualChainId
 }
 
 func newTempFileConfig() *localConfig {
@@ -50,7 +51,8 @@ func newTempFileConfig() *localConfig {
 		panic(err)
 	}
 	return &localConfig{
-		dir: dirName,
+		dir:     dirName,
+		chainId: 0xFF,
 	}
 }
 func (l *localConfig) BlockStorageDataDir() string {
@@ -62,11 +64,15 @@ func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
 }
 
 func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
-	return 0xFF
+	return l.chainId
 }
 
 func (l *localConfig) cleanDir() {
 	_ = os.RemoveAll(l.BlockStorageDataDir()) // ignore errors - nothing to do
+}
+
+func (l *localConfig) setVirtualChainId(id primitives.VirtualChainId) {
+	l.chainId = id
 }
 
 func getFileSize(t *testing.T, conf *localConfig) int64 {

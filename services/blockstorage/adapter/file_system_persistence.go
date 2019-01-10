@@ -84,25 +84,25 @@ func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceC
 	filename := blocksFileName(conf)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to verify data directory exists")
+		return nil, 0, errors.Wrapf(err, "failed to verify data directory exists %s", dir)
 	}
 
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to open blocks file for writing")
+		return nil, 0, errors.Wrapf(err, "failed to open blocks file for writing %s", filename)
 	}
 	closeOnContextDone(ctx, file, logger)
 
 	err = advisoryLockExclusive(file)
 	if err != nil {
 		closeSilently(file, logger)
-		return nil, 0, errors.Wrap(err, "failed to obtain exclusive lock for writing")
+		return nil, 0, errors.Wrapf(err, "failed to obtain exclusive lock for writing %s", filename)
 	}
 
 	firstBlockOffset, err := validateFileHeader(file, conf, logger)
 	if err != nil {
 		closeSilently(file, logger)
-		return nil, 0, errors.Wrap(err, "failed to obtain exclusive lock for writing")
+		return nil, 0, errors.Wrapf(err, "failed to obtain exclusive lock for writing %s", filename)
 	}
 
 	return file, firstBlockOffset, nil
