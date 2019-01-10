@@ -17,7 +17,7 @@ const chunkLengthSize = int(unsafe.Sizeof(uint32(0)))
 
 const orbsFormatMagic = uint32(0x5342524f) // "ORBS"
 const orbsFormatVersion = 0
-const blockMagic = uint32(0x4b434c42) // "BLCK"
+const blockMagic = uint32(0x6b4f4c42) // "BLOk"
 const blockVersion = 0
 
 type codec struct {

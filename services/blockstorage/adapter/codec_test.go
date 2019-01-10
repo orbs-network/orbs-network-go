@@ -96,7 +96,7 @@ func TestBlockHeaderCodec_Magic(t *testing.T) {
 	err := header.write(rw)
 	require.NoError(t, err, "expected to encode header successfully")
 
-	require.EqualValues(t, "BLCK", rw.Bytes()[:4], "expected header to begin with `BLCK`")
+	require.EqualValues(t, "BLOk", rw.Bytes()[:4], "expected header to begin with `BLOk`")
 }
 
 func TestBlockHeaderCodec_RejectDecodingWrongMagic(t *testing.T) {
