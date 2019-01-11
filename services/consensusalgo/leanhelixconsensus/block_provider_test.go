@@ -8,27 +8,21 @@ import (
 	"testing"
 )
 
-func TestValidLeanHelixBlockPair(t *testing.T) {
+type testBlock struct {
+	block *protocol.BlockPairContainer
+}
 
-	leanHelixProof1 := primitives.LeanHelixBlockProof(hash.CalcSha256([]byte{1, 2, 3, 4}))
-	leanHelixProof2 := primitives.LeanHelixBlockProof(hash.CalcSha256([]byte{5, 6, 7, 8}))
-
+func NewTestBlock() *testBlock {
 	txBlockProof1 := (&protocol.TransactionsBlockProofBuilder{
 		ResultsBlockHash: nil,
 		Type:             protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix:        leanHelixProof1,
+		LeanHelix:        primitives.LeanHelixBlockProof(hash.CalcSha256([]byte{1, 2, 3, 4})),
 	}).Build()
 
 	rxBlockProof1 := (&protocol.ResultsBlockProofBuilder{
 		TransactionsBlockHash: nil,
 		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix:             leanHelixProof1,
-	}).Build()
-
-	txBlockProof2 := (&protocol.TransactionsBlockProofBuilder{
-		ResultsBlockHash: nil,
-		Type:             protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		LeanHelix:        leanHelixProof2,
+		LeanHelix:             primitives.LeanHelixBlockProof(hash.CalcSha256([]byte{1, 2, 3, 4})),
 	}).Build()
 	txBlock := &(protocol.TransactionsBlockContainer{
 		Header:             nil,
@@ -42,57 +36,56 @@ func TestValidLeanHelixBlockPair(t *testing.T) {
 		ContractStateDiffs:  nil,
 		BlockProof:          rxBlockProof1,
 	}
-
-	t.Run("error on nil", func(t *testing.T) {
-		err := validLeanHelixBlockPair(nil)
-		require.Error(t, err)
-	})
-	t.Run("error on nil block proof in either transactions or results block", func(t *testing.T) {
-		err := validLeanHelixBlockPair(&protocol.BlockPairContainer{
-			TransactionsBlock: nil,
-			ResultsBlock:      rxBlock,
-		})
-		require.Error(t, err)
-		err = validLeanHelixBlockPair(&protocol.BlockPairContainer{
-			TransactionsBlock: txBlock,
-			ResultsBlock:      nil,
-		})
-		require.Error(t, err)
-		err = validLeanHelixBlockPair(&protocol.BlockPairContainer{
-			TransactionsBlock: nil,
-			ResultsBlock:      nil,
-		})
-		require.Error(t, err)
-	})
-	t.Run("error on non-leanhelix block proof in either transactions or results block", func(t *testing.T) {
-		validBlock := &protocol.BlockPairContainer{
+	return &testBlock{
+		block: &protocol.BlockPairContainer{
 			TransactionsBlock: txBlock,
 			ResultsBlock:      rxBlock,
-		}
-		validBlock.TransactionsBlock.BlockProof.MutateLeanHelix(nil)
-		validBlock.ResultsBlock.BlockProof.MutateLeanHelix(nil)
+		},
+	}
+}
 
-		err := validLeanHelixBlockPair(nil)
-		require.Error(t, err)
+func (t *testBlock) withNilTransactionBlock() *testBlock {
+	t.block.TransactionsBlock = nil
+	return t
+}
 
-	})
-	t.Run("error on different blockproofs in transactions and results block", func(t *testing.T) {
-		validBlock := &protocol.BlockPairContainer{
-			TransactionsBlock: txBlock,
-			ResultsBlock:      rxBlock,
-		}
-		validBlock.TransactionsBlock.BlockProof = txBlockProof2
-		err := validLeanHelixBlockPair(nil)
-		require.Error(t, err)
-		validBlock.TransactionsBlock.BlockProof = txBlockProof1 // so that the next test won't fail
-	})
-	t.Run("ok on valid block", func(t *testing.T) {
-		validBlock := &protocol.BlockPairContainer{
-			TransactionsBlock: txBlock,
-			ResultsBlock:      rxBlock,
-		}
-		err := validLeanHelixBlockPair(validBlock)
-		require.Nil(t, err)
-	})
+func (t *testBlock) withNilResultsBlock() *testBlock {
+	t.block.ResultsBlock = nil
+	return t
+}
 
+func (t *testBlock) withNilBlockProof() *testBlock {
+	t.block.TransactionsBlock.BlockProof = nil
+	t.block.ResultsBlock.BlockProof = nil
+	return t
+}
+
+func (t *testBlock) build() *protocol.BlockPairContainer {
+	return t.block
+}
+
+func (t *testBlock) withDifferentTxAndRxBlockProofs() *testBlock {
+	t.block.TransactionsBlock.BlockProof.MutateLeanHelix(primitives.LeanHelixBlockProof(hash.CalcSha256([]byte{1, 2, 3, 4})))
+	t.block.ResultsBlock.BlockProof.MutateLeanHelix(primitives.LeanHelixBlockProof(hash.CalcSha256([]byte{5, 6, 7, 8})))
+	return t
+}
+
+func TestValidLeanHelixBlockPair_SuccessOnValidBlock(t *testing.T) {
+	require.Nil(t, validLeanHelixBlockPair(NewTestBlock().build()), "should return nil on valid block")
+}
+
+func TestValidLeanHelixBlockPair_FailOnNil(t *testing.T) {
+
+	require.Error(t, validLeanHelixBlockPair(nil), "should return error when block is nil")
+	require.Error(t, validLeanHelixBlockPair(NewTestBlock().withNilTransactionBlock().withNilResultsBlock().build()), "should return error when txblock and rxblock are nil")
+	require.Error(t, validLeanHelixBlockPair(NewTestBlock().withNilTransactionBlock().build()), "should return error when txblock is nil")
+	require.Error(t, validLeanHelixBlockPair(NewTestBlock().withNilResultsBlock().build()), "should return error when rxblock is nil")
+}
+
+func TestValidLeanHelixBlockPair_FailOnNilBlockProof(t *testing.T) {
+	require.Error(t, validLeanHelixBlockPair(NewTestBlock().withNilBlockProof().build()), "should return error when block proof is nil")
+}
+
+func TestValidLeanHelixBlockPair_FailOnDifferentBlockProofsBetweenTransactionsAndResultsBlocks(t *testing.T) {
+	require.Error(t, validLeanHelixBlockPair(NewTestBlock().withDifferentTxAndRxBlockProofs().build()), "should return error if block proofs in transactions and results block are different")
 }
