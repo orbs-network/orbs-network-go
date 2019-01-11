@@ -67,9 +67,9 @@ func NewBlockProvider(
 func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock lh.Block) (lh.Block, lhprimitives.BlockHash) {
 
 	currentBlockHeight := primitives.BlockHeight(1)
-	var prevTxBlockHash primitives.Sha256 = nil
-	var prevRxBlockHash primitives.Sha256 = nil
-	var prevBlockTimestamp primitives.TimestampNano = 0
+	var prevTxBlockHash primitives.Sha256
+	var prevRxBlockHash primitives.Sha256
+	var prevBlockTimestamp primitives.TimestampNano
 
 	if prevBlock != nil {
 		prevBlockWrapper := prevBlock.(*BlockPairWrapper)
