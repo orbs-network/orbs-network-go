@@ -12,12 +12,25 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) bool {
+type validateBlockProposalContext struct {
+	logger                    log.BasicLogger
+	validateTransactionsBlock func(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error)
+	validateResultsBlock      func(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error)
+}
 
+func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) bool {
+	return validateBlockProposalInternal(ctx, blockHeight, block, blockHash, prevBlock, &validateBlockProposalContext{
+		validateTransactionsBlock: p.consensusContext.ValidateTransactionsBlock,
+		validateResultsBlock:      p.consensusContext.ValidateResultsBlock,
+		logger:                    p.logger,
+	})
+}
+
+func validateBlockProposalInternal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block, vctx *validateBlockProposalContext) bool {
 	blockPair := FromLeanHelixBlock(block)
 
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		p.logger.Info("Error in ValidateBlockProposal()")
+		vctx.logger.Info("Error in ValidateBlockProposal()")
 		return false
 	}
 
@@ -36,18 +49,18 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 		prevRxBlockHash = digest.CalcResultsBlockHash(prevBlockPair.ResultsBlock)
 	}
 
-	_, err := p.consensusContext.ValidateTransactionsBlock(ctx, &services.ValidateTransactionsBlockInput{
+	_, err := vctx.validateTransactionsBlock(ctx, &services.ValidateTransactionsBlockInput{
 		CurrentBlockHeight: newBlockHeight,
 		TransactionsBlock:  blockPair.TransactionsBlock,
 		PrevBlockHash:      prevTxBlockHash,
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		p.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock", log.Error(err))
+		vctx.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock")
 		return false
 	}
 
-	_, err = p.consensusContext.ValidateResultsBlock(ctx, &services.ValidateResultsBlockInput{
+	_, err = vctx.validateResultsBlock(ctx, &services.ValidateResultsBlockInput{
 		CurrentBlockHeight: newBlockHeight,
 		ResultsBlock:       blockPair.ResultsBlock,
 		PrevBlockHash:      prevRxBlockHash,
@@ -55,15 +68,15 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		p.logger.Error("ValidateBlockProposal failed ValidateResultsBlock", log.Int("block-height", int(newBlockHeight)), log.Error(err))
+		vctx.logger.Error("ValidateBlockProposal failed ValidateResultsBlock", log.Int("block-height", int(newBlockHeight)), log.Error(err))
 		return false
 	}
 
 	calcBlockHash := []byte(digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock))
 	if !bytes.Equal([]byte(blockHash), calcBlockHash) {
-		p.logger.Error("ValidateBlockProposal blockHash mismatch")
+		vctx.logger.Error("ValidateBlockProposal blockHash mismatch")
 		return false
 	}
-	p.logger.Info("ValidateBlockProposal passed", log.Int("block-height", int(newBlockHeight)))
+	vctx.logger.Info("ValidateBlockProposal passed", log.Int("block-height", int(newBlockHeight)))
 	return true
 }
