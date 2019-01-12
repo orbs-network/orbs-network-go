@@ -30,10 +30,6 @@ func parseOutput(input string) map[string]interface{} {
 	return jsonMap
 }
 
-func TestAlwaysFails(t *testing.T) {
-	t.FailNow()
-}
-
 func TestBasicLogger_WithTags_ClonesLoggerFully(t *testing.T) {
 	v1 := log.String("k1", "v1")
 	v2 := log.String("c1", "v2")
