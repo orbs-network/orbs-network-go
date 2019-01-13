@@ -134,6 +134,8 @@ We use the official go test runner `go test`. It has minimal UI and result cachi
 
 ### Testing on Docker
 
+> For Troubleshooting, see the [Docker Guide](docker/docker.md)
+
 All tests run automatically when the Docker images are built. The script `./test.sh` is part of the Docker build. 
 
 * Run `./docker/build/build.sh && ./docker/test/test.sh` to build all images and run E2E tests in a dockerized environment.
@@ -161,7 +163,7 @@ Please run `git config --local core.hooksPath .githooks` after cloning the repos
 
 Occasionally, local tests with `go test` will pass but the same tests on Docker will fail. This usually happens when tests are flaky and sensitive to timing (we do our best to avoid this). 
 
-* Run `./docker-build.debug.sh` and `./docker-test.debug.sh` to have a shorter development cycle by skipping tests and avoiding building development tools when the image is built. The purpose of these files is to let developers run E2E on Docker as fast as possible.
+* Run `./docker/build/build.debug.sh` and `./docker/test/test.debug.sh` to have a shorter development cycle by skipping tests and avoiding building development tools when the image is built. The purpose of these files is to let developers run E2E on Docker as fast as possible.
 
 * If the E2E test gets stuck or `docker-compose` stops working properly, try to **remove all containers** with this handy command: `docker rm -f $(docker ps -aq)`. But remember that **ALL YOUR LOCAL CONTAINERS WILL BE GONE** (even from other projects).
 
@@ -185,7 +187,7 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
   * It's also recommended to uncheck `Show Ignored` tests and check `Show Passed` in the test panel after running the configuration
   * If you have a failed test which keeps failing due to cache click `Rerun Failed Tests` in the test panel (it will ignore cache)
 
-* The supervized package recovers and suppresses panics in goroutines. You can disable this behavior when running tests in the IDE:
+* The supervised package recovers and suppresses panics in goroutines. You can disable this behavior when running tests in the IDE:
   * Under `Preferences | Go | Vendoring & Build Tags | Custom tags ` add the tag `norecover`
 
 * You may enable the following automatic tools that run on file changes:
@@ -194,7 +196,7 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
 
 * Debugging tests may contain very verbose logs, increase console buffer size in `Preferences | Editor | General | Console | Override console cycle buffer size = 10024 KB`
 
-* If you experience lags while working with GoLand, increasing its default VM heap size can help:
+* If you experience lags or Low Memory warnings while working with GoLand, increasing its default VM heap size can help:
  * Go to `Help | Edit Custom VM Options...` and set:
    ```
    -Xms256m
