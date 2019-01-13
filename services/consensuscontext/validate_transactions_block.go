@@ -3,32 +3,12 @@ package consensuscontext
 import (
 	"bytes"
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"time"
 )
-
-var ErrMismatchedProtocolVersion = errors.New("mismatched protocol version")
-var ErrMismatchedVirtualChainID = errors.New("mismatched virtual chain ID")
-var ErrMismatchedBlockHeight = errors.New("mismatched block height")
-var ErrMismatchedPrevBlockHash = errors.New("mismatched previous block hash")
-var ErrInvalidBlockTimestamp = errors.New("invalid current block timestamp")
-var ErrMismatchedTxMerkleRoot = errors.New("mismatched transactions merkle root")
-var ErrMismatchedMetadataHash = errors.New("mismatched metadata hash")
-var ErrIncorrectTransactionOrdering = errors.New("incorrect transaction ordering")
-
-var ErrMismatchedTxRxBlockHeight = errors.New("mismatched block height between transactions and results")
-var ErrMismatchedTxRxTimestamps = errors.New("mismatched timestamp between transactions and results")
-var ErrMismatchedTxHashPtrToActualTxBlock = errors.New("mismatched tx block hash ptr to actual tx block hash")
-var ErrMismatchedReceiptsRootHash = errors.New("receipt merkleRoot is different between results block header and calculated transaction receipts")
-var ErrMismatchedStateDiffHash = errors.New("state diff merkleRoot is different between results block header and calculated transaction receipts")
-var ErrGetStateHash = errors.New("failed in GetStateHash() so cannot retrieve pre-execution state diff merkleRoot from previous block")
-var ErrMismatchedPreExecutionStateMerkleRoot = errors.New("pre-execution state diff merkleRoot is different between results block header and extracted from state storage for previous block")
-var ErrProcessTransactionSet = errors.New("failed in ProcessTransactionSet()")
-var ErrCalculateReceiptsMerkleRoot = errors.New("failed in CalculateReceiptsMerkleRoot()")
-var ErrCalculateStateDiffMerkleRoot = errors.New("failed in ErrCalculateStateDiffMerkleRoot()")
 
 type txValidator func(ctx context.Context, vctx *txValidatorContext) error
 
@@ -59,8 +39,8 @@ func validateTxVirtualChainID(ctx context.Context, vctx *txValidatorContext) err
 }
 
 func validateTxBlockHeight(ctx context.Context, vctx *txValidatorContext) error {
-	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
 	expectedBlockHeight := vctx.input.CurrentBlockHeight
+	checkedBlockHeight := vctx.input.TransactionsBlock.Header.BlockHeight()
 	if checkedBlockHeight != expectedBlockHeight {
 		return ErrMismatchedBlockHeight
 	}
@@ -88,25 +68,16 @@ func validateTxTransactionsBlockTimestamp(ctx context.Context, vctx *txValidator
 	return nil
 }
 
-func validateTxTransactionsBlockMerkleRoot(ctx context.Context, vctx *txValidatorContext) error {
-	//Check the block's transactions_root_hash: Calculate the merkle root hash of the block's transactions and verify the hash in the header.
-	txMerkleRoot := vctx.input.TransactionsBlock.Header.TransactionsMerkleRootHash()
-	if expectedTxMerkleRoot, err := calculateTransactionsMerkleRoot(vctx.input.TransactionsBlock.SignedTransactions); err != nil {
-		return err
-	} else if !bytes.Equal(txMerkleRoot, expectedTxMerkleRoot) {
-		return errors.Wrapf(ErrMismatchedTxMerkleRoot, "expected %v actual %v", expectedTxMerkleRoot, txMerkleRoot)
-	}
-	return nil
+func validateTransactionsBlockMerkleRoot(ctx context.Context, vctx *txValidatorContext) error {
+	return validators.ValidateTransactionsBlockMerkleRoot(&validators.BlockValidatorContext{
+		TransactionsBlock: vctx.input.TransactionsBlock,
+	})
 }
 
-func validateTxMetadataHash(ctx context.Context, vctx *txValidatorContext) error {
-	//	Check the block's metadata hash: Calculate the hash of the block's metadata and verify the hash in the header.
-	expectedMetaDataHash := digest.CalcTransactionMetaDataHash(vctx.input.TransactionsBlock.Metadata)
-	metadataHash := vctx.input.TransactionsBlock.Header.MetadataHash()
-	if !bytes.Equal(metadataHash, expectedMetaDataHash) {
-		return errors.Wrapf(ErrMismatchedMetadataHash, "expected %v actual %v", expectedMetaDataHash, metadataHash)
-	}
-	return nil
+func validateTransactionsBlockMetadataHash(ctx context.Context, vctx *txValidatorContext) error {
+	return validators.ValidateTransactionsBlockMetadataHash(&validators.BlockValidatorContext{
+		TransactionsBlock: vctx.input.TransactionsBlock,
+	})
 }
 
 func validateTxTransactionOrdering(ctx context.Context, vctx *txValidatorContext) error {
@@ -138,8 +109,8 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		validateTxBlockHeight,
 		validateTxPrevBlockHashPtr,
 		validateTxTransactionsBlockTimestamp,
-		validateTxTransactionsBlockMerkleRoot,
-		validateTxMetadataHash,
+		validateTransactionsBlockMerkleRoot,
+		validateTransactionsBlockMetadataHash,
 		validateTxTransactionOrdering,
 	}
 
@@ -153,19 +124,28 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 
 func isValidBlockTimestamp(currentBlockTimestamp primitives.TimestampNano, prevBlockTimestamp primitives.TimestampNano, now time.Time, allowedTimestampJitter time.Duration) bool {
 
-	// TODO v1 decide on this: No, we do not handle gracefully dates before 1970
-	if now.UnixNano() < 0 {
-		panic("we don't handle dates before 1970")
+	if allowedTimestampJitter < 0 {
+		panic("allowedTimestampJitter cannot be negative")
+	}
+
+	upperJitterLimit := now.Add(allowedTimestampJitter).UnixNano()
+	lowerJitterLimit := now.Add(-allowedTimestampJitter).UnixNano()
+
+	if upperJitterLimit < 0 {
+		panic("upperJitterLimit cannot be negative")
+	}
+	if lowerJitterLimit < 0 {
+		panic("lowerJitterLimit cannot be negative")
 	}
 
 	if prevBlockTimestamp >= currentBlockTimestamp {
 		return false
 	}
-	if uint64(currentBlockTimestamp) > uint64(now.Add(allowedTimestampJitter).UnixNano()) {
+	if uint64(currentBlockTimestamp) > uint64(upperJitterLimit) {
 		return false
 	}
 
-	if uint64(currentBlockTimestamp) < uint64(now.Add(-allowedTimestampJitter).UnixNano()) {
+	if uint64(currentBlockTimestamp) < uint64(lowerJitterLimit) {
 		return false
 	}
 	return true

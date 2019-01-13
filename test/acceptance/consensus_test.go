@@ -61,6 +61,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	//	})
 }
 
+// LH: Not relevant
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 	harness.Network(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
