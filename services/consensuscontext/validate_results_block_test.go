@@ -5,7 +5,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	testValidators "github.com/orbs-network/orbs-network-go/test/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -15,50 +17,13 @@ import (
 	"time"
 )
 
-func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockInput {
-
-	currentBlockHeight := primitives.BlockHeight(1000)
-	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
-	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
-	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
-	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
-	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
-	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
-	validPrevBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano() - 1000)
-
-	// include only one transaction in block
-	block := builders.
-		BlockPair().
-		WithHeight(currentBlockHeight).
-		WithProtocolVersion(cfg.ProtocolVersion()).
-		WithVirtualChainId(cfg.VirtualChainId()).
-		WithTransactions(0).
-		WithTransaction(transaction).
-		WithPrevBlock(validPrevBlock).
-		WithPrevBlockHash(validPrevBlockHash).
-		WithMetadata(txMetadata).
-		WithMetadataHash(validMetadataHash).
-		WithTransactionsRootHash(txRootHashForValidBlock).
-		Build()
-
-	input := &services.ValidateResultsBlockInput{
-		CurrentBlockHeight: currentBlockHeight,
-		TransactionsBlock:  block.TransactionsBlock,
-		ResultsBlock:       block.ResultsBlock,
-		PrevBlockHash:      validPrevBlockHash,
-		PrevBlockTimestamp: validPrevBlockTimestamp,
-	}
-
-	return input
-}
-
 func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext {
 
 	empty32ByteHash := make([]byte, 32)
 	currentBlockHeight := primitives.BlockHeight(1000)
 	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
-	txRootHashForValidBlock, _ := calculateTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
+	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
 	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
 	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
 	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
@@ -79,15 +44,15 @@ func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext
 		Build()
 
 	txBlockHashPtr := digest.CalcTransactionsBlockHash(block.TransactionsBlock)
-	receiptMerkleRoot, _ := calculateReceiptsMerkleRoot(block.ResultsBlock.TransactionReceipts)
-	stateDiffMerkleRoot, _ := calculateStateDiffMerkleRoot(block.ResultsBlock.ContractStateDiffs)
+	receiptMerkleRoot, _ := digest.CalcReceiptsMerkleRoot(block.ResultsBlock.TransactionReceipts)
+	stateDiffHash, _ := digest.CalcStateDiffHash(block.ResultsBlock.ContractStateDiffs)
 	preExecutionRootHash := &services.GetStateHashOutput{
 		StateMerkleRootHash: empty32ByteHash,
 	}
 
 	block.ResultsBlock.Header.MutateTransactionsBlockHashPtr(txBlockHashPtr)
 	block.ResultsBlock.Header.MutateReceiptsMerkleRootHash(receiptMerkleRoot)
-	block.ResultsBlock.Header.MutateStateDiffHash(stateDiffMerkleRoot)
+	block.ResultsBlock.Header.MutateStateDiffHash(stateDiffHash)
 	block.ResultsBlock.Header.MutatePreExecutionStateMerkleRootHash(preExecutionRootHash.StateMerkleRootHash)
 
 	return &rxValidatorContext{
@@ -104,89 +69,16 @@ func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext
 
 }
 
-// Mock for GetStateHash
-type mockGetStateHashAdapter struct {
-	getStateHash func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
-}
-
-func NewMockGetStateHashThatReturns(stateRootHash primitives.Sha256, err error) GetStateHashAdapter {
-	return &mockGetStateHashAdapter{
-		getStateHash: func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-			return &services.GetStateHashOutput{
-				StateMerkleRootHash: stateRootHash,
-			}, err
-		},
-	}
-}
-func (m *mockGetStateHashAdapter) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	return m.getStateHash(ctx, input)
-}
-
-// Mock for ProcessTransactionSet
-type mockProcessTransactionSet struct {
-	processTransactionSet func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
-}
-
-func (m *mockProcessTransactionSet) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	return m.processTransactionSet(ctx, input)
-}
-
-func NewMockProcessTransactionSetThatReturns(err error) ProcessTransactionSetAdapter {
-
-	someEmptyTxSetThatWeReturnOnlyToPreventErrors := &services.ProcessTransactionSetOutput{
-		TransactionReceipts: nil,
-		ContractStateDiffs:  nil,
-	}
-
-	return &mockProcessTransactionSet{
-		processTransactionSet: func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-			return someEmptyTxSetThatWeReturnOnlyToPreventErrors, err
-		},
-	}
-}
-
-// Mock for CalculateReceiptsMerkleRoot
-type mockCalculateReceiptsMerkleRoot struct {
-	calculateReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
-}
-
-func (m *mockCalculateReceiptsMerkleRoot) CalculateReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-	return m.calculateReceiptsMerkleRoot(receipts)
-}
-
-func NewMockCalculateReceiptsMerkleRootThatReturns(root primitives.Sha256, err error) CalculateReceiptsMerkleRootAdapter {
-	return &mockCalculateReceiptsMerkleRoot{
-
-		calculateReceiptsMerkleRoot: func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-			return root, err
-		},
-	}
-}
-
-// Mock for CalculateStateDiffMerkleRoot
-type mockCalculateStateDiffMerkleRoot struct {
-	calculateStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
-}
-
-func (m *mockCalculateStateDiffMerkleRoot) CalculateStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	return m.calculateStateDiffMerkleRoot(stateDiffs)
-}
-
-func NewMockCalculateStateDiffMerkleRootThatReturns(root primitives.Sha256, err error) CalculateStateDiffMerkleRootAdapter {
-	return &mockCalculateStateDiffMerkleRoot{
-		calculateStateDiffMerkleRoot: func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-			return root, err
-		},
+func mockGetStateHashThatReturns(stateRootHash primitives.Sha256, err error) func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+	return func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
+		return &services.GetStateHashOutput{
+			StateMerkleRootHash: stateRootHash,
+		}, err
 	}
 }
 
 func TestResultsBlockValidators(t *testing.T) {
 	cfg := config.ForConsensusContextTests(nil)
-	empty32ByteHash := make([]byte, 32)
-
-	//falsyGetStateHash := func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	//	return &services.GetStateHashOutput{}, errors.New("Some error")
-	//}
 	t.Run("should return error for results block with incorrect protocol version", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
 		err := validateRxProtocolVersion(context.Background(), vcrx)
@@ -235,9 +127,10 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error for results block which points to a different transactions block than the one it has", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
+		someRandomHash := hash.CalcSha256([]byte{2})
 		err := validateRxTxBlockPtrMatchesActualTxBlock(context.Background(), vcrx)
 		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutateTransactionsBlockHashPtr(empty32ByteHash); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutateTransactionsBlockHashPtr(someRandomHash); err != nil {
 			t.Error(err)
 		}
 		err = validateRxTxBlockPtrMatchesActualTxBlock(context.Background(), vcrx)
@@ -257,49 +150,14 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error for block with incorrect prev block hash", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
+		someRandomHash := hash.CalcSha256([]byte{2})
 		err := validateRxPrevBlockHashPtr(context.Background(), vcrx)
 		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutatePrevBlockHashPtr(empty32ByteHash); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutatePrevBlockHashPtr(someRandomHash); err != nil {
 			t.Error(err)
 		}
 		err = validateRxPrevBlockHashPtr(context.Background(), vcrx)
 		require.Equal(t, ErrMismatchedPrevBlockHash, errors.Cause(err), "validation should fail on incorrect prev block hash", err)
-	})
-
-	t.Run("should return error for block with incorrect receipts root hash", func(t *testing.T) {
-		vcrx := toRxValidatorContext(cfg)
-		manualReceiptsMerkleRoot1 := hash.CalcSha256([]byte{1})
-		manualReceiptsMerkleRoot2 := hash.CalcSha256([]byte{2})
-		successfulCalculateReceiptsMerkleRoot := NewMockCalculateReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
-		vcrx.calculateReceiptsMerkleRootAdapter = successfulCalculateReceiptsMerkleRoot
-		if err := vcrx.input.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot1); err != nil {
-			t.Error(err)
-		}
-		err := validateRxReceiptsRootHash(context.Background(), vcrx)
-		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot2); err != nil {
-			t.Error(err)
-		}
-		err = validateRxReceiptsRootHash(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect receipts root hash", err)
-	})
-
-	t.Run("should return error for block with incorrect state diff hash", func(t *testing.T) {
-		vcrx := toRxValidatorContext(cfg)
-		manualStateDiffMerkleRoot1 := hash.CalcSha256([]byte{10})
-		manualStateDiffMerkleRoot2 := hash.CalcSha256([]byte{20})
-		successfulCalculateStateDiffMerkleRoot := NewMockCalculateStateDiffMerkleRootThatReturns(manualStateDiffMerkleRoot1, nil)
-		vcrx.calculateStateDiffMerkleRootAdapter = successfulCalculateStateDiffMerkleRoot
-		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffMerkleRoot1); err != nil {
-			t.Error(err)
-		}
-		err := validateRxStateDiffHash(context.Background(), vcrx)
-		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffMerkleRoot2); err != nil {
-			t.Error(err)
-		}
-		err = validateRxStateDiffHash(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect state diff hash", err)
 	})
 
 	t.Run("should return error when state's pre-execution merkle root is different between the results block and state storage", func(t *testing.T) {
@@ -308,22 +166,22 @@ func TestResultsBlockValidators(t *testing.T) {
 		manualPreExecutionStateMerkleRootHash2 := hash.CalcSha256([]byte{2})
 
 		// success case - setup the results block and GetStateHash() to return same hash
-		successfulGetStateHash := NewMockGetStateHashThatReturns(manualPreExecutionStateMerkleRootHash1, nil)
+		successfulGetStateHash := mockGetStateHashThatReturns(manualPreExecutionStateMerkleRootHash1, nil)
 		if err := vcrx.input.ResultsBlock.Header.MutatePreExecutionStateMerkleRootHash(manualPreExecutionStateMerkleRootHash1); err != nil {
 			t.Error(err)
 		}
-		vcrx.getStateHashAdapter = successfulGetStateHash
+		vcrx.getStateHash = successfulGetStateHash
 		err := validatePreExecutionStateMerkleRoot(context.Background(), vcrx)
 		require.Nil(t, err, "results block holds the same pre-execution merkle root that is returned from state storage")
 
 		// GetStateHash returns error
-		errorGetStateHash := NewMockGetStateHashThatReturns(vcrx.input.ResultsBlock.Header.PreExecutionStateMerkleRootHash(), errors.New("Some error"))
-		vcrx.getStateHashAdapter = errorGetStateHash
+		errorGetStateHash := mockGetStateHashThatReturns(vcrx.input.ResultsBlock.Header.PreExecutionStateMerkleRootHash(), errors.New("Some error"))
+		vcrx.getStateHash = errorGetStateHash
 		err = validatePreExecutionStateMerkleRoot(context.Background(), vcrx)
 		require.Equal(t, ErrGetStateHash, errors.Cause(err), "validation should fail if failed to read the pre-execution merkle root from state storage", err)
 
 		// GetStateHash returns successfully but a mismatching hash
-		vcrx.getStateHashAdapter = successfulGetStateHash
+		vcrx.getStateHash = successfulGetStateHash
 		if err := vcrx.input.ResultsBlock.Header.MutatePreExecutionStateMerkleRootHash(manualPreExecutionStateMerkleRootHash2); err != nil {
 			t.Error(err)
 		}
@@ -333,48 +191,47 @@ func TestResultsBlockValidators(t *testing.T) {
 
 	t.Run("should return error when receipts or state merkle roots are different between calculated execution result and those stored in block", func(t *testing.T) {
 
-		// TODO Add mismatching receipts and state diff checks
 		vcrx := toRxValidatorContext(cfg)
 		manualReceiptsMerkleRoot1 := hash.CalcSha256([]byte{1})
 		manualReceiptsMerkleRoot2 := hash.CalcSha256([]byte{2})
 
-		manualStateDiffMerkleRoot1 := hash.CalcSha256([]byte{10})
-		manualStateDiffMerkleRoot2 := hash.CalcSha256([]byte{20})
+		manualStateDiffHash1 := hash.CalcSha256([]byte{10})
+		manualStateDiffHash2 := hash.CalcSha256([]byte{20})
 
-		// Set expected values in results block (they will match those returned from successfulCalculateReceiptsMerkleRoot and successfulCalculateStateDiffMerkleRoot
+		// Set expected values in results block (they will match those returned from successfulCalculateReceiptsMerkleRoot and successfulCalculateStateDiffHash
 		if err := vcrx.input.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot1); err != nil {
 			t.Error(err)
 		}
-		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffMerkleRoot1); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffHash1); err != nil {
 			t.Error(err)
 		}
 
-		successfulProcessTransactionSet := NewMockProcessTransactionSetThatReturns(nil)
-		successfulCalculateReceiptsMerkleRoot := NewMockCalculateReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
-		successfulCalculateStateDiffMerkleRoot := NewMockCalculateStateDiffMerkleRootThatReturns(manualStateDiffMerkleRoot1, nil)
-		errorProcessTransactionSet := NewMockProcessTransactionSetThatReturns(errors.New("Some error"))
-		errorCalculateReceiptsMerkleRoot := NewMockCalculateReceiptsMerkleRootThatReturns(nil, errors.New("Some error"))
-		errorCalculateStateDiffMerkleRoot := NewMockCalculateStateDiffMerkleRootThatReturns(nil, errors.New("Some error"))
+		successfulProcessTransactionSet := MockProcessTransactionSetThatReturns(nil)
+		successfulCalcReceiptsMerkleRoot := testValidators.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
+		successfulCalcStateDiffHash := testValidators.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
+		errorProcessTransactionSet := MockProcessTransactionSetThatReturns(errors.New("Some error"))
+		errorCalcReceiptsMerkleRoot := testValidators.MockCalcReceiptsMerkleRootThatReturns(nil, errors.New("Some error"))
+		errorCalcStateDiffHash := testValidators.MockCalcStateDiffHashThatReturns(nil, errors.New("Some error"))
 
 		// ProcessTransactionSet returns an error - returns ErrProcessTransactionSet
-		vcrx.processTransactionSetAdapter = errorProcessTransactionSet
+		vcrx.processTransactionSet = errorProcessTransactionSet
 		err := validateExecution(context.Background(), vcrx)
 		require.Equal(t, ErrProcessTransactionSet, errors.Cause(err), "validation should fail if failed to execute transaction set", err)
 
-		// CalculateReceiptsMerkleRoot returns error
-		vcrx.processTransactionSetAdapter = successfulProcessTransactionSet
-		vcrx.calculateReceiptsMerkleRootAdapter = errorCalculateReceiptsMerkleRoot
+		// CalcReceiptsMerkleRoot returns error
+		vcrx.processTransactionSet = successfulProcessTransactionSet
+		vcrx.calcReceiptsMerkleRoot = errorCalcReceiptsMerkleRoot
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrCalculateReceiptsMerkleRoot, errors.Cause(err), "validation should fail if failed to calculate receipts merkle root", err)
+		require.Equal(t, validators.ErrCalcReceiptsMerkleRoot, errors.Cause(err), "validation should fail if failed to calculate receipts merkle root", err)
 
-		// CalculateStateDiffMerkleRoot returns error
-		vcrx.calculateReceiptsMerkleRootAdapter = successfulCalculateReceiptsMerkleRoot
-		vcrx.calculateStateDiffMerkleRootAdapter = errorCalculateStateDiffMerkleRoot
+		// CalcStateDiffHash returns error
+		vcrx.calcReceiptsMerkleRoot = successfulCalcReceiptsMerkleRoot
+		vcrx.calcStateDiffHash = errorCalcStateDiffHash
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrCalculateStateDiffMerkleRoot, errors.Cause(err), "validation should fail if failed to calculate state diff merkle root", err)
+		require.Equal(t, validators.ErrCalcStateDiffHash, errors.Cause(err), "validation should fail if failed to calculate state diff merkle root", err)
 
 		// Test the only case where everything is fine - collaborators don't return errors, and there are no mismatches
-		vcrx.calculateStateDiffMerkleRootAdapter = successfulCalculateStateDiffMerkleRoot
+		vcrx.calcStateDiffHash = successfulCalcStateDiffHash
 		err = validateExecution(context.Background(), vcrx)
 		require.Nil(t, err)
 
@@ -384,18 +241,28 @@ func TestResultsBlockValidators(t *testing.T) {
 			t.Error(err)
 		}
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect post-execution receipts hash", err)
+		require.Equal(t, validators.ErrMismatchedReceiptsRootHash, errors.Cause(err), "validation should fail on incorrect post-execution receipts hash", err)
 
 		// Restore good receipts hash
 		if err := vcrx.input.ResultsBlock.Header.MutateReceiptsMerkleRootHash(manualReceiptsMerkleRoot1); err != nil {
 			t.Error(err)
 		}
 		// Corrupt the statediff hash
-		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffMerkleRoot2); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutateStateDiffHash(manualStateDiffHash2); err != nil {
 			t.Error(err)
 		}
 		err = validateExecution(context.Background(), vcrx)
-		require.Equal(t, ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
+		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
 	})
 
+}
+
+func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+	someEmptyTxSetThatWeReturnOnlyToPreventErrors := &services.ProcessTransactionSetOutput{
+		TransactionReceipts: nil,
+		ContractStateDiffs:  nil,
+	}
+	return func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
+		return someEmptyTxSetThatWeReturnOnlyToPreventErrors, err
+	}
 }
