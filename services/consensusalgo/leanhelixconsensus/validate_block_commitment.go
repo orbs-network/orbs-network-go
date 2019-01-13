@@ -3,6 +3,8 @@ package leanhelixconsensus
 import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -13,7 +15,18 @@ import (
 type blockValidator func(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error
 
 type validatorContext struct {
-	blockHash primitives.Sha256
+	blockHash              primitives.Sha256
+	CalcReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
+	CalcStateDiffHash      func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
+}
+
+type commitmentvalidators struct {
+	validateBlockNotNil                 func(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error
+	validateTransactionsBlockMerkleRoot func(block *protocol.BlockPairContainer, vcx *validatorContext) error
+	validateTransactionsMetadataHash    func(block *protocol.BlockPairContainer, vcx *validatorContext) error
+	validateReceiptsMerkleRoot          func(block *protocol.BlockPairContainer, vcx *validatorContext) error
+	validateResultsBlockStateDiffHash   func(block *protocol.BlockPairContainer, vcx *validatorContext) error
+	validateBlockHash_Commitment        func(block *protocol.BlockPairContainer, vcx *validatorContext) error
 }
 
 func validateBlockNotNil(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error {
@@ -39,8 +52,9 @@ func validateTransactionsMetadataHash(block *protocol.BlockPairContainer, vcx *v
 
 func validateReceiptsMerkleRoot(block *protocol.BlockPairContainer, vcx *validatorContext) error {
 	return validators.ValidateReceiptsMerkleRoot(&validators.BlockValidatorContext{
-		TransactionsBlock: block.TransactionsBlock,
-		ResultsBlock:      block.ResultsBlock,
+		TransactionsBlock:      block.TransactionsBlock,
+		ResultsBlock:           block.ResultsBlock,
+		CalcReceiptsMerkleRoot: vcx.CalcReceiptsMerkleRoot,
 	})
 }
 
@@ -48,10 +62,11 @@ func validateResultsBlockStateDiffHash(block *protocol.BlockPairContainer, vcx *
 	return validators.ValidateResultsBlockStateDiffHash(&validators.BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
+		CalcStateDiffHash: vcx.CalcStateDiffHash,
 	})
 }
 
-func validateBlockHash(block *protocol.BlockPairContainer, vcx *validatorContext) error {
+func validateBlockHash_Commitment(block *protocol.BlockPairContainer, vcx *validatorContext) error {
 	return validators.ValidateBlockHash(&validators.BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -61,24 +76,37 @@ func validateBlockHash(block *protocol.BlockPairContainer, vcx *validatorContext
 
 func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash) bool {
 
+	vcx := &validatorContext{
+		blockHash:              primitives.Sha256(blockHash),
+		CalcReceiptsMerkleRoot: digest.CalcReceiptsMerkleRoot,
+		CalcStateDiffHash:      digest.CalcStateDiffHash,
+	}
+	return validateBlockCommitmentInternal(blockHeight, block, blockHash, p.logger, vcx, &commitmentvalidators{
+		validateBlockNotNil:                 validateBlockNotNil,
+		validateTransactionsBlockMerkleRoot: validateTransactionsBlockMerkleRoot,
+		validateTransactionsMetadataHash:    validateTransactionsMetadataHash,
+		validateReceiptsMerkleRoot:          validateReceiptsMerkleRoot,
+		validateResultsBlockStateDiffHash:   validateResultsBlockStateDiffHash,
+		validateBlockHash_Commitment:        validateBlockHash_Commitment,
+	})
+}
+
+func validateBlockCommitmentInternal(blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, logger log.BasicLogger, vcx *validatorContext, v *commitmentvalidators) bool {
+
 	blockPair := FromLeanHelixBlock(block)
 
 	validators := []blockValidator{
-		validateBlockNotNil,
-		validateTransactionsBlockMerkleRoot,
-		validateTransactionsMetadataHash,
-		validateReceiptsMerkleRoot,
-		validateResultsBlockStateDiffHash,
-		validateBlockHash,
-	}
-
-	vcx := &validatorContext{
-		blockHash: primitives.Sha256(blockHash),
+		v.validateBlockNotNil,
+		v.validateTransactionsBlockMerkleRoot,
+		v.validateTransactionsMetadataHash,
+		v.validateReceiptsMerkleRoot,
+		v.validateResultsBlockStateDiffHash,
+		v.validateBlockHash_Commitment,
 	}
 
 	for _, validator := range validators {
 		if err := validator(blockPair, vcx); err != nil {
-			p.logger.Info("Error in ValidateBlockCommitment()")
+			logger.Info("Error in ValidateBlockCommitment()", log.Error(err))
 			return false
 		}
 	}
