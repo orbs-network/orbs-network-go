@@ -26,7 +26,7 @@ func TestTransferIn_AllGood(t *testing.T) {
 		})
 
 		// this is what we expect to be called
-		m.MockServiceCallMethod(getTokenContract(), "mint", nil, orbsUserAddress[:], uint64(17))
+		m.MockServiceCallMethod(getTokenContract(), "asbMint", nil, orbsUserAddress[:], uint64(17))
 
 		// call
 		transferIn(txid)
@@ -148,7 +148,7 @@ func TestTransferOut_AllGood(t *testing.T) {
 		// what is expected to be called
 		tuid := safeuint64.Add(getOutTuid(), 1)
 		m.MockEmitEvent(OrbsTransferredOut, tuid, orbsUserAddress[:], ethAddr, big.NewInt(17).Uint64())
-		m.MockServiceCallMethod(getTokenContract(), "burn", nil, orbsUserAddress[:], amount)
+		m.MockServiceCallMethod(getTokenContract(), "asbBurn", nil, orbsUserAddress[:], amount)
 
 		// call
 		transferOut(ethAddr, amount)
