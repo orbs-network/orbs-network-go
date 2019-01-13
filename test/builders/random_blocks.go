@@ -21,8 +21,8 @@ func RandomizedBlockChain(numBlocks int32, ctrlRand *test.ControlledRand) []*pro
 func RandomizedBlock(h primitives.BlockHeight, ctrlRand *test.ControlledRand, prev *protocol.BlockPairContainer) *protocol.BlockPairContainer {
 	builder := BlockPair().
 		WithHeight(h).
-		WithTransactions(ctrlRand.Uint32() % 100).
-		WithStateDiffs(ctrlRand.Uint32() % 100).
+		WithTransactions(ctrlRand.Uint32() % 200).
+		WithStateDiffs(ctrlRand.Uint32() % 200).
 		WithReceiptsForTransactions().
 		WithLeanHelixBlockProof()
 	if prev != nil {
