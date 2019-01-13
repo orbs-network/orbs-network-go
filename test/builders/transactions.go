@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-const DEFAULT_TEST_PROTOCOL_VERSION = primitives.ProtocolVersion(1)
-const DEFAULT_TEST_VIRTUAL_CHAIN_ID = primitives.VirtualChainId(42)
+/// Test builders for: protocol.SignedTransaction
 
+// do not create this struct directly although it's exported
 type TransactionBuilder struct {
 	signer  primitives.Ed25519PrivateKey
 	builder *protocol.SignedTransactionBuilder
@@ -39,33 +39,8 @@ func TransferTransaction() *TransactionBuilder {
 			},
 		},
 	}
-	targetAddress := AddressForEd25519SignerForTests(2)
+	targetAddress := ClientAddressForEd25519SignerForTests(2)
 	return t.WithAmountAndTargetAddress(10, targetAddress)
-}
-
-func GetBalanceTransaction() *TransactionBuilder {
-	keyPair := testKeys.Ed25519KeyPairForTests(1)
-	t := &TransactionBuilder{
-		signer: keyPair.PrivateKey(),
-		builder: &protocol.SignedTransactionBuilder{
-			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
-				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-				ContractName:    "BenchmarkToken",
-				MethodName:      "getBalance",
-				Signer: &protocol.SignerBuilder{
-					Scheme: protocol.SIGNER_SCHEME_EDDSA,
-					Eddsa: &protocol.EdDSA01SignerBuilder{
-						NetworkType:     protocol.NETWORK_TYPE_TEST_NET,
-						SignerPublicKey: keyPair.PublicKey(),
-					},
-				},
-				Timestamp: primitives.TimestampNano(time.Now().UnixNano()),
-			},
-		},
-	}
-	targetAddress := AddressForEd25519SignerForTests(2)
-	return t.WithTargetAddress(targetAddress)
 }
 
 func Transaction() *TransactionBuilder {
@@ -131,7 +106,7 @@ func (t *TransactionBuilder) WithMethod(contractName primitives.ContractName, me
 }
 
 func (t *TransactionBuilder) WithArgs(args ...interface{}) *TransactionBuilder {
-	t.builder.Transaction.InputArgumentArray = MethodArgumentsArray(args...).RawArgumentsArray()
+	t.builder.Transaction.InputArgumentArray = ArgumentsArray(args...).RawArgumentsArray()
 	return t
 }
 
@@ -165,8 +140,8 @@ func (t *TransactionBuilder) WithVirtualChainId(virtualChainId primitives.Virtua
 	return t
 }
 
-func TransactionInputArgumentsParse(t *protocol.Transaction) *protocol.MethodArgumentArrayArgumentsIterator {
-	argsArray := protocol.MethodArgumentArrayReader(t.RawInputArgumentArrayWithHeader())
+func TransactionInputArgumentsParse(t *protocol.Transaction) *protocol.ArgumentArrayArgumentsIterator {
+	argsArray := protocol.ArgumentArrayReader(t.RawInputArgumentArrayWithHeader())
 	return argsArray.ArgumentsIterator()
 }
 

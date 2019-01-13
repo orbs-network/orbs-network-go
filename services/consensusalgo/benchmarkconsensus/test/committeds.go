@@ -12,8 +12,8 @@ import (
 
 func (h *harness) receivedCommittedViaGossip(ctx context.Context, message *gossipmessages.BenchmarkConsensusCommittedMessage) {
 	h.service.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
-		RecipientPublicKey: nil,
-		Message:            message,
+		RecipientNodeAddress: nil,
+		Message:              message,
 	})
 }
 
@@ -70,9 +70,9 @@ func (c *committed) FromNonFederationMembers() *committed {
 func (c *committed) Build() (res []*gossipmessages.BenchmarkConsensusCommittedMessage) {
 	aCommitted := builders.BenchmarkConsensusCommittedMessage().WithLastCommittedHeight(c.blockHeight)
 	for i := 0; i < c.count; i++ {
-		keyPair := keys.Ed25519KeyPairForTests(i + 1) // leader is set 0
+		keyPair := keys.EcdsaSecp256K1KeyPairForTests(i + 1) // leader is set 0
 		if c.nonFederationMembers {
-			keyPair = keys.Ed25519KeyPairForTests(i + NETWORK_SIZE)
+			keyPair = keys.EcdsaSecp256K1KeyPairForTests(i + NETWORK_SIZE)
 		}
 		if c.invalidSignatures {
 			res = append(res, aCommitted.WithInvalidSenderSignature(keyPair).Build())

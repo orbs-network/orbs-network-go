@@ -15,23 +15,16 @@ func TestMain(m *testing.M) {
 	bootstrap := getConfig().bootstrap
 
 	if bootstrap {
-		cleanNativeProcessorCache()
 		n := newInProcessE2ENetwork()
 
 		exitCode = m.Run()
-		n.gracefulShutdown()
+		n.gracefulShutdownAndWipeDisk()
 
-		cleanNativeProcessorCache()
 	} else {
 		exitCode = m.Run()
 	}
 
 	os.Exit(exitCode)
-}
-
-func cleanNativeProcessorCache() {
-	_, dirToCleanup := getProcessorArtifactPath()
-	os.RemoveAll(dirToCleanup)
 }
 
 func runMultipleTimes(t *testing.T, f func(t *testing.T)) {

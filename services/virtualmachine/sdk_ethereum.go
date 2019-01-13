@@ -10,22 +10,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.Argument, error) {
 	switch methodName {
 
 	case "callMethod":
 		packedOutput, err := s.handleSdkEthereumCallMethod(ctx, executionContext, args, permissionScope)
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "outputArgs",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// outputArgs
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: packedOutput,
 		}).Build()}, err
 
 	case "getTransactionLog":
 		packedOutput, err := s.handleSdkEthereumGetTransactionLog(ctx, executionContext, args, permissionScope)
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "outputArgs",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// outputArgs
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: packedOutput,
 		}).Build()}, err
 
@@ -39,7 +39,7 @@ func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *e
 // inputArg2: methodName (string)
 // inputArg3: ethereumABIPackedInputArguments ([]byte)
 // outputArg0: ethereumABIPackedOutput ([]byte)
-func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionContext *executionContext, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
+func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 4 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeStringValue() || !args[3].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK ethereum callMethod args: %v", args)
@@ -50,7 +50,7 @@ func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionCont
 	ethereumPackedInputArguments := args[3].BytesValue()
 
 	// get block timeatamp
-	blockTimestamp := executionContext.blockTimestamp
+	blockTimestamp := executionContext.currentBlockTimestamp
 
 	// execute the call
 	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
@@ -74,7 +74,7 @@ func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionCont
 // inputArg2: ethereumTxhash ([]byte)
 // inputArg3: eventName (string)
 // outputArg0: ethereumABIPackedOutput ([]byte)
-func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, executionContext *executionContext, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
+func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 4 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeBytesValue() || !args[3].IsTypeStringValue() {
 		return nil, errors.Errorf("invalid SDK ethereum getTransactionLog args: %v", args)

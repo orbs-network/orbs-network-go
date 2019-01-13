@@ -9,35 +9,49 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"math/big"
 	"strings"
 )
 
+var LogTag = log.Service("crosschain-connector")
+
 type service struct {
-	connection adapter.EthereumConnection
-	logger     log.BasicLogger
+	connection       adapter.EthereumConnection
+	logger           log.BasicLogger
+	timestampFetcher TimestampFetcher
 }
 
-func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, logger log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
+	logger := parent.WithTags(LogTag)
 	s := &service{
-		connection: connection,
-		logger:     logger,
+		connection:       connection,
+		timestampFetcher: NewTimestampFetcher(NewBlockTimestampFetcher(connection), logger),
+		logger:           logger,
 	}
 	return s
 }
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("calling contract", log.String("contract-address", input.EthereumContractAddress), log.String("function", input.EthereumFunctionName))
+	var referenceBlockNumber *big.Int //TODO (https://github.com/orbs-network/orbs-network-go/issues/648) re-integrate
+	//referenceBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	contractAddress, err := hexutil.Decode(input.EthereumContractAddress)
+	if referenceBlockNumber != nil {
+		logger.Info("calling contract from ethereum",
+			log.String("address", input.EthereumContractAddress),
+			log.Int64("reference-block", referenceBlockNumber.Int64()))
+	}
+	address, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to decode the contract address %s", input.EthereumContractAddress)
 	}
 
-	// TODO(v1): use input.ReferenceTimestamp to find the reference block number (last param)
-	output, err := s.connection.CallContract(ctx, contractAddress, input.EthereumAbiPackedInputArguments, nil)
+	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, referenceBlockNumber)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "ethereum call failed")
 	}
 
 	return &services.EthereumCallContractOutput{

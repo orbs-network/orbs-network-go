@@ -13,22 +13,23 @@ import (
 
 type transactionRemovedListener func(ctx context.Context, txHash primitives.Sha256, reason protocol.TransactionStatus)
 
-func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.Factory) *pendingTxPool {
+func NewPendingPool(pendingPoolSizeInBytes func() uint32, metricFactory metric.Factory, onNewTransaction func()) *pendingTxPool {
 	return &pendingTxPool{
 		pendingPoolSizeInBytes: pendingPoolSizeInBytes,
 		transactionsByHash:     make(map[string]*pendingTransaction),
 		transactionList:        list.New(),
 		lock:                   &sync.RWMutex{},
+		onNewTransaction:       onNewTransaction,
 
 		metrics: newPendingPoolMetrics(metricFactory),
 	}
 }
 
 type pendingTransaction struct {
-	gatewayPublicKey primitives.Ed25519PublicKey
-	transaction      *protocol.SignedTransaction
-	listElement      *list.Element
-	timeAdded        time.Time
+	gatewayNodeAddress primitives.NodeAddress
+	transaction        *protocol.SignedTransaction
+	listElement        *list.Element
+	timeAdded          time.Time
 }
 
 type pendingPoolMetrics struct {
@@ -51,6 +52,7 @@ type pendingTxPool struct {
 	currentSizeInBytes uint32
 	transactionsByHash map[string]*pendingTransaction
 	transactionList    *list.List
+	onNewTransaction   func()
 	lock               *sync.RWMutex
 
 	pendingPoolSizeInBytes func() uint32
@@ -59,7 +61,7 @@ type pendingTxPool struct {
 	metrics *pendingPoolMetrics
 }
 
-func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPublicKey primitives.Ed25519PublicKey) (primitives.Sha256, *ErrTransactionRejected) {
+func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayNodeAddress primitives.NodeAddress) (primitives.Sha256, *ErrTransactionRejected) {
 	size := sizeOfSignedTransaction(transaction)
 
 	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
@@ -76,15 +78,17 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayPubl
 
 	p.currentSizeInBytes += size
 	p.transactionsByHash[key.KeyForMap()] = &pendingTransaction{
-		transaction:      transaction,
-		gatewayPublicKey: gatewayPublicKey,
-		listElement:      p.transactionList.PushFront(transaction),
-		timeAdded:        time.Now(),
+		transaction:        transaction,
+		gatewayNodeAddress: gatewayNodeAddress,
+		listElement:        p.transactionList.PushFront(transaction),
+		timeAdded:          time.Now(),
 	}
 
 	p.metrics.transactionCountGauge.Inc()
 	p.metrics.poolSizeInBytesGauge.AddUint32(size)
 	p.metrics.transactionRatePerSecond.Measure(1)
+
+	p.onNewTransaction()
 
 	return key, nil
 }
@@ -120,12 +124,11 @@ func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, re
 	return nil
 }
 
-func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) Transactions {
-	txs := make(Transactions, 0, maxNumOfTransactions)
-	accumulatedSize := uint32(0)
-
+func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes uint32) (txs Transactions) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+
+	var sizeInBytes uint32
 
 	e := p.transactionList.Back()
 	for {
@@ -139,11 +142,12 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 
 		tx := e.Value.(*protocol.SignedTransaction)
 		//
-		accumulatedSize += sizeOfSignedTransaction(tx)
-		if sizeLimitInBytes > 0 && accumulatedSize > sizeLimitInBytes {
+		txSize := sizeOfSignedTransaction(tx)
+		if sizeLimitInBytes > 0 && sizeInBytes+txSize > sizeLimitInBytes {
 			break
 		}
 
+		sizeInBytes += txSize
 		txs = append(txs, tx)
 
 		e = e.Prev()
@@ -151,7 +155,7 @@ func (p *pendingTxPool) getBatch(maxNumOfTransactions uint32, sizeLimitInBytes u
 		p.transactionPickedFromQueueUnderMutex(tx)
 	}
 
-	return txs
+	return
 }
 
 func (p *pendingTxPool) get(txHash primitives.Sha256) *protocol.SignedTransaction {

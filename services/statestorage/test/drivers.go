@@ -60,9 +60,9 @@ func (d *Driver) ReadKeys(ctx context.Context, contract string, keys ...string) 
 }
 
 func (d *Driver) ReadKeysFromRevision(ctx context.Context, revision int, contract string, keys ...string) ([]*keyValue, error) {
-	ripmdKeys := make([]primitives.Ripmd160Sha256, 0, len(keys))
+	ripmdKeys := make([][]byte, 0, len(keys))
 	for _, key := range keys {
-		ripmdKeys = append(ripmdKeys, primitives.Ripmd160Sha256(key))
+		ripmdKeys = append(ripmdKeys, []byte(key))
 	}
 	out, err := d.service.ReadKeys(ctx, &services.ReadKeysInput{BlockHeight: primitives.BlockHeight(revision), ContractName: primitives.ContractName(contract), Keys: ripmdKeys})
 

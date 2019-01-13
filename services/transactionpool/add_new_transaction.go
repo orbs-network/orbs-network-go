@@ -5,9 +5,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
@@ -33,7 +35,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 		return s.addTransactionOutputFor(nil, status), err
 	}
 
-	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodePublicKey()); err != nil {
+	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodeAddress()); err != nil {
 		s.logger.Error("error adding transaction to pending pool", log.Error(err))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 
@@ -45,12 +47,20 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 }
 
 func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
-	bh, _ := s.currentBlockHeightAndTime()
-	//TODO(v1) handle error from vm call
-	preOrderCheckResults, _ := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		SignedTransactions: Transactions{transaction},
-		BlockHeight:        bh,
+	lastCommittedBlockHeight, _ := s.lastCommittedBlockHeightAndTime()
+
+	// the real pre order checks will run during consensus on some future new block, try to estimate its height and timestamp as closely as possible
+	estimatedCurrentBlockHeight := lastCommittedBlockHeight + 1
+	estimatedCurrentBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano())
+
+	preOrderCheckResults, err := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
+		SignedTransactions:    Transactions{transaction},
+		CurrentBlockHeight:    estimatedCurrentBlockHeight,
+		CurrentBlockTimestamp: estimatedCurrentBlockTimestamp,
 	})
+	if err != nil {
+		return err
+	}
 
 	if len(preOrderCheckResults.PreOrderResults) != 1 {
 		return errors.Errorf("expected exactly one result from pre-order check, got %+v", preOrderCheckResults)
@@ -64,7 +74,7 @@ func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, tran
 }
 
 func (s *service) addTransactionOutputFor(maybeReceipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.AddNewTransactionOutput {
-	bh, ts := s.currentBlockHeightAndTime()
+	bh, ts := s.lastCommittedBlockHeightAndTime()
 	return &services.AddNewTransactionOutput{
 		TransactionReceipt: maybeReceipt,
 		TransactionStatus:  status,

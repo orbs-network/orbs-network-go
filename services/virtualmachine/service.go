@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -46,44 +45,46 @@ func NewVirtualMachine(
 	return s
 }
 
-func (s *service) RunLocalMethod(ctx context.Context, input *services.RunLocalMethodInput) (*services.RunLocalMethodOutput, error) {
+func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQueryInput) (*services.ProcessQueryOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	blockHeight, blockTimestamp, err := s.getRecentBlockHeight(ctx)
+	if input.BlockHeight != 0 {
+		panic("Run local method with specific block height is not yet supported")
+	}
+
+	committedBlockHeight, committedBlockTimestamp, err := s.getRecentCommittedBlockHeight(ctx)
 	if err != nil {
-		return &services.RunLocalMethodOutput{
+		return &services.ProcessQueryOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 			OutputArgumentArray:     []byte{},
-			ReferenceBlockHeight:    blockHeight,
-			ReferenceBlockTimestamp: blockTimestamp,
+			ReferenceBlockHeight:    committedBlockHeight,
+			ReferenceBlockTimestamp: committedBlockTimestamp,
 		}, err
 	}
 
-	logger.Info("running local method", log.Stringable("contract", input.Transaction.ContractName()), log.Stringable("method", input.Transaction.MethodName()), log.BlockHeight(blockHeight))
-	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, blockHeight, blockTimestamp, input.Transaction, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), log.BlockHeight(committedBlockHeight))
+	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
-		outputArgs = (&protocol.MethodArgumentArrayBuilder{}).Build()
+		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
 	if outputEvents == nil {
 		outputEvents = (&protocol.EventsArrayBuilder{}).Build()
 	}
 
-	return &services.RunLocalMethodOutput{
+	return &services.ProcessQueryOutput{
 		CallResult:              callResult,
 		OutputEventsArray:       outputEvents.RawEventsArray(),
 		OutputArgumentArray:     outputArgs.RawArgumentsArray(),
-		ReferenceBlockHeight:    blockHeight,
-		ReferenceBlockTimestamp: blockTimestamp,
+		ReferenceBlockHeight:    committedBlockHeight,
+		ReferenceBlockTimestamp: committedBlockTimestamp,
 	}, err
 }
 
 func (s *service) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	previousBlockHeight := input.BlockHeight - 1      // our contracts rely on this block's state for execution (TODO(https://github.com/orbs-network/orbs-spec/issues/123): maybe move the minus one to processTransactionSet so it would match the timestamp)
-	blockTimestamp := primitives.TimestampNano(0x777) // TODO(v1): replace placeholder timestamp 0x777 with actual value (probably needs to be added to input in protos
 
-	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)))
-	receipts, stateDiffs := s.processTransactionSet(ctx, previousBlockHeight, blockTimestamp, input.SignedTransactions)
+	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)), log.BlockHeight(input.CurrentBlockHeight))
+	receipts, stateDiffs := s.processTransactionSet(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
 		TransactionReceipts: receipts,
@@ -95,25 +96,22 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
-	// TODO(v1) sometimes we get value of ffffffffffffffff
-	previousBlockHeight := input.BlockHeight - 1      // our contracts rely on this block's state for execution (TODO(https://github.com/orbs-network/orbs-spec/issues/123): maybe move the minus one to callGlobalPreOrderSystemContract so it would match the timestamp)
-	blockTimestamp := primitives.TimestampNano(0x777) // TODO(v1): replace placeholder timestamp 0x777 with actual value (probably needs to be added to input in protos)
 
 	// check subscription
-	err := s.callGlobalPreOrderSystemContract(ctx, previousBlockHeight, blockTimestamp)
+	err := s.callGlobalPreOrderSystemContract(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 	if err != nil {
 		for i := 0; i < len(statuses); i++ {
 			statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
 		}
 	} else {
 		// check signatures
-		err = s.verifyTransactionSignatures(input.SignedTransactions, statuses)
+		s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 	}
 
 	if err != nil {
-		logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+		logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	} else {
-		logger.Info("performed pre order checks", log.BlockHeight(previousBlockHeight), log.Int("num-statuses", len(statuses)))
+		logger.Info("performed pre order checks", log.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	}
 
 	return &services.TransactionSetPreOrderOutput{
@@ -122,7 +120,7 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 }
 
 func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
-	var output []*protocol.MethodArgument
+	var output []*protocol.Argument
 	var err error
 
 	executionContext := s.contexts.loadExecutionContext(input.ContextId)
@@ -141,6 +139,8 @@ func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCa
 		output, err = s.handleSdkEthereumCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	case native.SDK_OPERATION_NAME_ADDRESS:
 		output, err = s.handleSdkAddressCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
+	case native.SDK_OPERATION_NAME_ENV:
+		output, err = s.handleSdkEnvCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	default:
 		return nil, errors.Errorf("unknown SDK call operation: %s", input.OperationName)
 	}

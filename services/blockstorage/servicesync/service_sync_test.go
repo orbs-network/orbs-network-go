@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,7 +19,7 @@ func TestSyncLoop(t *testing.T) {
 		// Set up block source mock
 		sourceMock := newBlockSourceMock(4)
 		sourceMock.When("GetLastBlock").Times(1)
-		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
+		sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).Times(1)
 
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
@@ -31,10 +32,10 @@ func TestSyncLoop(t *testing.T) {
 		}).Times(5)
 
 		// run sync loop
-		syncedHeight, err := syncOnce(ctx, sourceMock, committerMock, log.GetLogger())
-		require.NoError(t, err, "expected syncOnce to execute without error")
-		require.EqualValues(t, 4, committerHeight, "expected syncOnce to advance committer to source height")
-		require.True(t, committerHeight == syncedHeight, "expected syncOnce to return the current block height")
+		syncedHeight, err := syncToTopBlock(ctx, sourceMock, committerMock, log.GetLogger())
+		require.NoError(t, err, "expected syncToTopBlock to execute without error")
+		require.EqualValues(t, 4, committerHeight, "expected syncToTopBlock to advance committer to source height")
+		require.True(t, committerHeight == syncedHeight, "expected syncToTopBlock to return the current block height")
 
 		_, err = sourceMock.Verify()
 		require.NoError(t, err)
@@ -52,7 +53,7 @@ func TestSyncInitialState(t *testing.T) {
 		sourceMock := newBlockSourceMock(3)
 		sourceMock.When("GetLastBlock").Times(2)
 		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil).AtLeast(0)
-		sourceMock.When("GetBlocks", mock.Any, mock.Any).Times(5)
+		sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).AtLeast(0)
 
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
@@ -60,8 +61,8 @@ func TestSyncInitialState(t *testing.T) {
 		targetTracker := synchronization.NewBlockTracker(log.GetLogger(), 0, 10)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+1 {
-				targetTracker.IncrementHeight()
 				targetCurrentHeight++
+				targetTracker.IncrementTo(targetCurrentHeight)
 			}
 			return targetCurrentHeight + 1, nil
 		}).Times(5)
@@ -74,7 +75,7 @@ func TestSyncInitialState(t *testing.T) {
 
 		// push another block
 		sourceMock.setLastBlockHeight(4)
-		sourceTracker.IncrementHeight()
+		sourceTracker.IncrementTo(4)
 
 		// Wait for second sync
 		err = targetTracker.WaitForBlock(ctx, 4)
@@ -112,17 +113,33 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 	}
 }
 
-// TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this fake implementation assumes there is no genesis block, Fix once addressing genesis
-func (bsf *blockSourceMock) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstReturnedBlockHeight primitives.BlockHeight, lastReturnedBlockHeight primitives.BlockHeight, err error) {
-	bsf.Called(first, last)
-	result := make([]*protocol.BlockPairContainer, last-first)
-	for i := range result {
-		result[i] = &protocol.BlockPairContainer{
-			TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
-			ResultsBlock:      &protocol.ResultsBlockContainer{Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: first + primitives.BlockHeight(i)}).Build()},
+// TODO V1 - this duplicates logic form inMemoryBlockPersistence. Do we really need a mock object here?
+func (bsf *blockSourceMock) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
+	bsf.Called(from, pageSize, f)
+
+	topBlockHeight := bsf.lastBlock.ResultsBlock.Header.BlockHeight()
+
+	// build a dummy block-chain
+	blocks := make([]*protocol.BlockPairContainer, topBlockHeight)
+	for i := range blocks {
+		blocks[i] = &protocol.BlockPairContainer{
+			TransactionsBlock: &protocol.TransactionsBlockContainer{Header: (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: from + primitives.BlockHeight(i)}).Build()},
+			ResultsBlock:      &protocol.ResultsBlockContainer{Header: (&protocol.ResultsBlockHeaderBuilder{BlockHeight: from + primitives.BlockHeight(i)}).Build()},
 		}
 	}
-	return result, first, last, nil
+
+	// invoke f repeatedly with pages
+	cont := true
+	for from <= topBlockHeight && cont {
+		topPageIndex := int(from) + int(pageSize) - 1
+		if topPageIndex > len(blocks) {
+			topPageIndex = len(blocks)
+		}
+		cont = f(from, blocks[from-1:topPageIndex])
+		from = primitives.BlockHeight(topPageIndex) + 1
+	}
+
+	return nil
 }
 
 func (bsf *blockSourceMock) GetBlockTracker() *synchronization.BlockTracker {

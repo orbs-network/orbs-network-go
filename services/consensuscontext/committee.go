@@ -15,32 +15,32 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 	return s.RequestValidationCommittee(ctx, input)
 }
 
-func toPublicKeys(nodes map[string]config.FederationNode) []primitives.Ed25519PublicKey {
-	keys := make([]primitives.Ed25519PublicKey, len(nodes))
+func toNodeAddresses(nodes map[string]config.FederationNode) []primitives.NodeAddress {
+	nodeAddresses := make([]primitives.NodeAddress, len(nodes))
 	i := 0
 	for _, value := range nodes {
-		keys[i] = value.NodePublicKey()
+		nodeAddresses[i] = value.NodeAddress()
 		i++
 	}
-	return keys
+	return nodeAddresses
 }
 
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	federationNodes := s.config.FederationNodes(uint64(input.BlockHeight))
-	federationNodesPublicKeys := toPublicKeys(federationNodes)
-	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.ConsensusMinimumCommitteeSize(), uint32(len(federationNodesPublicKeys)))
-	indices, err := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed, federationNodesPublicKeys)
+	federationNodes := s.config.FederationNodes(uint64(input.CurrentBlockHeight))
+	federationNodesAddresses := toNodeAddresses(federationNodes)
+	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.ConsensusMinimumCommitteeSize(), uint32(len(federationNodesAddresses)))
+	indices, err := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed, federationNodesAddresses)
 	if err != nil {
 		return nil, err
 	}
 
-	committeePublicKeys := make([]primitives.Ed25519PublicKey, len(indices))
+	committeeNodeAddresses := make([]primitives.NodeAddress, len(indices))
 	for i, index := range indices {
-		committeePublicKeys[i] = primitives.Ed25519PublicKey(federationNodesPublicKeys[int(index)])
+		committeeNodeAddresses[i] = primitives.NodeAddress(federationNodesAddresses[int(index)])
 	}
 
 	res := &services.RequestCommitteeOutput{
-		NodePublicKeys:           committeePublicKeys,
+		NodeAddresses:            committeeNodeAddresses,
 		NodeRandomSeedPublicKeys: nil,
 	}
 
@@ -64,7 +64,7 @@ func calculateCommitteeSize(requestedCommitteeSize uint32, minimumCommitteeSize 
 }
 
 // See https://github.com/orbs-network/orbs-spec/issues/111
-func chooseRandomCommitteeIndices(committeeSize uint32, randomSeed uint64, nodes []primitives.Ed25519PublicKey) ([]uint32, error) {
+func chooseRandomCommitteeIndices(committeeSize uint32, randomSeed uint64, nodes []primitives.NodeAddress) ([]uint32, error) {
 
 	type gradedIndex struct {
 		grade uint64

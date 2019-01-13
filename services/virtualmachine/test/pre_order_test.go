@@ -42,11 +42,7 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 				h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, nil)
 
 				results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tt.tx})
-				if tt.status == protocol.TRANSACTION_STATUS_PRE_ORDER_VALID {
-					require.NoError(t, err, "transaction set pre order should not fail")
-				} else {
-					require.Error(t, err, "transaction set pre order should fail")
-				}
+				require.NoError(t, err, "transaction set pre order should not fail on signature problems")
 				require.Equal(t, []protocol.TransactionStatus{tt.status}, results, "transactionSetPreOrder returned statuses should match")
 
 				h.verifySystemContractCalled(t)

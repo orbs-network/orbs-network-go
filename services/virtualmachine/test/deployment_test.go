@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
+func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -22,7 +22,7 @@ func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
 		h.expectStateStorageBlockHeightRequested(12)
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
-		result, outputArgs, refHeight, _, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")
 		require.Error(t, err, "run local method should fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
 		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
@@ -67,11 +67,11 @@ func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContrac
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract2", errors.New("not found"))
 
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			t.Log("CallMethod on non deployed contract")
-			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.MethodArgumentsArray().Raw())
+			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
 			require.Error(t, err, "handleSdkCall should fail")
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 		h.expectNativeContractMethodNotCalled("Contract2", "method1")
 
@@ -93,8 +93,8 @@ func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.
 		h.expectNativeContractInfoRequested("Contract1", nil)
 
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_DEPLOY_SERVICE, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE))
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
 		results, outputArgs, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{

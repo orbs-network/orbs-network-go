@@ -12,6 +12,7 @@ import (
 
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -106,7 +107,7 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
 	router.Handle("/api/v1/send-transaction", http.HandlerFunc(s.sendTransactionHandler))
-	router.Handle("/api/v1/call-method", http.HandlerFunc(s.callMethodHandler))
+	router.Handle("/api/v1/run-query", http.HandlerFunc(s.runQueryHandler))
 	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(s.getTransactionStatusHandler))
 	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(s.getTransactionReceiptProofHandler))
 	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
@@ -116,8 +117,7 @@ func (s *server) createRouter() http.Handler {
 
 func (s *server) robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
-	_, err := w.Write([]byte(`User-agent: *
-Disallow: /`))
+	_, err := w.Write([]byte("User-agent: *\nDisallow: /\n"))
 	if err != nil {
 		s.logger.Info("error writing robots.txt response", log.Error(err))
 	}
@@ -148,29 +148,29 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.SendTransaction(r.Context(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
+		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
 	} else {
 		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
 }
 
-func (s *server) callMethodHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) runQueryHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
 		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
-	clientRequest := client.CallMethodRequestReader(bytes)
+	clientRequest := client.RunQueryRequestReader(bytes)
 	if e := validate(clientRequest); e != nil {
 		s.writeErrorResponseAndLog(w, e)
 		return
 	}
 
-	s.logger.Info("http server received call-method", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.CallMethod(r.Context(), &services.CallMethodInput{ClientRequest: clientRequest})
+	s.logger.Info("http server received run-query", log.Stringable("request", clientRequest))
+	result, err := s.publicApi.RunQuery(r.Context(), &services.RunQueryInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringCallMethodResult())
+		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
 	} else {
 		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
@@ -192,7 +192,7 @@ func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Requ
 	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetTransactionStatus(r.Context(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
+		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
 	} else {
 		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
@@ -214,7 +214,7 @@ func (s *server) getTransactionReceiptProofHandler(w http.ResponseWriter, r *htt
 	s.logger.Info("http server received get-transaction-receipt-proof", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetTransactionReceiptProof(r.Context(), &services.GetTransactionReceiptProofInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, translateStatusToHttpCode(result.ClientResponse.RequestStatus()), result.ClientResponse.StringTransactionStatus())
+		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
 	} else {
 		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
 	}
@@ -239,15 +239,13 @@ func validate(m membuffers.Message) *httpErr {
 	return nil
 }
 
-func translateStatusToHttpCode(responseCode protocol.RequestStatus) int {
+func translateRequestStatusToHttpCode(responseCode protocol.RequestStatus) int {
 	switch responseCode {
 	case protocol.REQUEST_STATUS_COMPLETED:
 		return http.StatusOK
 	case protocol.REQUEST_STATUS_IN_PROCESS:
 		return http.StatusAccepted
-	case protocol.REQUEST_STATUS_NOT_FOUND:
-		return http.StatusNotFound
-	case protocol.REQUEST_STATUS_REJECTED:
+	case protocol.REQUEST_STATUS_BAD_REQUEST:
 		return http.StatusBadRequest
 	case protocol.REQUEST_STATUS_CONGESTION:
 		return http.StatusServiceUnavailable
@@ -259,14 +257,24 @@ func translateStatusToHttpCode(responseCode protocol.RequestStatus) int {
 	return http.StatusNotImplemented
 }
 
-func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, httpCode int, orbsText string) {
-	w.Header().Set("Content-Type", "application/vnd.membuffers")
+func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, requestResult *client.RequestResult, errorForVerbosity error) {
+	httpCode := translateRequestStatusToHttpCode(requestResult.RequestStatus())
+	w.Header().Set("Content-Type", "application/membuffers")
+	w.Header().Set("X-ORBS-REQUEST-RESULT", requestResult.RequestStatus().String())
+	w.Header().Set("X-ORBS-BLOCK-HEIGHT", fmt.Sprintf("%d", requestResult.BlockHeight()))
+	w.Header().Set("X-ORBS-BLOCK-TIMESTAMP", sprintfTimestamp(requestResult.BlockTimestamp()))
+	if errorForVerbosity != nil {
+		w.Header().Set("X-ORBS-ERROR-DETAILS", errorForVerbosity.Error())
+	}
 	w.WriteHeader(httpCode)
-	w.Header().Set("X-ORBS-CODE-NAME", orbsText)
 	_, err := w.Write(message.Raw())
 	if err != nil {
 		s.logger.Info("error writing response", log.Error(err))
 	}
+}
+
+func sprintfTimestamp(timestamp primitives.TimestampNano) string {
+	return time.Unix(0, int64(timestamp)).UTC().Format(time.RFC3339Nano)
 }
 
 func (s *server) writeErrorResponseAndLog(w http.ResponseWriter, m *httpErr) {

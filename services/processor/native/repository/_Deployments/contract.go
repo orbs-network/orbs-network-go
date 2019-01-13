@@ -1,9 +1,10 @@
 package deployments_systemcontract
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/service"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/state"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
@@ -19,14 +20,25 @@ const METHOD_DEPLOY_SERVICE = "deployService"
 var PUBLIC = sdk.Export(getInfo, getCode, deployService)
 
 func getInfo(serviceName string) uint32 {
-	if serviceName == CONTRACT_NAME { // getInfo on self
+	if isImplicitlyDeployed(serviceName) {
 		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
 	}
+
 	processorType := _readProcessor(serviceName)
 	if processorType == 0 {
 		panic("contract not deployed")
 	}
 	return processorType
+}
+
+func isImplicitlyDeployed(serviceName string) bool {
+	switch serviceName {
+	case
+		CONTRACT_NAME,
+		info_systemcontract.CONTRACT_NAME:
+		return true
+	}
+	return false
 }
 
 func getCode(serviceName string) []byte {
@@ -55,17 +67,17 @@ func deployService(serviceName string, processorType uint32, code []byte) {
 }
 
 func _readProcessor(serviceName string) uint32 {
-	return state.ReadUint32ByKey(serviceName + ".Processor")
+	return state.ReadUint32([]byte(serviceName + ".Processor"))
 }
 
 func _writeProcessor(serviceName string, processorType uint32) {
-	state.WriteUint32ByKey(serviceName+".Processor", processorType)
+	state.WriteUint32([]byte(serviceName+".Processor"), processorType)
 }
 
 func _readCode(serviceName string) []byte {
-	return state.ReadBytesByKey(serviceName + ".Code")
+	return state.ReadBytes([]byte(serviceName + ".Code"))
 }
 
 func _writeCode(serviceName string, code []byte) {
-	state.WriteBytesByKey(serviceName+".Code", code)
+	state.WriteBytes([]byte(serviceName+".Code"), code)
 }

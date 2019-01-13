@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$SKIP_TESTS" != "" ]; then
+if [ "$SKIP_TESTS" == "true" ]; then
     exit 0
 fi
 

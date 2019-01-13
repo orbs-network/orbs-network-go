@@ -2,6 +2,7 @@ package native
 
 import (
 	"context"
+	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,8 +19,9 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 		panic(err.Error())
 	}
 
-	argsArgumentArray := argsToMethodArgumentArray(args...)
-	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray)
+	functionNameForErrors := fmt.Sprintf("EVENTS.%s", eventName)
+	argsArgumentArray := argsToArgumentArray(args...)
+	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	if err != nil {
 		panic(errors.Wrap(err, "incorrect types given to event emit"))
 	}
@@ -28,15 +30,15 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_EVENTS,
 		MethodName:    "emitEvent",
-		InputArguments: []*protocol.MethodArgument{
-			(&protocol.MethodArgumentBuilder{
-				Name:        "eventName",
-				Type:        protocol.METHOD_ARGUMENT_TYPE_STRING_VALUE,
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// eventName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: eventName,
 			}).Build(),
-			(&protocol.MethodArgumentBuilder{
-				Name:       "inputArgs",
-				Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+			(&protocol.ArgumentBuilder{
+				// inputArgs
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 				BytesValue: argsArgumentArray.Raw(),
 			}).Build(),
 		},
@@ -47,7 +49,7 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	}
 }
 
-func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.MethodArgumentArray) error {
-	_, err := s.prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray)
+func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray, functionNameForErrors string) error {
+	_, err := s.prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	return err
 }

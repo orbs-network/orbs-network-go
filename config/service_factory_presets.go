@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"time"
@@ -9,7 +8,7 @@ import (
 
 func ForDirectTransportTests(gossipPeers map[string]GossipPeer) GossipTransportConfig {
 	cfg := emptyConfig()
-	cfg.SetNodePublicKey(testKeys.Ed25519KeyPairForTests(0).PublicKey())
+	cfg.SetNodeAddress(testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress())
 	cfg.SetGossipPeers(gossipPeers)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
@@ -17,9 +16,9 @@ func ForDirectTransportTests(gossipPeers map[string]GossipPeer) GossipTransportC
 	return cfg
 }
 
-func ForGossipAdapterTests(publicKey primitives.Ed25519PublicKey, gossipListenPort int, gossipPeers map[string]GossipPeer) GossipTransportConfig {
+func ForGossipAdapterTests(nodeAddress primitives.NodeAddress, gossipListenPort int, gossipPeers map[string]GossipPeer) GossipTransportConfig {
 	cfg := emptyConfig()
-	cfg.SetNodePublicKey(publicKey)
+	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetGossipPeers(gossipPeers)
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
@@ -33,8 +32,6 @@ func ForConsensusContextTests(federationNodes map[string]FederationNode) Consens
 
 	cfg.SetUint32(PROTOCOL_VERSION, 1)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME, 1*time.Millisecond)
-	cfg.SetUint32(CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK, 2)
 	cfg.SetUint32(CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
 	if federationNodes != nil {
@@ -60,9 +57,9 @@ func ForStateStorageTest(numOfStateRevisionsToRetain uint32, graceBlockDiff uint
 	return cfg
 }
 
-func ForTransactionPoolTests(sizeLimit uint32, keyPair *keys.Ed25519KeyPair) TransactionPoolConfig {
+func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp256K1KeyPair) TransactionPoolConfig {
 	cfg := emptyConfig()
-	cfg.SetNodePublicKey(keyPair.PublicKey())
+	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
@@ -75,5 +72,6 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *keys.Ed25519KeyPair) Tra
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 30*time.Millisecond)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 1)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
+	cfg.SetDuration(TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY, 1*time.Millisecond)
 	return cfg
 }

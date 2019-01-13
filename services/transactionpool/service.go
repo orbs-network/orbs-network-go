@@ -15,7 +15,7 @@ import (
 var LogTag = log.Service("transaction-pool")
 
 type BlockHeightReporter interface {
-	IncrementHeight()
+	IncrementTo(height primitives.BlockHeight)
 }
 
 type service struct {
@@ -36,13 +36,14 @@ type service struct {
 	committedPool        *committedTxPool
 	blockTracker         *synchronization.BlockTracker
 	transactionForwarder *transactionForwarder
+	transactionWaiter    *transactionWaiter
 
 	metrics struct {
 		blockHeight *metric.Gauge
 	}
 }
 
-func (s *service) currentBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.mu.lastCommittedBlockHeight, s.mu.lastCommittedBlockTimestamp

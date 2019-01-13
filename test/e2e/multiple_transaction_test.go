@@ -2,9 +2,8 @@ package e2e
 
 import (
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -24,15 +23,14 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		h.waitUntilTransactionPoolIsReady(t)
 		printTestTime(t, "first block committed", &lt)
 
-		transferTo, _ := keys.GenerateEd25519Key()
-		targetAddress := builders.AddressFor(transferTo)
+		transferTo, _ := orbsClient.CreateAccount()
 
 		// send 3 transactions with total of 70
 		amounts := []uint64{15, 22, 33}
 		txIds := []string{}
 		for _, amount := range amounts {
 			printTestTime(t, "send transaction - start", &lt)
-			response, txId, err := h.sendTransaction(OwnerOfAllSupply, "BenchmarkToken", "transfer", uint64(amount), []byte(targetAddress))
+			response, txId, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), transferTo.AddressAsBytes())
 			printTestTime(t, "send transaction - end", &lt)
 
 			txIds = append(txIds, txId)
@@ -41,7 +39,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 		}
 
-		// get statuses
+		// get statuses and receipt proofs
 		for _, txId := range txIds {
 			printTestTime(t, "get status - start", &lt)
 			response, err := h.getTransactionStatus(txId)
@@ -50,13 +48,22 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 			require.NoError(t, err, "get status for txid %s should not return error", txId)
 			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
 			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+
+			printTestTime(t, "get receipt proof - start", &lt)
+			proofResponse, err := h.getTransactionReceiptProof(txId)
+			printTestTime(t, "get receipt proof - end", &lt)
+
+			require.NoError(t, err, "get receipt proof for txid %s should not return error", txId)
+			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, proofResponse.TransactionStatus)
+			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, proofResponse.ExecutionResult)
+			require.True(t, len(proofResponse.PackedProof) > 20, "packed receipt proof for txid %s should return at least 20 bytes", txId)
 		}
 
 		// check balance
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "call method - start", &lt)
-			response, err := h.callMethod(transferTo, "BenchmarkToken", "getBalance", []byte(targetAddress))
-			printTestTime(t, "call method - end", &lt)
+			printTestTime(t, "run query - start", &lt)
+			response, err := h.runQuery(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.AddressAsBytes())
+			printTestTime(t, "run query - end", &lt)
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0] == uint64(70)

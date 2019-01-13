@@ -14,20 +14,19 @@ import (
 	"time"
 )
 
-var pk = keys.Ed25519KeyPairForTests(8).PublicKey()
+var nodeAddress = keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
 
 func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		p := makePendingPool()
 		require.Zero(t, p.currentSizeInBytes, "New pending pool created with non-zero size")
 
 		tx1 := builders.TransferTransaction().Build()
-		k1, _ := p.add(tx1, pk)
+		k1, _ := p.add(tx1, nodeAddress)
 		require.Equal(t, uint32(len(tx1.Raw())), p.currentSizeInBytes, "pending pool size did not reflect tx1 size")
 
 		tx2 := builders.TransferTransaction().WithContract("a contract with a long name so that tx has a different size").Build()
-		k2, _ := p.add(tx2, pk)
+		k2, _ := p.add(tx2, nodeAddress)
 		require.Equal(t, uint32(len(tx1.Raw())+len(tx2.Raw())), p.currentSizeInBytes, "pending pool size did not reflect combined sizes of tx1 + tx2")
 
 		p.remove(ctx, k1, 0)
@@ -39,12 +38,11 @@ func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testi
 }
 
 func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		p := makePendingPool()
 		tx1 := builders.TransferTransaction().Build()
 
-		k, _ := p.add(tx1, pk)
+		k, _ := p.add(tx1, nodeAddress)
 		require.True(t, p.has(tx1), "has() returned false for an added item")
 		require.Len(t, p.getBatch(1, 0), 1, "getBatch() did not return an added item")
 
@@ -59,7 +57,6 @@ func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing
 }
 
 func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransaction(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	add(p, builders.TransferTransaction().Build(), builders.TransferTransaction().Build())
@@ -70,7 +67,6 @@ func TestPendingTransactionPoolGetBatchReturnsLessThanMaximumIfPoolHasLessTransa
 }
 
 func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimitInBytes(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	tx1 := builders.TransferTransaction().Build()
@@ -84,7 +80,6 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedSizeLimitInBytes(t *testing.
 }
 
 func TestPendingTransactionPoolGetBatchDoesNotExceedLengthLimit(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	tx1 := builders.TransferTransaction().Build()
@@ -98,7 +93,6 @@ func TestPendingTransactionPoolGetBatchDoesNotExceedLengthLimit(t *testing.T) {
 }
 
 func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
-	t.Parallel()
 	p := makePendingPool()
 
 	// create 50 transactions so as to minimize the chance of randomly returning transactions in the expected order
@@ -114,7 +108,6 @@ func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
 }
 
 func TestPendingTransactionPoolClearsExpiredTransactions(t *testing.T) {
-	t.Parallel()
 	test.WithContext(func(ctx context.Context) {
 		p := makePendingPool()
 
@@ -136,14 +129,14 @@ func TestPendingTransactionPoolDoesNotAddTheSameTransactionTwiceRegardlessOfPubl
 
 	tx := builders.Transaction().Build()
 
-	_, err := p.add(tx, pk)
+	_, err := p.add(tx, nodeAddress)
 	require.Nil(t, err, "got an unexpected error adding the first transaction")
 
-	_, err = p.add(tx, pk)
+	_, err = p.add(tx, nodeAddress)
 	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING, err.TransactionStatus, "did not get expected status code")
 
-	someOtherPk := keys.Ed25519KeyPairForTests(3).PublicKey()
-	_, err = p.add(tx, someOtherPk)
+	someOtherAddress := keys.EcdsaSecp256K1KeyPairForTests(3).NodeAddress()
+	_, err = p.add(tx, someOtherAddress)
 	require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING, err.TransactionStatus, "did not get expected status code")
 
 }
@@ -160,7 +153,7 @@ func TestPendingTransactionPoolCallsRemovalListenerWhenRemovingTransaction(t *te
 		}
 
 		tx := builders.Transaction().Build()
-		p.add(tx, pk)
+		p.add(tx, nodeAddress)
 		txHash := digest.CalcTxHash(tx.Transaction())
 		p.remove(ctx, txHash, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
 
@@ -169,13 +162,24 @@ func TestPendingTransactionPoolCallsRemovalListenerWhenRemovingTransaction(t *te
 	})
 }
 
+func TestPendingPoolNotifiesOnNewTransactions(t *testing.T) {
+	var called bool
+	p := NewPendingPool(func() uint32 { return 100000 }, metric.NewRegistry(), func() {
+		called = true
+	})
+
+	p.add(builders.Transaction().Build(), nodeAddress)
+
+	require.True(t, called, "pending transaction pool did not notify onNewTransaction")
+}
+
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
-		p.add(tx, pk)
+		p.add(tx, nodeAddress)
 	}
 }
 
 func makePendingPool() *pendingTxPool {
 	metricFactory := metric.NewRegistry()
-	return NewPendingPool(func() uint32 { return 100000 }, metricFactory)
+	return NewPendingPool(func() uint32 { return 100000 }, metricFactory, func() {})
 }

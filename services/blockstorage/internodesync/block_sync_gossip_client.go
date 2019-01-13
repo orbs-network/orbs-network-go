@@ -12,11 +12,11 @@ import (
 )
 
 type blockSyncGossipClient struct {
-	gossip    gossiptopics.BlockSync
-	storage   BlockSyncStorage
-	logger    log.BasicLogger
-	batchSize func() uint32
-	nodeKey   func() primitives.Ed25519PublicKey
+	gossip      gossiptopics.BlockSync
+	storage     BlockSyncStorage
+	logger      log.BasicLogger
+	batchSize   func() uint32
+	nodeAddress func() primitives.NodeAddress
 }
 
 func newBlockSyncGossipClient(
@@ -24,14 +24,14 @@ func newBlockSyncGossipClient(
 	s BlockSyncStorage,
 	l log.BasicLogger,
 	batchSize func() uint32,
-	pk func() primitives.Ed25519PublicKey) *blockSyncGossipClient {
+	na func() primitives.NodeAddress) *blockSyncGossipClient {
 
 	return &blockSyncGossipClient{
-		gossip:    g,
-		storage:   s,
-		logger:    l,
-		batchSize: batchSize,
-		nodeKey:   pk,
+		gossip:      g,
+		storage:     s,
+		logger:      l,
+		batchSize:   batchSize,
+		nodeAddress: na,
 	}
 }
 
@@ -62,7 +62,7 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 	input := &gossiptopics.BlockAvailabilityRequestInput{
 		Message: &gossipmessages.BlockAvailabilityRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: c.nodeKey(),
+				SenderNodeAddress: c.nodeAddress(),
 			}).Build(),
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
@@ -77,7 +77,7 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 	return err
 }
 
-func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, senderPublicKey primitives.Ed25519PublicKey) error {
+func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, senderNodeAddress primitives.NodeAddress) error {
 	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
@@ -88,10 +88,10 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Conte
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
 	request := &gossiptopics.BlockSyncRequestInput{
-		RecipientPublicKey: senderPublicKey,
+		RecipientNodeAddress: senderNodeAddress,
 		Message: &gossipmessages.BlockSyncRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: c.nodeKey(),
+				SenderNodeAddress: c.nodeAddress(),
 			}).Build(),
 			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                blockType,

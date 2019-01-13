@@ -3,12 +3,11 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/logic"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
@@ -57,6 +56,11 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 }
 
 func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+
+	// TODO Handle nil as Genesis block https://github.com/orbs-network/orbs-network-go/issues/632
+	if blockPair == nil {
+		return errors.New("validateBlockConsensus received an empty block")
+	}
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeBenchmarkConsensus() {
 		return errors.Errorf("incorrect block proof type: %v", blockPair.TransactionsBlock.BlockProof.Type())
@@ -79,22 +83,29 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 
 	// block proof
 	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
-	if !blockProof.Sender().SenderPublicKey().Equal(s.config.ConstantConsensusLeader()) {
-		return errors.Errorf("block proof not from leader: %s", blockProof.Sender().SenderPublicKey())
+	signersIterator := blockProof.NodesIterator()
+	if !signersIterator.HasNext() {
+		return errors.New("block proof not signed")
+	}
+	signer := signersIterator.NextNodes()
+	if !signer.SenderNodeAddress().Equal(s.config.ConstantConsensusLeader()) {
+		return errors.Errorf("block proof not from leader: %s", signer.SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)
-	if !signature.VerifyEd25519(blockProof.Sender().SenderPublicKey(), signedData, blockProof.Sender().Signature()) {
-		return errors.Errorf("block proof signature is invalid: %s", blockProof.Sender().Signature())
+	if !digest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()) {
+		return errors.Errorf("block proof signature is invalid: %s", signer.Signature())
 	}
 
 	return nil
 }
 
 func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
-	txHash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
-	rxHash := digest.CalcResultsBlockHash(blockPair.ResultsBlock)
-	xorHash := logic.CalcXor(txHash, rxHash)
-	return xorHash
+	return (&consensus.BenchmarkConsensusBlockRefBuilder{
+		PlaceholderType: consensus.BENCHMARK_CONSENSUS_VALID,
+		BlockHeight:     blockPair.TransactionsBlock.Header.BlockHeight(),
+		PlaceholderView: 1,
+		BlockHash:       digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock),
+	}).Build().Raw()
 }
 
 func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConsensusMode, blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
@@ -114,6 +125,10 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 	if mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
 		lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
+		// TODO (v1): Tal handle genesis ack start (with nil) https://github.com/orbs-network/orbs-network-go/issues/632
+		if blockPair == nil {
+			return nil
+		}
 		if blockPair.TransactionsBlock.Header.BlockHeight() > lastCommittedBlockHeight {
 			err := s.setLastCommittedBlock(blockPair, lastCommittedBlock)
 			if err != nil {

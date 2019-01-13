@@ -7,7 +7,7 @@ import (
 )
 
 type hardCodedFederationNode struct {
-	nodePublicKey primitives.Ed25519PublicKey
+	nodeAddress primitives.NodeAddress
 }
 
 type hardCodedGossipPeer struct {
@@ -25,9 +25,9 @@ type config struct {
 	kv                      map[string]NodeConfigValue
 	federationNodes         map[string]FederationNode
 	gossipPeers             map[string]GossipPeer
-	nodePublicKey           primitives.Ed25519PublicKey
-	nodePrivateKey          primitives.Ed25519PrivateKey
-	constantConsensusLeader primitives.Ed25519PublicKey
+	nodeAddress             primitives.NodeAddress
+	nodePrivateKey          primitives.EcdsaSecp256K1PrivateKey
+	constantConsensusLeader primitives.NodeAddress
 	activeConsensusAlgo     consensus.ConsensusAlgoType
 }
 
@@ -48,8 +48,6 @@ const (
 	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
 	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
 
-	CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME              = "CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME"
-	CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK"
 	CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK"
 	CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER = "CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER"
 
@@ -65,6 +63,7 @@ const (
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_PROPAGATION_BATCH_SIZE                = "TRANSACTION_POOL_PROPAGATION_BATCH_SIZE"
 	TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT          = "TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT"
+	TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY = "TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY"
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
@@ -77,11 +76,17 @@ const (
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 
 	ETHEREUM_ENDPOINT = "ETHEREUM_ENDPOINT"
+
+	LOGGER_HTTP_ENDPOINT = "LOGGER_HTTP_ENDPOINT"
+	LOGGER_BULK_SIZE     = "LOGGER_BULK_SIZE"
+
+	BLOCK_STORAGE_DATA_DIR       = "BLOCK_STORAGE_DATA_DIR"
+	BLOCK_STORAGE_MAX_BLOCK_SIZE = "BLOCK_STORAGE_MAX_BLOCK_SIZE"
 )
 
-func NewHardCodedFederationNode(nodePublicKey primitives.Ed25519PublicKey) FederationNode {
+func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
 	return &hardCodedFederationNode{
-		nodePublicKey: nodePublicKey,
+		nodeAddress: nodeAddress,
 	}
 }
 
@@ -112,17 +117,17 @@ func (c *config) SetString(key string, value string) mutableNodeConfig {
 	return c
 }
 
-func (c *config) SetNodePublicKey(key primitives.Ed25519PublicKey) mutableNodeConfig {
-	c.nodePublicKey = key
+func (c *config) SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig {
+	c.nodeAddress = key
 	return c
 }
 
-func (c *config) SetNodePrivateKey(key primitives.Ed25519PrivateKey) mutableNodeConfig {
+func (c *config) SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig {
 	c.nodePrivateKey = key
 	return c
 }
 
-func (c *config) SetConstantConsensusLeader(key primitives.Ed25519PublicKey) mutableNodeConfig {
+func (c *config) SetConstantConsensusLeader(key primitives.NodeAddress) mutableNodeConfig {
 	c.constantConsensusLeader = key
 	return c
 }
@@ -142,8 +147,8 @@ func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) mutableNodeCo
 	return c
 }
 
-func (c *hardCodedFederationNode) NodePublicKey() primitives.Ed25519PublicKey {
-	return c.nodePublicKey
+func (c *hardCodedFederationNode) NodeAddress() primitives.NodeAddress {
+	return c.nodeAddress
 }
 
 func (c *hardCodedGossipPeer) GossipPort() int {
@@ -154,11 +159,11 @@ func (c *hardCodedGossipPeer) GossipEndpoint() string {
 	return c.gossipEndpoint
 }
 
-func (c *config) NodePublicKey() primitives.Ed25519PublicKey {
-	return c.nodePublicKey
+func (c *config) NodeAddress() primitives.NodeAddress {
+	return c.nodeAddress
 }
 
-func (c *config) NodePrivateKey() primitives.Ed25519PrivateKey {
+func (c *config) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
 	return c.nodePrivateKey
 }
 
@@ -182,7 +187,7 @@ func (c *config) GossipPeers(asOfBlock uint64) map[string]GossipPeer {
 	return c.gossipPeers
 }
 
-func (c *config) ConstantConsensusLeader() primitives.Ed25519PublicKey {
+func (c *config) ConstantConsensusLeader() primitives.NodeAddress {
 	return c.constantConsensusLeader
 }
 
@@ -220,14 +225,6 @@ func (c *config) BlockTransactionReceiptQueryGraceEnd() time.Duration {
 
 func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
-}
-
-func (c *config) ConsensusContextMinimalBlockTime() time.Duration {
-	return c.kv[CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME].DurationValue
-}
-
-func (c *config) ConsensusContextMinimumTransactionsInBlock() uint32 {
-	return c.kv[CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK].Uint32Value
 }
 
 func (c *config) ConsensusContextMaximumTransactionsInBlock() uint32 {
@@ -278,6 +275,10 @@ func (c *config) TransactionPoolPropagationBatchingTimeout() time.Duration {
 	return c.kv[TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT].DurationValue
 }
 
+func (c *config) TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration {
+	return c.kv[TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY].DurationValue
+}
+
 func (c *config) SendTransactionTimeout() time.Duration {
 	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
 }
@@ -316,4 +317,20 @@ func (c *config) ConsensusMinimumCommitteeSize() uint32 {
 
 func (c *config) EthereumEndpoint() string {
 	return c.kv[ETHEREUM_ENDPOINT].StringValue
+}
+
+func (c *config) LoggerHttpEndpoint() string {
+	return c.kv[LOGGER_HTTP_ENDPOINT].StringValue
+}
+
+func (c *config) LoggerBulkSize() uint32 {
+	return c.kv[LOGGER_BULK_SIZE].Uint32Value
+}
+
+func (c *config) BlockStorageDataDir() string {
+	return c.kv[BLOCK_STORAGE_DATA_DIR].StringValue
+}
+
+func (c *config) BlockStorageMaxBlockSize() uint32 {
+	return c.kv[BLOCK_STORAGE_MAX_BLOCK_SIZE].Uint32Value
 }

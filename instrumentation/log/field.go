@@ -78,6 +78,10 @@ func Transaction(txHash primitives.Sha256) *Field {
 	return Stringable("txHash", txHash)
 }
 
+func Query(queryHash primitives.Sha256) *Field {
+	return Stringable("queryHash", queryHash)
+}
+
 func StringableSlice(key string, values interface{}) *Field {
 	var strings []string
 	switch reflect.TypeOf(values).Kind() {
@@ -152,7 +156,7 @@ func BlockHeight(value primitives.BlockHeight) *Field {
 }
 
 func VirtualChainId(value primitives.VirtualChainId) *Field {
-	return &Field{Key: "vcid", StringVal: value.String(), Type: StringType}
+	return &Field{Key: "vcid", Uint: uint64(value), Type: UintType}
 }
 
 func (f *Field) Value() interface{} {

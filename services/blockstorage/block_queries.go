@@ -2,12 +2,12 @@ package blockstorage
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/bloom"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
@@ -61,13 +61,15 @@ func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.Get
 }
 
 func (s *service) GetTransactionReceipt(ctx context.Context, input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
-	searchRules := adapter.BlockSearchRules{
-		EndGraceNano:          s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds(),
-		StartGraceNano:        s.config.BlockTransactionReceiptQueryGraceStart().Nanoseconds(),
-		TransactionExpireNano: s.config.BlockTransactionReceiptQueryExpirationWindow().Nanoseconds(),
-	}
-	blocksToSearch := s.persistence.GetBlocksRelevantToTxTimestamp(input.TransactionTimestamp, searchRules)
-	if blocksToSearch == nil {
+	endGraceNano := s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds()
+	startGraceNano := s.config.BlockTransactionReceiptQueryGraceStart().Nanoseconds()
+	txExpireNano := s.config.BlockTransactionReceiptQueryExpirationWindow().Nanoseconds()
+
+	start := input.TransactionTimestamp - primitives.TimestampNano(startGraceNano)
+	end := input.TransactionTimestamp + primitives.TimestampNano(endGraceNano+txExpireNano)
+
+	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
+	if end < start || end-start > primitives.TimestampNano(time.Hour.Nanoseconds()) {
 		receipt, err := s.createEmptyTransactionReceiptResult(ctx)
 		if err != nil {
 			return nil, err
@@ -76,8 +78,11 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 		return receipt, errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
 	}
 
-	if len(blocksToSearch) == 0 {
-		// duplication of this piece of code is a smell originating from issue#448
+	blockPair, txIdx, err := s.persistence.GetBlockByTx(input.Txhash, start, end)
+	if err != nil {
+		return nil, err
+	}
+	if blockPair == nil {
 		receipt, err := s.createEmptyTransactionReceiptResult(ctx)
 		if err != nil {
 			return nil, err
@@ -85,32 +90,28 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 		return receipt, nil
 	}
 
-	for _, b := range blocksToSearch {
-		tbf := bloom.NewFromRaw(b.ResultsBlock.TransactionsBloomFilter.TimestampBloomFilter())
-		if tbf.Test(input.TransactionTimestamp) {
-			for _, txr := range b.ResultsBlock.TransactionReceipts {
-				if txr.Txhash().Equal(input.Txhash) {
-					return &services.GetTransactionReceiptOutput{
-						TransactionReceipt: txr,
-						BlockHeight:        b.ResultsBlock.Header.BlockHeight(),
-						BlockTimestamp:     b.ResultsBlock.Header.Timestamp(),
-					}, nil
-				}
-			}
-		}
-	}
-
-	receipt, err := s.createEmptyTransactionReceiptResult(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return receipt, nil
+	return &services.GetTransactionReceiptOutput{
+		TransactionReceipt: blockPair.ResultsBlock.TransactionReceipts[txIdx],
+		BlockHeight:        blockPair.ResultsBlock.Header.BlockHeight(),
+		BlockTimestamp:     blockPair.ResultsBlock.Header.Timestamp(),
+	}, nil
 }
 
 // Returns a slice of blocks containing first and last
-// TODO(https://github.com/orbs-network/orbs-network-go/issues/174): support paging
-func (s *service) GetBlocks(first primitives.BlockHeight, last primitives.BlockHeight) (blocks []*protocol.BlockPairContainer, firstAvailableBlockHeight primitives.BlockHeight, lastAvailableBlockHeight primitives.BlockHeight, err error) {
-	return s.persistence.GetBlocks(first, last)
+// TODO kill this method signature or use a larger page size without returning too many blocks
+func (s *service) GetBlockSlice(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
+	blocks := make([]*protocol.BlockPairContainer, 0, last-first+1)
+	err := s.persistence.ScanBlocks(first, 1, func(firstInPage primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		blocks = append(blocks, page...)
+		return firstInPage < last
+	})
+	if err != nil {
+		return nil, 0, 0, errors.Wrap(err, "failed getting block slice")
+	}
+	if len(blocks) == 0 {
+		return nil, 0, 0, fmt.Errorf("could not find blocks in height range %d-%d", first, last)
+	}
+	return blocks, first, first + primitives.BlockHeight(len(blocks)) - 1, nil
 }
 
 func (s *service) createEmptyTransactionReceiptResult(ctx context.Context) (*services.GetTransactionReceiptOutput, error) {

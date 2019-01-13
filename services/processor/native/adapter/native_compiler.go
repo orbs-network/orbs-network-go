@@ -13,8 +13,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"plugin"
+	"runtime"
 	"strings"
 )
 
@@ -101,7 +103,8 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	}
 
 	// compile
-	cmd := exec.CommandContext(ctx, "go", "build", "-buildmode=plugin", "-o", soFilePath, sourceFilePath)
+	goCmd := path.Join(runtime.GOROOT(), "bin", "go")
+	cmd := exec.CommandContext(ctx, goCmd, "build", "-buildmode=plugin", "-o", soFilePath, sourceFilePath)
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),

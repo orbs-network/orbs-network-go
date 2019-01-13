@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkStateCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkStateCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.Argument, error) {
 	switch methodName {
 
 	case "read":
@@ -16,9 +16,9 @@ func (s *service) handleSdkStateCall(ctx context.Context, executionContext *exec
 		if err != nil {
 			return nil, err
 		}
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "value",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: value,
 		}).Build()}, nil
 
@@ -27,7 +27,7 @@ func (s *service) handleSdkStateCall(ctx context.Context, executionContext *exec
 		if err != nil {
 			return nil, err
 		}
-		return []*protocol.MethodArgument{}, nil
+		return []*protocol.Argument{}, nil
 
 	default:
 		return nil, errors.Errorf("unknown SDK state call method: %s", methodName)
@@ -36,7 +36,7 @@ func (s *service) handleSdkStateCall(ctx context.Context, executionContext *exec
 
 // inputArg0: key ([]byte)
 // outputArg0: value ([]byte)
-func (s *service) handleSdkStateRead(ctx context.Context, executionContext *executionContext, args []*protocol.MethodArgument) ([]byte, error) {
+func (s *service) handleSdkStateRead(ctx context.Context, executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
 	if len(args) != 1 || !args[0].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK state read args: %v", args)
 	}
@@ -61,9 +61,9 @@ func (s *service) handleSdkStateRead(ctx context.Context, executionContext *exec
 
 	// cache miss to state storage
 	output, err := s.stateStorage.ReadKeys(ctx, &services.ReadKeysInput{
-		BlockHeight:  executionContext.blockHeight,
+		BlockHeight:  executionContext.lastCommittedBlockHeight,
 		ContractName: currentService,
-		Keys:         []primitives.Ripmd160Sha256{key},
+		Keys:         [][]byte{key},
 	})
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (s *service) handleSdkStateRead(ctx context.Context, executionContext *exec
 
 // inputArg0: key ([]byte)
 // inputArg1: value ([]byte)
-func (s *service) handleSdkStateWrite(executionContext *executionContext, args []*protocol.MethodArgument) error {
+func (s *service) handleSdkStateWrite(executionContext *executionContext, args []*protocol.Argument) error {
 	if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
 		return errors.Errorf("write attempted without write access: %s", executionContext.accessScope)
 	}

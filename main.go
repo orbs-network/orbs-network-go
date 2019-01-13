@@ -6,12 +6,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 )
 
-func getLogger(path string, silent bool, httpLogEndpoint string) log.BasicLogger {
+func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize int, vchainId primitives.VirtualChainId) log.BasicLogger {
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -31,10 +32,16 @@ func getLogger(path string, silent bool, httpLogEndpoint string) log.BasicLogger
 
 	if httpLogEndpoint != "" {
 		customJSONFormatter := log.NewJsonFormatter().WithTimestampColumn("@timestamp")
-		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(httpLogEndpoint), customJSONFormatter, 100))
+		bulkSize := httpLogBulkSize
+		if bulkSize == 0 {
+			bulkSize = 100
+		}
+
+		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(httpLogEndpoint), customJSONFormatter, bulkSize))
 	}
 
 	return log.GetLogger().WithTags(
+		log.VirtualChainId(vchainId),
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test", os.Getenv("TEST_NAME")),
@@ -69,13 +76,18 @@ func getConfig(configFiles config.ArrayFlags) (config.NodeConfig, error) {
 func main() {
 	httpAddress := flag.String("listen", ":8080", "ip address and port for http server")
 	silentLog := flag.Bool("silent", false, "disable output to stdout")
-	httpLogEndpoint := flag.String("http-log-endpoint", "", "report logs to http/https endpoint (i.e. logz.io)")
 	pathToLog := flag.String("log", "", "path/to/node.log")
+	version := flag.Bool("version", false, "returns information about version")
 
 	var configFiles config.ArrayFlags
 	flag.Var(&configFiles, "config", "path/to/config.json")
 
 	flag.Parse()
+
+	if *version {
+		fmt.Println(config.GetVersion())
+		return
+	}
 
 	cfg, err := getConfig(configFiles)
 	if err != nil {
@@ -83,7 +95,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := getLogger(*pathToLog, *silentLog, *httpLogEndpoint)
+	logger := getLogger(*pathToLog, *silentLog, cfg.LoggerHttpEndpoint(), int(cfg.LoggerBulkSize()), cfg.VirtualChainId())
 
 	bootstrap.NewNode(
 		cfg,

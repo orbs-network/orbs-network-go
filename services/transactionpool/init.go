@@ -24,8 +24,9 @@ func NewTransactionPool(ctx context.Context,
 	if blockHeightReporter == nil {
 		blockHeightReporter = synchronization.NopHeightReporter{}
 	}
-
-	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory)
+	waiter := newTransactionWaiter()
+	onNewTransaction := func() { waiter.inc(ctx) }
+	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory, onNewTransaction)
 	committedPool := NewCommittedPool(metricFactory)
 
 	logger := parent.WithTags(LogTag)
@@ -43,6 +44,7 @@ func NewTransactionPool(ctx context.Context,
 		blockTracker:         synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
 		blockHeightReporter:  blockHeightReporter,
 		transactionForwarder: txForwarder,
+		transactionWaiter:    waiter,
 	}
 
 	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
@@ -58,7 +60,7 @@ func NewTransactionPool(ctx context.Context,
 }
 
 func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
-	bh, ts := s.currentBlockHeightAndTime()
+	bh, ts := s.lastCommittedBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		for _, trh := range s.transactionResultsHandlers {
 			_, err := trh.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{

@@ -15,28 +15,28 @@ func TestRequestOrderingCommittee(t *testing.T) {
 
 	t.Run("if MaxCommitteeSize <= federationSize, then return MaxCommitteeSize members", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{
-			BlockHeight:      blockHeight,
-			RandomSeed:       0,
-			MaxCommitteeSize: uint32(federationSize),
+			CurrentBlockHeight: blockHeight,
+			RandomSeed:         0,
+			MaxCommitteeSize:   uint32(federationSize),
 		}
 		output, err := h.service.RequestOrderingCommittee(context.Background(), input)
 		if err != nil {
 			t.Error(err)
 		}
-		actualFederationSize := len(output.NodePublicKeys)
+		actualFederationSize := len(output.NodeAddresses)
 		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
 	})
 	t.Run("if MaxCommitteeSize > federationSize, then return all federation members (federationSize)", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{
-			BlockHeight:      blockHeight,
-			RandomSeed:       0,
-			MaxCommitteeSize: uint32(federationSize + 1),
+			CurrentBlockHeight: blockHeight,
+			RandomSeed:         0,
+			MaxCommitteeSize:   uint32(federationSize + 1),
 		}
 		output, err := h.service.RequestOrderingCommittee(context.Background(), input)
 		if err != nil {
 			t.Error(err)
 		}
-		actualFederationSize := len(output.NodePublicKeys)
+		actualFederationSize := len(output.NodeAddresses)
 		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
 	})
 }

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ExpectedTransactionHashHex = "4c78c82f8cdd40a923630d38c6b5f48bc257b7a307fb8873495b4b462ef51898"
+	ExpectedTransactionHashHex = "0559010be7d370085b0cd86ac8f5b9609e185c3ff9d3a30e8957e851043aed41"
 )
 
 func getTransaction() *protocol.Transaction {

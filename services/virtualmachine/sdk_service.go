@@ -9,14 +9,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) handleSdkServiceCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.MethodArgument, error) {
+func (s *service) handleSdkServiceCall(ctx context.Context, executionContext *executionContext, methodName primitives.MethodName, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]*protocol.Argument, error) {
 	switch methodName {
 
 	case "callMethod":
 		outputArgumentArrayRaw, err := s.handleSdkServiceCallMethod(ctx, executionContext, args, permissionScope)
-		return []*protocol.MethodArgument{(&protocol.MethodArgumentBuilder{
-			Name:       "outputArgs",
-			Type:       protocol.METHOD_ARGUMENT_TYPE_BYTES_VALUE,
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// outputArgs
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: outputArgumentArrayRaw,
 		}).Build()}, err
 
@@ -27,15 +27,15 @@ func (s *service) handleSdkServiceCall(ctx context.Context, executionContext *ex
 
 // inputArg0: serviceName (string)
 // inputArg1: methodName (string)
-// inputArg2: inputArgumentArray ([]byte of raw MethodArgumentArray)
-// outputArg0: outputArgumentArray ([]byte of raw MethodArgumentArray)
-func (s *service) handleSdkServiceCallMethod(ctx context.Context, executionContext *executionContext, args []*protocol.MethodArgument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
+// inputArg2: inputArgumentArray ([]byte of raw ArgumentArray)
+// outputArg0: outputArgumentArray ([]byte of raw ArgumentArray)
+func (s *service) handleSdkServiceCallMethod(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
 	if len(args) != 3 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK service callMethod args: %v", args)
 	}
 	serviceName := args[0].StringValue()
 	methodName := args[1].StringValue()
-	inputArgumentArray := protocol.MethodArgumentArrayReader(args[2].BytesValue())
+	inputArgumentArray := protocol.ArgumentArrayReader(args[2].BytesValue())
 
 	// get deployment info
 	processor, err := s.getServiceDeployment(ctx, executionContext, primitives.ContractName(serviceName))
@@ -45,7 +45,6 @@ func (s *service) handleSdkServiceCallMethod(ctx context.Context, executionConte
 	}
 
 	// modify execution context
-	callingService := executionContext.serviceStackTop()
 	executionContext.serviceStackPush(primitives.ContractName(serviceName))
 	defer executionContext.serviceStackPop()
 
@@ -57,10 +56,9 @@ func (s *service) handleSdkServiceCallMethod(ctx context.Context, executionConte
 		InputArgumentArray:     inputArgumentArray,
 		AccessScope:            executionContext.accessScope,
 		CallingPermissionScope: permissionScope,
-		CallingService:         callingService, // TODO(v1): input.CallingService is probably not needed, can remove from protos
 	})
 	if err != nil {
-		s.logger.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("caller", callingService), log.Stringable("callee", primitives.ContractName(serviceName)))
+		s.logger.Info("Sdk.Service.CallMethod failed", log.Error(err), log.Stringable("callee", primitives.ContractName(serviceName)))
 		return nil, err
 	}
 

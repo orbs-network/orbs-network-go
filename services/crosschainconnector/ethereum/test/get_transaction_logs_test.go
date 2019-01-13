@@ -3,7 +3,9 @@ package test
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -24,30 +26,30 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		auth := simulator.GetAuth()
 		connector := ethereum.NewEthereumCrosschainConnector(simulator, logger)
 
-		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
-		require.NoError(t, err, "failed parsing ABI")
-
-		contractAddress, deployedContract, err := simulator.DeployEmitEvent(auth, parsedABI)
+		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 		simulator.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
 		amount := big.NewInt(42)
 		tuid := big.NewInt(33)
-		ethAddress := [20]byte{0x01, 0x02, 0x03}
-		orbsAddress := [20]byte{0x04, 0x05, 0x06}
+		ethAddress := common.BigToAddress(big.NewInt(42000000000))
+		orbsAddress := anOrbsAddress()
 
 		tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
 		simulator.Commit()
 		require.NoError(t, err, "failed emitting event")
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
-			EthereumContractAddress: hexutil.Encode(contractAddress),
+			EthereumContractAddress: hexutil.Encode(contractAddress.Bytes()),
 			EthereumTxhash:          primitives.Uint256(tx.Hash().Bytes()),
 			EthereumEventName:       "TransferredOut",
 			EthereumJsonAbi:         contract.EmitEventAbi,
 			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
 		})
 		require.NoError(t, err, "failed getting logs")
+
+		parsedABI, err := abi.JSON(strings.NewReader(contract.EmitEventAbi))
+		require.NoError(t, err, "failed parsing ABI")
 
 		event := new(contract.EmitEvent)
 		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "TransferredOut", out.EthereumAbiPackedOutput)
@@ -57,4 +59,11 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		require.EqualValues(t, orbsAddress, event.OrbsAddress, "failed getting orbsAddress from unpacked data")
 		require.EqualValues(t, amount, event.Value, "failed getting amount from unpacked data")
 	})
+}
+
+func anOrbsAddress() [20]byte {
+	orbsUser, _ := orbsClient.CreateAccount()
+	var orbsUserAddress [20]byte
+	copy(orbsUserAddress[:], orbsUser.AddressAsBytes())
+	return orbsUserAddress
 }

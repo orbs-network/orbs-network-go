@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -21,7 +20,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 		tx := builders.TransferTransaction().Build()
 
 		hash, _, _ := transactionpool.HashTransactions(tx)
-		sig, _ := signature.SignEd25519(thisNodeKeyPair.PrivateKey(), hash)
+		sig, _ := digest.SignAsNode(thisNodeKeyPair.PrivateKey(), hash)
 
 		h.expectTransactionsToBeForwarded(sig, tx)
 
@@ -57,7 +56,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 
 		blockHeight := primitives.BlockHeight(3)
 		blockTime := primitives.TimestampNano(time.Now().UnixNano())
-		h.goToBlock(ctx, blockHeight, blockTime)
+		h.fastForwardToHeightAndTime(ctx, blockHeight, blockTime)
 
 		out, err := h.addNewTransaction(ctx, tx)
 

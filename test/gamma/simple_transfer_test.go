@@ -11,24 +11,24 @@ func TestSimpleTransfer(t *testing.T) {
 	h := newHarness()
 	defer h.shutdown()
 
+	h.waitUntilTransactionPoolIsReady(t)
+
 	cli := test.GammaCliWithPort(h.port)
 
-	out, err := cli.Run("send-tx", "-i", "transfer.json")
-	t.Log(out)
-	require.NoError(t, err, "transfer should succeed")
-	require.True(t, strings.Contains(out, `"ExecutionResult": "SUCCESS"`))
+	out, err := cli.Run("send-tx", "transfer.json")
+	require.Contains(t, out, `"ExecutionResult": "SUCCESS"`)
 
 	txId := extractTxIdFromSendTxOutput(out)
 	t.Log(txId)
 
-	out, err = cli.Run("status", "-txid", txId)
-	t.Log(out)
+	sendTxOut, err := cli.Run("tx-status", txId)
+	t.Log(sendTxOut)
 	require.NoError(t, err, "get tx status should succeed")
-	require.True(t, strings.Contains(out, `"RequestStatus": "COMPLETED"`))
+	require.True(t, strings.Contains(sendTxOut, `"RequestStatus": "COMPLETED"`))
 
-	out, err = cli.Run("read", "-i", "get-balance.json")
-	t.Log(out)
+	sendTxOut, err = cli.Run("run-query", "get-balance.json")
+	t.Log(sendTxOut)
 	require.NoError(t, err, "get balance should succeed")
-	require.True(t, strings.Contains(out, `"ExecutionResult": "SUCCESS"`))
-	require.True(t, strings.Contains(out, `"Value": "17"`))
+	require.True(t, strings.Contains(sendTxOut, `"ExecutionResult": "SUCCESS"`))
+	require.True(t, strings.Contains(sendTxOut, `"Value": "17"`))
 }

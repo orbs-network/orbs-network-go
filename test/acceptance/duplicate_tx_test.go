@@ -16,6 +16,7 @@ var STATUS_COMMITTED_OR_PENDING_OR_DUPLICATE = []TransactionStatus{TRANSACTION_S
 var STATUS_COMMITTED_OR_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 var STATUS_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 
+// LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	harness.Network(t).AllowingErrors(
 		"error adding transaction to pending pool",
@@ -24,7 +25,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 		ts := time.Now()
 
-		contract := network.GetBenchmarkTokenContract()
+		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 1)
 
 		// send three identical transactions to two nodes
@@ -42,7 +43,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.TestNetworkDriver, txHash primitives.Sha256) {
 	// wait for the tx to be seen as committed in state
 	network.WaitForTransactionInState(ctx, txHash)
-	txHeight, err := network.BlockPersistence(0).GetNumBlocks()
+	txHeight, err := network.BlockPersistence(0).GetLastBlockHeight()
 	require.NoError(t, err)
 
 	// wait for 5 more blocks to be committed
@@ -52,9 +53,13 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.T
 
 	// count receipts for txHash in leader block storage
 	receiptCount := 0
-	blocks, _, _, err := network.BlockPersistence(0).GetBlocks(1, height)
-	require.NoError(t, err, "GetBlocks should return blocks")
-	require.Len(t, blocks, int(height), "GetBlocks should return %d blocks", height)
+	var blocks []*BlockPairContainer
+	err = network.BlockPersistence(0).ScanBlocks(1, uint8(height), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
+		blocks = page
+		return false
+	})
+	require.NoError(t, err, "ScanBlocks should return blocks")
+	require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks", height)
 	for _, block := range blocks {
 		for _, r := range block.ResultsBlock.TransactionReceipts {
 			if bytes.Equal(r.Txhash(), txHash) {
@@ -65,6 +70,7 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.T
 	require.Equal(t, 1, receiptCount, "blocks should include tx exactly once")
 }
 
+// LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 	harness.Network(t).AllowingErrors(
 		"error adding transaction to pending pool",
@@ -74,7 +80,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 	).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		ts := time.Now()
-		contract := network.GetBenchmarkTokenContract()
+		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 1)
 
 		// this should be the same builder, but membuffers is not thread-safe for concurrent builds on same builder

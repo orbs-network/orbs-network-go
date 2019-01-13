@@ -6,12 +6,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
-
+	"github.com/pkg/errors"
 	"sync"
 	"time"
 )
@@ -28,14 +28,30 @@ type node struct {
 	ctxCancel    context.CancelFunc
 }
 
+func getMetricRegistry() metric.Registry {
+	metricRegistry := metric.NewRegistry()
+	version := config.GetVersion()
+
+	metricRegistry.NewText("Version.Semantic", version.Semantic)
+	metricRegistry.NewText("Version.Commit", version.Commit)
+
+	return metricRegistry
+}
+
 func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress string) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
-	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodePublicKey().String()))
-	metricRegistry := metric.NewRegistry()
+	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
+	metricRegistry := getMetricRegistry()
 
-	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger)
-	blockPersistence := blockStorageAdapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
+	blockPersistence, err := blockStorageAdapter.NewFilesystemBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
+	if err != nil {
+		logger.Error("failed initializing blocks database", log.Error(err))
+		err = errors.Wrap(err, "failed initializing blocks database")
+		panic(err)
+	}
+
+	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)

@@ -25,7 +25,7 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	logger.Info("received block availability request",
-		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
+		log.Stringable("petitioner", message.Sender.SenderNodeAddress()),
 		log.Stringable("requested-first-block", message.SignedBatchRange.FirstBlockHeight()),
 		log.Stringable("requested-last-block", message.SignedBatchRange.LastBlockHeight()),
 		log.Stringable("requested-last-committed-block", message.SignedBatchRange.LastCommittedBlockHeight()))
@@ -44,10 +44,10 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	blockType := message.SignedBatchRange.BlockType()
 
 	response := &gossiptopics.BlockAvailabilityResponseInput{
-		RecipientPublicKey: message.Sender.SenderPublicKey(),
+		RecipientNodeAddress: message.Sender.SenderNodeAddress(),
 		Message: &gossipmessages.BlockAvailabilityResponseMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
+				SenderNodeAddress: s.config.NodeAddress(),
 			}).Build(),
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                blockType,
@@ -59,11 +59,11 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	}
 
 	logger.Info("sending the response for availability request",
-		log.Stringable("petitioner", response.RecipientPublicKey),
+		log.Stringable("petitioner", response.RecipientNodeAddress),
 		log.Stringable("first-available-block-height", response.Message.SignedBatchRange.FirstBlockHeight()),
 		log.Stringable("last-available-block-height", response.Message.SignedBatchRange.LastBlockHeight()),
 		log.Stringable("last-committed-available-block-height", response.Message.SignedBatchRange.LastCommittedBlockHeight()),
-		log.Stringable("source", response.Message.Sender.SenderPublicKey()),
+		log.Stringable("source", response.Message.Sender.SenderNodeAddress()),
 	)
 
 	_, err = s.gossip.SendBlockAvailabilityResponse(ctx, response)
@@ -73,7 +73,7 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gossipmessages.BlockSyncRequestMessage) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	senderPublicKey := message.Sender.SenderPublicKey()
+	senderNodeAddress := message.Sender.SenderNodeAddress()
 	blockType := message.SignedChunkRange.BlockType()
 	firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
 	lastRequestedBlockHeight := message.SignedChunkRange.LastBlockHeight()
@@ -85,7 +85,7 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
 	logger.Info("received block sync request",
-		log.Stringable("petitioner", message.Sender.SenderPublicKey()),
+		log.Stringable("petitioner", message.Sender.SenderNodeAddress()),
 		log.Stringable("first-requested-block-height", firstRequestedBlockHeight),
 		log.Stringable("last-requested-block-height", lastRequestedBlockHeight),
 		log.Stringable("last-committed-block-height", lastCommittedBlockHeight))
@@ -98,21 +98,21 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize()-1)
 	}
 
-	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight, err := s.GetBlocks(firstRequestedBlockHeight, lastRequestedBlockHeight)
+	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight, err := s.GetBlockSlice(firstRequestedBlockHeight, lastRequestedBlockHeight)
 	if err != nil {
 		return errors.Wrap(err, "block sync failed reading from block persistence")
 	}
 
 	logger.Info("sending blocks to another node via block sync",
-		log.Stringable("petitioner", senderPublicKey),
+		log.Stringable("petitioner", senderNodeAddress),
 		log.Stringable("first-available-block-height", firstAvailableBlockHeight),
 		log.Stringable("last-available-block-height", lastAvailableBlockHeight))
 
 	response := &gossiptopics.BlockSyncResponseInput{
-		RecipientPublicKey: senderPublicKey,
+		RecipientNodeAddress: senderNodeAddress,
 		Message: &gossipmessages.BlockSyncResponseMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderPublicKey: s.config.NodePublicKey(),
+				SenderNodeAddress: s.config.NodeAddress(),
 			}).Build(),
 			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 				BlockType:                blockType,

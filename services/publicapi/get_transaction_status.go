@@ -3,6 +3,7 @@ package publicapi
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -11,18 +12,27 @@ import (
 	"time"
 )
 
-func (s *service) GetTransactionStatus(ctx context.Context, input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
+func (s *service) GetTransactionStatus(parentCtx context.Context, input *services.GetTransactionStatusInput) (*services.GetTransactionStatusOutput, error) {
+	ctx := trace.NewContext(parentCtx, "PublicApi.GetTransactionStatus")
+
 	if input.ClientRequest == nil {
-		err := errors.Errorf("error: missing input (client request is nil)")
+		err := errors.Errorf("client request is nil")
 		s.logger.Info("get transaction status received missing input", log.Error(err))
 		return nil, err
 	}
 
-	s.logger.Info("get transaction status request received", log.String("flow", "checkpoint"), log.Transaction(input.ClientRequest.Txhash()))
-	txHash := input.ClientRequest.Txhash()
-	timestamp := input.ClientRequest.TransactionTimestamp()
+	tx := input.ClientRequest.TransactionRef()
+	txHash := tx.Txhash()
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
 
-	return s.getTransactionStatus(ctx, txHash, timestamp)
+	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
+		logger.Info("get transaction status received input failed", log.Error(err))
+		return toGetTxStatusOutput(&txOutput{transactionStatus: txStatus}), err
+	}
+
+	logger.Info("get transaction status request received")
+
+	return s.getTransactionStatus(ctx, txHash, tx.TransactionTimestamp())
 }
 
 func (s *service) getTransactionStatus(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*services.GetTransactionStatusOutput, error) {
@@ -30,84 +40,78 @@ func (s *service) getTransactionStatus(ctx context.Context, txHash primitives.Sh
 	defer s.metrics.getTransactionStatusTime.RecordSince(start)
 
 	if txReceipt, err, ok := s.getFromTxPool(ctx, txHash, timestamp); ok {
-		return toGetTxOutput(txReceipt), err
+		return toGetTxStatusOutput(txReceipt), err
 	}
 
 	blockReceipt, err := s.getFromBlockStorage(ctx, txHash, timestamp)
 	if err != nil {
 		return nil, err
 	}
-	return toGetTxOutput(blockReceipt), err
+	return toGetTxStatusOutput(blockReceipt), err
 }
 
-func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error, bool) {
+func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txOutput, error, bool) {
 	txReceipt, err := s.transactionPool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
 		Txhash:               txHash,
 		TransactionTimestamp: timestamp,
 	})
 	if err != nil {
-		s.logger.Info("get transaction status failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
-		return txStatusToTxResponse(txReceipt), err, true
+		s.logger.Info("get transaction txStatus failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
+		return poolOutputToTxOutput(txReceipt), err, true
 	}
 	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
-		return txStatusToTxResponse(txReceipt), nil, true
+		return poolOutputToTxOutput(txReceipt), nil, true
 	}
 	return nil, nil, false
 }
 
-func txStatusToTxResponse(txStatus *services.GetCommittedTransactionReceiptOutput) *txResponse {
-	return &txResponse{
-		transactionStatus:  txStatus.TransactionStatus,
-		transactionReceipt: txStatus.TransactionReceipt,
-		blockHeight:        txStatus.BlockHeight,
-		blockTimestamp:     txStatus.BlockTimestamp,
+func poolOutputToTxOutput(t *services.GetCommittedTransactionReceiptOutput) *txOutput {
+	return &txOutput{
+		transactionStatus:  t.TransactionStatus,
+		transactionReceipt: t.TransactionReceipt,
+		blockHeight:        t.BlockHeight,
+		blockTimestamp:     t.BlockTimestamp,
 	}
 }
 
-func (s *service) getFromBlockStorage(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txResponse, error) {
+func (s *service) getFromBlockStorage(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txOutput, error) {
 	txReceipt, err := s.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
 		Txhash:               txHash,
 		TransactionTimestamp: timestamp,
 	})
 	if err != nil {
-		s.logger.Info("get transaction status failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
+		s.logger.Info("get transaction txStatus failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
 		return nil, err
 	}
-	return blockToTxResponse(txReceipt), nil
-
+	return blockOutputToTxOutput(txReceipt), nil
 }
 
-func blockToTxResponse(bReceipt *services.GetTransactionReceiptOutput) *txResponse {
-	status := protocol.TRANSACTION_STATUS_NO_RECORD_FOUND
-	if bReceipt.TransactionReceipt != nil {
-		status = protocol.TRANSACTION_STATUS_COMMITTED
+func blockOutputToTxOutput(t *services.GetTransactionReceiptOutput) *txOutput {
+	txStatus := protocol.TRANSACTION_STATUS_NO_RECORD_FOUND
+	if t.TransactionReceipt != nil {
+		txStatus = protocol.TRANSACTION_STATUS_COMMITTED
 	}
-	return &txResponse{
-		transactionStatus:  status,
-		transactionReceipt: bReceipt.TransactionReceipt,
-		blockHeight:        bReceipt.BlockHeight,
-		blockTimestamp:     bReceipt.BlockTimestamp,
+	return &txOutput{
+		transactionStatus:  txStatus,
+		transactionReceipt: t.TransactionReceipt,
+		blockHeight:        t.BlockHeight,
+		blockTimestamp:     t.BlockTimestamp,
 	}
 }
 
-func toGetTxOutput(transactionOutput *txResponse) *services.GetTransactionStatusOutput {
-	var receiptForClient *protocol.TransactionReceiptBuilder = nil
-
-	if receipt := transactionOutput.transactionReceipt; receipt != nil {
-		receiptForClient = &protocol.TransactionReceiptBuilder{
-			Txhash:              receipt.Txhash(),
-			ExecutionResult:     receipt.ExecutionResult(),
-			OutputArgumentArray: receipt.OutputArgumentArray(),
-		}
-	}
-
+func toGetTxStatusOutput(out *txOutput) *services.GetTransactionStatusOutput {
 	response := &client.GetTransactionStatusResponseBuilder{
-		RequestStatus:      translateTxStatusToResponseCode(transactionOutput.transactionStatus),
-		TransactionReceipt: receiptForClient,
-		TransactionStatus:  transactionOutput.transactionStatus,
-		BlockHeight:        transactionOutput.blockHeight,
-		BlockTimestamp:     transactionOutput.blockTimestamp,
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  translateTransactionStatusToRequestStatus(out.transactionStatus, protocol.EXECUTION_RESULT_RESERVED),
+			BlockHeight:    out.blockHeight,
+			BlockTimestamp: out.blockTimestamp,
+		},
+		TransactionStatus:  out.transactionStatus,
+		TransactionReceipt: nil,
 	}
-
+	if out.transactionReceipt != nil {
+		response.RequestResult.RequestStatus = translateTransactionStatusToRequestStatus(out.transactionStatus, out.transactionReceipt.ExecutionResult())
+		response.TransactionReceipt = protocol.TransactionReceiptBuilderFromRaw(out.transactionReceipt.Raw())
+	}
 	return &services.GetTransactionStatusOutput{ClientResponse: response.Build()}
 }

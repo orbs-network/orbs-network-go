@@ -14,9 +14,11 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -42,12 +44,14 @@ type acceptanceTestNetworkBuilder struct {
 	requiredQuorumPercentage uint32
 }
 
+// TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
 func Network(f canFail) *acceptanceTestNetworkBuilder {
 	n := &acceptanceTestNetworkBuilder{f: f, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	return n.
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(2).
+		//WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 }
 
@@ -57,7 +61,8 @@ func (b *acceptanceTestNetworkBuilder) WithLogFilters(filters ...log.Filter) *ac
 }
 
 func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTestNetworkBuilder {
-	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	randNum := rand.Intn(1000000)
+	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
 	return b
 }
 
@@ -144,7 +149,12 @@ func extractBlocks(blocks blockStorageAdapter.InMemoryBlockPersistence) []*proto
 	if err != nil {
 		panic(errors.Wrapf(err, "spawn network: failed reading block height"))
 	}
-	blockPairs, _, _, err := blocks.GetBlocks(1, lastBlock.ResultsBlock.Header.BlockHeight()+1)
+	var blockPairs []*protocol.BlockPairContainer
+	pageSize := uint8(lastBlock.ResultsBlock.Header.BlockHeight())
+	err = blocks.ScanBlocks(1, pageSize, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		blockPairs = page // TODO should we copy the slice here to make sure both networks are isolated?
+		return false
+	})
 	if err != nil {
 		panic(errors.Wrapf(err, "spawn network: failed extract blocks"))
 	}
@@ -181,17 +191,17 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", b.numNodes))
 	description := fmt.Sprintf("network with %d nodes running %s", b.numNodes, consensusAlgo)
 
-	leaderKeyPair := testKeys.Ed25519KeyPairForTests(0)
+	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < int(b.numNodes); i++ {
-		publicKey := testKeys.Ed25519KeyPairForTests(i).PublicKey()
-		federationNodes[publicKey.KeyForMap()] = config.NewHardCodedFederationNode(publicKey)
+		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
+		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
 	}
 
 	cfg := config.ForAcceptanceTestNetwork(
 		federationNodes,
-		leaderKeyPair.PublicKey(),
+		leaderKeyPair.NodeAddress(),
 		consensusAlgo,
 		b.maxTxPerBlock,
 		b.requiredQuorumPercentage,
@@ -201,22 +211,22 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
 
 	network := &acceptanceNetwork{
-		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport, sharedEthereumSimulator),
+		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
 		tamperingTransport: sharedTamperingTransport,
 		ethereumConnection: sharedEthereumSimulator,
 		description:        description,
 	}
 
 	for i := 0; i < b.numNodes; i++ {
-		keyPair := testKeys.Ed25519KeyPairForTests(i)
+		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(i)
 
-		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.PublicKey(), keyPair.PrivateKey())
+		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.NodeAddress(), keyPair.PrivateKey(), "")
 
 		metricRegistry := metric.NewRegistry()
-		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodePublicKey().String()))
+		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodeAddress().String()))
 		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
 
-		network.AddNode(keyPair, nodeCfg, nativeProcessorAdapter.NewFakeCompiler(), blockStorageAdapter, metricRegistry, nodeLogger)
+		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, nodeCfg, blockStorageAdapter, nativeProcessorAdapter.NewFakeCompiler(), sharedEthereumSimulator, metricRegistry, nodeLogger)
 	}
 
 	return network

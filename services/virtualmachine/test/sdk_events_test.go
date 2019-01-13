@@ -17,19 +17,19 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			t.Log("Emit of Event1")
-			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.MethodArgumentsArray("hello").Raw())
+			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.ArgumentsArray("hello").Raw())
 			require.NoError(t, err, "handleSdkCall should succeed")
 
 			t.Log("Emit of Event2")
-			_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event2", builders.MethodArgumentsArray(uint64(17)).Raw())
+			_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event2", builders.ArgumentsArray(uint64(17)).Raw())
 			require.NoError(t, err, "handleSdkCall should succeed")
 
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
-		h.expectNativeContractMethodCalled("Contract1", "method2", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+		h.expectNativeContractMethodCalled("Contract1", "method2", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
 		_, _, _, outputEvents := h.processTransactionSet(ctx, []*contractAndMethod{
@@ -39,8 +39,8 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 
 		expectedEventsArray1 := (&protocol.EventsArrayBuilder{
 			Events: []*protocol.EventBuilder{
-				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.MethodArgumentsOpaqueEncode("hello")},
-				{ContractName: "Contract1", EventName: "Event2", OutputArgumentArray: builders.MethodArgumentsOpaqueEncode(uint64(17))},
+				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.PackedArgumentArrayEncode("hello")},
+				{ContractName: "Contract1", EventName: "Event2", OutputArgumentArray: builders.PackedArgumentArrayEncode(uint64(17))},
 			},
 		}).Build().RawEventsArray()
 		expectedEventsArray2 := (&protocol.EventsArrayBuilder{}).Build().RawEventsArray()
@@ -53,26 +53,26 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 	})
 }
 
-func TestSdkEvents_EmitEvent_InRunLocalMethod(t *testing.T) {
+func TestSdkEvents_EmitEvent_InProcessQuery(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.MethodArgumentArray) (protocol.ExecutionResult, *protocol.MethodArgumentArray, error) {
+		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			t.Log("Emit of Event1")
-			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.MethodArgumentsArray("hello").Raw())
+			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.ArgumentsArray("hello").Raw())
 			require.NoError(t, err, "handleSdkCall should succeed")
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.MethodArgumentsArray(), nil
+			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
-		result, _, _, outputEvents, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, _, _, outputEvents, err := h.processQuery(ctx, "Contract1", "method1")
 		require.NoError(t, err, "run local method should not fail")
 		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
 
 		expectedEventsArray := (&protocol.EventsArrayBuilder{
 			Events: []*protocol.EventBuilder{
-				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.MethodArgumentsOpaqueEncode("hello")},
+				{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.PackedArgumentArrayEncode("hello")},
 			},
 		}).Build().RawEventsArray()
 

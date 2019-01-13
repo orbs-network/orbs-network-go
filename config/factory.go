@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"path/filepath"
 )
 
 func emptyConfig() mutableNodeConfig {
@@ -11,13 +12,16 @@ func emptyConfig() mutableNodeConfig {
 }
 func (c *config) OverrideNodeSpecificValues(
 	gossipListenPort int,
-	nodePublicKey primitives.Ed25519PublicKey,
-	nodePrivateKey primitives.Ed25519PrivateKey) NodeConfig {
+	nodeAddress primitives.NodeAddress,
+	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
+	blockStorageDataDirPrefix string,
+) NodeConfig {
+
 	cloned := c.Clone()
-	cloned.SetNodePublicKey(nodePublicKey)
+	cloned.SetNodeAddress(nodeAddress)
 	cloned.SetNodePrivateKey(nodePrivateKey)
 	cloned.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
-
+	cloned.SetString(BLOCK_STORAGE_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
 	return cloned
 }
 
@@ -32,7 +36,7 @@ func (c *config) Clone() mutableNodeConfig {
 		federationNodes:         c.federationNodes,
 		gossipPeers:             c.gossipPeers,
 		nodePrivateKey:          c.nodePrivateKey,
-		nodePublicKey:           c.nodePublicKey,
+		nodeAddress:             c.nodeAddress,
 		kv:                      cloneMap(c.kv),
 	}
 }

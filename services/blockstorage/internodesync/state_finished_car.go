@@ -42,10 +42,10 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	}
 	s.metrics.timesWithResponses.Inc()
 	logger.Info("selecting from received sources", log.Int("sources-count", c))
-	syncSource := s.responses[0] //TODO add a real selection algorithm for selecting the source for the sync
-	syncSourceKey := syncSource.Sender.SenderPublicKey()
+	syncSource := s.responses[0] //TODO V1 how do we pick the source?
+	syncSourceNodeAddress := syncSource.Sender.SenderNodeAddress()
 
-	return s.factory.CreateWaitingForChunksState(syncSourceKey)
+	return s.factory.CreateWaitingForChunksState(syncSourceNodeAddress)
 }
 
 func (s *finishedCARState) blockCommitted(ctx context.Context) {

@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -19,9 +20,10 @@ import (
 )
 
 type E2EConfig struct {
-	bootstrap  bool
-	baseUrl    string
-	stressTest StressTestConfig
+	bootstrap        bool
+	baseUrl          string
+	stressTest       StressTestConfig
+	ethereumEndpoint string
 }
 
 type StressTestConfig struct {
@@ -35,19 +37,22 @@ const VITRUAL_CHAIN_ID = 42
 const START_HTTP_PORT = 8090
 
 type harness struct {
-	client *orbsclient.OrbsClient
+	client *orbsClient.OrbsClient
 }
 
 func newHarness() *harness {
 	return &harness{
-		client: orbsclient.NewOrbsClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
+		client: orbsClient.NewClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
 	}
 }
 
 func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
-	sendTxOut, txId, err := h.sendTransaction(from, "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to deploy native contract")
+	}
 
 	txStatus, executionResult := sendTxOut.TransactionStatus, sendTxOut.ExecutionResult
 
@@ -67,8 +72,8 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 	return executionResult, txStatus, err
 }
 
-func (h *harness) sendTransaction(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
-	payload, txId, err := h.client.CreateSendTransactionPayload(sender.PublicKey(), sender.PrivateKey(), contractName, methodName, args...)
+func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
+	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, txId, err
 	}
@@ -76,21 +81,22 @@ func (h *harness) sendTransaction(sender *keys.Ed25519KeyPair, contractName stri
 	return
 }
 
-func (h *harness) callMethod(sender *keys.Ed25519KeyPair, contractName string, methodName string, args ...interface{}) (response *codec.CallMethodResponse, err error) {
-	payload, err := h.client.CreateCallMethodPayload(sender.PublicKey(), contractName, methodName, args...)
+func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+	payload, err := h.client.CreateQuery(senderPublicKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, err
 	}
-	response, err = h.client.CallMethod(payload)
+	response, err = h.client.SendQuery(payload)
 	return
 }
 
 func (h *harness) getTransactionStatus(txId string) (response *codec.GetTransactionStatusResponse, err error) {
-	payload, err := h.client.CreateGetTransactionStatusPayload(txId)
-	if err != nil {
-		return nil, err
-	}
-	response, err = h.client.GetTransactionStatus(payload)
+	response, err = h.client.GetTransactionStatus(txId)
+	return
+}
+
+func (h *harness) getTransactionReceiptProof(txId string) (response *codec.GetTransactionReceiptProofResponse, err error) {
+	response, err = h.client.GetTransactionReceiptProof(txId)
 	return
 }
 
@@ -112,8 +118,6 @@ func (h *harness) getMetrics() metrics {
 	}
 
 	readBytes, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(string(readBytes))
-
 	m := make(metrics)
 	json.Unmarshal(readBytes, &m)
 
@@ -130,7 +134,7 @@ func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 		blockHeight := m["TransactionPool.BlockHeight"]["Value"].(float64)
 
 		return blockHeight > 0
-	}), "could not retrieve metrics")
+	}), "Timed out waiting for metric TransactionPool.BlockHeight > 0")
 }
 
 func printTestTime(t *testing.T, msg string, last *time.Time) {
@@ -147,9 +151,12 @@ func getConfig() E2EConfig {
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
 
+	ethereumEndpoint := "http://127.0.0.1:8545"
+
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
 		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
+		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 
 	if stressTestEnabled {
@@ -167,5 +174,6 @@ func getConfig() E2EConfig {
 			stressTestFailureRate,
 			stressTestTargetTPS,
 		},
+		ethereumEndpoint,
 	}
 }

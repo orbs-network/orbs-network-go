@@ -16,7 +16,7 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 		h := newHarness(ctx)
 
 		require.NoError(t,
-			h.validateTransactionsForOrdering(ctx, 0, builders.Transaction().Build(), builders.Transaction().Build()),
+			h.validateTransactionsForOrdering(ctx, 2, builders.Transaction().Build(), builders.Transaction().Build()),
 			"rejected a set of valid transactions")
 	})
 }
@@ -35,7 +35,7 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 		h.reportTransactionsAsCommitted(ctx, committedTx)
 
 		require.EqualErrorf(t,
-			h.validateTransactionsForOrdering(ctx, 0, committedTx, builders.Transaction().Build()),
+			h.validateTransactionsForOrdering(ctx, 2, committedTx, builders.Transaction().Build()),
 			fmt.Sprintf("transaction with hash %s already committed", digest.CalcTxHash(committedTx.Transaction())),
 			"did not reject a committed transaction")
 	})
@@ -47,7 +47,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 
 		invalidTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 
-		err := h.validateTransactionsForOrdering(ctx, 0, builders.Transaction().Build(), invalidTx)
+		err := h.validateTransactionsForOrdering(ctx, 1, builders.Transaction().Build(), invalidTx)
 
 		require.Contains(t,
 			err.Error(),
@@ -66,7 +66,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 		})
 
 		require.EqualErrorf(t,
-			h.validateTransactionsForOrdering(ctx, 0, builders.Transaction().Build(), invalidTx),
+			h.validateTransactionsForOrdering(ctx, 2, builders.Transaction().Build(), invalidTx),
 			fmt.Sprintf("transaction with hash %s failed pre-order checks with status TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER", digest.CalcTxHash(invalidTx.Transaction())),
 			"did not reject transaction that failed pre-order checks")
 	})

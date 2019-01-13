@@ -46,12 +46,13 @@ func TestBasicLogger_WithTags_ClonesLoggerFully(t *testing.T) {
 
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
+	log.GetLogger(log.Node("node1"), log.VirtualChainId(primitives.VirtualChainId(999)), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
 
 	jsonMap := parseOutput(b.String())
 
 	require.Equal(t, "info", jsonMap["level"])
 	require.Equal(t, "node1", jsonMap["node"])
+	require.Equal(t, 999.0, jsonMap["vcid"]) // because golang JSON parser decodes ints as float64
 	require.Equal(t, "public-api", jsonMap["service"])
 	require.Equal(t, "log_test.TestSimpleLogger", jsonMap["function"])
 	require.Equal(t, "Service initialized", jsonMap["message"])
@@ -135,8 +136,8 @@ func TestStringableSlice(t *testing.T) {
 	jsonMap := parseOutput(b.String())
 
 	require.Equal(t, []interface{}{
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
-		"{Txhash:736f6d652d74782d68617368,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
+		"{Txhash:ab2eccdf91e87771d6a8a5a37a6d26a9a220f78b3aa0662842b682a869e0819a,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
+		"{Txhash:ab2eccdf91e87771d6a8a5a37a6d26a9a220f78b3aa0662842b682a869e0819a,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
 	}, jsonMap["a-collection"])
 }
 
@@ -160,7 +161,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "service=public-api", out)
 	require.Regexp(t, "block-height=270f", out)
 	require.Regexp(t, "vchainId=7b", out)
-	require.Regexp(t, "bytes=gDp", out)
+	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
 	require.Regexp(t, "function=log_test.TestCustomLogFormatter", out)
 	require.Regexp(t, "source=instrumentation/log/basic_logger_test.go", out)

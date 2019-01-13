@@ -16,14 +16,14 @@ func TestProcessCall_Errors(t *testing.T) {
 		input          *services.ProcessCallInput
 		expectedError  bool
 		expectedResult protocol.ExecutionResult
-		expectedOutput *protocol.MethodArgumentArray
+		expectedOutput *protocol.ArgumentArray
 	}{
 		{
 			name:           "ThatThrowsError",
 			input:          processCallInput().WithMethod("BenchmarkContract", "throw").Build(),
 			expectedError:  true,
 			expectedResult: protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
-			expectedOutput: builders.MethodArgumentsArray("example error returned by contract"),
+			expectedOutput: builders.ArgumentsArray("example error returned by contract"),
 		},
 	}
 	for _, tt := range tests {

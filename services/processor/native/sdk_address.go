@@ -3,6 +3,7 @@ package native
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -16,7 +17,7 @@ func (s *service) SdkAddressGetSignerAddress(executionContextId sdkContext.Conte
 		ContextId:       primitives.ExecutionContextId(executionContextId),
 		OperationName:   SDK_OPERATION_NAME_ADDRESS,
 		MethodName:      "getSignerAddress",
-		InputArguments:  []*protocol.MethodArgument{},
+		InputArguments:  []*protocol.Argument{},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
@@ -33,7 +34,7 @@ func (s *service) SdkAddressGetCallerAddress(executionContextId sdkContext.Conte
 		ContextId:       primitives.ExecutionContextId(executionContextId),
 		OperationName:   SDK_OPERATION_NAME_ADDRESS,
 		MethodName:      "getCallerAddress",
-		InputArguments:  []*protocol.MethodArgument{},
+		InputArguments:  []*protocol.Argument{},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
@@ -43,4 +44,29 @@ func (s *service) SdkAddressGetCallerAddress(executionContextId sdkContext.Conte
 		panic("getCallerAddress Sdk.Address returned corrupt output value")
 	}
 	return output.OutputArguments[0].BytesValue()
+}
+
+func (s *service) SdkAddressGetOwnAddress(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) []byte {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:       primitives.ExecutionContextId(executionContextId),
+		OperationName:   SDK_OPERATION_NAME_ADDRESS,
+		MethodName:      "getOwnAddress",
+		InputArguments:  []*protocol.Argument{},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
+		panic("getOwnAddress Sdk.Address returned corrupt output value")
+	}
+	return output.OutputArguments[0].BytesValue()
+}
+
+func (s *service) SdkAddressGetContractAddress(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, contractName string) []byte {
+	address, err := digest.CalcClientAddressOfContract(primitives.ContractName(contractName))
+	if err != nil {
+		panic(err.Error())
+	}
+	return address
 }

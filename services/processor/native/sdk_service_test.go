@@ -17,6 +17,14 @@ func TestSdkService_CallMethod(t *testing.T) {
 	require.Equal(t, []interface{}{uint64(17), "hello"}, res, "callMethod result should match expected")
 }
 
+func TestSdkService_CallMethod_FailingCall(t *testing.T) {
+	s := createServiceSdk()
+
+	require.Panics(t, func() {
+		s.SdkServiceCallMethod(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "AnotherFailingContract", "someMethod", uint64(17), "hello")
+	}, "should panic because the call failed (called contract threw an exception)")
+}
+
 func createServiceSdk() *service {
 	return &service{sdkHandler: &contractSdkServiceCallHandlerStub{}}
 }
@@ -29,8 +37,12 @@ func (c *contractSdkServiceCallHandlerStub) HandleSdkCall(ctx context.Context, i
 	}
 	switch input.MethodName {
 	case "callMethod":
+		if input.InputArguments[0].StringValue() == "AnotherFailingContract" {
+			return nil, errors.New("failing call")
+		}
+		// all other contracts should succeed
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: []*protocol.MethodArgument{input.InputArguments[2]},
+			OutputArguments: []*protocol.Argument{input.InputArguments[2]},
 		}, nil
 	default:
 		return nil, errors.New("unknown method")

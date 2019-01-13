@@ -70,7 +70,7 @@ func (h *harness) transactionIsPendingInPool() {
 	h.bksMock.Never("GetTransactionReceipt", mock.Any)
 }
 
-func (h *harness) transactionIsCommitedInPool() {
+func (h *harness) transactionIsCommittedInPool() {
 	h.txpMock.When("GetCommittedTransactionReceipt", mock.Any, mock.Any).Return(&services.GetCommittedTransactionReceiptOutput{
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: builders.TransactionReceipt().Build(),
@@ -93,15 +93,15 @@ func (h *harness) transactionIsNotInPoolIsInBlockStorage() {
 }
 
 func (h *harness) runTransactionSuccess() {
-	h.vmMock.When("RunLocalMethod", mock.Any, mock.Any).Times(1).
-		Return(&services.RunLocalMethodOutput{
+	h.vmMock.When("ProcessQuery", mock.Any, mock.Any).Times(1).
+		Return(&services.ProcessQueryOutput{
 			CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
 			OutputArgumentArray: nil,
 		})
 }
 
 func (h *harness) transactionHasProof() {
-	h.transactionIsCommitedInPool()
+	h.transactionIsCommittedInPool()
 	h.bksMock.When("GenerateReceiptProof", mock.Any, mock.Any).Return(
 		&services.GenerateReceiptProofOutput{
 			Proof: (&protocol.ReceiptProofBuilder{}).Build(),

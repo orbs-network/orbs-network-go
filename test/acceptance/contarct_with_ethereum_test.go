@@ -9,7 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/contracts/ethereum_caller"
+	"github.com/orbs-network/orbs-network-go/test/contracts/ethereum_caller_mock"
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -18,6 +18,7 @@ import (
 	"time"
 )
 
+// LH: Same comment as autonomous
 func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 	harness.Network(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync"), log.ExcludeEntryPoint("TransactionForwarder")).
@@ -30,7 +31,7 @@ func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 
 			readResponse := readStringFromEthereumReaderAt(ctx, network, addressOfContractInEthereum)
 
-			require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, readResponse.CallMethodResult())
+			require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, readResponse.QueryResult().ExecutionResult())
 			require.EqualValues(t, "foobar", extractStringValueFrom(readResponse))
 
 		})
@@ -43,26 +44,27 @@ func deployEthereumContract(t *testing.T, simulator *adapter.EthereumSimulator, 
 	return hexutil.Encode(addressOfContractInEthereum[:])
 }
 
-func extractStringValueFrom(readResponse *client.CallMethodResponse) string {
-	return builders.ClientCallMethodResponseOutputArgumentsDecode(readResponse).NextArguments().StringValue()
+func extractStringValueFrom(readResponse *client.RunQueryResponse) string {
+	argsArray := builders.PackedArgumentArrayDecode(readResponse.QueryResult().RawOutputArgumentArrayWithHeader())
+	return argsArray.ArgumentsIterator().NextArguments().StringValue()
 }
 
-func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNetworkDriver, address string) *client.CallMethodResponse {
-	readTx := builders.Transaction().
+func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNetworkDriver, address string) *client.RunQueryResponse {
+	readQuery := builders.Query().
 		WithMethod("EthereumReader", "readString").
 		WithArgs(address).
 		Builder()
-	readResponse := network.CallMethod(ctx, readTx.Transaction, 0)
+	readResponse := network.RunQuery(ctx, readQuery, 0)
 	return readResponse
 }
 
 func deployOrbsContractCallingEthereum(parent context.Context, network harness.TestNetworkDriver) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
-	ethereumReaderCode := "foo"
+	ethereumReaderCode := "foo" // TODO (v1) this junk argument is very confusing
 	network.MockContract(&sdkContext.ContractInfo{
-		PublicMethods: ethereum_caller.PUBLIC,
-		SystemMethods: ethereum_caller.SYSTEM,
+		PublicMethods: ethereum_caller_mock.PUBLIC,
+		SystemMethods: ethereum_caller_mock.SYSTEM,
 		Permission:    sdkContext.PERMISSION_SCOPE_SERVICE,
 	}, ethereumReaderCode)
 	deployTx := builders.Transaction().
