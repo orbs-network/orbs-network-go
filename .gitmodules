@@ -43,6 +43,6 @@
 [submodule "vendor/github.com/orbs-network/orbs-client-sdk-go"]
 	path = vendor/github.com/orbs-network/orbs-client-sdk-go
 	url = https://github.com/orbs-network/orbs-client-sdk-go
-[submodule "vendor/github.com/orbs-network/orbs-federation"]
-	path = vendor/github.com/orbs-network/orbs-federation
-	url = https://github.com/orbs-network/orbs-federation
+[submodule "vendor/github.com/orbs-network/orbs-ethereum-contracts"]
+	path = vendor/github.com/orbs-network/orbs-ethereum-contracts
+	url = https://github.com/orbs-network/orbs-ethereum-contracts
