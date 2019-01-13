@@ -2,7 +2,7 @@ version: '2.1'
 
 services:
   orbs-network-node-1:
-    image: orbs:export_e2e
+    image: orbs:export
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -12,6 +12,7 @@ services:
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
+      - ../../_tmp/blocks/node1/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
     sysctls:
       net.core.somaxconn: 25000
@@ -21,7 +22,7 @@ services:
         ipv4_address: 192.168.199.2
 
   orbs-network-node-2:
-    image: orbs:export_e2e
+    image: orbs:export
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -31,6 +32,7 @@ services:
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
+      - ../../_tmp/blocks/node2/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
     sysctls:
       net.core.somaxconn: 25000
@@ -39,7 +41,7 @@ services:
         ipv4_address: 192.168.199.3
 
   orbs-network-node-3:
-    image: orbs:export_e2e
+    image: orbs:export
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -49,6 +51,7 @@ services:
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
+      - ../../_tmp/blocks/node3/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
     sysctls:
       net.core.somaxconn: 25000

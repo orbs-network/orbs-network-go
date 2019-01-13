@@ -28,7 +28,6 @@ func TestCommitTransactionWithLeanHelix(t *testing.T) {
 			require.EqualValues(t, 17, contract.GetBalance(ctx, 0, 6), "getBalance result for the receiver on gateway node")
 			t.Log("test done")
 		})
-
 }
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
@@ -58,7 +57,6 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 		network.WaitForTransactionInNodeState(ctx, txHash2, 1)
 		require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.GetBalance(ctx, 1, 5), "getBalance result on non leader")
 		require.EqualValues(t, 39, contract.GetBalance(ctx, 1, 6), "getBalance result on non leader")
-
 	})
 }
 
@@ -90,7 +88,6 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		require.EqualValues(t, 17, contract.GetBalance(ctx, 0, 6), "eventual getBalance result on leader")
 		network.WaitForTransactionInNodeState(ctx, txHash, 1)
 		require.EqualValues(t, 17, contract.GetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
-
 	})
 }
 

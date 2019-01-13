@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -27,28 +28,20 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 
 // TODO v1 Decouple this test from TestReturnAllAvailableTransactionsFromTransactionPool()
 // Presently if the latter fails, this test will fail too
-func TestCreateResultsBlock(t *testing.T) {
+func TestCreateBlock_HappyFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
-		txCount := uint32(2)
+		txCount := 2
 
-		h.expectTxPoolToReturnXTransactions(txCount)
+		h.expectTxPoolToReturnXTransactions(uint32(txCount))
 		h.expectStateHashToReturn([]byte{1, 2, 3, 4, 5})
 
 		txBlock, err := h.requestTransactionsBlock(ctx)
-		if err != nil {
-			t.Fatal("request transactions block failed:", err)
-		}
+		require.Nil(t, err, "request transactions block failed")
 		h.expectVirtualMachineToReturnXTransactionReceipts(len(txBlock.SignedTransactions))
 		rxBlock, err := h.requestResultsBlock(ctx, txBlock)
-		if err != nil {
-			t.Fatal("request results block failed:", err)
-		}
-
-		if uint32(len(rxBlock.TransactionReceipts)) != txCount {
-			t.Fatalf("returned %d instead of %d", len(rxBlock.TransactionReceipts), txCount)
-		}
-
+		require.Nil(t, err, "request results block failed")
+		require.Equal(t, txCount, len(rxBlock.TransactionReceipts))
 		h.verifyTransactionsRequestedFromTransactionPool(t)
 	})
 }
