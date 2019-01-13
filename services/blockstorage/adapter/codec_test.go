@@ -24,14 +24,14 @@ func TestCodec_EncodesAndDecodes(t *testing.T) {
 	rw := new(bytes.Buffer)
 	c := newCodec(1024 * 1024)
 
-	writeSize, err := c.encode(block, rw)
+	bytesWritten, err := c.encode(block, rw)
 	require.NoError(t, err)
 
 	blockLen := rw.Len()
 
 	decodedBlock, readSize, err := c.decode(rw)
 	require.NoError(t, err, "expected to decode block record successfully")
-	require.EqualValues(t, writeSize, readSize, "expected to read same number of bytes as written")
+	require.EqualValues(t, bytesWritten, readSize, "expected to read same number of bytes as written")
 	require.EqualValues(t, blockLen, readSize, "expected to read entire buffer")
 	test.RequireCmpEqual(t, block, decodedBlock, "expected to decode an identical block as encoded")
 }
