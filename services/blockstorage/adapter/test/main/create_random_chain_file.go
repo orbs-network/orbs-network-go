@@ -20,7 +20,7 @@ func (l *adHocLogger) Name() string {
 }
 
 func main() {
-	dir, virtualChain, targetHeight := parseParams()
+	dir, virtualChain, targetHeight, randomizeEach := parseParams()
 
 	logger := adHocLogger("")
 	rand := testUtils.NewControlledRand(&logger)
@@ -45,10 +45,17 @@ func main() {
 	}
 
 	fmt.Printf("indexed %d blocks in %v\n", currentHeight, time.Now().Sub(start))
+	block := builders.RandomizedBlock(0, rand, prevBlock)
 
 	for currentHeight < targetHeight {
 		nextHeight := currentHeight + 1
-		block := builders.RandomizedBlock(nextHeight, rand, prevBlock)
+
+		if randomizeEach {
+			block = builders.RandomizedBlock(nextHeight, rand, prevBlock)
+		} else {
+			_ = block.ResultsBlock.Header.MutateBlockHeight(nextHeight)
+			_ = block.TransactionsBlock.Header.MutateBlockHeight(nextHeight)
+		}
 
 		err := adapter.WriteNextBlock(block)
 		if err != nil {
@@ -66,14 +73,15 @@ func main() {
 	fmt.Printf("\n\nblocks file in %s/ now has %d blocks\n\n", conf.BlockStorageDataDir(), currentHeight)
 }
 
-func parseParams() (dir string, vchain primitives.VirtualChainId, height primitives.BlockHeight) {
+func parseParams() (dir string, vchain primitives.VirtualChainId, height primitives.BlockHeight, randomEach bool) {
 	intHeight := flag.Uint64("height", 100, "target height for blocks file")
 	outputDir := flag.String("output", "./gen_data", "target directory for new block file")
 	virtualChain := flag.Uint("vchain", 42, "blocks file virtual chain id")
+	rand := flag.Bool("full_random", false, "generate a different random block for each block height")
 	flag.Parse()
 	fmt.Printf("usage: [-output output_folder_name] [-height target_block_height] [-vchain vchain_id]\n\n")
 	targetHeight := primitives.BlockHeight(*intHeight)
-	return *outputDir, primitives.VirtualChainId(*virtualChain), targetHeight
+	return *outputDir, primitives.VirtualChainId(*virtualChain), targetHeight, *rand
 }
 
 type randomChainLocalConfig struct {
