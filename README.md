@@ -80,6 +80,11 @@ If you only want to build the Docker images containing the node binaries, you do
 
 We use the official go test runner `go test`. It has minimal UI and result caching.
 
+Please install go-junit-reporter prior to running tests for the first time:
+```
+go get -u github.com/jstemmer/go-junit-report
+```
+
 ### Test
 
 * Run **all** tests using a script:
