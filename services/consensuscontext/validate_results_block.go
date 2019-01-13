@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -12,30 +13,14 @@ import (
 
 type rxValidator func(ctx context.Context, vcrx *rxValidatorContext) error
 
-type GetStateHashAdapter interface {
-	GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
-}
-
-type ProcessTransactionSetAdapter interface {
-	ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
-}
-
-type CalculateReceiptsMerkleRootAdapter interface {
-	CalculateReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
-}
-
-type CalculateStateDiffMerkleRootAdapter interface {
-	CalculateStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
-}
-
 type rxValidatorContext struct {
-	protocolVersion                     primitives.ProtocolVersion
-	virtualChainId                      primitives.VirtualChainId
-	input                               *services.ValidateResultsBlockInput
-	getStateHashAdapter                 GetStateHashAdapter
-	processTransactionSetAdapter        ProcessTransactionSetAdapter
-	calculateReceiptsMerkleRootAdapter  CalculateReceiptsMerkleRootAdapter
-	calculateStateDiffMerkleRootAdapter CalculateStateDiffMerkleRootAdapter
+	protocolVersion        primitives.ProtocolVersion
+	virtualChainId         primitives.VirtualChainId
+	input                  *services.ValidateResultsBlockInput
+	getStateHash           func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
+	processTransactionSet  func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
+	calcReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
+	calcStateDiffHash      func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
 }
 
 func validateRxProtocolVersion(ctx context.Context, vcrx *rxValidatorContext) error {
@@ -96,33 +81,25 @@ func validateRxPrevBlockHashPtr(ctx context.Context, vcrx *rxValidatorContext) e
 	return nil
 }
 
-func validateRxReceiptsRootHash(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
-	calculatedReceiptMerkleRoot, err := vcrx.calculateReceiptsMerkleRootAdapter.CalculateReceiptsMerkleRoot(vcrx.input.ResultsBlock.TransactionReceipts)
-	if err != nil {
-		return errors.Wrapf(ErrCalculateReceiptsMerkleRoot, "ValidateResultsBlock error calculateReceiptsMerkleRoot(), %v", err)
-	}
-	if !bytes.Equal(expectedReceiptsMerkleRoot, []byte(calculatedReceiptMerkleRoot)) {
-		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "expected %v actual %v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
-	}
-	return nil
+func validateReceiptsMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
+	return validators.ValidateReceiptsMerkleRoot(&validators.BlockValidatorContext{
+		TransactionsBlock:      vcrx.input.TransactionsBlock,
+		ResultsBlock:           vcrx.input.ResultsBlock,
+		CalcReceiptsMerkleRoot: vcrx.calcReceiptsMerkleRoot,
+	})
 }
 
 func validateRxStateDiffHash(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.StateDiffHash()
-	calculatedStateDiffMerkleRoot, err := vcrx.calculateStateDiffMerkleRootAdapter.CalculateStateDiffMerkleRoot(vcrx.input.ResultsBlock.ContractStateDiffs)
-	if err != nil {
-		return errors.Wrapf(ErrCalculateStateDiffMerkleRoot, "ValidateResultsBlock error calculateStateDiffMerkleRoot(), %v", err)
-	}
-	if !bytes.Equal(expectedStateDiffMerkleRoot, []byte(calculatedStateDiffMerkleRoot)) {
-		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
-	}
-	return nil
+	return validators.ValidateResultsBlockStateDiffHash(&validators.BlockValidatorContext{
+		TransactionsBlock: vcrx.input.TransactionsBlock,
+		ResultsBlock:      vcrx.input.ResultsBlock,
+		CalcStateDiffHash: vcrx.calcStateDiffHash,
+	})
 }
 
 func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorContext) error {
 	expectedPreExecutionMerkleRoot := vcrx.input.ResultsBlock.Header.PreExecutionStateMerkleRootHash()
-	getStateHashOut, err := vcrx.getStateHashAdapter.GetStateHash(ctx, &services.GetStateHashInput{
+	getStateHashOut, err := vcrx.getStateHash(ctx, &services.GetStateHashInput{
 		BlockHeight: vcrx.input.ResultsBlock.Header.BlockHeight() - 1,
 	})
 	if err != nil {
@@ -137,7 +114,7 @@ func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorC
 func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	//Validate transaction execution
 	// Execute the ordered transactions set by calling VirtualMachine.ProcessTransactionSet creating receipts and state diff. Using the provided header timestamp as a reference timestamp.
-	processTxsOut, err := vcrx.processTransactionSetAdapter.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{ // TODO wrap with adapter
+	processTxsOut, err := vcrx.processTransactionSet(ctx, &services.ProcessTransactionSetInput{
 		CurrentBlockHeight:    vcrx.input.TransactionsBlock.Header.BlockHeight(),
 		CurrentBlockTimestamp: vcrx.input.TransactionsBlock.Header.Timestamp(),
 		SignedTransactions:    vcrx.input.TransactionsBlock.SignedTransactions,
@@ -147,89 +124,37 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	}
 	// Compare the receipts merkle root hash to the one in the block.
 	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
-	calculatedReceiptMerkleRoot, err := vcrx.calculateReceiptsMerkleRootAdapter.CalculateReceiptsMerkleRoot(processTxsOut.TransactionReceipts) // TODO wrap with adapter
+	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRoot(processTxsOut.TransactionReceipts)
 	if err != nil {
-		return errors.Wrapf(ErrCalculateReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")
+		return errors.Wrapf(validators.ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")
 	}
 	if !bytes.Equal(expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot) {
-		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "ValidateResultsBlock error receipt merkleRoot in header does not match processed txs receipts")
+		return errors.Wrapf(validators.ErrMismatchedReceiptsRootHash, "expected %v actual %v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
 	}
 
 	// Compare the state diff hash to the one in the block (supports only deterministic execution).
-	expectedStateDiffMerkleRoot := vcrx.input.ResultsBlock.Header.RawStateDiffHash()
-	calculatedStateDiffMerkleRoot, err := vcrx.calculateStateDiffMerkleRootAdapter.CalculateStateDiffMerkleRoot(processTxsOut.ContractStateDiffs) // TODO wrap with adapter
+	expectedStateDiffHash := vcrx.input.ResultsBlock.Header.StateDiffHash()
+	calculatedStateDiffHash, err := vcrx.calcStateDiffHash(processTxsOut.ContractStateDiffs)
 	if err != nil {
-		return errors.Wrapf(ErrCalculateStateDiffMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffMerkleRoot")
+		return errors.Wrapf(validators.ErrCalcStateDiffHash, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffHash")
 	}
-	if !bytes.Equal(expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot) {
-		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffMerkleRoot, calculatedStateDiffMerkleRoot)
+	if !bytes.Equal(expectedStateDiffHash, calculatedStateDiffHash) {
+		return errors.Wrapf(validators.ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffHash, calculatedStateDiffHash)
 	}
 
 	return nil
 }
 
-type realGetStateHashAdapter struct {
-	getStateHash func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
-}
-
-func (r *realGetStateHashAdapter) GetStateHash(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
-	return r.getStateHash(ctx, input)
-}
-func NewRealGetStateHashAdapter(f func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)) GetStateHashAdapter {
-	return &realGetStateHashAdapter{
-		getStateHash: f,
-	}
-}
-
-type realProcessTransactionSetAdapter struct {
-	processTransactionSet func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
-}
-
-func (r *realProcessTransactionSetAdapter) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	return r.processTransactionSet(ctx, input)
-}
-func NewRealProcessTransactionSetAdapter(f func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)) ProcessTransactionSetAdapter {
-	return &realProcessTransactionSetAdapter{
-		processTransactionSet: f,
-	}
-}
-
-type realCalculateReceiptsMerkleRootAdapter struct {
-	calculateReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
-}
-
-func (r *realCalculateReceiptsMerkleRootAdapter) CalculateReceiptsMerkleRoot(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
-	return r.calculateReceiptsMerkleRoot(receipts)
-}
-func NewRealCalculateReceiptsMerkleRootAdapter(f func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)) CalculateReceiptsMerkleRootAdapter {
-	return &realCalculateReceiptsMerkleRootAdapter{
-		calculateReceiptsMerkleRoot: f,
-	}
-}
-
-type realCalculateStateDiffMerkleRootAdapter struct {
-	calculateStateDiffMerkleRoot func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)
-}
-
-func (r *realCalculateStateDiffMerkleRootAdapter) CalculateStateDiffMerkleRoot(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
-	return r.CalculateStateDiffMerkleRoot(stateDiffs)
-}
-func NewRealCalculateStateDiffMerkleRootAdapter(f func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error)) CalculateStateDiffMerkleRootAdapter {
-	return &realCalculateStateDiffMerkleRootAdapter{
-		calculateStateDiffMerkleRoot: f,
-	}
-}
-
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
 
 	vcrx := &rxValidatorContext{
-		protocolVersion:                     s.config.ProtocolVersion(),
-		virtualChainId:                      s.config.VirtualChainId(),
-		input:                               input,
-		getStateHashAdapter:                 NewRealGetStateHashAdapter(s.stateStorage.GetStateHash),
-		processTransactionSetAdapter:        NewRealProcessTransactionSetAdapter(s.virtualMachine.ProcessTransactionSet),
-		calculateReceiptsMerkleRootAdapter:  NewRealCalculateReceiptsMerkleRootAdapter(calculateReceiptsMerkleRoot),
-		calculateStateDiffMerkleRootAdapter: NewRealCalculateStateDiffMerkleRootAdapter(calculateStateDiffMerkleRoot),
+		protocolVersion:        s.config.ProtocolVersion(),
+		virtualChainId:         s.config.VirtualChainId(),
+		input:                  input,
+		getStateHash:           s.stateStorage.GetStateHash,
+		processTransactionSet:  s.virtualMachine.ProcessTransactionSet,
+		calcReceiptsMerkleRoot: digest.CalcReceiptsMerkleRoot,
+		calcStateDiffHash:      digest.CalcStateDiffHash,
 	}
 
 	validators := []rxValidator{
@@ -239,7 +164,7 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 		validateRxTxBlockPtrMatchesActualTxBlock,
 		validateIdenticalTxRxTimestamp,
 		validateRxPrevBlockHashPtr,
-		validateRxReceiptsRootHash,
+		validateReceiptsMerkleRoot,
 		validateRxStateDiffHash,
 		validatePreExecutionStateMerkleRoot,
 		validateExecution,

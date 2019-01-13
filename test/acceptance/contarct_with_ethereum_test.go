@@ -18,6 +18,7 @@ import (
 	"time"
 )
 
+// LH: Same comment as autonomous
 func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 	harness.Network(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync"), log.ExcludeEntryPoint("TransactionForwarder")).

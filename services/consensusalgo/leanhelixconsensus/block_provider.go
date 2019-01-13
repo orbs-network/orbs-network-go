@@ -1,8 +1,10 @@
 package leanhelixconsensus
 
 import (
+	"bytes"
 	"context"
 	"github.com/orbs-network/lean-helix-go"
+	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -10,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type BlockPairWrapper struct {
@@ -21,7 +22,7 @@ func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
 	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
 }
 
-func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) leanhelix.Block {
+func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) lh.Block {
 
 	if blockPair == nil {
 		return nil
@@ -31,6 +32,16 @@ func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) leanhelix.Block {
 	}
 }
 
+func FromLeanHelixBlock(lhBlock lh.Block) *protocol.BlockPairContainer {
+	if lhBlock != nil {
+		block, ok := lhBlock.(*BlockPairWrapper)
+		if ok {
+			return block.blockPair
+		}
+	}
+	return nil
+}
+
 type blockProvider struct {
 	logger           log.BasicLogger
 	leanhelix        leanhelix.LeanHelix
@@ -38,18 +49,6 @@ type blockProvider struct {
 	consensusContext services.ConsensusContext
 	nodeAddress      primitives.NodeAddress
 	nodePrivateKey   primitives.EcdsaSecp256K1PrivateKey
-}
-
-func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash, prevBlock leanhelix.Block) bool {
-	// TODO Implement me
-
-	return true
-}
-
-func (p *blockProvider) ValidateBlockCommitment(blockHeight lhprimitives.BlockHeight, block leanhelix.Block, blockHash lhprimitives.BlockHash) bool {
-	// TODO Implement me
-
-	return true
 }
 
 func NewBlockProvider(
@@ -65,20 +64,14 @@ func NewBlockProvider(
 
 }
 
-func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock leanhelix.Block) (leanhelix.Block, lhprimitives.BlockHash) {
+func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock lh.Block) (lh.Block, lhprimitives.BlockHash) {
 
-	var currentBlockHeight primitives.BlockHeight
+	currentBlockHeight := primitives.BlockHeight(1)
 	var prevTxBlockHash primitives.Sha256
 	var prevRxBlockHash primitives.Sha256
 	var prevBlockTimestamp primitives.TimestampNano
 
-	if prevBlock == nil {
-		currentBlockHeight = 1
-		prevTxBlockHash = nil
-		prevRxBlockHash = nil
-		prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano() - 1)
-
-	} else {
+	if prevBlock != nil {
 		prevBlockWrapper := prevBlock.(*BlockPairWrapper)
 		currentBlockHeight = primitives.BlockHeight(prevBlock.Height() + 1)
 		prevTxBlockHash = digest.CalcTransactionsBlockHash(prevBlockWrapper.blockPair.TransactionsBlock)
@@ -89,14 +82,16 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", currentBlockHeight))
 
 	// TODO https://tree.taiga.io/project/orbs-network/us/642 Add configurable maxNumTx and maxBlockSize
+	maxNumOfTransactions := uint32(10000)
+	maxBlockSize := uint32(1000000)
 
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		CurrentBlockHeight:      currentBlockHeight,
-		MaxBlockSizeKb:          0, // TODO(v1): fill in or remove from spec
-		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           prevTxBlockHash,
 		PrevBlockTimestamp:      prevBlockTimestamp,
+		MaxNumberOfTransactions: maxNumOfTransactions,
+		MaxBlockSizeKb:          maxBlockSize,
 	})
 	if err != nil {
 		return nil, nil
@@ -126,21 +121,44 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 }
 
-// TODO (v1) Complete this https://tree.taiga.io/project/orbs-network/us/567
-func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
-	// correct block type
-	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
-		return errors.Errorf("incorrect block proof type: %v", blockPair.TransactionsBlock.BlockProof.Type())
-	}
-	if !blockPair.ResultsBlock.BlockProof.IsTypeLeanHelix() {
-		return errors.Errorf("incorrect block proof type: %v", blockPair.ResultsBlock.BlockProof.Type())
+func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+
+	if err := validLeanHelixBlockPair(blockPair); err != nil {
+		return err
 	}
 
-	// TODO (v1) Impl in LH lib https://tree.taiga.io/project/orbs-network/us/473
-	_ = s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockPair.TransactionsBlock.BlockProof.LeanHelix())
+	blockProof := blockPair.TransactionsBlock.BlockProof.LeanHelix()
+	prevBlockProof := prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
+
+	isBlockProofValid := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, prevBlockProof)
+	if !isBlockProofValid {
+		return errors.Errorf("LeanHelix ValidateBlockConsensus - block proof is not valid!!")
+	}
 	return nil
 }
 
-func (p *blockProvider) GenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
+func validLeanHelixBlockPair(blockPair *protocol.BlockPairContainer) error {
+	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
+		return errors.New("nil blockPair or its TransactionsBlock or ResultsBlock")
+	}
+	if blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
+		return errors.New("nil block proof")
+	}
+	// correct block type
+	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
+		return errors.Errorf("incorrect block proof type for transaction block: %v", blockPair.TransactionsBlock.BlockProof.Type())
+	}
+	if !blockPair.ResultsBlock.BlockProof.IsTypeLeanHelix() {
+		return errors.Errorf("incorrect block proof type for results block: %v", blockPair.ResultsBlock.BlockProof.Type())
+	}
+	// same block proof in txBlock and rxBlock
+	if !bytes.Equal(blockPair.TransactionsBlock.BlockProof.LeanHelix(), blockPair.ResultsBlock.BlockProof.LeanHelix()) {
+		return errors.Errorf("TransactionsBlock LeanHelix block proof and  ResultsBlock LeanHelix block proof do not match")
+	}
 	return nil
+}
+
+// Genesis is defined to be nil
+func (p *blockProvider) GenerateGenesisBlockProposal(ctx context.Context) (lh.Block, lhprimitives.BlockHash) {
+	return nil, nil
 }
