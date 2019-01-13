@@ -11,7 +11,13 @@ import (
 	"unsafe"
 )
 
-const codecVersion = 0
+const blockHeaderSize = int(unsafe.Sizeof(blockHeader{}))
+const checksumSize = int(unsafe.Sizeof(uint32(0)))
+const chunkLengthSize = int(unsafe.Sizeof(uint32(0)))
+
+const orbsFormatMagic = uint32(0x5342524f) // "ORBS"
+const orbsFormatVersion = 0
+const blockVersion = 0
 
 type codec struct {
 	maxBlockSize int
@@ -23,6 +29,13 @@ func newCodec(maxBlockSize uint32) *codec {
 	}
 }
 
+type blocksFileHeader struct {
+	ORBS        uint32
+	FileVersion uint32
+	NetworkId   uint32
+	ChainId     uint32
+}
+
 type blockHeader struct {
 	Version      uint32
 	FixedSize    uint32
@@ -32,42 +45,97 @@ type blockHeader struct {
 }
 
 func diskChunkSize(bytes []byte) uint32 {
-	return uint32(unsafe.Sizeof(uint32(0))) + uint32(len(bytes))
+	return uint32(chunkLengthSize) + uint32(len(bytes))
 }
 
-func (h *blockHeader) addFixed(m membuffers.Message) {
-	h.FixedSize += diskChunkSize(m.Raw())
+func (bh *blockHeader) addFixed(m membuffers.Message) {
+	bh.FixedSize += diskChunkSize(m.Raw())
 }
 
-func (h *blockHeader) addReceipt(receipt *protocol.TransactionReceipt) {
-	h.ReceiptsSize += diskChunkSize(receipt.Raw())
+func (bh *blockHeader) addReceipt(receipt *protocol.TransactionReceipt) {
+	bh.ReceiptsSize += diskChunkSize(receipt.Raw())
 }
 
-func (h *blockHeader) addDiff(diff *protocol.ContractStateDiff) {
-	h.DiffsSize += diskChunkSize(diff.Raw())
+func (bh *blockHeader) addDiff(diff *protocol.ContractStateDiff) {
+	bh.DiffsSize += diskChunkSize(diff.Raw())
 }
 
-func (h *blockHeader) addTx(tx *protocol.SignedTransaction) {
-	h.TxsSize += diskChunkSize(tx.Raw())
+func (bh *blockHeader) addTx(tx *protocol.SignedTransaction) {
+	bh.TxsSize += diskChunkSize(tx.Raw())
 }
 
-func (h *blockHeader) totalSize() uint32 {
-	return h.FixedSize + h.DiffsSize + h.ReceiptsSize + h.TxsSize
+func (bh *blockHeader) totalSize() int {
+	return int(bh.FixedSize + bh.DiffsSize + bh.ReceiptsSize + bh.TxsSize)
 }
 
-func (h *blockHeader) write(w io.Writer) error {
-	err := binary.Write(w, binary.LittleEndian, h)
+func (bh *blockHeader) write(w io.Writer) error {
+	err := binary.Write(w, binary.LittleEndian, bh)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (h *blockHeader) read(r io.Reader) error {
-	err := binary.Read(r, binary.LittleEndian, h)
+func (bh *blockHeader) read(r io.Reader) error {
+	err := binary.Read(r, binary.LittleEndian, bh)
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func newBlocksFileHeader(networkId, vchainId uint32) *blocksFileHeader {
+	return &blocksFileHeader{
+		ORBS:        orbsFormatMagic,
+		FileVersion: orbsFormatVersion,
+		NetworkId:   networkId,
+		ChainId:     vchainId,
+	}
+}
+
+func (bfh *blocksFileHeader) read(r io.Reader) error {
+	checkSum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+	tr := io.TeeReader(r, checkSum)
+	err := binary.Read(tr, binary.LittleEndian, bfh)
+	if err != nil {
+		return err
+	}
+
+	// checksum
+	var sum32 uint32
+	err = binary.Read(r, binary.LittleEndian, &sum32)
+	if err != nil {
+		return errors.Wrapf(err, "failed reading header checksum")
+	}
+
+	if sum32 != checkSum.Sum32() {
+		return fmt.Errorf("invalid header, bad checksum")
+	}
+
+	if bfh.ORBS != orbsFormatMagic {
+		return fmt.Errorf("invalid magic number %v", orbsFormatMagic)
+	}
+	if bfh.FileVersion != orbsFormatVersion {
+		return fmt.Errorf("invalid version %d", bfh.FileVersion)
+	}
+	return nil
+}
+
+func (bfh *blocksFileHeader) write(w io.Writer) error {
+	checkSum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+	sw := newChecksumWriter(w, checkSum)
+
+	err := binary.Write(sw, binary.LittleEndian, bfh)
+	if err != nil {
+		return err
+	}
+
+	sum32 := checkSum.Sum32()
+	err = binary.Write(w, binary.LittleEndian, sum32)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -83,7 +151,7 @@ func writeMessage(writer io.Writer, message membuffers.Message) error {
 	return nil
 }
 
-func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) error {
+func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) (int, error) {
 	tb := block.TransactionsBlock
 	rb := block.ResultsBlock
 
@@ -108,62 +176,62 @@ func (c *codec) encode(block *protocol.BlockPairContainer, w io.Writer) error {
 	sw := newChecksumWriter(w, checkSum)
 	err := serializationHeader.write(sw)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// write buffers
 	err = writeMessage(sw, tb.Header)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, tb.Metadata)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, tb.BlockProof)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, rb.Header)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = writeMessage(sw, rb.BlockProof)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, receipt := range rb.TransactionReceipts {
 		err = writeMessage(sw, receipt)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 	}
 	for _, diff := range rb.ContractStateDiffs {
 		err = writeMessage(sw, diff)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	for _, tx := range tb.SignedTransactions {
 		err = writeMessage(sw, tx)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	if sw.bytesWritten > c.maxBlockSize {
-		return fmt.Errorf("block size exceeds max limit")
+		return 0, fmt.Errorf("block size exceeds max limit. wrote %d bytes", sw.bytesWritten)
 	}
 
 	// checksum
 	err = binary.Write(w, binary.LittleEndian, checkSum.Sum32())
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return blockHeaderSize + serializationHeader.totalSize() + checksumSize, nil
 }
 
 func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
@@ -176,16 +244,15 @@ func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 		return nil, 0, err
 	}
 
-	headerSize := int(unsafe.Sizeof(*serializationHeader))
 	budget := newReadingBudget(
-		int(serializationHeader.totalSize())+headerSize,
-		headerSize)
+		int(serializationHeader.totalSize())+blockHeaderSize,
+		blockHeaderSize)
 
 	if budget.limit > c.maxBlockSize {
-		return nil, budget.bytesRead, fmt.Errorf("block size exceeds max limit")
+		return nil, budget.bytesRead, fmt.Errorf("block size exceeds max limit. block header %#v", serializationHeader)
 	}
 
-	if serializationHeader.Version != codecVersion {
+	if serializationHeader.Version != blockVersion {
 		return nil, budget.bytesRead, fmt.Errorf("encountered unsupported codec version %d", serializationHeader.Version)
 	}
 
@@ -273,10 +340,10 @@ func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	}
 
 	if readCheckSum != checkSum.Sum32() {
-		return nil, budget.bytesRead + int(unsafe.Sizeof(readCheckSum)), fmt.Errorf("block checksum mismatch. computed: %v recorded: %v", checkSum.Sum32(), readCheckSum)
+		return nil, budget.bytesRead + checksumSize, fmt.Errorf("block checksum mismatch. computed: %v recorded: %v", checkSum.Sum32(), readCheckSum)
 	}
 
-	return blockPair, budget.bytesRead + int(unsafe.Sizeof(readCheckSum)), nil
+	return blockPair, budget.bytesRead + checksumSize, nil
 }
 
 type checksumWriter struct {
@@ -311,19 +378,19 @@ func newReadingBudget(limit int, bytesRead int) *readingBudget {
 }
 
 func readChunk(reader io.Reader, budget *readingBudget) ([]byte, error) {
-	var chunkSize uint32
-	err := binary.Read(reader, binary.LittleEndian, &chunkSize)
+	var chunkLength uint32
+	err := binary.Read(reader, binary.LittleEndian, &chunkLength)
 	if err != nil {
 		return nil, err
 	}
-	budget.bytesRead += int(unsafe.Sizeof(chunkSize))
+	budget.bytesRead += chunkLengthSize
 
 	// check budget
-	if budget.limit < budget.bytesRead+int(chunkSize) {
+	if budget.limit < budget.bytesRead+int(chunkLength) {
 		return nil, fmt.Errorf("invalid block. size exceeds limit (%d)", budget.limit)
 	}
 
-	chunk := make([]byte, chunkSize)
+	chunk := make([]byte, chunkLength)
 	n, err := reader.Read(chunk)
 	if err != nil {
 		return nil, err

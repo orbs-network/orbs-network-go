@@ -15,35 +15,35 @@ type blockHeightIndex struct {
 	topBlockHeight       primitives.BlockHeight
 }
 
-func newBlockHeightIndex() *blockHeightIndex {
+func newBlockHeightIndex(firstBlockOffset int64) *blockHeightIndex {
 	return &blockHeightIndex{
-		heightOffset:         map[primitives.BlockHeight]int64{1: 0},
+		heightOffset:         map[primitives.BlockHeight]int64{1: firstBlockOffset},
 		firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
 		topBlock:             nil,
 		topBlockHeight:       0,
 	}
 }
 
-func (i *blockHeightIndex) fetchTopOffest() (int64, error) {
+func (i *blockHeightIndex) fetchTopOffset() int64 {
 	i.RLock()
 	defer i.RUnlock()
 
-	offset, ok := i.heightOffset[i.topBlockHeight]
+	offset, ok := i.heightOffset[i.topBlockHeight+1]
 	if !ok {
-		return 0, fmt.Errorf("index missing offset for block height %d", i.topBlockHeight)
+		panic(fmt.Sprintf("index missing offset for block height %d", i.topBlockHeight))
 	}
-	return offset, nil
+	return offset
 }
 
-func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) (int64, error) {
+func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) int64 {
 	i.RLock()
 	defer i.RUnlock()
 
 	offset, ok := i.heightOffset[height]
 	if !ok {
-		return 0, fmt.Errorf("index missing offset for block height %d", height)
+		panic(fmt.Sprintf("index missing offset for block height %d", height))
 	}
-	return offset, nil
+	return offset
 }
 
 func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primitives.TimestampNano, rangeEnd primitives.TimestampNano) (primitives.BlockHeight, bool) {

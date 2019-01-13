@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -40,7 +41,8 @@ func NewFilesystemAdapterDriver(conf config.FilesystemBlockPersistenceConfig) (a
 }
 
 type localConfig struct {
-	dir string
+	dir     string
+	chainId primitives.VirtualChainId
 }
 
 func newTempFileConfig() *localConfig {
@@ -49,7 +51,8 @@ func newTempFileConfig() *localConfig {
 		panic(err)
 	}
 	return &localConfig{
-		dir: dirName,
+		dir:     dirName,
+		chainId: 0xFF,
 	}
 }
 func (l *localConfig) BlockStorageDataDir() string {
@@ -60,8 +63,16 @@ func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
 	return 64 * 1024 * 1024
 }
 
+func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
+	return l.chainId
+}
+
 func (l *localConfig) cleanDir() {
 	_ = os.RemoveAll(l.BlockStorageDataDir()) // ignore errors - nothing to do
+}
+
+func (l *localConfig) setVirtualChainId(id primitives.VirtualChainId) {
+	l.chainId = id
 }
 
 func getFileSize(t *testing.T, conf *localConfig) int64 {
