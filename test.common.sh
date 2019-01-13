@@ -1,9 +1,5 @@
 #!/bin/bash
 
-if [ "$SKIP_TESTS" == "true" ]; then
-    exit 0
-fi
-
 check_exit_code_and_report () {
     export EXIT_CODE="${PIPESTATUS[0]}"
 

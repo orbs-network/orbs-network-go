@@ -57,7 +57,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: SKIP_TESTS=true ./docker/build/build.sh
+      - run: ./docker/build/build.sh
       - run: ./.circleci/e2e-testnet.sh
 
   release_gamma:
