@@ -4,7 +4,6 @@ check_exit_code_and_report () {
     export EXIT_CODE="${PIPESTATUS[0]}"
 
     if [ $EXIT_CODE != 0 ]; then
-        echo "***** some tests have failed *****"
         grep -B 150 -A 15 -- "FAIL:" ./test.out > ./fail.out
         cat ./fail.out
 
