@@ -24,7 +24,7 @@ func main() {
 
 	extractBlocksFile()
 
-	n.GracefulShutdown()
+	n.GracefulShutdownAndWipeDisk()
 }
 
 func cannedBlocksFilename() string {

@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 		n := NewInProcessE2ENetwork()
 
 		exitCode = m.Run()
-		n.GracefulShutdown()
+		n.GracefulShutdownAndWipeDisk()
 
 	} else {
 		exitCode = m.Run()

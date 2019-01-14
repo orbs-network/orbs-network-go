@@ -27,14 +27,13 @@ func NewInProcessE2ENetwork() *inProcessE2ENetwork {
 	return &inProcessE2ENetwork{bootstrapNetwork()}
 }
 
-func (h *inProcessE2ENetwork) GracefulShutdown() {
+func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	for _, node := range h.nodes {
 		node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 	}
 
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
-
 }
 
 func bootstrapNetwork() (nodes []bootstrap.Node) {
