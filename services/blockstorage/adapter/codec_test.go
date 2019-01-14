@@ -235,7 +235,7 @@ func TestFixedSectionChecksum(t *testing.T) {
 
 	require.EqualValues(t, calcChecksum.Sum32(), encodedChecksum, "expected encoded section to end correct checksum")
 
-	_, _, _, _, _, readChecksum, err := codec.readFixedSection(rw, &readingBudget{limit: 10000})
+	_, readChecksum, err := codec.readFixedSection(rw, &readingBudget{limit: 10000})
 
 	require.NoError(t, err, "expected to decode successfully")
 	require.EqualValues(t, readChecksum, encodedChecksum, "expected read method to return encoded checksum")
