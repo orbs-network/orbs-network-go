@@ -10,21 +10,15 @@ import (
 	"time"
 )
 
-type adHocLogger string
-
-func (l *adHocLogger) Log(args ...interface{}) {
-	fmt.Println(args...)
-}
-func (l *adHocLogger) Name() string {
-	return string(*l)
-}
-
+// tool to generate large blocks files. intended to be used internally for benchmark tests and performance/load
+// the blocks generated here do not go through consensus. they simulate some state diffs, tx and receipts, but will
+// may not be successfully validated as blocks under consensus
 func main() {
 	dir, virtualChain, targetHeight, randomizeEach := parseParams()
 
 	logger := adHocLogger("")
 	rand := testUtils.NewControlledRand(&logger)
-	conf := &randomChainLocalConfig{dir: dir, virtualChainId: virtualChain}
+	conf := &randomChainConfig{dir: dir, virtualChainId: virtualChain}
 
 	start := time.Now()
 	fmt.Printf("\nusing:\noutput directory: %s\nvirtual chain id: %d\n\nloading adapter and building index...\n", conf.BlockStorageDataDir(), conf.VirtualChainId())
@@ -79,24 +73,33 @@ func parseParams() (dir string, vchain primitives.VirtualChainId, height primiti
 	virtualChain := flag.Uint("vchain", 42, "blocks file virtual chain id")
 	rand := flag.Bool("full_random", false, "generate a different random block for each block height")
 	flag.Parse()
-	fmt.Printf("usage: [-output output_folder_name] [-height target_block_height] [-vchain vchain_id]\n\n")
+	fmt.Printf("usage: [-output output_folder_name] [-height target_block_height] [-vchain vchain_id] [-full_random]\n\n")
 	targetHeight := primitives.BlockHeight(*intHeight)
 	return *outputDir, primitives.VirtualChainId(*virtualChain), targetHeight, *rand
 }
 
-type randomChainLocalConfig struct {
+type randomChainConfig struct {
 	dir            string
 	virtualChainId primitives.VirtualChainId
 }
 
-func (l *randomChainLocalConfig) VirtualChainId() primitives.VirtualChainId {
+func (l *randomChainConfig) VirtualChainId() primitives.VirtualChainId {
 	return l.virtualChainId
 }
 
-func (l *randomChainLocalConfig) BlockStorageDataDir() string {
+func (l *randomChainConfig) BlockStorageDataDir() string {
 	return l.dir
 }
 
-func (l *randomChainLocalConfig) BlockStorageMaxBlockSize() uint32 {
+func (l *randomChainConfig) BlockStorageMaxBlockSize() uint32 {
 	return 1000000000
+}
+
+type adHocLogger string
+
+func (l *adHocLogger) Log(args ...interface{}) {
+	fmt.Println(args...)
+}
+func (l *adHocLogger) Name() string {
+	return string(*l)
 }
