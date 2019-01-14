@@ -48,6 +48,7 @@ type Config interface {
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
 }
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
@@ -81,6 +82,7 @@ func NewLeanHelixConsensusAlgo(
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
 	electionTrigger := electiontrigger.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
 	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
+	instanceId := CalcInstanceId(config.NetworkType(), config.VirtualChainId())
 
 	s := &service{
 		com:           com,
@@ -93,6 +95,7 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	leanHelixConfig := &lh.Config{
+		InstanceId:      instanceId,
 		Communication:   com,
 		Membership:      membership,
 		BlockUtils:      provider,

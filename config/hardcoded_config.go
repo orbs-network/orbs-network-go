@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
 )
@@ -34,6 +35,7 @@ type config struct {
 const (
 	PROTOCOL_VERSION                            = "PROTOCOL_VERSION"
 	VIRTUAL_CHAIN_ID                            = "VIRTUAL_CHAIN_ID"
+	NETWORK_TYPE                                = "NETWORK_TYPE"
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL          = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
 	CONSENSUS_REQUIRED_QUORUM_PERCENTAGE        = "CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
@@ -173,6 +175,10 @@ func (c *config) ProtocolVersion() primitives.ProtocolVersion {
 
 func (c *config) VirtualChainId() primitives.VirtualChainId {
 	return primitives.VirtualChainId(c.kv[VIRTUAL_CHAIN_ID].Uint32Value)
+}
+
+func (c *config) NetworkType() protocol.SignerNetworkType {
+	return protocol.SignerNetworkType(c.kv[NETWORK_TYPE].Uint32Value)
 }
 
 func (c *config) NetworkSize(asOfBlock uint64) uint32 {
