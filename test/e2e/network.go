@@ -17,26 +17,25 @@ import (
 var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant across all e2e tests since we deploy the contract only once
 
 const LOCAL_NETWORK_SIZE = 3
-const blockStorageDataDirPrefix = "/tmp/orbs/e2e"
+const BlockStorageDataDirPrefix = "/tmp/orbs/e2e"
 
 type inProcessE2ENetwork struct {
 	nodes []bootstrap.Node
 }
 
-func newInProcessE2ENetwork() *inProcessE2ENetwork {
+func NewInProcessE2ENetwork() *inProcessE2ENetwork {
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 
 	return &inProcessE2ENetwork{bootstrapNetwork()}
 }
 
-func (h *inProcessE2ENetwork) gracefulShutdownAndWipeDisk() {
+func (h *inProcessE2ENetwork) GracefulShutdown() {
 	for _, node := range h.nodes {
 		node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 	}
 
 	cleanNativeProcessorCache()
-	cleanBlockStorage()
 }
 
 func bootstrapNetwork() (nodes []bootstrap.Node) {
@@ -88,7 +87,7 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 				firstRandomPort+i,
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
-				blockStorageDataDirPrefix)
+				BlockStorageDataDirPrefix)
 
 		deployBlockStorageFiles(cfg.BlockStorageDataDir(), logger)
 
@@ -110,7 +109,7 @@ func cleanNativeProcessorCache() {
 }
 
 func cleanBlockStorage() {
-	_ = os.RemoveAll(blockStorageDataDirPrefix)
+	_ = os.RemoveAll(BlockStorageDataDirPrefix)
 }
 
 func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
@@ -120,12 +119,16 @@ func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
 
 	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))
 
-	rawBlocks, err := ioutil.ReadFile(sourceBlocksFilePath)
+	copyFile(sourceBlocksFilePath, targetBlocksFilePath)
+}
+
+func copyFile(sourcePath string, targetPath string) {
+	rawBlocks, err := ioutil.ReadFile(sourcePath)
 	if err != nil {
 		panic("failed loading blocks file")
 	}
-	err = ioutil.WriteFile(targetBlocksFilePath, rawBlocks, 0644)
+	err = ioutil.WriteFile(targetPath, rawBlocks, 0644)
 	if err != nil {
-		panic(fmt.Sprintf("failed deploying blocks file to %s", targetDir))
+		panic(fmt.Sprintf("failed copying files: %s -> %s", sourcePath, targetPath))
 	}
 }

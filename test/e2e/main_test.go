@@ -15,10 +15,12 @@ func TestMain(m *testing.M) {
 	bootstrap := getConfig().bootstrap
 
 	if bootstrap {
-		n := newInProcessE2ENetwork()
+		n := NewInProcessE2ENetwork()
 
 		exitCode = m.Run()
-		n.gracefulShutdownAndWipeDisk()
+		n.GracefulShutdown()
+
+		cleanBlockStorage()
 
 	} else {
 		exitCode = m.Run()
