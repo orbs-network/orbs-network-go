@@ -10,12 +10,12 @@ ACCEPTANCE_TESTS_TIMEOUT=200s
 #SERIAL="-parallel 1"
 
 run_specific_test() {
-    time go test ./... -v -run $1 ${SERIAL} -count ${COUNT} -timeout ${MULTIPLE_RUNS_TIMEOUT} -failfast 2&>1 >> test.out
+    time go test ./... -v -run $1 ${SERIAL} -count ${COUNT} -timeout ${MULTIPLE_RUNS_TIMEOUT} -failfast 2&>1 >> _out/test.out
 }
 
 run_component_tests() {
     for dir in `find services -type d -name "test"` ; do
-        time go test ./${dir} -v ${SERIAL} -count ${COUNT} -timeout ${MULTIPLE_RUNS_TIMEOUT} -failfast 2&>1 >> test.out
+        time go test ./${dir} -v ${SERIAL} -count ${COUNT} -timeout ${MULTIPLE_RUNS_TIMEOUT} -failfast 2&>1 >> _out/test.out
         check_exit_code_and_report
     done
 }

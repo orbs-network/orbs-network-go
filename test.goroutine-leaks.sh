@@ -1,6 +1,7 @@
 #!/bin/sh
 
-NO_LOG_STDOUT=true go test ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1 > test.out
+mkdir -p _out
+NO_LOG_STDOUT=true go test ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1 > _out/test.out
 
 export EXIT_CODE=$?
 
@@ -19,7 +20,7 @@ if [ $EXIT_CODE != 0 ]; then
   echo ""
   cat /tmp/gorou-shutdown-after.out
 
-  cat test.out
+  cat _out/test.out
 
   exit $EXIT_CODE
 fi
