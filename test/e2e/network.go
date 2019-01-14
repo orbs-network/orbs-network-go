@@ -8,16 +8,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"time"
 )
 
 var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant across all e2e tests since we deploy the contract only once
 
 const LOCAL_NETWORK_SIZE = 3
-const BlockStorageDataDirPrefix = "/tmp/orbs/e2e"
 
 type inProcessE2ENetwork struct {
 	nodes []bootstrap.Node
@@ -36,6 +33,8 @@ func (h *inProcessE2ENetwork) GracefulShutdown() {
 	}
 
 	cleanNativeProcessorCache()
+	cleanBlockStorage()
+
 }
 
 func bootstrapNetwork() (nodes []bootstrap.Node) {
@@ -87,7 +86,7 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 				firstRandomPort+i,
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
-				BlockStorageDataDirPrefix)
+				blockStorageDataDirPrefix)
 
 		deployBlockStorageFiles(cfg.BlockStorageDataDir(), logger)
 
@@ -96,39 +95,4 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 		nodes = append(nodes, node)
 	}
 	return nodes
-}
-
-func getProcessorArtifactPath() (string, string) {
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	return filepath.Join(dir, "processor-artifacts"), dir
-}
-
-func cleanNativeProcessorCache() {
-	_, dirToCleanup := getProcessorArtifactPath()
-	_ = os.RemoveAll(dirToCleanup)
-}
-
-func cleanBlockStorage() {
-	_ = os.RemoveAll(BlockStorageDataDirPrefix)
-}
-
-func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
-	os.MkdirAll(targetDir, os.ModePerm)
-	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "blocks")
-	targetBlocksFilePath := filepath.Join(targetDir, "blocks")
-
-	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))
-
-	copyFile(sourceBlocksFilePath, targetBlocksFilePath)
-}
-
-func copyFile(sourcePath string, targetPath string) {
-	rawBlocks, err := ioutil.ReadFile(sourcePath)
-	if err != nil {
-		panic("failed loading blocks file")
-	}
-	err = ioutil.WriteFile(targetPath, rawBlocks, 0644)
-	if err != nil {
-		panic(fmt.Sprintf("failed copying files: %s -> %s", sourcePath, targetPath))
-	}
 }

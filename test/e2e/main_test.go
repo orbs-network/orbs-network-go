@@ -20,8 +20,6 @@ func TestMain(m *testing.M) {
 		exitCode = m.Run()
 		n.GracefulShutdown()
 
-		cleanBlockStorage()
-
 	} else {
 		exitCode = m.Run()
 	}
