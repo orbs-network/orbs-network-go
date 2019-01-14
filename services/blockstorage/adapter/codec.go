@@ -302,22 +302,22 @@ func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 		return nil, budget.bytesRead, fmt.Errorf("block size exceeds max limit. block header %#v", serializationHeader)
 	}
 
-	tbHeader, tbMetadata, tbBlockProof, rbHeader, rbBlockProof, _, err := c.readFixedSection(tr, budget)
+	fixed, _, err := c.readFixedSection(tr, budget)
 	if err != nil {
 		return nil, budget.bytesRead, err
 	}
 
-	receipts, _, err := c.readReceiptsSection(tr, budget, rbHeader.NumTransactionReceipts())
+	receipts, _, err := c.readReceiptsSection(tr, budget, fixed.resultsBlockHeader.NumTransactionReceipts())
 	if err != nil {
 		return nil, budget.bytesRead, err
 	}
 
-	stateDiffs, _, err := c.readStateDiffsSection(tr, budget, rbHeader.NumContractStateDiffs())
+	stateDiffs, _, err := c.readStateDiffsSection(tr, budget, fixed.resultsBlockHeader.NumContractStateDiffs())
 	if err != nil {
 		return nil, budget.bytesRead, err
 	}
 
-	txs, _, err := c.readTransactionsSection(tr, budget, tbHeader.NumSignedTransactions())
+	txs, _, err := c.readTransactionsSection(tr, budget, fixed.transactionsBlockHeader.NumSignedTransactions())
 	if err != nil {
 		return nil, budget.bytesRead, err
 	}
@@ -338,56 +338,70 @@ func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: &protocol.TransactionsBlockContainer{
-			Header:             tbHeader,
-			Metadata:           tbMetadata,
+			Header:             fixed.transactionsBlockHeader,
+			Metadata:           fixed.transactionsBlockMetadata,
 			SignedTransactions: txs,
-			BlockProof:         tbBlockProof,
+			BlockProof:         fixed.transactionsBlockProof,
 		},
 		ResultsBlock: &protocol.ResultsBlockContainer{
-			Header:              rbHeader,
+			Header:              fixed.resultsBlockHeader,
 			TransactionReceipts: receipts,
 			ContractStateDiffs:  stateDiffs,
-			BlockProof:          rbBlockProof,
+			BlockProof:          fixed.resultsBlockProof,
 		},
 	}
 
 	return blockPair, budget.bytesRead + checksumSize*5, nil
 }
 
-func (c *codec) readFixedSection(r io.Reader, budget *readingBudget) (*protocol.TransactionsBlockHeader, *protocol.TransactionsBlockMetadata, *protocol.TransactionsBlockProof, *protocol.ResultsBlockHeader, *protocol.ResultsBlockProof, uint32, error) {
+type fixedSizeBlockSection struct {
+	transactionsBlockHeader   *protocol.TransactionsBlockHeader
+	transactionsBlockMetadata *protocol.TransactionsBlockMetadata
+	transactionsBlockProof    *protocol.TransactionsBlockProof
+	resultsBlockHeader        *protocol.ResultsBlockHeader
+	resultsBlockProof         *protocol.ResultsBlockProof
+}
+
+func (c *codec) readFixedSection(r io.Reader, budget *readingBudget) (*fixedSizeBlockSection, uint32, error) {
+	fixed := &fixedSizeBlockSection{}
+
 	tbHeaderChunk, err := readChunk(r, budget)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, 0, err
 	}
-	tbHeader := protocol.TransactionsBlockHeaderReader(tbHeaderChunk)
+	fixed.transactionsBlockHeader = protocol.TransactionsBlockHeaderReader(tbHeaderChunk)
+
 	tbMetadataChunk, err := readChunk(r, budget)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, 0, err
 	}
-	tbMetadata := protocol.TransactionsBlockMetadataReader(tbMetadataChunk)
+	fixed.transactionsBlockMetadata = protocol.TransactionsBlockMetadataReader(tbMetadataChunk)
+
 	tbBlockProofChunk, err := readChunk(r, budget)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, 0, err
 	}
-	tbBlockProof := protocol.TransactionsBlockProofReader(tbBlockProofChunk)
+	fixed.transactionsBlockProof = protocol.TransactionsBlockProofReader(tbBlockProofChunk)
+
 	rbHeaderChunk, err := readChunk(r, budget)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, 0, err
 	}
-	rbHeader := protocol.ResultsBlockHeaderReader(rbHeaderChunk)
+	fixed.resultsBlockHeader = protocol.ResultsBlockHeaderReader(rbHeaderChunk)
+
 	rbBlockProofChunk, err := readChunk(r, budget)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, 0, err
 	}
-	rbBlockProof := protocol.ResultsBlockProofReader(rbBlockProofChunk)
+	fixed.resultsBlockProof = protocol.ResultsBlockProofReader(rbBlockProofChunk)
 
 	var checksum uint32
 	err = binary.Read(r, binary.LittleEndian, &checksum)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, 0, err
 	}
 
-	return tbHeader, tbMetadata, tbBlockProof, rbHeader, rbBlockProof, checksum, nil
+	return fixed, checksum, nil
 }
 
 func (c *codec) readReceiptsSection(tr io.Reader, budget *readingBudget, count uint32) ([]*protocol.TransactionReceipt, uint32, error) {
