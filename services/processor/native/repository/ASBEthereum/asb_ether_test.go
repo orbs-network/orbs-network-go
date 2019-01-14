@@ -1,7 +1,7 @@
 package asb_ether
 
 import (
-	"github.com/orbs-network/orbs-client-sdk-go/orbsclient"
+	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/safemath/safeuint64"
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
 	"github.com/stretchr/testify/require"
@@ -12,10 +12,7 @@ import (
 func TestTransferIn_AllGood(t *testing.T) {
 	txid := "cccc"
 
-	orbsUser, err := orbsclient.CreateAccount()
-	require.NoError(t, err, "could not create orbs address")
-	var orbsUserAddress [20]byte
-	copy(orbsUserAddress[:], orbsUser.RawAddress)
+	orbsUserAddress := createOrbsAccount()
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init() // start the asb contract // todo  v1 open bug
@@ -29,7 +26,7 @@ func TestTransferIn_AllGood(t *testing.T) {
 		})
 
 		// this is what we expect to be called
-		m.MockServiceCallMethod(getTokenContract(), "mint", nil, orbsUser.RawAddress, uint64(17))
+		m.MockServiceCallMethod(getTokenContract(), "asbMint", nil, orbsUserAddress[:], uint64(17))
 
 		// call
 		transferIn(txid)
@@ -118,10 +115,7 @@ func TestTransferIn_NoOrbsAddress(t *testing.T) {
 func TestTransferIn_TuidAlreadyUsed(t *testing.T) {
 	txid := "cccc"
 
-	orbsUser, err := orbsclient.CreateAccount()
-	require.NoError(t, err, "could not create orbs address")
-	var orbsUserAddress [20]byte
-	copy(orbsUserAddress[:], orbsUser.RawAddress)
+	orbsUserAddress := createOrbsAccount()
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init() // start the asb contract // todo  v1 open bug
@@ -146,18 +140,15 @@ func TestTransferOut_AllGood(t *testing.T) {
 	amount := uint64(17)
 	ethAddr := AnAddress()
 
-	orbsUser, err := orbsclient.CreateAccount()
-	require.NoError(t, err, "could not create orbs address")
-	var orbsUserAddress [20]byte
-	copy(orbsUserAddress[:], orbsUser.RawAddress)
+	orbsUserAddress := createOrbsAccount()
 
-	InServiceScope(orbsUser.RawAddress, nil, func(m Mockery) {
+	InServiceScope(orbsUserAddress[:], nil, func(m Mockery) {
 		_init() // start the asb contract // todo  v1 open bug
 
 		// what is expected to be called
 		tuid := safeuint64.Add(getOutTuid(), 1)
-		m.MockEmitEvent(OrbsTransferredOut, tuid, orbsUser.RawAddress, ethAddr, big.NewInt(17).Uint64())
-		m.MockServiceCallMethod(getTokenContract(), "burn", nil, orbsUser.RawAddress, amount)
+		m.MockEmitEvent(OrbsTransferredOut, tuid, orbsUserAddress[:], ethAddr, big.NewInt(17).Uint64())
+		m.MockServiceCallMethod(getTokenContract(), "asbBurn", nil, orbsUserAddress[:], amount)
 
 		// call
 		transferOut(ethAddr, amount)
@@ -194,4 +185,15 @@ func TestReset(t *testing.T) {
 			require.False(t, isInTuidExists(genInTuidKey(big.NewInt(i).Bytes())), "tuid should be empty %d", i)
 		}
 	})
+}
+
+// TODO(v1): talkol - I will move this to be part of the test framework
+func createOrbsAccount() [20]byte {
+	orbsUser, err := orbsClient.CreateAccount()
+	if err != nil {
+		panic(err.Error())
+	}
+	var orbsUserAddress [20]byte
+	copy(orbsUserAddress[:], orbsUser.AddressAsBytes())
+	return orbsUserAddress
 }

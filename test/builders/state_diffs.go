@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-// protocol.ContractStateDiff
+/// Test builders for: protocol.ContractStateDiff
 
 type sdiff struct {
 	builder *protocol.ContractStateDiffBuilder
@@ -32,10 +32,12 @@ func (s *sdiff) Build() *protocol.ContractStateDiff {
 func (s *sdiff) Builder() *protocol.ContractStateDiffBuilder {
 	return s.builder
 }
+
 func (s *sdiff) WithStringRecord(k string, v string) *sdiff {
 	s.records = append(s.records, &protocol.StateRecordBuilder{Key: []byte(k), Value: []byte(v)})
 	return s
 }
+
 func (s *sdiff) WithContractName(contract string) *sdiff {
 	s.builder.ContractName = primitives.ContractName(contract)
 	return s

@@ -2,6 +2,7 @@ package native
 
 import (
 	"context"
+	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,8 +19,9 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 		panic(err.Error())
 	}
 
+	functionNameForErrors := fmt.Sprintf("EVENTS.%s", eventName)
 	argsArgumentArray := argsToArgumentArray(args...)
-	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray)
+	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	if err != nil {
 		panic(errors.Wrap(err, "incorrect types given to event emit"))
 	}
@@ -47,7 +49,7 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	}
 }
 
-func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray) error {
-	_, err := s.prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray)
+func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray, functionNameForErrors string) error {
+	_, err := s.prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	return err
 }

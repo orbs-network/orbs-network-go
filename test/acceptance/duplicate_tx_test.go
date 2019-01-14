@@ -16,6 +16,7 @@ var STATUS_COMMITTED_OR_PENDING_OR_DUPLICATE = []TransactionStatus{TRANSACTION_S
 var STATUS_COMMITTED_OR_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 var STATUS_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 
+// LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	harness.Network(t).AllowingErrors(
 		"error adding transaction to pending pool",
@@ -24,7 +25,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 		ts := time.Now()
 
-		contract := network.GetBenchmarkTokenContract()
+		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 1)
 
 		// send three identical transactions to two nodes
@@ -69,6 +70,7 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.T
 	require.Equal(t, 1, receiptCount, "blocks should include tx exactly once")
 }
 
+// LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 	harness.Network(t).AllowingErrors(
 		"error adding transaction to pending pool",
@@ -78,7 +80,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 	).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		ts := time.Now()
-		contract := network.GetBenchmarkTokenContract()
+		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 1)
 
 		// this should be the same builder, but membuffers is not thread-safe for concurrent builds on same builder

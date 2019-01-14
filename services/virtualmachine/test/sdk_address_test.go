@@ -38,8 +38,8 @@ func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
-		// runLocalMethod in harness uses nil as the Signer
-		h.runLocalMethod(ctx, "Contract1", "method1")
+		// processQuery in harness uses nil as the Signer
+		h.processQuery(ctx, "Contract1", "method1")
 
 		h.verifySystemContractCalled(t)
 		h.verifyStateStorageBlockHeightRequested(t)
@@ -107,8 +107,8 @@ func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 		})
 
-		// runLocalMethod in harness uses nil as the Signer
-		h.runLocalMethod(ctx, "Contract1", "method1")
+		// processQuery in harness uses nil as the Signer
+		h.processQuery(ctx, "Contract1", "method1")
 
 		h.verifySystemContractCalled(t)
 		h.verifyStateStorageBlockHeightRequested(t)

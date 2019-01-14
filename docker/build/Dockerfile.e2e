@@ -1,3 +1,0 @@
-FROM orbs:export
-
-COPY ./test/e2e/blocks /usr/local/var/orbs/blocks

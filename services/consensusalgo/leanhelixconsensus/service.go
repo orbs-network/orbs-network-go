@@ -3,6 +3,8 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
+	"github.com/orbs-network/lean-helix-go/services/electiontrigger"
+	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -46,6 +48,7 @@ type Config interface {
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
 }
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
@@ -77,8 +80,9 @@ func NewLeanHelixConsensusAlgo(
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
-	electionTrigger := leanhelix.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
+	electionTrigger := electiontrigger.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
 	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
+	instanceId := CalcInstanceId(config.NetworkType(), config.VirtualChainId())
 
 	s := &service{
 		com:           com,
@@ -90,7 +94,8 @@ func NewLeanHelixConsensusAlgo(
 		leanHelix:     nil,
 	}
 
-	leanHelixConfig := &leanhelix.Config{
+	leanHelixConfig := &lh.Config{
+		InstanceId:      instanceId,
 		Communication:   com,
 		Membership:      membership,
 		BlockUtils:      provider,
@@ -116,7 +121,63 @@ func NewLeanHelixConsensusAlgo(
 	return s
 }
 
-func (s *service) onCommit(ctx context.Context, block leanhelix.Block, blockProof []byte) {
+func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+
+	blockType := input.BlockType
+	blockPair := input.BlockPair
+	prevCommittedBlockPair := input.PrevCommittedBlockPair
+	var lhBlockProof []byte
+	var lhBlock lh.Block
+
+	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
+		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
+	}
+
+	// validate the lhBlock consensus (lhBlock and proof)
+	if shouldValidate(input.Mode) {
+		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// update the lhBlock consensus - with lhBlock and proof - (might be nil -> genesisBlock)
+	if shouldUpdate(input.Mode) {
+		// if LeanHelix is not the active consensus do not update
+		//  Note: genesis case (nil) is special no lhBlockProof type - registered handlers cannot distinguish - should be handled here
+		if s.config.ActiveConsensusAlgo() != consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
+			s.logger.Info("LeanHelix is not the active consensus algo, not starting its consensus loop - update")
+			// TODO: maybe add output in this case? (change protos - HandleBlockConsensusOutput?)
+			return nil, nil
+		}
+
+		if shouldCreateGenesisBlock(blockPair) {
+			lhBlock, lhBlockProof = s.blockProvider.GenerateGenesisBlockProposal(ctx)
+			s.logger.Info("HandleBlockConsensus Update LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode), log.Stringable("blockPair", blockPair))
+		} else { // we should have a lhBlock proof
+			s.logger.Info("HandleBlockConsensus Update LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			lhBlockProof = blockPair.TransactionsBlock.BlockProof.Raw()
+			lhBlock = ToLeanHelixBlock(blockPair)
+
+		}
+
+		s.leanHelix.UpdateState(ctx, lhBlock, lhBlockProof)
+		// TODO: Should we notify error?
+	}
+
+	return nil, nil
+}
+
+func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
+	consensusRawMessage := &lh.ConsensusRawMessage{
+		Content: input.Message.Content,
+		Block:   ToLeanHelixBlock(input.Message.BlockPair),
+	}
+	s.leanHelix.HandleConsensusMessage(ctx, consensusRawMessage)
+	return nil, nil
+}
+
+func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
 	// log
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
@@ -157,67 +218,14 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 	return err
 }
 
-func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-
-	blockType := input.BlockType
-	mode := input.Mode
-	blockPair := input.BlockPair
-	prevCommittedBlockPair := input.PrevCommittedBlockPair
-	var blockProof []byte
-	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
-		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
-	}
-
-	// validate the block consensus (block and proof)
-	if shouldVerify(mode) {
-		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// update the block consensus - with block and proof - (might be nil -> genesisBlock)
-	if shouldUpdate(mode) {
-		// if LeanHelix is not the active consensus do not update
-		//  Note: genesis case (nil) is special no blockProof type - registered handlers cannot distinguish - should be handled here
-		if s.config.ActiveConsensusAlgo() != consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-			s.logger.Info("LeanHelix is not the active consensus algo, not starting its consensus loop - update")
-			// TODO: maybe add output in this case? (change protos - HandleBlockConsensusOutput?)
-			return nil, nil
-		}
-
-		if shouldCreateGenesisBlock(blockPair) {
-			blockPair = s.blockProvider.GenerateGenesisBlock(ctx)
-			s.logger.Info("HandleBlockConsensus Update LeanHelix with GenesisBlock", log.Stringable("mode", mode), log.Stringable("blockPair", blockPair))
-		} else { // we should have a block proof
-			s.logger.Info("HandleBlockConsensus Update LeanHelix with block", log.Stringable("mode", mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-			blockProof = blockPair.TransactionsBlock.BlockProof.LeanHelix()
-		}
-
-		s.leanHelix.UpdateState(ctx, ToLeanHelixBlock(blockPair), blockProof)
-		// TODO: Should we notify error?
-	}
-
-	return nil, nil
-}
-
 func shouldCreateGenesisBlock(blockPair *protocol.BlockPairContainer) bool {
 	return blockPair == nil
 }
 
-func shouldVerify(mode handlers.HandleBlockConsensusMode) bool {
+func shouldValidate(mode handlers.HandleBlockConsensusMode) bool {
 	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
 }
 
 func shouldUpdate(mode handlers.HandleBlockConsensusMode) bool {
 	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY
-}
-
-func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
-	consensusRawMessage := &leanhelix.ConsensusRawMessage{
-		Content: input.Message.Content,
-		Block:   ToLeanHelixBlock(input.Message.BlockPair),
-	}
-	s.leanHelix.HandleConsensusMessage(ctx, consensusRawMessage)
-	return nil, nil
 }

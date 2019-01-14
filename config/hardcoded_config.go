@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
 )
@@ -34,6 +35,7 @@ type config struct {
 const (
 	PROTOCOL_VERSION                            = "PROTOCOL_VERSION"
 	VIRTUAL_CHAIN_ID                            = "VIRTUAL_CHAIN_ID"
+	NETWORK_TYPE                                = "NETWORK_TYPE"
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL          = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
 	CONSENSUS_REQUIRED_QUORUM_PERCENTAGE        = "CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
@@ -48,8 +50,6 @@ const (
 	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
 	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
 
-	CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME              = "CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME"
-	CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK"
 	CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK"
 	CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER = "CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER"
 
@@ -65,6 +65,7 @@ const (
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_PROPAGATION_BATCH_SIZE                = "TRANSACTION_POOL_PROPAGATION_BATCH_SIZE"
 	TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT          = "TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT"
+	TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY = "TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY"
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
@@ -81,7 +82,8 @@ const (
 	LOGGER_HTTP_ENDPOINT = "LOGGER_HTTP_ENDPOINT"
 	LOGGER_BULK_SIZE     = "LOGGER_BULK_SIZE"
 
-	BLOCK_STORAGE_DATA_DIR = "BLOCK_STORAGE_DATA_DIR"
+	BLOCK_STORAGE_DATA_DIR       = "BLOCK_STORAGE_DATA_DIR"
+	BLOCK_STORAGE_MAX_BLOCK_SIZE = "BLOCK_STORAGE_MAX_BLOCK_SIZE"
 )
 
 func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
@@ -175,6 +177,10 @@ func (c *config) VirtualChainId() primitives.VirtualChainId {
 	return primitives.VirtualChainId(c.kv[VIRTUAL_CHAIN_ID].Uint32Value)
 }
 
+func (c *config) NetworkType() protocol.SignerNetworkType {
+	return protocol.SignerNetworkType(c.kv[NETWORK_TYPE].Uint32Value)
+}
+
 func (c *config) NetworkSize(asOfBlock uint64) uint32 {
 	return uint32(len(c.federationNodes))
 }
@@ -227,14 +233,6 @@ func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
 	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
 }
 
-func (c *config) ConsensusContextMinimalBlockTime() time.Duration {
-	return c.kv[CONSENSUS_CONTEXT_MINIMAL_BLOCK_TIME].DurationValue
-}
-
-func (c *config) ConsensusContextMinimumTransactionsInBlock() uint32 {
-	return c.kv[CONSENSUS_CONTEXT_MINIMUM_TRANSACTIONS_IN_BLOCK].Uint32Value
-}
-
 func (c *config) ConsensusContextMaximumTransactionsInBlock() uint32 {
 	return c.kv[CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK].Uint32Value
 }
@@ -281,6 +279,10 @@ func (c *config) TransactionPoolPropagationBatchSize() uint16 {
 
 func (c *config) TransactionPoolPropagationBatchingTimeout() time.Duration {
 	return c.kv[TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT].DurationValue
+}
+
+func (c *config) TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration {
+	return c.kv[TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY].DurationValue
 }
 
 func (c *config) SendTransactionTimeout() time.Duration {
@@ -333,4 +335,8 @@ func (c *config) LoggerBulkSize() uint32 {
 
 func (c *config) BlockStorageDataDir() string {
 	return c.kv[BLOCK_STORAGE_DATA_DIR].StringValue
+}
+
+func (c *config) BlockStorageMaxBlockSize() uint32 {
+	return c.kv[BLOCK_STORAGE_MAX_BLOCK_SIZE].Uint32Value
 }

@@ -119,13 +119,13 @@ func asbBurn(targetAddress []byte, amount uint64) {
 	state.WriteUint64(TOTAL_SUPPLY_KEY, total-amount)
 }
 
-func asbBind(asbAddress []byte) {
+func asbBind(asbAddress string) {
 	owner := state.ReadBytes(OWNER_KEY)
 	caller := address.GetCallerAddress()
 	if !bytes.Equal(owner, caller) {
 		panic("only owner can call asbBind")
 	}
-	state.WriteBytes(ASB_ADDR_KEY, asbAddress)
+	state.WriteBytes(ASB_ADDR_KEY, address.GetContractAddress(asbAddress))
 }
 
 func asbGetAddress() []byte {

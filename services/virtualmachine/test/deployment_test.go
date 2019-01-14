@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
+func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness()
 
@@ -22,9 +22,9 @@ func TestRunLocalMethod_WhenContractNotDeployed(t *testing.T) {
 		h.expectStateStorageBlockHeightRequested(12)
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
-		result, outputArgs, refHeight, _, err := h.runLocalMethod(ctx, "Contract1", "method1")
+		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")
 		require.Error(t, err, "run local method should fail")
-		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
+		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, result, "run local method should return not deployed")
 		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
 		require.EqualValues(t, 12, refHeight)
 
@@ -47,7 +47,7 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContra
 			{"Contract1", "method1"},
 		})
 		require.Equal(t, results, []protocol.ExecutionResult{
-			protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED,
 		}, "processTransactionSet returned receipts should match")
 		require.Equal(t, outputArgs, [][]byte{
 			{},
@@ -127,7 +127,7 @@ func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *t
 			{"Contract1", "method1"},
 		})
 		require.Equal(t, results, []protocol.ExecutionResult{
-			protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
+			protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED,
 		}, "processTransactionSet returned receipts should match")
 		require.Equal(t, outputArgs, [][]byte{
 			{},

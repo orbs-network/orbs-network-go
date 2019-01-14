@@ -13,13 +13,17 @@ const (
 	CLIENT_ADDRESS_SHA256_OFFSET = hash.SHA256_HASH_SIZE_BYTES - CLIENT_ADDRESS_SIZE_BYTES
 )
 
-func CalcClientAddressOfEd25519Signer(signer *protocol.Signer) (primitives.ClientAddress, error) {
-	signerPublicKey := signer.Eddsa().SignerPublicKey()
-	if len(signerPublicKey) != keys.ED25519_PUBLIC_KEY_SIZE_BYTES {
+func CalcClientAddressOfEd25519PublicKey(publicKey primitives.Ed25519PublicKey) (primitives.ClientAddress, error) {
+	if len(publicKey) != keys.ED25519_PUBLIC_KEY_SIZE_BYTES {
 		return nil, errors.New("transaction is not signed by a valid Signer")
 	}
-	res := hash.CalcSha256(signerPublicKey)[CLIENT_ADDRESS_SHA256_OFFSET:]
+	res := hash.CalcSha256(publicKey)[CLIENT_ADDRESS_SHA256_OFFSET:]
 	return primitives.ClientAddress(res), nil
+}
+
+func CalcClientAddressOfEd25519Signer(signer *protocol.Signer) (primitives.ClientAddress, error) {
+	signerPublicKey := signer.Eddsa().SignerPublicKey()
+	return CalcClientAddressOfEd25519PublicKey(signerPublicKey)
 }
 
 // TODO(v1): add argument (spec feature)

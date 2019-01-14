@@ -2,7 +2,7 @@ package leanhelixconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/lean-helix-go"
+	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -28,7 +28,7 @@ func NewCommunication(logger log.BasicLogger, gossip gossiptopics.LeanHelix) *co
 }
 
 // LeanHelix lib sends its messages here
-func (comm *communication) SendConsensusMessage(ctx context.Context, lhtargets []lhprimitives.MemberId, consensusRawMessage *leanhelix.ConsensusRawMessage) {
+func (comm *communication) SendConsensusMessage(ctx context.Context, lhtargets []lhprimitives.MemberId, consensusRawMessage *lh.ConsensusRawMessage) {
 	targets := make([]primitives.NodeAddress, 0, len(lhtargets))
 	for _, lhtarget := range lhtargets {
 		targets = append(targets, primitives.NodeAddress(lhtarget))

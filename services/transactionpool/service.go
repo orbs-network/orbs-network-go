@@ -36,6 +36,7 @@ type service struct {
 	committedPool        *committedTxPool
 	blockTracker         *synchronization.BlockTracker
 	transactionForwarder *transactionForwarder
+	transactionWaiter    *transactionWaiter
 
 	metrics struct {
 		blockHeight *metric.Gauge

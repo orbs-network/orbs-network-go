@@ -5,6 +5,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
+/// Test builders for: protocol.ArgumentArray, primitives.PackedArgumentArray
+
 func ArgumentsBuilders(args ...interface{}) (res []*protocol.ArgumentBuilder) {
 	res = []*protocol.ArgumentBuilder{}
 	for _, arg := range args {

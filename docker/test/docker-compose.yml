@@ -2,7 +2,7 @@ version: '2.1'
 
 services:
   orbs-network-node-1:
-    image: orbs:export_e2e
+    image: orbs:export
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -12,6 +12,7 @@ services:
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
+      - ../../_tmp/blocks/node1/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
     sysctls:
       net.core.somaxconn: 25000
@@ -21,7 +22,7 @@ services:
         ipv4_address: 192.168.199.2
 
   orbs-network-node-2:
-    image: orbs:export_e2e
+    image: orbs:export
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -31,6 +32,7 @@ services:
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
+      - ../../_tmp/blocks/node2/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
     sysctls:
       net.core.somaxconn: 25000
@@ -39,7 +41,7 @@ services:
         ipv4_address: 192.168.199.3
 
   orbs-network-node-3:
-    image: orbs:export_e2e
+    image: orbs:export
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
@@ -49,12 +51,32 @@ services:
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./e2e-config/:/opt/orbs/config
+      - ../../_tmp/blocks/node3/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
     sysctls:
       net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.4
+
+  orbs-network-node-4:
+    image: orbs:export
+    environment:
+      GIT_BRANCH: $GIT_BRANCH
+      GIT_COMMIT: $GIT_COMMIT
+      TEST_NAME: e2e
+    ports:
+      - 8083:8080
+    volumes:
+      - ../../_logs/:/opt/orbs/logs
+      - ./e2e-config/:/opt/orbs/config
+      - ../../_tmp/blocks/node4/:/usr/local/var/orbs/
+    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node4.json --log /opt/orbs/logs/node4.log
+    sysctls:
+      net.core.somaxconn: 25000
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.5
 
   ganache:
     image: trufflesuite/ganache-cli:v6.1.8 # this version is freezed because a bug in >6.2.0, that uses ganache-core 2.3.1, resulting in inconsistent hashes with go-ethereum https://github.com/trufflesuite/ganache-cli/issues/387
@@ -80,7 +102,7 @@ services:
       net.core.somaxconn: 25000
     networks:
       orbs-network:
-        ipv4_address: 192.168.199.5
+        ipv4_address: 192.168.199.7
 
 networks:
   orbs-network:

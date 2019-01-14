@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"os"
 	"time"
 )
@@ -29,9 +30,18 @@ func createLockingAdapter() (func(), error) {
 }
 
 type localConfig struct {
-	dir string
+	dir          string
+	maxBlockSize uint32
 }
 
 func (l *localConfig) BlockStorageDataDir() string {
 	return l.dir
+}
+
+func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+	return 1024
+}
+
+func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
+	return 0xFF
 }

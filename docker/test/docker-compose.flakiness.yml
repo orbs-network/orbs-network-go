@@ -3,7 +3,7 @@ version: '2'
 services:
   orbs-flakiness:
     image: orbs:flakiness
-    command: sh -x test.flakiness.sh
+    command: bash -x test.flakiness.sh
     environment:
       GIT_BRANCH: $GIT_BRANCH
       GIT_COMMIT: $GIT_COMMIT
