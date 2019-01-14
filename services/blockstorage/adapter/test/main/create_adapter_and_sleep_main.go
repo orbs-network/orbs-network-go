@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"os"
 	"time"
 )
@@ -39,4 +40,8 @@ func (l *localConfig) BlockStorageDataDir() string {
 
 func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
 	return 1024
+}
+
+func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
+	return 0xFF
 }

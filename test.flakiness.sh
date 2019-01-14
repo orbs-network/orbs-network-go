@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/bash -x
 
 . ./test.common.sh
 

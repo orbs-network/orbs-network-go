@@ -11,7 +11,7 @@ import (
 func TestCodec_EnforcesBlockSizeLimit(t *testing.T) {
 	largeBlock := builders.BlockPair().WithHeight(1).WithTransactions(6).Build()
 	c := newCodec(5)
-	err := c.encode(largeBlock, new(bytes.Buffer))
+	_, err := c.encode(largeBlock, new(bytes.Buffer))
 
 	require.Error(t, err, "expected to fail encoding a block larger than maxBlockSize")
 }
@@ -22,13 +22,14 @@ func TestCodec_EncodesAndDecodes(t *testing.T) {
 	rw := new(bytes.Buffer)
 	c := newCodec(1024 * 1024)
 
-	err := c.encode(block, rw)
+	bytesWritten, err := c.encode(block, rw)
 	require.NoError(t, err)
 
 	blockLen := rw.Len()
 
 	decodedBlock, readSize, err := c.decode(rw)
 	require.NoError(t, err, "expected to decode block record successfully")
+	require.EqualValues(t, bytesWritten, readSize, "expected to read same number of bytes as written")
 	require.EqualValues(t, blockLen, readSize, "expected to read entire buffer")
 	test.RequireCmpEqual(t, block, decodedBlock, "expected to decode an identical block as encoded")
 }
@@ -41,7 +42,7 @@ func TestCodec_DetectsDataCorruption(t *testing.T) {
 	// serialize
 	c := newCodec(1024 * 1024)
 	encodedBlock := new(bytes.Buffer)
-	err := c.encode(block, encodedBlock)
+	_, err := c.encode(block, encodedBlock)
 	blockBytes := encodedBlock.Bytes()
 	require.NoError(t, err, "expected to encode block successfully")
 
@@ -67,7 +68,7 @@ func TestCodec_DetectsDataCorruption(t *testing.T) {
 	}
 }
 
-func TestEncodeHeader(t *testing.T) {
+func TestBlockHeaderCodec(t *testing.T) {
 	rw := new(bytes.Buffer)
 	header := &blockHeader{
 		Version:      0,
@@ -87,4 +88,72 @@ func TestEncodeHeader(t *testing.T) {
 	require.NoError(t, err, "expected to decode header successfully")
 
 	require.EqualValues(t, header, decodedHeader, "expected decoded header to match original")
+}
+
+func TestFileHeaderCodec_Magic(t *testing.T) {
+	header := newBlocksFileHeader(0, 0)
+
+	rw := new(bytes.Buffer)
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	require.EqualValues(t, "ORBS", rw.Bytes()[:4], "expected header to begin with `ORBS`")
+}
+
+func TestFileHeaderCodec_EncodesAndDecodesHeader(t *testing.T) {
+	ctrlRand := test.NewControlledRand(t)
+	header := newBlocksFileHeader(ctrlRand.Uint32(), ctrlRand.Uint32())
+
+	rw := new(bytes.Buffer)
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	decodedHeader := &blocksFileHeader{}
+	err = decodedHeader.read(rw)
+	require.NoError(t, err, "expected to decode header successfully")
+
+	test.RequireCmpEqual(t, header, decodedHeader, "expected to decode identical header")
+}
+
+func TestFileHeaderCodec_RejectDecodingWrongVersion(t *testing.T) {
+	header := newBlocksFileHeader(0, 0)
+
+	header.FileVersion++ // fake incompatible version
+
+	rw := new(bytes.Buffer)
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	decodedHeader := &blocksFileHeader{}
+	err = decodedHeader.read(rw)
+	require.Error(t, err, "expected to fail parsing a header with wrong version")
+}
+
+func TestFileHeaderCodec_RejectDecodingWrongMagic(t *testing.T) {
+	header := newBlocksFileHeader(0, 0)
+
+	header.ORBS++ // fake wrong magic
+
+	rw := new(bytes.Buffer)
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	decodedHeader := &blocksFileHeader{}
+	err = decodedHeader.read(rw)
+	require.Error(t, err, "expected to fail parsing a header with wrong magic")
+}
+
+func TestFileHeaderCodec_RejectDecodingBadChecksum(t *testing.T) {
+	header := newBlocksFileHeader(0, 0)
+
+	rw := new(bytes.Buffer)
+	err := header.write(rw)
+	require.NoError(t, err, "expected to encode header successfully")
+
+	ctrlRand := test.NewControlledRand(t)
+	rw.Bytes()[ctrlRand.Intn(rw.Len())]++ // increment a random byte
+
+	decodedHeader := &blocksFileHeader{}
+	err = decodedHeader.read(rw)
+	require.Error(t, err, "expected to fail parsing a header with corrupt data")
 }
