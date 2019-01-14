@@ -1,10 +1,11 @@
-#!/bin/sh -x
+#!/bin/bash -x
 
 ulimit -S -n 20000
 
 source ./test.common.sh
 
-go test -timeout 7m ./... -failfast > test.out
+go test -timeout 7m ./... -failfast -v &> _out/test.out
+go-junit-report -set-exit-code < _out/test.out > _out/results.xml
 check_exit_code_and_report
 
 # this test must run separately since zero parallel package tests are allowed concurrently

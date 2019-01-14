@@ -1,10 +1,8 @@
 #!/bin/bash -xe
-export SKIP_TESTS=${SKIP_TESTS-false}
 export GIT_COMMIT=$(git rev-parse HEAD)
 export SEMVER=$(cat ./.version)
 
 docker build -f ./docker/build/Dockerfile.build \
-    --build-arg SKIP_TESTS=$SKIP_TESTS \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
     --build-arg SEMVER=$SEMVER \
     -t orbs:build .
