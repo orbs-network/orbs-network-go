@@ -25,24 +25,7 @@ jobs:
       - run: ./git-submodule-checkout.sh
       - run: ./.circleci/gopath.sh
       - run:
-          # remove logs if the test was successful for quicker feedback loop
-          # TODO filter for errors and save them regardless
-          command: |
-            cd /go/src/github.com/orbs-network/orbs-network-go/
-
-            ./test.flakiness.sh
-            EXIT_CODE=$?
-
-            sudo chown -R circleci:circleci _logs
-
-            if [ $EXIT_CODE != 0 ]; then
-              ./.circleci/upload-node-metrics.sh
-              find _logs/acceptance -type f -delete
-            else
-              ./.circleci/archive-logs.sh
-            fi
-
-            exit $EXIT_CODE
+          command: cd /go/src/github.com/orbs-network/orbs-network-go/ && ./test.flakiness.sh
           no_output_timeout: 25m
       - store_artifacts:
           path: /go/src/github.com/orbs-network/orbs-network-go/_logs
@@ -101,8 +84,8 @@ workflows:
   build:
     jobs:
       - build
-#      - build-docker-image
-#      - flakiness
+      - build-docker-image
+      - flakiness
 #      - notify_github_about_dashboard
 #      - success:
 #          requires:
