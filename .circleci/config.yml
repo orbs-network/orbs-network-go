@@ -35,8 +35,8 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run:
-          command: SKIP_TESTS=true ./docker/build/build.sh
+      - run: ./docker/build/build.sh
+      - run: ./docker/test/test.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
