@@ -101,8 +101,8 @@ workflows:
   build:
     jobs:
       - build
-      - build-docker-image
-      - flakiness
+#      - build-docker-image
+#      - flakiness
 #      - notify_github_about_dashboard
 #      - success:
 #          requires:
