@@ -18,7 +18,7 @@ func TestCommitTransactionWithLeanHelix(t *testing.T) {
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 			contract := network.BenchmarkTokenContract()
-			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+			// leader is nodeIndex 0, validator is nodeIndex 1
 			_, txHash := contract.Transfer(ctx, 0, 17, 5, 6)
 
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
@@ -38,7 +38,7 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+		// leader is nodeIndex 0, validator is nodeIndex 1
 
 		_, txHash1 := contract.Transfer(ctx, 0, 17, 5, 6)
 		contract.InvalidTransfer(ctx, 0, 5, 6)
@@ -68,7 +68,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+		// leader is nodeIndex 0, validator is nodeIndex 1
 
 		pausedTxForwards := network.TransportTamperer().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		txHash := contract.TransferInBackground(ctx, 1, 17, 5, 6)
@@ -99,7 +99,7 @@ func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
 		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+		// leader is nodeIndex 0, validator is nodeIndex 1
 
 		txHash1 := contract.TransferInBackground(ctx, 0, 17, 5, 6)
 		txHash2 := contract.TransferInBackground(ctx, 0, 22, 5, 6)

@@ -13,7 +13,6 @@ import (
 func TestDeploysNativeContract(t *testing.T) {
 	harness.Network(t).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-		t.Log("testing", network.Description())
 		// in BC leader is nodeIndex 0, validator is nodeIndex 1, in LH leadership is randomized
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM

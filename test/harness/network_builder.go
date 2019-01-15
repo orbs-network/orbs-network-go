@@ -185,11 +185,10 @@ func (b *acceptanceTestNetworkBuilder) WithRequiredQuorumPercentage(percentage i
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer) *acceptanceNetwork {
+func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer) *acceptanceNetworkHarness {
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", b.numNodes))
-	description := fmt.Sprintf("network with %d nodes running %s", b.numNodes, consensusAlgo)
 
 	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 
@@ -209,12 +208,13 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
 	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
+	compiler := nativeProcessorAdapter.NewFakeCompiler()
 
-	network := &acceptanceNetwork{
+	network := &acceptanceNetworkHarness{
 		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
 		tamperingTransport: sharedTamperingTransport,
 		ethereumConnection: sharedEthereumSimulator,
-		description:        description,
+		fakeCompiler:       compiler,
 	}
 
 	for i := 0; i < b.numNodes; i++ {
@@ -226,7 +226,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodeAddress().String()))
 		blockStorageAdapter := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(nodeLogger, preloadedBlocks, metricRegistry)
 
-		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, nodeCfg, blockStorageAdapter, nativeProcessorAdapter.NewFakeCompiler(), sharedEthereumSimulator, metricRegistry, nodeLogger)
+		network.AddNode(fmt.Sprintf("%s", keyPair.PublicKey()[:3]), nodeCfg, blockStorageAdapter, compiler, sharedEthereumSimulator, metricRegistry, nodeLogger)
 	}
 
 	return network

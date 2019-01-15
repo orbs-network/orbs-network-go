@@ -16,8 +16,6 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
-		t.Log("testing", network.Description())
-
 		tx := builders.TransferTransaction()
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
 		require.Equal(t, protocol.REQUEST_STATUS_COMPLETED, resp.RequestResult().RequestStatus())
@@ -30,8 +28,6 @@ func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
 	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
-
-		t.Log("testing", network.Description())
 
 		tx := builders.Transaction().WithContract("UnknownContract")
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
@@ -46,8 +42,6 @@ func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
-		t.Log("testing", network.Description())
-
 		tx := builders.TransferTransaction().WithArgs("bad", "types", "of", "args")
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
 		require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, resp.RequestResult().RequestStatus())
@@ -61,8 +55,6 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
-		t.Log("testing", network.Description())
-
 		tx := builders.Transaction().WithMethod(primitives.ContractName("BenchmarkContract"), primitives.MethodName("throw")).WithArgs()
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
 		require.Equal(t, protocol.REQUEST_STATUS_COMPLETED, resp.RequestResult().RequestStatus())
@@ -75,8 +67,6 @@ func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
 	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
-
-		t.Log("testing", network.Description())
 
 		tx := builders.Transaction().WithProtocolVersion(9999999)
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
