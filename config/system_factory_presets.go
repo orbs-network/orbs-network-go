@@ -16,6 +16,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2*time.Second)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 4*time.Second)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 	cfg.SetDuration(TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY, 1*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 100)
@@ -76,6 +77,7 @@ func ForE2E(
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 250*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 500*time.Millisecond)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 	cfg.SetDuration(TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY, 100*time.Millisecond) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 100)
@@ -110,6 +112,7 @@ func ForAcceptanceTestNetwork(
 	// TODO v1 How to express relations between config properties https://tree.taiga.io/project/orbs-network/us/647
 	// LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL should be less than BLOCK_SYNC_INTERVAL, or else node-sync will be triggered unnecessarily
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 100*time.Millisecond)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetDuration(TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY, 10*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
@@ -140,6 +143,7 @@ func ForGamma(
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1000*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 1*time.Second)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 	cfg.SetDuration(TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY, 500*time.Millisecond) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 100)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
