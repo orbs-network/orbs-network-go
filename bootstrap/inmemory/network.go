@@ -52,13 +52,13 @@ func NewNetworkWithNumOfNodes(
 		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
 		compiler, ethereumConnection, metricRegistry, blockPersistence := provider(cfg, nodeLogger)
 
-		network.AddNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
+		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
 	}
 
-	return network
+	return network // call network.CreateAndStartNodes to launch nodes in the network
 }
 
-func (n *Network) AddNode(name string, cfg config.NodeConfig, blockPersistence blockStorageAdapter.TamperingInMemoryBlockPersistence, compiler nativeProcessorAdapter.Compiler, ethereumConnection ethereumAdapter.EthereumConnection, metricRegistry metric.Registry, logger log.BasicLogger) {
+func (n *Network) addNode(name string, cfg config.NodeConfig, blockPersistence blockStorageAdapter.TamperingInMemoryBlockPersistence, compiler nativeProcessorAdapter.Compiler, ethereumConnection ethereumAdapter.EthereumConnection, metricRegistry metric.Registry, logger log.BasicLogger) {
 
 	node := &Node{}
 	node.index = len(n.Nodes)
@@ -97,12 +97,12 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 	}
 }
 
-func (n *Network) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
-	return n.Nodes[nodeIndex].GetTransactionPoolBlockHeightTracker()
-}
-
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
 	return n.Nodes[nodeIndex].nodeLogic.PublicApi()
+}
+
+func (n *Network) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
+	return n.Nodes[nodeIndex].GetTransactionPoolBlockHeightTracker()
 }
 
 func (n *Network) BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {

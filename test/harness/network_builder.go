@@ -225,7 +225,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		fakeCompiler:       sharedCompiler,
 	}
 
-	return harness
+	return harness // call harness.Start() to launch nodes in the network
 }
 
 func makeFormattingOutput(testId string) log.Output {
