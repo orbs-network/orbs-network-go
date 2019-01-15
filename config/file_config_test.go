@@ -17,11 +17,11 @@ func TestFileConfigConstructor(t *testing.T) {
 }
 
 func TestFileConfigSetUint32(t *testing.T) {
-	cfg, err := newEmptyFileConfig(`{"block-sync-batch-size": 999}`)
+	cfg, err := newEmptyFileConfig(`{"block-sync-num-blocks-in-batch": 999}`)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
-	require.EqualValues(t, 999, cfg.BlockSyncBatchSize())
+	require.EqualValues(t, 999, cfg.BlockSyncNumBlocksInBatch())
 }
 
 func TestFileConfigSetDuration(t *testing.T) {
@@ -53,7 +53,7 @@ func TestSetNodePrivateKey(t *testing.T) {
 }
 
 func TestSetBenchmarkConsensusConstantLeader(t *testing.T) {
-	cfg, err := newEmptyFileConfig(`{"constant-consensus-leader": "d27e2e7398e2582f63d0800330010b3e58952ff6"}`)
+	cfg, err := newEmptyFileConfig(`{"benchmark-consensus-constant-leader": "d27e2e7398e2582f63d0800330010b3e58952ff6"}`)
 
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(1)
 
@@ -135,11 +135,11 @@ func TestMergeWithFileConfig(t *testing.T) {
 
 	cfg.MergeWithFileConfig(`
 {
-	"block-sync-batch-size": 999,
+	"block-sync-num-blocks-in-batch": 999,
 	"block-sync-collect-response-timeout": "10m",
 	"node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
 	"node-private-key": "901a1a0bfbe217593062a054e561e708707cb814a123474c25fd567a0fe088f8",
-	"constant-consensus-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+	"benchmark-consensus-constant-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
 	"active-consensus-algo": 999,
 	"gossip-port": 4500,
 	"federation-nodes": [

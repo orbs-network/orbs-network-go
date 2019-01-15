@@ -17,6 +17,7 @@ type NodeConfig interface {
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	GossipPeers(asOfBlock uint64) map[string]GossipPeer
+	TransactionExpirationWindow() time.Duration
 
 	// consensus
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
@@ -31,13 +32,11 @@ type NodeConfig interface {
 	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 
 	// block storage
-	BlockSyncBatchSize() uint32
+	BlockSyncNumBlocksInBatch() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
-	BlockTransactionReceiptQueryGraceStart() time.Duration
-	BlockTransactionReceiptQueryGraceEnd() time.Duration
-	BlockTransactionReceiptQueryExpirationWindow() time.Duration
+	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	BlockStorageFileSystemDataDir() string
 	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 
@@ -54,7 +53,6 @@ type NodeConfig interface {
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
-	TransactionPoolTransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
@@ -107,13 +105,12 @@ type mutableNodeConfig interface {
 
 type BlockStorageConfig interface {
 	NodeAddress() primitives.NodeAddress
-	BlockSyncBatchSize() uint32
+	BlockSyncNumBlocksInBatch() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
-	BlockTransactionReceiptQueryGraceStart() time.Duration
-	BlockTransactionReceiptQueryGraceEnd() time.Duration
-	BlockTransactionReceiptQueryExpirationWindow() time.Duration
+	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
+	TransactionExpirationWindow() time.Duration
 }
 
 type FilesystemBlockPersistenceConfig interface {
@@ -158,7 +155,7 @@ type TransactionPoolConfig interface {
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
 	TransactionPoolPendingPoolSizeInBytes() uint32
-	TransactionPoolTransactionExpirationWindow() time.Duration
+	TransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
