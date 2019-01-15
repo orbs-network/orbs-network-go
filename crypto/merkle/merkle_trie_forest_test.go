@@ -10,6 +10,61 @@ import (
 	"testing"
 )
 
+func TestTrieNodeProof(t *testing.T) {
+	leftleft := &node{hash: hash.CalcSha256([]byte("left"))}
+	rightleaf := &node{hash: hash.CalcSha256([]byte("right"))}
+	tests := []struct {
+		name         string
+		n            *node
+		expectedSize int
+	}{
+		{"empty leaf node", &node{[]byte{}, primitives.Sha256{}, primitives.Sha256{}, nil, nil}, 2},
+		{"leaf node", &node{value: hash.CalcSha256([]byte("value"))}, 2},
+		{"node with left", &node{[]byte{}, primitives.Sha256{}, primitives.Sha256{}, leftleft, nil}, 3},
+		{"node with right", &node{[]byte{}, primitives.Sha256{}, primitives.Sha256{}, nil, rightleaf}, 3},
+		{"node with both", &node{[]byte{}, primitives.Sha256{}, primitives.Sha256{}, leftleft, rightleaf}, 3},
+	}
+	for i := range tests {
+		cTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
+		t.Run(cTest.name, func(t *testing.T) {
+			t.Parallel()
+			trieProof := generateNodeOrLeafProof(cTest.n)
+			require.Equal(t, cTest.expectedSize, len(trieProof), "%s proof node size mismatch", cTest.name)
+			//			require.Equal(t, cTest.keysize, tree.keySize, "tree max depth size error", cTest.name)
+		})
+	}
+}
+
+func TestFromBin(t *testing.T) {
+	tests := []struct {
+		name  string
+		bin   []byte
+		bytes [32]byte
+	}{
+		{"empty", []byte{}, [32]byte{}},
+		{"small non empty zero", []byte{0, 0, 0, 0, 0}, [32]byte{}},
+		{"large non empty zero", []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, [32]byte{}},
+		{"small 1", []byte{0, 0, 0, 0, 0, 0, 0, 1}, [32]byte{1}},
+		{"large 1", []byte{0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, [32]byte{1}},
+		{"small 16", []byte{0, 0, 0, 1}, [32]byte{16}},
+		{"large 16", []byte{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, [32]byte{16}},
+		{"small2 2", []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, [32]byte{0, 2}},
+		{"large2 2", []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, [32]byte{0, 2}},
+		{"large3", []byte{0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0}, [32]byte{1, 2, 5, 9}},
+	}
+	for i := range tests {
+		cTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
+		t.Run(cTest.name, func(t *testing.T) {
+			t.Parallel()
+			b := fromBin(cTest.bin)
+			require.Len(t, b, 32, "%s failed size", cTest.name)
+			for i := 0; i < 32; i++ {
+				require.Equal(t, cTest.bytes[i], b[i], "%s failed at byte %d", cTest.name, i)
+			}
+		})
+	}
+}
+
 func TestRootManagement(t *testing.T) {
 	f, _ := NewForest()
 
@@ -85,6 +140,11 @@ func TestValidProofForMissingKey(t *testing.T) {
 	proof := generalKeyGetProofRequireHeight(t, f, root, key, 1)
 	generalKeyVerifyProof(t, f, root, proof, key, "", true)
 	generalKeyVerifyProof(t, f, root, proof, key, "non-zero", false)
+
+	root1 := generalKeyUpdateEntries(f, root, "abcdef", "val")
+	proof = generalKeyGetProofRequireHeight(t, f, root1, key, 1)
+	generalKeyVerifyProof(t, f, root1, proof, key, "", true)
+	generalKeyVerifyProof(t, f, root1, proof, key, "non-zero", false)
 }
 
 func TestUpdateTrieFailsForMissingBaseNode(t *testing.T) {

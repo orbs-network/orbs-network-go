@@ -8,7 +8,9 @@ import (
 	"sync"
 )
 
-// TrieProof code
+/*
+ * TrieProof code
+ */
 type TrieProofNode [][]byte
 type TrieProof []TrieProofNode
 
@@ -20,6 +22,18 @@ func (pn TrieProofNode) path() []byte {
 }
 func (pn TrieProofNode) value() []byte {
 	return pn[1]
+}
+func (pn TrieProofNode) getChild(c byte) []byte {
+	if len(pn) == 2 {
+		return primitives.Sha256{}
+	} else if c == 0 {
+		return pn[1]
+	} else {
+		return pn[2]
+	}
+}
+func (pn TrieProofNode) getKeySize() int {
+	return int(pn[1][0])
 }
 
 func generateNodeOrLeafProof(n *node) TrieProofNode {
@@ -34,8 +48,8 @@ func generateLeafProof(n *node) TrieProofNode {
 	res := make(TrieProofNode, 2)
 	res[0] = fromBin(n.path)
 	res[1] = make([]byte, hash.SHA256_HASH_SIZE_BYTES)
-	copy(res[1], n.value[0:hash.SHA256_HASH_SIZE_BYTES-1])
-	res[1][hash.SHA256_HASH_SIZE_BYTES-1] = byte(len(n.path))
+	copy(res[1], n.value)
+	res[1][0] = byte(len(n.path))
 	return res
 }
 
@@ -51,9 +65,9 @@ func generateNodeProof(n *node) TrieProofNode {
 func generateNodeChildHash(n *node, prefixSize byte) []byte {
 	res := make([]byte, hash.SHA256_HASH_SIZE_BYTES)
 	if n != nil {
-		copy(res, n.hash[0:hash.SHA256_HASH_SIZE_BYTES-1])
+		copy(res, n.hash)
 	}
-	res[hash.SHA256_HASH_SIZE_BYTES-1] = prefixSize
+	res[0] = prefixSize
 	return res
 }
 
@@ -74,7 +88,7 @@ func fromBin(s []byte) []byte {
 	}
 	leftover := len(s) - length
 	for i := 0; i < leftover; i++ {
-		res[fullbytes] = res[fullbytes] | s[length+i]<<uint(7-leftover)
+		res[fullbytes] = res[fullbytes] | s[length+i]<<uint(7-i)
 	}
 
 	return res
@@ -126,7 +140,7 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (TrieProof, e
 	proof := make(TrieProof, 0, 10)
 	proof = append(proof, generateNodeOrLeafProof(current))
 
-	path = toBin(path)
+	path = toBin(path, toBinSize(path))
 	for p := path; bytes.HasPrefix(p, current.path); {
 		p = p[len(current.path):]
 
@@ -145,19 +159,19 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (TrieProof, e
 }
 
 func (f *Forest) Verify(rootHash primitives.Sha256, proof TrieProof, path []byte, value primitives.Sha256) (bool, error) {
-	path = toBin(path)
+	path = toBin(path, toBinSize(path))
 	currentHash := rootHash
 	emptyMerkleHash := primitives.Sha256{}
 
 	for i, currentNode := range proof {
 		calcHash := currentNode.hash()
 		//calcHash[hash.SHA256_HASH_SIZE_BYTES-1] = byte(len(n.path))
-		if !calcHash[0:31].Equal(currentHash[0:31]) { // validate current node against expected hash
+		if !bytes.Equal(calcHash[1:31], currentHash[1:31]) { // validate current node against expected hash
 			return false, errors.Errorf("proof hash mismatch at node %d", i)
 		}
-		currentPath := toBin(currentNode[0])
+		currentPath := toBin(currentNode[0], currentNode.getKeySize())
 		if bytes.Equal(path, currentPath) {
-			return value.Equal(currentNode[1]), nil
+			return value.Equal(currentNode.value()), nil
 		}
 		if len(path) <= len(currentPath) {
 			return value.Equal(zeroValueHash), nil
@@ -166,13 +180,12 @@ func (f *Forest) Verify(rootHash primitives.Sha256, proof TrieProof, path []byte
 			return value.Equal(zeroValueHash), nil
 		}
 
-		if path[len(currentPath)] == 0 {
-			currentHash = currentNode[1]
-		} else if len(currentNode) == 3 {
-			currentHash = currentNode[2]
-		} else {
-			return false, errors.Errorf("proof terminated unexpectedly")
-		}
+		currentHash = currentNode.getChild(path[len(currentPath)])
+		//if path[len(currentPath)] == 0 {
+		//	currentHash = currentNode[1]
+		//} else if len(currentNode) == 3 {
+		//	currentHash = currentNode[2]
+		//}
 		path = path[len(currentPath)+1:]
 
 		if emptyMerkleHash.Equal(currentHash) {
@@ -219,7 +232,7 @@ func (f *Forest) Update(rootMerkle primitives.Sha256, diffs TrieDiffs) (primitiv
 	sandbox := make(dirtyNodes)
 
 	for _, diff := range diffs {
-		root = insert(diff.Value, nil, 0, root, toBin(diff.Key), sandbox)
+		root = insert(diff.Value, nil, 0, root, toBin(diff.Key, toBinSize(diff.Key)), sandbox)
 	}
 
 	root = collapseAndHash(root, sandbox, hashTrieNode)
@@ -235,17 +248,31 @@ func hashTrieNode(n *node) primitives.Sha256 {
 	return hash.CalcSha256(generateNodeOrLeafProof(n)...)
 }
 
-func toBin(s []byte) []byte {
-	bitsArray := make([]byte, len(s)*8)
-	for i, b := range s {
-		bitsArray[i*8] = 1 & (b >> 7)
-		bitsArray[i*8+1] = 1 & (b >> 6)
-		bitsArray[i*8+2] = 1 & (b >> 5)
-		bitsArray[i*8+3] = 1 & (b >> 4)
-		bitsArray[i*8+4] = 1 & (b >> 3)
-		bitsArray[i*8+5] = 1 & (b >> 2)
-		bitsArray[i*8+6] = 1 & (b >> 1)
-		bitsArray[i*8+7] = 1 & b
+func toBinSize(s []byte) int {
+	return len(s) * 8
+}
+func toBin(s []byte, size int) []byte {
+	bitsArray := make([]byte, size)
+	for i := 0; i < size; i++ {
+		b := s[i/8]
+		bitsArray[i] = 1 & (b >> uint(7-(i%8)))
+		//bitsArray[i+1] = 1 & (b >> 6)
+		//bitsArray[i+2] = 1 & (b >> 5)
+		//bitsArray[i+3] = 1 & (b >> 4)
+		//bitsArray[i+4] = 1 & (b >> 3)
+		//bitsArray[i+5] = 1 & (b >> 2)
+		//bitsArray[i+6] = 1 & (b >> 1)
+		//bitsArray[i+7] = 1 & b
 	}
+	//for i, b := range s {
+	//	bitsArray[i*8] = 1 & (b >> 7)
+	//	bitsArray[i*8+1] = 1 & (b >> 6)
+	//	bitsArray[i*8+2] = 1 & (b >> 5)
+	//	bitsArray[i*8+3] = 1 & (b >> 4)
+	//	bitsArray[i*8+4] = 1 & (b >> 3)
+	//	bitsArray[i*8+5] = 1 & (b >> 2)
+	//	bitsArray[i*8+6] = 1 & (b >> 1)
+	//	bitsArray[i*8+7] = 1 & b
+	//}
 	return bitsArray
 }
