@@ -56,7 +56,7 @@ func NewPublicApi(
 		logger:          logger.WithTags(LogTag),
 
 		waiter:  newWaiter(),
-		metrics: newMetrics(metricFactory, config.SendTransactionTimeout(), 2*time.Second, 1*time.Second),
+		metrics: newMetrics(metricFactory, config.PublicApiSendTransactionTimeout(), 2*time.Second, 1*time.Second),
 	}
 
 	transactionPool.RegisterTransactionResultsHandler(s)

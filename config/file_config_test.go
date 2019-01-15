@@ -52,14 +52,14 @@ func TestSetNodePrivateKey(t *testing.T) {
 	require.EqualValues(t, keyPair.PrivateKey(), cfg.NodePrivateKey())
 }
 
-func TestSetConstantConsensusLeader(t *testing.T) {
+func TestSetBenchmarkConsensusConstantLeader(t *testing.T) {
 	cfg, err := newEmptyFileConfig(`{"constant-consensus-leader": "d27e2e7398e2582f63d0800330010b3e58952ff6"}`)
 
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(1)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
-	require.EqualValues(t, keyPair.NodeAddress(), cfg.ConstantConsensusLeader())
+	require.EqualValues(t, keyPair.NodeAddress(), cfg.BenchmarkConsensusConstantLeader())
 }
 
 func TestSetActiveConsensusAlgo(t *testing.T) {

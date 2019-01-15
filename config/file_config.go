@@ -104,7 +104,7 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 
 		if key == "constant-consensus-leader" {
 			nodeAddress, err = hex.DecodeString(value.(string))
-			cfg.SetConstantConsensusLeader(primitives.NodeAddress(nodeAddress))
+			cfg.SetBenchmarkConsensusConstantLeader(primitives.NodeAddress(nodeAddress))
 			continue
 		}
 

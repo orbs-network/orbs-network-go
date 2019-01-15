@@ -19,29 +19,27 @@ type NodeConfig interface {
 	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 
 	// consensus
-	ConstantConsensusLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	ConsensusRequiredQuorumPercentage() uint32
-	ConsensusMinimumCommitteeSize() uint32
 
 	// Lean Helix consensus
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixConsensusMinimumCommitteeSize() uint32
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
+	BenchmarkConsensusRequiredQuorumPercentage() uint32
+	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 
 	// block storage
 	BlockSyncBatchSize() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
+	BlockSyncCollectChunksTimeout() time.Duration
 	BlockTransactionReceiptQueryGraceStart() time.Duration
 	BlockTransactionReceiptQueryGraceEnd() time.Duration
 	BlockTransactionReceiptQueryExpirationWindow() time.Duration
-	BlockSyncCollectChunksTimeout() time.Duration
-
-	// file system block storage
-	BlockStorageDataDir() string
-	BlockStorageMaxBlockSize() uint32
+	BlockStorageFileSystemDataDir() string
+	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 
 	// state storage
 	StateStorageHistorySnapshotNum() uint32
@@ -62,7 +60,7 @@ type NodeConfig interface {
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
-	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
+	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -70,7 +68,7 @@ type NodeConfig interface {
 	GossipNetworkTimeout() time.Duration
 
 	// public api
-	SendTransactionTimeout() time.Duration
+	PublicApiSendTransactionTimeout() time.Duration
 
 	// processor
 	ProcessorArtifactPath() string
@@ -81,7 +79,7 @@ type NodeConfig interface {
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
 
-	// Logger
+	// logger
 	LoggerHttpEndpoint() string
 	LoggerBulkSize() uint32
 }
@@ -101,7 +99,7 @@ type mutableNodeConfig interface {
 	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
 	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
 	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
-	SetConstantConsensusLeader(key primitives.NodeAddress) mutableNodeConfig
+	SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
 	Clone() mutableNodeConfig
@@ -119,8 +117,8 @@ type BlockStorageConfig interface {
 }
 
 type FilesystemBlockPersistenceConfig interface {
-	BlockStorageDataDir() string
-	BlockStorageMaxBlockSize() uint32
+	BlockStorageFileSystemDataDir() string
+	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 	VirtualChainId() primitives.VirtualChainId
 }
 
@@ -138,12 +136,12 @@ type ConsensusContextConfig interface {
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
-	ConsensusMinimumCommitteeSize() uint32
+	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 }
 
 type PublicApiConfig interface {
-	SendTransactionTimeout() time.Duration
+	PublicApiSendTransactionTimeout() time.Duration
 	VirtualChainId() primitives.VirtualChainId
 }
 
@@ -166,7 +164,7 @@ type TransactionPoolConfig interface {
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
-	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
+	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
 }
 
 type FederationNode interface {
