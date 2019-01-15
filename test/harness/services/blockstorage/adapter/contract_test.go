@@ -18,6 +18,9 @@ import (
 )
 
 func withEachAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.BlockPersistence)) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	adapters := []*adapterUnderTest{
 		newInMemoryAdapter(),
 		newFilesystemAdapter(),

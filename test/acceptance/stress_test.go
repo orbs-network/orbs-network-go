@@ -22,7 +22,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 			"FORK!! block already in storage, transaction block header mismatch", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Duplicate(AnyNthMessage(7))
@@ -37,7 +37,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
@@ -52,7 +52,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
-		WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Delay(func() time.Duration {
@@ -64,7 +64,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(3).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	harness.Network(t).WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 		t.Skip("this test causes the system to hang, seems like consensus algo stops")
 		ctrlRand := test.NewControlledRand(t)
 
