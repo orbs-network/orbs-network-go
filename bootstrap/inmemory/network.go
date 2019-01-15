@@ -9,13 +9,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -41,7 +41,7 @@ type Node struct {
 	index                             int
 	name                              string
 	config                            config.NodeConfig
-	blockPersistence                  blockStorageAdapter.InMemoryBlockPersistence
+	blockPersistence                  blockStorageAdapter.TamperingInMemoryBlockPersistence
 	statePersistence                  harnessStateStorageAdapter.DumpingStatePersistence
 	stateBlockHeightTracker           *synchronization.BlockTracker
 	transactionPoolBlockHeightTracker *synchronization.BlockTracker
@@ -58,7 +58,7 @@ func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
 func (n *Network) AddNode(
 	nodeKeyPair *keys.EcdsaSecp256K1KeyPair,
 	cfg config.NodeConfig,
-	blockPersistence blockStorageAdapter.InMemoryBlockPersistence,
+	blockPersistence blockStorageAdapter.TamperingInMemoryBlockPersistence,
 	compiler nativeProcessorAdapter.Compiler,
 	ethereumConnection ethereumAdapter.EthereumConnection,
 	metricRegistry metric.Registry,
@@ -135,7 +135,7 @@ func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
 	return n.Nodes[nodeIndex].nodeLogic.PublicApi()
 }
 
-func (n *Network) GetBlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
+func (n *Network) GetBlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {
 	return n.Nodes[nodeIndex].blockPersistence
 }
 

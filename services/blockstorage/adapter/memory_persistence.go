@@ -1,14 +1,9 @@
 package adapter
 
 import (
-	"context"
-	"fmt"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -16,85 +11,46 @@ import (
 	"unsafe"
 )
 
-type InMemoryBlockPersistence interface {
-	adapter.BlockPersistence
-	FailNextBlocks()
-	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
-}
-
 type blockHeightChan chan primitives.BlockHeight
 
-type metrics struct {
+type memMetrics struct {
 	size *metric.Gauge
 }
 
-type inMemoryBlockPersistence struct {
+type aChainOfBlocks struct {
+	sync.RWMutex
+	blocks []*protocol.BlockPairContainer
+}
+
+type InMemoryBlockPersistence struct {
 	blockChain struct {
 		sync.RWMutex
 		blocks []*protocol.BlockPairContainer
 	}
 
-	failNextBlocks bool
-	tracker        *synchronization.BlockTracker
-	logger         log.BasicLogger
+	tracker *synchronization.BlockTracker
+	logger  log.BasicLogger
 
-	blockHeightsPerTxHash struct {
-		sync.Mutex
-		channels map[string]blockHeightChan
-	}
-
-	metrics *metrics
+	metrics *memMetrics
 }
 
-func newMetrics(m metric.Factory) *metrics {
-	return &metrics{
-		size: m.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInBytes"),
-	}
-}
-
-func NewInMemoryBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory) InMemoryBlockPersistence {
-	return NewInMemoryBlockPersistenceWithBlocks(parent, nil, metricFactory)
-}
-
-func NewInMemoryBlockPersistenceWithBlocks(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) InMemoryBlockPersistence {
+func NewInMemoryBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory) *InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
-	p := &inMemoryBlockPersistence{
-		failNextBlocks: false,
-		logger:         logger,
-		metrics:        newMetrics(metricFactory),
-		tracker:        synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
-		blockChain: struct {
-			sync.RWMutex
-			blocks []*protocol.BlockPairContainer
-		}{blocks: preloadedBlocks},
-	}
-
-	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
-
-	for _, bpc := range preloadedBlocks {
-		p.advertiseAllTransactions(bpc.TransactionsBlock)
+	p := &InMemoryBlockPersistence{
+		logger:     logger,
+		metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInBytes")},
+		tracker:    synchronization.NewBlockTracker(logger, 0, 5),
+		blockChain: aChainOfBlocks{},
 	}
 
 	return p
 }
 
-func (bp *inMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
+func (bp *InMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
 	return bp.tracker
 }
 
-func (bp *inMemoryBlockPersistence) WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
-	ch := bp.getChanFor(txHash)
-
-	select {
-	case h := <-ch:
-		return h
-	case <-ctx.Done():
-		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
-		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
-	}
-}
-
-func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
+func (bp *InMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
@@ -106,17 +62,14 @@ func (bp *inMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer
 	return bp.blockChain.blocks[count-1], nil
 }
 
-func (bp *inMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
+func (bp *InMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
 	return primitives.BlockHeight(len(bp.blockChain.blocks)), nil
 }
 
-func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
-	if bp.failNextBlocks {
-		return errors.New("could not write a block")
-	}
+func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 
 	added, err := bp.validateAndAddNextBlock(blockPair)
 	if err != nil || !added {
@@ -126,12 +79,10 @@ func (bp *inMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 	bp.tracker.IncrementTo(blockPair.ResultsBlock.Header.BlockHeight())
 	bp.metrics.size.Add(sizeOfBlock(blockPair))
 
-	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
-
 	return nil
 }
 
-func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
 	bp.blockChain.Lock()
 	defer bp.blockChain.Unlock()
 
@@ -147,7 +98,7 @@ func (bp *inMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	return true, nil
 }
 
-func (bp *inMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {
+func (bp *InMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {
 
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
@@ -175,7 +126,7 @@ func (bp *inMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBl
 	return nil, 0, nil
 }
 
-func (bp *inMemoryBlockPersistence) getBlockPairAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+func (bp *InMemoryBlockPersistence) getBlockPairAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
@@ -186,7 +137,7 @@ func (bp *inMemoryBlockPersistence) getBlockPairAtHeight(height primitives.Block
 	return bp.blockChain.blocks[height-1], nil
 }
 
-func (bp *inMemoryBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+func (bp *InMemoryBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
 	blockPair, err := bp.getBlockPairAtHeight(height)
 	if err != nil {
 		return nil, err
@@ -194,7 +145,7 @@ func (bp *inMemoryBlockPersistence) GetTransactionsBlock(height primitives.Block
 	return blockPair.TransactionsBlock, nil
 }
 
-func (bp *inMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
+func (bp *InMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
 	blockPair, err := bp.getBlockPairAtHeight(height)
 	if err != nil {
 		return nil, err
@@ -202,35 +153,7 @@ func (bp *inMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeigh
 	return blockPair.ResultsBlock, nil
 }
 
-func (bp *inMemoryBlockPersistence) FailNextBlocks() {
-	bp.failNextBlocks = true
-}
-
-// Is covered by the mutex in WriteNextBlock
-func (bp *inMemoryBlockPersistence) getChanFor(txHash primitives.Sha256) blockHeightChan {
-	bp.blockHeightsPerTxHash.Lock()
-	defer bp.blockHeightsPerTxHash.Unlock()
-
-	ch, ok := bp.blockHeightsPerTxHash.channels[txHash.KeyForMap()]
-	if !ok {
-		ch = make(blockHeightChan, 1)
-		bp.blockHeightsPerTxHash.channels[txHash.KeyForMap()] = ch
-	}
-
-	return ch
-}
-
-func (bp *inMemoryBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
-	for _, tx := range block.SignedTransactions {
-		txHash := digest.CalcTxHash(tx.Transaction())
-		bp.logger.Info("advertising transaction completion", log.Transaction(txHash), log.BlockHeight(block.Header.BlockHeight()))
-		ch := bp.getChanFor(txHash)
-		ch <- block.Header.BlockHeight() // this will panic with "send on closed channel" if the same tx is added twice to blocks (duplicate tx hash!!)
-		close(ch)
-	}
-}
-
-func (bp *inMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
+func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f CursorFunc) error {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 

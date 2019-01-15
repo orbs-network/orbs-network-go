@@ -1,4 +1,4 @@
-package adapter
+package test
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -191,7 +190,7 @@ type adapterUnderTest struct {
 func newInMemoryAdapter() *adapterUnderTest {
 	return &adapterUnderTest{
 		name:    "In Memory Adapter",
-		adapter: NewInMemoryBlockPersistence(log.GetLogger(), metric.NewRegistry()),
+		adapter: adapter.NewInMemoryBlockPersistence(log.GetLogger(), metric.NewRegistry()),
 		cleanup: func() {},
 	}
 }
@@ -199,7 +198,7 @@ func newInMemoryAdapter() *adapterUnderTest {
 func newFilesystemAdapter() *adapterUnderTest {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	conf := newLocalConfig()
+	conf := newTempFileConfig()
 	cleanup := func() {
 		cancel()
 		_ = os.RemoveAll(conf.BlockStorageDataDir()) // ignore errors - nothing to do
@@ -215,29 +214,4 @@ func newFilesystemAdapter() *adapterUnderTest {
 		adapter: persistence,
 		cleanup: cleanup,
 	}
-}
-
-type localConfig struct {
-	dir string
-}
-
-func newLocalConfig() *localConfig {
-	dirName, err := ioutil.TempDir("", "contract_test_block_persist")
-	if err != nil {
-		panic(err)
-	}
-	return &localConfig{
-		dir: dirName,
-	}
-}
-func (l *localConfig) BlockStorageDataDir() string {
-	return l.dir
-}
-
-func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
-	return 64 * 1024 * 1024
-}
-
-func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
-	return 0xFF
 }

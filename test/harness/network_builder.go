@@ -7,11 +7,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -144,7 +144,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 	}
 }
 
-func extractBlocks(blocks blockStorageAdapter.InMemoryBlockPersistence) []*protocol.BlockPairContainer {
+func extractBlocks(blocks blockStorageAdapter.TamperingInMemoryBlockPersistence) []*protocol.BlockPairContainer {
 	lastBlock, err := blocks.GetLastBlock()
 	if err != nil {
 		panic(errors.Wrapf(err, "spawn network: failed reading block height"))
@@ -224,7 +224,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 
 		metricRegistry := metric.NewRegistry()
 		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodeAddress().String()))
-		blockStorageAdapter := blockStorageAdapter.NewInMemoryBlockPersistenceWithBlocks(nodeLogger, preloadedBlocks, metricRegistry)
+		blockStorageAdapter := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(nodeLogger, preloadedBlocks, metricRegistry)
 
 		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, nodeCfg, blockStorageAdapter, nativeProcessorAdapter.NewFakeCompiler(), sharedEthereumSimulator, metricRegistry, nodeLogger)
 	}

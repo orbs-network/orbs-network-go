@@ -5,10 +5,10 @@ import (
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -20,7 +20,7 @@ type TestNetworkDriver interface {
 	TransportTamperer() testGossipAdapter.Tamperer
 	EthereumSimulator() *ethereumAdapter.EthereumSimulator
 	Description() string
-	BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence
+	BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence
 	DumpState()
 	WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int)
 	GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker
@@ -60,7 +60,7 @@ func (n *acceptanceNetwork) EthereumSimulator() *ethereumAdapter.EthereumSimulat
 	return n.ethereumConnection
 }
 
-func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.InMemoryBlockPersistence {
+func (n *acceptanceNetwork) BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {
 	return n.GetBlockPersistence(nodeIndex)
 }
 

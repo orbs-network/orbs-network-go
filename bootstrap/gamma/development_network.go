@@ -6,11 +6,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
@@ -45,7 +45,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, metricRe
 		)
 
 		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))
-		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
+		blockPersistence := adapter.NewTamperingInMemoryBlockPersistence(nodeLogger, nil, metricRegistry)
 		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
 		ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(cfg, logger)
 
