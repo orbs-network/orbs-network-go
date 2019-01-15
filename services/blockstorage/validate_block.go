@@ -138,6 +138,10 @@ func (s *service) notifyConsensusAlgos(
 			PrevCommittedBlockPair: prevBlockPair,
 		})
 
+		if err != nil {
+			s.logger.Info("HandleBlockConsensus() failed: ", log.Error(err))
+		}
+
 		if verifyMode && err == nil {
 			verifiedCount++
 		}

@@ -105,18 +105,18 @@ func NewLeanHelixConsensusAlgo(
 		Logger:          NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
-	logger.Info("NewLeanHelixConsensusAlgo() run NewLeanHelix()")
+	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix() (not starting its goroutine yet)")
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		ctxLH := trace.NewContext(ctx, "LeanHelix.Run")
 		supervised.GoForever(ctx, logger, func() {
-			parentLogger.Info("LeanHelix is active consensus algo: go routine starts")
+			parentLogger.Info("LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctxLH)
 		})
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
-		parentLogger.Info("LeanHelix is not the active consensus algo so not running its go routine, only registering for block validation")
+		parentLogger.Info("LeanHelix is not the active consensus algo so not starting its goroutine, only registering for block validation")
 	}
 	// LeanHelix can be used as handler to validateBlocks without actively running consensus rounds
 	blockStorage.RegisterConsensusBlocksHandler(s)
@@ -135,13 +135,14 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	var lhBlock lh.Block
 
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
-		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
+		return nil, errors.Errorf("LeanHelix: handler received unsupported block type %s", blockType)
 	}
 
 	// validate the lhBlock consensus (lhBlock and proof)
 	if shouldValidate(input.Mode) {
 		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
 		if err != nil {
+			s.logger.Info("LeanHelix: HandleBlockConsensus() failed", log.Error(err))
 			return nil, err
 		}
 	}

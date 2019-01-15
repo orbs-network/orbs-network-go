@@ -127,33 +127,37 @@ func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 		return err
 	}
 
+	if err := validLeanHelixBlockPair(prevBlockPair); err != nil {
+		return err
+	}
+
 	blockProof := blockPair.TransactionsBlock.BlockProof.LeanHelix()
 	prevBlockProof := prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
 
-	isBlockProofValid := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, prevBlockProof)
-	if !isBlockProofValid {
-		return errors.Errorf("LeanHelix ValidateBlockConsensus - block proof is not valid!!")
+	err := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, prevBlockProof)
+	if err != nil {
+		return errors.Wrap(err, "LeanHelix: ValidateBlockConsensus() invalid blockProof")
 	}
 	return nil
 }
 
 func validLeanHelixBlockPair(blockPair *protocol.BlockPairContainer) error {
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		return errors.New("nil blockPair or its TransactionsBlock or ResultsBlock")
+		return errors.New("LeanHelix: nil blockPair or its TransactionsBlock or ResultsBlock")
 	}
 	if blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
-		return errors.New("nil block proof")
+		return errors.New("LeanHelix: nil block proof")
 	}
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
-		return errors.Errorf("incorrect block proof type for transaction block: %v", blockPair.TransactionsBlock.BlockProof.Type())
+		return errors.Errorf("LeanHelix: incorrect block proof type for transaction block: %v", blockPair.TransactionsBlock.BlockProof.Type())
 	}
 	if !blockPair.ResultsBlock.BlockProof.IsTypeLeanHelix() {
-		return errors.Errorf("incorrect block proof type for results block: %v", blockPair.ResultsBlock.BlockProof.Type())
+		return errors.Errorf("LeanHelix: incorrect block proof type for results block: %v", blockPair.ResultsBlock.BlockProof.Type())
 	}
 	// same block proof in txBlock and rxBlock
 	if !bytes.Equal(blockPair.TransactionsBlock.BlockProof.LeanHelix(), blockPair.ResultsBlock.BlockProof.LeanHelix()) {
-		return errors.Errorf("TransactionsBlock LeanHelix block proof and  ResultsBlock LeanHelix block proof do not match")
+		return errors.Errorf("LeanHelix: TransactionsBlock LeanHelix block proof and  ResultsBlock LeanHelix block proof do not match")
 	}
 	return nil
 }

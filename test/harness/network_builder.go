@@ -50,9 +50,8 @@ func Network(f canFail) *acceptanceTestNetworkBuilder {
 
 	return n.
 		WithTestId(getCallerFuncName()).
-		WithNumNodes(2).
-		//WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
-		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+		WithNumNodes(4).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
 }
 
 func (b *acceptanceTestNetworkBuilder) WithLogFilters(filters ...log.Filter) *acceptanceTestNetworkBuilder {
