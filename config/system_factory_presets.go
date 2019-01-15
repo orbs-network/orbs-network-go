@@ -112,7 +112,7 @@ func ForAcceptanceTestNetwork(
 	// TODO v1 How to express relations between config properties https://tree.taiga.io/project/orbs-network/us/647
 	// LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL should be less than BLOCK_SYNC_INTERVAL, or else node-sync will be triggered unnecessarily
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 100*time.Millisecond)
-	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetDuration(TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY, 10*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)

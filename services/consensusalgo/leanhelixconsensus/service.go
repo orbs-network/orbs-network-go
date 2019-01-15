@@ -111,17 +111,15 @@ func NewLeanHelixConsensusAlgo(
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		ctxLH := trace.NewContext(ctx, "LeanHelix.Run")
 		supervised.GoForever(ctx, logger, func() {
-			parentLogger.Info("LeanHelix is active consensus algo: starting its goroutine")
+			parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctxLH)
 		})
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
-		parentLogger.Info("LeanHelix is not the active consensus algo so not starting its goroutine, only registering for block validation")
+		parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is not the active consensus algo so not starting its goroutine, only registering for block validation")
 	}
-	// LeanHelix can be used as handler to validateBlocks without actively running consensus rounds
+	// Do this even if not active consensus algo - LeanHelix can still be a handler to validateBlocks without actively running consensus rounds
 	blockStorage.RegisterConsensusBlocksHandler(s)
-
-	logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
 
 	return s
 }
