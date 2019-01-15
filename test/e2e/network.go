@@ -117,7 +117,7 @@ func cleanBlockStorage() {
 
 func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
 	os.MkdirAll(targetDir, os.ModePerm)
-	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "blocks")
+	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "blocks")
 	targetBlocksFilePath := filepath.Join(targetDir, "blocks")
 
 	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))
