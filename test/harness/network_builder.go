@@ -10,6 +10,7 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -192,13 +193,15 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 
 	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 
-	federationNodes := make(map[string]config.FederationNode)
+	federationNodes := map[string]config.FederationNode{}
+	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
 	for i := 0; i < int(b.numNodes); i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+		privateKeys[nodeAddress.KeyForMap()] = testKeys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
 	}
 
-	cfg := config.ForAcceptanceTestNetwork(
+	cfgTemplate := config.ForAcceptanceTestNetwork(
 		federationNodes,
 		leaderKeyPair.NodeAddress(),
 		consensusAlgo,
@@ -207,31 +210,22 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 	)
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, gossipAdapter.NewMemoryTransport(ctx, testLogger, federationNodes))
+	sharedCompiler := nativeProcessorAdapter.NewFakeCompiler()
 	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
-	compiler := nativeProcessorAdapter.NewFakeCompiler()
 
-	network := &acceptanceNetworkHarness{
-		Network:            inmemory.NewNetwork(testLogger, sharedTamperingTransport),
+	provider := func(nodeConfig config.NodeConfig, logger log.BasicLogger) (adapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.TamperingInMemoryBlockPersistence) {
+		metricRegistry := metric.NewRegistry()
+		blockStorageAdapter := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(logger, preloadedBlocks, metricRegistry)
+		return sharedCompiler, sharedEthereumSimulator, metricRegistry, blockStorageAdapter
+	}
+	harness := &acceptanceNetworkHarness{
+		Network:            *inmemory.NewNetworkWithNumOfNodes(ctx, federationNodes, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
 		tamperingTransport: sharedTamperingTransport,
 		ethereumConnection: sharedEthereumSimulator,
-		fakeCompiler:       compiler,
+		fakeCompiler:       sharedCompiler,
 	}
 
-	for i := 0; i < b.numNodes; i++ {
-		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(i)
-
-		nodeCfg := cfg.OverrideNodeSpecificValues(0, keyPair.NodeAddress(), keyPair.PrivateKey(), "")
-
-		metricRegistry := metric.NewRegistry()
-		nodeLogger := testLogger.WithTags(log.Node(nodeCfg.NodeAddress().String()))
-		blockStorageAdapter := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(nodeLogger, preloadedBlocks, metricRegistry)
-
-		network.AddNode(fmt.Sprintf("%s", keyPair.PublicKey()[:3]), nodeCfg, blockStorageAdapter, compiler, sharedEthereumSimulator, metricRegistry, nodeLogger)
-	}
-
-	return network
-
-	// must call network.Start(ctx) to actually start the nodes in the network
+	return harness
 }
 
 func makeFormattingOutput(testId string) log.Output {

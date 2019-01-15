@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -29,34 +28,32 @@ type Network struct {
 	Transport adapter.Transport
 }
 
-func NewNetwork(logger log.BasicLogger, transport adapter.Transport) Network {
-	return Network{Logger: logger, Transport: transport}
-}
+type foo func(nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.TamperingInMemoryBlockPersistence)
 
-func NewNetworkWithNumOfNodes(ctx context.Context, federation map[string]config.FederationNode, logger log.BasicLogger, cfgTemplate config.OverridableConfig,
-	metricRegistry metric.Registry, transport adapter.Transport) *Network {
+func NewNetworkWithNumOfNodes(
+	ctx context.Context,
+	federation map[string]config.FederationNode,
+	privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey,
+	parent log.BasicLogger,
+	cfgTemplate config.OverridableConfig,
+	transport adapter.Transport,
+	provider foo,
+) *Network {
 
 	network := &Network{
-		Logger:    logger,
+		Logger:    parent,
 		Transport: transport,
 	}
 
-	numNodes := len(federation)
+	for stringAddress, federationNode := range federation {
 
-	for i := 0; i < numNodes; i++ {
+		cfg := cfgTemplate.ForNode(federationNode.NodeAddress(), privateKeys[stringAddress])
 
-		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(i)
-		cfg := cfgTemplate.ForNode(keyPair.NodeAddress(), keyPair.PrivateKey())
+		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
+		compiler, ethereumConnection, metricRegistry, blockPersistence := provider(cfg, nodeLogger)
 
-		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))
-		blockPersistence := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(nodeLogger, nil, metricRegistry)
-		ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(cfg, logger)
-		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
-
-		network.AddNode(fmt.Sprintf("%s", keyPair.PublicKey()[:3]), cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
+		network.AddNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
 	}
-
-	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network
 
 	return network
 }
