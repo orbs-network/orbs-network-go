@@ -25,14 +25,15 @@ func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressI
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
+	count := 0
 	for {
 		response, _ := c.Transfer(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
 		if response.TransactionStatus() == protocol.TRANSACTION_STATUS_COMMITTED {
 			return
 		}
-
+		count++
 		if timeoutCtx.Err() != nil {
-			panic(errors.Wrapf(timeoutCtx.Err(), "timeout trying to deploy benchmark token contract. previous response was %+v", response.String()))
+			panic(errors.Wrapf(timeoutCtx.Err(), "timeout trying to deploy benchmark token contract. attempts: %d, previous response was %+v", count, response.String()))
 		}
 	}
 }
