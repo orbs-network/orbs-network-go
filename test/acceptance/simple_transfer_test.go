@@ -94,8 +94,15 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 }
 
 func requireBalanceInNodeEventually(ctx context.Context, t *testing.T, contract callcontract.BenchmarkTokenClient, expectedBalance uint64, forAddressIndex int, nodeIndex int, msgAndArguments ...interface{}) {
-	require.True(t, test.Eventually(3*time.Second, func() bool {
-		return expectedBalance == contract.GetBalance(ctx, nodeIndex, forAddressIndex)
+	require.True(t, test.Eventually(3*time.Second, func() (success bool) {
+		defer func() { // silence panics
+			if err := recover(); err != nil {
+				t.Log("silenced panic in eventually loop", err)
+				success = false
+			}
+		}()
+		success = expectedBalance == contract.GetBalance(ctx, nodeIndex, forAddressIndex)
+		return
 	}), msgAndArguments)
 }
 
