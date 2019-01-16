@@ -12,8 +12,9 @@ import (
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -28,7 +29,7 @@ type Network struct {
 	Transport adapter.Transport
 }
 
-type nodeDependencyProvider func(nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.TamperingInMemoryBlockPersistence)
+type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.BlockPersistence, stateStorageAdapter.StatePersistence)
 
 func NewNetworkWithNumOfNodes(
 	federation map[string]config.FederationNode,
@@ -49,21 +50,21 @@ func NewNetworkWithNumOfNodes(
 		cfg := cfgTemplate.ForNode(federationNode.NodeAddress(), privateKeys[stringAddress])
 
 		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
-		compiler, ethereumConnection, metricRegistry, blockPersistence := provider(cfg, nodeLogger)
+		compiler, ethereumConnection, metricRegistry, blockPersistence, stateAdapter := provider(len(network.Nodes), cfg, nodeLogger)
 
-		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
+		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, blockPersistence, stateAdapter, compiler, ethereumConnection, metricRegistry, nodeLogger)
 	}
 
 	return network // call network.CreateAndStartNodes to launch nodes in the network
 }
 
-func (n *Network) addNode(name string, cfg config.NodeConfig, blockPersistence blockStorageAdapter.TamperingInMemoryBlockPersistence, compiler nativeProcessorAdapter.Compiler, ethereumConnection ethereumAdapter.EthereumConnection, metricRegistry metric.Registry, logger log.BasicLogger) {
+func (n *Network) addNode(name string, cfg config.NodeConfig, blockPersistence blockStorageAdapter.BlockPersistence, statePersistence stateStorageAdapter.StatePersistence, compiler nativeProcessorAdapter.Compiler, ethereumConnection ethereumAdapter.EthereumConnection, metricRegistry metric.Registry, logger log.BasicLogger) {
 
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = name
 	node.config = cfg
-	node.StatePersistence = harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry, logger)
+	node.StatePersistence = statePersistence
 	node.StateBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
 	node.transactionPoolBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
 	node.BlockPersistence = blockPersistence
@@ -142,6 +143,29 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, builder *prot
 	}()
 }
 
+func (n *Network) GetTransactionStatus(ctx context.Context, txHash primitives.Sha256, nodeIndex int) *client.GetTransactionStatusResponse {
+	n.assertStarted(nodeIndex)
+
+	ch := make(chan *client.GetTransactionStatusResponse)
+	go func() {
+		defer close(ch)
+		publicApi := n.Nodes[nodeIndex].GetPublicApi()
+		output, err := publicApi.GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
+			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
+				TransactionRef: builders.TransactionRef().WithTxHash(txHash).Builder(),
+			}).Build(),
+		})
+		if output == nil {
+			panic(fmt.Sprintf("error calling method: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+		}
+		select {
+		case ch <- output.ClientResponse:
+		case <-ctx.Done():
+		}
+	}()
+	return <-ch
+}
+
 func (n *Network) RunQuery(ctx context.Context, builder *protocol.SignedQueryBuilder, nodeIndex int) *client.RunQueryResponse {
 	n.assertStarted(nodeIndex)
 
@@ -166,15 +190,6 @@ func (n *Network) RunQuery(ctx context.Context, builder *protocol.SignedQueryBui
 func (n *Network) assertStarted(nodeIndex int) {
 	if !n.Nodes[nodeIndex].Started() {
 		panic(fmt.Errorf("accessing a stopped node %d", nodeIndex))
-	}
-}
-
-func (n *Network) WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256) {
-	for _, node := range n.Nodes {
-		if node.Started() {
-			h := node.WaitForTransactionInState(ctx, txHash)
-			n.Logger.Info("WaitForTransactionInState found tx in state", log.BlockHeight(h), log.Node(node.name), log.Transaction(txHash))
-		}
 	}
 }
 

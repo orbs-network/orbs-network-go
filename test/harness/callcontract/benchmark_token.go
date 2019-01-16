@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"time"
 )
@@ -23,7 +24,10 @@ func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressI
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	c.API.WaitForTransactionInState(timeoutCtx, txHash)
+	response := c.API.GetTransactionStatus(timeoutCtx, txHash, 0)
+	for response.TransactionStatus() != protocol.TRANSACTION_STATUS_COMMITTED {
+		response = c.API.GetTransactionStatus(timeoutCtx, txHash, 0)
+	}
 }
 
 func (c *contractClient) Transfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {

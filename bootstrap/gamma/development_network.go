@@ -6,10 +6,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	blockPersistenceAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	statePersistenceAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -34,11 +35,12 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, metricRe
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 	)
 
-	provider := func(nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, adapter.TamperingInMemoryBlockPersistence) {
-		persistence := adapter.NewTamperingInMemoryBlockPersistence(logger, nil, metricRegistry)
+	provider := func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockPersistenceAdapter.BlockPersistence, statePersistenceAdapter.StatePersistence) {
+		blockPersistence := blockPersistenceAdapter.NewTamperingInMemoryBlockPersistence(logger, nil, metricRegistry)
 		compiler := nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, logger)
 		connection := ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, logger)
-		return compiler, connection, metricRegistry, persistence
+		state := statePersistenceAdapter.NewInMemoryStatePersistence(metricRegistry)
+		return compiler, connection, metricRegistry, blockPersistence, state
 	}
 	network := inmemory.NewNetworkWithNumOfNodes(federationNodes, federationKeys, logger, cfgTemplate, sharedTransport, provider)
 	network.CreateAndStartNodes(ctx, numNodes)
