@@ -89,7 +89,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	vctx := s.createValidationContext()
 	pov := &vmPreOrderValidator{vm: s.virtualMachine}
 
-	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolMaxWaitTimeForFullBlockCapacity())
+	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolTimeBetweenEmptyBlocks())
 	defer cancel()
 
 	runBatch := func() (*transactionBatch, error) {

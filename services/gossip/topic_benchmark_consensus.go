@@ -13,6 +13,7 @@ import (
 )
 
 func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.BenchmarkConsensusHandler) {
+	s.logger.Info("RegisterBenchmarkConsensusHandler()")
 	s.benchmarkConsensusHandlers = append(s.benchmarkConsensusHandlers, handler)
 }
 

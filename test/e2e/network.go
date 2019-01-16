@@ -16,7 +16,9 @@ import (
 
 var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant across all e2e tests since we deploy the contract only once
 
-const LOCAL_NETWORK_SIZE = 3
+// LOCAL_NETWORK_SIZE must remain identical to number of configured nodes in docker/test/e2e-config
+// Also Lean Helix consensus algo requires it to be >= 4 or it will panic
+const LOCAL_NETWORK_SIZE = 4
 const blockStorageDataDirPrefix = "/tmp/orbs/e2e"
 
 type inProcessE2ENetwork struct {
@@ -27,7 +29,7 @@ func newInProcessE2ENetwork() *inProcessE2ENetwork {
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 
-	return &inProcessE2ENetwork{bootstrapNetwork()}
+	return &inProcessE2ENetwork{bootstrapE2ENetwork()}
 }
 
 func (h *inProcessE2ENetwork) gracefulShutdownAndWipeDisk() {
@@ -39,7 +41,7 @@ func (h *inProcessE2ENetwork) gracefulShutdownAndWipeDisk() {
 	cleanBlockStorage()
 }
 
-func bootstrapNetwork() (nodes []bootstrap.Node) {
+func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 	firstRandomPort := test.RandomPort()
 
 	federationNodes := make(map[string]config.FederationNode)
@@ -90,7 +92,7 @@ func bootstrapNetwork() (nodes []bootstrap.Node) {
 				nodeKeyPair.PrivateKey(),
 				blockStorageDataDirPrefix)
 
-		deployBlockStorageFiles(cfg.BlockStorageDataDir(), logger)
+		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
 		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
 
@@ -115,7 +117,7 @@ func cleanBlockStorage() {
 
 func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
 	os.MkdirAll(targetDir, os.ModePerm)
-	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "blocks")
+	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "blocks")
 	targetBlocksFilePath := filepath.Join(targetDir, "blocks")
 
 	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))

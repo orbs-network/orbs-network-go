@@ -84,6 +84,8 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		var err error
 
 		switch value.(type) {
+		case bool:
+			cfg.SetBool(convertKeyName(key), value.(bool))
 		case float64:
 			numericValue, err = parseUint32(value.(float64))
 		case string:
@@ -102,9 +104,9 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 			cfg.SetDuration(convertKeyName(key), duration)
 		}
 
-		if key == "constant-consensus-leader" {
+		if key == "benchmark-consensus-constant-leader" {
 			nodeAddress, err = hex.DecodeString(value.(string))
-			cfg.SetConstantConsensusLeader(primitives.NodeAddress(nodeAddress))
+			cfg.SetBenchmarkConsensusConstantLeader(primitives.NodeAddress(nodeAddress))
 			continue
 		}
 

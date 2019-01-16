@@ -46,8 +46,10 @@ type Config interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixShowDebug() bool
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
 }
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
@@ -81,6 +83,7 @@ func NewLeanHelixConsensusAlgo(
 	// Configure to be ~5 times the minimum wait for transactions (consensus context)
 	electionTrigger := electiontrigger.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
 	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
+	instanceId := CalcInstanceId(config.NetworkType(), config.VirtualChainId())
 
 	s := &service{
 		com:           com,
@@ -93,24 +96,29 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	leanHelixConfig := &lh.Config{
+		InstanceId:      instanceId,
 		Communication:   com,
 		Membership:      membership,
 		BlockUtils:      provider,
 		KeyManager:      mgr,
 		ElectionTrigger: electionTrigger,
-		Logger:          NewLoggerWrapper(parentLogger, true),
+		Logger:          NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() run NewLeanHelix()")
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
-	// Note: LeanHelix could be used as handler to validateBlocks without actively running consensus rounds
-
-	supervised.GoForever(ctx, logger, func() {
-		parentLogger.Info("LeanHelix go routine starts")
-		s.leanHelix.Run(ctx)
-	})
-	gossip.RegisterLeanHelixHandler(s)
+	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
+		ctxLH := trace.NewContext(ctx, "LeanHelix.Run")
+		supervised.GoForever(ctx, logger, func() {
+			parentLogger.Info("LeanHelix is active consensus algo: go routine starts")
+			s.leanHelix.Run(ctxLH)
+		})
+		gossip.RegisterLeanHelixHandler(s)
+	} else {
+		parentLogger.Info("LeanHelix is not the active consensus algo so not running its go routine, only registering for block validation")
+	}
+	// LeanHelix can be used as handler to validateBlocks without actively running consensus rounds
 	blockStorage.RegisterConsensusBlocksHandler(s)
 
 	logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
@@ -143,7 +151,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		// if LeanHelix is not the active consensus do not update
 		//  Note: genesis case (nil) is special no lhBlockProof type - registered handlers cannot distinguish - should be handled here
 		if s.config.ActiveConsensusAlgo() != consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-			s.logger.Info("LeanHelix is not the active consensus algo, not starting its consensus loop - update")
+			s.logger.Info("LeanHelix is not the active consensus algo, not calling UpdateState()")
 			// TODO: maybe add output in this case? (change protos - HandleBlockConsensusOutput?)
 			return nil, nil
 		}

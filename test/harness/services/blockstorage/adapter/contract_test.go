@@ -18,6 +18,9 @@ import (
 )
 
 func withEachAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.BlockPersistence)) {
+	if testing.Short() {
+		t.Skip("Skipping contract tests in short mode")
+	}
 	adapters := []*adapterUnderTest{
 		newInMemoryAdapter(),
 		newFilesystemAdapter(),
@@ -199,7 +202,7 @@ func newFilesystemAdapter() *adapterUnderTest {
 	conf := newLocalConfig()
 	cleanup := func() {
 		cancel()
-		_ = os.RemoveAll(conf.BlockStorageDataDir()) // ignore errors - nothing to do
+		_ = os.RemoveAll(conf.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 	}
 
 	persistence, err := adapter.NewFilesystemBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())
@@ -227,11 +230,11 @@ func newLocalConfig() *localConfig {
 		dir: dirName,
 	}
 }
-func (l *localConfig) BlockStorageDataDir() string {
+func (l *localConfig) BlockStorageFileSystemDataDir() string {
 	return l.dir
 }
 
-func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+func (l *localConfig) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
 	return 64 * 1024 * 1024
 }
 

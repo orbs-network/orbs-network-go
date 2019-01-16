@@ -53,7 +53,7 @@ func (s *service) createValidationContext() *validationContext {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return &validationContext{
-		expiryWindow:                s.config.TransactionPoolTransactionExpirationWindow(),
+		expiryWindow:                s.config.TransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.mu.lastCommittedBlockTimestamp,
 		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:              s.config.VirtualChainId(),
