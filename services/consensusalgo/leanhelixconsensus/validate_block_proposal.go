@@ -76,7 +76,7 @@ func validateBlockProposalInternal(ctx context.Context, blockHeight lhprimitives
 
 	err = vctx.validateBlockHash(primitives.Sha256(blockHash), blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal blockHash mismatch")
+		vctx.logger.Error("ValidateBlockProposal blockHash mismatch", log.Error(err))
 		return false
 	}
 	vctx.logger.Info("ValidateBlockProposal passed", log.Int("block-height", int(newBlockHeight)))
