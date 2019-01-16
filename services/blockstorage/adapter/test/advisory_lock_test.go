@@ -17,12 +17,12 @@ func TestAdvisoryLock_AdapterTakesExclusiveLock_ConcurrentProcesses(t *testing.T
 	c := newTempFileConfig()
 	defer c.cleanDir()
 
-	waitFunc1 := createAdapterAndSleepInChildProcess(t, c.BlockStorageDataDir())
-	waitFunc2 := createAdapterAndSleepInChildProcess(t, c.BlockStorageDataDir())
+	waitFunc1 := createAdapterAndSleepInChildProcess(t, c.BlockStorageFileSystemDataDir())
+	waitFunc2 := createAdapterAndSleepInChildProcess(t, c.BlockStorageFileSystemDataDir())
 
 	requireOneFailOnePass(t, waitFunc1(), waitFunc2())
 
-	waitFunc3 := createAdapterAndSleepInChildProcess(t, c.BlockStorageDataDir())
+	waitFunc3 := createAdapterAndSleepInChildProcess(t, c.BlockStorageFileSystemDataDir())
 	require.NoError(t, waitFunc3(), "after locking process shuts down subsequent attempts should succeed")
 }
 

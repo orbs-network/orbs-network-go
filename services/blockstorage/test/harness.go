@@ -37,7 +37,7 @@ func (c *configForBlockStorageTests) NodeAddress() primitives.NodeAddress {
 	return c.nodeAddress
 }
 
-func (c *configForBlockStorageTests) BlockSyncBatchSize() uint32 {
+func (c *configForBlockStorageTests) BlockSyncNumBlocksInBatch() uint32 {
 	return c.syncBatchSize
 }
 
@@ -53,15 +53,11 @@ func (c *configForBlockStorageTests) BlockSyncCollectChunksTimeout() time.Durati
 	return c.syncCollectChunks
 }
 
-func (c *configForBlockStorageTests) BlockTransactionReceiptQueryGraceStart() time.Duration {
+func (c *configForBlockStorageTests) BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration {
 	return c.queryGraceStart
 }
 
-func (c *configForBlockStorageTests) BlockTransactionReceiptQueryGraceEnd() time.Duration {
-	return c.queryGraceEnd
-}
-
-func (c *configForBlockStorageTests) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
+func (c *configForBlockStorageTests) TransactionExpirationWindow() time.Duration {
 	return c.queryExpirationWindow
 }
 

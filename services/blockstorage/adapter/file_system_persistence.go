@@ -47,7 +47,7 @@ type FilesystemBlockPersistence struct {
 func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
-	codec := newCodec(conf.BlockStorageMaxBlockSize())
+	codec := newCodec(conf.BlockStorageFileSystemMaxBlockSizeInBytes())
 
 	file, blocksOffset, err := openBlocksFile(ctx, conf, logger)
 	if err != nil {
@@ -80,7 +80,7 @@ func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBl
 }
 
 func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, logger log.BasicLogger) (*os.File, int64, error) {
-	dir := conf.BlockStorageDataDir()
+	dir := conf.BlockStorageFileSystemDataDir()
 	filename := blocksFileName(conf)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -350,7 +350,7 @@ func (f *FilesystemBlockPersistence) blockFileName() string {
 }
 
 func blocksFileName(config config.FilesystemBlockPersistenceConfig) string {
-	return filepath.Join(config.BlockStorageDataDir(), blocksFilename)
+	return filepath.Join(config.BlockStorageFileSystemDataDir(), blocksFilename)
 }
 
 func closeSilently(file *os.File, logger log.BasicLogger) {

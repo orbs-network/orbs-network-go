@@ -56,7 +56,7 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 		return toSendTxOutput(addOutputToTxOutput(addResp)), nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, s.config.SendTransactionTimeout())
+	ctx, cancel := context.WithTimeout(ctx, s.config.PublicApiSendTransactionTimeout())
 	defer cancel()
 
 	obj, err := s.waiter.wait(ctx, waitResult)
