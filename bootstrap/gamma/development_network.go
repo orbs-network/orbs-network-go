@@ -40,7 +40,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, metricRe
 		connection := ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, logger)
 		return compiler, connection, metricRegistry, persistence
 	}
-	network := inmemory.NewNetworkWithNumOfNodes(ctx, federationNodes, federationKeys, logger, cfgTemplate, sharedTransport, provider)
+	network := inmemory.NewNetworkWithNumOfNodes(federationNodes, federationKeys, logger, cfgTemplate, sharedTransport, provider)
 	network.CreateAndStartNodes(ctx, numNodes)
 	return network
 }

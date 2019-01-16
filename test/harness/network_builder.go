@@ -121,7 +121,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 				b.setupFunc(networkCtx, network)
 			}
 
-			network.Start(networkCtx, b.numOfNodesToStart)
+			network.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
 
 			restart := func() TestNetworkDriver {
 				cancelNetwork()
@@ -132,7 +132,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 				networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
 				newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
 
-				newNetwork.Start(networkCtx, b.numOfNodesToStart)
+				newNetwork.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
 
 				return newNetwork
 			}
@@ -219,13 +219,13 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		return sharedCompiler, sharedEthereumSimulator, metricRegistry, blockStorageAdapter
 	}
 	harness := &acceptanceNetworkHarness{
-		Network:            *inmemory.NewNetworkWithNumOfNodes(ctx, federationNodes, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
+		Network:            *inmemory.NewNetworkWithNumOfNodes(federationNodes, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
 		tamperingTransport: sharedTamperingTransport,
 		ethereumConnection: sharedEthereumSimulator,
 		fakeCompiler:       sharedCompiler,
 	}
 
-	return harness // call harness.Start() to launch nodes in the network
+	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
 }
 
 func makeFormattingOutput(testId string) log.Output {

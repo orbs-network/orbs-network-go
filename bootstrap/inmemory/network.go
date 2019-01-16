@@ -28,16 +28,15 @@ type Network struct {
 	Transport adapter.Transport
 }
 
-type foo func(nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.TamperingInMemoryBlockPersistence)
+type nodeDependencyProvider func(nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.TamperingInMemoryBlockPersistence)
 
 func NewNetworkWithNumOfNodes(
-	ctx context.Context,
 	federation map[string]config.FederationNode,
 	privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey,
 	parent log.BasicLogger,
 	cfgTemplate config.OverridableConfig,
 	transport adapter.Transport,
-	provider foo,
+	provider nodeDependencyProvider,
 ) *Network {
 
 	network := &Network{
@@ -64,10 +63,10 @@ func (n *Network) addNode(name string, cfg config.NodeConfig, blockPersistence b
 	node.index = len(n.Nodes)
 	node.name = name
 	node.config = cfg
-	node.statePersistence = harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry, logger)
-	node.stateBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
+	node.StatePersistence = harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry, logger)
+	node.StateBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
 	node.transactionPoolBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
-	node.blockPersistence = blockPersistence
+	node.BlockPersistence = blockPersistence
 	node.nativeCompiler = compiler
 	node.ethereumConnection = ethereumConnection
 	node.metricRegistry = metricRegistry
@@ -84,9 +83,9 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			n.Transport,
-			node.blockPersistence,
-			node.statePersistence,
-			node.stateBlockHeightTracker,
+			node.BlockPersistence,
+			node.StatePersistence,
+			node.StateBlockHeightTracker,
 			node.transactionPoolBlockHeightTracker,
 			node.nativeCompiler,
 			n.Logger.WithTags(log.Node(node.name)),
@@ -94,27 +93,12 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.config,
 			node.ethereumConnection,
 		)
+		defer node.transactionPoolBlockHeightTracker.WaitForBlock(ctx, 1)
 	}
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
 	return n.Nodes[nodeIndex].nodeLogic.PublicApi()
-}
-
-func (n *Network) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
-	return n.Nodes[nodeIndex].GetTransactionPoolBlockHeightTracker()
-}
-
-func (n *Network) BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {
-	return n.Nodes[nodeIndex].blockPersistence
-}
-
-func (n *Network) GetStatePersistence(i int) harnessStateStorageAdapter.DumpingStatePersistence {
-	return n.Nodes[i].statePersistence
-}
-
-func (n *Network) Size() int {
-	return len(n.Nodes)
 }
 
 func (n *Network) SendTransaction(ctx context.Context, builder *protocol.SignedTransactionBuilder, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
@@ -191,20 +175,6 @@ func (n *Network) WaitForTransactionInState(ctx context.Context, txHash primitiv
 			h := node.WaitForTransactionInState(ctx, txHash)
 			n.Logger.Info("WaitForTransactionInState found tx in state", log.BlockHeight(h), log.Node(node.name), log.Transaction(txHash))
 		}
-	}
-}
-
-func (n *Network) WaitUntilReadyForTransactions(ctx context.Context) {
-	for _, node := range n.Nodes {
-		if node.Started() {
-			node.transactionPoolBlockHeightTracker.WaitForBlock(ctx, 1)
-		}
-	}
-}
-
-func (n *Network) DumpState() {
-	for i := range n.Nodes {
-		n.Logger.Info("state dump", log.Int("node", i), log.String("data", n.GetStatePersistence(i).Dump()))
 	}
 }
 
