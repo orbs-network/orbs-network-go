@@ -3,7 +3,9 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness"
+	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -80,8 +82,8 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 			t.Errorf("failed waiting for block on node 1: %s", err)
 		}
 
-		require.EqualValues(t, 0, contract.GetBalance(ctx, 0, 6), "initial getBalance result on leader")
-		require.EqualValues(t, 0, contract.GetBalance(ctx, 1, 6), "initial getBalance result on non leader")
+		requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 0, "expected to read initial getBalance result on leader")
+		requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 1, "expected to read initial getBalance result on non-leader")
 
 		pausedTxForwards.Release(ctx)
 		network.WaitForTransactionInNodeState(ctx, txHash, 0)
@@ -89,6 +91,12 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		network.WaitForTransactionInNodeState(ctx, txHash, 1)
 		require.EqualValues(t, 17, contract.GetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 	})
+}
+
+func requireBalanceInNodeEventually(ctx context.Context, t *testing.T, contract callcontract.BenchmarkTokenClient, expectedBalance uint64, forAddressIndex int, nodeIndex int, msgAndArguments ...interface{}) {
+	require.True(t, test.Eventually(3*time.Second, func() bool {
+		return expectedBalance == contract.GetBalance(ctx, nodeIndex, forAddressIndex)
+	}), msgAndArguments)
 }
 
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {

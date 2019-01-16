@@ -2,12 +2,14 @@ package callcontract
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -20,13 +22,18 @@ type BenchmarkTokenClient interface {
 }
 
 func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int) {
-	txHash := c.TransferInBackground(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
 	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	response := c.API.GetTransactionStatus(timeoutCtx, txHash, 0)
-	for response.TransactionStatus() != protocol.TRANSACTION_STATUS_COMMITTED {
-		response = c.API.GetTransactionStatus(timeoutCtx, txHash, 0)
+	for {
+		response, _ := c.Transfer(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
+		if response.TransactionStatus() == protocol.TRANSACTION_STATUS_COMMITTED {
+			return
+		}
+
+		if timeoutCtx.Err() != nil {
+			panic(errors.Wrapf(timeoutCtx.Err(), "timeout trying to deploy benchmark token contract. previous response was %+v", response.String()))
+		}
 	}
 }
 
@@ -72,5 +79,9 @@ func (c *contractClient) GetBalance(ctx context.Context, nodeIndex int, forAddre
 
 	out := c.API.RunQuery(ctx, query, nodeIndex)
 	argsArray := builders.PackedArgumentArrayDecode(out.QueryResult().RawOutputArgumentArrayWithHeader())
-	return argsArray.ArgumentsIterator().NextArguments().Uint64Value()
+	arguments := argsArray.ArgumentsIterator().NextArguments()
+	if !arguments.IsTypeUint64Value() {
+		panic(fmt.Sprintf("expected uint64 returned. found %s, in %s", arguments.String(), out.String()))
+	}
+	return arguments.Uint64Value()
 }

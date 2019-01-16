@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 	"math"
 )
 
@@ -102,9 +103,14 @@ func (n *Network) PublicApi(nodeIndex int) services.PublicApi {
 	return n.Nodes[nodeIndex].nodeLogic.PublicApi()
 }
 
+type sendTxResp struct {
+	res *services.SendTransactionOutput
+	err error
+}
+
 func (n *Network) SendTransaction(ctx context.Context, builder *protocol.SignedTransactionBuilder, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	n.assertStarted(nodeIndex)
-	ch := make(chan *client.SendTransactionResponse)
+	ch := make(chan sendTxResp)
 
 	transactionRequestBuilder := &client.SendTransactionRequestBuilder{SignedTransaction: builder}
 	txHash := digest.CalcTxHash(transactionRequestBuilder.SignedTransaction.Transaction.Build())
@@ -115,17 +121,19 @@ func (n *Network) SendTransaction(ctx context.Context, builder *protocol.SignedT
 		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
 			ClientRequest: transactionRequestBuilder.Build(),
 		})
-		if output == nil {
-			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
-		}
 
 		select {
-		case ch <- output.ClientResponse:
+		case ch <- sendTxResp{res: output, err: err}:
 		case <-ctx.Done():
+			ch <- sendTxResp{err: errors.Wrap(ctx.Err(), "aborted send tx")}
 		}
 	}()
 
-	return <-ch, txHash
+	out := <-ch
+	if out.res == nil {
+		panic(fmt.Sprintf("error in send transaction: %v", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+	}
+	return out.res.ClientResponse, txHash
 }
 
 func (n *Network) SendTransactionInBackground(ctx context.Context, builder *protocol.SignedTransactionBuilder, nodeIndex int) {
@@ -143,10 +151,15 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, builder *prot
 	}()
 }
 
+type getTxStatResp struct {
+	res *services.GetTransactionStatusOutput
+	err error
+}
+
 func (n *Network) GetTransactionStatus(ctx context.Context, txHash primitives.Sha256, nodeIndex int) *client.GetTransactionStatusResponse {
 	n.assertStarted(nodeIndex)
 
-	ch := make(chan *client.GetTransactionStatusResponse)
+	ch := make(chan getTxStatResp)
 	go func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
@@ -155,36 +168,46 @@ func (n *Network) GetTransactionStatus(ctx context.Context, txHash primitives.Sh
 				TransactionRef: builders.TransactionRef().WithTxHash(txHash).Builder(),
 			}).Build(),
 		})
-		if output == nil {
-			panic(fmt.Sprintf("error calling method: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
-		}
 		select {
-		case ch <- output.ClientResponse:
+		case ch <- getTxStatResp{res: output, err: err}:
 		case <-ctx.Done():
+			ch <- getTxStatResp{err: errors.Wrap(ctx.Err(), "aborted get tx status")}
 		}
 	}()
-	return <-ch
+	out := <-ch
+	if out.res == nil {
+		panic(fmt.Sprintf("error in get tx status: %v", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+	}
+	return out.res.ClientResponse
+}
+
+type runQueryResp struct {
+	res *services.RunQueryOutput
+	err error
 }
 
 func (n *Network) RunQuery(ctx context.Context, builder *protocol.SignedQueryBuilder, nodeIndex int) *client.RunQueryResponse {
 	n.assertStarted(nodeIndex)
 
-	ch := make(chan *client.RunQueryResponse)
+	ch := make(chan runQueryResp)
 	go func() {
 		defer close(ch)
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
 		output, err := publicApi.RunQuery(ctx, &services.RunQueryInput{
 			ClientRequest: (&client.RunQueryRequestBuilder{SignedQuery: builder}).Build(),
 		})
-		if output == nil {
-			panic(fmt.Sprintf("error calling method: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
-		}
+
 		select {
-		case ch <- output.ClientResponse:
+		case ch <- runQueryResp{res: output, err: err}:
 		case <-ctx.Done():
+			ch <- runQueryResp{err: errors.Wrap(ctx.Err(), "aborted run query")}
 		}
 	}()
-	return <-ch
+	out := <-ch
+	if out.res == nil {
+		panic(fmt.Sprintf("error in run query: %v", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+	}
+	return out.res.ClientResponse
 }
 
 func (n *Network) assertStarted(nodeIndex int) {
