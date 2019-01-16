@@ -46,6 +46,7 @@ type Config interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixShowDebug() bool
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
@@ -101,16 +102,17 @@ func NewLeanHelixConsensusAlgo(
 		BlockUtils:      provider,
 		KeyManager:      mgr,
 		ElectionTrigger: electionTrigger,
-		Logger:          NewLoggerWrapper(parentLogger, true),
+		Logger:          NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() run NewLeanHelix()")
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
+		ctxLH := trace.NewContext(ctx, "LeanHelix.Run")
 		supervised.GoForever(ctx, logger, func() {
 			parentLogger.Info("LeanHelix is active consensus algo: go routine starts")
-			s.leanHelix.Run(ctx)
+			s.leanHelix.Run(ctxLH)
 		})
 		gossip.RegisterLeanHelixHandler(s)
 	} else {

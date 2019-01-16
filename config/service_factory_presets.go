@@ -32,6 +32,7 @@ func ForConsensusContextTests(federationNodes map[string]FederationNode) Consens
 	cfg := emptyConfig()
 
 	cfg.SetUint32(PROTOCOL_VERSION, 1)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(NETWORK_TYPE, uint32(protocol.NETWORK_TYPE_TEST_NET))
 	cfg.SetUint32(CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)

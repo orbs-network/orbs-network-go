@@ -20,6 +20,7 @@ type NodeConfigValue struct {
 	Uint32Value   uint32
 	DurationValue time.Duration
 	StringValue   string
+	BoolValue     bool
 }
 
 type config struct {
@@ -38,6 +39,7 @@ const (
 	NETWORK_TYPE                                = "NETWORK_TYPE"
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL          = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
+	LEAN_HELIX_SHOW_DEBUG                       = "LEAN_HELIX_SHOW_DEBUG"
 	CONSENSUS_REQUIRED_QUORUM_PERCENTAGE        = "CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
 	CONSENSUS_MINIMUM_COMMITTEE_SIZE            = "CONSENSUS_MINIMUM_COMMITTEE_SIZE"
 
@@ -116,6 +118,11 @@ func (c *config) SetUint32(key string, value uint32) mutableNodeConfig {
 
 func (c *config) SetString(key string, value string) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{StringValue: value}
+	return c
+}
+
+func (c *config) SetBool(key string, value bool) mutableNodeConfig {
+	c.kv[key] = NodeConfigValue{BoolValue: value}
 	return c
 }
 
@@ -207,6 +214,10 @@ func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
 
 func (c *config) LeanHelixConsensusRoundTimeoutInterval() time.Duration {
 	return c.kv[LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL].DurationValue
+}
+
+func (c *config) LeanHelixShowDebug() bool {
+	return c.kv[LEAN_HELIX_SHOW_DEBUG].BoolValue
 }
 
 func (c *config) BlockSyncBatchSize() uint32 {
