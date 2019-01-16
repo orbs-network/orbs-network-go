@@ -16,6 +16,22 @@ func TestFileConfigConstructor(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestFileConfigSetBoolTrue(t *testing.T) {
+	cfg, err := newEmptyFileConfig(`{"lean-helix-show-debug": true}`)
+
+	require.NotNil(t, cfg)
+	require.NoError(t, err)
+	require.EqualValues(t, true, cfg.LeanHelixShowDebug())
+}
+
+func TestFileConfigSetBoolFalse(t *testing.T) {
+	cfg, err := newEmptyFileConfig(`{"lean-helix-show-debug": false}`)
+
+	require.NotNil(t, cfg)
+	require.NoError(t, err)
+	require.EqualValues(t, false, cfg.LeanHelixShowDebug())
+}
+
 func TestFileConfigSetUint32(t *testing.T) {
 	cfg, err := newEmptyFileConfig(`{"block-sync-batch-size": 999}`)
 
@@ -135,6 +151,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 
 	cfg.MergeWithFileConfig(`
 {
+	"lean-helix-show-debug": true,
 	"block-sync-batch-size": 999,
 	"block-sync-collect-response-timeout": "10m",
 	"node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
@@ -153,6 +170,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 	newKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
 	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
+	require.EqualValues(t, true, cfg.LeanHelixShowDebug())
 	require.EqualValues(t, newKeyPair.NodeAddress(), cfg.NodeAddress())
 }
 
