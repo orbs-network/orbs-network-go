@@ -8,6 +8,8 @@ ADD ./_bin/orbs-node /opt/orbs/
 
 VOLUME /usr/local/var/orbs/
 
+VOLUME /opt/orbs/logs
+
 WORKDIR /opt/orbs
 
 CMD ./orbs-node
