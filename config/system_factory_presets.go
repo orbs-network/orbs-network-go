@@ -51,6 +51,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetString(BLOCK_STORAGE_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to replace with /var/lib/orbs for linux
 	cfg.SetUint32(BLOCK_STORAGE_MAX_BLOCK_SIZE, 64*1024*1024)
 
+	cfg.SetDuration(LOGGER_FILE_ROTATION_INTERVAL, 24*time.Hour)
+
 	return cfg
 }
 

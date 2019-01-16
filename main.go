@@ -1,18 +1,23 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
-func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize int, vchainId primitives.VirtualChainId) log.BasicLogger {
+func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize int,
+	vchainId primitives.VirtualChainId, rotationInterval time.Duration) (log.BasicLogger, synchronization.Trigger) {
+
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -22,9 +27,16 @@ func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize
 		panic(err)
 	}
 
+	fileWriter := log.NewRotatingFileWriter(logFile)
 	outputs := []log.Output{
-		log.NewFormattingOutput(logFile, log.NewJsonFormatter()),
+		log.NewFormattingOutput(fileWriter, log.NewJsonFormatter()),
 	}
+
+	trigger := synchronization.NewPeriodicalTrigger(context.Background(), rotationInterval, nil, func() {
+		fileWriter.Rotate()
+	}, func() {
+
+	})
 
 	if !silent {
 		outputs = append(outputs, log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
@@ -45,7 +57,7 @@ func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test", os.Getenv("TEST_NAME")),
-	).WithOutput(outputs...)
+	).WithOutput(outputs...), trigger
 }
 
 func getConfig(configFiles config.ArrayFlags) (config.NodeConfig, error) {
@@ -95,7 +107,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := getLogger(*pathToLog, *silentLog, cfg.LoggerHttpEndpoint(), int(cfg.LoggerBulkSize()), cfg.VirtualChainId())
+	logger, logRotationTrigger := getLogger(*pathToLog, *silentLog, cfg.LoggerHttpEndpoint(), int(cfg.LoggerBulkSize()),
+		cfg.VirtualChainId(), cfg.LoggerFileRotationInterval())
+	defer logRotationTrigger.Stop()
 
 	bootstrap.NewNode(
 		cfg,
