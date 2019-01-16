@@ -130,7 +130,7 @@ func (s *service) notifyConsensusAlgos(
 
 	verifiedCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
-		s.logger.Info("Calling HandleBlockConsensus()")
+		//s.logger.Info("Calling HandleBlockConsensus()")
 		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,

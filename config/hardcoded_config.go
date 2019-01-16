@@ -20,6 +20,7 @@ type NodeConfigValue struct {
 	Uint32Value   uint32
 	DurationValue time.Duration
 	StringValue   string
+	BoolValue     bool
 }
 
 type config struct {
@@ -33,13 +34,16 @@ type config struct {
 }
 
 const (
-	PROTOCOL_VERSION                               = "PROTOCOL_VERSION"
-	VIRTUAL_CHAIN_ID                               = "VIRTUAL_CHAIN_ID"
-	NETWORK_TYPE                                   = "NETWORK_TYPE"
+	PROTOCOL_VERSION = "PROTOCOL_VERSION"
+	VIRTUAL_CHAIN_ID = "VIRTUAL_CHAIN_ID"
+	NETWORK_TYPE     = "NETWORK_TYPE"
+
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL             = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
-	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL    = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
 	BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE = "BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
-	LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE    = "LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE"
+
+	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
+	LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE = "LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE"
+	LEAN_HELIX_SHOW_DEBUG                       = "LEAN_HELIX_SHOW_DEBUG"
 
 	BLOCK_SYNC_NUM_BLOCKS_IN_BATCH      = "BLOCK_SYNC_NUM_BLOCKS_IN_BATCH"
 	BLOCK_SYNC_NO_COMMIT_INTERVAL       = "BLOCK_SYNC_NO_COMMIT_INTERVAL"
@@ -114,6 +118,11 @@ func (c *config) SetUint32(key string, value uint32) mutableNodeConfig {
 
 func (c *config) SetString(key string, value string) mutableNodeConfig {
 	c.kv[key] = NodeConfigValue{StringValue: value}
+	return c
+}
+
+func (c *config) SetBool(key string, value bool) mutableNodeConfig {
+	c.kv[key] = NodeConfigValue{BoolValue: value}
 	return c
 }
 
@@ -205,6 +214,10 @@ func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
 
 func (c *config) LeanHelixConsensusRoundTimeoutInterval() time.Duration {
 	return c.kv[LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL].DurationValue
+}
+
+func (c *config) LeanHelixShowDebug() bool {
+	return c.kv[LEAN_HELIX_SHOW_DEBUG].BoolValue
 }
 
 func (c *config) BlockSyncNumBlocksInBatch() uint32 {

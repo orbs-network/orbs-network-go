@@ -84,6 +84,8 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		var err error
 
 		switch value.(type) {
+		case bool:
+			cfg.SetBool(convertKeyName(key), value.(bool))
 		case float64:
 			numericValue, err = parseUint32(value.(float64))
 		case string:

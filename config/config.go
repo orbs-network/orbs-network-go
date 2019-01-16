@@ -25,6 +25,7 @@ type NodeConfig interface {
 	// Lean Helix consensus
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	LeanHelixConsensusMinimumCommitteeSize() uint32
+	LeanHelixShowDebug() bool
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
@@ -93,6 +94,7 @@ type mutableNodeConfig interface {
 	SetDuration(key string, value time.Duration) mutableNodeConfig
 	SetUint32(key string, value uint32) mutableNodeConfig
 	SetString(key string, value string) mutableNodeConfig
+	SetBool(key string, value bool) mutableNodeConfig
 	SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig
 	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
 	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
