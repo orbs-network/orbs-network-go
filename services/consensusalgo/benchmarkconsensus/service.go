@@ -26,10 +26,10 @@ type Config interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
-	ConstantConsensusLeader() primitives.NodeAddress
+	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
-	ConsensusRequiredQuorumPercentage() uint32
+	BenchmarkConsensusRequiredQuorumPercentage() uint32
 }
 
 type service struct {
@@ -86,7 +86,7 @@ func NewBenchmarkConsensusAlgo(
 		logger:           logger,
 		config:           config,
 
-		isLeader:                   config.ConstantConsensusLeader().Equal(config.NodeAddress()),
+		isLeader:                   config.BenchmarkConsensusConstantLeader().Equal(config.NodeAddress()),
 		successfullyVotedBlocks:    make(chan primitives.BlockHeight), // leader only
 		lastSuccessfullyVotedBlock: blockHeightNone,                   // leader only
 

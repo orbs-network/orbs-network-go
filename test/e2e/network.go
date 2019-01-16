@@ -92,7 +92,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 				nodeKeyPair.PrivateKey(),
 				blockStorageDataDirPrefix)
 
-		deployBlockStorageFiles(cfg.BlockStorageDataDir(), logger)
+		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
 		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
 

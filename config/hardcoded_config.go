@@ -34,23 +34,23 @@ type config struct {
 }
 
 const (
-	PROTOCOL_VERSION                            = "PROTOCOL_VERSION"
-	VIRTUAL_CHAIN_ID                            = "VIRTUAL_CHAIN_ID"
-	NETWORK_TYPE                                = "NETWORK_TYPE"
-	BENCHMARK_CONSENSUS_RETRY_INTERVAL          = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
-	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
-	LEAN_HELIX_SHOW_DEBUG                       = "LEAN_HELIX_SHOW_DEBUG"
-	CONSENSUS_REQUIRED_QUORUM_PERCENTAGE        = "CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
-	CONSENSUS_MINIMUM_COMMITTEE_SIZE            = "CONSENSUS_MINIMUM_COMMITTEE_SIZE"
+	PROTOCOL_VERSION = "PROTOCOL_VERSION"
+	VIRTUAL_CHAIN_ID = "VIRTUAL_CHAIN_ID"
+	NETWORK_TYPE     = "NETWORK_TYPE"
 
-	BLOCK_SYNC_BATCH_SIZE               = "BLOCK_SYNC_BATCH_SIZE"
-	BLOCK_SYNC_INTERVAL                 = "BLOCK_SYNC_INTERVAL"
+	BENCHMARK_CONSENSUS_RETRY_INTERVAL             = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
+	BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE = "BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
+
+	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
+	LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE = "LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE"
+	LEAN_HELIX_SHOW_DEBUG                       = "LEAN_HELIX_SHOW_DEBUG"
+
+	BLOCK_SYNC_NUM_BLOCKS_IN_BATCH      = "BLOCK_SYNC_NUM_BLOCKS_IN_BATCH"
+	BLOCK_SYNC_NO_COMMIT_INTERVAL       = "BLOCK_SYNC_NO_COMMIT_INTERVAL"
 	BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT = "BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT"
 	BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT   = "BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT"
 
-	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START       = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START"
-	BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END         = "BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END"
-	BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW = "BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW"
+	BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE = "BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE"
 
 	CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK"
 	CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER = "CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER"
@@ -61,13 +61,13 @@ const (
 	BLOCK_TRACKER_GRACE_TIMEOUT  = "BLOCK_TRACKER_GRACE_TIMEOUT"
 
 	TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES            = "TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES"
-	TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW         = "TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW"
+	TRANSACTION_EXPIRATION_WINDOW                          = "TRANSACTION_EXPIRATION_WINDOW"
 	TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT        = "TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT"
 	TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL   = "TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL = "TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL"
 	TRANSACTION_POOL_PROPAGATION_BATCH_SIZE                = "TRANSACTION_POOL_PROPAGATION_BATCH_SIZE"
 	TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT          = "TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT"
-	TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY = "TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY"
+	TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS             = "TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS"
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
@@ -84,8 +84,8 @@ const (
 	LOGGER_HTTP_ENDPOINT = "LOGGER_HTTP_ENDPOINT"
 	LOGGER_BULK_SIZE     = "LOGGER_BULK_SIZE"
 
-	BLOCK_STORAGE_DATA_DIR       = "BLOCK_STORAGE_DATA_DIR"
-	BLOCK_STORAGE_MAX_BLOCK_SIZE = "BLOCK_STORAGE_MAX_BLOCK_SIZE"
+	BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR                = "BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR"
+	BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES = "BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES"
 )
 
 func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
@@ -136,7 +136,7 @@ func (c *config) SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) muta
 	return c
 }
 
-func (c *config) SetConstantConsensusLeader(key primitives.NodeAddress) mutableNodeConfig {
+func (c *config) SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig {
 	c.constantConsensusLeader = key
 	return c
 }
@@ -200,7 +200,7 @@ func (c *config) GossipPeers(asOfBlock uint64) map[string]GossipPeer {
 	return c.gossipPeers
 }
 
-func (c *config) ConstantConsensusLeader() primitives.NodeAddress {
+func (c *config) BenchmarkConsensusConstantLeader() primitives.NodeAddress {
 	return c.constantConsensusLeader
 }
 
@@ -220,28 +220,20 @@ func (c *config) LeanHelixShowDebug() bool {
 	return c.kv[LEAN_HELIX_SHOW_DEBUG].BoolValue
 }
 
-func (c *config) BlockSyncBatchSize() uint32 {
-	return c.kv[BLOCK_SYNC_BATCH_SIZE].Uint32Value
+func (c *config) BlockSyncNumBlocksInBatch() uint32 {
+	return c.kv[BLOCK_SYNC_NUM_BLOCKS_IN_BATCH].Uint32Value
 }
 
 func (c *config) BlockSyncNoCommitInterval() time.Duration {
-	return c.kv[BLOCK_SYNC_INTERVAL].DurationValue
+	return c.kv[BLOCK_SYNC_NO_COMMIT_INTERVAL].DurationValue
 }
 
 func (c *config) BlockSyncCollectResponseTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT].DurationValue
 }
 
-func (c *config) BlockTransactionReceiptQueryGraceStart() time.Duration {
-	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_START].DurationValue
-}
-
-func (c *config) BlockTransactionReceiptQueryGraceEnd() time.Duration {
-	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_GRACE_END].DurationValue
-}
-
-func (c *config) BlockTransactionReceiptQueryExpirationWindow() time.Duration {
-	return c.kv[BLOCK_TRANSACTION_RECEIPT_QUERY_EXPIRATION_WINDOW].DurationValue
+func (c *config) BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration {
+	return c.kv[BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE].DurationValue
 }
 
 func (c *config) ConsensusContextMaximumTransactionsInBlock() uint32 {
@@ -268,8 +260,8 @@ func (c *config) TransactionPoolPendingPoolSizeInBytes() uint32 {
 	return c.kv[TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES].Uint32Value
 }
 
-func (c *config) TransactionPoolTransactionExpirationWindow() time.Duration {
-	return c.kv[TRANSACTION_POOL_TRANSACTION_EXPIRATION_WINDOW].DurationValue
+func (c *config) TransactionExpirationWindow() time.Duration {
+	return c.kv[TRANSACTION_EXPIRATION_WINDOW].DurationValue
 }
 
 func (c *config) TransactionPoolFutureTimestampGraceTimeout() time.Duration {
@@ -292,11 +284,11 @@ func (c *config) TransactionPoolPropagationBatchingTimeout() time.Duration {
 	return c.kv[TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT].DurationValue
 }
 
-func (c *config) TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration {
-	return c.kv[TRANSACTION_POOL_MAX_WAIT_TIME_FOR_FULL_BLOCK_CAPACITY].DurationValue
+func (c *config) TransactionPoolTimeBetweenEmptyBlocks() time.Duration {
+	return c.kv[TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS].DurationValue
 }
 
-func (c *config) SendTransactionTimeout() time.Duration {
+func (c *config) PublicApiSendTransactionTimeout() time.Duration {
 	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
 }
 
@@ -324,12 +316,12 @@ func (c *config) MetricsReportInterval() time.Duration {
 	return c.kv[METRICS_REPORT_INTERVAL].DurationValue
 }
 
-func (c *config) ConsensusRequiredQuorumPercentage() uint32 {
-	return c.kv[CONSENSUS_REQUIRED_QUORUM_PERCENTAGE].Uint32Value
+func (c *config) BenchmarkConsensusRequiredQuorumPercentage() uint32 {
+	return c.kv[BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE].Uint32Value
 }
 
-func (c *config) ConsensusMinimumCommitteeSize() uint32 {
-	return c.kv[CONSENSUS_MINIMUM_COMMITTEE_SIZE].Uint32Value
+func (c *config) LeanHelixConsensusMinimumCommitteeSize() uint32 {
+	return c.kv[LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE].Uint32Value
 }
 
 func (c *config) EthereumEndpoint() string {
@@ -344,10 +336,10 @@ func (c *config) LoggerBulkSize() uint32 {
 	return c.kv[LOGGER_BULK_SIZE].Uint32Value
 }
 
-func (c *config) BlockStorageDataDir() string {
-	return c.kv[BLOCK_STORAGE_DATA_DIR].StringValue
+func (c *config) BlockStorageFileSystemDataDir() string {
+	return c.kv[BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR].StringValue
 }
 
-func (c *config) BlockStorageMaxBlockSize() uint32 {
-	return c.kv[BLOCK_STORAGE_MAX_BLOCK_SIZE].Uint32Value
+func (c *config) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
+	return c.kv[BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES].Uint32Value
 }
