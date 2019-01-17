@@ -72,10 +72,6 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	const totalAmount = transfers * transferAmount
 
 	harness.Network(t).
-		AllowingErrors(
-			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
-			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).
 		StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 
 			var txHashes []primitives.Sha256
