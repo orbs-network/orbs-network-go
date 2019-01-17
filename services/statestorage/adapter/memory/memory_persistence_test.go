@@ -1,7 +1,8 @@
-package adapter
+package memory
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestReadStateWithNonExistingContractName(t *testing.T) {
-	d := NewInMemoryStatePersistence(metric.NewRegistry())
+	d := NewStatePersistence(metric.NewRegistry())
 	_, _, err := d.Read("foo", "")
 	require.NoError(t, err, "unexpected error")
 }
@@ -38,12 +39,12 @@ type driver struct {
 
 func newDriver() *driver {
 	return &driver{
-		NewInMemoryStatePersistence(metric.NewRegistry()),
+		NewStatePersistence(metric.NewRegistry()),
 	}
 }
 
 func (d *driver) writeSingleValueBlock(h primitives.BlockHeight, c, k, v string) error {
 	record := (&protocol.StateRecordBuilder{Key: []byte(k), Value: []byte(v)}).Build()
-	diff := ChainState{primitives.ContractName(c): {k: record}}
+	diff := adapter.ChainState{primitives.ContractName(c): {k: record}}
 	return d.InMemoryStatePersistence.Write(h, 0, []byte{}, diff)
 }

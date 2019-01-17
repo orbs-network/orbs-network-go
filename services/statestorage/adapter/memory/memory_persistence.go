@@ -1,10 +1,11 @@
-package adapter
+package memory
 
 import (
 	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sort"
@@ -27,19 +28,19 @@ func newMetrics(m metric.Factory) *metrics {
 type InMemoryStatePersistence struct {
 	metrics    *metrics
 	mutex      sync.RWMutex
-	fullState  ChainState
+	fullState  adapter.ChainState
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
 	merkleRoot primitives.Sha256
 }
 
-func NewInMemoryStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence {
+func NewStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence {
 	_, merkleRoot := merkle.NewForest()
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/582) - this is our hard coded Genesis block (height 0). Move this to a more dignified place or load from a file
 	return &InMemoryStatePersistence{
 		metrics:    newMetrics(metricFactory),
 		mutex:      sync.RWMutex{},
-		fullState:  ChainState{},
+		fullState:  adapter.ChainState{},
 		height:     0,
 		ts:         0,
 		merkleRoot: merkleRoot,
@@ -57,7 +58,7 @@ func (sp *InMemoryStatePersistence) reportSize() {
 	sp.metrics.numberOfContracts.Update(int64(nContracts))
 }
 
-func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff ChainState) error {
+func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff adapter.ChainState) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 

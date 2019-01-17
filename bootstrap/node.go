@@ -10,7 +10,7 @@ import (
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/pkg/errors"
 	"sync"
 	"time"
@@ -52,7 +52,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress s
 	}
 
 	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
-	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)
+	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)

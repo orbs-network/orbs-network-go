@@ -9,11 +9,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
+	blockStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	stateStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -64,10 +65,10 @@ func NewNetworkWithNumOfNodes(
 		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
 		dep := &NodeDependencies{}
 		if provider == nil {
-			dep.BlockPersistence = memory.NewBlockPersistence(nodeLogger, metricRegistry)
+			dep.BlockPersistence = blockStorageMemoryAdapter.NewBlockPersistence(nodeLogger, metricRegistry)
 			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, nodeLogger)
 			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger)
-			dep.StatePersistence = stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)
+			dep.StatePersistence = stateStorageMemoryAdapter.NewStatePersistence(metricRegistry)
 		} else {
 			dep = provider(len(network.Nodes), cfg, nodeLogger, metricRegistry)
 		}
