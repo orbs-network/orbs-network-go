@@ -58,7 +58,8 @@ jobs:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: ./docker/build/build.sh
-      - run: ./.circleci/e2e-testnet.sh
+      - run: ./.circleci/e2e-testnet.sh 42
+      - run: ./.circleci/e2e-testnet.sh 2013
 
   release_gamma:
     machine: true
