@@ -88,7 +88,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 		t.Log("Leader commits height 1003, confirm height 1003")
 
 		b1003 := aBlockFromLeader.WithHeight(1003).WithPrevBlock(b1002).Build()
-		h.expectCommitSaveAndReply(b1003, 1003, h.config.ConstantConsensusLeader(), h.config.NodeAddress())
+		h.expectCommitSaveAndReply(b1003, 1003, h.config.BenchmarkConsensusConstantLeader(), h.config.NodeAddress())
 
 		h.receivedCommitViaGossip(ctx, b1003)
 		h.verifyCommitSaveAndReply(t)

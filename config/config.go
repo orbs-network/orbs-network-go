@@ -17,31 +17,29 @@ type NodeConfig interface {
 	NetworkSize(asOfBlock uint64) uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	GossipPeers(asOfBlock uint64) map[string]GossipPeer
+	TransactionExpirationWindow() time.Duration
 
 	// consensus
-	ConstantConsensusLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	ConsensusRequiredQuorumPercentage() uint32
-	ConsensusMinimumCommitteeSize() uint32
 
 	// Lean Helix consensus
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixConsensusMinimumCommitteeSize() uint32
+	LeanHelixShowDebug() bool
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
+	BenchmarkConsensusRequiredQuorumPercentage() uint32
+	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 
 	// block storage
-	BlockSyncBatchSize() uint32
+	BlockSyncNumBlocksInBatch() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
-	BlockTransactionReceiptQueryGraceStart() time.Duration
-	BlockTransactionReceiptQueryGraceEnd() time.Duration
-	BlockTransactionReceiptQueryExpirationWindow() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
-
-	// file system block storage
-	BlockStorageDataDir() string
-	BlockStorageMaxBlockSize() uint32
+	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
+	BlockStorageFileSystemDataDir() string
+	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 
 	// state storage
 	StateStorageHistorySnapshotNum() uint32
@@ -56,13 +54,12 @@ type NodeConfig interface {
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
-	TransactionPoolTransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
-	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
+	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -70,7 +67,7 @@ type NodeConfig interface {
 	GossipNetworkTimeout() time.Duration
 
 	// public api
-	SendTransactionTimeout() time.Duration
+	PublicApiSendTransactionTimeout() time.Duration
 
 	// processor
 	ProcessorArtifactPath() string
@@ -81,14 +78,16 @@ type NodeConfig interface {
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
 
-	// Logger
+	// logger
 	LoggerHttpEndpoint() string
 	LoggerBulkSize() uint32
+	LoggerFileTruncationInterval() time.Duration
 }
 
 type OverridableConfig interface {
 	NodeConfig
 	OverrideNodeSpecificValues(gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, blockStorageDataDirPrefix string) NodeConfig
+	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
 }
 
 type mutableNodeConfig interface {
@@ -97,11 +96,12 @@ type mutableNodeConfig interface {
 	SetDuration(key string, value time.Duration) mutableNodeConfig
 	SetUint32(key string, value uint32) mutableNodeConfig
 	SetString(key string, value string) mutableNodeConfig
+	SetBool(key string, value bool) mutableNodeConfig
 	SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig
 	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
 	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
 	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
-	SetConstantConsensusLeader(key primitives.NodeAddress) mutableNodeConfig
+	SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
 	MergeWithFileConfig(source string) (mutableNodeConfig, error)
 	Clone() mutableNodeConfig
@@ -109,18 +109,17 @@ type mutableNodeConfig interface {
 
 type BlockStorageConfig interface {
 	NodeAddress() primitives.NodeAddress
-	BlockSyncBatchSize() uint32
+	BlockSyncNumBlocksInBatch() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
-	BlockTransactionReceiptQueryGraceStart() time.Duration
-	BlockTransactionReceiptQueryGraceEnd() time.Duration
-	BlockTransactionReceiptQueryExpirationWindow() time.Duration
+	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
+	TransactionExpirationWindow() time.Duration
 }
 
 type FilesystemBlockPersistenceConfig interface {
-	BlockStorageDataDir() string
-	BlockStorageMaxBlockSize() uint32
+	BlockStorageFileSystemDataDir() string
+	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 	VirtualChainId() primitives.VirtualChainId
 }
 
@@ -138,12 +137,12 @@ type ConsensusContextConfig interface {
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	FederationNodes(asOfBlock uint64) map[string]FederationNode
-	ConsensusMinimumCommitteeSize() uint32
+	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 }
 
 type PublicApiConfig interface {
-	SendTransactionTimeout() time.Duration
+	PublicApiSendTransactionTimeout() time.Duration
 	VirtualChainId() primitives.VirtualChainId
 }
 
@@ -160,13 +159,13 @@ type TransactionPoolConfig interface {
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
 	TransactionPoolPendingPoolSizeInBytes() uint32
-	TransactionPoolTransactionExpirationWindow() time.Duration
+	TransactionExpirationWindow() time.Duration
 	TransactionPoolFutureTimestampGraceTimeout() time.Duration
 	TransactionPoolPendingPoolClearExpiredInterval() time.Duration
 	TransactionPoolCommittedPoolClearExpiredInterval() time.Duration
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
-	TransactionPoolMaxWaitTimeForFullBlockCapacity() time.Duration
+	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
 }
 
 type FederationNode interface {

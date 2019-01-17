@@ -4,10 +4,9 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/harness"
-	. "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -15,14 +14,14 @@ import (
 )
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
-	harness.Network(t).
+	newHarness(t).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool",                 // because we duplicate, among other messages, the transaction propagation message
 			"all consensus \\d* algos refused to validate the block",             //TODO(v1) investigate and explain, or fix and remove expected error
 			"FORK!! block already in storage, transaction block header mismatch", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
-		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
 
 		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Duplicate(AnyNthMessage(7))
@@ -32,12 +31,12 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
-	harness.Network(t).
+	newHarness(t).
 		AllowingErrors(
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
-		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
 
 		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
@@ -47,12 +46,12 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
-	harness.Network(t).
+	newHarness(t).
 		AllowingErrors(
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
 		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
-		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
 
 		ctrlRand := test.NewControlledRand(t)
 		network.TransportTamperer().Delay(func() time.Duration {
@@ -64,7 +63,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
-	harness.Network(t).WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
 		t.Skip("this test causes the system to hang, seems like consensus algo stops")
 		ctrlRand := test.NewControlledRand(t)
 
@@ -99,7 +98,7 @@ func AnyNthMessage(n int) MessagePredicate {
 	}
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.TestNetworkDriver, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
 	contract := network.BenchmarkTokenContract()

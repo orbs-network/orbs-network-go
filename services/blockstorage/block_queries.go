@@ -61,12 +61,11 @@ func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.Get
 }
 
 func (s *service) GetTransactionReceipt(ctx context.Context, input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
-	endGraceNano := s.config.BlockTransactionReceiptQueryGraceEnd().Nanoseconds()
-	startGraceNano := s.config.BlockTransactionReceiptQueryGraceStart().Nanoseconds()
-	txExpireNano := s.config.BlockTransactionReceiptQueryExpirationWindow().Nanoseconds()
+	graceNano := s.config.BlockStorageTransactionReceiptQueryTimestampGrace().Nanoseconds()
+	txExpireNano := s.config.TransactionExpirationWindow().Nanoseconds()
 
-	start := input.TransactionTimestamp - primitives.TimestampNano(startGraceNano)
-	end := input.TransactionTimestamp + primitives.TimestampNano(endGraceNano+txExpireNano)
+	start := input.TransactionTimestamp - primitives.TimestampNano(graceNano)
+	end := input.TransactionTimestamp + primitives.TimestampNano(graceNano+txExpireNano)
 
 	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
 	if end < start || end-start > primitives.TimestampNano(time.Hour.Nanoseconds()) {

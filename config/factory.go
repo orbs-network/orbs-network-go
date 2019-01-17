@@ -21,7 +21,15 @@ func (c *config) OverrideNodeSpecificValues(
 	cloned.SetNodeAddress(nodeAddress)
 	cloned.SetNodePrivateKey(nodePrivateKey)
 	cloned.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
-	cloned.SetString(BLOCK_STORAGE_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
+	cloned.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
+	return cloned
+}
+
+func (c *config) ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig {
+
+	cloned := c.Clone()
+	cloned.SetNodeAddress(nodeAddress)
+	cloned.SetNodePrivateKey(privateKey)
 	return cloned
 }
 

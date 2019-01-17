@@ -30,7 +30,7 @@ func (c *blockSyncConfigForTests) NodeAddress() primitives.NodeAddress {
 	return c.nodeAddress
 }
 
-func (c *blockSyncConfigForTests) BlockSyncBatchSize() uint32 {
+func (c *blockSyncConfigForTests) BlockSyncNumBlocksInBatch() uint32 {
 	return c.batchSize
 }
 

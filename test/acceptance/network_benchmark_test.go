@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"golang.org/x/time/rate"
 	"sync"
 	"testing"
@@ -16,9 +15,9 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 	limiter := rate.NewLimiter(1000, 100)
 	ctrlRand := test.NewControlledRand(b)
 
-	harness.Network(b).
+	newHarness(b).
 		WithLogFilters(log.DiscardAll()).
-		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
 
 		contract := network.BenchmarkTokenContract()
 

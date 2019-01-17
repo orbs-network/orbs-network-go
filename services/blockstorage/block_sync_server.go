@@ -94,8 +94,8 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		return errors.New("firstBlockHeight is greater or equal to lastCommittedBlockHeight")
 	}
 
-	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncBatchSize()-1) {
-		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncBatchSize()-1)
+	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch()-1) {
+		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch()-1)
 	}
 
 	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight, err := s.GetBlockSlice(firstRequestedBlockHeight, lastRequestedBlockHeight)

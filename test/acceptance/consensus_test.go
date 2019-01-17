@@ -4,8 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
-	"github.com/orbs-network/orbs-network-go/test/harness"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -18,10 +17,10 @@ import (
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	t.Skipf("Change this - Orbs is not supposed to know LH message types")
 	//harness.
-	//	Network(t).
+	//	newHarness(t).
 	//	WithNumNodes(4).
 	//	WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-	//	Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	//	Start(func(ctx context.Context, network NetworkHarness) {
 	//
 	//		contract := network.BenchmarkTokenContract()
 	//
@@ -63,20 +62,20 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 
 // LH: Not relevant
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	harness.Network(t).
+	newHarness(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		WithMaxTxPerBlock(1).
-		Start(func(parent context.Context, network harness.TestNetworkDriver) {
+		Start(func(parent context.Context, network NetworkHarness) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 
 			contract := network.BenchmarkTokenContract()
 			contract.DeployBenchmarkToken(ctx, 5)
 
-			committedTamper := network.TransportTamperer().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
-			blockSyncTamper := network.TransportTamperer().Fail(adapter.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
-			committedLatch := network.TransportTamperer().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+			committedTamper := network.TransportTamperer().Fail(testkit.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+			blockSyncTamper := network.TransportTamperer().Fail(testkit.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
+			committedLatch := network.TransportTamperer().LatchOn(testkit.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 
 			contract.TransferInBackground(ctx, 0, 0, 5, 6) // send a transaction so that network advances to block 1. the tamper prevents COMMITTED messages from reaching leader, so it doesn't move to block 2
 			committedLatch.Wait()                          // wait for validator to try acknowledge that it reached block 1 (and fail)

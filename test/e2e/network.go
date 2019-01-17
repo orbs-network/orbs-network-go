@@ -92,7 +92,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 				nodeKeyPair.PrivateKey(),
 				blockStorageDataDirPrefix)
 
-		deployBlockStorageFiles(cfg.BlockStorageDataDir(), logger)
+		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
 		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
 
@@ -117,7 +117,7 @@ func cleanBlockStorage() {
 
 func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
 	os.MkdirAll(targetDir, os.ModePerm)
-	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "blocks")
+	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "blocks")
 	targetBlocksFilePath := filepath.Join(targetDir, "blocks")
 
 	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))

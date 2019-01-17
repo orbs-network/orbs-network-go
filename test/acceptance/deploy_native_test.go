@@ -2,18 +2,16 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
-	"github.com/orbs-network/orbs-network-go/test/harness"
-	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config (remove "NonLeader")
 func TestDeploysNativeContract(t *testing.T) {
-	harness.Network(t).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(ctx context.Context, network NetworkHarness) {
 
-		t.Log("testing", network.Description())
 		// in BC leader is nodeIndex 0, validator is nodeIndex 1, in LH leadership is randomized
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
