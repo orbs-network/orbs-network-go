@@ -77,7 +77,13 @@ type corruptingTamperer struct {
 func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
 		for i := 0; i < 10; i++ {
+			if len(data.Payloads) == 0 {
+				continue
+			}
 			x := o.ctrlRand.Intn(len(data.Payloads))
+			if len(data.Payloads[x]) == 0 {
+				continue
+			}
 			y := o.ctrlRand.Intn(len(data.Payloads[x]))
 			data.Payloads[x][y] = 0
 		}
