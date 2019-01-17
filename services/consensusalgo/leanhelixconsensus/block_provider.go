@@ -142,11 +142,20 @@ func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 }
 
 func validLeanHelixBlockPair(blockPair *protocol.BlockPairContainer) error {
-	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		return errors.New("LeanHelix: nil blockPair or its TransactionsBlock or ResultsBlock")
+	if blockPair == nil {
+		return errors.New("LeanHelix: nil blockPair")
 	}
-	if blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
-		return errors.New("LeanHelix: nil block proof")
+	if blockPair.TransactionsBlock == nil {
+		return errors.New("LeanHelix: nil Transactions Block")
+	}
+	if blockPair.ResultsBlock == nil {
+		return errors.New("LeanHelix: nil Results Block")
+	}
+	if blockPair.TransactionsBlock.BlockProof == nil {
+		return errors.New("LeanHelix: nil transactions block proof")
+	}
+	if blockPair.ResultsBlock.BlockProof == nil {
+		return errors.New("LeanHelix: nil results block proof")
 	}
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
