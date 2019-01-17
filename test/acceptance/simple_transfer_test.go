@@ -2,9 +2,10 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
-	"github.com/orbs-network/orbs-network-go/test/harness"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -13,12 +14,12 @@ import (
 )
 
 func TestCommitTransactionWithLeanHelix(t *testing.T) {
-	harness.Network(t).
+	newHarness(t).
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network NetworkHarness) {
 			contract := network.BenchmarkTokenContract()
-			t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+			// leader is nodeIndex 0, validator is nodeIndex 1
 			_, txHash := contract.Transfer(ctx, 0, 17, 5, 6)
 
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
@@ -31,14 +32,14 @@ func TestCommitTransactionWithLeanHelix(t *testing.T) {
 }
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
 		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+		// leader is nodeIndex 0, validator is nodeIndex 1
 
 		_, txHash1 := contract.Transfer(ctx, 0, 17, 5, 6)
 		contract.InvalidTransfer(ctx, 0, 5, 6)
@@ -61,16 +62,16 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
 		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+		// leader is nodeIndex 0, validator is nodeIndex 1
 
-		pausedTxForwards := network.TransportTamperer().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
+		pausedTxForwards := network.TransportTamperer().Pause(testkit.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		txHash := contract.TransferInBackground(ctx, 1, 17, 5, 6)
 
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 2); err != nil {
@@ -80,8 +81,8 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 			t.Errorf("failed waiting for block on node 1: %s", err)
 		}
 
-		require.EqualValues(t, 0, contract.GetBalance(ctx, 0, 6), "initial getBalance result on leader")
-		require.EqualValues(t, 0, contract.GetBalance(ctx, 1, 6), "initial getBalance result on non leader")
+		requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 0, "expected to read initial getBalance result on leader")
+		requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 1, "expected to read initial getBalance result on non-leader")
 
 		pausedTxForwards.Release(ctx)
 		network.WaitForTransactionInNodeState(ctx, txHash, 0)
@@ -91,15 +92,28 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 	})
 }
 
+func requireBalanceInNodeEventually(ctx context.Context, t *testing.T, contract callcontract.BenchmarkTokenClient, expectedBalance uint64, forAddressIndex int, nodeIndex int, msgAndArguments ...interface{}) {
+	require.True(t, test.Eventually(3*time.Second, func() (success bool) {
+		defer func() { // silence panics
+			if err := recover(); err != nil {
+				t.Log("silenced panic in eventually loop", err)
+				success = false
+			}
+		}()
+		success = expectedBalance == contract.GetBalance(ctx, nodeIndex, forAddressIndex)
+		return
+	}), msgAndArguments)
+}
+
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
 		contract := network.BenchmarkTokenContract()
 		contract.DeployBenchmarkToken(ctx, 5)
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+		// leader is nodeIndex 0, validator is nodeIndex 1
 
 		txHash1 := contract.TransferInBackground(ctx, 0, 17, 5, 6)
 		txHash2 := contract.TransferInBackground(ctx, 0, 22, 5, 6)

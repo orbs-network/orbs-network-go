@@ -20,7 +20,8 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))
 
 	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
-		s.logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err))
+		height, nano := s.lastCommittedBlockHeightAndTime()
+		logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err), log.BlockHeight(height), log.TimestampNano("last-committed", nano))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 

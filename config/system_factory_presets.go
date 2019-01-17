@@ -132,13 +132,11 @@ func ForAcceptanceTestNetwork(
 }
 
 // config for gamma dev network that runs with in-memory adapters except for contract compilation
-func ForGamma(
+func TemplateForGamma(
 	federationNodes map[string]FederationNode,
-	nodeAddress primitives.NodeAddress,
-	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-) NodeConfig {
+) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1000*time.Millisecond)
@@ -162,5 +160,5 @@ func ForGamma(
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	return cfg.OverrideNodeSpecificValues(0, nodeAddress, nodePrivateKey, "")
+	return cfg
 }

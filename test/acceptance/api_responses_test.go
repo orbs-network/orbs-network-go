@@ -3,7 +3,6 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -12,11 +11,9 @@ import (
 )
 
 func TestResponseForTransactionOnValidContract(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
-
-		t.Log("testing", network.Description())
 
 		tx := builders.TransferTransaction()
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
@@ -27,11 +24,9 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
-
-		t.Log("testing", network.Description())
 
 		tx := builders.Transaction().WithContract("UnknownContract")
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
@@ -42,11 +37,9 @@ func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
-
-		t.Log("testing", network.Description())
 
 		tx := builders.TransferTransaction().WithArgs("bad", "types", "of", "args")
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
@@ -57,11 +50,9 @@ func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
 }
 
 func TestResponseForTransactionOnFailingContract(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
-
-		t.Log("testing", network.Description())
 
 		tx := builders.Transaction().WithMethod(primitives.ContractName("BenchmarkContract"), primitives.MethodName("throw")).WithArgs()
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
@@ -72,11 +63,9 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 }
 
 func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
-
-		t.Log("testing", network.Description())
 
 		tx := builders.Transaction().WithProtocolVersion(9999999)
 		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)

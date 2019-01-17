@@ -25,6 +25,14 @@ func (c *config) OverrideNodeSpecificValues(
 	return cloned
 }
 
+func (c *config) ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig {
+
+	cloned := c.Clone()
+	cloned.SetNodeAddress(nodeAddress)
+	cloned.SetNodePrivateKey(privateKey)
+	return cloned
+}
+
 func (c *config) MergeWithFileConfig(source string) (mutableNodeConfig, error) {
 	return newFileConfig(c, source)
 }
