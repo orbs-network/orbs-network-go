@@ -6,7 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
@@ -44,7 +44,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress s
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
 	metricRegistry := getMetricRegistry()
 
-	blockPersistence, err := blockStorageAdapter.NewFilesystemBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
+	blockPersistence, err := filesystem.NewBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
 		logger.Error("failed initializing blocks database", log.Error(err))
 		err = errors.Wrap(err, "failed initializing blocks database")

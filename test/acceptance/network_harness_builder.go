@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -224,7 +224,7 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	var dumpingStatePersistences []harnessStateStorageAdapter.DumpingStatePersistence
 
 	provider := func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *inmemory.NodeDependencies {
-		tamperingBlockPersistence := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(logger, preloadedBlocks, metricRegistry)
+		tamperingBlockPersistence := blockStorageAdapter.NewBlockPersistence(logger, preloadedBlocks, metricRegistry)
 		dumpingStateStorage := harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry)
 		tamperingBlockPersistences = append(tamperingBlockPersistences, tamperingBlockPersistence)
 		dumpingStatePersistences = append(dumpingStatePersistences, dumpingStateStorage)

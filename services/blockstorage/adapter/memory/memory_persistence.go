@@ -1,8 +1,9 @@
-package adapter
+package memory
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -10,8 +11,6 @@ import (
 	"sync"
 	"unsafe"
 )
-
-type blockHeightChan chan primitives.BlockHeight
 
 type memMetrics struct {
 	size *metric.Gauge
@@ -29,18 +28,18 @@ type InMemoryBlockPersistence struct {
 	}
 
 	tracker *synchronization.BlockTracker
-	logger  log.BasicLogger
+	Logger  log.BasicLogger
 
 	metrics *memMetrics
 }
 
-func NewInMemoryBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory) *InMemoryBlockPersistence {
+func NewBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory, preloadedBlocks ...*protocol.BlockPairContainer) *InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &InMemoryBlockPersistence{
-		logger:     logger,
+		Logger:     logger,
 		metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInBytes")},
-		tracker:    synchronization.NewBlockTracker(logger, 0, 5),
-		blockChain: aChainOfBlocks{},
+		tracker:    synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
+		blockChain: aChainOfBlocks{blocks: preloadedBlocks},
 	}
 
 	return p
@@ -91,7 +90,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	}
 
 	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 > blockPair.TransactionsBlock.Header.BlockHeight() {
-		bp.logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
+		bp.Logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
 		return false, nil
 	}
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
@@ -153,7 +152,7 @@ func (bp *InMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeigh
 	return blockPair.ResultsBlock, nil
 }
 
-func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f CursorFunc) error {
+func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 

@@ -1,4 +1,4 @@
-package adapter
+package memory
 
 import (
 	"github.com/orbs-network/orbs-network-go/test/builders"

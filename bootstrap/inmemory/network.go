@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
@@ -63,7 +64,7 @@ func NewNetworkWithNumOfNodes(
 		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
 		dep := &NodeDependencies{}
 		if provider == nil {
-			dep.BlockPersistence = blockStorageAdapter.NewTamperingInMemoryBlockPersistence(nodeLogger, nil, metricRegistry)
+			dep.BlockPersistence = memory.NewBlockPersistence(nodeLogger, metricRegistry)
 			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, nodeLogger)
 			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger)
 			dep.StatePersistence = stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)

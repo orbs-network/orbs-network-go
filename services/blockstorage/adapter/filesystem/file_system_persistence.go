@@ -1,4 +1,4 @@
-package adapter
+package filesystem
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -44,7 +45,7 @@ type FilesystemBlockPersistence struct {
 	codec        blockCodec
 }
 
-func NewFilesystemBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (BlockPersistence, error) {
+func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (adapter.BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
 	codec := newCodec(conf.BlockStorageMaxBlockSize())
@@ -240,7 +241,7 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	return nil
 }
 
-func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor CursorFunc) error {
+func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
 	file, err := os.Open(f.blockFileName())
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for reading")

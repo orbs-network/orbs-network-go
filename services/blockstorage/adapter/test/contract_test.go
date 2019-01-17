@@ -6,6 +6,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -190,7 +192,7 @@ type adapterUnderTest struct {
 func newInMemoryAdapter() *adapterUnderTest {
 	return &adapterUnderTest{
 		name:    "In Memory Adapter",
-		adapter: adapter.NewInMemoryBlockPersistence(log.GetLogger(), metric.NewRegistry()),
+		adapter: memory.NewBlockPersistence(log.GetLogger(), metric.NewRegistry()),
 		cleanup: func() {},
 	}
 }
@@ -204,7 +206,7 @@ func newFilesystemAdapter() *adapterUnderTest {
 		_ = os.RemoveAll(conf.BlockStorageDataDir()) // ignore errors - nothing to do
 	}
 
-	persistence, err := adapter.NewFilesystemBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())
+	persistence, err := filesystem.NewBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())
 	if err != nil {
 		panic(err)
 	}

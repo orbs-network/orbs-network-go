@@ -1,4 +1,4 @@
-package adapter
+package testkit
 
 import (
 	"context"
@@ -7,28 +7,26 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
 )
 
+type blockHeightChan chan primitives.BlockHeight
+
 type TamperingInMemoryBlockPersistence interface {
-	BlockPersistence
+	adapter.BlockPersistence
 	FailNextBlocks()
 	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
-func NewTamperingInMemoryBlockPersistence(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) *tamperingBlockPersistence {
+func NewBlockPersistence(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) *tamperingBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &tamperingBlockPersistence{
-		InMemoryBlockPersistence: InMemoryBlockPersistence{
-			logger:     logger,
-			metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInBytes")},
-			tracker:    synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
-			blockChain: aChainOfBlocks{blocks: preloadedBlocks},
-		},
+		InMemoryBlockPersistence: *memory.NewBlockPersistence(logger, metricFactory, preloadedBlocks...),
 	}
 
 	p.blockHeightsPerTxHash.channels = make(map[string]blockHeightChan)
@@ -40,7 +38,7 @@ func NewTamperingInMemoryBlockPersistence(parent log.BasicLogger, preloadedBlock
 }
 
 type tamperingBlockPersistence struct {
-	InMemoryBlockPersistence
+	memory.InMemoryBlockPersistence
 	failNextBlocks bool
 
 	blockHeightsPerTxHash struct {
@@ -80,7 +78,7 @@ func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 func (bp *tamperingBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
 	for _, tx := range block.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		bp.logger.Info("advertising transaction completion", log.Transaction(txHash), log.BlockHeight(block.Header.BlockHeight()))
+		bp.Logger.Info("advertising transaction completion", log.Transaction(txHash), log.BlockHeight(block.Header.BlockHeight()))
 		ch := bp.getChanFor(txHash)
 		ch <- block.Header.BlockHeight() // this will panic with "send on closed channel" if the same tx is added twice to blocks (duplicate tx hash!!)
 		close(ch)
