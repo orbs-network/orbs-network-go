@@ -29,10 +29,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	harness.Network(t).
-		AllowingErrors(
-			"ValidateBlockProposal blockHash mismatch", // expected due to tampering
-		).
-		//WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
+		AllowingErrors("ValidateBlockProposal blockHash mismatch"). // expected due to tampering
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 			network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
@@ -42,9 +39,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	harness.Network(t).
-		AllowingErrors(
-			"ValidateBlockProposal blockHash mismatch", // expected due to tampering
-		).
+		AllowingErrors("ValidateBlockProposal blockHash mismatch"). // expected due to tampering
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
 			network.TransportTamperer().Delay(func() time.Duration {
@@ -55,15 +50,14 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 		})
 }
 
+// TODO (v1) Rethink the corrupting tamperer - introduces random nils in the system
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
+	t.Skip("This introduces random nils in the system, and it is not designed for it!")
 	ctrlRand := test.NewControlledRand(t)
 	harness.Network(t).WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-		t.Skip("this test causes the system to hang, seems like consensus algo stops")
-
+		//t.Skip("this test causes the system to hang, seems like consensus algo stops")
 		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)), ctrlRand)
-
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 90, ctrlRand)
-
 		tamper.Release(ctx)
 
 		// assert that the system recovered properly
