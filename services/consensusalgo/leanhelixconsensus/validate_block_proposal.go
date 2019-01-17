@@ -32,7 +32,7 @@ func validateBlockProposalInternal(ctx context.Context, blockHeight lhprimitives
 	blockPair := FromLeanHelixBlock(block)
 
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		vctx.logger.Info("Error in ValidateBlockProposal()")
+		vctx.logger.Info("Error in ValidateBlockProposal(): block or its tx/rx are nil")
 		return false
 	}
 
