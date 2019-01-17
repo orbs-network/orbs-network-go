@@ -2,8 +2,8 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
-	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
