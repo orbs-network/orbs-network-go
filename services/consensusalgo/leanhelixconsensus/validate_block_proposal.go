@@ -58,7 +58,7 @@ func validateBlockProposalInternal(ctx context.Context, blockHeight lhprimitives
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock")
+		vctx.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock", log.Error(err))
 		return false
 	}
 
