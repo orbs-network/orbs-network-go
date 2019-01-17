@@ -10,8 +10,6 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	statePersistenceAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
@@ -224,16 +222,20 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 
 	var tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence
 	var dumpingStatePersistences []harnessStateStorageAdapter.DumpingStatePersistence
-	provider := func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger) (adapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.BlockPersistence, statePersistenceAdapter.StatePersistence) {
-		metricRegistry := metric.NewRegistry()
-		blockPersistence := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(logger, preloadedBlocks, metricRegistry)
-		statePersistence := harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry)
 
-		tamperingBlockPersistences = append(tamperingBlockPersistences, blockPersistence)
-		dumpingStatePersistences = append(dumpingStatePersistences, statePersistence)
-
-		return sharedCompiler, sharedEthereumSimulator, metricRegistry, blockPersistence, statePersistence
+	provider := func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *inmemory.NodeDependencies {
+		tamperingBlockPersistence := blockStorageAdapter.NewTamperingInMemoryBlockPersistence(logger, preloadedBlocks, metricRegistry)
+		dumpingStateStorage := harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry)
+		tamperingBlockPersistences = append(tamperingBlockPersistences, tamperingBlockPersistence)
+		dumpingStatePersistences = append(dumpingStatePersistences, dumpingStateStorage)
+		return &inmemory.NodeDependencies{
+			BlockPersistence: tamperingBlockPersistence,
+			StatePersistence: dumpingStateStorage,
+			EtherConnection:  sharedEthereumSimulator,
+			Compiler:         sharedCompiler,
+		}
 	}
+
 	harness := &acceptanceNetworkHarness{
 		Network:                    *inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
 		tamperingTransport:         sharedTamperingTransport,

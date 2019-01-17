@@ -3,7 +3,6 @@ package gamma
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
@@ -18,7 +17,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		network := NewDevelopmentNetwork(ctx, log.GetLogger(), metric.NewRegistry())
+		network := NewDevelopmentNetwork(ctx, log.GetLogger())
 		contract := callcontract.NewContractClient(network)
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM

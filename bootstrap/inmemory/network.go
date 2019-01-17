@@ -31,9 +31,23 @@ type Network struct {
 	Transport adapter.Transport
 }
 
-type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.BlockPersistence, stateStorageAdapter.StatePersistence)
+type NodeDependencies struct {
+	Compiler         nativeProcessorAdapter.Compiler
+	EtherConnection  ethereumAdapter.EthereumConnection
+	BlockPersistence blockStorageAdapter.BlockPersistence
+	StatePersistence stateStorageAdapter.StatePersistence
+}
+type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *NodeDependencies
 
-func NewNetworkWithNumOfNodes(federation map[string]config.FederationNode, nodeOrder []primitives.NodeAddress, privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey, parent log.BasicLogger, cfgTemplate config.OverridableConfig, transport adapter.Transport, provider nodeDependencyProvider) *Network {
+func NewNetworkWithNumOfNodes(
+	federation map[string]config.FederationNode,
+	nodeOrder []primitives.NodeAddress,
+	privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey,
+	parent log.BasicLogger,
+	cfgTemplate config.OverridableConfig,
+	transport adapter.Transport,
+	provider nodeDependencyProvider,
+) *Network {
 
 	network := &Network{
 		Logger:    parent,
@@ -44,11 +58,20 @@ func NewNetworkWithNumOfNodes(federation map[string]config.FederationNode, nodeO
 	for _, address := range nodeOrder {
 		federationNode := federation[address.KeyForMap()]
 		cfg := cfgTemplate.ForNode(address, privateKeys[address.KeyForMap()])
+		metricRegistry := metric.NewRegistry()
 
 		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
-		compiler, ethereumConnection, metricRegistry, blockPersistence, stateAdapter := provider(len(network.Nodes), cfg, nodeLogger)
+		dep := &NodeDependencies{}
+		if provider == nil {
+			dep.BlockPersistence = blockStorageAdapter.NewTamperingInMemoryBlockPersistence(nodeLogger, nil, metricRegistry)
+			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, nodeLogger)
+			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger)
+			dep.StatePersistence = stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)
+		} else {
+			dep = provider(len(network.Nodes), cfg, nodeLogger, metricRegistry)
+		}
 
-		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, blockPersistence, stateAdapter, compiler, ethereumConnection, metricRegistry, nodeLogger)
+		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, dep.BlockPersistence, dep.StatePersistence, dep.Compiler, dep.EtherConnection, metricRegistry, nodeLogger)
 	}
 
 	return network // call network.CreateAndStartNodes to launch nodes in the network
@@ -223,4 +246,8 @@ func (n *Network) Destroy() {
 	for _, node := range n.Nodes {
 		node.Destroy()
 	}
+}
+
+func (n *Network) MetricRegistry(nodeIndex int) metric.Registry {
+	return n.Nodes[nodeIndex].metricRegistry
 }
