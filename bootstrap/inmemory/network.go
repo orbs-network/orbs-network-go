@@ -21,6 +21,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"math"
+	"sync"
 )
 
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
@@ -32,23 +33,17 @@ type Network struct {
 
 type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger) (nativeProcessorAdapter.Compiler, ethereumAdapter.EthereumConnection, metric.Registry, blockStorageAdapter.BlockPersistence, stateStorageAdapter.StatePersistence)
 
-func NewNetworkWithNumOfNodes(
-	federation map[string]config.FederationNode,
-	privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey,
-	parent log.BasicLogger,
-	cfgTemplate config.OverridableConfig,
-	transport adapter.Transport,
-	provider nodeDependencyProvider,
-) *Network {
+func NewNetworkWithNumOfNodes(federation map[string]config.FederationNode, nodeOrder []primitives.NodeAddress, privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey, parent log.BasicLogger, cfgTemplate config.OverridableConfig, transport adapter.Transport, provider nodeDependencyProvider) *Network {
 
 	network := &Network{
 		Logger:    parent,
 		Transport: transport,
 	}
+	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
 
-	for stringAddress, federationNode := range federation {
-
-		cfg := cfgTemplate.ForNode(federationNode.NodeAddress(), privateKeys[stringAddress])
+	for _, address := range nodeOrder {
+		federationNode := federation[address.KeyForMap()]
+		cfg := cfgTemplate.ForNode(address, privateKeys[address.KeyForMap()])
 
 		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
 		compiler, ethereumConnection, metricRegistry, blockPersistence, stateAdapter := provider(len(network.Nodes), cfg, nodeLogger)
@@ -77,10 +72,12 @@ func (n *Network) addNode(name string, cfg config.NodeConfig, blockPersistence b
 }
 
 func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) {
+	wg := sync.WaitGroup{}
 	for i, node := range n.Nodes {
 		if i >= numOfNodesToStart {
-			return
+			break
 		}
+		wg.Add(1)
 
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
@@ -95,8 +92,14 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.config,
 			node.ethereumConnection,
 		)
-		defer node.transactionPoolBlockHeightTracker.WaitForBlock(ctx, 1)
+		go func(nx *Node) { // nodes should not block each other from executing wait
+			if err := nx.transactionPoolBlockHeightTracker.WaitForBlock(ctx, 1); err != nil {
+				panic(fmt.Sprintf("node %v did not reach block 1", node.name))
+			}
+			wg.Done()
+		}(node)
 	}
+	wg.Wait()
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {

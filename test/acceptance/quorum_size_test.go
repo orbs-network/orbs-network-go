@@ -14,7 +14,10 @@ func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks(t *testing.T) {
 		WithNumNodes(6).
 		WithNumRunningNodes(4).
 		WithRequiredQuorumPercentage(66).
-		WithLogFilters(log.ExcludeEntryPoint("BlockSync")).
+		WithLogFilters(
+			log.ExcludeEntryPoint("BlockSync"),
+			log.IgnoreMessagesMatching("Metric recorded"),
+			log.ExcludeEntryPoint("LeanHelixConsensus")).
 		Start(func(parent context.Context, network harness.TestNetworkDriver) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()

@@ -21,12 +21,14 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, metricRe
 	logger.Info("creating development network")
 
 	federationNodes := map[string]config.FederationNode{}
-	federationKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
+	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
 
+	var nodeOrder []primitives.NodeAddress
 	for i := 0; i < int(numNodes); i++ {
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
-		federationKeys[nodeAddress.KeyForMap()] = keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
+		privateKeys[nodeAddress.KeyForMap()] = keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
+		nodeOrder = append(nodeOrder, nodeAddress)
 	}
 	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
 	cfgTemplate := config.TemplateForGamma(
@@ -42,7 +44,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, metricRe
 		state := statePersistenceAdapter.NewInMemoryStatePersistence(metricRegistry)
 		return compiler, connection, metricRegistry, blockPersistence, state
 	}
-	network := inmemory.NewNetworkWithNumOfNodes(federationNodes, federationKeys, logger, cfgTemplate, sharedTransport, provider)
+	network := inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, logger, cfgTemplate, sharedTransport, provider)
 	network.CreateAndStartNodes(ctx, numNodes)
 	return network
 }

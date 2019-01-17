@@ -115,6 +115,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 			logger, errorRecorder := b.makeLogger(testId)
 			network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
+			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(b.f, testId)
 			defer dumpStateOnFailure(b.f, network)
 			defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
@@ -124,6 +125,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 			}
 
 			network.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
+			logger.Info("acceptance network started")
 
 			restart := func() TestNetworkDriver {
 				cancelNetwork()
@@ -133,12 +135,15 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 				// signal the old network to stop
 				networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
 				newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
+				logger.Info("acceptance network re-created")
 
 				newNetwork.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
+				logger.Info("acceptance network re-started")
 
 				return newNetwork
 			}
 
+			logger.Info("acceptance network running test")
 			f(ctx, network, restart)
 		})
 		// end test
@@ -197,10 +202,12 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 
 	federationNodes := map[string]config.FederationNode{}
 	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
+	var nodeOrder []primitives.NodeAddress
 	for i := 0; i < int(b.numNodes); i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
 		privateKeys[nodeAddress.KeyForMap()] = testKeys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
+		nodeOrder = append(nodeOrder, nodeAddress)
 	}
 
 	cfgTemplate := config.ForAcceptanceTestNetwork(
@@ -228,7 +235,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		return sharedCompiler, sharedEthereumSimulator, metricRegistry, blockPersistence, statePersistence
 	}
 	harness := &acceptanceNetworkHarness{
-		Network:                    *inmemory.NewNetworkWithNumOfNodes(federationNodes, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
+		Network:                    *inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
 		tamperingTransport:         sharedTamperingTransport,
 		ethereumConnection:         sharedEthereumSimulator,
 		fakeCompiler:               sharedCompiler,

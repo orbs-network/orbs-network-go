@@ -60,7 +60,7 @@ func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
 }
 
 func NewLeanHelixConsensusAlgo(
-	ctx context.Context,
+	parentContext context.Context,
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
@@ -70,7 +70,9 @@ func NewLeanHelixConsensusAlgo(
 
 ) services.ConsensusAlgoLeanHelix {
 
-	logger := parentLogger.WithTags(LogTag)
+	ctx := trace.NewContext(parentContext, "LeanHelixConsensus")
+	logger := parentLogger.WithTags(LogTag, trace.LogFieldFrom(ctx))
+
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("Node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
 	committeeSize := uint32(len(config.FederationNodes(0)))
@@ -109,12 +111,12 @@ func NewLeanHelixConsensusAlgo(
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		supervised.GoForever(ctx, logger, func() {
-			parentLogger.Info("LeanHelix is active consensus algo: go routine starts")
+			logger.Info("LeanHelix is active consensus algo: go routine starts")
 			s.leanHelix.Run(ctx)
 		})
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
-		parentLogger.Info("LeanHelix is not the active consensus algo so not running its go routine, only registering for block validation")
+		logger.Info("LeanHelix is not the active consensus algo so not running its go routine, only registering for block validation")
 	}
 	// LeanHelix can be used as handler to validateBlocks without actively running consensus rounds
 	blockStorage.RegisterConsensusBlocksHandler(s)
