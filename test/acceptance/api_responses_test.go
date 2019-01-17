@@ -3,7 +3,6 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -12,7 +11,7 @@ import (
 )
 
 func TestResponseForTransactionOnValidContract(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -25,7 +24,7 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -38,7 +37,7 @@ func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -51,7 +50,7 @@ func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
 }
 
 func TestResponseForTransactionOnFailingContract(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -64,7 +63,7 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 }
 
 func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 

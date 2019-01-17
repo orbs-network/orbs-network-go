@@ -1,4 +1,4 @@
-package harness
+package acceptance
 
 import (
 	"context"
@@ -32,12 +32,12 @@ type canFail interface {
 	Fatal(args ...interface{})
 }
 
-type acceptanceTestNetworkBuilder struct {
+type networkHarnessBuilder struct {
 	f                        canFail
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
-	setupFunc                func(ctx context.Context, network TestNetworkDriver)
+	setupFunc                func(ctx context.Context, network NetworkHarness)
 	logFilters               []log.Filter
 	maxTxPerBlock            uint32
 	allowedErrors            []string
@@ -46,8 +46,8 @@ type acceptanceTestNetworkBuilder struct {
 }
 
 // TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
-func Network(f canFail) *acceptanceTestNetworkBuilder {
-	n := &acceptanceTestNetworkBuilder{f: f, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+func newHarness(f canFail) *networkHarnessBuilder {
+	n := &networkHarnessBuilder{f: f, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	return n.
 		WithTestId(getCallerFuncName()).
@@ -56,50 +56,50 @@ func Network(f canFail) *acceptanceTestNetworkBuilder {
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 }
 
-func (b *acceptanceTestNetworkBuilder) WithLogFilters(filters ...log.Filter) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithLogFilters(filters ...log.Filter) *networkHarnessBuilder {
 	b.logFilters = filters
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) WithTestId(testId string) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithTestId(testId string) *networkHarnessBuilder {
 	randNum := rand.Intn(1000000)
 	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) WithNumNodes(numNodes int) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithNumNodes(numNodes int) *networkHarnessBuilder {
 	b.numNodes = numNodes
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) WithConsensusAlgos(algos ...consensus.ConsensusAlgoType) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithConsensusAlgos(algos ...consensus.ConsensusAlgoType) *networkHarnessBuilder {
 	b.consensusAlgos = algos
 	return b
 }
 
 // setup runs when all adapters have been created but before the nodes are started
-func (b *acceptanceTestNetworkBuilder) WithSetup(f func(ctx context.Context, network TestNetworkDriver)) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithSetup(f func(ctx context.Context, network NetworkHarness)) *networkHarnessBuilder {
 	b.setupFunc = f
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) WithMaxTxPerBlock(maxTxPerBlock uint32) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithMaxTxPerBlock(maxTxPerBlock uint32) *networkHarnessBuilder {
 	b.maxTxPerBlock = maxTxPerBlock
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) AllowingErrors(allowedErrors ...string) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) AllowingErrors(allowedErrors ...string) *networkHarnessBuilder {
 	b.allowedErrors = append(b.allowedErrors, allowedErrors...)
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) Start(f func(ctx context.Context, network TestNetworkDriver)) {
-	b.StartWithRestart(func(ctx context.Context, network TestNetworkDriver, _ func() TestNetworkDriver) {
+func (b *networkHarnessBuilder) Start(f func(ctx context.Context, network NetworkHarness)) {
+	b.StartWithRestart(func(ctx context.Context, network NetworkHarness, _ func() NetworkHarness) {
 		f(ctx, network)
 	})
 }
 
-func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Context, network TestNetworkDriver, restartPreservingBlocks func() TestNetworkDriver)) {
+func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)) {
 	if b.numOfNodesToStart == 0 {
 		b.numOfNodesToStart = b.numNodes
 	}
@@ -125,7 +125,7 @@ func (b *acceptanceTestNetworkBuilder) StartWithRestart(f func(ctx context.Conte
 			network.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
 			logger.Info("acceptance network started")
 
-			restart := func() TestNetworkDriver {
+			restart := func() NetworkHarness {
 				cancelNetwork()
 				network.Destroy()
 				time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
@@ -167,7 +167,7 @@ func extractBlocks(blocks blockStorageAdapter.TamperingInMemoryBlockPersistence)
 	return blockPairs
 }
 
-func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
+func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
 	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
@@ -181,17 +181,17 @@ func (b *acceptanceTestNetworkBuilder) makeLogger(testId string) (log.BasicLogge
 	return logger, errorRecorder
 }
 
-func (b *acceptanceTestNetworkBuilder) WithNumRunningNodes(numNodes int) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithNumRunningNodes(numNodes int) *networkHarnessBuilder {
 	b.numOfNodesToStart = numNodes
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) WithRequiredQuorumPercentage(percentage int) *acceptanceTestNetworkBuilder {
+func (b *networkHarnessBuilder) WithRequiredQuorumPercentage(percentage int) *networkHarnessBuilder {
 	b.requiredQuorumPercentage = uint32(percentage)
 	return b
 }
 
-func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer) *acceptanceNetworkHarness {
+func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer) *networkHarness {
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", b.numNodes))
@@ -236,7 +236,7 @@ func (b *acceptanceTestNetworkBuilder) newAcceptanceTestNetwork(ctx context.Cont
 		}
 	}
 
-	harness := &acceptanceNetworkHarness{
+	harness := &networkHarness{
 		Network:                    *inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
 		tamperingTransport:         sharedTamperingTransport,
 		ethereumConnection:         sharedEthereumSimulator,
@@ -269,7 +269,7 @@ func printTestIdOnFailure(f canFail, testId string) {
 	}
 }
 
-func dumpStateOnFailure(f canFail, network TestNetworkDriver) {
+func dumpStateOnFailure(f canFail, network NetworkHarness) {
 	if f.Failed() {
 		network.DumpState()
 	}

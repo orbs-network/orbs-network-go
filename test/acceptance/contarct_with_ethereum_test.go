@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts/ethereum_caller_mock"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/stretchr/testify/require"
@@ -20,9 +19,9 @@ import (
 
 // LH: Same comment as autonomous
 func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
-	harness.Network(t).
+	newHarness(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync"), log.ExcludeEntryPoint("TransactionForwarder")).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network NetworkHarness) {
 
 			addressOfContractInEthereum := deployEthereumContract(t, network.EthereumSimulator(), "foobar")
 			deployOrbsContractCallingEthereum(ctx, network)
@@ -49,7 +48,7 @@ func extractStringValueFrom(readResponse *client.RunQueryResponse) string {
 	return argsArray.ArgumentsIterator().NextArguments().StringValue()
 }
 
-func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNetworkDriver, address string) *client.RunQueryResponse {
+func readStringFromEthereumReaderAt(ctx context.Context, network NetworkHarness, address string) *client.RunQueryResponse {
 	readQuery := builders.Query().
 		WithMethod("EthereumReader", "readString").
 		WithArgs(address).
@@ -58,7 +57,7 @@ func readStringFromEthereumReaderAt(ctx context.Context, network harness.TestNet
 	return readResponse
 }
 
-func deployOrbsContractCallingEthereum(parent context.Context, network harness.TestNetworkDriver) {
+func deployOrbsContractCallingEthereum(parent context.Context, network NetworkHarness) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
 	ethereumReaderCode := "foo" // TODO (v1) this junk argument is very confusing

@@ -3,7 +3,6 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -13,13 +12,13 @@ import (
 // TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
 func TestInterNodeBlockSync(t *testing.T) {
 
-	harness.Network(t).
+	newHarness(t).
 		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
-		WithSetup(func(ctx context.Context, network harness.TestNetworkDriver) {
+		WithSetup(func(ctx context.Context, network NetworkHarness) {
 			var prevBlock *protocol.BlockPairContainer
 			for i := 1; i <= 10; i++ {
 				//blockPair := builders.LeanHelixBlockPair().
@@ -35,7 +34,7 @@ func TestInterNodeBlockSync(t *testing.T) {
 			numBlocks, err := network.BlockPersistence(1).GetLastBlockHeight()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
-		}).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		}).Start(func(ctx context.Context, network NetworkHarness) {
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
 	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -15,10 +14,10 @@ import (
 )
 
 func TestCommitTransactionWithLeanHelix(t *testing.T) {
-	harness.Network(t).
+	newHarness(t).
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network NetworkHarness) {
 			contract := network.BenchmarkTokenContract()
 			// leader is nodeIndex 0, validator is nodeIndex 1
 			_, txHash := contract.Transfer(ctx, 0, 17, 5, 6)
@@ -33,7 +32,7 @@ func TestCommitTransactionWithLeanHelix(t *testing.T) {
 }
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -63,7 +62,7 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -107,7 +106,7 @@ func requireBalanceInNodeEventually(ctx context.Context, t *testing.T, contract 
 }
 
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
-	harness.Network(t).Start(func(parent context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
