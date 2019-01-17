@@ -81,8 +81,9 @@ const (
 
 	ETHEREUM_ENDPOINT = "ETHEREUM_ENDPOINT"
 
-	LOGGER_HTTP_ENDPOINT = "LOGGER_HTTP_ENDPOINT"
-	LOGGER_BULK_SIZE     = "LOGGER_BULK_SIZE"
+	LOGGER_HTTP_ENDPOINT            = "LOGGER_HTTP_ENDPOINT"
+	LOGGER_BULK_SIZE                = "LOGGER_BULK_SIZE"
+	LOGGER_FILE_TRUNCATION_INTERVAL = "LOGGER_FILE_TRUNCATION_INTERVAL"
 
 	BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR                = "BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR"
 	BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES = "BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES"
@@ -334,6 +335,10 @@ func (c *config) LoggerHttpEndpoint() string {
 
 func (c *config) LoggerBulkSize() uint32 {
 	return c.kv[LOGGER_BULK_SIZE].Uint32Value
+}
+
+func (c *config) LoggerFileTruncationInterval() time.Duration {
+	return c.kv[LOGGER_FILE_TRUNCATION_INTERVAL].DurationValue
 }
 
 func (c *config) BlockStorageFileSystemDataDir() string {
