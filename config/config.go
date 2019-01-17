@@ -81,7 +81,7 @@ type NodeConfig interface {
 	// logger
 	LoggerHttpEndpoint() string
 	LoggerBulkSize() uint32
-	LoggerFileRotationInterval() time.Duration
+	LoggerFileTruncationInterval() time.Duration
 }
 
 type OverridableConfig interface {
