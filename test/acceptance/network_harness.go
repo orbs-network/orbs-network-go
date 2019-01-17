@@ -9,11 +9,11 @@ import (
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	testStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
-	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -38,7 +38,7 @@ type networkHarness struct {
 
 	tamperingTransport         testGossipAdapter.Tamperer
 	ethereumConnection         *ethereumAdapter.EthereumSimulator
-	fakeCompiler               nativeProcessorAdapter.FakeCompiler
+	fakeCompiler               fake.FakeCompiler
 	tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence
 	dumpingStatePersistences   []testStateStorageAdapter.DumpingStatePersistence
 }

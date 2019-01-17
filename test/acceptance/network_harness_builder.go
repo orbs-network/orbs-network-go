@@ -11,10 +11,10 @@ import (
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	memoryGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
+	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/test/harness/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -217,7 +217,7 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	)
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, federationNodes))
-	sharedCompiler := nativeProcessorAdapter.NewFakeCompiler()
+	sharedCompiler := nativeProcessorAdapter.NewCompiler()
 	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
 
 	var tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence

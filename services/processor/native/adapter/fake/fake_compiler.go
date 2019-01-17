@@ -1,4 +1,4 @@
-package adapter
+package fake
 
 import (
 	"context"
@@ -18,7 +18,7 @@ type fakeCompiler struct {
 	provided map[string]*sdkContext.ContractInfo
 }
 
-func NewFakeCompiler() FakeCompiler {
+func NewCompiler() *fakeCompiler {
 	return &fakeCompiler{
 		mutex:    &sync.RWMutex{},
 		provided: make(map[string]*sdkContext.ContractInfo),

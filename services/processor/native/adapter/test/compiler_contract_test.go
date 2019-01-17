@@ -1,9 +1,10 @@
-package adapter
+package test
 
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
@@ -76,7 +77,7 @@ func aNativeCompiler(t *testing.T) *compilerContractHarness {
 }
 
 func aFakeCompiler(t *testing.T) *compilerContractHarness {
-	compiler := NewFakeCompiler()
+	compiler := fake.NewCompiler()
 	code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
 	compiler.ProvideFakeContract(contracts.MockForCounter(), code)
 	return &compilerContractHarness{
