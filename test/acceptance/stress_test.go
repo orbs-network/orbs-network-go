@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -19,16 +18,10 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 	harness.Network(t).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
-			"ValidateBlockProposal blockHash mismatch",
-			//"all consensus \\d* algos refused to validate the block",             //TODO(v1) investigate and explain, or fix and remove expected error
-			//"FORK!! block already in storage, transaction block header mismatch", //TODO(v1) investigate and explain, or fix and remove expected error
+			"ValidateBlockProposal blockHash mismatch",           // expected due to tampering
 		).
-		//WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"),
-		//	log.IgnoreErrorsMatching("transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING")).
 		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-
-			//network.TransportTamperer().Duplicate(AnyNthMessage(7))
-
+			network.TransportTamperer().Duplicate(AnyNthMessage(7))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
 		})
 }
@@ -37,32 +30,29 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 	ctrlRand := test.NewControlledRand(t)
 	harness.Network(t).
 		AllowingErrors(
-			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
+			"ValidateBlockProposal blockHash mismatch", // expected due to tampering
 		).
-		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
-		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
-
-		network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
-
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
-	})
+		//WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote"), log.IgnoreErrorsMatching("transport failed to send")).
+		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+			network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
+			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
+		})
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	harness.Network(t).
 		AllowingErrors(
-			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
+			"ValidateBlockProposal blockHash mismatch", // expected due to tampering
 		).
-		WithLogFilters(log.IgnoreMessagesMatching("leader failed to validate vote")).
-		WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 
-		network.TransportTamperer().Delay(func() time.Duration {
-			return (time.Duration(ctrlRand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
-		}, AnyNthMessage(2))
+			network.TransportTamperer().Delay(func() time.Duration {
+				return (time.Duration(ctrlRand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
+			}, AnyNthMessage(2))
 
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
-	})
+			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
+		})
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
