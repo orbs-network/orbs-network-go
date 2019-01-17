@@ -48,7 +48,7 @@ func broadcastTest(makeContext func(ctx context.Context) *transportContractConte
 			c.listeners[2].ExpectReceive(data.Payloads)
 			c.listeners[3].ExpectNotReceive()
 
-			c.transports[3].Send(ctx, data)
+			require.NoError(t, c.transports[3].Send(ctx, data))
 			c.verify(t)
 		})
 	}

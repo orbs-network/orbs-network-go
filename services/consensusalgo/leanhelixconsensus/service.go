@@ -46,6 +46,7 @@ type Config interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixShowDebug() bool
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
@@ -70,7 +71,7 @@ func NewLeanHelixConsensusAlgo(
 
 ) services.ConsensusAlgoLeanHelix {
 
-	ctx := trace.NewContext(parentContext, "LeanHelixConsensus")
+	ctx := trace.NewContext(parentContext, "LeanHelix.Run")
 	logger := parentLogger.WithTags(LogTag, trace.LogFieldFrom(ctx))
 
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("Node-address", config.NodeAddress().String()))
@@ -103,7 +104,7 @@ func NewLeanHelixConsensusAlgo(
 		BlockUtils:      provider,
 		KeyManager:      mgr,
 		ElectionTrigger: electionTrigger,
-		Logger:          NewLoggerWrapper(parentLogger, true),
+		Logger:          NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() run NewLeanHelix()")

@@ -109,7 +109,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
 		factory:      f,
-		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodeAddress),
+		gossipClient: newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
 		createTimer:  f.createCollectTimeoutTimer,
 		logger:       f.logger,
 		conduit:      f.conduit,
@@ -130,7 +130,7 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceNodeAddress primitives.
 	return &waitingForChunksState{
 		sourceNodeAddress: sourceNodeAddress,
 		factory:           f,
-		gossipClient:      newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncBatchSize, f.config.NodeAddress),
+		gossipClient:      newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
 		createTimer:       f.createWaitForChunksTimeoutTimer,
 		logger:            f.logger,
 		abort:             make(chan struct{}),

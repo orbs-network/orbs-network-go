@@ -203,7 +203,7 @@ func newFilesystemAdapter() *adapterUnderTest {
 	conf := newTempFileConfig()
 	cleanup := func() {
 		cancel()
-		_ = os.RemoveAll(conf.BlockStorageDataDir()) // ignore errors - nothing to do
+		_ = os.RemoveAll(conf.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 	}
 
 	persistence, err := filesystem.NewBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())

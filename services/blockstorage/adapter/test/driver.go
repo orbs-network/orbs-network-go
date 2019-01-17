@@ -56,11 +56,11 @@ func newTempFileConfig() *localConfig {
 		chainId: 0xFF,
 	}
 }
-func (l *localConfig) BlockStorageDataDir() string {
+func (l *localConfig) BlockStorageFileSystemDataDir() string {
 	return l.dir
 }
 
-func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+func (l *localConfig) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
 	return 64 * 1024 * 1024
 }
 
@@ -69,7 +69,7 @@ func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
 }
 
 func (l *localConfig) cleanDir() {
-	_ = os.RemoveAll(l.BlockStorageDataDir()) // ignore errors - nothing to do
+	_ = os.RemoveAll(l.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 }
 
 func (l *localConfig) setVirtualChainId(id primitives.VirtualChainId) {
@@ -77,7 +77,7 @@ func (l *localConfig) setVirtualChainId(id primitives.VirtualChainId) {
 }
 
 func getFileSize(t *testing.T, conf *localConfig) int64 {
-	blocksFile, err := os.Open(filepath.Join(conf.BlockStorageDataDir(), blocksFilename))
+	blocksFile, err := os.Open(filepath.Join(conf.BlockStorageFileSystemDataDir(), blocksFilename))
 	require.NoError(t, err)
 	blocksFileInfo2, err := blocksFile.Stat()
 	require.NoError(t, err)
@@ -87,7 +87,7 @@ func getFileSize(t *testing.T, conf *localConfig) int64 {
 }
 
 func truncateFile(t *testing.T, conf *localConfig, size int64) {
-	blocksFile, err := os.OpenFile(filepath.Join(conf.BlockStorageDataDir(), blocksFilename), os.O_RDWR, 0666)
+	blocksFile, err := os.OpenFile(filepath.Join(conf.BlockStorageFileSystemDataDir(), blocksFilename), os.O_RDWR, 0666)
 	require.NoError(t, err)
 	err = blocksFile.Truncate(size)
 	require.NoError(t, err)
@@ -96,7 +96,7 @@ func truncateFile(t *testing.T, conf *localConfig, size int64) {
 }
 
 func flipBitInFile(t *testing.T, conf *localConfig, offset int64, bitMask byte) {
-	blocksFile, err := os.OpenFile(filepath.Join(conf.BlockStorageDataDir(), blocksFilename), os.O_RDWR, 0666)
+	blocksFile, err := os.OpenFile(filepath.Join(conf.BlockStorageFileSystemDataDir(), blocksFilename), os.O_RDWR, 0666)
 	require.NoError(t, err)
 	b := make([]byte, 1)
 	n, err := blocksFile.ReadAt(b, offset)

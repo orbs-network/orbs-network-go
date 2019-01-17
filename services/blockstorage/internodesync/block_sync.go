@@ -28,7 +28,7 @@ type syncState interface {
 
 type blockSyncConfig interface {
 	NodeAddress() primitives.NodeAddress
-	BlockSyncBatchSize() uint32
+	BlockSyncNumBlocksInBatch() uint32
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
@@ -88,7 +88,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 		log.Stringable("no-commit-timeout", bs.config.BlockSyncNoCommitInterval()),
 		log.Stringable("collect-responses-timeout", bs.config.BlockSyncCollectResponseTimeout()),
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
-		log.Uint32("batch-size", bs.config.BlockSyncBatchSize()))
+		log.Uint32("batch-size", bs.config.BlockSyncNumBlocksInBatch()))
 
 	supervised.GoForever(ctx, logger, func() {
 		bs.syncLoop(ctx)

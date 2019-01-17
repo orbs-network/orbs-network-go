@@ -27,10 +27,10 @@ func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
 	return l.virtualChainId
 }
 
-func (l *localConfig) BlockStorageDataDir() string {
+func (l *localConfig) BlockStorageFileSystemDataDir() string {
 	return l.dir
 }
 
-func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
+func (l *localConfig) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
 	return 1000000000
 }
