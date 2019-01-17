@@ -1,8 +1,9 @@
-package adapter
+package tcp
 
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -74,7 +75,7 @@ func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(ctx, &TransportData{
+		err := h.transport.Send(ctx, &adapter.TransportData{
 			SenderNodeAddress:      h.config.NodeAddress(),
 			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 			RecipientNodeAddresses: nil,
@@ -96,7 +97,7 @@ func TestDirectOutgoing_AdapterSendsUnicast(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(ctx, &TransportData{
+		err := h.transport.Send(ctx, &adapter.TransportData{
 			SenderNodeAddress:      h.config.NodeAddress(),
 			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 			RecipientNodeAddresses: []primitives.NodeAddress{h.nodeAddressForPeer(1)},
@@ -238,7 +239,7 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(ctx, &TransportData{
+		err := h.transport.Send(ctx, &adapter.TransportData{
 			SenderNodeAddress:      h.config.NodeAddress(),
 			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 			RecipientNodeAddresses: []primitives.NodeAddress{h.nodeAddressForPeer(1)},

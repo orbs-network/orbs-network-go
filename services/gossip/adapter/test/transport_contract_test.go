@@ -1,10 +1,14 @@
-package adapter
+package test
 
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -33,7 +37,7 @@ func broadcastTest(makeContext func(ctx context.Context) *transportContractConte
 		test.WithContext(func(ctx context.Context) {
 			c := makeContext(ctx)
 
-			data := &TransportData{
+			data := &adapter.TransportData{
 				SenderNodeAddress: c.nodeAddresses[3],
 				RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 				Payloads:          [][]byte{{0x71, 0x72, 0x73}},
@@ -52,8 +56,8 @@ func broadcastTest(makeContext func(ctx context.Context) *transportContractConte
 
 type transportContractContext struct {
 	nodeAddresses []primitives.NodeAddress
-	transports    []Transport
-	listeners     []*MockTransportListener
+	transports    []adapter.Transport
+	listeners     []*testkit.MockTransportListener
 }
 
 func aChannelTransport(ctx context.Context) *transportContractContext {
@@ -67,13 +71,13 @@ func aChannelTransport(ctx context.Context) *transportContractContext {
 
 	logger := log.GetLogger(log.String("adapter", "transport"))
 
-	transport := NewMemoryTransport(ctx, logger, federationNodes)
-	res.transports = []Transport{transport, transport, transport, transport}
-	res.listeners = []*MockTransportListener{
-		listenTo(res.transports[0], res.nodeAddresses[0]),
-		listenTo(res.transports[1], res.nodeAddresses[1]),
-		listenTo(res.transports[2], res.nodeAddresses[2]),
-		listenTo(res.transports[3], res.nodeAddresses[3]),
+	transport := memory.NewTransport(ctx, logger, federationNodes)
+	res.transports = []adapter.Transport{transport, transport, transport, transport}
+	res.listeners = []*testkit.MockTransportListener{
+		testkit.ListenTo(res.transports[0], res.nodeAddresses[0]),
+		testkit.ListenTo(res.transports[1], res.nodeAddresses[1]),
+		testkit.ListenTo(res.transports[2], res.nodeAddresses[2]),
+		testkit.ListenTo(res.transports[3], res.nodeAddresses[3]),
 	}
 
 	return res
@@ -100,17 +104,17 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	registry := metric.NewRegistry()
 
-	res.transports = []Transport{
-		NewDirectTransport(ctx, configs[0], logger, registry),
-		NewDirectTransport(ctx, configs[1], logger, registry),
-		NewDirectTransport(ctx, configs[2], logger, registry),
-		NewDirectTransport(ctx, configs[3], logger, registry),
+	res.transports = []adapter.Transport{
+		tcp.NewDirectTransport(ctx, configs[0], logger, registry),
+		tcp.NewDirectTransport(ctx, configs[1], logger, registry),
+		tcp.NewDirectTransport(ctx, configs[2], logger, registry),
+		tcp.NewDirectTransport(ctx, configs[3], logger, registry),
 	}
-	res.listeners = []*MockTransportListener{
-		listenTo(res.transports[0], res.nodeAddresses[0]),
-		listenTo(res.transports[1], res.nodeAddresses[1]),
-		listenTo(res.transports[2], res.nodeAddresses[2]),
-		listenTo(res.transports[3], res.nodeAddresses[3]),
+	res.listeners = []*testkit.MockTransportListener{
+		testkit.ListenTo(res.transports[0], res.nodeAddresses[0]),
+		testkit.ListenTo(res.transports[1], res.nodeAddresses[1]),
+		testkit.ListenTo(res.transports[2], res.nodeAddresses[2]),
+		testkit.ListenTo(res.transports[3], res.nodeAddresses[3]),
 	}
 
 	// TODO(v1): improve this, we need some time until everybody connects to everybody else

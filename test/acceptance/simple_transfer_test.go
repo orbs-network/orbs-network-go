@@ -2,10 +2,10 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/harness/callcontract"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -71,7 +71,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 
 		// leader is nodeIndex 0, validator is nodeIndex 1
 
-		pausedTxForwards := network.TransportTamperer().Pause(adapter.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
+		pausedTxForwards := network.TransportTamperer().Pause(testkit.TransactionRelayMessage(gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS))
 		txHash := contract.TransferInBackground(ctx, 1, 17, 5, 6)
 
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 2); err != nil {

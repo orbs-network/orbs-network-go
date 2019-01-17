@@ -1,4 +1,4 @@
-package adapter
+package tcp
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -33,10 +34,10 @@ type directTransport struct {
 	config config.GossipTransportConfig
 	logger log.BasicLogger
 
-	outgoingPeerQueues map[string]chan *TransportData // does not require mutex to read
+	outgoingPeerQueues map[string]chan *adapter.TransportData // does not require mutex to read
 
 	mutex                       *sync.RWMutex
-	transportListenerUnderMutex TransportListener
+	transportListenerUnderMutex adapter.TransportListener
 	serverListeningUnderMutex   bool
 	serverPort                  int
 
@@ -52,12 +53,12 @@ func getMetrics(registry metric.Registry) *metrics {
 	}
 }
 
-func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.BasicLogger, registry metric.Registry) Transport {
+func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.BasicLogger, registry metric.Registry) *directTransport {
 	t := &directTransport{
 		config: config,
 		logger: logger.WithTags(LogTag),
 
-		outgoingPeerQueues: make(map[string]chan *TransportData),
+		outgoingPeerQueues: make(map[string]chan *adapter.TransportData),
 
 		mutex:   &sync.RWMutex{},
 		metrics: getMetrics(registry),
@@ -66,7 +67,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	// client channels (not under mutex, before all goroutines)
 	for peerNodeAddress := range t.config.GossipPeers(0) {
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
-			t.outgoingPeerQueues[peerNodeAddress] = make(chan *TransportData)
+			t.outgoingPeerQueues[peerNodeAddress] = make(chan *adapter.TransportData)
 		}
 	}
 
@@ -89,7 +90,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	return t
 }
 
-func (t *directTransport) RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress) {
+func (t *directTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -97,7 +98,7 @@ func (t *directTransport) RegisterListener(listener TransportListener, listenerN
 }
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)
-func (t *directTransport) Send(ctx context.Context, data *TransportData) error {
+func (t *directTransport) Send(ctx context.Context, data *adapter.TransportData) error {
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, peerQueue := range t.outgoingPeerQueues {
@@ -263,14 +264,14 @@ func (t *directTransport) notifyListener(ctx context.Context, payloads [][]byte)
 	listener.OnTransportMessageReceived(ctx, payloads)
 }
 
-func (t *directTransport) getListener() TransportListener {
+func (t *directTransport) getListener() adapter.TransportListener {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 
 	return t.transportListenerUnderMutex
 }
 
-func (t *directTransport) clientMainLoop(parentCtx context.Context, address string, msgs chan *TransportData) {
+func (t *directTransport) clientMainLoop(parentCtx context.Context, address string, msgs chan *adapter.TransportData) {
 	for {
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", address))
 		t.logger.Info("attempting outgoing transport connection", log.String("server", address), trace.LogFieldFrom(ctx))
@@ -289,7 +290,7 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, address stri
 }
 
 // returns true if should attempt reconnect on error
-func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, msgs chan *TransportData) bool {
+func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, msgs chan *adapter.TransportData) bool {
 	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
 	for {
@@ -318,7 +319,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 	}
 }
 
-func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *TransportData) error {
+func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
 	t.logger.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
 	timeout := t.config.GossipNetworkTimeout()

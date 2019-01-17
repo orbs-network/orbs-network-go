@@ -1,10 +1,15 @@
-package adapter
+/*
+Package memory provides an in-memory implementation of the Gossip Transport adapter, meant for usage in fast tests that
+should not use the TCP-based adapter, such as acceptance tests or sociable unit tests, or in other in-process network use cases
+*/
+package memory
 
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -18,7 +23,7 @@ type message struct {
 
 type peer struct {
 	socket   chan message
-	listener chan TransportListener
+	listener chan adapter.TransportListener
 }
 
 type memoryTransport struct {
@@ -26,11 +31,7 @@ type memoryTransport struct {
 	peers map[string]*peer
 }
 
-/*
-Package adapter provides an in-memory implementation of the Gossip Transport adapter, meant for usage in fast tests that
-should not use the TCP-based adapter, such as acceptance tests or sociable unit tests, or in other in-process network use cases
-*/
-func NewMemoryTransport(ctx context.Context, logger log.BasicLogger, federation map[string]config.FederationNode) *memoryTransport {
+func NewTransport(ctx context.Context, logger log.BasicLogger, federation map[string]config.FederationNode) *memoryTransport {
 	transport := &memoryTransport{peers: make(map[string]*peer)}
 
 	transport.Lock()
@@ -43,13 +44,13 @@ func NewMemoryTransport(ctx context.Context, logger log.BasicLogger, federation 
 	return transport
 }
 
-func (p *memoryTransport) RegisterListener(listener TransportListener, nodeAddress primitives.NodeAddress) {
+func (p *memoryTransport) RegisterListener(listener adapter.TransportListener, nodeAddress primitives.NodeAddress) {
 	p.Lock()
 	defer p.Unlock()
 	p.peers[string(nodeAddress)].attach(listener)
 }
 
-func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
+func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData) error {
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
@@ -72,7 +73,7 @@ func (p *memoryTransport) Send(ctx context.Context, data *TransportData) error {
 }
 
 func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket: make(chan message, 1000), listener: make(chan TransportListener)} // channel is buffered on purpose, otherwise the whole network is synced on transport
+	p := &peer{socket: make(chan message, 1000), listener: make(chan adapter.TransportListener)} // channel is buffered on purpose, otherwise the whole network is synced on transport
 
 	supervised.GoForever(bgCtx, logger, func() {
 		// wait till we have a listener attached
@@ -87,11 +88,11 @@ func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
 	return p
 }
 
-func (p *peer) attach(listener TransportListener) {
+func (p *peer) attach(listener adapter.TransportListener) {
 	p.listener <- listener
 }
 
-func (p *peer) send(ctx context.Context, data *TransportData) {
+func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
 	tracingContext, _ := trace.FromContext(ctx)
 	select {
 	case p.socket <- message{payloads: data.Payloads, traceContext: tracingContext}:
@@ -100,7 +101,7 @@ func (p *peer) send(ctx context.Context, data *TransportData) {
 	}
 }
 
-func (p *peer) acceptUsing(bgCtx context.Context, listener TransportListener) {
+func (p *peer) acceptUsing(bgCtx context.Context, listener adapter.TransportListener) {
 	for {
 		select {
 		case message := <-p.socket:
@@ -111,7 +112,7 @@ func (p *peer) acceptUsing(bgCtx context.Context, listener TransportListener) {
 	}
 }
 
-func receive(bgCtx context.Context, listener TransportListener, message message) {
+func receive(bgCtx context.Context, listener adapter.TransportListener, message message) {
 	ctx, cancel := context.WithCancel(bgCtx)
 	defer cancel()
 	traceContext := contextFrom(ctx, message)

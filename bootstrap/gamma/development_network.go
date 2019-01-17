@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -25,7 +25,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inmemor
 		privateKeys[nodeAddress.KeyForMap()] = keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
 		nodeOrder = append(nodeOrder, nodeAddress)
 	}
-	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
+	sharedTransport := gossipAdapter.NewTransport(ctx, logger, federationNodes)
 	cfgTemplate := config.TemplateForGamma(
 		federationNodes,
 		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),

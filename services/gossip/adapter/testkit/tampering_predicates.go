@@ -1,4 +1,4 @@
-package adapter
+package testkit
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"

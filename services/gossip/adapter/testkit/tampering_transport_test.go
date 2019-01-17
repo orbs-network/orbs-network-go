@@ -1,4 +1,4 @@
-package adapter
+package testkit
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -16,20 +17,20 @@ import (
 type tamperingHarness struct {
 	senderKey string
 	transport *TamperingTransport
-	listener  *adapter.MockTransportListener
+	listener  *MockTransportListener
 }
 
 func newTamperingHarness(ctx context.Context) *tamperingHarness {
 	senderAddress := "sender"
 	listenerAddress := "listener"
-	listener := &adapter.MockTransportListener{}
+	listener := &MockTransportListener{}
 	logger := log.GetLogger(log.String("adapter", "transport"))
 
 	federationNodes := make(map[string]config.FederationNode)
 	federationNodes[senderAddress] = config.NewHardCodedFederationNode(primitives.NodeAddress(senderAddress))
 	federationNodes[listenerAddress] = config.NewHardCodedFederationNode(primitives.NodeAddress(listenerAddress))
 
-	transport := NewTamperingTransport(logger, adapter.NewMemoryTransport(ctx, logger, federationNodes))
+	transport := NewTamperingTransport(logger, memory.NewTransport(ctx, logger, federationNodes))
 
 	transport.RegisterListener(listener, primitives.NodeAddress(listenerAddress))
 

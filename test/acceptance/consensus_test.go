@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -73,9 +73,9 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			contract := network.BenchmarkTokenContract()
 			contract.DeployBenchmarkToken(ctx, 5)
 
-			committedTamper := network.TransportTamperer().Fail(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
-			blockSyncTamper := network.TransportTamperer().Fail(adapter.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
-			committedLatch := network.TransportTamperer().LatchOn(adapter.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+			committedTamper := network.TransportTamperer().Fail(testkit.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
+			blockSyncTamper := network.TransportTamperer().Fail(testkit.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
+			committedLatch := network.TransportTamperer().LatchOn(testkit.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 
 			contract.TransferInBackground(ctx, 0, 0, 5, 6) // send a transaction so that network advances to block 1. the tamper prevents COMMITTED messages from reaching leader, so it doesn't move to block 2
 			committedLatch.Wait()                          // wait for validator to try acknowledge that it reached block 1 (and fail)

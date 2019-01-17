@@ -1,11 +1,12 @@
-package adapter
+package memory
 
 import (
 	"context"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -19,8 +20,8 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 	test.WithContext(func(parentContext context.Context) {
 		address := primitives.NodeAddress{0x01}
 
-		transport := NewMemoryTransport(parentContext, log.GetLogger(), makeFederation(address))
-		listener := listenTo(transport, address)
+		transport := NewTransport(parentContext, log.GetLogger(), makeFederation(address))
+		listener := testkit.ListenTo(transport, address)
 
 		childContext, cancel := context.WithCancel(parentContext) // this is required so that the parent context does not get polluted
 		defer cancel()
@@ -28,25 +29,15 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 		contextWithTrace := trace.NewContext(childContext, "foo")
 		originalTracingContext, _ := trace.FromContext(contextWithTrace)
 
-		listener.expectTracingContextToPropagate(t, originalTracingContext)
+		listener.ExpectTracingContextToPropagate(t, originalTracingContext)
 
-		transport.Send(contextWithTrace, &TransportData{
+		_ = transport.Send(contextWithTrace, &adapter.TransportData{
 			SenderNodeAddress: primitives.NodeAddress{0x02},
 			RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
 		})
 
-		test.EventuallyVerify(100*time.Millisecond, listener)
+		require.NoError(t, test.EventuallyVerify(100*time.Millisecond, listener))
 	})
-}
-
-func (l *MockTransportListener) expectTracingContextToPropagate(t *testing.T, originalTracingContext *trace.Context) *mock.MockFunction {
-	return l.When("OnTransportMessageReceived", mock.Any, mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
-		propagatedTracingContext, ok := trace.FromContext(ctx)
-		require.True(t, ok, "memory transport did not create a tracing context")
-
-		require.NotEmpty(t, propagatedTracingContext.NestedFields())
-		require.Equal(t, propagatedTracingContext.NestedFields(), originalTracingContext.NestedFields())
-	}).Times(1)
 }
 
 func makeFederation(address primitives.NodeAddress) map[string]config.FederationNode {

@@ -1,4 +1,4 @@
-package adapter
+package tcp
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -25,7 +26,7 @@ type directHarness struct {
 	peersListeners            []net.Listener
 	peersListenersConnections []net.Conn
 	peerTalkerConnection      net.Conn
-	listenerMock              *MockTransportListener
+	listenerMock              *testkit.MockTransportListener
 }
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
@@ -42,7 +43,7 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	h := &directHarness{
 		config:                    cfg,
 		transport:                 transport,
-		listenerMock:              &MockTransportListener{},
+		listenerMock:              &testkit.MockTransportListener{},
 		peerTalkerConnection:      peerTalkerConnection,
 		peersListenersConnections: peersListenersConnections,
 		peersListeners:            peersListeners,
@@ -54,7 +55,7 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 func makeTransport(ctx context.Context, cfg config.GossipTransportConfig) *directTransport {
 	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	registry := metric.NewRegistry()
-	transport := NewDirectTransport(ctx, cfg, log, registry).(*directTransport)
+	transport := NewDirectTransport(ctx, cfg, log, registry)
 	// to synchronize tests, wait until server is ready
 	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
 		return transport.isServerListening()
