@@ -3,6 +3,7 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

@@ -71,7 +71,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	const totalAmount = transfers * transferAmount
 
 	newHarness(t).
-		StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
+		StartWithRestart(func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
 
 			var txHashes []primitives.Sha256
 			// generate some blocks with state
