@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks(t *testing.T) {
@@ -18,10 +17,7 @@ func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks(t *testing.T) {
 			log.ExcludeEntryPoint("BlockSync"),
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeEntryPoint("LeanHelixConsensus")).
-		Start(func(parent context.Context, network harness.TestNetworkDriver) {
-			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-			defer cancel()
-
+		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 			contract := network.BenchmarkTokenContract()
 			contract.DeployBenchmarkToken(ctx, 5)
 

@@ -20,9 +20,9 @@ type TamperingInMemoryBlockPersistence interface {
 	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
-func NewTamperingInMemoryBlockPersistence(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) *foo {
+func NewTamperingInMemoryBlockPersistence(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) *tamperingBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
-	p := &foo{
+	p := &tamperingBlockPersistence{
 		InMemoryBlockPersistence: InMemoryBlockPersistence{
 			logger:     logger,
 			metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInBytes")},
@@ -39,7 +39,7 @@ func NewTamperingInMemoryBlockPersistence(parent log.BasicLogger, preloadedBlock
 	return p
 }
 
-type foo struct {
+type tamperingBlockPersistence struct {
 	InMemoryBlockPersistence
 	failNextBlocks bool
 
@@ -49,7 +49,7 @@ type foo struct {
 	}
 }
 
-func (bp *foo) WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
+func (bp *tamperingBlockPersistence) WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
 	ch := bp.getChanFor(txHash)
 
 	select {
@@ -61,11 +61,11 @@ func (bp *foo) WaitForTransaction(ctx context.Context, txHash primitives.Sha256)
 	}
 }
 
-func (bp *foo) FailNextBlocks() {
+func (bp *tamperingBlockPersistence) FailNextBlocks() {
 	bp.failNextBlocks = true
 }
 
-func (bp *foo) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
+func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 	if bp.failNextBlocks {
 		return errors.New("could not write a block")
 	}
@@ -77,7 +77,7 @@ func (bp *foo) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
 	return nil
 }
 
-func (bp *foo) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
+func (bp *tamperingBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
 	for _, tx := range block.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
 		bp.logger.Info("advertising transaction completion", log.Transaction(txHash), log.BlockHeight(block.Header.BlockHeight()))
@@ -87,7 +87,7 @@ func (bp *foo) advertiseAllTransactions(block *protocol.TransactionsBlockContain
 	}
 }
 
-func (bp *foo) getChanFor(txHash primitives.Sha256) blockHeightChan {
+func (bp *tamperingBlockPersistence) getChanFor(txHash primitives.Sha256) blockHeightChan {
 	bp.blockHeightsPerTxHash.Lock()
 	defer bp.blockHeightsPerTxHash.Unlock()
 
