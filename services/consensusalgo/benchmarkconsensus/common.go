@@ -39,7 +39,7 @@ func (s *service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, 
 }
 
 func (s *service) requiredQuorumSize() int {
-	return int(math.Ceil(float64(s.config.NetworkSize(0)) * float64(s.config.ConsensusRequiredQuorumPercentage()) / 100))
+	return int(math.Ceil(float64(s.config.NetworkSize(0)) * float64(s.config.BenchmarkConsensusRequiredQuorumPercentage()) / 100))
 }
 
 func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
@@ -88,7 +88,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 		return errors.New("BenchmarkConsensus: block proof not signed")
 	}
 	signer := signersIterator.NextNodes()
-	if !signer.SenderNodeAddress().Equal(s.config.ConstantConsensusLeader()) {
+	if !signer.SenderNodeAddress().Equal(s.config.BenchmarkConsensusConstantLeader()) {
 		return errors.Errorf("BenchmarkConsensus: block proof not from leader: %s", signer.SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)

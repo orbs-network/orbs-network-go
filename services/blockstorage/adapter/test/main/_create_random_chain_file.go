@@ -21,7 +21,7 @@ func main() {
 	conf := &randomChainConfig{dir: dir, virtualChainId: virtualChain}
 
 	start := time.Now()
-	fmt.Printf("\nusing:\noutput directory: %s\nvirtual chain id: %d\n\nloading adapter and building index...\n", conf.BlockStorageDataDir(), conf.VirtualChainId())
+	fmt.Printf("\nusing:\noutput directory: %s\nvirtual chain id: %d\n\nloading adapter and building index...\n", conf.BlockStorageFileSystemDataDir(), conf.VirtualChainId())
 
 	adapter, release, err := test.NewFilesystemAdapterDriver(conf)
 	if err != nil {
@@ -64,7 +64,7 @@ func main() {
 		prevBlock = block
 	}
 
-	fmt.Printf("\n\nblocks file in %s/ now has %d blocks\n\n", conf.BlockStorageDataDir(), currentHeight)
+	fmt.Printf("\n\nblocks file in %s/ now has %d blocks\n\n", conf.BlockStorageFileSystemDataDir(), currentHeight)
 }
 
 func parseParams() (dir string, vchain primitives.VirtualChainId, height primitives.BlockHeight, randomEach bool) {
@@ -87,11 +87,11 @@ func (l *randomChainConfig) VirtualChainId() primitives.VirtualChainId {
 	return l.virtualChainId
 }
 
-func (l *randomChainConfig) BlockStorageDataDir() string {
+func (l *randomChainConfig) BlockStorageFileSystemDataDir() string {
 	return l.dir
 }
 
-func (l *randomChainConfig) BlockStorageMaxBlockSize() uint32 {
+func (l *randomChainConfig) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
 	return 1000000000
 }
 

@@ -10,9 +10,12 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
-func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize int, vchainId primitives.VirtualChainId) log.BasicLogger {
+func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize int,
+	vchainId primitives.VirtualChainId, truncationInterval time.Duration) log.BasicLogger {
+
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -22,8 +25,9 @@ func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize
 		panic(err)
 	}
 
+	fileWriter := log.NewTruncatingFileWriter(logFile, truncationInterval)
 	outputs := []log.Output{
-		log.NewFormattingOutput(logFile, log.NewJsonFormatter()),
+		log.NewFormattingOutput(fileWriter, log.NewJsonFormatter()),
 	}
 
 	if !silent {
@@ -95,7 +99,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := getLogger(*pathToLog, *silentLog, cfg.LoggerHttpEndpoint(), int(cfg.LoggerBulkSize()), cfg.VirtualChainId())
+	logger := getLogger(*pathToLog, *silentLog, cfg.LoggerHttpEndpoint(), int(cfg.LoggerBulkSize()),
+		cfg.VirtualChainId(), cfg.LoggerFileTruncationInterval())
 
 	bootstrap.NewNode(
 		cfg,
