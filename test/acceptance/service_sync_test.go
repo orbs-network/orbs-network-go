@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -22,11 +21,11 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		txBuilders[i] = builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, builders.ClientAddressForEd25519SignerForTests(6))
 	}
 
-	harness.Network(t).
+	newHarness(t).
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
+		).StartWithRestart(func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
 
 		var topBlockHeight primitives.BlockHeight
 		for _, builder := range txBuilders {
@@ -51,7 +50,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	})
 }
 
-func waitForTransactionStatusCommitted(ctx context.Context, network harness.TestNetworkDriver, txHash primitives.Sha256, nodeIndex int) bool {
+func waitForTransactionStatusCommitted(ctx context.Context, network NetworkHarness, txHash primitives.Sha256, nodeIndex int) bool {
 	return test.Eventually(5*time.Second, func() bool {
 		txStatusOut, err := network.PublicApi(nodeIndex).GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
 			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
@@ -71,7 +70,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	const transfers = 10
 	const totalAmount = transfers * transferAmount
 
-	harness.Network(t).
+	newHarness(t).
 		StartWithRestart(func(ctx context.Context, network harness.TestNetworkDriver, restartPreservingBlocks func() harness.TestNetworkDriver) {
 
 			var txHashes []primitives.Sha256

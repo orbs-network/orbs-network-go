@@ -3,10 +3,9 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/harness"
-	. "github.com/orbs-network/orbs-network-go/test/harness/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -15,12 +14,12 @@ import (
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
-	harness.Network(t).
+	newHarness(t).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 			"ValidateBlockProposal blockHash mismatch",           // expected due to tampering
 		).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Duplicate(AnyNthMessage(7))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
 		})
@@ -28,9 +27,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
-	harness.Network(t).
+	newHarness(t).
 		AllowingErrors("ValidateBlockProposal blockHash mismatch"). // expected due to tampering
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Fail(HasHeader(ABenchmarkConsensusMessage).And(AnyNthMessage(7)))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, ctrlRand)
 		})
@@ -38,9 +37,9 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
-	harness.Network(t).
+	newHarness(t).
 		AllowingErrors("ValidateBlockProposal blockHash mismatch"). // expected due to tampering
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+		Start(func(ctx context.Context, network NetworkHarness) {
 
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(ctrlRand.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
@@ -54,7 +53,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("This introduces random nils in the system, and it is not designed for it!")
 	ctrlRand := test.NewControlledRand(t)
-	harness.Network(t).WithNumNodes(4).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
 		//t.Skip("this test causes the system to hang, seems like consensus algo stops")
 		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)), ctrlRand)
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 90, ctrlRand)
@@ -85,7 +84,7 @@ func AnyNthMessage(n int) MessagePredicate {
 	}
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network harness.TestNetworkDriver, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
 	contract := network.BenchmarkTokenContract()

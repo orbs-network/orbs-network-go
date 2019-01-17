@@ -61,7 +61,7 @@ func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
 }
 
 func NewLeanHelixConsensusAlgo(
-	ctx context.Context,
+	parentContext context.Context,
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
@@ -71,7 +71,9 @@ func NewLeanHelixConsensusAlgo(
 
 ) services.ConsensusAlgoLeanHelix {
 
-	logger := parentLogger.WithTags(LogTag)
+	ctx := trace.NewContext(parentContext, "LeanHelix.Run")
+	logger := parentLogger.WithTags(LogTag, trace.LogFieldFrom(ctx))
+
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("Node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
 	committeeSize := uint32(len(config.FederationNodes(0)))
@@ -109,10 +111,9 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		ctxLH := trace.NewContext(ctx, "LeanHelix.Run")
 		supervised.GoForever(ctx, logger, func() {
 			parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
-			s.leanHelix.Run(ctxLH)
+			s.leanHelix.Run(ctx)
 		})
 		gossip.RegisterLeanHelixHandler(s)
 	} else {

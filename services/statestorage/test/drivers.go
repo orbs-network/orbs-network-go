@@ -8,7 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -35,7 +35,7 @@ func newStateStorageDriverWithGrace(numOfStateRevisionsToRetain uint32, graceBlo
 	cfg := config.ForStateStorageTest(numOfStateRevisionsToRetain, graceBlockDiff, graceTimeoutMillis)
 	registry := metric.NewRegistry()
 
-	p := adapter.NewInMemoryStatePersistence(registry)
+	p := memory.NewStatePersistence(registry)
 	logger := log.GetLogger().WithOutput() // a mute logger
 
 	return &Driver{service: statestorage.NewStateStorage(cfg, p, nil, logger, registry)}
