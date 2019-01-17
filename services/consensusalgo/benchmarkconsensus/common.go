@@ -92,8 +92,8 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 		return errors.Errorf("BenchmarkConsensus: block proof not from leader: %s", signer.SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)
-	if !digest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()) {
-		return errors.Errorf("BenchmarkConsensus: block proof signature is invalid: %s", signer.Signature())
+	if err := digest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()); err != nil {
+		return errors.Wrapf(err, "BenchmarkConsensus: block proof signature is invalid: %s", signer.Signature())
 	}
 
 	return nil
