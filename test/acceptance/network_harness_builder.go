@@ -116,7 +116,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		// start test
-		test.WithContextWithTimeout(10*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+		test.WithContextWithTimeout(15*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 			networkCtx, cancelNetwork := context.WithCancel(ctx)
 			testId := b.testId + "-" + consensusAlgo.String()
 			logger, errorRecorder := b.makeLogger(testId)

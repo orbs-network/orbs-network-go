@@ -111,7 +111,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1*time.Millisecond)
 	// TODO v1 How to express relations between config properties https://tree.taiga.io/project/orbs-network/us/647
 	// LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL should be less than BLOCK_SYNC_NO_COMMIT_INTERVAL, or else node-sync will be triggered unnecessarily
-	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 100*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 10*time.Millisecond)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
@@ -121,7 +121,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)
-	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 400*time.Millisecond) // should be a factor more than average block time
+	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 200*time.Millisecond) // should be a factor more than average block time
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
 
