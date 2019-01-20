@@ -124,19 +124,19 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
 
 	if err := validLeanHelixBlockPair(blockPair); err != nil {
-		return err
-	}
-
-	if err := validLeanHelixBlockPair(prevBlockPair); err != nil {
-		return err
+		return errors.Wrapf(err, "validateBlockConsensus(): error when sending blockPair to validLeanHelixBlockPair()")
 	}
 
 	blockProof := blockPair.TransactionsBlock.BlockProof.LeanHelix()
-	prevBlockProof := prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
+	var prevBlockProof primitives.LeanHelixBlockProof = nil
+
+	if prevBlockPair != nil && prevBlockPair.TransactionsBlock != nil && prevBlockPair.TransactionsBlock.BlockProof != nil {
+		prevBlockProof = prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
+	}
 
 	err := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, prevBlockProof)
 	if err != nil {
-		return errors.Wrap(err, "LeanHelix: ValidateBlockConsensus() invalid blockProof")
+		return errors.Wrapf(err, "validateBlockConsensus(): error when calling leanHelix.ValidateBlockConsensus()")
 	}
 	return nil
 }
