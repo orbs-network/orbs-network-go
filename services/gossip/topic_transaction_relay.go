@@ -11,7 +11,10 @@ import (
 )
 
 func (s *service) RegisterTransactionRelayHandler(handler gossiptopics.TransactionRelayHandler) {
-	s.transactionHandlers = append(s.transactionHandlers, handler)
+	s.handlers.Lock()
+	defer s.handlers.Unlock()
+
+	s.handlers.transactionHandlers = append(s.handlers.transactionHandlers, handler)
 }
 
 func (s *service) receivedTransactionRelayMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
@@ -50,7 +53,10 @@ func (s *service) receivedForwardedTransactions(ctx context.Context, header *gos
 	}
 	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", message.SignedTransactions))
 
-	for _, l := range s.transactionHandlers {
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.transactionHandlers {
 		_, err := l.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{Message: message})
 		if err != nil {
 			logger.Info("HandleForwardedTransactions failed", log.Error(err))
