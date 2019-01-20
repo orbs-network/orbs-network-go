@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"sync"
 )
 
 var LogTag = log.Service("gossip")
@@ -17,14 +18,19 @@ type Config interface {
 	NodeAddress() primitives.NodeAddress
 }
 
-type service struct {
-	config                     Config
-	logger                     log.BasicLogger
-	transport                  adapter.Transport
+type gossipListeners struct {
+	sync.RWMutex
 	transactionHandlers        []gossiptopics.TransactionRelayHandler
 	leanHelixHandlers          []gossiptopics.LeanHelixHandler
 	benchmarkConsensusHandlers []gossiptopics.BenchmarkConsensusHandler
 	blockSyncHandlers          []gossiptopics.BlockSyncHandler
+}
+
+type service struct {
+	config    Config
+	logger    log.BasicLogger
+	transport adapter.Transport
+	handlers  gossipListeners
 }
 
 func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogger) services.Gossip {
@@ -32,6 +38,7 @@ func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogge
 		transport: transport,
 		config:    config,
 		logger:    logger.WithTags(LogTag),
+		handlers:  gossipListeners{},
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
 	return s

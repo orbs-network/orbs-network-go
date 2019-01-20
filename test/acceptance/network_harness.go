@@ -36,16 +36,18 @@ type NetworkHarness interface {
 type networkHarness struct {
 	inmemory.Network
 
-	tamperingTransport         testGossipAdapter.Tamperer
-	ethereumConnection         *ethereumAdapter.EthereumSimulator
-	fakeCompiler               fake.FakeCompiler
-	tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence
-	dumpingStatePersistences   []testStateStorageAdapter.DumpingStatePersistence
+	tamperingTransport                 testGossipAdapter.Tamperer
+	ethereumConnection                 *ethereumAdapter.EthereumSimulator
+	fakeCompiler                       fake.FakeCompiler
+	tamperingBlockPersistences         []blockStorageAdapter.TamperingInMemoryBlockPersistence
+	dumpingStatePersistences           []testStateStorageAdapter.DumpingStatePersistence
+	stateBlockHeightTrackers           []*synchronization.BlockTracker
+	transactionPoolBlockHeightTrackers []*synchronization.BlockTracker
 }
 
 func (n *networkHarness) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
 	blockHeight := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
-	err := n.Nodes[nodeIndex].StateBlockHeightTracker.WaitForBlock(ctx, blockHeight)
+	err := n.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
 	if err != nil {
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
@@ -77,7 +79,7 @@ func (n *networkHarness) MockContract(fakeContractInfo *sdkContext.ContractInfo,
 }
 
 func (n *networkHarness) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
-	return n.Nodes[nodeIndex].GetTransactionPoolBlockHeightTracker()
+	return n.transactionPoolBlockHeightTrackers[nodeIndex]
 }
 
 func (n *networkHarness) BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {

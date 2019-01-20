@@ -10,7 +10,10 @@ import (
 )
 
 func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler) {
-	s.leanHelixHandlers = append(s.leanHelixHandlers, handler)
+	s.handlers.Lock()
+	defer s.handlers.Unlock()
+
+	s.handlers.leanHelixHandlers = append(s.handlers.leanHelixHandlers, handler)
 }
 
 func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
@@ -19,7 +22,10 @@ func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 		return
 	}
 
-	for _, l := range s.leanHelixHandlers {
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.leanHelixHandlers {
 		_, err := l.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{Message: message})
 		if err != nil {
 			s.logger.Info("receivedLeanHelixMessage() HandleLeanHelixMessage failed", log.Error(err))
