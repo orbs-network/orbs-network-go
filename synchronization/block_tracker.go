@@ -64,7 +64,7 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 	}
 
 	if currentHeight+uint64(t.graceDistance) < requestedHeightUint { // requested block too far ahead, no grace
-		return errors.Errorf("requested future block outside of grace range: currentHeight=%d requestedHeightUint=%d graceDistance=%d", currentHeight, requestedHeightUint, t.graceDistance)
+		return errors.Errorf("requested future block outside of grace range")
 	}
 
 	for currentHeight < requestedHeightUint {
