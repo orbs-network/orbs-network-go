@@ -2,6 +2,7 @@ package blockstorage
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
@@ -11,17 +12,17 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Cont
 	// the source of truth for the last committed block is persistence
 	lastCommittedBlock, err := s.persistence.GetLastBlock()
 	if err != nil {
-		s.logger.Error(err.Error())
+		s.logger.Error("UpdateConsensusAlgosAboutLatestCommittedBlock(): GetLastBlock() failed", log.Error(err))
 		return
 	}
 
-	// passing nil on purpose, see spec
-	// TODO (v1) Do we want to check lastCommittedBlock=nil or not??
-
-	// If lastCommittedBlock is nil, it means this is the Genesis Block
-	err = s.notifyConsensusAlgos(ctx, nil, lastCommittedBlock, handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
+	err = s.notifyConsensusAlgos(
+		ctx,
+		nil,                // don't care about prev block, we are updating consensus algo about last committed, not asking it to validate using the prev block
+		lastCommittedBlock, // if lastCommittedBlock is nil, it means this is the Genesis Block
+		handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 	if err != nil {
-		s.logger.Error(err.Error())
+		s.logger.Error("UpdateConsensusAlgosAboutLatestCommittedBlock(): notifyConsensusAlgos() failed", log.Error(err))
 		return
 	}
 }

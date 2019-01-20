@@ -129,7 +129,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	blockType := input.BlockType
 	blockPair := input.BlockPair
-	prevCommittedBlockPair := input.PrevCommittedBlockPair
+	prevBlockPair := input.PrevCommittedBlockPair
 	var lhBlockProof []byte
 	var lhBlock lh.Block
 
@@ -139,7 +139,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	// validate the lhBlock consensus (lhBlock and proof)
 	if shouldValidateBlockConsensusWithLeanHelix(input.Mode) {
-		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
+		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair)
 		if err != nil {
 			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
 			return nil, err
