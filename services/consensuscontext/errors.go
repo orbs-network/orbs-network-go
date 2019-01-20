@@ -8,7 +8,7 @@ var ErrMismatchedBlockHeight = errors.New("ErrMismatchedBlockHeight")
 var ErrMismatchedPrevBlockHash = errors.New("ErrMismatchedPrevBlockHash")
 var ErrInvalidBlockTimestamp = errors.New("ErrInvalidBlockTimestamp")
 
-var ErrIncorrectTransactionOrdering = errors.New("ErrIncorrectTransactionOrdering")
+var ErrFailedTransactionOrdering = errors.New("ErrFailedTransactionOrdering")
 
 var ErrMismatchedTxRxBlockHeight = errors.New("ErrMismatchedTxRxBlockHeight mismatched block height between transactions and results")
 var ErrMismatchedTxRxTimestamps = errors.New("ErrMismatchedTxRxTimestamps mismatched timestamp between transactions and results")
