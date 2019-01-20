@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  tests:
     docker:
       - image: circleci/golang:latest
     resource_class: large
@@ -30,7 +30,7 @@ jobs:
       - store_artifacts:
           path: /go/src/github.com/orbs-network/orbs-network-go/_logs
 
-  build-docker-image:
+  e2e:
     machine: true
     steps:
       - checkout
@@ -84,8 +84,8 @@ workflows:
   version: 2
   build:
     jobs:
-      - build
-      - build-docker-image
+      - tests
+      - e2e
       - flakiness
 #      - notify_github_about_dashboard
 #      - success:
