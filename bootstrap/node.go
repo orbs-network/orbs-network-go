@@ -56,7 +56,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress s
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
-	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
+	httpServer := httpserver.NewHttpServer(httpAddress, nodeLogger, nodeLogic.PublicApi(), metricRegistry, nodeConfig.Profiling())
 
 	return &node{
 		logic:        nodeLogic,

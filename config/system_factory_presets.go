@@ -50,6 +50,8 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	cfg.SetDuration(LOGGER_FILE_TRUNCATION_INTERVAL, 24*time.Hour)
 
+	cfg.SetBool(PROFILING, false)
+
 	return cfg
 }
 

@@ -32,7 +32,7 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 	network := NewDevelopmentNetwork(ctx, testLogger)
 	testLogger.Info("finished creating development network")
 
-	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0), network.MetricRegistry(0))
+	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0), network.MetricRegistry(0), false)
 
 	s := &GammaServer{
 		ctxCancel:    cancel,

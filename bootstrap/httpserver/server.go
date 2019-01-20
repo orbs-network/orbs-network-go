@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver/pprof"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"io/ioutil"
 	"net"
@@ -37,6 +38,7 @@ type server struct {
 	publicApi      services.PublicApi
 	metricRegistry metric.Registry
 	port           int
+	profiling      bool
 }
 
 type tcpKeepAliveListener struct {
@@ -59,11 +61,12 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
+func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry, profiling bool) HttpServer {
 	server := &server{
 		logger:         logger.WithTags(LogTag),
 		publicApi:      publicApi,
 		metricRegistry: metricRegistry,
+		profiling:      profiling,
 	}
 
 	if listener, err := server.listen(address); err != nil {
@@ -112,6 +115,11 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(s.getTransactionReceiptProofHandler))
 	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
+
+	if s.profiling {
+		pprof.Register(router)
+	}
+
 	return router
 }
 

@@ -208,6 +208,12 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
    -Xmx1536m
    ```
 
+### Profiling
+
+To enable profiling: put `"profiling": true` in your `config.json`.
+
+It will enable [net/http/pprof](https://golang.org/pkg/net/http/pprof/) package, and you will be able to query `pprof` via http just as described in the docs.
+
 ## Development principles
 Refer to the [Contributor's Guide](CONTRIBUTING.md) (work in progress)
 
