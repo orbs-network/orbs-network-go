@@ -13,8 +13,11 @@ import (
 )
 
 func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.BenchmarkConsensusHandler) {
+	s.handlers.Lock()
+	defer s.handlers.Unlock()
+
 	s.logger.Info("RegisterBenchmarkConsensusHandler()")
-	s.benchmarkConsensusHandlers = append(s.benchmarkConsensusHandlers, handler)
+	s.handlers.benchmarkConsensusHandlers = append(s.handlers.benchmarkConsensusHandlers, handler)
 }
 
 func (s *service) receivedBenchmarkConsensusMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
@@ -53,7 +56,10 @@ func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *
 		return
 	}
 
-	for _, l := range s.benchmarkConsensusHandlers {
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.benchmarkConsensusHandlers {
 		_, err := l.HandleBenchmarkConsensusCommit(ctx, &gossiptopics.BenchmarkConsensusCommitInput{Message: message})
 		if err != nil {
 			logger.Info("HandleBenchmarkConsensusCommit failed", log.Error(err))
@@ -87,7 +93,10 @@ func (s *service) receivedBenchmarkConsensusCommitted(ctx context.Context, heade
 		return
 	}
 
-	for _, l := range s.benchmarkConsensusHandlers {
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.benchmarkConsensusHandlers {
 		_, err := l.HandleBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBenchmarkConsensusCommitted failed", log.Error(err))
