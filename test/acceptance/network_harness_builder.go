@@ -32,7 +32,7 @@ type canFail interface {
 	Fatal(args ...interface{})
 }
 
-var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
+var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
 
 type networkHarnessBuilder struct {
 	f                        canFail
@@ -60,7 +60,7 @@ func newHarness(f canFail) *networkHarnessBuilder {
 
 	return n.
 		WithTestId(getCallerFuncName()).
-		WithNumNodes(7).
+		WithNumNodes(4).
 		WithConsensusAlgos(algos...).
 		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
 }
