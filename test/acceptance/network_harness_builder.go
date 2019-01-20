@@ -13,12 +13,14 @@ import (
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/pkg/errors"
+	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -222,27 +224,40 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 
 	var tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence
 	var dumpingStatePersistences []harnessStateStorageAdapter.DumpingStatePersistence
+	var transactionPoolTrackers []*synchronization.BlockTracker
+	var stateTrackers []*synchronization.BlockTracker
 
 	provider := func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *inmemory.NodeDependencies {
 		tamperingBlockPersistence := blockStorageAdapter.NewBlockPersistence(logger, preloadedBlocks, metricRegistry)
 		dumpingStateStorage := harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry)
+
+		txPoolHeightTracker := synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
+		stateHeightTracker := synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
+
 		tamperingBlockPersistences = append(tamperingBlockPersistences, tamperingBlockPersistence)
 		dumpingStatePersistences = append(dumpingStatePersistences, dumpingStateStorage)
+		transactionPoolTrackers = append(transactionPoolTrackers, txPoolHeightTracker)
+		stateTrackers = append(stateTrackers, stateHeightTracker)
+
 		return &inmemory.NodeDependencies{
-			BlockPersistence: tamperingBlockPersistence,
-			StatePersistence: dumpingStateStorage,
-			EtherConnection:  sharedEthereumSimulator,
-			Compiler:         sharedCompiler,
+			BlockPersistence:                   tamperingBlockPersistence,
+			StatePersistence:                   dumpingStateStorage,
+			EtherConnection:                    sharedEthereumSimulator,
+			Compiler:                           sharedCompiler,
+			TransactionPoolBlockHeightReporter: txPoolHeightTracker,
+			StateBlockHeightReporter:           stateHeightTracker,
 		}
 	}
 
 	harness := &networkHarness{
-		Network:                    *inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
-		tamperingTransport:         sharedTamperingTransport,
-		ethereumConnection:         sharedEthereumSimulator,
-		fakeCompiler:               sharedCompiler,
-		tamperingBlockPersistences: tamperingBlockPersistences,
-		dumpingStatePersistences:   dumpingStatePersistences,
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
+		tamperingTransport:                 sharedTamperingTransport,
+		ethereumConnection:                 sharedEthereumSimulator,
+		fakeCompiler:                       sharedCompiler,
+		tamperingBlockPersistences:         tamperingBlockPersistences,
+		dumpingStatePersistences:           dumpingStatePersistences,
+		stateBlockHeightTrackers:           stateTrackers,
+		transactionPoolBlockHeightTrackers: transactionPoolTrackers,
 	}
 
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network

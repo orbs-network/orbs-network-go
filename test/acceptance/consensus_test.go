@@ -47,12 +47,12 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	//		prePrepareTamper.Release(ctx)
 	//		prePrepareLatch.Remove()
 	//
-	//		if err := network.BlockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
+	//		if err := network.blockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
 	//			t.Errorf("waiting for block on node 0 failed: %s", err)
 	//		}
 	//		require.EqualValues(t, amount, contract.GetBalance(ctx, leaderIndex, toAddress), "eventual getBalance result on leader")
 	//
-	//		if err := network.BlockPersistence(validatorIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
+	//		if err := network.blockPersistence(validatorIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
 	//			t.Errorf("waiting for block on node 1 failed: %s", err)
 	//		}
 	//		require.EqualValues(t, amount, contract.GetBalance(ctx, validatorIndex, toAddress), "eventual getBalance result on non leader")
