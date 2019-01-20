@@ -163,7 +163,6 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		}
 
 		s.leanHelix.UpdateState(ctx, lhBlock, lhBlockProof)
-		// TODO: Should we notify error?
 	}
 
 	return nil, nil
@@ -179,20 +178,17 @@ func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopic
 }
 
 func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
-	// log
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
-	// convert block with proof to comply to blockstorage
 	blockPairWrapper := block.(*BlockPairWrapper)
 	blockPair := blockPairWrapper.blockPair
-	// set blockProof
-	// generate and set tx block proof
+
 	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
 		Type:             protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		ResultsBlockHash: digest.CalcResultsBlockHash(blockPair.ResultsBlock),
 		LeanHelix:        blockProof,
 	}).Build()
-	// generate rx block proof
+
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
