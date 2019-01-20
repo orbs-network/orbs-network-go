@@ -34,10 +34,12 @@ type Network struct {
 }
 
 type NodeDependencies struct {
-	Compiler         nativeProcessorAdapter.Compiler
-	EtherConnection  ethereumAdapter.EthereumConnection
-	BlockPersistence blockStorageAdapter.BlockPersistence
-	StatePersistence stateStorageAdapter.StatePersistence
+	Compiler                           nativeProcessorAdapter.Compiler
+	EtherConnection                    ethereumAdapter.EthereumConnection
+	BlockPersistence                   blockStorageAdapter.BlockPersistence
+	StatePersistence                   stateStorageAdapter.StatePersistence
+	StateBlockHeightReporter           stateStorageAdapter.BlockHeightReporter
+	TransactionPoolBlockHeightReporter *synchronization.BlockTracker
 }
 type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *NodeDependencies
 
@@ -69,28 +71,30 @@ func NewNetworkWithNumOfNodes(
 			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, nodeLogger)
 			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger)
 			dep.StatePersistence = stateStorageMemoryAdapter.NewStatePersistence(metricRegistry)
+			dep.StateBlockHeightReporter = synchronization.NopHeightReporter{}
+			dep.TransactionPoolBlockHeightReporter = synchronization.NewBlockTracker(nodeLogger, 0, math.MaxUint16)
 		} else {
 			dep = provider(len(network.Nodes), cfg, nodeLogger, metricRegistry)
 		}
 
-		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, dep.BlockPersistence, dep.StatePersistence, dep.Compiler, dep.EtherConnection, metricRegistry, nodeLogger)
+		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, dep, metricRegistry, nodeLogger)
 	}
 
 	return network // call network.CreateAndStartNodes to launch nodes in the network
 }
 
-func (n *Network) addNode(name string, cfg config.NodeConfig, blockPersistence blockStorageAdapter.BlockPersistence, statePersistence stateStorageAdapter.StatePersistence, compiler nativeProcessorAdapter.Compiler, ethereumConnection ethereumAdapter.EthereumConnection, metricRegistry metric.Registry, logger log.BasicLogger) {
+func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *NodeDependencies, metricRegistry metric.Registry, logger log.BasicLogger) {
 
 	node := &Node{}
 	node.index = len(n.Nodes)
 	node.name = name
 	node.config = cfg
-	node.StatePersistence = statePersistence
-	node.StateBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
-	node.transactionPoolBlockHeightTracker = synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
-	node.BlockPersistence = blockPersistence
-	node.nativeCompiler = compiler
-	node.ethereumConnection = ethereumConnection
+	node.statePersistence = nodeDependencies.StatePersistence
+	node.stateBlockHeightReporter = nodeDependencies.StateBlockHeightReporter
+	node.transactionPoolBlockTracker = nodeDependencies.TransactionPoolBlockHeightReporter
+	node.blockPersistence = nodeDependencies.BlockPersistence
+	node.nativeCompiler = nodeDependencies.Compiler
+	node.ethereumConnection = nodeDependencies.EtherConnection
 	node.metricRegistry = metricRegistry
 
 	n.Nodes = append(n.Nodes, node)
@@ -107,10 +111,10 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			n.Transport,
-			node.BlockPersistence,
-			node.StatePersistence,
-			node.StateBlockHeightTracker,
-			node.transactionPoolBlockHeightTracker,
+			node.blockPersistence,
+			node.statePersistence,
+			node.stateBlockHeightReporter,
+			node.transactionPoolBlockTracker,
 			node.nativeCompiler,
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,
@@ -118,7 +122,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.ethereumConnection,
 		)
 		go func(nx *Node) { // nodes should not block each other from executing wait
-			if err := nx.transactionPoolBlockHeightTracker.WaitForBlock(ctx, 1); err != nil {
+			if err := nx.transactionPoolBlockTracker.WaitForBlock(ctx, 1); err != nil {
 				panic(fmt.Sprintf("node %v did not reach block 1", node.name))
 			}
 			wg.Done()
