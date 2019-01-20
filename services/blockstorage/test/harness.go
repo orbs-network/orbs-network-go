@@ -7,10 +7,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -63,7 +63,7 @@ func (c *configForBlockStorageTests) TransactionExpirationWindow() time.Duration
 
 type harness struct {
 	stateStorage   *services.MockStateStorage
-	storageAdapter adapter.InMemoryBlockPersistence
+	storageAdapter testkit.TamperingInMemoryBlockPersistence
 	blockStorage   services.BlockStorage
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
@@ -214,7 +214,7 @@ func newBlockStorageHarness() *harness {
 	registry := metric.NewRegistry()
 	d := &harness{config: cfg, logger: logger}
 	d.stateStorage = &services.MockStateStorage{}
-	d.storageAdapter = adapter.NewInMemoryBlockPersistence(logger, registry)
+	d.storageAdapter = testkit.NewBlockPersistence(logger, nil, registry)
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 

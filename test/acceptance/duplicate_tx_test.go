@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	. "github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -18,11 +17,11 @@ var STATUS_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_DUPLICATE_TRANSACT
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
-	harness.Network(t).AllowingErrors(
+	newHarness(t).AllowingErrors(
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
-	).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	).Start(func(ctx context.Context, network NetworkHarness) {
 		ts := time.Now()
 
 		contract := network.BenchmarkTokenContract()
@@ -40,7 +39,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	})
 }
 
-func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.TestNetworkDriver, txHash primitives.Sha256) {
+func requireTxCommittedOnce(ctx context.Context, t *testing.T, network NetworkHarness, txHash primitives.Sha256) {
 	// wait for the tx to be seen as committed in state
 	network.WaitForTransactionInState(ctx, txHash)
 	txHeight, err := network.BlockPersistence(0).GetLastBlockHeight()
@@ -72,12 +71,12 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network harness.T
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
-	harness.Network(t).AllowingErrors(
+	newHarness(t).AllowingErrors(
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
 		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
-	).Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	).Start(func(ctx context.Context, network NetworkHarness) {
 
 		ts := time.Now()
 		contract := network.BenchmarkTokenContract()

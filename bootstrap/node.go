@@ -6,11 +6,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/pkg/errors"
 	"sync"
 	"time"
@@ -44,15 +44,15 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger, httpAddress s
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
 	metricRegistry := getMetricRegistry()
 
-	blockPersistence, err := blockStorageAdapter.NewFilesystemBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
+	blockPersistence, err := filesystem.NewBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
 		logger.Error("failed initializing blocks database", log.Error(err))
 		err = errors.Wrap(err, "failed initializing blocks database")
 		panic(err)
 	}
 
-	transport := gossipAdapter.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
-	statePersistence := stateStorageAdapter.NewInMemoryStatePersistence(metricRegistry)
+	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
+	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)

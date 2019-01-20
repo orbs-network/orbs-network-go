@@ -48,6 +48,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to replace with /var/lib/orbs for linux
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 
+	cfg.SetDuration(LOGGER_FILE_TRUNCATION_INTERVAL, 24*time.Hour)
+
 	return cfg
 }
 
@@ -130,13 +132,11 @@ func ForAcceptanceTestNetwork(
 }
 
 // config for gamma dev network that runs with in-memory adapters except for contract compilation
-func ForGamma(
+func TemplateForGamma(
 	federationNodes map[string]FederationNode,
-	nodeAddress primitives.NodeAddress,
-	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-) NodeConfig {
+) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 1000*time.Millisecond)
@@ -160,5 +160,5 @@ func ForGamma(
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	return cfg.OverrideNodeSpecificValues(0, nodeAddress, nodePrivateKey, "")
+	return cfg
 }

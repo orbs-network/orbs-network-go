@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/test/harness"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -25,8 +24,8 @@ import (
 // LH: Can only use after enabling Jonathan's (also Noam) feature for finding a block on Eth based on timestamp (find Taiga)
 func TestTransferFromEthereumToOrbs(t *testing.T) {
 	t.Skip()
-	harness.Network(t).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).
+		Start(func(ctx context.Context, network NetworkHarness) {
 			d := newAutonomousSwapDriver(network)
 
 			etherAmountBefore := big.NewInt(20)
@@ -61,8 +60,8 @@ func TestTransferFromEthereumToOrbs(t *testing.T) {
 
 func TestTransferFromOrbsToEthereum(t *testing.T) {
 	t.Skip()
-	harness.Network(t).
-		Start(func(ctx context.Context, network harness.TestNetworkDriver) {
+	newHarness(t).
+		Start(func(ctx context.Context, network NetworkHarness) {
 			d := newAutonomousSwapDriver(network)
 
 			etherAmount := big.NewInt(3)
@@ -93,7 +92,7 @@ func TestTransferFromOrbsToEthereum(t *testing.T) {
 		})
 }
 
-func newAutonomousSwapDriver(networkDriver harness.TestNetworkDriver) *driver {
+func newAutonomousSwapDriver(networkDriver NetworkHarness) *driver {
 	simulator := networkDriver.EthereumSimulator()
 	return &driver{
 		network:                  networkDriver,
@@ -105,7 +104,7 @@ func newAutonomousSwapDriver(networkDriver harness.TestNetworkDriver) *driver {
 }
 
 type driver struct {
-	network   harness.TestNetworkDriver
+	network   NetworkHarness
 	simulator *adapter.EthereumSimulator
 
 	orbsContractOwnerAddress *keys.Ed25519KeyPair
