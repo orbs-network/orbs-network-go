@@ -15,6 +15,10 @@ import (
 // TODO v1 Rewrite this test without knowing specific LH message types
 // Add more nodes for consensus to work (min 4)
 func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
+	if !ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
+		t.Skip("Lean Helix test not allowed - ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS is false")
+	}
+
 	t.Skipf("Change this - Orbs is not supposed to know LH message types")
 	//harness.
 	//	newHarness(t).
@@ -61,6 +65,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
+	t.Skip()
 	newHarness(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // override default consensus algo
