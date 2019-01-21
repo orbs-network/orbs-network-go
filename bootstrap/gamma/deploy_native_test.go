@@ -12,6 +12,7 @@ import (
 )
 
 func TestNonLeaderDeploysNativeContract(t *testing.T) {
+	t.Skip("Talk to Ron - this might need to be deleted")
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
