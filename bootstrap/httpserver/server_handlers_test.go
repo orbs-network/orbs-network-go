@@ -45,7 +45,7 @@ func TestHttpServerSendTransaction_Basic(t *testing.T) {
 		RequestResult: &client.RequestResultBuilder{
 			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
 			BlockHeight:    1,
-			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+			BlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		},
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: nil,
@@ -90,7 +90,7 @@ func TestHttpServerRunQuery_Basic(t *testing.T) {
 		RequestResult: &client.RequestResultBuilder{
 			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
 			BlockHeight:    1,
-			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+			BlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		},
 		QueryResult: &protocol.QueryResultBuilder{
 			ExecutionResult:     protocol.EXECUTION_RESULT_SUCCESS,
@@ -140,7 +140,7 @@ func TestHttpServerGetTransactionStatus_Basic(t *testing.T) {
 		RequestResult: &client.RequestResultBuilder{
 			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
 			BlockHeight:    1,
-			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+			BlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		},
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: nil,
@@ -183,7 +183,7 @@ func TestHttpServerGetTransactionReceiptProof_Basic(t *testing.T) {
 		RequestResult: &client.RequestResultBuilder{
 			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
 			BlockHeight:    1,
-			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+			BlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		},
 		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
 		TransactionReceipt: nil,

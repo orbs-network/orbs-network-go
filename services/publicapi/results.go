@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type txOutput struct {
@@ -18,6 +19,14 @@ type txOutput struct {
 type queryOutput struct {
 	requestStatus protocol.RequestStatus
 	callOutput    *services.ProcessQueryOutput
+}
+
+func isOutputPotentiallyOutOfSync(config config.PublicApiConfig, referenceBlockTimestamp primitives.TimestampNano) bool {
+	if referenceBlockTimestamp == 0 {
+		return false
+	}
+	threshold := primitives.TimestampNano(time.Now().Add(config.PublicApiNodeSyncWarningTime() * -1).UnixNano())
+	return threshold > referenceBlockTimestamp
 }
 
 func validateRequest(config config.PublicApiConfig, protocolVersion primitives.ProtocolVersion, vcId primitives.VirtualChainId) (protocol.TransactionStatus, error) {

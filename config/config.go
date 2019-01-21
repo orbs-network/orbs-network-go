@@ -68,6 +68,7 @@ type NodeConfig interface {
 
 	// public api
 	PublicApiSendTransactionTimeout() time.Duration
+	PublicApiNodeSyncWarningTime() time.Duration
 
 	// processor
 	ProcessorArtifactPath() string
@@ -143,6 +144,7 @@ type ConsensusContextConfig interface {
 
 type PublicApiConfig interface {
 	PublicApiSendTransactionTimeout() time.Duration
+	PublicApiNodeSyncWarningTime() time.Duration
 	VirtualChainId() primitives.VirtualChainId
 }
 

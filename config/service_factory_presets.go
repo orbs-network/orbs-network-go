@@ -43,11 +43,12 @@ func ForConsensusContextTests(federationNodes map[string]FederationNode) Consens
 	return cfg
 }
 
-func ForPublicApiTests(virtualChain uint32, txTimeout time.Duration) PublicApiConfig {
+func ForPublicApiTests(virtualChain uint32, txTimeout time.Duration, outOfSyncWarningTime time.Duration) PublicApiConfig {
 	cfg := emptyConfig()
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, virtualChain)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, txTimeout)
+	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, outOfSyncWarningTime)
 	return cfg
 }
 

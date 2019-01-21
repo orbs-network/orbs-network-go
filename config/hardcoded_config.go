@@ -74,6 +74,7 @@ const (
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
 
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
+	PUBLIC_API_NODE_SYNC_WARNING_TIME   = "PUBLIC_API_NODE_SYNC_WARNING_TIME"
 
 	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
 
@@ -291,6 +292,10 @@ func (c *config) TransactionPoolTimeBetweenEmptyBlocks() time.Duration {
 
 func (c *config) PublicApiSendTransactionTimeout() time.Duration {
 	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
+}
+
+func (c *config) PublicApiNodeSyncWarningTime() time.Duration {
+	return c.kv[PUBLIC_API_NODE_SYNC_WARNING_TIME].DurationValue
 }
 
 func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
