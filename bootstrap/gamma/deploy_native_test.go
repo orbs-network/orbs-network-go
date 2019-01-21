@@ -12,7 +12,7 @@ import (
 )
 
 func TestNonLeaderDeploysNativeContract(t *testing.T) {
-	t.Skip("Talk to Ron - this might need to be deleted")
+	t.Skip("Flaky, see https://github.com/orbs-network/orbs-network-go/issues/752")
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}

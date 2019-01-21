@@ -51,10 +51,11 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 
 // TODO (v1) Rethink the corrupting tamperer - introduces random nils in the system
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
-	t.Skip("This introduces random nils in the system, and it is not designed for it!")
-	ctrlRand := test.NewControlledRand(t)
-	newHarness(t).Start(func(ctx context.Context, network NetworkHarness) {
-		//t.Skip("this test causes the system to hang, seems like consensus algo stops")
+	t.Skip("this test causes the system to hang, seems like consensus algo stops")
+	newHarness(t).WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
+		t.Skip("this test causes the system to hang, seems like consensus algo stops")
+		ctrlRand := test.NewControlledRand(t)
+
 		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)), ctrlRand)
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 90, ctrlRand)
 		tamper.Release(ctx)
