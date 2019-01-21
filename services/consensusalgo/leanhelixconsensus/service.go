@@ -207,7 +207,7 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return errors.Errorf("saveToBlockStorage with block height 0 - genesis is not supported")
 	}
-	hash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
+	hash := digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	logger.Info("saving block to storage", log.Stringable("block-hash", hash), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPair,

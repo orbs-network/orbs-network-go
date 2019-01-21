@@ -39,4 +39,5 @@ func (l *loggerWrapper) Info(format string, args ...interface{}) {
 
 func (l *loggerWrapper) Error(format string, args ...interface{}) {
 	l.log.Error(fmt.Sprintf(strings.Join([]string{LH_PREFIX, format}, ""), args...))
+	l.log.WithTags()
 }

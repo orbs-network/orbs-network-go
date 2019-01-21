@@ -79,8 +79,6 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		prevBlockTimestamp = prevBlockWrapper.blockPair.TransactionsBlock.Header.Timestamp()
 	}
 
-	p.logger.Info("RequestNewBlockProposal()", log.Stringable("new-block-height", currentBlockHeight))
-
 	// TODO https://tree.taiga.io/project/orbs-network/us/642 Add configurable maxNumTx and maxBlockSize
 	maxNumOfTransactions := uint32(10000)
 	maxBlockSize := uint32(1000000)
@@ -113,11 +111,10 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		ResultsBlock:      rxOutput.ResultsBlock,
 	}
 
-	p.logger.Info("RequestNewBlockProposal() returning", log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
-
-	blockHash := []byte(digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock))
+	blockHash := digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	blockPairWrapper := ToLeanHelixBlock(blockPair)
-	return blockPairWrapper, blockHash
+	p.logger.Info("RequestNewBlockProposal() created new block", log.BlockHeight(currentBlockHeight), log.Stringable("block-hash", blockHash), log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
+	return blockPairWrapper, []byte(blockHash)
 
 }
 
