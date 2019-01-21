@@ -64,6 +64,8 @@ func translateTransactionStatusToRequestStatus(txStatus protocol.TransactionStat
 		return protocol.REQUEST_STATUS_BAD_REQUEST
 	case protocol.TRANSACTION_STATUS_REJECTED_CONGESTION:
 		return protocol.REQUEST_STATUS_CONGESTION
+	case protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC:
+		return protocol.REQUEST_STATUS_OUT_OF_SYNC
 	}
 	return protocol.REQUEST_STATUS_RESERVED
 }
