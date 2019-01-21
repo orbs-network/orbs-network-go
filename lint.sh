@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # For local installation, see: https://github.com/golangci/golangci-lint#local-installation
 
