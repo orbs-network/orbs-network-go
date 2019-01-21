@@ -55,7 +55,7 @@ type subBencher interface {
 	Run(name string, f func(b *testing.B)) bool
 }
 
-var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
+var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
 
 type networkHarnessBuilder struct {
 	f                        canFail
