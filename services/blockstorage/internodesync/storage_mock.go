@@ -19,7 +19,7 @@ func (s *blockSyncStorageMock) GetLastCommittedBlockHeight(ctx context.Context, 
 	}
 }
 
-func (s *blockSyncStorageMock) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+func (s *blockSyncStorageMock) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	ret := s.Called(ctx, input)
 	if out := ret.Get(0); out != nil {
 		return out.(*services.CommitBlockOutput), ret.Error(1)
