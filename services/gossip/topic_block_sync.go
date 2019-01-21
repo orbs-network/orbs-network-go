@@ -11,7 +11,10 @@ import (
 )
 
 func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler) {
-	s.blockSyncHandlers = append(s.blockSyncHandlers, handler)
+	s.handlers.Lock()
+	defer s.handlers.Unlock()
+
+	s.handlers.blockSyncHandlers = append(s.handlers.blockSyncHandlers, handler)
 }
 
 func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
@@ -49,7 +52,11 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 	if err != nil {
 		return
 	}
-	for _, l := range s.blockSyncHandlers {
+
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.blockSyncHandlers {
 		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockAvailabilityRequest failed", log.Error(err))
@@ -82,7 +89,11 @@ func (s *service) receivedBlockSyncAvailabilityResponse(ctx context.Context, hea
 	if err != nil {
 		return
 	}
-	for _, l := range s.blockSyncHandlers {
+
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.blockSyncHandlers {
 		_, err := l.HandleBlockAvailabilityResponse(ctx, &gossiptopics.BlockAvailabilityResponseInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockAvailabilityResponse failed", log.Error(err))
@@ -115,7 +126,11 @@ func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipme
 	if err != nil {
 		return
 	}
-	for _, l := range s.blockSyncHandlers {
+
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.blockSyncHandlers {
 		_, err := l.HandleBlockSyncRequest(ctx, &gossiptopics.BlockSyncRequestInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockSyncRequest failed", log.Error(err))
@@ -148,7 +163,11 @@ func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipm
 	if err != nil {
 		return
 	}
-	for _, l := range s.blockSyncHandlers {
+
+	s.handlers.RLock()
+	defer s.handlers.RUnlock()
+
+	for _, l := range s.handlers.blockSyncHandlers {
 		_, err := l.HandleBlockSyncResponse(ctx, &gossiptopics.BlockSyncResponseInput{Message: message})
 		if err != nil {
 			s.logger.Info("HandleBlockSyncResponse failed", log.Error(err))

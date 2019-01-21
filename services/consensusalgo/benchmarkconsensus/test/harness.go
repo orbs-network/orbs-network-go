@@ -84,7 +84,7 @@ func newHarness(
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
 		reporting:        log,
-		config:           cfg.OverrideNodeSpecificValues(0, nodeKeyPair.NodeAddress(), nodeKeyPair.PrivateKey(), ""),
+		config:           cfg.OverrideNodeSpecificValues(":8080", 0, nodeKeyPair.NodeAddress(), nodeKeyPair.PrivateKey(), ""),
 		service:          nil,
 		registry:         metric.NewRegistry(),
 	}
