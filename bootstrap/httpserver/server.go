@@ -273,6 +273,7 @@ func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.
 	w.Header().Set("X-ORBS-REQUEST-RESULT", requestResult.RequestStatus().String())
 	w.Header().Set("X-ORBS-BLOCK-HEIGHT", fmt.Sprintf("%d", requestResult.BlockHeight()))
 	w.Header().Set("X-ORBS-BLOCK-TIMESTAMP", sprintfTimestamp(requestResult.BlockTimestamp()))
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if errorForVerbosity != nil {
 		w.Header().Set("X-ORBS-ERROR-DETAILS", errorForVerbosity.Error())
 	}
