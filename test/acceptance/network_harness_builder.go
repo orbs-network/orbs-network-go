@@ -195,7 +195,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 				logger.Info("acceptance network running test")
 				f(ctx, network, restart)
 				time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
-			}
+			})
 		}
 
 		if b.sb != nil {
