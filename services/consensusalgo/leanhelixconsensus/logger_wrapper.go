@@ -25,7 +25,9 @@ func (l *loggerWrapper) ShowDebug(showDebug bool) {
 }
 
 func (l *loggerWrapper) Debug(format string, args ...interface{}) {
-
+	if !l.showDebug {
+		return
+	}
 	str := strings.Join([]string{LH_PREFIX, format}, "")
 	finalStr := fmt.Sprintf(str, args...)
 	l.log.Info(finalStr)

@@ -5,54 +5,34 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/test/harness/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
-func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, metricRegistry metric.Registry) inmemory.NetworkDriver {
+func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inmemory.Network {
 	numNodes := 2
-	consensusAlgo := consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS
 	logger.Info("creating development network")
 
-	leaderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
+	federationNodes := map[string]config.FederationNode{}
+	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
 
-	federationNodes := make(map[string]config.FederationNode)
+	var nodeOrder []primitives.NodeAddress
 	for i := 0; i < int(numNodes); i++ {
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+		privateKeys[nodeAddress.KeyForMap()] = keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
+		nodeOrder = append(nodeOrder, nodeAddress)
 	}
+	sharedTransport := gossipAdapter.NewTransport(ctx, logger, federationNodes)
+	cfgTemplate := config.TemplateForGamma(
+		federationNodes,
+		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
+		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+	)
 
-	sharedTransport := gossipAdapter.NewMemoryTransport(ctx, logger, federationNodes)
-
-	network := &inmemory.Network{
-		Logger:    logger,
-		Transport: sharedTransport,
-	}
-
-	for i := 0; i < numNodes; i++ {
-		keyPair := keys.EcdsaSecp256K1KeyPairForTests(i)
-		cfg := config.ForGamma(
-			federationNodes,
-			keyPair.NodeAddress(),
-			keyPair.PrivateKey(),
-			leaderKeyPair.NodeAddress(),
-			consensusAlgo,
-		)
-
-		nodeLogger := logger.WithTags(log.Node(cfg.NodeAddress().String()))
-		blockPersistence := adapter.NewInMemoryBlockPersistence(nodeLogger, metricRegistry)
-		compiler := nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger)
-		ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(cfg, logger)
-
-		network.AddNode(keyPair.EcdsaSecp256K1KeyPair, cfg, blockPersistence, compiler, ethereumConnection, metricRegistry, nodeLogger)
-	}
-
-	network.CreateAndStartNodes(ctx, numNodes) // must call network.Start(ctx) to actually start the nodes in the network
-
+	network := inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, logger, cfgTemplate, sharedTransport, nil)
+	network.CreateAndStartNodes(ctx, numNodes)
 	return network
 }

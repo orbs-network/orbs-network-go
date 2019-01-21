@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	release, err := createLockingAdapter()
+	config := &localConfig{dir: os.Args[1], virtualChainId: 42}
+	_, release, err := test.NewFilesystemAdapterDriver(config)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -17,31 +18,19 @@ func main() {
 	time.Sleep(1 * time.Second)
 }
 
-func createLockingAdapter() (func(), error) {
-	dir := os.Args[1]
-	c := &localConfig{
-		dir: dir,
-	}
-	_, cancel, err := test.NewFilesystemAdapterDriver(c)
-	if err != nil {
-		return nil, err
-	}
-	return cancel, nil
-}
-
 type localConfig struct {
-	dir          string
-	maxBlockSize uint32
-}
-
-func (l *localConfig) BlockStorageDataDir() string {
-	return l.dir
-}
-
-func (l *localConfig) BlockStorageMaxBlockSize() uint32 {
-	return 1024
+	dir            string
+	virtualChainId primitives.VirtualChainId
 }
 
 func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
-	return 0xFF
+	return l.virtualChainId
+}
+
+func (l *localConfig) BlockStorageFileSystemDataDir() string {
+	return l.dir
+}
+
+func (l *localConfig) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
+	return 1000000000
 }

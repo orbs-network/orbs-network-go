@@ -2,7 +2,8 @@
 
 rm -rf /tmp/*.prof
 
-go test ./test/_manual -count 1 > test.out
+mkdir -p _out
+go test ./test/_manual -count 1 > _out/test.out
 
 go tool pprof --inuse_space -nodecount 10 -weblist orbs-network-go -hide /orbs-network-go/test/ --base /tmp/mem-tx-before.prof /tmp/mem-tx-after.prof
 go tool pprof --inuse_space -nodecount 20 -weblist orbs-network-go -hide /orbs-network-go/test/ --base /tmp/mem-shutdown-before.prof /tmp/mem-shutdown-after.prof
