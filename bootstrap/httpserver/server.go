@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver/pprof"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"time"
 
 	"github.com/orbs-network/membuffers/go"
@@ -117,7 +117,7 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
 
 	if s.profiling {
-		pprof.Register(router)
+		registerPprof(router)
 	}
 
 	return router
@@ -297,4 +297,11 @@ func (s *server) writeErrorResponseAndLog(w http.ResponseWriter, m *httpErr) {
 	if err != nil {
 		s.logger.Info("error writing response", log.Error(err))
 	}
+}
+
+func registerPprof(router *http.ServeMux) {
+	router.HandleFunc("/debug/pprof/", pprof.Index)
+	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
 }
