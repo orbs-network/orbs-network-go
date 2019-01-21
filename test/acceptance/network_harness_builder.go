@@ -34,7 +34,7 @@ type canFail interface {
 	Fatal(args ...interface{})
 }
 
-var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
+var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
 
 type networkHarnessBuilder struct {
 	f                        canFail
