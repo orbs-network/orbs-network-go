@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"time"
 
 	"github.com/orbs-network/membuffers/go"
@@ -36,7 +38,9 @@ type server struct {
 	logger         log.BasicLogger
 	publicApi      services.PublicApi
 	metricRegistry metric.Registry
-	port           int
+	config         config.HttpServerConfig
+
+	port int
 }
 
 type tcpKeepAliveListener struct {
@@ -59,14 +63,15 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(address string, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
+func NewHttpServer(cfg config.HttpServerConfig, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
 	server := &server{
 		logger:         logger.WithTags(LogTag),
 		publicApi:      publicApi,
 		metricRegistry: metricRegistry,
+		config:         cfg,
 	}
 
-	if listener, err := server.listen(address); err != nil {
+	if listener, err := server.listen(server.config.HttpAddress()); err != nil {
 		logger.Error("failed to start http server", log.Error(err))
 		panic(fmt.Sprintf("failed to start http server: %s", err.Error()))
 	} else {
@@ -79,7 +84,7 @@ func NewHttpServer(address string, logger log.BasicLogger, publicApi services.Pu
 		go server.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
 	}
 
-	logger.Info("started http server", log.String("address", address))
+	logger.Info("started http server", log.String("address", server.config.HttpAddress()))
 
 	return server
 }
@@ -112,6 +117,11 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(s.getTransactionReceiptProofHandler))
 	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
+
+	if s.config.Profiling() {
+		registerPprof(router)
+	}
+
 	return router
 }
 
@@ -289,4 +299,11 @@ func (s *server) writeErrorResponseAndLog(w http.ResponseWriter, m *httpErr) {
 	if err != nil {
 		s.logger.Info("error writing response", log.Error(err))
 	}
+}
+
+func registerPprof(router *http.ServeMux) {
+	router.HandleFunc("/debug/pprof/", pprof.Index)
+	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
 }

@@ -87,6 +87,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				ethereumEndpoint).
 			OverrideNodeSpecificValues(
+				fmt.Sprintf(":%d", START_HTTP_PORT+i),
 				firstRandomPort+i,
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
@@ -94,7 +95,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 
 		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
-		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
+		node := bootstrap.NewNode(cfg, nodeLogger)
 
 		nodes = append(nodes, node)
 	}
