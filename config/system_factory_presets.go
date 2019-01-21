@@ -51,6 +51,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(LOGGER_FILE_TRUNCATION_INTERVAL, 24*time.Hour)
 
 	cfg.SetBool(PROFILING, false)
+	cfg.SetString(HTTP_ADDRESS, ":8080")
 
 	return cfg
 }
