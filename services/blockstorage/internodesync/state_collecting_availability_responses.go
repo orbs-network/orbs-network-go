@@ -41,7 +41,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	}
 
 	waitForResponses := s.createTimer()
-	for { // the forever is because of responses handling loop
+	for {
 		select {
 		case <-waitForResponses.C:
 			s.metrics.timesSuccessful.Inc()
@@ -51,6 +51,8 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			responses = append(responses, r)
 		case <-ctx.Done():
 			return nil
+		case <-s.conduit.blocks: // nop
+		case <-s.conduit.idleReset: // nop
 		}
 	}
 }

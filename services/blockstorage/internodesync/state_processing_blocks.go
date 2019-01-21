@@ -36,7 +36,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
-	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
+	if ctx.Err() == context.Canceled { // state machine should terminate
 		return nil
 	}
 
@@ -74,7 +74,27 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 			s.metrics.committedBlocks.Inc()
 			logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}
+		if ctx.Err() == context.Canceled { // state machine should terminate
+			return nil
+		}
+	}
+	if ctx.Err() == context.Canceled { // state machine should terminate
+		return nil
 	}
 
+	s.flushConduit()
+
 	return s.factory.CreateCollectingAvailabilityResponseState()
+}
+
+func (s *processingBlocksState) flushConduit() {
+	for {
+		select {
+		case <-s.factory.conduit.idleReset: // nop
+		case <-s.factory.conduit.responses: // nop
+		case <-s.factory.conduit.blocks: // nop
+		default:
+			return // nothing more to flush
+		}
+	}
 }

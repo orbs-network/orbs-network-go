@@ -31,16 +31,20 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	noCommitTimer := s.createTimer()
-	select {
-	case <-noCommitTimer.C:
-		logger.Info("starting sync after no-commit timer expired")
-		s.metrics.timesExpired.Inc()
-		return s.factory.CreateCollectingAvailabilityResponseState()
-	case <-s.conduit.idleReset:
-		s.metrics.timesReset.Inc()
-		return s.factory.CreateIdleState()
-	case <-ctx.Done():
-		return nil
+	for {
+		select {
+		case <-noCommitTimer.C:
+			logger.Info("starting sync after no-commit timer expired")
+			s.metrics.timesExpired.Inc()
+			return s.factory.CreateCollectingAvailabilityResponseState()
+		case <-s.conduit.idleReset:
+			s.metrics.timesReset.Inc()
+			return s.factory.CreateIdleState()
+		case <-ctx.Done():
+			return nil
+		case <-s.conduit.blocks: // nop
+		case <-s.conduit.responses: // nop
+		}
 	}
 }
 
