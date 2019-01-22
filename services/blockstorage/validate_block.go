@@ -35,7 +35,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("block validation by consensus algo failed", log.Error(err))
+		logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err))
 		return nil, err
 	}
 
@@ -119,7 +119,7 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 func (s *service) notifyConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
-	lastCommittedBlockPair *protocol.BlockPairContainer,
+	blockPair *protocol.BlockPairContainer,
 	mode handlers.HandleBlockConsensusMode) error {
 
 	verifyMode := mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE ||
@@ -128,21 +128,29 @@ func (s *service) notifyConsensusAlgos(
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
 
+	var latestErr error
 	verifiedCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
-		_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+		_, latestErr := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   mode,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              lastCommittedBlockPair,
-			PrevCommittedBlockPair: prevBlockPair,
+			BlockPair:              blockPair,
+			PrevCommittedBlockPair: prevBlockPair, // TODO (v1) rename to HandleBlockConsensusInput.PrevCommittedBlockPair to PrevBlockPair
 		})
 
-		if verifyMode && err == nil {
+		if latestErr != nil {
+			s.logger.Info("notifyConsensusAlgos(): failed HandleBlockConsensus()", log.Error(latestErr))
+		}
+
+		if verifyMode && latestErr == nil {
 			verifiedCount++
 		}
 	}
 
 	if verifyMode && verifiedCount == 0 {
+		if latestErr != nil {
+			s.logger.Info("notifyConsensusAlgos() error", log.Error(latestErr))
+		}
 		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
 	}
 

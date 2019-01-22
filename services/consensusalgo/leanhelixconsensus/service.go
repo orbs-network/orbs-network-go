@@ -107,22 +107,20 @@ func NewLeanHelixConsensusAlgo(
 		Logger:          NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
-	logger.Info("NewLeanHelixConsensusAlgo() run NewLeanHelix()")
+	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix() (not starting its goroutine yet)")
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		supervised.GoForever(ctx, logger, func() {
-			logger.Info("LeanHelix is active consensus algo: go routine starts")
+			parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctx)
 		})
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
-		logger.Info("LeanHelix is not the active consensus algo so not running its go routine, only registering for block validation")
+		parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is not the active consensus algo so not starting its goroutine, only registering for block validation")
 	}
-	// LeanHelix can be used as handler to validateBlocks without actively running consensus rounds
+	// Do this even if not active consensus algo - LeanHelix can still be a handler to validateBlocks without actively running consensus rounds
 	blockStorage.RegisterConsensusBlocksHandler(s)
-
-	logger.Info("NewLeanHelixConsensusAlgo() active algo", log.Stringable("active-consensus-algo", config.ActiveConsensusAlgo()))
 
 	return s
 }
@@ -131,44 +129,40 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	blockType := input.BlockType
 	blockPair := input.BlockPair
-	prevCommittedBlockPair := input.PrevCommittedBlockPair
+	prevBlockPair := input.PrevCommittedBlockPair
 	var lhBlockProof []byte
 	var lhBlock lh.Block
 
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
-		return nil, errors.Errorf("handler received unsupported block type %s", blockType)
+		return nil, errors.Errorf("HandleBlockConsensus(): LeanHelix: received unsupported block type %s", blockType)
 	}
 
 	// validate the lhBlock consensus (lhBlock and proof)
-	if shouldValidate(input.Mode) {
-		err := s.validateBlockConsensus(ctx, blockPair, prevCommittedBlockPair)
+	if shouldValidateBlockConsensusWithLeanHelix(input.Mode) {
+		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair)
 		if err != nil {
+			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
 			return nil, err
 		}
 	}
 
-	// update the lhBlock consensus - with lhBlock and proof - (might be nil -> genesisBlock)
-	if shouldUpdate(input.Mode) {
-		// if LeanHelix is not the active consensus do not update
-		//  Note: genesis case (nil) is special no lhBlockProof type - registered handlers cannot distinguish - should be handled here
+	if shouldUpdateStateInLeanHelix(input.Mode) {
 		if s.config.ActiveConsensusAlgo() != consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-			s.logger.Info("LeanHelix is not the active consensus algo, not calling UpdateState()")
-			// TODO: maybe add output in this case? (change protos - HandleBlockConsensusOutput?)
+			s.logger.Info("HandleBlockConsensus(): LeanHelix is not the active consensus algo, not calling UpdateState()")
 			return nil, nil
 		}
 
 		if shouldCreateGenesisBlock(blockPair) {
 			lhBlock, lhBlockProof = s.blockProvider.GenerateGenesisBlockProposal(ctx)
-			s.logger.Info("HandleBlockConsensus Update LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode), log.Stringable("blockPair", blockPair))
+			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode), log.Stringable("blockPair", blockPair))
 		} else { // we should have a lhBlock proof
-			s.logger.Info("HandleBlockConsensus Update LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			lhBlockProof = blockPair.TransactionsBlock.BlockProof.Raw()
 			lhBlock = ToLeanHelixBlock(blockPair)
 
 		}
 
 		s.leanHelix.UpdateState(ctx, lhBlock, lhBlockProof)
-		// TODO: Should we notify error?
 	}
 
 	return nil, nil
@@ -184,20 +178,17 @@ func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopic
 }
 
 func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
-	// log
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
-	// convert block with proof to comply to blockstorage
 	blockPairWrapper := block.(*BlockPairWrapper)
 	blockPair := blockPairWrapper.blockPair
-	// set blockProof
-	// generate and set tx block proof
+
 	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
 		Type:             protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		ResultsBlockHash: digest.CalcResultsBlockHash(blockPair.ResultsBlock),
 		LeanHelix:        blockProof,
 	}).Build()
-	// generate rx block proof
+
 	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
 		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
@@ -228,10 +219,10 @@ func shouldCreateGenesisBlock(blockPair *protocol.BlockPairContainer) bool {
 	return blockPair == nil
 }
 
-func shouldValidate(mode handlers.HandleBlockConsensusMode) bool {
+func shouldValidateBlockConsensusWithLeanHelix(mode handlers.HandleBlockConsensusMode) bool {
 	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
 }
 
-func shouldUpdate(mode handlers.HandleBlockConsensusMode) bool {
+func shouldUpdateStateInLeanHelix(mode handlers.HandleBlockConsensusMode) bool {
 	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY
 }

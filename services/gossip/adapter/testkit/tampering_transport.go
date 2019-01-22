@@ -116,7 +116,11 @@ func (t *TamperingTransport) Duplicate(predicate MessagePredicate) OngoingTamper
 }
 
 func (t *TamperingTransport) Corrupt(predicate MessagePredicate, ctrlRand *test.ControlledRand) OngoingTamper {
-	return t.addTamperer(&corruptingTamperer{predicate: predicate, transport: t})
+	return t.addTamperer(&corruptingTamperer{
+		predicate: predicate,
+		transport: t,
+		ctrlRand:  ctrlRand,
+	})
 }
 
 func (t *TamperingTransport) Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper {

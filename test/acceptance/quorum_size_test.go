@@ -3,12 +3,14 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks(t *testing.T) {
+func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks_BenchmarkConsensus(t *testing.T) {
 	newHarness(t).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		WithNumNodes(6).
 		WithNumRunningNodes(4).
 		WithRequiredQuorumPercentage(66).

@@ -66,8 +66,8 @@ func TestSignAndVerifyRandomSeed(t *testing.T) {
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: lhprimitives.Signature(randomSeedSig),
 	}
-	verified := mgr.VerifyRandomSeed(1, randomSeed, senderSignature.Build())
-	require.True(t, verified, "Verification of original random seed should succeed")
+	err := mgr.VerifyRandomSeed(1, randomSeed, senderSignature.Build())
+	require.Nil(t, err, "Verification of original random seed should succeed")
 }
 
 func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
@@ -82,8 +82,8 @@ func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: lhprimitives.Signature(randomSeedSig),
 	}
-	verified := mgr.VerifyRandomSeed(1, tamperedRandomSeed, senderSignature.Build())
-	require.False(t, verified, "Verification of a tampered random seed should fail")
+	err := mgr.VerifyRandomSeed(1, tamperedRandomSeed, senderSignature.Build())
+	require.Error(t, err, "Verification of a tampered random seed should fail")
 }
 
 func TestSignAndVerifyRandomSeedOfMismatchedHeight(t *testing.T) {
@@ -97,7 +97,7 @@ func TestSignAndVerifyRandomSeedOfMismatchedHeight(t *testing.T) {
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: lhprimitives.Signature(randomSeedSig),
 	}
-	verified := mgr.VerifyRandomSeed(2, randomSeed, senderSignature.Build())
-	require.False(t, verified, "Verification of random seed that was signed for another block height should fail")
+	err := mgr.VerifyRandomSeed(2, randomSeed, senderSignature.Build())
+	require.Error(t, err, "Verification of random seed that was signed for another block height should fail")
 
 }
