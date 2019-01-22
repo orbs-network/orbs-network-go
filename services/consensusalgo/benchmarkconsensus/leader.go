@@ -236,8 +236,8 @@ func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	}
 
 	// signature
-	if !digest.VerifyNodeSignature(sender.SenderNodeAddress(), status.Raw(), sender.Signature()) {
-		return errors.Errorf("sender signature is invalid: %s, signed data: %s", sender.Signature(), status.Raw())
+	if err := digest.VerifyNodeSignature(sender.SenderNodeAddress(), status.Raw(), sender.Signature()); err != nil {
+		return errors.Wrapf(err, "sender signature is invalid: %s, signed data: %s", sender.Signature(), status.Raw())
 	}
 
 	return nil

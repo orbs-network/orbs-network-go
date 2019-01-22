@@ -20,8 +20,8 @@ func TestVerifyNodeSignature(t *testing.T) {
 	sig, err := SignAsNode(privateKey, ExampleDataToSign)
 	require.NoError(t, err)
 
-	ok := VerifyNodeSignature(nodeAddress, ExampleDataToSign, sig)
-	require.True(t, ok, "verification should succeed")
+	err = VerifyNodeSignature(nodeAddress, ExampleDataToSign, sig)
+	require.NoError(t, err, "verification should succeed")
 }
 
 func TestVerifyNodeSignature_InvalidAddress(t *testing.T) {
@@ -31,6 +31,6 @@ func TestVerifyNodeSignature_InvalidAddress(t *testing.T) {
 	sig, err := SignAsNode(privateKey, ExampleDataToSign)
 	require.NoError(t, err)
 
-	ok := VerifyNodeSignature(differentNodeAddress, ExampleDataToSign, sig)
-	require.False(t, ok, "verification should fail")
+	err = VerifyNodeSignature(differentNodeAddress, ExampleDataToSign, sig)
+	require.Error(t, err, "verification should fail")
 }

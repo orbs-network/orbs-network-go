@@ -103,7 +103,7 @@ func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorC
 		BlockHeight: vcrx.input.ResultsBlock.Header.BlockHeight() - 1,
 	})
 	if err != nil {
-		return errors.Wrapf(ErrGetStateHash, "ValidateResultsBlock.validatePreExecutionStateMerkleRoot() error GetStateHash(), %v", err)
+		return errors.Wrapf(ErrGetStateHash, "ValidateResultsBlock.validatePreExecutionStateMerkleRoot() error from GetStateHash(): %v", err)
 	}
 	if !bytes.Equal(expectedPreExecutionMerkleRoot, getStateHashOut.StateMerkleRootHash) {
 		return errors.Wrapf(ErrMismatchedPreExecutionStateMerkleRoot, "expected %v actual %v", expectedPreExecutionMerkleRoot, getStateHashOut.StateMerkleRootHash)
@@ -120,13 +120,13 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 		SignedTransactions:    vcrx.input.TransactionsBlock.SignedTransactions,
 	})
 	if err != nil {
-		return errors.Wrapf(ErrProcessTransactionSet, "ValidateResultsBlock.validateExecution() error ProcessTransactionSet")
+		return errors.Wrapf(ErrProcessTransactionSet, "ValidateResultsBlock.validateExecution() error from ProcessTransactionSet(): %v", err)
 	}
 	// Compare the receipts merkle root hash to the one in the block.
 	expectedReceiptsMerkleRoot := vcrx.input.ResultsBlock.Header.ReceiptsMerkleRootHash()
 	calculatedReceiptMerkleRoot, err := vcrx.calcReceiptsMerkleRoot(processTxsOut.TransactionReceipts)
 	if err != nil {
-		return errors.Wrapf(validators.ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calculateReceiptsMerkleRoot")
+		return errors.Wrapf(validators.ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error ProcessTransactionSet calcReceiptsMerkleRoot(): %v", err)
 	}
 	if !bytes.Equal(expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot) {
 		return errors.Wrapf(validators.ErrMismatchedReceiptsRootHash, "expected %v actual %v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
@@ -136,7 +136,7 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 	expectedStateDiffHash := vcrx.input.ResultsBlock.Header.StateDiffHash()
 	calculatedStateDiffHash, err := vcrx.calcStateDiffHash(processTxsOut.ContractStateDiffs)
 	if err != nil {
-		return errors.Wrapf(validators.ErrCalcStateDiffHash, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffHash")
+		return errors.Wrapf(validators.ErrCalcStateDiffHash, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffHash(): %v", err)
 	}
 	if !bytes.Equal(expectedStateDiffHash, calculatedStateDiffHash) {
 		return errors.Wrapf(validators.ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffHash, calculatedStateDiffHash)
