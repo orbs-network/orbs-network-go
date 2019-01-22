@@ -12,7 +12,7 @@ type idleState struct {
 	createTimer func() *synchronization.Timer
 	logger      log.BasicLogger
 	factory     *stateFactory
-	conduit     chan interface{}
+	conduit     blockSyncConduit
 	metrics     idleStateMetrics
 }
 

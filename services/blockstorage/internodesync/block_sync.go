@@ -39,12 +39,10 @@ type BlockSyncStorage interface {
 
 type idleResetMessage struct{}
 
-// the conduit connects between the states and the state machine (which is connected to the gossip handler)
-// the data that the states receive, regardless of their instance, is waiting at these channels
-type blockSyncConduit struct {
-	done   chan struct{}
-	events chan interface{}
-}
+// state machine passes outside events into this channel type for consumption by the currently active state instance.
+// within processState.processState() all states must read from the channel eagerly!
+// keeping the channel clear for new incoming events and tossing out irrelevant messages.
+type blockSyncConduit chan interface{}
 
 type BlockSync struct {
 	logger  log.BasicLogger
@@ -53,7 +51,7 @@ type BlockSync struct {
 	storage BlockSyncStorage
 	config  blockSyncConfig
 
-	conduit chan interface{} // passing events and state used to drive state machine without sharing state
+	conduit blockSyncConduit
 
 	metrics *stateMachineMetrics
 	done    supervised.ContextEndedChan
@@ -98,7 +96,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
 	logger := parentLogger.WithTags(LogTag)
 
-	conduit := make(chan interface{})
+	conduit := make(blockSyncConduit)
 	return newBlockSyncWithFactory(
 		ctx,
 		NewStateFactory(config, gossip, storage, conduit, logger, metricFactory),

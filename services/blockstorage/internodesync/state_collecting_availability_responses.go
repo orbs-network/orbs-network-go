@@ -14,7 +14,7 @@ type collectingAvailabilityResponsesState struct {
 	gossipClient *blockSyncGossipClient
 	createTimer  func() *synchronization.Timer
 	logger       log.BasicLogger
-	conduit      chan interface{}
+	conduit      blockSyncConduit
 	metrics      collectingStateMetrics
 }
 
