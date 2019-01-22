@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
 )
 
@@ -46,23 +45,4 @@ func (s *idleState) processState(ctx context.Context) syncState {
 		case <-s.conduit.responses: // nop
 		}
 	}
-}
-
-func (s *idleState) blockCommitted(ctx context.Context) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
-	select {
-	case s.conduit.idleReset <- struct{}{}:
-		logger.Info("sync got new block commit")
-	case <-ctx.Done():
-		logger.Info("terminated on writing new block notification", log.String("context-message", ctx.Err().Error()))
-	}
-}
-
-func (s *idleState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
-	return
-}
-
-func (s *idleState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
-	return
 }

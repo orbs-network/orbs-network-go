@@ -36,10 +36,6 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
-	if ctx.Err() == context.Canceled { // state machine should terminate
-		return nil
-	}
-
 	if s.blocks == nil {
 		s.logger.Info("possible byzantine state in block sync, received no blocks to processing blocks state")
 		return s.factory.CreateIdleState()
@@ -55,6 +51,10 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Stringable("last-block-height", lastBlockHeight))
 
 	for _, blockPair := range s.blocks.BlockPairs {
+		if s.heartbeat(ctx) {
+			return nil
+		}
+
 		s.metrics.blocksRate.Measure(1)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
@@ -74,27 +74,25 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 			s.metrics.committedBlocks.Inc()
 			logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}
-		if ctx.Err() == context.Canceled { // state machine should terminate
-			return nil
-		}
-	}
-	if ctx.Err() == context.Canceled { // state machine should terminate
-		return nil
 	}
 
-	s.flushConduit()
+	if s.heartbeat(ctx) {
+		return nil
+	}
 
 	return s.factory.CreateCollectingAvailabilityResponseState()
 }
 
-func (s *processingBlocksState) flushConduit() {
+func (s *processingBlocksState) heartbeat(ctx context.Context) (shutdown bool) {
 	for {
 		select {
 		case <-s.factory.conduit.idleReset: // nop
 		case <-s.factory.conduit.responses: // nop
 		case <-s.factory.conduit.blocks: // nop
+		case <-ctx.Done():
+			return true
 		default:
-			return // nothing more to flush
+			return false // done
 		}
 	}
 }
