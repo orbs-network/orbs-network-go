@@ -320,7 +320,7 @@ func TestProof_OrderOfAdditionsDoesNotMatter(t *testing.T) {
 
 	require.Equal(t, root1, root2, "unexpected different root hash")
 	require.Equal(t, len(proof1.nodes), len(proof2.nodes), "unexpected different tree depth / proof lengths")
-	require.Equal(t, proof1.nodes[3].siblingHash, proof2.nodes[3].siblingHash, "unexpected different leaf node hash")
+	require.Equal(t, proof1.nodes[3].otherChildHash, proof2.nodes[3].otherChildHash, "unexpected different leaf node hash")
 
 	f3, initRoot3 := NewForest()
 	root3 := updateEntries(f3, initRoot3, keyValue[var3[0]], keyValue[var3[0]+1], keyValue[var3[1]], keyValue[var3[1]+1],
@@ -328,7 +328,7 @@ func TestProof_OrderOfAdditionsDoesNotMatter(t *testing.T) {
 	proof3 := getProof(t, f3, root3, "abc12345")
 
 	require.Equal(t, len(proof2.nodes), len(proof3.nodes), "unexpected different tree depth / proof lengths")
-	require.Equal(t, proof2.nodes[3].siblingHash, proof3.nodes[3].siblingHash, "unexpected different leaf node hash")
+	require.Equal(t, proof2.nodes[3].otherChildHash, proof3.nodes[3].otherChildHash, "unexpected different leaf node hash")
 }
 
 func TestProof_AddConvegingPathsWithExactValues(t *testing.T) {

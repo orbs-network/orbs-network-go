@@ -45,13 +45,13 @@ func (f *Forest) appendRoot(root *node) {
 }
 
 type TrieProofNode struct {
-	siblingHash primitives.Sha256 // the sibling's hash
-	prefixSize  int               // "my" prefix size
+	otherChildHash primitives.Sha256 // the "other child"'s hash
+	prefixSize     int               // "my" prefix size
 }
 type TrieProof struct {
-	nodes []*TrieProofNode
-	path  []byte
-	value []byte
+	nodes     []*TrieProofNode
+	path      []byte
+	valueHash []byte
 }
 
 func newTrieProof() *TrieProof {
@@ -60,8 +60,8 @@ func newTrieProof() *TrieProof {
 	}
 }
 
-func (tp *TrieProof) appendToProof(n, sibling *node) {
-	tp.nodes = append(tp.nodes, &TrieProofNode{sibling.hash, len(n.path)})
+func (tp *TrieProof) appendToProof(n, otherChild *node) {
+	tp.nodes = append(tp.nodes, &TrieProofNode{otherChild.hash, len(n.path)})
 }
 
 func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (*TrieProof, error) {
@@ -93,64 +93,68 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (*TrieProof, 
 		}
 	}
 	if current != nil { // last node, unless wrong key size should be value(leaf) node "closest" to requested path
-		proof.appendToProof(current, current)
-		proof.value = current.value                            // for exclusion : the value used for proof
+		proof.appendToProof(current, current)                  // use safe proof node but data is self hash and self prefix
+		proof.valueHash = current.value                        // for exclusion : the value used for proof
 		copy(path[len(path)-len(current.path):], current.path) // for exclusion : the path used for proof
 	}
 	proof.path = path
 	return proof, nil
 }
 
-func (f *Forest) Verify(rootHash primitives.Sha256, proof *TrieProof, path []byte, value primitives.Sha256) (bool, error) {
+func (f *Forest) Verify(rootHash primitives.Sha256, proof *TrieProof, path []byte, valueHash primitives.Sha256) (bool, error) {
 	if proof == nil || len(proof.nodes) == 0 {
-		return value.Equal(zeroValueHash), nil
+		return valueHash.Equal(zeroValueHash), nil
 	}
 
-	proofValueNode := len(proof.nodes) - 1
 	pathFromVerify := toBin(path, toBinSize(path))
-	inclusion := !value.Equal(zeroValueHash)
 
 	if !verifyProofIsSelfConsistent(rootHash, proof, pathFromVerify) {
 		return false, errors.Errorf("proof is not self consistent with given key")
 	}
 
-	if inclusion {
-		calcedHash := hashImpl(value, pathFromVerify[len(pathFromVerify)-proof.nodes[proofValueNode].prefixSize:])
-		return bytes.Equal(proof.nodes[proofValueNode].siblingHash, calcedHash), nil
+	if !valueHash.Equal(zeroValueHash) { // inclusion
+		proofValueNodeIndex := len(proof.nodes) - 1
+		calcedHash := hashImpl(valueHash, pathFromVerify[len(pathFromVerify)-proof.nodes[proofValueNodeIndex].prefixSize:])
+		return bytes.Equal(proof.nodes[proofValueNodeIndex].otherChildHash, calcedHash), nil
 	} else {
-		pathLen := len(proof.path)
-		if pathLen != len(pathFromVerify) {
-			return false, nil
-		}
-		valueNodePrefixIndex := pathLen - proof.nodes[proofValueNode].prefixSize
-		isHashEqual := bytes.Equal(proof.nodes[proofValueNode].siblingHash, hashImpl(proof.value, proof.path[valueNodePrefixIndex:]))
-		isBeginOfKeyEqual := bytes.Equal(proof.path[:valueNodePrefixIndex], pathFromVerify[:valueNodePrefixIndex])
-		isEndOfKeyEqual := false
-		if pathLen-proof.nodes[proofValueNode].prefixSize != 0 {
-			isEndOfKeyEqual = bytes.Equal(proof.path[valueNodePrefixIndex:], pathFromVerify[valueNodePrefixIndex:])
-		}
-		return isHashEqual && isBeginOfKeyEqual && !isEndOfKeyEqual, nil
+		return verifyProofExclusion(proof, pathFromVerify)
 	}
 }
 
 func verifyProofIsSelfConsistent(rootHash primitives.Sha256, proof *TrieProof, pathFromVerify []byte) bool {
 	proofValueNode := len(proof.nodes) - 1
-	//pathFromVerify := toBin(path, toBinSize(path))
 	keyEndInd := len(pathFromVerify)
 	keyStartInd := keyEndInd - proof.nodes[proofValueNode].prefixSize
-	current := proof.nodes[proofValueNode].siblingHash
+	current := proof.nodes[proofValueNode].otherChildHash
 
 	for i := proofValueNode - 1; i >= 0; i-- {
 		keyEndInd = keyStartInd - 1
 		keyStartInd = keyEndInd - proof.nodes[i].prefixSize
 		if pathFromVerify[keyEndInd] == 0 {
-			current = hashImpl(current, proof.nodes[i].siblingHash, pathFromVerify[keyStartInd:keyEndInd])
+			current = hashImpl(current, proof.nodes[i].otherChildHash, pathFromVerify[keyStartInd:keyEndInd])
 		} else {
-			current = hashImpl(proof.nodes[i].siblingHash, current, pathFromVerify[keyStartInd:keyEndInd])
+			current = hashImpl(proof.nodes[i].otherChildHash, current, pathFromVerify[keyStartInd:keyEndInd])
 		}
 	}
 
 	return bytes.Equal(current, rootHash)
+}
+
+func verifyProofExclusion(proof *TrieProof, pathFromVerify []byte) (bool, error) {
+	proofValueNodeIndex := len(proof.nodes) - 1
+	pathLen := len(proof.path)
+	if pathLen != len(pathFromVerify) {
+		return false, errors.Errorf("proof length is not consistent with given key length")
+	}
+	valueNodePrefixIndex := pathLen - proof.nodes[proofValueNodeIndex].prefixSize
+	isHashEqual := bytes.Equal(proof.nodes[proofValueNodeIndex].otherChildHash, hashImpl(proof.valueHash, proof.path[valueNodePrefixIndex:]))
+	isBeginOfKeyEqual := bytes.Equal(proof.path[:valueNodePrefixIndex], pathFromVerify[:valueNodePrefixIndex])
+	isEndOfKeyEqual := false
+	if pathLen-proof.nodes[proofValueNodeIndex].prefixSize != 0 {
+		isEndOfKeyEqual = bytes.Equal(proof.path[valueNodePrefixIndex:], pathFromVerify[valueNodePrefixIndex:])
+	}
+	return isHashEqual && isBeginOfKeyEqual && !isEndOfKeyEqual, nil
+
 }
 
 func (f *Forest) Forget(rootHash primitives.Sha256) {

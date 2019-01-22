@@ -4,56 +4,73 @@
 > This is a basic non public implementation of a compact Binary Merkle Tree/Trie. 
 It defines the common algorithm for both Tree and Trie.
 Essentially it defines:
-* The node in memory with hashed value, left/right pointer, 
-decompressed path (list of bytes each one is a 1 or 0) and a hash of the from this node
-downwards.
+* The node in memory is:
+   * hashed value
+   * left/right child pointers, 
+   * prefix : decompressed partial path (list of bytes each one is a 1 or 0)
+   * hash of this node: hash(left child hash, right child hash, my partial path)
 * The insert function that allows adding a new key/value to a tree by generating 
 a new node pointer. This function should be called multiple times to update a tree with 
-many values as it doesn't hash or trim the tree. Note insert needs a "dirty" cache also defined in this package.
+many values as it does not hash or trim the tree. Note insert needs a "dirty" cache also defined in this package.
 * The collapseAndHash function is called after the insert to compact the tree and run the hash 
-function from the leafs upwards
-> The implementations supports multi-length keys, so non-leafs may have a value. 
-  The trie is compacted.
+function from the leafs upwards (using the dirty cache to limit action only on changed nodes).
+> The implementation supports multi-length keys, so non-leafs may have a value. 
 > These common functions are used to build two public implementations of Merkle:
 
 ##  Merkle Binary Trie Forest
-> The input is a list of Key/Value pair. Each tree after creating is immutable.
+> The input is a list of Key/Value pair. Each tree after creation is immutable.
 We use a forest implementation that keeps several past trees with their root pointers 
 and in each update only new nodes (including root node) change. This has advantage of
 using the go GC to remove unused nodes when we discard a root node.
 
 > The implementations assumes a fixed size of key so that only leaf nodes have Values.
- This causes all nodes that are non leaf have 2 children. 
-
+ This causes all nodes that are non leaf to have 2 children. Adding nodes with differnt length
+ will not fail, but the proof/verify functions may not work.
+ 
 * Tree type: Binary Merkle Trie
-* Key: []byte (assume fixed size upto 1-256)
-* Value: SHA256 (32B)
-* Hash: SHA256 (32B)
+* Key: []byte (assume fixed size, upto 32B)
+* Value (hash): SHA256 (32B)
+* Hash (of Node): SHA256 (32B)
 
 #### Merkle Binary Trie Forest - Hash
 > Please note, since only leaf nodes use value in hashing any entry with non fixed size key
 will not participate in the the Merkle root and will not be able to create valid proofs.
-* Leaf node : hash{Value, prefix (MSB shifted)}
-* Core node : hash{left_child_hash, right_child_hash, prefix (MSB shifted)}
+* Leaf node : hash{Value, prefix}
+* Core node : hash{left_child_hash, right_child_hash, prefix}
 
 #### Binary Merkle Trie Forest - Proof
 > Provides inclusion / exclusion authentication for arbitrary keys.
 
-* Structure:
-    * First node {Root hash(32B), Root prefix size(B)}
-    * Core node: {Sibling hash (32B), Self prefix size (B)}
-    * List is of max depth of tree * 33B each node.
+> _Structure_:
+* Nodes:
+    * Core node: {child not in key path hash (32B), self prefix size (1B)}
+    * Leaf node: {hash of leaf, prefix of leaf (1B)}
+* ValueHash : Hash Value of leaf (needed for exclusion)
+* Path: Key of proof (needed for exclusion - will differ in LSB from queried key)
 
-* Proof validation:
-  * node prefix size = the size of prefeix (lsb) of the key 
-  * node hash = hash of sibling of value testes.
-  * hash_state = hash of (the value tested, key prefix (prefix size lsb of key)
-  * key left over = key size - node prefix size
-  * For each node in the proof starting from the last
-    * if key in key left over size = 0
-      * hash_state = hash{hash_state, node hash, Max(hash_state, node)}
-    * key_bit--
-  * Compare the hash_state with the tree root.
+> _Proof validation_:
+  * Step 1: check self consistance of proof with queried key
+     * hash_state = hash part of last node
+     * key_bit = size of key 
+     * For each node in the proof starting from the one before last
+        * key_bit -= size of prefix of hash_state node (one after)
+        * if key[key_bit] == 0
+            * hash_state = hash{hash_state, node hash, node prefix}
+        * else 
+            * hash_state = hash{node hash, hash_state, node prefix}
+       * 
+     * result must be equal to the merkle root hash (or error)
+  * Step 2: inclusion/ exclusion
+     * if queried value is non zerohash
+        * calculate_hash = hash{value, prefix}
+        * if calculate is equal to hash of last node - value is included in tree
+     * if queried value is zerohash
+        * calculate_hash = hash{value from proof, prefix from proof}
+        * exclusion is prooved if
+            * calulate_hash is equal to hash of last node
+            * query key is equal to proof key - without LSB  prefix size of leaf node
+            * query key is NOT equal to proof key - in LSB prefix size of leaf node
+        * if query and proof key size are not equal - erro
 
 
 ## Merkle Binary Ordered Tree
