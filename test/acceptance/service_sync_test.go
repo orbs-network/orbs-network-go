@@ -3,15 +3,13 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
+	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestServiceBlockSync_TransactionPool(t *testing.T) {
@@ -51,20 +49,6 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	})
 }
 
-func waitForTransactionStatusCommitted(ctx context.Context, network NetworkHarness, txHash primitives.Sha256, nodeIndex int) bool {
-	return test.Eventually(5*time.Second, func() bool {
-		txStatusOut, err := network.PublicApi(nodeIndex).GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
-			ClientRequest: (&client.GetTransactionStatusRequestBuilder{
-				TransactionRef: builders.TransactionRef().WithTxHash(txHash).Builder(),
-			}).Build(),
-		})
-		if err != nil {
-			return false
-		}
-		return txStatusOut.ClientResponse.TransactionStatus() == protocol.TRANSACTION_STATUS_COMMITTED
-	})
-}
-
 func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 	const transferAmount = 10
@@ -72,11 +56,9 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	const totalAmount = transfers * transferAmount
 
 	newHarness(t).
-		WithLogFilters(log.IgnoreMessagesMatching("transport message received"),
+		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.IgnoreMessagesMatching("Metric recorded"),
-			log.IgnoreMessagesMatching("received block availability"),
-			log.IgnoreMessagesMatching("sending the response for availability"),
-			log.IgnoreMessagesMatching("attempt service sync")).
+			log.ExcludeField(internodesync.LogTag)).
 		StartWithRestart(func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
 
 			var txHashes []primitives.Sha256

@@ -74,37 +74,22 @@ type networkHarnessBuilder struct {
 
 // TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
 func newHarness(t testContext) *networkHarnessBuilder {
-	n := &networkHarnessBuilder{f: t.(canFail), st: t.(subTester), maxTxPerBlock: 30, requiredQuorumPercentage: 100}
-
-	var algos []consensus.ConsensusAlgoType
-	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	} else {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	}
-
-	return n.
-		WithTestId(getCallerFuncName()).
-		WithNumNodes(4).
-		WithConsensusAlgos(algos...).
-		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+	return createHarness(&networkHarnessBuilder{f: t, st: t, maxTxPerBlock: 30, requiredQuorumPercentage: 100})
 }
 
 func newBenchHarness(b benchContext) *networkHarnessBuilder {
-	n := &networkHarnessBuilder{f: b.(canFail), sb: b.(subBencher), maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+	return createHarness(&networkHarnessBuilder{f: b, sb: b, maxTxPerBlock: 30, requiredQuorumPercentage: 100})
 
-	var algos []consensus.ConsensusAlgoType
-	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	} else {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	}
+}
 
-	return n.
+func createHarness(n *networkHarnessBuilder) *networkHarnessBuilder {
+	harness := n.
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(4).
-		WithConsensusAlgos(algos...).
-		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
+		AllowingErrors("ValidateBlockProposal failed.*")
+	// it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+	return harness
 }
 
 func (b *networkHarnessBuilder) WithLogFilters(filters ...log.Filter) *networkHarnessBuilder {
@@ -150,63 +135,78 @@ func (b *networkHarnessBuilder) Start(f func(ctx context.Context, network Networ
 	})
 }
 
-func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)) {
+type acceptanceTest func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)
+
+func (b *networkHarnessBuilder) StartWithRestart(f acceptanceTest) {
 	if b.numOfNodesToStart == 0 {
 		b.numOfNodesToStart = b.numNodes
 	}
 
 	for _, consensusAlgo := range b.consensusAlgos {
+		b.runWithAlgo(consensusAlgo, f)
+	}
+}
 
-		restartableTest := func(ctx context.Context) {
-			test.WithContextWithTimeout(15*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
-				networkCtx, cancelNetwork := context.WithCancel(ctx)
-				testId := b.testId + "-" + consensusAlgo.String()
-				logger, errorRecorder := b.makeLogger(testId)
-				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
+func (b *networkHarnessBuilder) runWithAlgo(consensusAlgo consensus.ConsensusAlgoType, testFunc acceptanceTest) {
+	skip := consensusAlgo == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX && !ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS
 
-				logger.Info("acceptance network created")
-				defer printTestIdOnFailure(b.f, testId)
-				defer dumpStateOnFailure(b.f, network)
-				defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
+	restartableTest := b.setupASingleRestartableTest(consensusAlgo, testFunc)
+	timeout := 10 * time.Second
+	if b.sb != nil {
+		b.sb.Run(consensusAlgo.String(), func(t *testing.B) {
+			if skip {
+				t.Skip("Lean Helix is disabled")
+			}
+			test.WithContextWithTimeout(timeout, restartableTest)
+		})
+	} else {
+		b.st.Run(consensusAlgo.String(), func(t *testing.T) {
+			if skip {
+				t.Skip("Lean Helix is disabled")
+			}
+			test.WithContextWithTimeout(timeout, restartableTest)
+		})
+	}
+}
 
-				if b.setupFunc != nil {
-					b.setupFunc(networkCtx, network)
-				}
+func (b *networkHarnessBuilder) setupASingleRestartableTest(consensusAlgo consensus.ConsensusAlgoType, actualTest func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)) func(ctx context.Context) {
+	return func(ctx context.Context) {
+		networkCtx, cancelNetwork := context.WithCancel(ctx)
+		testId := b.testId + "-" + consensusAlgo.String()
+		logger, errorRecorder := b.makeLogger(testId)
+		network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
-				network.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
-				logger.Info("acceptance network started")
+		logger.Info("acceptance network created")
+		defer printTestIdOnFailure(b.f, testId)
+		defer dumpStateOnFailure(b.f, network)
+		defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
 
-				restart := func() NetworkHarness {
-					cancelNetwork()
-					network.Destroy()
-					time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
-
-					// signal the old network to stop
-					networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
-					newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
-					logger.Info("acceptance network re-created")
-
-					newNetwork.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
-					logger.Info("acceptance network re-started")
-
-					return newNetwork
-				}
-
-				logger.Info("acceptance network running test")
-				f(ctx, network, restart)
-				time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
-			})
+		if b.setupFunc != nil {
+			b.setupFunc(networkCtx, network)
 		}
 
-		if b.sb != nil {
-			b.sb.Run(consensusAlgo.String(), func(t *testing.B) {
-				test.WithContextWithTimeout(15*time.Second, restartableTest)
-			})
-		} else {
-			b.st.Run(consensusAlgo.String(), func(t *testing.T) {
-				test.WithContextWithTimeout(15*time.Second, restartableTest)
-			})
+		network.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
+		logger.Info("acceptance network started")
+
+		restart := func() NetworkHarness {
+			cancelNetwork()
+			network.Destroy()
+			time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+
+			// signal the old network to stop
+			networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
+			newNetwork := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, extractBlocks(network.BlockPersistence(0)))
+			logger.Info("acceptance network re-created")
+
+			newNetwork.CreateAndStartNodes(networkCtx, b.numOfNodesToStart)
+			logger.Info("acceptance network re-started")
+
+			return newNetwork
 		}
+
+		logger.Info("acceptance network running test")
+		actualTest(ctx, network, restart)
+		time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 	}
 }
 

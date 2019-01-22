@@ -14,9 +14,6 @@ import (
 )
 
 func TestCommitTransactionWithLeanHelix(t *testing.T) {
-	if !ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		t.Skip("Lean Helix test not allowed - ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS is false")
-	}
 	newHarness(t).
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
