@@ -20,7 +20,7 @@ const consistentlyIterations = 25
 
 func Eventually(timeout time.Duration, f func() bool) bool {
 	for i := 0; i < eventuallyIterations; i++ {
-		if f() {
+		if testButDontPanic(f) {
 			return true
 		}
 		time.Sleep(timeout / eventuallyIterations)
@@ -30,12 +30,17 @@ func Eventually(timeout time.Duration, f func() bool) bool {
 
 func Consistently(timeout time.Duration, f func() bool) bool {
 	for i := 0; i < consistentlyIterations; i++ {
-		if !f() {
+		if !testButDontPanic(f) {
 			return false
 		}
 		time.Sleep(timeout / consistentlyIterations)
 	}
 	return true
+}
+
+func testButDontPanic(f func() bool) bool {
+	defer func() { recover() }()
+	return f()
 }
 
 func EventuallyVerify(timeout time.Duration, mocks ...mock.HasVerify) error {
