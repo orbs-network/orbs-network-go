@@ -49,6 +49,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			return s.factory.CreateFinishedCARState(responses)
 		case r := <-s.conduit.responses:
 			responses = append(responses, r)
+			logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()))
 		case <-ctx.Done():
 			return nil
 		}
