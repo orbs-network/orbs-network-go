@@ -89,6 +89,7 @@ func TestHttpServerWriteMembuffResponse(t *testing.T) {
 	require.Equal(t, "application/membuffers", rec.Header().Get("Content-Type"), "should have our content type")
 	require.Equal(t, "REQUEST_STATUS_COMPLETED", rec.Header().Get("X-ORBS-REQUEST-RESULT"), "should have correct X-ORBS-REQUEST-RESULT")
 	require.Equal(t, "1234", rec.Header().Get("X-ORBS-BLOCK-HEIGHT"), "should have correct X-ORBS-BLOCK-HEIGHT")
+	require.Equal(t, "*", rec.Header().Get("Access-Control-Allow-Origin"), "should always add Access-Control-Allow-Origin header")
 	require.Equal(t, "2019-01-07T10:52:35.859Z", rec.Header().Get("X-ORBS-BLOCK-TIMESTAMP"), "should have correct X-ORBS-BLOCK-TIMESTAMP")
 	require.Equal(t, "example error", rec.Header().Get("X-ORBS-ERROR-DETAILS"), "should have correct X-ORBS-ERROR-DETAILS")
 	responseFromBody := client.SendTransactionResponseReader(rec.Body.Bytes())

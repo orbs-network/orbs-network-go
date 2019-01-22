@@ -11,6 +11,7 @@ func emptyConfig() mutableNodeConfig {
 	}
 }
 func (c *config) OverrideNodeSpecificValues(
+	httpAddress string,
 	gossipListenPort int,
 	nodeAddress primitives.NodeAddress,
 	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
@@ -18,6 +19,7 @@ func (c *config) OverrideNodeSpecificValues(
 ) NodeConfig {
 
 	cloned := c.Clone()
+	cloned.SetString(HTTP_ADDRESS, httpAddress)
 	cloned.SetNodeAddress(nodeAddress)
 	cloned.SetNodePrivateKey(nodePrivateKey)
 	cloned.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))

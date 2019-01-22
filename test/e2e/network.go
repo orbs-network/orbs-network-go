@@ -8,9 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -19,20 +17,19 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 // LOCAL_NETWORK_SIZE must remain identical to number of configured nodes in docker/test/e2e-config
 // Also Lean Helix consensus algo requires it to be >= 4 or it will panic
 const LOCAL_NETWORK_SIZE = 4
-const blockStorageDataDirPrefix = "/tmp/orbs/e2e"
 
 type inProcessE2ENetwork struct {
 	nodes []bootstrap.Node
 }
 
-func newInProcessE2ENetwork() *inProcessE2ENetwork {
+func NewInProcessE2ENetwork() *inProcessE2ENetwork {
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 
 	return &inProcessE2ENetwork{bootstrapE2ENetwork()}
 }
 
-func (h *inProcessE2ENetwork) gracefulShutdownAndWipeDisk() {
+func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	for _, node := range h.nodes {
 		node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
 	}
@@ -87,6 +84,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 				ethereumEndpoint).
 			OverrideNodeSpecificValues(
+				fmt.Sprintf(":%d", START_HTTP_PORT+i),
 				firstRandomPort+i,
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
@@ -94,40 +92,9 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 
 		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
-		node := bootstrap.NewNode(cfg, nodeLogger, fmt.Sprintf(":%d", START_HTTP_PORT+i))
+		node := bootstrap.NewNode(cfg, nodeLogger)
 
 		nodes = append(nodes, node)
 	}
 	return nodes
-}
-
-func getProcessorArtifactPath() (string, string) {
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
-	return filepath.Join(dir, "processor-artifacts"), dir
-}
-
-func cleanNativeProcessorCache() {
-	_, dirToCleanup := getProcessorArtifactPath()
-	_ = os.RemoveAll(dirToCleanup)
-}
-
-func cleanBlockStorage() {
-	_ = os.RemoveAll(blockStorageDataDirPrefix)
-}
-
-func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
-	os.MkdirAll(targetDir, os.ModePerm)
-	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "blocks")
-	targetBlocksFilePath := filepath.Join(targetDir, "blocks")
-
-	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))
-
-	rawBlocks, err := ioutil.ReadFile(sourceBlocksFilePath)
-	if err != nil {
-		panic("failed loading blocks file")
-	}
-	err = ioutil.WriteFile(targetBlocksFilePath, rawBlocks, 0644)
-	if err != nil {
-		panic(fmt.Sprintf("failed deploying blocks file to %s", targetDir))
-	}
 }

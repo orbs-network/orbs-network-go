@@ -52,7 +52,7 @@ func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize
 	).WithOutput(outputs...)
 }
 
-func getConfig(configFiles config.ArrayFlags) (config.NodeConfig, error) {
+func getConfig(configFiles config.ArrayFlags, httpAddress string) (config.NodeConfig, error) {
 	cfg := config.ForProduction("")
 
 	if len(configFiles) != 0 {
@@ -74,6 +74,8 @@ func getConfig(configFiles config.ArrayFlags) (config.NodeConfig, error) {
 		}
 	}
 
+	cfg.SetString(config.HTTP_ADDRESS, httpAddress)
+
 	return cfg, nil
 }
 
@@ -93,7 +95,7 @@ func main() {
 		return
 	}
 
-	cfg, err := getConfig(configFiles)
+	cfg, err := getConfig(configFiles, *httpAddress)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
@@ -105,6 +107,5 @@ func main() {
 	bootstrap.NewNode(
 		cfg,
 		logger,
-		*httpAddress,
 	).WaitUntilShutdown()
 }
