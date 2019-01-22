@@ -51,6 +51,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			switch r := e.(type) {
 			case *gossipmessages.BlockAvailabilityResponseMessage:
 				responses = append(responses, r)
+				logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()))
 			}
 		case <-ctx.Done():
 			return nil
