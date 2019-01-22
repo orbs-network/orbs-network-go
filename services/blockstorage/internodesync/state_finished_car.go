@@ -50,9 +50,7 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 func (s *finishedCARState) heartbeat(ctx context.Context) (shutdown bool) {
 	for {
 		select {
-		case <-s.factory.conduit.idleReset: // nop
-		case <-s.factory.conduit.responses: // nop
-		case <-s.factory.conduit.blocks: // nop
+		case <-s.factory.conduit.events: // nop
 		case <-ctx.Done():
 			return true
 		default:

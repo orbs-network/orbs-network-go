@@ -31,7 +31,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
-	responses := []*gossipmessages.BlockAvailabilityResponseMessage{}
+	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
 	s.gossipClient.petitionerUpdateConsensusAlgos(ctx)
 	err := s.gossipClient.petitionerBroadcastBlockAvailabilityRequest(ctx)
@@ -47,12 +47,13 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			s.metrics.timesSuccessful.Inc()
 			logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
 			return s.factory.CreateFinishedCARState(responses)
-		case r := <-s.conduit.responses:
-			responses = append(responses, r)
+		case e := <-s.conduit.events:
+			switch r := e.(type) {
+			case *gossipmessages.BlockAvailabilityResponseMessage:
+				responses = append(responses, r)
+			}
 		case <-ctx.Done():
 			return nil
-		case <-s.conduit.blocks: // nop
-		case <-s.conduit.idleReset: // nop
 		}
 	}
 }

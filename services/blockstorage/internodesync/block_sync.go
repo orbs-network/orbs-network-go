@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"time"
@@ -38,13 +37,13 @@ type BlockSyncStorage interface {
 	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
 }
 
+type idleResetMessage struct{}
+
 // the conduit connects between the states and the state machine (which is connected to the gossip handler)
 // the data that the states receive, regardless of their instance, is waiting at these channels
 type blockSyncConduit struct {
-	done      chan struct{}
-	idleReset chan struct{}
-	responses chan *gossipmessages.BlockAvailabilityResponseMessage
-	blocks    chan *gossipmessages.BlockSyncResponseMessage
+	done   chan struct{}
+	events chan interface{}
 }
 
 type BlockSync struct {
@@ -53,7 +52,6 @@ type BlockSync struct {
 	gossip  gossiptopics.BlockSync
 	storage BlockSyncStorage
 	config  blockSyncConfig
-	//currentState syncState
 	conduit *blockSyncConduit
 
 	metrics *stateMachineMetrics
@@ -99,10 +97,8 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	logger := parentLogger.WithTags(LogTag)
 
 	conduit := &blockSyncConduit{
-		done:      make(chan struct{}),
-		idleReset: make(chan struct{}),
-		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
-		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+		done:   make(chan struct{}),
+		events: make(chan interface{}),
 	}
 	return newBlockSyncWithFactory(
 		ctx,
@@ -137,22 +133,17 @@ func (bs *BlockSync) IsTerminated() bool {
 }
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncNoCommitInterval()/2)
-	defer cancel()
-
 	select {
-	case bs.conduit.idleReset <- struct{}{}:
+	case bs.conduit.events <- idleResetMessage{}:
 	case <-ctx.Done():
 	}
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectResponseTimeout()/2)
-	defer cancel()
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	select {
-	case bs.conduit.responses <- input.Message:
+	case bs.conduit.events <- input.Message:
 	case <-ctx.Done():
 		logger.Info("terminated on writing new availability response",
 			log.String("context-message", ctx.Err().Error()),
@@ -162,12 +153,10 @@ func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input 
 }
 
 func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectChunksTimeout()/2)
-	defer cancel()
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	select {
-	case bs.conduit.blocks <- input.Message:
+	case bs.conduit.events <- input.Message:
 	case <-ctx.Done():
 		logger.Info("terminated on writing new block chunk message",
 			log.String("context-message", ctx.Err().Error()),

@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
@@ -86,10 +85,8 @@ func newBlockSyncHarnessWithTimers(
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
 	conduit := &blockSyncConduit{
-		done:      make(chan struct{}),
-		idleReset: make(chan struct{}),
-		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
-		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
+		done:   make(chan struct{}),
+		events: make(chan interface{}),
 	}
 	metricFactory := metric.NewRegistry()
 

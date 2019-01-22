@@ -53,7 +53,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 		state := h.factory.CreateCollectingAvailabilityResponseState()
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
 			h.verifyBroadcastOfBlockAvailabilityRequest(t)
-			h.factory.conduit.responses <- message
+			h.factory.conduit.events <- message
 			manualCollectResponsesTimer.ManualTick()
 		})
 

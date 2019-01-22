@@ -47,22 +47,22 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 			logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceNodeAddress))
 			s.metrics.timesTimeout.Inc()
 			return s.factory.CreateIdleState()
-		case blocks := <-s.conduit.blocks:
-			if !blocks.Sender.SenderNodeAddress().Equal(s.sourceNodeAddress) { // aborting, back to idle
-				logger.Info("byzantine message detected, expected source key does not match incoming",
-					log.Stringable("source", s.sourceNodeAddress),
-					log.Stringable("message-sender", blocks.Sender.SenderNodeAddress()))
-				s.metrics.timesByzantine.Inc()
-				return s.factory.CreateIdleState()
+		case e := <-s.conduit.events:
+			switch blocks := e.(type) {
+			case *gossipmessages.BlockSyncResponseMessage:
+				if !blocks.Sender.SenderNodeAddress().Equal(s.sourceNodeAddress) { // aborting, back to idle
+					logger.Info("byzantine message detected, expected source key does not match incoming",
+						log.Stringable("source", s.sourceNodeAddress),
+						log.Stringable("message-sender", blocks.Sender.SenderNodeAddress()))
+					s.metrics.timesByzantine.Inc()
+					return s.factory.CreateIdleState()
+				}
+				logger.Info("got blocks from sync", log.Stringable("source", s.sourceNodeAddress))
+				s.metrics.timesSuccessful.Inc()
+				return s.factory.CreateProcessingBlocksState(blocks)
 			}
-
-			logger.Info("got blocks from sync", log.Stringable("source", s.sourceNodeAddress))
-			s.metrics.timesSuccessful.Inc()
-			return s.factory.CreateProcessingBlocksState(blocks)
 		case <-ctx.Done():
 			return nil
-		case <-s.conduit.idleReset: // nop
-		case <-s.conduit.responses: // nop
 		}
 	}
 }

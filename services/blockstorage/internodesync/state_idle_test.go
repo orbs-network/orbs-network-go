@@ -17,7 +17,7 @@ func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 
 		state := h.factory.CreateIdleState()
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
-			h.factory.conduit.idleReset <- struct{}{}
+			h.factory.conduit.events <- idleResetMessage{}
 			manualNoCommitTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
 

@@ -32,17 +32,18 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	noCommitTimer := s.createTimer()
 	for {
 		select {
+		case e := <-s.conduit.events:
+			switch e.(type) {
+			case idleResetMessage:
+				s.metrics.timesReset.Inc()
+				return s.factory.CreateIdleState()
+			}
 		case <-noCommitTimer.C:
 			logger.Info("starting sync after no-commit timer expired")
 			s.metrics.timesExpired.Inc()
 			return s.factory.CreateCollectingAvailabilityResponseState()
-		case <-s.conduit.idleReset:
-			s.metrics.timesReset.Inc()
-			return s.factory.CreateIdleState()
 		case <-ctx.Done():
 			return nil
-		case <-s.conduit.blocks: // nop
-		case <-s.conduit.responses: // nop
 		}
 	}
 }
