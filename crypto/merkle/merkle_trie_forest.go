@@ -8,12 +8,6 @@ import (
 	"sync"
 )
 
-func createEmptyTrieNode() *node {
-	tmp := createNode([]byte{}, zeroValueHash)
-	tmp.hash = hashTrieNode(tmp)
-	return tmp
-}
-
 type Forest struct {
 	mutex sync.Mutex
 	roots []*node
@@ -22,6 +16,12 @@ type Forest struct {
 func NewForest() (*Forest, primitives.Sha256) {
 	var emptyNode = createEmptyTrieNode()
 	return &Forest{sync.Mutex{}, []*node{emptyNode}}, emptyNode.hash
+}
+
+func createEmptyTrieNode() *node {
+	tmp := createNode([]byte{}, zeroValueHash)
+	tmp.hash = hashTrieNode(tmp)
+	return tmp
 }
 
 func (f *Forest) findRoot(rootHash primitives.Sha256) *node {
@@ -45,78 +45,112 @@ func (f *Forest) appendRoot(root *node) {
 }
 
 type TrieProofNode struct {
-	hashValue  primitives.Sha256 // the sibling's hash
-	prefixSize int               // "my" prefix size
+	siblingHash primitives.Sha256 // the sibling's hash
+	prefixSize  int               // "my" prefix size
 }
-type TrieProof []*TrieProofNode
-
-func generateTrieProofNode(current, sibling *node) *TrieProofNode {
-	return &TrieProofNode{sibling.hash, len(current.path)}
+type TrieProof struct {
+	nodes []*TrieProofNode
+	path  []byte
+	value []byte
 }
 
-func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (TrieProof, error) {
+func newTrieProof() *TrieProof {
+	return &TrieProof{
+		make([]*TrieProofNode, 0, 10), nil, nil,
+	}
+}
+
+func (tp *TrieProof) appendToProof(n, sibling *node) {
+	tp.nodes = append(tp.nodes, &TrieProofNode{sibling.hash, len(n.path)})
+}
+
+func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (*TrieProof, error) {
 	current := f.findRoot(rootHash)
 	if current == nil {
 		return nil, errors.Errorf("unknown root")
 	}
 
-	proof := make(TrieProof, 0, 10)
-	other := current
-	proof = append(proof, generateTrieProofNode(current, other)) // TODO make proof to struct ?
+	proof := newTrieProof()
 	path = toBin(path, toBinSize(path))
-	for p := path; bytes.HasPrefix(p, current.path); {
+	for p := path; bytes.HasPrefix(p, current.path) && len(p) > len(current.path); {
 		p = p[len(current.path):]
 
-		if len(p) != 0 {
-			if p[0] == 0 {
-				other = current.right
-				current = current.left
-			} else {
-				other = current.left
-				current = current.right
-			}
+		parent := current
+		sibling := current
+		if p[0] == 0 {
+			sibling = parent.right
+			current = parent.left
+		} else {
+			sibling = parent.left
+			current = parent.right
+		}
 
-			if current != nil {
-				// each proof node has my sibling's hash but my prefix size
-				proof = append(proof, generateTrieProofNode(current, other))
-				p = p[1:]
-			} else {
-				break
-			}
+		if current != nil {
+			proof.appendToProof(parent, sibling)
+			p = p[1:]
 		} else {
 			break
 		}
 	}
+	if current != nil { // last node, unless wrong key size should be value(leaf) node "closest" to requested path
+		proof.appendToProof(current, current)
+		proof.value = current.value                            // for exclusion : the value used for proof
+		copy(path[len(path)-len(current.path):], current.path) // for exclusion : the path used for proof
+	}
+	proof.path = path
 	return proof, nil
 }
 
-func (f *Forest) Verify(rootHash primitives.Sha256, proof TrieProof, path []byte, value primitives.Sha256) (bool, error) {
-	if len(proof) == 0 {
+func (f *Forest) Verify(rootHash primitives.Sha256, proof *TrieProof, path []byte, value primitives.Sha256) (bool, error) {
+	if proof == nil || len(proof.nodes) == 0 {
 		return value.Equal(zeroValueHash), nil
 	}
 
-	proofInd := len(proof) - 1
-	keyEndInd := toBinSize(path)
-	keyStartInd := keyEndInd - proof[proofInd].prefixSize
-	path = toBin(path, toBinSize(path))
-	current := hashImpl(value, fromBin(path[keyStartInd:keyEndInd]))
-	other := proof[proofInd].hashValue
+	proofValueNode := len(proof.nodes) - 1
+	pathFromVerify := toBin(path, toBinSize(path))
+	inclusion := !value.Equal(zeroValueHash)
 
-	for i := proofInd - 1; i >= 0; i-- {
-		keyEndInd = keyStartInd - 1
-		keyStartInd = keyEndInd - proof[i].prefixSize
-		if path[keyEndInd] == 0 {
-			current = hashImpl(current, other, fromBin(path[keyStartInd:keyEndInd]))
-		} else {
-			current = hashImpl(other, current, fromBin(path[keyStartInd:keyEndInd]))
+	if !verifyProofIsSelfConsistent(rootHash, proof, pathFromVerify) {
+		return false, errors.Errorf("proof is not self consistent with given key")
+	}
+
+	if inclusion {
+		calcedHash := hashImpl(value, pathFromVerify[len(pathFromVerify)-proof.nodes[proofValueNode].prefixSize:])
+		return bytes.Equal(proof.nodes[proofValueNode].siblingHash, calcedHash), nil
+	} else {
+		pathLen := len(proof.path)
+		if pathLen != len(pathFromVerify) {
+			return false, nil
 		}
-		other = proof[i].hashValue
+		valueNodePrefixIndex := pathLen - proof.nodes[proofValueNode].prefixSize
+		isHashEqual := bytes.Equal(proof.nodes[proofValueNode].siblingHash, hashImpl(proof.value, proof.path[valueNodePrefixIndex:]))
+		isBeginOfKeyEqual := bytes.Equal(proof.path[:valueNodePrefixIndex], pathFromVerify[:valueNodePrefixIndex])
+		isEndOfKeyEqual := false
+		if pathLen-proof.nodes[proofValueNode].prefixSize != 0 {
+			isEndOfKeyEqual = bytes.Equal(proof.path[valueNodePrefixIndex:], pathFromVerify[valueNodePrefixIndex:])
+		}
+		return isHashEqual && isBeginOfKeyEqual && !isEndOfKeyEqual, nil
+	}
+}
+
+func verifyProofIsSelfConsistent(rootHash primitives.Sha256, proof *TrieProof, pathFromVerify []byte) bool {
+	proofValueNode := len(proof.nodes) - 1
+	//pathFromVerify := toBin(path, toBinSize(path))
+	keyEndInd := len(pathFromVerify)
+	keyStartInd := keyEndInd - proof.nodes[proofValueNode].prefixSize
+	current := proof.nodes[proofValueNode].siblingHash
+
+	for i := proofValueNode - 1; i >= 0; i-- {
+		keyEndInd = keyStartInd - 1
+		keyStartInd = keyEndInd - proof.nodes[i].prefixSize
+		if pathFromVerify[keyEndInd] == 0 {
+			current = hashImpl(current, proof.nodes[i].siblingHash, pathFromVerify[keyStartInd:keyEndInd])
+		} else {
+			current = hashImpl(proof.nodes[i].siblingHash, current, pathFromVerify[keyStartInd:keyEndInd])
+		}
 	}
 
-	if !bytes.Equal(other, current) {
-		return value.Equal(zeroValueHash), nil
-	}
-	return /*!value.Equal(zeroValueHash) &&*/ bytes.Equal(current, rootHash), nil
+	return bytes.Equal(current, rootHash)
 }
 
 func (f *Forest) Forget(rootHash primitives.Sha256) {
@@ -182,7 +216,7 @@ func hashImpl(parts ...[]byte) primitives.Sha256 {
 func generateLeafParts(n *node) [][]byte {
 	res := make([][]byte, 2)
 	res[0] = n.value
-	res[1] = fromBin(n.path)
+	res[1] = n.path
 	return res
 }
 
@@ -196,30 +230,7 @@ func generateNodeParts(n *node) [][]byte {
 	if n.right != nil {
 		copy(res[1], n.right.hash)
 	}
-	res[2] = fromBin(n.path)
-	return res
-}
-
-func fromBin(s []byte) []byte {
-	res := make([]byte, hash.SHA256_HASH_SIZE_BYTES)
-	fullbytes := len(s) / 8
-	length := fullbytes * 8
-
-	for i := 0; i < length; i = i + 8 {
-		res[i/8] = s[i]<<7 |
-			s[i+1]<<6 |
-			s[i+2]<<5 |
-			s[i+3]<<4 |
-			s[i+4]<<3 |
-			s[i+5]<<2 |
-			s[i+6]<<1 |
-			s[i+7]
-	}
-	leftover := len(s) - length
-	for i := 0; i < leftover; i++ {
-		res[fullbytes] = res[fullbytes] | s[length+i]<<uint(7-i)
-	}
-
+	res[2] = n.path
 	return res
 }
 
@@ -232,15 +243,5 @@ func toBin(s []byte, size int) []byte {
 		b := s[i/8]
 		bitsArray[i] = 1 & (b >> uint(7-(i%8)))
 	}
-	//for i, b := range s {
-	//	bitsArray[i*8] = 1 & (b >> 7)
-	//	bitsArray[i*8+1] = 1 & (b >> 6)
-	//	bitsArray[i*8+2] = 1 & (b >> 5)
-	//	bitsArray[i*8+3] = 1 & (b >> 4)
-	//	bitsArray[i*8+4] = 1 & (b >> 3)
-	//	bitsArray[i*8+5] = 1 & (b >> 2)
-	//	bitsArray[i*8+6] = 1 & (b >> 1)
-	//	bitsArray[i*8+7] = 1 & b
-	//}
 	return bitsArray
 }
