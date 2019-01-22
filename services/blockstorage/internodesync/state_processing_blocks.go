@@ -64,7 +64,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 			break
 		}
 
-		_, err = s.storage.CommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
+		_, err = s.storage.NodeSyncCommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
 
 		if err != nil {
 			s.metrics.failedCommitBlocks.Inc()
@@ -77,16 +77,4 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	}
 
 	return s.factory.CreateCollectingAvailabilityResponseState()
-}
-
-func (s *processingBlocksState) blockCommitted(ctx context.Context) {
-	return
-}
-
-func (s *processingBlocksState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
-	return
-}
-
-func (s *processingBlocksState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
-	return
 }
