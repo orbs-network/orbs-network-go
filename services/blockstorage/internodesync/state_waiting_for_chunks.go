@@ -17,7 +17,7 @@ type waitingForChunksState struct {
 	gossipClient      *blockSyncGossipClient
 	createTimer       func() *synchronization.Timer
 	logger            log.BasicLogger
-	conduit           *blockSyncConduit
+	conduit           chan interface{}
 	metrics           waitingStateMetrics
 }
 
@@ -47,7 +47,7 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 			logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceNodeAddress))
 			s.metrics.timesTimeout.Inc()
 			return s.factory.CreateIdleState()
-		case e := <-s.conduit.events:
+		case e := <-s.conduit:
 			switch blocks := e.(type) {
 			case *gossipmessages.BlockSyncResponseMessage:
 				if !blocks.Sender.SenderNodeAddress().Equal(s.sourceNodeAddress) { // aborting, back to idle

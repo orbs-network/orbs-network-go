@@ -52,9 +52,11 @@ type BlockSync struct {
 	gossip  gossiptopics.BlockSync
 	storage BlockSyncStorage
 	config  blockSyncConfig
-	conduit *blockSyncConduit
+
+	conduit chan interface{} // passing events and state used to drive state machine without sharing state
 
 	metrics *stateMachineMetrics
+	done    supervised.ContextEndedChan
 }
 
 type stateMachineMetrics struct {
@@ -86,7 +88,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.config.BlockSyncNumBlocksInBatch()))
 
-	supervised.GoForever(ctx, logger, func() {
+	bs.done = supervised.GoForever(ctx, logger, func() {
 		bs.syncLoop(ctx)
 	})
 
@@ -96,10 +98,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
 	logger := parentLogger.WithTags(LogTag)
 
-	conduit := &blockSyncConduit{
-		done:   make(chan struct{}),
-		events: make(chan interface{}),
-	}
+	conduit := make(chan interface{})
 	return newBlockSyncWithFactory(
 		ctx,
 		NewStateFactory(config, gossip, storage, conduit, logger, metricFactory),
@@ -119,13 +118,11 @@ func (bs *BlockSync) syncLoop(parent context.Context) {
 		currentState = currentState.processState(ctx)
 		bs.metrics.statesTransitioned.Inc()
 	}
-
-	close(bs.conduit.done)
 }
 
 func (bs *BlockSync) IsTerminated() bool {
 	select {
-	case _, open := <-bs.conduit.done:
+	case _, open := <-bs.done:
 		return !open
 	default:
 		return false
@@ -134,7 +131,7 @@ func (bs *BlockSync) IsTerminated() bool {
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	select {
-	case bs.conduit.events <- idleResetMessage{}:
+	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():
 	}
 }
@@ -143,7 +140,7 @@ func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input 
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	select {
-	case bs.conduit.events <- input.Message:
+	case bs.conduit <- input.Message:
 	case <-ctx.Done():
 		logger.Info("terminated on writing new availability response",
 			log.String("context-message", ctx.Err().Error()),
@@ -156,7 +153,7 @@ func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossipt
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	select {
-	case bs.conduit.events <- input.Message:
+	case bs.conduit <- input.Message:
 	case <-ctx.Done():
 		logger.Info("terminated on writing new block chunk message",
 			log.String("context-message", ctx.Err().Error()),

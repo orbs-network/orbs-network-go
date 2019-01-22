@@ -86,7 +86,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 func (s *processingBlocksState) heartbeat(ctx context.Context) (shutdown bool) {
 	for {
 		select {
-		case <-s.factory.conduit.events: // nop
+		case <-s.factory.conduit: // nop
 		case <-ctx.Done():
 			return true
 		default:

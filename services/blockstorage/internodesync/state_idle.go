@@ -12,7 +12,7 @@ type idleState struct {
 	createTimer func() *synchronization.Timer
 	logger      log.BasicLogger
 	factory     *stateFactory
-	conduit     *blockSyncConduit
+	conduit     chan interface{}
 	metrics     idleStateMetrics
 }
 
@@ -32,7 +32,7 @@ func (s *idleState) processState(ctx context.Context) syncState {
 	noCommitTimer := s.createTimer()
 	for {
 		select {
-		case e := <-s.conduit.events:
+		case e := <-s.conduit:
 			switch e.(type) {
 			case idleResetMessage:
 				s.metrics.timesReset.Inc()

@@ -84,10 +84,8 @@ func newBlockSyncHarnessWithTimers(
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
-	conduit := &blockSyncConduit{
-		done:   make(chan struct{}),
-		events: make(chan interface{}),
-	}
+	conduit := make(chan interface{})
+
 	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{

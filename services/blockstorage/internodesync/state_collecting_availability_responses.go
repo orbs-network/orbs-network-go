@@ -14,7 +14,7 @@ type collectingAvailabilityResponsesState struct {
 	gossipClient *blockSyncGossipClient
 	createTimer  func() *synchronization.Timer
 	logger       log.BasicLogger
-	conduit      *blockSyncConduit
+	conduit      chan interface{}
 	metrics      collectingStateMetrics
 }
 
@@ -47,7 +47,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			s.metrics.timesSuccessful.Inc()
 			logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
 			return s.factory.CreateFinishedCARState(responses)
-		case e := <-s.conduit.events:
+		case e := <-s.conduit:
 			switch r := e.(type) {
 			case *gossipmessages.BlockAvailabilityResponseMessage:
 				responses = append(responses, r)
