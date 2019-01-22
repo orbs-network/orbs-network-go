@@ -217,8 +217,6 @@ func (t *directTransport) receiveTransportData(ctx context.Context, conn net.Con
 	}
 	numPayloads := membuffers.GetUint32(sizeBuffer)
 
-	t.logger.Info("receiving transport data", log.Int("payloads", int(numPayloads)), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-
 	if numPayloads > MAX_PAYLOADS_IN_MESSAGE {
 		return nil, errors.Errorf("received message with too many payloads: %d", numPayloads)
 	}
@@ -320,8 +318,6 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 }
 
 func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
-	t.logger.Info("sending transport data", log.Int("payloads", len(data.Payloads)), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 	sizeBuffer := make([]byte, 4)
@@ -367,8 +363,6 @@ func calcPaddingSize(size uint32) uint32 {
 }
 
 func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
-	t.logger.Info("sending transport data", log.Int("payloads", 0), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 
