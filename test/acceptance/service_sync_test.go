@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -71,19 +72,23 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	const totalAmount = transfers * transferAmount
 
 	newHarness(t).
-		AllowingErrors(
-			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
-			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).
+		WithLogFilters(log.IgnoreMessagesMatching("transport message received"),
+			log.IgnoreMessagesMatching("Metric recorded"),
+			log.IgnoreMessagesMatching("received block availability"),
+			log.IgnoreMessagesMatching("sending the response for availability"),
+			log.IgnoreMessagesMatching("attempt service sync")).
 		StartWithRestart(func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
 
 			var txHashes []primitives.Sha256
 			// generate some blocks with state
 			contract := network.BenchmarkTokenContract()
 			for i := 0; i < transfers; i++ {
-				resp, txHash := contract.Transfer(ctx, 0, transferAmount, 0, 1)
-				require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
+				_, txHash := contract.Transfer(ctx, 0, transferAmount, 0, 1)
 				txHashes = append(txHashes, txHash)
+			}
+
+			for _, txHash := range txHashes {
+				network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
 			}
 
 			network = restartPreservingBlocks()

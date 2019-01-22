@@ -30,7 +30,7 @@ func ValidateTransactionsBlockMerkleRoot(bvcx *BlockValidatorContext) error {
 	if expectedTransactionsMerkleRoot, err := digest.CalcTransactionsMerkleRoot(bvcx.TransactionsBlock.SignedTransactions); err != nil {
 		return err
 	} else if !bytes.Equal(transactionsMerkleRoot, expectedTransactionsMerkleRoot) {
-		return errors.Wrapf(ErrMismatchedTxMerkleRoot, "expected %v actual %v", expectedTransactionsMerkleRoot, transactionsMerkleRoot)
+		return errors.Wrapf(ErrMismatchedTxMerkleRoot, "expected=%v actual=%v", expectedTransactionsMerkleRoot, transactionsMerkleRoot)
 	}
 	return nil
 }
@@ -40,7 +40,7 @@ func ValidateTransactionsBlockMetadataHash(bvcx *BlockValidatorContext) error {
 	expectedMetaDataHash := digest.CalcTransactionMetaDataHash(bvcx.TransactionsBlock.Metadata)
 	metadataHash := bvcx.TransactionsBlock.Header.MetadataHash()
 	if !bytes.Equal(metadataHash, expectedMetaDataHash) {
-		return errors.Wrapf(ErrMismatchedMetadataHash, "expected %v actual %v", expectedMetaDataHash, metadataHash)
+		return errors.Wrapf(ErrMismatchedMetadataHash, "expected=%v actual=%v", expectedMetaDataHash, metadataHash)
 	}
 	return nil
 }
@@ -52,7 +52,7 @@ func ValidateReceiptsMerkleRoot(bvcx *BlockValidatorContext) error {
 		return errors.Wrapf(ErrCalcReceiptsMerkleRoot, "ValidateResultsBlock error calculateReceiptsMerkleRoot(), %v", err)
 	}
 	if !bytes.Equal(expectedReceiptsMerkleRoot, []byte(calculatedReceiptMerkleRoot)) {
-		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "expected %v actual %v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
+		return errors.Wrapf(ErrMismatchedReceiptsRootHash, "expected=%v actual=%v", expectedReceiptsMerkleRoot, calculatedReceiptMerkleRoot)
 	}
 	return nil
 }
@@ -64,7 +64,7 @@ func ValidateResultsBlockStateDiffHash(bvcx *BlockValidatorContext) error {
 		return errors.Wrapf(ErrCalcStateDiffHash, "ValidateResultsBlock error calculateStateDiffHash(), %v", err)
 	}
 	if !bytes.Equal(expectedStateDiffHash, []byte(calculatedStateDiffHash)) {
-		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffHash, calculatedStateDiffHash)
+		return errors.Wrapf(ErrMismatchedStateDiffHash, "expected=%v actual=%v", expectedStateDiffHash, calculatedStateDiffHash)
 	}
 	return nil
 }
@@ -75,7 +75,7 @@ func ValidateBlockHash(bvcx *BlockValidatorContext) error {
 	}
 	calculatedBlockHash := []byte(digest.CalcBlockHash(bvcx.TransactionsBlock, bvcx.ResultsBlock))
 	if !bytes.Equal(bvcx.ExpectedBlockHash, calculatedBlockHash) {
-		return errors.Wrapf(ErrMismatchedBlockHash, "expected %v actual %v", bvcx.ExpectedBlockHash, calculatedBlockHash)
+		return errors.Wrapf(ErrMismatchedBlockHash, "expected=%v actual=%v", bvcx.ExpectedBlockHash, calculatedBlockHash)
 	}
 	return nil
 }

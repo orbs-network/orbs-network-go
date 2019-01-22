@@ -38,8 +38,8 @@ func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossip
 		return nil, errors.Wrapf(err, "could not create one hash, invalid signature in relay message from sender %s", sender.SenderNodeAddress())
 	}
 
-	if !digest.VerifyNodeSignature(sender.SenderNodeAddress(), oneBigHash, sender.Signature()) {
-		return nil, errors.Errorf("invalid signature in relay message from sender %s", sender.SenderNodeAddress())
+	if err := digest.VerifyNodeSignature(sender.SenderNodeAddress(), oneBigHash, sender.Signature()); err != nil {
+		return nil, errors.Wrapf(err, "invalid signature in relay message from sender %s", sender.SenderNodeAddress())
 	}
 
 	for _, tx := range input.Message.SignedTransactions {

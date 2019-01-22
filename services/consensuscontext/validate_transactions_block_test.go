@@ -82,7 +82,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
 		vctx.txOrderValidator = falsyValidateTransactionOrdering
 		err := validateTxTransactionOrdering(context.Background(), vctx)
-		require.Equal(t, ErrIncorrectTransactionOrdering, errors.Cause(err), "validation should fail on failing tx ordering validation", err)
+		require.Equal(t, ErrFailedTransactionOrdering, errors.Cause(err), "validation should fail on failing tx ordering validation", err)
 	})
 }
 

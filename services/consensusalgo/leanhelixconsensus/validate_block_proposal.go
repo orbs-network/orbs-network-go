@@ -19,8 +19,9 @@ type validateBlockProposalContext struct {
 	validateBlockHash         func(blockHash primitives.Sha256, tx *protocol.TransactionsBlockContainer, rx *protocol.ResultsBlockContainer) error
 }
 
+// Block height is unused - the spec of ValidateBlockProposal() prepares for a height-based config but it is not part of v1
 func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) bool {
-	return validateBlockProposalInternal(ctx, blockHeight, block, blockHash, prevBlock, &validateBlockProposalContext{
+	return validateBlockProposalInternal(ctx, block, blockHash, prevBlock, &validateBlockProposalContext{
 		validateTransactionsBlock: p.consensusContext.ValidateTransactionsBlock,
 		validateResultsBlock:      p.consensusContext.ValidateResultsBlock,
 		validateBlockHash:         validateBlockHash_Proposal,
@@ -28,11 +29,11 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 	})
 }
 
-func validateBlockProposalInternal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block, vctx *validateBlockProposalContext) bool {
+func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block, vctx *validateBlockProposalContext) bool {
 	blockPair := FromLeanHelixBlock(block)
 
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		vctx.logger.Info("Error in ValidateBlockProposal()")
+		vctx.logger.Info("Error in ValidateBlockProposal(): block or its tx/rx are nil")
 		return false
 	}
 
@@ -58,7 +59,7 @@ func validateBlockProposalInternal(ctx context.Context, blockHeight lhprimitives
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock")
+		vctx.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock", log.Error(err), log.BlockHeight(newBlockHeight))
 		return false
 	}
 
@@ -70,16 +71,16 @@ func validateBlockProposalInternal(ctx context.Context, blockHeight lhprimitives
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal failed ValidateResultsBlock", log.Int("block-height", int(newBlockHeight)), log.Error(err))
+		vctx.logger.Error("ValidateBlockProposal failed ValidateResultsBlock", log.BlockHeight(newBlockHeight), log.Error(err))
 		return false
 	}
 
 	err = vctx.validateBlockHash(primitives.Sha256(blockHash), blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal blockHash mismatch")
+		vctx.logger.Error("ValidateBlockProposal blockHash mismatch", log.Error(err), log.Stringable("expected-block-hash", blockHash))
 		return false
 	}
-	vctx.logger.Info("ValidateBlockProposal passed", log.Int("block-height", int(newBlockHeight)))
+	vctx.logger.Info("ValidateBlockProposal passed", log.BlockHeight(newBlockHeight))
 	return true
 }
 

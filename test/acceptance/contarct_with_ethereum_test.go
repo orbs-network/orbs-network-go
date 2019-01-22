@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// LH: Same comment as autonomous
+// LH: Can only use after enabling Jonathan's (also Noam) feature for finding a block on Eth based on timestamp (find Taiga)
 func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 	newHarness(t).
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync"), log.ExcludeEntryPoint("TransactionForwarder")).
