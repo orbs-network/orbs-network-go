@@ -200,8 +200,8 @@ func colorize(fields []*Field) string {
 	colors := []string{ansi.Cyan, ansi.Yellow, ansi.LightBlue, ansi.Magenta, ansi.LightYellow, ansi.LightRed, ansi.LightGreen, ansi.LightMagenta, ansi.Green}
 	for _, f := range fields {
 		if f.Key == "request-id" {
-			lastChar := int(f.StringVal[len(f.StringVal)-1])
-			return colors[lastChar%len(colors)]
+			fourthBeforeLastChar := int(f.StringVal[len(f.StringVal)-4])
+			return colors[fourthBeforeLastChar%len(colors)]
 		}
 	}
 

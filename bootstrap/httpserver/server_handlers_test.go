@@ -22,7 +22,7 @@ import (
 func makeServer(papiMock *services.MockPublicApi) HttpServer {
 	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 
-	return NewHttpServer("", logger, papiMock, metric.NewRegistry())
+	return NewHttpServer(NewServerConfig(":0", false), logger, papiMock, metric.NewRegistry())
 }
 
 func TestHttpServer_Robots(t *testing.T) {

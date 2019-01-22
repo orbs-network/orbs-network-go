@@ -20,7 +20,7 @@ check_exit_code_and_report () {
 
     # copy full log for further investigation
     mkdir -p ./_logs
-    cp ./*.out ./_logs
+    cp ./_out/*.out ./_logs
 
     if [ $EXIT_CODE != 0 ]; then
         exit $EXIT_CODE

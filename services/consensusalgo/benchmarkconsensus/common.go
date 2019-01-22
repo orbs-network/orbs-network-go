@@ -59,25 +59,25 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 
 	// TODO Handle nil as Genesis block https://github.com/orbs-network/orbs-network-go/issues/632
 	if blockPair == nil {
-		return errors.New("validateBlockConsensus received an empty block")
+		return errors.New("BenchmarkConsensus: validateBlockConsensus received an empty block")
 	}
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("incorrect block proof type: %v", blockPair.TransactionsBlock.BlockProof.Type())
+		return errors.Errorf("BenchmarkConsensus: incorrect block proof type for transaction block: %v", blockPair.TransactionsBlock.BlockProof.Type())
 	}
 	if !blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("incorrect block proof type: %v", blockPair.ResultsBlock.BlockProof.Type())
+		return errors.Errorf("BenchmarkConsensus: incorrect block proof type for results block: %v", blockPair.ResultsBlock.BlockProof.Type())
 	}
 
 	// prev block hash ptr (if given)
 	if prevCommittedBlockPair != nil {
 		prevTxHash := digest.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
 		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
-			return errors.Errorf("transactions prev block hash does not match prev block: %s", prevTxHash)
+			return errors.Errorf("BenchmarkConsensus: transactions prev block hash does not match prev block: %s", prevTxHash)
 		}
 		prevRxHash := digest.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
 		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
-			return errors.Errorf("results prev block hash does not match prev block: %s", prevRxHash)
+			return errors.Errorf("BenchmarkConsensus: results prev block hash does not match prev block: %s", prevRxHash)
 		}
 	}
 
@@ -85,15 +85,15 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	blockProof := blockPair.ResultsBlock.BlockProof.BenchmarkConsensus()
 	signersIterator := blockProof.NodesIterator()
 	if !signersIterator.HasNext() {
-		return errors.New("block proof not signed")
+		return errors.New("BenchmarkConsensus: block proof not signed")
 	}
 	signer := signersIterator.NextNodes()
 	if !signer.SenderNodeAddress().Equal(s.config.BenchmarkConsensusConstantLeader()) {
-		return errors.Errorf("block proof not from leader: %s", signer.SenderNodeAddress())
+		return errors.Errorf("BenchmarkConsensus: block proof not from leader: %s", signer.SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)
-	if !digest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()) {
-		return errors.Errorf("block proof signature is invalid: %s", signer.Signature())
+	if err := digest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()); err != nil {
+		return errors.Wrapf(err, "BenchmarkConsensus: block proof signature is invalid: %s", signer.Signature())
 	}
 
 	return nil
