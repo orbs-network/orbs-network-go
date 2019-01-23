@@ -79,7 +79,8 @@ func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener
 }
 
 func (t *TamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
-	t.releaseLatches(data)
+	signalAndRelease := t.lockLatchesForSignalling(data)
+	defer signalAndRelease()
 
 	if err, shouldReturn := t.maybeTamper(ctx, data); shouldReturn {
 		return err
@@ -177,17 +178,33 @@ func (t *TamperingTransport) sendToPeers(ctx context.Context, data *adapter.Tran
 	t.nested.Send(ctx, data)
 }
 
-func (t *TamperingTransport) releaseLatches(data *adapter.TransportData) {
+// should be called prior to releasing latches.
+// applies latches predicates to data, obtains latch locks, and returns
+// a function to notify any waiting latches and release their locks.
+// typically should be used use like so:
+//
+// signalAndRelease := lockLatchesForSignalling(data)
+// defer signalAndRelease()
+// ... // do whatever it is we are waiting for
+func (t *TamperingTransport) lockLatchesForSignalling(data *adapter.TransportData) (signalAndRelease func()) {
 	t.tamperers.RLock()
 	defer t.tamperers.RUnlock()
 
+	var latches []*latchingTamperer
 	for _, o := range t.tamperers.latches {
 		if o.predicate(data) {
 			o.cond.L.Lock()
+			latches = append(latches, o)
+		}
+	}
+
+	return func() {
+		for _, o := range latches {
 			o.cond.Signal()
 			o.cond.L.Unlock()
 		}
 	}
+
 }
 
 func (t *TamperingTransport) addTamperer(tamperer OngoingTamper) OngoingTamper {
