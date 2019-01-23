@@ -2,7 +2,6 @@ package testkit
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
