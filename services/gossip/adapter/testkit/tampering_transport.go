@@ -183,7 +183,9 @@ func (t *TamperingTransport) releaseLatches(data *adapter.TransportData) {
 
 	for _, o := range t.tamperers.latches {
 		if o.predicate(data) {
+			o.cond.L.Lock()
 			o.cond.Signal()
+			o.cond.L.Unlock()
 		}
 	}
 }

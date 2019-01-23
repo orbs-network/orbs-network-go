@@ -10,8 +10,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"sync"
+	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 type tamperingHarness struct {
@@ -102,47 +103,63 @@ func TestPausingTamperer(t *testing.T) {
 	})
 }
 
-func TestLatchingTamperer(t *testing.T) {
-	t.Skip("this test is suspect as having a deadlock, skipping until @ronnno and @electricmonk can look at it")
+func TestLatchingTamperer_WaitBlocksUntilSend(t *testing.T) {
+	t.Parallel()
+
 	test.WithContext(func(ctx context.Context) {
 		c := newTamperingHarness(ctx)
 
-		called := make(chan bool)
-
 		latch := c.transport.LatchOn(anyMessage())
-
 		c.listener.WhenOnTransportMessageReceived(mock.Any)
 
-		afterMessageArrived := sync.WaitGroup{}
-		afterMessageArrived.Add(1)
-
-		afterLatched := sync.WaitGroup{}
-		afterLatched.Add(1)
-
-		go func() {
-			afterLatched.Done()
-
-			defer func() {
-				latch.Wait()
-				afterMessageArrived.Wait()
-				called <- true
-			}()
-
-		}()
-
-		afterLatched.Wait()
-		c.send(ctx, nil)
-
-		select {
-		case <-called:
-			t.Error("called too early")
-		default:
-		}
-
-		afterMessageArrived.Done()
-
-		<-called
+		requireOperationBlocking(t, ctx, func() { latch.Wait() }, func() { c.send(ctx, nil) }, "latch.Wait()", "tamperingHarness.send()")
 	})
+}
+
+func TestLatchingTamperer_SendBlocksUntilWait(t *testing.T) {
+	t.Parallel()
+
+	test.WithContext(func(ctx context.Context) {
+		c := newTamperingHarness(ctx)
+
+		latch := c.transport.LatchOn(anyMessage())
+		c.listener.WhenOnTransportMessageReceived(mock.Any)
+
+		requireOperationBlocking(t, ctx, func() { c.send(ctx, nil) }, func() { latch.Wait() }, "tamperingHarness.send()", "latch.Wait()")
+	})
+}
+
+func requireOperationBlocking(t *testing.T, ctx context.Context, op1, op2 func(), op1Name, op2Name string) {
+	infinity := 500 * time.Millisecond
+	immediately := 50 * time.Millisecond
+
+	doneOp1 := make(chan struct{})
+	go func() {
+		op1()
+		close(doneOp1)
+	}()
+
+	timeout, _ := context.WithTimeout(ctx, infinity)
+	select {
+	case <-doneOp1:
+		t.Fatalf("expected %s to block before %s", op1Name, op2Name)
+	case <-timeout.Done():
+		t.Logf("%s blocks before %s", op1Name, op2Name)
+	}
+
+	op2StartTime := time.Now()
+	op2()
+	op2EndTime := time.Now()
+
+	require.WithinDurationf(t, op2EndTime, op2StartTime, immediately, "expected %s to return immediately when calling %s", op1Name, op2Name)
+
+	timeout, _ = context.WithTimeout(ctx, infinity)
+	select {
+	case <-doneOp1:
+		require.WithinDurationf(t, time.Now(), op2EndTime, immediately, "expected %s to return fast after %s", op1Name, op2Name)
+	case <-timeout.Done(): // done testing
+		t.Fatalf("expected %s to return immediately after %s", op1Name, op2Name)
+	}
 }
 
 func oddNumbers() MessagePredicate {
