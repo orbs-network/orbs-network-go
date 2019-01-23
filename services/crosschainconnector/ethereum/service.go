@@ -61,7 +61,7 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 
 func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *services.EthereumGetTransactionLogsInput) (*services.EthereumGetTransactionLogsOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("getting transaction logs", log.String("contract-address", input.EthereumContractAddress), log.String("event", input.EthereumEventName), log.Stringable("txhash", input.EthereumTxhash))
+	logger.Info("getting transaction logs", log.String("contract-address", input.EthereumContractAddress), log.String("event", input.EthereumEventName), log.Stringable("tx-hash", input.EthereumTxhash))
 
 	parsedABI, err := abi.JSON(strings.NewReader(input.EthereumJsonAbi))
 	if err != nil {
