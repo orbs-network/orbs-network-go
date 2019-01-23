@@ -47,15 +47,3 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 
 	return s.factory.CreateWaitingForChunksState(syncSourceNodeAddress)
 }
-
-func (s *finishedCARState) blockCommitted(ctx context.Context) {
-	return
-}
-
-func (s *finishedCARState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
-	return
-}
-
-func (s *finishedCARState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
-	return
-}

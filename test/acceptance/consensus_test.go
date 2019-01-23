@@ -5,6 +5,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -89,8 +91,7 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 
 			committedLatch.Wait()
 
-			require.EqualValues(t, 0, contract.GetBalance(ctx, 0, 6), "initial getBalance result on leader")
-			require.EqualValues(t, 0, contract.GetBalance(ctx, 1, 6), "initial getBalance result on non leader")
+			requireInitialStateEventually(ctx, t, contract)
 
 			committedLatch.Remove()
 			committedTamper.Release(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
@@ -103,4 +104,14 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 
 			blockSyncTamper.Release(ctx)
 		})
+}
+
+func requireInitialStateEventually(ctx context.Context, t *testing.T, contract callcontract.BenchmarkTokenClient) {
+	require.True(t, test.Eventually(3*time.Second, func() bool {
+		return contract.GetBalance(ctx, 0, 6) == 0
+	}), "initial getBalance result on leader")
+
+	require.True(t, test.Eventually(3*time.Second, func() bool {
+		return contract.GetBalance(ctx, 1, 6) == 0
+	}), "initial getBalance result on non leader")
 }

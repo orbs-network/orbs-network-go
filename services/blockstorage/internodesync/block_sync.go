@@ -21,9 +21,6 @@ type syncState interface {
 	name() string
 	String() string
 	processState(ctx context.Context) syncState
-	blockCommitted(ctx context.Context)
-	gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage)
-	gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage)
 }
 
 type blockSyncConfig interface {
@@ -36,7 +33,7 @@ type blockSyncConfig interface {
 
 type BlockSyncStorage interface {
 	GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error)
-	CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
+	NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
 	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
 }
@@ -44,19 +41,20 @@ type BlockSyncStorage interface {
 // the conduit connects between the states and the state machine (which is connected to the gossip handler)
 // the data that the states receive, regardless of their instance, is waiting at these channels
 type blockSyncConduit struct {
+	done      chan struct{}
 	idleReset chan struct{}
 	responses chan *gossipmessages.BlockAvailabilityResponseMessage
 	blocks    chan *gossipmessages.BlockSyncResponseMessage
 }
 
 type BlockSync struct {
-	logger       log.BasicLogger
-	factory      *stateFactory
-	gossip       gossiptopics.BlockSync
-	storage      BlockSyncStorage
-	config       blockSyncConfig
-	currentState syncState
-	conduit      *blockSyncConduit
+	logger  log.BasicLogger
+	factory *stateFactory
+	gossip  gossiptopics.BlockSync
+	storage BlockSyncStorage
+	config  blockSyncConfig
+	//currentState syncState
+	conduit *blockSyncConduit
 
 	metrics *stateMachineMetrics
 }
@@ -101,6 +99,7 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	logger := parentLogger.WithTags(LogTag)
 
 	conduit := &blockSyncConduit{
+		done:      make(chan struct{}),
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
@@ -117,12 +116,23 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 }
 
 func (bs *BlockSync) syncLoop(parent context.Context) {
-	for bs.currentState = bs.factory.CreateCollectingAvailabilityResponseState(); bs.currentState != nil; {
+	for currentState := bs.factory.CreateCollectingAvailabilityResponseState(); currentState != nil; {
 		ctx := trace.NewContext(parent, "BlockSync")
-		bs.logger.Info("state transitioning", log.Stringable("current-state", bs.currentState), trace.LogFieldFrom(ctx))
+		bs.logger.Info("state transitioning", log.Stringable("current-state", currentState), trace.LogFieldFrom(ctx))
 
-		bs.currentState = bs.currentState.processState(ctx)
+		currentState = currentState.processState(ctx)
 		bs.metrics.statesTransitioned.Inc()
+	}
+
+	close(bs.conduit.done)
+}
+
+func (bs *BlockSync) IsTerminated() bool {
+	select {
+	case _, open := <-bs.conduit.done:
+		return !open
+	default:
+		return false
 	}
 }
 
@@ -130,19 +140,23 @@ func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncNoCommitInterval()/2)
 	defer cancel()
 
-	cs := bs.currentState // careful! we're reading a shared variable here from a different goroutine
-	if cs != nil {
-		cs.blockCommitted(ctx)
+	select {
+	case bs.conduit.idleReset <- struct{}{}:
+	case <-ctx.Done():
 	}
 }
 
 func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectResponseTimeout()/2)
 	defer cancel()
+	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	cs := bs.currentState // careful! we're reading a shared variable here from a different goroutine
-	if cs != nil {
-		cs.gotAvailabilityResponse(ctx, input.Message)
+	select {
+	case bs.conduit.responses <- input.Message:
+	case <-ctx.Done():
+		logger.Info("terminated on writing new availability response",
+			log.String("context-message", ctx.Err().Error()),
+			log.Stringable("response-source", input.Message.Sender.SenderNodeAddress()))
 	}
 	return nil, nil
 }
@@ -150,10 +164,15 @@ func (bs *BlockSync) HandleBlockAvailabilityResponse(ctx context.Context, input 
 func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	ctx, cancel := context.WithTimeout(ctx, bs.config.BlockSyncCollectChunksTimeout()/2)
 	defer cancel()
+	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	cs := bs.currentState // careful! we're reading a shared variable here from a different goroutine
-	if cs != nil {
-		cs.gotBlocks(ctx, input.Message)
+	select {
+	case bs.conduit.blocks <- input.Message:
+	case <-ctx.Done():
+		logger.Info("terminated on writing new block chunk message",
+			log.String("context-message", ctx.Err().Error()),
+			log.Stringable("message-sender", input.Message.Sender.SenderNodeAddress()))
 	}
+
 	return nil, nil
 }

@@ -86,6 +86,7 @@ func newBlockSyncHarnessWithTimers(
 	storage := &blockSyncStorageMock{}
 	logger := log.GetLogger()
 	conduit := &blockSyncConduit{
+		done:      make(chan struct{}),
 		idleReset: make(chan struct{}),
 		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
 		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
@@ -120,13 +121,7 @@ func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(createTimer func() *
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
 	return test.Eventually(test.EVENTUALLY_LOCAL_E2E_TIMEOUT, func() bool {
-		return bs.currentState == nil
-	})
-}
-
-func (h *blockSyncHarness) waitForState(bs *BlockSync, desiredState syncState) bool {
-	return test.Eventually(test.EVENTUALLY_LOCAL_E2E_TIMEOUT, func() bool {
-		return bs.currentState != nil && bs.currentState.name() == desiredState.name()
+		return bs.IsTerminated()
 	})
 }
 
@@ -213,11 +208,11 @@ func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastVal
 
 func (h *blockSyncHarness) expectBlockCommitsToStorage(numExpectedBlocks int) {
 	outCommit := &services.CommitBlockOutput{}
-	h.storage.When("CommitBlock", mock.Any, mock.Any).Return(outCommit, nil).Times(numExpectedBlocks)
+	h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Return(outCommit, nil).Times(numExpectedBlocks)
 }
 
 func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
-	h.storage.When("CommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+	h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
 			return nil, errors.Errorf("failed to commit block #%d", numExpectedBlocks)
 		}

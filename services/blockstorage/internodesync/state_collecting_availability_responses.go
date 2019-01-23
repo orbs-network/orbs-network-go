@@ -49,32 +49,9 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			return s.factory.CreateFinishedCARState(responses)
 		case r := <-s.conduit.responses:
 			responses = append(responses, r)
+			logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()))
 		case <-ctx.Done():
 			return nil
 		}
 	}
-}
-
-func (s *collectingAvailabilityResponsesState) blockCommitted(ctx context.Context) {
-	return
-}
-
-func (s *collectingAvailabilityResponsesState) gotAvailabilityResponse(ctx context.Context, message *gossipmessages.BlockAvailabilityResponseMessage) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
-	logger.Info("got a new availability response", log.Stringable("response-source", message.Sender.SenderNodeAddress()))
-	select {
-	case s.conduit.responses <- message:
-	case <-ctx.Done():
-		logger.Info("terminated on writing new availability response",
-			log.String("context-message", ctx.Err().Error()),
-			log.Stringable("response-source", message.Sender.SenderNodeAddress()))
-	}
-}
-
-func (s *collectingAvailabilityResponsesState) gotBlocks(ctx context.Context, message *gossipmessages.BlockSyncResponseMessage) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
-	logger.Info("got a block chunk in availability response state", log.Stringable("block-source", message.Sender.SenderNodeAddress()))
-	return
 }

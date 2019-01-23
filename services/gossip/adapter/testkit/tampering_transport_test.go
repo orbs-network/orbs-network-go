@@ -103,6 +103,7 @@ func TestPausingTamperer(t *testing.T) {
 }
 
 func TestLatchingTamperer(t *testing.T) {
+	t.Skip("this test is suspect as having a deadlock, skipping until @ronnno and @electricmonk can look at it")
 	test.WithContext(func(ctx context.Context) {
 		c := newTamperingHarness(ctx)
 
