@@ -12,10 +12,7 @@ import (
 func recoverPanics(logger Errorer) {
 	if p := recover(); p != nil {
 		e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
-		stack := string(debug.Stack())
-		logger.Error("Fatal error", log.Error(e), log.String("stack-trace", stack))
-		println("Exited brutally due to panicking goroutine: ", e)
-		println(stack)
+		logger.Error("Fatal error", log.Error(e), log.String("stack-trace", string(debug.Stack())))
 		os.Exit(42) // because otherwise the system might be a zombie with partial functionality
 	}
 }
