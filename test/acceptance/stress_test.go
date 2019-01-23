@@ -38,7 +38,6 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
 	newHarness(t).
-		AllowingErrors("ValidateBlockProposal blockHash mismatch"). // expected due to tampering
 		Start(func(ctx context.Context, network NetworkHarness) {
 
 			network.TransportTamperer().Delay(func() time.Duration {
