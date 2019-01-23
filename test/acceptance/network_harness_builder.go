@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -193,7 +192,7 @@ func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId)).
-		WithOutput(makeFormattingOutput(testId), errorRecorder).
+		WithOutput(b.makeFormattingOutput(testId), errorRecorder).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
@@ -280,7 +279,7 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
 }
 
-func makeFormattingOutput(testId string) log.Output {
+func (b *networkHarnessBuilder) makeFormattingOutput(testId string) log.Output {
 	var output log.Output
 	if os.Getenv("NO_LOG_STDOUT") == "true" {
 		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -290,14 +289,14 @@ func makeFormattingOutput(testId string) log.Output {
 
 		output = log.NewFormattingOutput(logFile, log.NewJsonFormatter())
 	} else {
-		output = log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())
+		output = log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
 	}
 	return output
 }
 
 func printTestIdOnFailure(tb testing.TB, testId string) {
 	if tb.Failed() {
-		fmt.Println("FAIL search snippet: grep _test-id="+testId, "test.out")
+		tb.Error("FAIL search snippet: grep _test-id="+testId, "test.out")
 	}
 }
 

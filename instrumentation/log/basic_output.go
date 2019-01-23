@@ -36,10 +36,6 @@ type testOutput struct {
 
 func (o *testOutput) Append(level string, message string, fields ...*Field) {
 	logLine := o.formatter.FormatRow(time.Now(), level, message, fields...)
-	switch level {
-	case "error":
-		o.tb.Error(logLine)
-	default:
-		o.tb.Log(logLine)
-	}
+	o.tb.Log(logLine)
+
 }
