@@ -87,8 +87,7 @@ func createHarness(n *networkHarnessBuilder) *networkHarnessBuilder {
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
-		AllowingErrors("ValidateBlockProposal failed.*")
-	// it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
 	return harness
 }
 
@@ -150,7 +149,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f acceptanceTest) {
 func (b *networkHarnessBuilder) runWithAlgo(consensusAlgo consensus.ConsensusAlgoType, testFunc acceptanceTest) {
 	skip := consensusAlgo == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX && !ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS
 
-	restartableTest := b.setupASingleRestartableTest(consensusAlgo, testFunc)
+	restartableTest := b.setupASingleRestartableTest(b.Name(), consensusAlgo, testFunc)
 	timeout := 10 * time.Second
 	if b.sb != nil {
 		b.sb.Run(consensusAlgo.String(), func(t *testing.B) {
@@ -169,10 +168,10 @@ func (b *networkHarnessBuilder) runWithAlgo(consensusAlgo consensus.ConsensusAlg
 	}
 }
 
-func (b *networkHarnessBuilder) setupASingleRestartableTest(consensusAlgo consensus.ConsensusAlgoType, actualTest func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)) func(ctx context.Context) {
+func (b *networkHarnessBuilder) setupASingleRestartableTest(testName string, consensusAlgo consensus.ConsensusAlgoType, actualTest func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)) func(ctx context.Context) {
 	return func(ctx context.Context) {
 		networkCtx, cancelNetwork := context.WithCancel(ctx)
-		testId := b.testId + "-" + consensusAlgo.String()
+		testId := b.testId + "-" + testName + "-" + consensusAlgo.String()
 		logger, errorRecorder := b.makeLogger(testId)
 		network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
@@ -319,6 +318,13 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	}
 
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
+}
+
+func (b *networkHarnessBuilder) Name() string {
+	if b.sb != nil {
+		return b.sb.Name()
+	}
+	return b.st.Name()
 }
 
 func makeFormattingOutput(testId string) log.Output {
