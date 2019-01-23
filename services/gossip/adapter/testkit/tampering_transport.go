@@ -20,7 +20,7 @@ type Tamperer interface {
 	Fail(predicate MessagePredicate) OngoingTamper
 
 	// Creates an ongoing tamper which delays messages matching the given predicate. The messages will be sent when
-	// calling OngoingTamper.Release(). This is useful for emulating network congestion or messages arriving in an order
+	// calling OngoingTamper.StopTampering(). This is useful for emulating network congestion or messages arriving in an order
 	// different than expected
 	Pause(predicate MessagePredicate) OngoingTamper
 
@@ -44,7 +44,7 @@ type Tamperer interface {
 type MessagePredicate func(data *adapter.TransportData) bool
 
 type OngoingTamper interface {
-	Release(ctx context.Context)
+	StopTampering(ctx context.Context)
 	maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool)
 }
 

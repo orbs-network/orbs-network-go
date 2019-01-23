@@ -40,7 +40,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 		Start(func(ctx context.Context, network NetworkHarness) {
 
 			network.TransportTamperer().Delay(func() time.Duration {
-				return (time.Duration(rnd.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1000 and 2000 millis
+				return (time.Duration(rnd.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1-2 millis
 			}, WithPercentChance(rnd, 50))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
@@ -54,7 +54,7 @@ func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *
 	newHarness(t).WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
 		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 30)), rnd)
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
-		tamper.Release(ctx)
+		tamper.StopTampering(ctx)
 
 		// assert that the system recovered properly
 		sendTransfersAndAssertTotalBalance(ctx, network, t, 10, rnd)

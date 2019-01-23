@@ -88,7 +88,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 			requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 0, "expected to read initial getBalance result on leader")
 			requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 1, "expected to read initial getBalance result on non-leader")
 
-			pausedTxForwards.Release(ctx)
+			pausedTxForwards.StopTampering(ctx)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 17, contract.GetBalance(ctx, 0, 6), "eventual getBalance result on leader")
 			network.WaitForTransactionInNodeState(ctx, txHash, 1)

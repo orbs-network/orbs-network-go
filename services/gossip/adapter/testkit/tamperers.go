@@ -2,6 +2,7 @@ package testkit
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -23,7 +24,7 @@ func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.Transpo
 	return nil, false
 }
 
-func (o *failingTamperer) Release(ctx context.Context) {
+func (o *failingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -42,7 +43,7 @@ func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.Tra
 	return nil, false
 }
 
-func (o *duplicatingTamperer) Release(ctx context.Context) {
+func (o *duplicatingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -64,7 +65,7 @@ func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.Transp
 	return nil, false
 }
 
-func (o *delayingTamperer) Release(ctx context.Context) {
+func (o *delayingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -91,7 +92,7 @@ func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.Tran
 	return nil, false
 }
 
-func (o *corruptingTamperer) Release(ctx context.Context) {
+func (o *corruptingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -113,7 +114,7 @@ func (o *pausingTamperer) maybeTamper(ctx context.Context, data *adapter.Transpo
 	return nil, false
 }
 
-func (o *pausingTamperer) Release(ctx context.Context) {
+func (o *pausingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 	for _, message := range o.messages {
 		o.transport.Send(ctx, message)
