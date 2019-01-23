@@ -30,37 +30,10 @@ import (
 	"time"
 )
 
-type testContext interface {
-	canFail
-	subTester
-}
-
-type benchContext interface {
-	canFail
-	subBencher
-}
-
-type canFail interface {
-	Failed() bool
-	Fatal(args ...interface{})
-}
-
-type subTester interface {
-	Name() string
-	Run(name string, f func(t *testing.T)) bool
-}
-
-type subBencher interface {
-	Name() string
-	Run(name string, f func(b *testing.B)) bool
-}
-
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
 
 type networkHarnessBuilder struct {
-	f                        canFail
-	st                       subTester
-	sb                       subBencher
+	tb                       testing.TB
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
@@ -73,25 +46,8 @@ type networkHarnessBuilder struct {
 }
 
 // TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
-func newHarness(t testContext) *networkHarnessBuilder {
-	n := &networkHarnessBuilder{f: t.(canFail), st: t.(subTester), maxTxPerBlock: 30, requiredQuorumPercentage: 100}
-
-	var algos []consensus.ConsensusAlgoType
-	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	} else {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	}
-
-	return n.
-		WithTestId(getCallerFuncName()).
-		WithNumNodes(4).
-		WithConsensusAlgos(algos...).
-		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
-}
-
-func newBenchHarness(b benchContext) *networkHarnessBuilder {
-	n := &networkHarnessBuilder{f: b.(canFail), sb: b.(subBencher), maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+func newHarness(tb testing.TB) *networkHarnessBuilder {
+	n := &networkHarnessBuilder{tb: tb, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
@@ -165,9 +121,9 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
 				logger.Info("acceptance network created")
-				defer printTestIdOnFailure(b.f, testId)
-				defer dumpStateOnFailure(b.f, network)
-				defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
+				defer printTestIdOnFailure(b.tb, testId)
+				defer dumpStateOnFailure(b.tb, network)
+				defer test.RequireNoUnexpectedErrors(b.tb, errorRecorder)
 
 				if b.setupFunc != nil {
 					b.setupFunc(networkCtx, network)
@@ -198,14 +154,17 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 			})
 		}
 
-		if b.sb != nil {
-			b.sb.Run(consensusAlgo.String(), func(t *testing.B) {
+		switch runner := b.tb.(type) {
+		case *testing.T:
+			runner.Run(consensusAlgo.String(), func(t *testing.T) {
 				test.WithContextWithTimeout(15*time.Second, restartableTest)
 			})
-		} else {
-			b.st.Run(consensusAlgo.String(), func(t *testing.T) {
+		case *testing.B:
+			runner.Run(consensusAlgo.String(), func(t *testing.B) {
 				test.WithContextWithTimeout(15*time.Second, restartableTest)
 			})
+		default:
+			panic("unexpected TB implementation")
 		}
 	}
 }
@@ -336,14 +295,14 @@ func makeFormattingOutput(testId string) log.Output {
 	return output
 }
 
-func printTestIdOnFailure(f canFail, testId string) {
-	if f.Failed() {
+func printTestIdOnFailure(tb testing.TB, testId string) {
+	if tb.Failed() {
 		fmt.Println("FAIL search snippet: grep _test-id="+testId, "test.out")
 	}
 }
 
-func dumpStateOnFailure(f canFail, network NetworkHarness) {
-	if f.Failed() {
+func dumpStateOnFailure(tb testing.TB, network NetworkHarness) {
+	if tb.Failed() {
 		network.DumpState()
 	}
 }
