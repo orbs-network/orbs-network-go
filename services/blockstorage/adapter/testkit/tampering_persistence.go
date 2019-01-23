@@ -93,7 +93,7 @@ func (bp *tamperingBlockPersistence) advertiseAllTransactions(block *protocol.Tr
 		bhc := bp.getChanForTxHashUnlocked(txHash)
 
 		if bhc.h != 0 { // previously advertised
-			checkForForks(bhc.h, height, bp.Logger, txHash)
+			checkForConflicts(bhc.h, height, bp.Logger, txHash)
 			continue
 		}
 
@@ -103,10 +103,10 @@ func (bp *tamperingBlockPersistence) advertiseAllTransactions(block *protocol.Tr
 	}
 }
 
-func checkForForks(prevHeight primitives.BlockHeight, newHeight primitives.BlockHeight, logger log.BasicLogger, txHash primitives.Sha256) {
+func checkForConflicts(prevHeight primitives.BlockHeight, newHeight primitives.BlockHeight, logger log.BasicLogger, txHash primitives.Sha256) {
 	if prevHeight != newHeight {
-		logger.Error("FORK!!!! same transaction reported in different heights", log.Transaction(txHash), log.BlockHeight(newHeight), log.Uint64("previously-reported-height", uint64(prevHeight)))
-		panic(fmt.Sprintf("FORK!!!! transaction %s previously advertised for height %d and now again for height %d", txHash.String(), prevHeight, newHeight))
+		logger.Error("FORK/DOUBLE-SPEND!!!! same transaction reported in different heights. may be committed twice", log.Transaction(txHash), log.BlockHeight(newHeight), log.Uint64("previously-reported-height", uint64(prevHeight)))
+		panic(fmt.Sprintf("FORK/DOUBLE-SPEND!!!! transaction %s previously advertised for height %d and now again for height %d. may be committed twice", txHash.String(), prevHeight, newHeight))
 	}
 	logger.Info("advertising transaction completion aborted - already advertised", log.Transaction(txHash), log.BlockHeight(newHeight))
 }
