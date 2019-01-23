@@ -37,8 +37,6 @@ type BlockSyncStorage interface {
 	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
 }
 
-type idleResetMessage struct{}
-
 // state machine passes outside events into this channel type for consumption by the currently active state instance.
 // within processState.processState() all states must read from the channel eagerly!
 // keeping the channel clear for new incoming events and tossing out irrelevant messages.

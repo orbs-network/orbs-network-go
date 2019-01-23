@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+type idleResetMessage struct{}
+
 type idleState struct {
 	createTimer func() *synchronization.Timer
 	logger      log.BasicLogger

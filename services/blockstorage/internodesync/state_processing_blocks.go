@@ -51,7 +51,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Stringable("last-block-height", lastBlockHeight))
 
 	for _, blockPair := range s.blocks.BlockPairs {
-		if s.heartbeat(ctx) {
+		if !s.heartbeat(ctx) {
 			return nil
 		}
 
@@ -76,21 +76,21 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		}
 	}
 
-	if s.heartbeat(ctx) {
+	if !s.heartbeat(ctx) {
 		return nil
 	}
 
 	return s.factory.CreateCollectingAvailabilityResponseState()
 }
 
-func (s *processingBlocksState) heartbeat(ctx context.Context) (shutdown bool) {
+func (s *processingBlocksState) heartbeat(ctx context.Context) bool { // drain conduit and check for shutdown
 	for {
 		select {
 		case <-s.factory.conduit: // nop
 		case <-ctx.Done():
-			return true
+			return false // indicate a shutdown was signaled
 		default:
-			return false // done
+			return true
 		}
 	}
 }
