@@ -63,6 +63,8 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 			network.WaitForTransactionInNodeState(ctx, txHash2, 1)
 			require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.GetBalance(ctx, 1, 5), "getBalance result on non leader")
 			require.EqualValues(t, 39, contract.GetBalance(ctx, 1, 6), "getBalance result on non leader")
+
+			t.Fatalf("failed on purpose for testing purposes")
 		})
 }
 
