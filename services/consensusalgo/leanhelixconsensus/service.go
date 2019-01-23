@@ -154,7 +154,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 		if shouldCreateGenesisBlock(blockPair) {
 			lhBlock, lhBlockProof = s.blockProvider.GenerateGenesisBlockProposal(ctx)
-			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode), log.Stringable("blockPair", blockPair))
+			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode))
 		} else { // we should have a lhBlock proof
 			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			lhBlockProof = blockPair.TransactionsBlock.BlockProof.Raw()

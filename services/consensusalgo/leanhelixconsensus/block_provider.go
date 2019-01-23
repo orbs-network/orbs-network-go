@@ -113,7 +113,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	blockHash := digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	blockPairWrapper := ToLeanHelixBlock(blockPair)
-	p.logger.Info("RequestNewBlockProposal() created new block", log.BlockHeight(currentBlockHeight), log.Stringable("block-hash", blockHash), log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)))
+	p.logger.Info("RequestNewBlockProposal() created new block", log.BlockHeight(currentBlockHeight), log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)), log.Stringable("block-hash", blockHash))
 	return blockPairWrapper, []byte(blockHash)
 
 }
