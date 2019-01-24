@@ -3,9 +3,15 @@ package acceptance
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
+	"github.com/orbs-network/orbs-network-go/services/publicapi"
+	"github.com/orbs-network/orbs-network-go/services/statestorage"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
@@ -17,6 +23,18 @@ import (
 func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
 	rnd := test.NewControlledRand(t)
 	newHarness(t).
+		WithLogFilters( // as little logs as possible, biased towards printing mostly consensus & gossip messages
+			log.ExcludeField(internodesync.LogTag),
+			log.ExcludeField(virtualmachine.LogTag),
+			log.ExcludeField(native.LogTag),
+			log.ExcludeField(statestorage.LogTag),
+			log.ExcludeField(publicapi.LogTag),
+			log.ExcludeEntryPoint("tx-pool-sync"),
+			log.ExcludeEntryPoint("state-storage-sync"),
+			log.ExcludeEntryPoint("TransactionForwarder"),
+			log.IgnoreMessagesMatching("Metric recorded"),
+			log.IgnoreMessagesMatching("advertising transaction completion"),
+		).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
@@ -60,15 +78,16 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
 	rnd := test.NewControlledRand(t)
-	newHarness(t).WithNumNodes(4).Start(func(ctx context.Context, network NetworkHarness) {
-		tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 30)), rnd)
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
-		tamper.StopTampering(ctx)
+	newHarness(t).
+		Start(func(ctx context.Context, network NetworkHarness) {
+			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 30)), rnd)
+			sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
+			tamper.StopTampering(ctx)
 
-		// assert that the system recovered properly
-		sendTransfersAndAssertTotalBalance(ctx, network, t, 10, rnd)
+			// assert that the system recovered properly
+			sendTransfersAndAssertTotalBalance(ctx, network, t, 10, rnd)
 
-	})
+		})
 }
 
 func AnyNthMessage(n int) MessagePredicate {
