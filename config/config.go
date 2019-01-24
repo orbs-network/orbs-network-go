@@ -60,6 +60,7 @@ type NodeConfig interface {
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
+	TransactionPoolNodeSyncRejectTime() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -168,6 +169,7 @@ type TransactionPoolConfig interface {
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
+	TransactionPoolNodeSyncRejectTime() time.Duration
 }
 
 type FederationNode interface {

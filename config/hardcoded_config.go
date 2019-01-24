@@ -68,6 +68,7 @@ const (
 	TRANSACTION_POOL_PROPAGATION_BATCH_SIZE                = "TRANSACTION_POOL_PROPAGATION_BATCH_SIZE"
 	TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT          = "TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT"
 	TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS             = "TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS"
+	TRANSACTION_POOL_NODE_SYNC_REJECT_TIME                 = "TRANSACTION_POOL_NODE_SYNC_REJECT_TIME"
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
@@ -288,6 +289,10 @@ func (c *config) TransactionPoolPropagationBatchingTimeout() time.Duration {
 
 func (c *config) TransactionPoolTimeBetweenEmptyBlocks() time.Duration {
 	return c.kv[TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS].DurationValue
+}
+
+func (c *config) TransactionPoolNodeSyncRejectTime() time.Duration {
+	return c.kv[TRANSACTION_POOL_NODE_SYNC_REJECT_TIME].DurationValue
 }
 
 func (c *config) PublicApiSendTransactionTimeout() time.Duration {

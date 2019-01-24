@@ -55,8 +55,9 @@ func (s *service) createValidationContext() *validationContext {
 	defer s.mu.RUnlock()
 	return &validationContext{
 		nodeTime:                    time.Now(),
-		expiryWindow:                s.config.TransactionExpirationWindow(),
 		lastCommittedBlockTimestamp: s.mu.lastCommittedBlockTimestamp,
+		expiryWindow:                s.config.TransactionExpirationWindow(),
+		nodeSyncRejectInterval:      s.config.TransactionPoolNodeSyncRejectTime(),
 		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:              s.config.VirtualChainId(),
 	}

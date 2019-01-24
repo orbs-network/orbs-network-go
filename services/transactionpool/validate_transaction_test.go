@@ -12,12 +12,14 @@ import (
 
 const expirationWindowInterval = 30 * time.Minute
 const futureTimestampGrace = 3 * time.Minute
+const nodeSyncRejectInterval = 2 * time.Minute
 
 func aValidationContextAsOf(nodeTime time.Time, lastCommittedBlockTimestamp primitives.TimestampNano) *validationContext {
 	return &validationContext{
 		nodeTime:                    nodeTime,
 		expiryWindow:                expirationWindowInterval,
 		lastCommittedBlockTimestamp: lastCommittedBlockTimestamp,
+		nodeSyncRejectInterval:      nodeSyncRejectInterval,
 		futureTimestampGrace:        futureTimestampGrace,
 		virtualChainId:              builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 	}
@@ -29,7 +31,7 @@ func futureTimeAfterGracePeriod(lastCommittedBlockTimestamp primitives.Timestamp
 
 func TestValidateTransaction_ValidTransaction(t *testing.T) {
 	nodeTime := time.Now()
-	lastCommittedBlockTime := primitives.TimestampNano(nodeTime.Add(-15 * time.Minute).UnixNano())
+	lastCommittedBlockTime := primitives.TimestampNano(nodeTime.Add(nodeSyncRejectInterval / 2).UnixNano())
 	err := aValidationContextAsOf(nodeTime, lastCommittedBlockTime).validateTransaction(aTransactionAtNodeTimestamp(lastCommittedBlockTime).Build())
 	require.Nil(t, err, "a valid transaction was rejected")
 }
@@ -46,10 +48,18 @@ func TestValidateTransaction_RejectsTransactionsWhenTimestampIsZero(t *testing.T
 	require.Error(t, err, "a transaction was not rejected when the system is in zero timestamp")
 }
 
+func TestValidateTransaction_NodeOutOfSync(t *testing.T) {
+	nodeTime := time.Now()
+	lastCommittedBlockTime := primitives.TimestampNano(nodeTime.Add(-2 * nodeSyncRejectInterval).UnixNano())
+	err := aValidationContextAsOf(nodeTime, lastCommittedBlockTime).validateTransaction(builders.TransferTransaction().Build())
+	require.Error(t, err, fmt.Sprintf("a transaction was not rejected when the node is out of sync"))
+	require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, err.TransactionStatus, "error status differed from expected")
+}
+
 //TODO(v1) talk to TalKol about Invalid Signer
 func TestValidateTransaction_InvalidTransactions(t *testing.T) {
 	nodeTime := time.Now()
-	lastCommittedBlockTime := primitives.TimestampNano(nodeTime.Add(-15 * time.Minute).UnixNano())
+	lastCommittedBlockTime := primitives.TimestampNano(nodeTime.Add(nodeSyncRejectInterval / 2).UnixNano())
 
 	tests := []struct {
 		name           string
