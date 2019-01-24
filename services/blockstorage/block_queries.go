@@ -124,3 +124,18 @@ func (s *service) createEmptyTransactionReceiptResult(ctx context.Context) (*ser
 		BlockTimestamp:     out.LastCommittedBlockTimestamp,
 	}, nil
 }
+
+func (s *service) GetBlockPair(ctx context.Context, input *services.GetBlockPairInput) (*services.GetBlockPairOutput, error) {
+	var bpc *protocol.BlockPairContainer
+	err := s.persistence.ScanBlocks(input.BlockHeight, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+		bpc = page[0]
+		return false
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &services.GetBlockPairOutput{
+		BlockPair: bpc,
+	}, nil
+}

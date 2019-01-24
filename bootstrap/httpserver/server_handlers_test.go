@@ -220,3 +220,52 @@ func TestHttpServerGetTransactionReceiptProof_Error(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
 }
+
+func TestHttpServerGetBlock_Basic(t *testing.T) {
+	papiMock := &services.MockPublicApi{}
+	response := &client.GetBlockResponseBuilder{
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+			BlockHeight:    1,
+			BlockTimestamp: primitives.TimestampNano(time.Now().Nanosecond()),
+		},
+		TransactionsBlockHeader:   nil,
+		TransactionsBlockMetadata: nil,
+		SignedTransactions:        nil,
+		TransactionsBlockProof:    nil,
+		ResultsBlockHeader:        nil,
+		TransactionReceipts:       nil,
+		ContractStateDiffs:        nil,
+		ResultsBlockProof:         nil,
+	}
+
+	papiMock.When("GetBlock", mock.Any, mock.Any).Times(1).Return(&services.GetBlockOutput{ClientResponse: response.Build()})
+
+	s := makeServer(papiMock)
+
+	request := (&client.GetBlockRequestBuilder{BlockHeight: 1}).Build()
+
+	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
+	rec := httptest.NewRecorder()
+	s.(*server).getBlockHandler(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
+	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
+}
+
+func TestHttpServerGetBlock_Error(t *testing.T) {
+	papiMock := &services.MockPublicApi{}
+
+	papiMock.When("GetBlock", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
+
+	s := makeServer(papiMock)
+
+	request := (&client.GetBlockRequestBuilder{}).Build()
+
+	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
+	rec := httptest.NewRecorder()
+	s.(*server).getBlockHandler(rec, req)
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
+	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
+}
