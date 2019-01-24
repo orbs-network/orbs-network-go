@@ -13,6 +13,15 @@ import (
 	"time"
 )
 
+// Control group - if this fails, there are bugs unrelated to message tampering
+func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
+	rnd := test.NewControlledRand(t)
+	newHarness(t).
+		Start(func(ctx context.Context, network NetworkHarness) {
+			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
+		})
+}
+
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
 	newHarness(t).

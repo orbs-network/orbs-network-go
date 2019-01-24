@@ -67,7 +67,7 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 	}
 
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
-	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)))
+	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.BlockHeight(input.CurrentBlockHeight))
 	s.printTxHash(logger, txBlock)
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
@@ -89,7 +89,7 @@ func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.Re
 		return nil, err
 	}
 
-	logger.Info("created Results block", log.Int("num-receipts", len(rxBlock.TransactionReceipts)))
+	logger.Info("created Results block", log.Int("num-receipts", len(rxBlock.TransactionReceipts)), log.BlockHeight(input.CurrentBlockHeight))
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,
