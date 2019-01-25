@@ -9,6 +9,7 @@ jobs:
       - run: ./docker/test/test.sh
       - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
+      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/hash.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
       - store_artifacts:
