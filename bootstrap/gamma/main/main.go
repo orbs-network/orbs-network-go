@@ -10,6 +10,7 @@ import (
 
 func main() {
 	port := flag.Int("port", 8080, "The port to bind the gamma server to")
+	profiling := flag.Bool("profiling", false, "enable profiling")
 	version := flag.Bool("version", false, "returns information about version")
 
 	flag.Parse()
@@ -22,5 +23,5 @@ func main() {
 	var serverAddress = ":" + strconv.Itoa(*port)
 
 	// TODO(v1) add WaitUntilShutdown so this behaves like the regular main (no blocking flag)
-	gamma.StartGammaServer(serverAddress, true)
+	gamma.StartGammaServer(serverAddress, *profiling, true)
 }
