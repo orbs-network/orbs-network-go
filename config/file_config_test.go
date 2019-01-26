@@ -152,6 +152,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 	cfg.MergeWithFileConfig(`
 {
 	"lean-helix-show-debug": true,
+	"profiling": true,
 	"block-sync-num-blocks-in-batch": 999,
 	"block-sync-collect-response-timeout": "10m",
 	"node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
@@ -171,6 +172,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 
 	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
 	require.EqualValues(t, true, cfg.LeanHelixShowDebug())
+	require.EqualValues(t, true, cfg.Profiling())
 	require.EqualValues(t, newKeyPair.NodeAddress(), cfg.NodeAddress())
 }
 

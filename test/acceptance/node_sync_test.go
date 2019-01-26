@@ -5,14 +5,18 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-// TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
-func TestInterNodeBlockSync(t *testing.T) {
+// There is no need to test more than one consensus algo, because the SUT here is the node-sync mechanism, not the consensus algo
+// (could have mocked the whole thing)
+// Either test with Benchmark Consensus which is makes it easier to generate fake proofs, or use real recorded Lean Helix blocks
+func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 
 	newHarness(t).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error

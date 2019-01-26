@@ -77,12 +77,24 @@ func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 
 func (bp *tamperingBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
 	for _, tx := range block.SignedTransactions {
-		txHash := digest.CalcTxHash(tx.Transaction())
-		bp.Logger.Info("advertising transaction completion", log.Transaction(txHash), log.BlockHeight(block.Header.BlockHeight()))
-		ch := bp.getChanFor(txHash)
-		ch <- block.Header.BlockHeight() // this will panic with "send on closed channel" if the same tx is added twice to blocks (duplicate tx hash!!)
-		close(ch)
+		notified := bp.notifyChanFor(digest.CalcTxHash(tx.Transaction()), block.Header.BlockHeight())
+		if notified == false {
+			bp.Logger.Info("advertising transaction completion already occurred", log.Transaction(digest.CalcTxHash(tx.Transaction())), log.BlockHeight(block.Header.BlockHeight()))
+			continue
+		}
+		bp.Logger.Info("advertising transaction completion", log.Transaction(digest.CalcTxHash(tx.Transaction())), log.BlockHeight(block.Header.BlockHeight()))
 	}
+}
+
+func (bp *tamperingBlockPersistence) notifyChanFor(txHash primitives.Sha256, height primitives.BlockHeight) (notified bool) {
+	defer func() {
+		recover() //BlockPersistence.WriteNextBlock() does not return "added" so it's possible to notifyChanFor() twice
+	}()
+	ch := bp.getChanFor(txHash)
+	ch <- height
+	close(ch)
+	notified = true // reach here only if ch was open - first invocation for txHash
+	return
 }
 
 func (bp *tamperingBlockPersistence) getChanFor(txHash primitives.Sha256) blockHeightChan {

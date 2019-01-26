@@ -89,6 +89,10 @@ const (
 
 	BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR                = "BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR"
 	BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES = "BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES"
+
+	PROFILING = "PROFILING"
+
+	HTTP_ADDRESS = "HTTP_ADDRESS"
 )
 
 func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
@@ -357,4 +361,12 @@ func (c *config) BlockStorageFileSystemDataDir() string {
 
 func (c *config) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
 	return c.kv[BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES].Uint32Value
+}
+
+func (c *config) Profiling() bool {
+	return c.kv[PROFILING].BoolValue
+}
+
+func (c *config) HttpAddress() string {
+	return c.kv[HTTP_ADDRESS].StringValue
 }

@@ -52,6 +52,9 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	cfg.SetDuration(LOGGER_FILE_TRUNCATION_INTERVAL, 24*time.Hour)
 
+	cfg.SetBool(PROFILING, false)
+	cfg.SetString(HTTP_ADDRESS, ":8080")
+
 	return cfg
 }
 
@@ -119,7 +122,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 10*time.Millisecond)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
-	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 300*time.Millisecond)
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 600*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)

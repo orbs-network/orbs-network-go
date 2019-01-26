@@ -88,7 +88,7 @@ func validateTxTransactionOrdering(ctx context.Context, vctx *txValidatorContext
 	}
 	_, err := vctx.txOrderValidator(ctx, validationInput)
 	if err != nil {
-		return ErrIncorrectTransactionOrdering
+		return errors.Wrapf(ErrFailedTransactionOrdering, "%v", err)
 	}
 	return nil
 }

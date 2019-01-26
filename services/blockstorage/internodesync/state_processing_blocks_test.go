@@ -99,16 +99,3 @@ func TestStateProcessingBlocks_TerminatesOnContextTermination(t *testing.T) {
 
 	require.Nil(t, nextState, "next state should be nil on context termination")
 }
-
-func TestStateProcessingBlocks_NOP(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
-
-		state := h.factory.CreateProcessingBlocksState(nil)
-
-		// these tests are for sanity, they should not do anything
-		state.blockCommitted(ctx)
-		state.gotBlocks(ctx, nil)
-		state.gotAvailabilityResponse(ctx, nil)
-	})
-}

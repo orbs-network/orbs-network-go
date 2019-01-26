@@ -44,16 +44,3 @@ func TestStateFinishedCollectingAvailabilityResponses_ContextTerminationFlow(t *
 
 	require.Nil(t, shouldBeNil, "context terminated, state should be nil")
 }
-
-func TestStateFinishedCollectingAvailabilityResponses_NOP(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
-
-		state := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
-
-		// sanity test, these should do nothing
-		state.gotBlocks(ctx, nil)
-		state.blockCommitted(ctx)
-		state.gotAvailabilityResponse(ctx, nil)
-	})
-}

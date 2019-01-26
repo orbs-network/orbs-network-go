@@ -11,7 +11,7 @@ type loggerWrapper struct {
 	showDebug bool
 }
 
-const LH_PREFIX = "<LH> "
+const LH_PREFIX = "=LH= "
 
 func NewLoggerWrapper(log log.BasicLogger, showDebug bool) *loggerWrapper {
 	return &loggerWrapper{

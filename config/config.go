@@ -84,11 +84,17 @@ type NodeConfig interface {
 	LoggerHttpEndpoint() string
 	LoggerBulkSize() uint32
 	LoggerFileTruncationInterval() time.Duration
+
+	// http server
+	HttpAddress() string
+
+	// profiling
+	Profiling() bool
 }
 
 type OverridableConfig interface {
 	NodeConfig
-	OverrideNodeSpecificValues(gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, blockStorageDataDirPrefix string) NodeConfig
+	OverrideNodeSpecificValues(httpAddress string, gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, blockStorageDataDirPrefix string) NodeConfig
 	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
 }
 
@@ -179,4 +185,9 @@ type FederationNode interface {
 type GossipPeer interface {
 	GossipPort() int
 	GossipEndpoint() string
+}
+
+type HttpServerConfig interface {
+	HttpAddress() string
+	Profiling() bool
 }

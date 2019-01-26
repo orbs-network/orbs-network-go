@@ -53,7 +53,7 @@ func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *test
 
 		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
-			state.gotBlocks(ctx, blocksMessage)
+			h.factory.conduit.blocks <- blocksMessage
 			manualWaitForChunksTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
 
@@ -94,31 +94,10 @@ func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T)
 
 		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
-			state.gotBlocks(ctx, blocksMessage)
+			h.factory.conduit.blocks <- blocksMessage
 		})
 
 		require.IsType(t, &idleState{}, nextState, "expecting to abort sync and go back to idle (ignore blocks)")
 		h.verifyMocks(t)
-	})
-}
-
-func TestStateWaitingForChunks_DoesNotBlockOnBlocksNotificationWhenChannelIsNotReady(t *testing.T) {
-	h := newBlockSyncHarness()
-	test.WithContextWithTimeout(h.config.collectChunks/2, func(ctx context.Context) {
-		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
-		messageSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
-		blocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
-		state.gotBlocks(ctx, blocksMessage) // we did not call process, so channel is not ready, test fails if this blocks
-	})
-}
-
-func TestStateWaitingForChunks_NOP(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
-		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
-
-		// this is sanity, these calls should do nothing
-		state.gotAvailabilityResponse(ctx, nil)
-		state.blockCommitted(ctx)
 	})
 }

@@ -16,7 +16,7 @@ type GammaServer struct {
 	Logger       log.BasicLogger
 }
 
-func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
+func StartGammaServer(serverAddress string, profiling bool, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	testLogger := log.GetLogger().
@@ -32,7 +32,8 @@ func StartGammaServer(serverAddress string, blocking bool) *GammaServer {
 	network := NewDevelopmentNetwork(ctx, testLogger)
 	testLogger.Info("finished creating development network")
 
-	httpServer := httpserver.NewHttpServer(serverAddress, testLogger, network.PublicApi(0), network.MetricRegistry(0))
+	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(serverAddress, profiling),
+		testLogger, network.PublicApi(0), network.MetricRegistry(0))
 
 	s := &GammaServer{
 		ctxCancel:    cancel,

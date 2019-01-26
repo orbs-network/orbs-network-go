@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/pkg/errors"
 )
 
 // don't need to provide hashed data as this function will SHA256
@@ -12,15 +13,18 @@ func SignAsNode(privateKey primitives.EcdsaSecp256K1PrivateKey, data []byte) (pr
 	return signature.SignEcdsaSecp256K1(privateKey, hashedData)
 }
 
-func VerifyNodeSignature(nodeAddress primitives.NodeAddress, data []byte, sig primitives.EcdsaSecp256K1Sig) bool {
+func VerifyNodeSignature(nodeAddress primitives.NodeAddress, data []byte, sig primitives.EcdsaSecp256K1Sig) error {
 	if len(nodeAddress) != NODE_ADDRESS_SIZE_BYTES {
-		return false
+		return errors.Errorf("incorrect node address length. Expected=%d Actual=%d", NODE_ADDRESS_SIZE_BYTES, len(nodeAddress))
 	}
 	hashedData := hash.CalcSha256(data)
 	publicKey, err := signature.RecoverEcdsaSecp256K1(hashedData, sig)
 	if err != nil {
-		return false
+		return errors.Wrap(err, "RecoverEcdsaSecp256K1() failed")
 	}
 	recoveredNodeAddress := CalcNodeAddressFromPublicKey(publicKey)
-	return nodeAddress.Equal(recoveredNodeAddress)
+	if !nodeAddress.Equal(recoveredNodeAddress) {
+		return errors.Errorf("mismatched recovered node address. nodeAddress=%v recovered=%v", nodeAddress, recoveredNodeAddress)
+	}
+	return nil
 }

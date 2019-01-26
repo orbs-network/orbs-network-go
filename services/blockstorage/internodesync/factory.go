@@ -133,7 +133,6 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceNodeAddress primitives.
 		gossipClient:      newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
 		createTimer:       f.createWaitForChunksTimeoutTimer,
 		logger:            f.logger,
-		abort:             make(chan struct{}),
 		conduit:           f.conduit,
 		metrics:           f.metrics.waitingStateMetrics,
 	}
