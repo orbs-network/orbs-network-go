@@ -16,18 +16,18 @@ import (
 
 type txTracker struct {
 	sync.Mutex
-	txToHeight     map[string]primitives.BlockHeight
-	topKnownHeight primitives.BlockHeight
-	idxTracker     *synchronization.BlockTracker
-	parent         log.BasicLogger
+	txToHeight   map[string]primitives.BlockHeight
+	topHeight    primitives.BlockHeight
+	blockTracker *synchronization.BlockTracker
+	parent       log.BasicLogger
 }
 
 func newTxTracker(logger log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer) *txTracker {
 	tracker := &txTracker{
-		Mutex:      sync.Mutex{},
-		txToHeight: make(map[string]primitives.BlockHeight),
-		idxTracker: synchronization.NewBlockTracker(logger, 0, math.MaxUint16),
-		parent:     logger,
+		Mutex:        sync.Mutex{},
+		txToHeight:   make(map[string]primitives.BlockHeight),
+		blockTracker: synchronization.NewBlockTracker(logger, 0, math.MaxUint16),
+		parent:       logger,
 	}
 
 	for _, bpc := range preloadedBlocks {
@@ -41,7 +41,7 @@ func (t *txTracker) getBlockHeight(txHash primitives.Sha256) (primitives.BlockHe
 	t.Lock()
 	defer t.Unlock()
 
-	return t.txToHeight[txHash.KeyForMap()], t.topKnownHeight
+	return t.txToHeight[txHash.KeyForMap()], t.topHeight
 }
 
 func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*protocol.SignedTransaction) {
@@ -52,7 +52,7 @@ func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*pro
 	t.Lock()
 	defer t.Unlock()
 
-	if height <= t.topKnownHeight { // block already advertised
+	if height <= t.topHeight { // block already advertised
 		t.parent.Info("advertising block transactions aborted - already advertised", log.BlockHeight(height))
 		return
 	}
@@ -64,15 +64,15 @@ func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*pro
 
 		if existed {
 			assertSameHeight(prevHeight, height, t.parent, txHash)
-			panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topKnownHeight. tx %s found listed for height %d. but topKnownHeight is %d", txHash.String(), height, t.topKnownHeight))
+			panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topHeight. tx %s found listed for height %d. but topHeight is %d", txHash.String(), height, t.topHeight))
 		}
 
 		t.txToHeight[txHash.KeyForMap()] = height
 	}
 	t.parent.Info("advertising block transactions done", log.BlockHeight(height))
 
-	t.idxTracker.IncrementTo(height)
-	t.topKnownHeight = height
+	t.blockTracker.IncrementTo(height)
+	t.topHeight = height
 }
 
 func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
@@ -87,7 +87,7 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 		}
 
 		logger.Info("transaction not found as of block", log.Transaction(txHash), log.BlockHeight(topHeight))
-		err := t.idxTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
+		err := t.blockTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
 		if err != nil {
 			test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
