@@ -48,10 +48,9 @@ func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPair
 
 func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, committer BlockPairCommitter, logger log.BasicLogger) primitives.BlockHeight {
 	h := block.ResultsBlock.Header.BlockHeight()
-	// log transactions
-	for _, tx := range block.ResultsBlock.TransactionReceipts {
-		logger.Info("attempt service sync for block", log.BlockHeight(h), log.Transaction(tx.Txhash()))
-	}
+
+	logger.Info("service sync", log.BlockHeight(h))
+
 	// notify the receiving service of a new block
 	requestedHeight, err := committer.commitBlockPair(ctx, block)
 	if err != nil {

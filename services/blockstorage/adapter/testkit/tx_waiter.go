@@ -68,7 +68,6 @@ func (txi *txWaiter) advertiseTransactions(height primitives.BlockHeight, transa
 		}
 
 		txi.txToHeight[txHash.KeyForMap()] = height
-		txi.parent.Info("advertising transaction completion", log.Transaction(txHash), log.BlockHeight(height))
 	}
 	txi.parent.Info("advertising block transactions done", log.BlockHeight(height))
 
