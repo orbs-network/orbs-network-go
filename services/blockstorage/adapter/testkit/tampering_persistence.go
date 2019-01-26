@@ -17,23 +17,23 @@ type TamperingInMemoryBlockPersistence interface {
 	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
-func NewBlockPersistence(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) *tamperingBlockPersistence {
-	logger := parent.WithTags(log.String("adapter", "block-storage"))
-	return &tamperingBlockPersistence{
-		InMemoryBlockPersistence: *memory.NewBlockPersistence(logger, metricFactory, preloadedBlocks...),
-		txRegistry:               newTxWaiter(logger, preloadedBlocks),
-	}
-}
-
 type tamperingBlockPersistence struct {
 	memory.InMemoryBlockPersistence
 	failNextBlocks bool
 
-	txRegistry *txWaiter
+	txTracker *txTracker
+}
+
+func NewBlockPersistence(parent log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer, metricFactory metric.Factory) *tamperingBlockPersistence {
+	logger := parent.WithTags(log.String("adapter", "block-storage"))
+	return &tamperingBlockPersistence{
+		InMemoryBlockPersistence: *memory.NewBlockPersistence(logger, metricFactory, preloadedBlocks...),
+		txTracker:                newTxTracker(logger, preloadedBlocks),
+	}
 }
 
 func (bp *tamperingBlockPersistence) WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
-	return bp.txRegistry.waitForTransaction(ctx, txHash)
+	return bp.txTracker.waitForTransaction(ctx, txHash)
 }
 
 func (bp *tamperingBlockPersistence) FailNextBlocks() {
@@ -53,5 +53,5 @@ func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 }
 
 func (bp *tamperingBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {
-	bp.txRegistry.advertiseTransactions(block.Header.BlockHeight(), block.SignedTransactions)
+	bp.txTracker.advertise(block.Header.BlockHeight(), block.SignedTransactions)
 }

@@ -14,7 +14,7 @@ import (
 	"sync"
 )
 
-type txWaiter struct {
+type txTracker struct {
 	sync.Mutex
 	txToHeight     map[string]primitives.BlockHeight
 	topKnownHeight primitives.BlockHeight
@@ -22,8 +22,8 @@ type txWaiter struct {
 	parent         log.BasicLogger
 }
 
-func newTxWaiter(logger log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer) *txWaiter {
-	registry := &txWaiter{
+func newTxTracker(logger log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer) *txTracker {
+	tracker := &txTracker{
 		Mutex:      sync.Mutex{},
 		txToHeight: make(map[string]primitives.BlockHeight),
 		idxTracker: synchronization.NewBlockTracker(logger, 0, math.MaxUint16),
@@ -31,55 +31,55 @@ func newTxWaiter(logger log.BasicLogger, preloadedBlocks []*protocol.BlockPairCo
 	}
 
 	for _, bpc := range preloadedBlocks {
-		registry.advertiseTransactions(bpc.TransactionsBlock.Header.BlockHeight(), bpc.TransactionsBlock.SignedTransactions)
+		tracker.advertise(bpc.TransactionsBlock.Header.BlockHeight(), bpc.TransactionsBlock.SignedTransactions)
 	}
 
-	return registry
+	return tracker
 }
 
-func (txi *txWaiter) getBlockHeight(txHash primitives.Sha256) (primitives.BlockHeight, primitives.BlockHeight) {
-	txi.Lock()
-	defer txi.Unlock()
+func (t *txTracker) getBlockHeight(txHash primitives.Sha256) (primitives.BlockHeight, primitives.BlockHeight) {
+	t.Lock()
+	defer t.Unlock()
 
-	return txi.txToHeight[txHash.KeyForMap()], txi.topKnownHeight
+	return t.txToHeight[txHash.KeyForMap()], t.topKnownHeight
 }
 
-func (txi *txWaiter) advertiseTransactions(height primitives.BlockHeight, transactions []*protocol.SignedTransaction) {
+func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*protocol.SignedTransaction) {
 	if height == 0 {
 		panic("illegal block height 0")
 	}
 
-	txi.Lock()
-	defer txi.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
-	if height <= txi.topKnownHeight { // block already advertised
-		txi.parent.Info("advertising block transactions aborted - already advertised", log.BlockHeight(height))
+	if height <= t.topKnownHeight { // block already advertised
+		t.parent.Info("advertising block transactions aborted - already advertised", log.BlockHeight(height))
 		return
 	}
 
 	for _, tx := range transactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
 
-		prevHeight, existed := txi.txToHeight[txHash.KeyForMap()]
+		prevHeight, existed := t.txToHeight[txHash.KeyForMap()]
 
 		if existed {
-			assertSameHeight(prevHeight, height, txi.parent, txHash)
-			panic(fmt.Sprintf("BUG!! txWaiter.txToHeight contains a block height ahead of topKnownHeight. tx %s found listed for height %d. but topKnownHeight is %d", txHash.String(), height, txi.topKnownHeight))
+			assertSameHeight(prevHeight, height, t.parent, txHash)
+			panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topKnownHeight. tx %s found listed for height %d. but topKnownHeight is %d", txHash.String(), height, t.topKnownHeight))
 		}
 
-		txi.txToHeight[txHash.KeyForMap()] = height
+		t.txToHeight[txHash.KeyForMap()] = height
 	}
-	txi.parent.Info("advertising block transactions done", log.BlockHeight(height))
+	t.parent.Info("advertising block transactions done", log.BlockHeight(height))
 
-	txi.idxTracker.IncrementTo(height)
-	txi.topKnownHeight = height
+	t.idxTracker.IncrementTo(height)
+	t.topKnownHeight = height
 }
 
-func (txi *txWaiter) waitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
-	logger := txi.parent.WithTags(trace.LogFieldFrom(ctx))
+func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
+	logger := t.parent.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("waiting for transaction", log.Transaction(txHash))
 	for {
-		txHeight, topHeight := txi.getBlockHeight(txHash)
+		txHeight, topHeight := t.getBlockHeight(txHash)
 
 		if txHeight > 0 { // found requested height
 			logger.Info("transaction found in block", log.Transaction(txHash), log.BlockHeight(txHeight))
@@ -87,7 +87,7 @@ func (txi *txWaiter) waitForTransaction(ctx context.Context, txHash primitives.S
 		}
 
 		logger.Info("transaction not found as of block", log.Transaction(txHash), log.BlockHeight(topHeight))
-		err := txi.idxTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
+		err := t.idxTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
 		if err != nil {
 			test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
