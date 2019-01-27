@@ -42,6 +42,18 @@ type BlockSyncStorage interface {
 // keeping the channel clear for new incoming events and tossing out irrelevant messages.
 type blockSyncConduit chan interface{}
 
+func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
+	for {
+		select {
+		case <-c: // nop
+		case <-ctx.Done():
+			return false // indicate a shutdown was signaled
+		default:
+			return true
+		}
+	}
+}
+
 type BlockSync struct {
 	logger  log.BasicLogger
 	factory *stateFactory

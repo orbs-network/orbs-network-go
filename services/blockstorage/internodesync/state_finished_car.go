@@ -41,20 +41,8 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	syncSource := s.responses[0] //TODO V1 how do we pick the source?
 	syncSourceNodeAddress := syncSource.Sender.SenderNodeAddress()
 
-	if !s.heartbeat(ctx) {
+	if !s.factory.conduit.drainAndCheckForShutdown(ctx) {
 		return nil
 	}
 	return s.factory.CreateWaitingForChunksState(syncSourceNodeAddress)
-}
-
-func (s *finishedCARState) heartbeat(ctx context.Context) bool { // drain conduit and check for shutdown
-	for {
-		select {
-		case <-s.factory.conduit: // nop
-		case <-ctx.Done():
-			return false // indicate a shutdown was signaled
-		default:
-			return true
-		}
-	}
 }
