@@ -5,12 +5,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
@@ -64,18 +62,5 @@ func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, out.TransactionStatus, "did not return expected status")
-	})
-}
-
-func TestGetTransactionReceiptWhenTimestampAheadOfNodeTime(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
-
-		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
-			TransactionTimestamp: primitives.TimestampNano(time.Now().Add(h.config.TransactionPoolFutureTimestampGraceTimeout() + 1*time.Minute).UnixNano()),
-		})
-
-		require.NoError(t, err)
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, out.TransactionStatus, "did not return expected status")
 	})
 }

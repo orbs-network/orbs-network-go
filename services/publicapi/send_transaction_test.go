@@ -12,7 +12,7 @@ import (
 
 func TestSendTransaction_PrepareResponse(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
-	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+	blockTime := primitives.TimestampNano(time.Now().UnixNano())
 	receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 
 	response := toSendTxOutput(&txOutput{
@@ -31,7 +31,7 @@ func TestSendTransaction_PrepareResponse(t *testing.T) {
 }
 
 func TestSendTransaction_PrepareResponse_NilReceipt(t *testing.T) {
-	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+	blockTime := primitives.TimestampNano(time.Now().UnixNano())
 
 	response := toSendTxOutput(&txOutput{
 		transactionStatus:  protocol.TRANSACTION_STATUS_REJECTED_CONGESTION,
