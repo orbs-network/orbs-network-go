@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestResults_TranslateTransactionStatusToRequestStatus(t *testing.T) {
@@ -41,6 +43,7 @@ func TestResults_TranslateTransactionStatusToRequestStatus(t *testing.T) {
 		{"TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER", protocol.REQUEST_STATUS_BAD_REQUEST, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER, protocol.EXECUTION_RESULT_RESERVED},
 		{"TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME", protocol.REQUEST_STATUS_BAD_REQUEST, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, protocol.EXECUTION_RESULT_RESERVED},
 		{"TRANSACTION_STATUS_REJECTED_CONGESTION", protocol.REQUEST_STATUS_CONGESTION, protocol.TRANSACTION_STATUS_REJECTED_CONGESTION, protocol.EXECUTION_RESULT_RESERVED},
+		{"TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC", protocol.REQUEST_STATUS_OUT_OF_SYNC, protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, protocol.EXECUTION_RESULT_RESERVED},
 	}
 	for i := range tests {
 		currTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
@@ -74,7 +77,7 @@ func TestResults_TranslateExecutionStatusToRequestStatus(t *testing.T) {
 }
 
 func TestResults_IsRequestValidChain(t *testing.T) {
-	cfg := config.ForPublicApiTests(6, 0)
+	cfg := config.ForPublicApiTests(6, 0, 0)
 	tx := builders.Transaction().WithVirtualChainId(6).Build().Transaction()
 	txStatus, err := validateRequest(cfg, tx.ProtocolVersion(), tx.VirtualChainId())
 	require.NoError(t, err, "there should be no error")
@@ -82,9 +85,21 @@ func TestResults_IsRequestValidChain(t *testing.T) {
 }
 
 func TestResults_IsRequestValidChain_NonValid(t *testing.T) {
-	cfg := config.ForPublicApiTests(44, 0)
+	cfg := config.ForPublicApiTests(44, 0, 0)
 	tx := builders.Transaction().WithVirtualChainId(6).Build().Transaction()
 	txStatus, err := validateRequest(cfg, tx.ProtocolVersion(), tx.VirtualChainId())
 	require.Error(t, err, "there should be an error")
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, txStatus, "virtual chain should be wrong")
+}
+
+func TestResults_IsOutputPotentiallyOutOfSync(t *testing.T) {
+	cfg := config.ForPublicApiTests(22, 0, time.Minute)
+	var refBlockTimestamp primitives.TimestampNano
+	require.False(t, isOutputPotentiallyOutOfSync(cfg, refBlockTimestamp), "empty block reference should not be out of sync")
+	refBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
+	require.False(t, isOutputPotentiallyOutOfSync(cfg, refBlockTimestamp), "recent block reference should not be out of sync")
+	refBlockTimestamp = primitives.TimestampNano(time.Now().Add(time.Hour * -1).UnixNano())
+	require.True(t, isOutputPotentiallyOutOfSync(cfg, refBlockTimestamp), "old block reference should be out of sync")
+	refBlockTimestamp = primitives.TimestampNano(time.Now().Add(time.Hour).UnixNano())
+	require.False(t, isOutputPotentiallyOutOfSync(cfg, refBlockTimestamp), "future block reference should not be out of sync")
 }

@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -30,37 +29,10 @@ import (
 	"time"
 )
 
-type testContext interface {
-	canFail
-	subTester
-}
-
-type benchContext interface {
-	canFail
-	subBencher
-}
-
-type canFail interface {
-	Failed() bool
-	Fatal(args ...interface{})
-}
-
-type subTester interface {
-	Name() string
-	Run(name string, f func(t *testing.T)) bool
-}
-
-type subBencher interface {
-	Name() string
-	Run(name string, f func(b *testing.B)) bool
-}
-
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
 
 type networkHarnessBuilder struct {
-	f                        canFail
-	st                       subTester
-	sb                       subBencher
+	tb                       testing.TB
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
@@ -73,25 +45,8 @@ type networkHarnessBuilder struct {
 }
 
 // TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
-func newHarness(t testContext) *networkHarnessBuilder {
-	n := &networkHarnessBuilder{f: t.(canFail), st: t.(subTester), maxTxPerBlock: 30, requiredQuorumPercentage: 100}
-
-	var algos []consensus.ConsensusAlgoType
-	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	} else {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
-	}
-
-	return n.
-		WithTestId(getCallerFuncName()).
-		WithNumNodes(4).
-		WithConsensusAlgos(algos...).
-		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
-}
-
-func newBenchHarness(b benchContext) *networkHarnessBuilder {
-	n := &networkHarnessBuilder{f: b.(canFail), sb: b.(subBencher), maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+func newHarness(tb testing.TB) *networkHarnessBuilder {
+	n := &networkHarnessBuilder{tb: tb, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
@@ -165,9 +120,9 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
 				logger.Info("acceptance network created")
-				defer printTestIdOnFailure(b.f, testId)
-				defer dumpStateOnFailure(b.f, network)
-				defer test.RequireNoUnexpectedErrors(b.f, errorRecorder)
+				defer printTestIdOnFailure(b.tb, testId)
+				defer dumpStateOnFailure(b.tb, network)
+				defer test.RequireNoUnexpectedErrors(b.tb, errorRecorder)
 
 				if b.setupFunc != nil {
 					b.setupFunc(networkCtx, network)
@@ -198,14 +153,17 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 			})
 		}
 
-		if b.sb != nil {
-			b.sb.Run(consensusAlgo.String(), func(t *testing.B) {
+		switch runner := b.tb.(type) {
+		case *testing.T:
+			runner.Run(consensusAlgo.String(), func(t *testing.T) {
 				test.WithContextWithTimeout(15*time.Second, restartableTest)
 			})
-		} else {
-			b.st.Run(consensusAlgo.String(), func(t *testing.T) {
+		case *testing.B:
+			runner.Run(consensusAlgo.String(), func(t *testing.B) {
 				test.WithContextWithTimeout(15*time.Second, restartableTest)
 			})
+		default:
+			panic("unexpected TB implementation")
 		}
 	}
 }
@@ -234,7 +192,7 @@ func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId)).
-		WithOutput(makeFormattingOutput(testId), errorRecorder).
+		WithOutput(b.makeFormattingOutput(testId), errorRecorder).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
@@ -321,7 +279,7 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
 }
 
-func makeFormattingOutput(testId string) log.Output {
+func (b *networkHarnessBuilder) makeFormattingOutput(testId string) log.Output {
 	var output log.Output
 	if os.Getenv("NO_LOG_STDOUT") == "true" {
 		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -331,19 +289,19 @@ func makeFormattingOutput(testId string) log.Output {
 
 		output = log.NewFormattingOutput(logFile, log.NewJsonFormatter())
 	} else {
-		output = log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())
+		output = log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
 	}
 	return output
 }
 
-func printTestIdOnFailure(f canFail, testId string) {
-	if f.Failed() {
-		fmt.Println("FAIL search snippet: grep _test-id="+testId, "test.out")
+func printTestIdOnFailure(tb testing.TB, testId string) {
+	if tb.Failed() {
+		tb.Error("FAIL search snippet: grep _test-id="+testId, "test.out")
 	}
 }
 
-func dumpStateOnFailure(f canFail, network NetworkHarness) {
-	if f.Failed() {
+func dumpStateOnFailure(tb testing.TB, network NetworkHarness) {
+	if tb.Failed() {
 		network.DumpState()
 	}
 }
