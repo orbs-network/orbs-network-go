@@ -8,8 +8,6 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ASBEthereum"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/ERC20Proxy"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -98,7 +96,7 @@ func newAutonomousSwapDriver(networkDriver NetworkHarness) *driver {
 		network:                  networkDriver,
 		simulator:                simulator,
 		addressInEthereum:        simulator.GetAuth(),
-		orbsASBContractName:      asb_ether.CONTRACT_NAME,
+		orbsASBContractName:      "asb_ether",
 		orbsContractOwnerAddress: testKeys.Ed25519KeyPairForTests(5),
 	}
 }
@@ -133,7 +131,7 @@ func (d *driver) generateOrbsAccount(t *testing.T) {
 
 func (d *driver) generateOrbsFunds(ctx context.Context, t *testing.T, amount *big.Int) {
 	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
-		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "mint").
+		WithMethod(primitives.ContractName("erc20proxy"), "mint").
 		WithEd25519Signer(d.orbsContractOwnerAddress).
 		WithArgs(d.orbsUserAddress[:], amount.Uint64()).
 		Builder(), 0)
@@ -144,7 +142,7 @@ func (d *driver) generateOrbsFunds(ctx context.Context, t *testing.T, amount *bi
 func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
 	balanceResponse := d.network.RunQuery(ctx, builders.Query().
 		WithEd25519Signer(d.orbsContractOwnerAddress).
-		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "balanceOf").
+		WithMethod(primitives.ContractName("erc20proxy"), "balanceOf").
 		WithArgs(d.orbsUserAddress[:]).
 		Builder(), 0)
 	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, balanceResponse.QueryResult().ExecutionResult())
@@ -157,7 +155,7 @@ func (d *driver) getBalanceInOrbs(ctx context.Context, t *testing.T) uint64 {
 func (d *driver) approveTransferInOrbsTokenContract(ctx context.Context, t *testing.T, amount *big.Int) {
 	response, txHash := d.network.SendTransaction(ctx, builders.Transaction().
 		WithEd25519Signer(d.orbsUserKeyPair).
-		WithMethod(primitives.ContractName(erc20proxy.CONTRACT_NAME), "approve").
+		WithMethod(primitives.ContractName("erc20proxy"), "approve").
 		WithArgs(d.addressInEthereum.From, amount.Uint64()).
 		Builder(), 0)
 	d.network.WaitForTransactionInState(ctx, txHash)
