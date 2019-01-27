@@ -43,11 +43,12 @@ func ForConsensusContextTests(federationNodes map[string]FederationNode) Consens
 	return cfg
 }
 
-func ForPublicApiTests(virtualChain uint32, txTimeout time.Duration) PublicApiConfig {
+func ForPublicApiTests(virtualChain uint32, txTimeout time.Duration, outOfSyncWarningTime time.Duration) PublicApiConfig {
 	cfg := emptyConfig()
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, virtualChain)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, txTimeout)
+	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, outOfSyncWarningTime)
 	return cfg
 }
 
@@ -69,6 +70,7 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
 	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
+	cfg.SetDuration(TRANSACTION_POOL_NODE_SYNC_REJECT_TIME, 2*time.Minute)
 	cfg.SetDuration(TRANSACTION_EXPIRATION_WINDOW, 30*time.Minute)
 	cfg.SetDuration(TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 3*time.Minute)
 	cfg.SetDuration(TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL, 10*time.Millisecond)

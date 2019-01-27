@@ -22,7 +22,8 @@ type BenchmarkTokenClient interface {
 }
 
 func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	benchmarkDeploymentTimeout := 1 * time.Second
+	timeoutCtx, cancel := context.WithTimeout(ctx, benchmarkDeploymentTimeout)
 	defer cancel()
 
 	count := 0
@@ -33,7 +34,7 @@ func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressI
 		}
 		count++
 		if timeoutCtx.Err() != nil {
-			panic(errors.Wrapf(timeoutCtx.Err(), "timeout trying to deploy benchmark token contract. attempts: %d, previous response was %+v", count, response.String()))
+			panic(errors.Wrapf(timeoutCtx.Err(), "timeout trying to deploy benchmark token contract. attempts=%d, timeout=%s, previous response was %+v", count, benchmarkDeploymentTimeout, response.String()))
 		}
 	}
 }

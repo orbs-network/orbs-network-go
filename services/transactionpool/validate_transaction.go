@@ -13,8 +13,10 @@ const ProtocolVersion = primitives.ProtocolVersion(1)
 type validator func(transaction *protocol.SignedTransaction) *ErrTransactionRejected
 
 type validationContext struct {
-	expiryWindow                time.Duration
+	nodeTime                    time.Time
 	lastCommittedBlockTimestamp primitives.TimestampNano
+	nodeSyncRejectInterval      time.Duration
+	expiryWindow                time.Duration
 	futureTimestampGrace        time.Duration
 	virtualChainId              primitives.VirtualChainId
 }
@@ -25,6 +27,7 @@ func (c *validationContext) validateTransaction(transaction *protocol.SignedTran
 		validateProtocolVersion,
 		validateContractName,
 		validateSignature,
+		validateNodeIsInSync(c),
 		validateTransactionNotExpired(c),
 		validateTransactionNotInFuture(c),
 		validateTransactionVirtualChainId(c),
@@ -70,9 +73,20 @@ func validateContractName(transaction *protocol.SignedTransaction) *ErrTransacti
 	return nil
 }
 
+func validateNodeIsInSync(vctx *validationContext) validator {
+	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+		threshold := primitives.TimestampNano(vctx.nodeTime.Add(vctx.nodeSyncRejectInterval * -1).UnixNano())
+		if vctx.lastCommittedBlockTimestamp < threshold {
+			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("last-committed-block-timestamp", vctx.lastCommittedBlockTimestamp)}
+		}
+
+		return nil
+	}
+}
+
 func validateTransactionNotExpired(vctx *validationContext) validator {
 	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-		threshold := primitives.TimestampNano(time.Now().Add(vctx.expiryWindow * -1).UnixNano())
+		threshold := primitives.TimestampNano(vctx.nodeTime.Add(vctx.expiryWindow * -1).UnixNano())
 		if transaction.Transaction().Timestamp() < threshold {
 			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
 		}
