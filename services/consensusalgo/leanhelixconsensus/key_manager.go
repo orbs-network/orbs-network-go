@@ -36,13 +36,8 @@ func (km *keyManager) SignRandomSeed(blockHeight lhprimitives.BlockHeight, conte
 	return lhprimitives.RandomSeedSignature(sig)
 }
 
-func (km *keyManager) VerifyConsensusMessage(blockHeight lhprimitives.BlockHeight, content []byte, sender *lhprotocol.SenderSignature) bool {
-	err := digest.VerifyNodeSignature(primitives.NodeAddress(sender.MemberId()), content, primitives.EcdsaSecp256K1Sig(sender.Signature()))
-	if err != nil {
-		km.logger.Info("VerifyConsensusMessage() failed", log.Error(err))
-		return false
-	}
-	return true
+func (km *keyManager) VerifyConsensusMessage(blockHeight lhprimitives.BlockHeight, content []byte, sender *lhprotocol.SenderSignature) error {
+	return digest.VerifyNodeSignature(primitives.NodeAddress(sender.MemberId()), content, primitives.EcdsaSecp256K1Sig(sender.Signature()))
 }
 
 func (km *keyManager) VerifyRandomSeed(blockHeight lhprimitives.BlockHeight, content []byte, sender *lhprotocol.SenderSignature) error {
