@@ -30,7 +30,9 @@ jobs:
           # remove logs if the test was successful for quicker feedback loop
           command: ./docker/test/test.flakiness.sh #&& sudo find _logs/acceptance -type f -delete
           no_output_timeout: 25m
-      - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
+      - run:
+          command: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
+          no_output_timeout: 25m
       - store_artifacts:
           path: _logs
 
