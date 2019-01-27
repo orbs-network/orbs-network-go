@@ -4,7 +4,6 @@ package acceptance
 
 import (
 	"github.com/stretchr/testify/require"
-	"golang.org/x/text/message"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -17,7 +16,6 @@ import (
 // therefore, this file is marked on top with a build flag ("memoryleak") meaning without this flag it won't build or run
 // to run this test, add to the go command "-tags memoryleak", this is done in test.sh while making sure it's the only test running
 func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
-	p := message.NewPrinter(message.MatchLanguage("en"))
 	before, _ := os.Create("/tmp/mem-shutdown-before.prof")
 	defer before.Close()
 	after, _ := os.Create("/tmp/mem-shutdown-after.prof")
@@ -60,8 +58,8 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 
 	require.Conditionf(t, func() bool {
 		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes
-	}, p.Sprintf("Heap size after GC is too large. Pre-run: %d bytes, post-run: %d bytes, added %d bytes. This is more than 10%% of initial memory and more than the allowed addition of %d bytes. Compare /tmp/mem-shutdown-before.prof and /tmp/mem-shutdown-after.prof to see memory consumers",
-		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes))
+	}, "Heap size after GC is too large. Pre-run: %d bytes, post-run: %d bytes, added %d bytes. This is more than 10%% of initial memory and more than the allowed addition of %d bytes. Compare /tmp/mem-shutdown-before.prof and /tmp/mem-shutdown-after.prof to see memory consumers",
+		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes)
 }
 
 func getMemUsageBytes() uint64 {
