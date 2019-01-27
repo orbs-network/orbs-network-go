@@ -20,8 +20,8 @@ func TestSignAndVerifyConsensusMessage(t *testing.T) {
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: contentSig,
 	}
-	verified := mgr.VerifyConsensusMessage(1, content, senderSignature.Build())
-	require.True(t, verified, "Verification of original consensus message should succeed")
+	err := mgr.VerifyConsensusMessage(1, content, senderSignature.Build())
+	require.NoError(t, err, "Verification of original consensus message should succeed")
 }
 
 func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
@@ -35,8 +35,8 @@ func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 		Signature: contentSig,
 	}
 
-	verified := mgr.VerifyConsensusMessage(2, content, senderSignature.Build())
-	require.False(t, verified, "Verification of consensus message that was signed for another block height should fail")
+	err := mgr.VerifyConsensusMessage(2, content, senderSignature.Build())
+	require.Error(t, err, "Verification of consensus message that was signed for another block height should fail")
 }
 
 func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
@@ -51,8 +51,8 @@ func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: contentSig,
 	}
-	verified := mgr.VerifyConsensusMessage(1, tamperedMessage, senderSignature.Build())
-	require.False(t, verified, "Verification of a tampered consensus message should fail")
+	err := mgr.VerifyConsensusMessage(1, tamperedMessage, senderSignature.Build())
+	require.Error(t, err, "Verification of a tampered consensus message should fail")
 }
 
 func TestSignAndVerifyRandomSeed(t *testing.T) {

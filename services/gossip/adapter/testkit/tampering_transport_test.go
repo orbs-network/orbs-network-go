@@ -92,7 +92,7 @@ func TestPausingTamperer(t *testing.T) {
 			}
 		}
 
-		odds.Release(ctx)
+		odds.StopTampering(ctx)
 
 		for b := 0; b < 5; b++ {
 			if <-digits%2 != 1 {

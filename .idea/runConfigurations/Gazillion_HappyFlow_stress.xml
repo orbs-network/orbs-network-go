@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Gazillion HappyFlow stress" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="orbs-network-go" />
+    <working_directory value="$PROJECT_DIR$/test/acceptance" />
+    <go_parameters value="-i" />
+    <parameters value="-test.count 3 -test.failfast" />
+    <framework value="gotest" />
+    <kind value="PACKAGE" />
+    <package value="github.com/orbs-network/orbs-network-go/test/acceptance" />
+    <directory value="$PROJECT_DIR$/" />
+    <filePath value="$PROJECT_DIR$/" />
+    <pattern value="^TestCreateGazillionTransactionsHappyFlow$" />
+    <method v="2" />
+  </configuration>
+</component>
