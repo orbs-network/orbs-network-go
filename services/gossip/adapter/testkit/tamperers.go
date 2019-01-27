@@ -15,7 +15,7 @@ type failingTamperer struct {
 	transport *TamperingTransport
 }
 
-func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
 	if o.predicate(data) {
 		return &adapter.ErrTransportFailed{Data: data}, true
 	}
@@ -23,7 +23,7 @@ func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.Transpo
 	return nil, false
 }
 
-func (o *failingTamperer) Release(ctx context.Context) {
+func (o *failingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -32,7 +32,7 @@ type duplicatingTamperer struct {
 	transport *TamperingTransport
 }
 
-func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
 	if o.predicate(data) {
 		supervised.GoOnce(o.transport.logger, func() {
 			time.Sleep(10 * time.Millisecond)
@@ -42,7 +42,7 @@ func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.Tra
 	return nil, false
 }
 
-func (o *duplicatingTamperer) Release(ctx context.Context) {
+func (o *duplicatingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -64,7 +64,7 @@ func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.Transp
 	return nil, false
 }
 
-func (o *delayingTamperer) Release(ctx context.Context) {
+func (o *delayingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -85,13 +85,13 @@ func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.Tran
 				continue
 			}
 			y := o.ctrlRand.Intn(len(data.Payloads[x]))
-			data.Payloads[x][y] = 0
+			data.Payloads[x][y] ^= 0x55 // 0x55 is 01010101 so XORing with it reverses all bits on the byte - this actually does something even if original byte was 0
 		}
 	}
 	return nil, false
 }
 
-func (o *corruptingTamperer) Release(ctx context.Context) {
+func (o *corruptingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
@@ -113,7 +113,7 @@ func (o *pausingTamperer) maybeTamper(ctx context.Context, data *adapter.Transpo
 	return nil, false
 }
 
-func (o *pausingTamperer) Release(ctx context.Context) {
+func (o *pausingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 	for _, message := range o.messages {
 		o.transport.Send(ctx, message)

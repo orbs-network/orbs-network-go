@@ -14,7 +14,7 @@ import (
 
 func TestGetTransactionReceiptProof_PrepareResponse(t *testing.T) {
 	ctrlRand := test.NewControlledRand(t)
-	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+	blockTime := primitives.TimestampNano(time.Now().UnixNano())
 	receipt := builders.TransactionReceipt().WithRandomHash(ctrlRand).Builder()
 
 	txStatusOutput := &services.GetTransactionStatusOutput{
@@ -51,7 +51,7 @@ func TestGetTransactionReceiptProof_PrepareResponse(t *testing.T) {
 }
 
 func TestGetTransactionReceiptProof_PrepareResponse_NilProof(t *testing.T) {
-	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+	blockTime := primitives.TimestampNano(time.Now().UnixNano())
 
 	txStatusOutput := &services.GetTransactionStatusOutput{
 		ClientResponse: (&client.GetTransactionStatusResponseBuilder{

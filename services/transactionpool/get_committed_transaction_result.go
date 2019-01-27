@@ -9,10 +9,6 @@ import (
 
 func (s *service) GetCommittedTransactionReceipt(ctx context.Context, input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
 
-	if input.TransactionTimestamp > s.currentNodeTimeWithGrace() {
-		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME), nil
-	}
-
 	if tx := s.pendingPool.get(input.Txhash); tx != nil {
 		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 	}

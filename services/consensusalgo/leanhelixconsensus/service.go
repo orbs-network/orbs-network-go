@@ -154,7 +154,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 		if shouldCreateGenesisBlock(blockPair) {
 			lhBlock, lhBlockProof = s.blockProvider.GenerateGenesisBlockProposal(ctx)
-			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode), log.Stringable("blockPair", blockPair))
+			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode))
 		} else { // we should have a lhBlock proof
 			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			lhBlockProof = blockPair.TransactionsBlock.BlockProof.Raw()
@@ -207,7 +207,7 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return errors.Errorf("saveToBlockStorage with block height 0 - genesis is not supported")
 	}
-	hash := digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock)
+	hash := digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	logger.Info("saving block to storage", log.Stringable("block-hash", hash), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPair,

@@ -86,6 +86,7 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 		{"REQUEST_STATUS_BAD_REQUEST", http.StatusBadRequest, protocol.REQUEST_STATUS_BAD_REQUEST},
 		{"REQUEST_STATUS_CONGESTION", http.StatusServiceUnavailable, protocol.REQUEST_STATUS_CONGESTION},
 		{"REQUEST_STATUS_SYSTEM_ERROR", http.StatusInternalServerError, protocol.REQUEST_STATUS_SYSTEM_ERROR},
+		{"REQUEST_STATUS_OUT_OF_SYNC", http.StatusServiceUnavailable, protocol.REQUEST_STATUS_OUT_OF_SYNC},
 	}
 	for i := range tests {
 		cTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721

@@ -50,7 +50,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	//		require.EqualValues(t, 0, contract.GetBalance(ctx, leaderIndex, toAddress), "initial getBalance result on leader")
 	//		require.EqualValues(t, 0, contract.GetBalance(ctx, validatorIndex, toAddress), "initial getBalance result on non leader")
 	//
-	//		prePrepareTamper.Release(ctx)
+	//		prePrepareTamper.StopTampering(ctx)
 	//		prePrepareLatch.Remove()
 	//
 	//		if err := network.blockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
@@ -94,7 +94,7 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			requireInitialStateEventually(ctx, t, contract)
 
 			committedLatch.Remove()
-			committedTamper.Release(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
+			committedTamper.StopTampering(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
 
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 17, contract.GetBalance(ctx, 0, 6), "eventual getBalance result on leader")
@@ -102,7 +102,7 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			network.WaitForTransactionInNodeState(ctx, txHash, 1)
 			require.EqualValues(t, 17, contract.GetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 
-			blockSyncTamper.Release(ctx)
+			blockSyncTamper.StopTampering(ctx)
 		})
 }
 
