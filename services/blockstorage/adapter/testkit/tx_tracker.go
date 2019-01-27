@@ -19,15 +19,16 @@ type txTracker struct {
 	txToHeight   map[string]primitives.BlockHeight
 	topHeight    primitives.BlockHeight
 	blockTracker *synchronization.BlockTracker
-	parent       log.BasicLogger
+	logger       log.BasicLogger
 }
 
+// this struct will leak memory in production. intended for use only in short lived tests
 func newTxTracker(logger log.BasicLogger, preloadedBlocks []*protocol.BlockPairContainer) *txTracker {
 	tracker := &txTracker{
 		Mutex:        sync.Mutex{},
 		txToHeight:   make(map[string]primitives.BlockHeight),
 		blockTracker: synchronization.NewBlockTracker(logger, 0, math.MaxUint16),
-		parent:       logger,
+		logger:       logger,
 	}
 
 	for _, bpc := range preloadedBlocks {
@@ -53,7 +54,7 @@ func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*pro
 	defer t.Unlock()
 
 	if height <= t.topHeight { // block already advertised
-		t.parent.Info("advertising block transactions aborted - already advertised", log.BlockHeight(height))
+		t.logger.Info("advertising block transactions aborted - already advertised", log.BlockHeight(height))
 		return
 	}
 
@@ -63,20 +64,25 @@ func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*pro
 		prevHeight, existed := t.txToHeight[txHash.KeyForMap()]
 
 		if existed {
-			assertSameHeight(prevHeight, height, t.parent, txHash)
-			panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topHeight. tx %s found listed for height %d. but topHeight is %d", txHash.String(), height, t.topHeight))
+			if prevHeight != height {
+				t.logger.Error("FORK/DOUBLE-SPEND!! same transaction reported in different heights. may be committed twice", log.Transaction(txHash), log.BlockHeight(height), log.Uint64("previously-reported-height", uint64(prevHeight)))
+				panic(fmt.Sprintf("FORK/DOUBLE-SPEND!! transaction %s previously advertised for height %d and now again for height %d. may be committed twice", txHash.String(), prevHeight, height))
+			} else {
+				t.logger.Error("BUG!! txTracker.txToHeight contains a block height ahead of topHeight", log.Transaction(txHash), log.BlockHeight(height), log.Uint64("tracker-top-height", uint64(t.topHeight)))
+				panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topHeight. tx %s found listed for height %d. but topHeight is %d", txHash.String(), height, t.topHeight))
+			}
 		}
 
 		t.txToHeight[txHash.KeyForMap()] = height
 	}
-	t.parent.Info("advertising block transactions done", log.BlockHeight(height))
+	t.logger.Info("advertising block transactions done", log.BlockHeight(height))
 
 	t.blockTracker.IncrementTo(height)
 	t.topHeight = height
 }
 
 func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
-	logger := t.parent.WithTags(trace.LogFieldFrom(ctx))
+	logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("waiting for transaction", log.Transaction(txHash))
 	for {
 		txHeight, topHeight := t.getBlockHeight(txHash)
@@ -92,12 +98,5 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 			test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
 			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
 		}
-	}
-}
-
-func assertSameHeight(prevHeight primitives.BlockHeight, newHeight primitives.BlockHeight, logger log.BasicLogger, txHash primitives.Sha256) {
-	if prevHeight != newHeight {
-		logger.Error("FORK/DOUBLE-SPEND!!!! same transaction reported in different heights. may be committed twice", log.Transaction(txHash), log.BlockHeight(newHeight), log.Uint64("previously-reported-height", uint64(prevHeight)))
-		panic(fmt.Sprintf("FORK/DOUBLE-SPEND!!!! transaction %s previously advertised for height %d and now again for height %d. may be committed twice", txHash.String(), prevHeight, newHeight))
 	}
 }
