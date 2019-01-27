@@ -14,7 +14,7 @@ import (
 
 func TestGetBlock_GetBlockStorageOk(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second)
+		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
 
 		now := time.Now()
 		blockPair := builders.BlockPair().WithBlockCreated(now).WithHeight(8).Build()
@@ -42,7 +42,7 @@ func TestGetBlock_GetBlockStorageOk(t *testing.T) {
 
 func TestGetBlock_GetBlockStorageFail(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second)
+		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
 
 		harness.getBlockFails()
 		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
@@ -67,7 +67,7 @@ func TestGetBlock_GetBlockStorageFail(t *testing.T) {
 
 func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second)
+		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
 
 		now := time.Now()
 		lastCommitedPair := builders.BlockPair().WithBlockCreated(now).WithHeight(8).Build()
@@ -94,7 +94,7 @@ func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 
 func TestGetBlock_GetBlockStorageNoRecordThenFailsToGetLast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second)
+		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
 
 		harness.getBlock(nil, nil)
 		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{

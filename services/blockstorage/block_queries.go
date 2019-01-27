@@ -126,6 +126,9 @@ func (s *service) createEmptyTransactionReceiptResult(ctx context.Context) (*ser
 }
 
 func (s *service) GetBlockPair(ctx context.Context, input *services.GetBlockPairInput) (*services.GetBlockPairOutput, error) {
+	if input.BlockHeight == 0 {
+		return &services.GetBlockPairOutput{}, nil
+	}
 	var bpc *protocol.BlockPairContainer
 	err := s.persistence.ScanBlocks(input.BlockHeight, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
 		bpc = page[0]
