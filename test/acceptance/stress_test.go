@@ -47,7 +47,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 		).
 		Start(func(ctx context.Context, network NetworkHarness) {
-			network.TransportTamperer().Duplicate(WithPercentChance(rnd, 30))
+			network.TransportTamperer().Duplicate(AnyNthMessage(7))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
@@ -56,7 +56,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 	rnd := test.NewControlledRand(t)
 	newHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
-			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 30)))
+			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(AnyNthMessage(7)))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
@@ -68,7 +68,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(rnd.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1-2 millis
-			}, WithPercentChance(rnd, 50))
+			}, AnyNthMessage(7))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
@@ -80,7 +80,7 @@ func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *
 	rnd := test.NewControlledRand(t)
 	newHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
-			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 30)), rnd)
+			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)), rnd)
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
 			tamper.StopTampering(ctx)
 
