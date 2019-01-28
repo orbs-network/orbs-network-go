@@ -16,6 +16,10 @@ func ABenchmarkConsensusMessage(header *gossipmessages.Header) bool {
 	return header.IsTopicBenchmarkConsensus()
 }
 
+func AConsensusMessage(header *gossipmessages.Header) bool {
+	return header.IsTopicBenchmarkConsensus() || header.IsTopicLeanHelix()
+}
+
 func HasHeader(headerPredicate HeaderPredicate) MessagePredicate {
 	return func(data *adapter.TransportData) bool {
 		header, ok := parseHeader(data)

@@ -12,7 +12,7 @@ import (
 )
 
 func TestRunQuery_PrepareResponse(t *testing.T) {
-	blockTime := primitives.TimestampNano(time.Now().Nanosecond())
+	blockTime := primitives.TimestampNano(time.Now().UnixNano())
 	outputArgs := builders.PackedArgumentArrayEncode("hello", uint64(17))
 	outputEvents := builders.PackedEventsArrayEncode(nil)
 

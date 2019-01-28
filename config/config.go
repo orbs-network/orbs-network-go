@@ -60,6 +60,7 @@ type NodeConfig interface {
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
+	TransactionPoolNodeSyncRejectTime() time.Duration
 
 	// gossip
 	GossipListenPort() uint16
@@ -68,6 +69,7 @@ type NodeConfig interface {
 
 	// public api
 	PublicApiSendTransactionTimeout() time.Duration
+	PublicApiNodeSyncWarningTime() time.Duration
 
 	// processor
 	ProcessorArtifactPath() string
@@ -149,6 +151,7 @@ type ConsensusContextConfig interface {
 
 type PublicApiConfig interface {
 	PublicApiSendTransactionTimeout() time.Duration
+	PublicApiNodeSyncWarningTime() time.Duration
 	VirtualChainId() primitives.VirtualChainId
 }
 
@@ -172,6 +175,7 @@ type TransactionPoolConfig interface {
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
+	TransactionPoolNodeSyncRejectTime() time.Duration
 }
 
 type FederationNode interface {

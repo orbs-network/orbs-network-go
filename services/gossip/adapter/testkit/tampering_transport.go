@@ -20,7 +20,7 @@ type Tamperer interface {
 	Fail(predicate MessagePredicate) OngoingTamper
 
 	// Creates an ongoing tamper which delays messages matching the given predicate. The messages will be sent when
-	// calling OngoingTamper.Release(). This is useful for emulating network congestion or messages arriving in an order
+	// calling OngoingTamper.StopTampering(). This is useful for emulating network congestion or messages arriving in an order
 	// different than expected
 	Pause(predicate MessagePredicate) OngoingTamper
 
@@ -44,7 +44,7 @@ type Tamperer interface {
 type MessagePredicate func(data *adapter.TransportData) bool
 
 type OngoingTamper interface {
-	Release(ctx context.Context)
+	StopTampering(ctx context.Context)
 	maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool)
 }
 
@@ -82,7 +82,7 @@ func (t *TamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 	signalAndRelease := t.lockLatchesForSignalling(data)
 	defer signalAndRelease()
 
-	if err, shouldReturn := t.maybeTamper(ctx, data); shouldReturn {
+	if err, returnWithoutSending := t.maybeTamper(ctx, data); returnWithoutSending {
 		return err
 	}
 
@@ -93,12 +93,12 @@ func (t *TamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 	return nil
 }
 
-func (t *TamperingTransport) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+func (t *TamperingTransport) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
 	t.tamperers.RLock()
 	defer t.tamperers.RUnlock()
 	for _, o := range t.tamperers.ongoingTamperers {
-		if err, shouldReturn := o.maybeTamper(ctx, data); shouldReturn {
-			return err, shouldReturn
+		if err, returnWithoutSending := o.maybeTamper(ctx, data); returnWithoutSending {
+			return err, returnWithoutSending
 		}
 	}
 	return nil, false

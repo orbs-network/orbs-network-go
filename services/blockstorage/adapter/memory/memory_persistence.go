@@ -75,7 +75,6 @@ func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 		return err
 	}
 
-	bp.tracker.IncrementTo(blockPair.ResultsBlock.Header.BlockHeight())
 	bp.metrics.size.Add(sizeOfBlock(blockPair))
 
 	return nil
@@ -94,6 +93,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 		return false, nil
 	}
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
+	bp.tracker.IncrementTo(blockPair.ResultsBlock.Header.BlockHeight())
 	return true, nil
 }
 

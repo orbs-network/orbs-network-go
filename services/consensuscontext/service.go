@@ -67,7 +67,7 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 	}
 
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
-	logger.Info("created transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.Stringable("transactions-block", txBlock))
+	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.BlockHeight(input.CurrentBlockHeight))
 	s.printTxHash(logger, txBlock)
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
@@ -77,7 +77,7 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 func (s *service) printTxHash(logger log.BasicLogger, txBlock *protocol.TransactionsBlockContainer) {
 	for _, tx := range txBlock.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Stringable("txHash", txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
+		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Transaction(txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
 	}
 }
 
@@ -89,7 +89,7 @@ func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.Re
 		return nil, err
 	}
 
-	logger.Info("created Results block", log.Stringable("results-block", rxBlock))
+	logger.Info("created Results block", log.Int("num-receipts", len(rxBlock.TransactionReceipts)), log.BlockHeight(input.CurrentBlockHeight))
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,

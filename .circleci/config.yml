@@ -9,6 +9,7 @@ jobs:
       - run: ./docker/test/test.sh
       - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
+      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/hash.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
       - store_artifacts:
@@ -29,7 +30,9 @@ jobs:
           # remove logs if the test was successful for quicker feedback loop
           command: ./docker/test/test.flakiness.sh #&& sudo find _logs/acceptance -type f -delete
           no_output_timeout: 25m
-      - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
+      - run:
+          command: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
+          no_output_timeout: 25m
       - store_artifacts:
           path: _logs
 
