@@ -17,7 +17,7 @@ type waitingForChunksState struct {
 	gossipClient      *blockSyncGossipClient
 	createTimer       func() *synchronization.Timer
 	logger            log.BasicLogger
-	conduit           *blockSyncConduit
+	conduit           blockSyncConduit
 	metrics           waitingStateMetrics
 }
 
@@ -41,24 +41,28 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	}
 
 	timeout := s.createTimer()
-	select {
-	case <-timeout.C:
-		logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceNodeAddress))
-		s.metrics.timesTimeout.Inc()
-		return s.factory.CreateIdleState()
-	case blocks := <-s.conduit.blocks:
-		if !blocks.Sender.SenderNodeAddress().Equal(s.sourceNodeAddress) { // aborting, back to idle
-			logger.Info("byzantine message detected, expected source key does not match incoming",
-				log.Stringable("source", s.sourceNodeAddress),
-				log.Stringable("message-sender", blocks.Sender.SenderNodeAddress()))
-			s.metrics.timesByzantine.Inc()
+	for {
+		select {
+		case <-timeout.C:
+			logger.Info("timed out when waiting for chunks", log.Stringable("source", s.sourceNodeAddress))
+			s.metrics.timesTimeout.Inc()
 			return s.factory.CreateIdleState()
+		case e := <-s.conduit:
+			switch blocks := e.(type) {
+			case *gossipmessages.BlockSyncResponseMessage:
+				if !blocks.Sender.SenderNodeAddress().Equal(s.sourceNodeAddress) { // aborting, back to idle
+					logger.Info("byzantine message detected, expected source key does not match incoming",
+						log.Stringable("source", s.sourceNodeAddress),
+						log.Stringable("message-sender", blocks.Sender.SenderNodeAddress()))
+					s.metrics.timesByzantine.Inc()
+					return s.factory.CreateIdleState()
+				}
+				logger.Info("got blocks from sync", log.Stringable("source", s.sourceNodeAddress))
+				s.metrics.timesSuccessful.Inc()
+				return s.factory.CreateProcessingBlocksState(blocks)
+			}
+		case <-ctx.Done():
+			return nil
 		}
-
-		logger.Info("got blocks from sync", log.Stringable("source", s.sourceNodeAddress))
-		s.metrics.timesSuccessful.Inc()
-		return s.factory.CreateProcessingBlocksState(blocks)
-	case <-ctx.Done():
-		return nil
 	}
 }

@@ -53,7 +53,7 @@ func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *test
 
 		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
-			h.factory.conduit.blocks <- blocksMessage
+			h.factory.conduit <- blocksMessage
 			manualWaitForChunksTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
 
@@ -94,7 +94,7 @@ func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T)
 
 		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
-			h.factory.conduit.blocks <- blocksMessage
+			h.factory.conduit <- blocksMessage
 		})
 
 		require.IsType(t, &idleState{}, nextState, "expecting to abort sync and go back to idle (ignore blocks)")

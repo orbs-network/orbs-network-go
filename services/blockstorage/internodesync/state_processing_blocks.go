@@ -36,10 +36,6 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
-	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
-		return nil
-	}
-
 	if s.blocks == nil {
 		s.logger.Info("possible byzantine state in block sync, received no blocks to processing blocks state")
 		return s.factory.CreateIdleState()
@@ -55,6 +51,10 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Stringable("last-block-height", lastBlockHeight))
 
 	for _, blockPair := range s.blocks.BlockPairs {
+		if !s.factory.conduit.drainAndCheckForShutdown(ctx) {
+			return nil
+		}
+
 		s.metrics.blocksRate.Measure(1)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
@@ -74,6 +74,10 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 			s.metrics.committedBlocks.Inc()
 			logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}
+	}
+
+	if !s.factory.conduit.drainAndCheckForShutdown(ctx) {
+		return nil
 	}
 
 	return s.factory.CreateCollectingAvailabilityResponseState()

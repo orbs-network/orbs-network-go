@@ -30,10 +30,6 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	start := time.Now()
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 
-	if ctx.Err() == context.Canceled { // system is terminating and we do not select on channels in this state
-		return nil
-	}
-
 	c := len(s.responses)
 	if c == 0 {
 		logger.Info("no responses received")
@@ -45,5 +41,8 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 	syncSource := s.responses[0] //TODO V1 how do we pick the source?
 	syncSourceNodeAddress := syncSource.Sender.SenderNodeAddress()
 
+	if !s.factory.conduit.drainAndCheckForShutdown(ctx) {
+		return nil
+	}
 	return s.factory.CreateWaitingForChunksState(syncSourceNodeAddress)
 }
