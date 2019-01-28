@@ -169,6 +169,28 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "_underscore=wow", out)
 }
 
+func TestHumanReadableFormatter_ColorOn(t *testing.T) {
+	b := new(bytes.Buffer)
+	log.GetLogger().
+		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter())).
+		Info("bar", log.String("request-id", "einstein"))
+
+	out := b.String()
+	require.Regexp(t, "request-id=einstein", out)
+	require.Regexp(t, "\x1b", out, "colorized by default")
+}
+
+func TestHumanReadableFormatter_ColorOff(t *testing.T) {
+	b := new(bytes.Buffer)
+	log.GetLogger().
+		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter().ColorOff())).
+		Info("bar", log.String("request-id", "einstein"))
+
+	out := b.String()
+	require.Regexp(t, "request-id=einstein", out)
+	require.NotRegexp(t, "\x1b", out, "should not be colorized")
+}
+
 func TestHumanReadable_AggregateField(t *testing.T) {
 	ctx := trace.NewContext(context.Background(), "foo")
 	b := new(bytes.Buffer)

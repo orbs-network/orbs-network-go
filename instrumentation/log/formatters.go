@@ -13,6 +13,12 @@ type LogFormatter interface {
 	FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string)
 }
 
+type ColorfulLogFormatter interface {
+	LogFormatter
+	ColorOn() ColorfulLogFormatter
+	ColorOff() ColorfulLogFormatter
+}
+
 type jsonFormatter struct {
 	timestampColumn string
 }
@@ -52,6 +58,7 @@ func (j *jsonFormatter) WithTimestampColumn(column string) *jsonFormatter {
 }
 
 type humanReadableFormatter struct {
+	colorize bool
 }
 
 const (
@@ -165,7 +172,10 @@ func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, me
 
 	ts := timestamp.UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 
-	builder.WriteString(colorize(mutableParams))
+	if j.colorize {
+		builder.WriteString(colorize(mutableParams))
+	}
+
 	builder.WriteString(level)
 	builder.WriteString(SPACE)
 	builder.WriteString(ts)
@@ -196,6 +206,16 @@ func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, me
 	return builder.String()
 }
 
+func (j *humanReadableFormatter) ColorOn() ColorfulLogFormatter {
+	j.colorize = true
+	return j
+}
+
+func (j *humanReadableFormatter) ColorOff() ColorfulLogFormatter {
+	j.colorize = false
+	return j
+}
+
 func colorize(fields []*Field) string {
 	colors := []string{ansi.Cyan, ansi.Yellow, ansi.LightBlue, ansi.Magenta, ansi.LightYellow, ansi.LightRed, ansi.LightGreen, ansi.LightMagenta, ansi.Green}
 	for _, f := range fields {
@@ -208,6 +228,8 @@ func colorize(fields []*Field) string {
 	return ""
 }
 
-func NewHumanReadableFormatter() LogFormatter {
-	return &humanReadableFormatter{}
+func NewHumanReadableFormatter() ColorfulLogFormatter {
+	return &humanReadableFormatter{
+		colorize: true,
+	}
 }
