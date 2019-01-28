@@ -52,6 +52,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 		})
 }
 
+// TODO (v1) Must drop message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
 	newHarness(t).
@@ -65,16 +66,16 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 	rnd := test.NewControlledRand(t)
 	newHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
-
 			network.TransportTamperer().Delay(func() time.Duration {
-				return (time.Duration(rnd.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1-2 millis
-			}, AnyNthMessage(7))
+				return (time.Duration(10 + rnd.Intn(10))) * time.Millisecond // delay each message between 10-20 millis
+				//return (time.Duration(rnd.Intn(50000)) + 100000) * time.Microsecond // delay each message between 1-2 millis
+			}, AnyNthMessage(2))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
 
-// TODO (v1) This should work - fix and remove Skip
+// TODO (v1) Must corrupt message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
 	rnd := test.NewControlledRand(t)

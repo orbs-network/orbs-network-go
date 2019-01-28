@@ -30,6 +30,7 @@ import (
 )
 
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
+var LOG_DIR = "_logs/acceptance"
 
 type networkHarnessBuilder struct {
 	tb                       testing.TB
@@ -61,7 +62,7 @@ func newHarness(tb testing.TB) *networkHarnessBuilder {
 		WithConsensusAlgos(algos...).
 		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
 
-	tb.Logf("testId=%s", n.testId)
+	tb.Logf("starting _test-id=%s", n.testId)
 
 	return harness
 }
@@ -285,7 +286,7 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 
 func (b *networkHarnessBuilder) makeFormattingOutput(testId string) log.Output {
 	var output log.Output
-	logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/"+logFilename(LOG_DIR, testId), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -294,9 +295,13 @@ func (b *networkHarnessBuilder) makeFormattingOutput(testId string) log.Output {
 	return output
 }
 
+func logFilename(logDir string, testId string) string {
+	return logDir + "/" + testId + ".log"
+}
+
 func printTestIdOnFailure(tb testing.TB, testId string) {
 	if tb.Failed() {
-		tb.Errorf("FAIL search snippet: tail -500 _logs/acceptance/%s.log", testId)
+		tb.Errorf("FAIL search snippet: tail -500 %s", logFilename(LOG_DIR, testId))
 	}
 }
 

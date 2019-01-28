@@ -54,8 +54,10 @@ func (bp *tamperingBlockPersistence) WaitForTransaction(ctx context.Context, txH
 	case h := <-ch:
 		return h
 	case <-ctx.Done():
+		bp.Logger.Info("tamperingBlockPersistence context terminated panic", log.Transaction(txHash))
 		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
-		panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
+		// TODO https://github.com/orbs-network/orbs-network-go/issues/785 remove this panic()! logger prints with delay, but panic() prints immediately so it's out of context when reading logs (as if it's printed from a future test which the log hasn't printed yet)
+		panic(fmt.Sprintf("context terminated while waiting for transaction with hash %s", txHash))
 	}
 }
 
