@@ -62,12 +62,13 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 		})
 }
 
+// See BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT - cannot delay messages consistently more than that, or block sync will never work - it throws "timed out when waiting for chunks"
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
 	newHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Delay(func() time.Duration {
-				return (time.Duration(10 + rnd.Intn(10))) * time.Millisecond // delay each message between 10-20 millis
+				return (time.Duration(5 + rnd.Intn(5))) * time.Millisecond // delay each message between 10-20 millis
 				//return (time.Duration(rnd.Intn(50000)) + 100000) * time.Microsecond // delay each message between 1-2 millis
 			}, AnyNthMessage(2))
 
