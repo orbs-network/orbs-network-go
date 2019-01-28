@@ -9,34 +9,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/pkg/errors"
-	"time"
 )
 
 type BenchmarkTokenClient interface {
-	DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int)
 	Transfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256)
 	TransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256
 	InvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse
 	GetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64
-}
-
-func (c *contractClient) DeployBenchmarkToken(ctx context.Context, ownerAddressIndex int) {
-	benchmarkDeploymentTimeout := 1 * time.Second
-	timeoutCtx, cancel := context.WithTimeout(ctx, benchmarkDeploymentTimeout)
-	defer cancel()
-
-	count := 0
-	for {
-		response, _ := c.Transfer(ctx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
-		if response.TransactionStatus() == protocol.TRANSACTION_STATUS_COMMITTED {
-			return
-		}
-		count++
-		if timeoutCtx.Err() != nil {
-			panic(errors.Wrapf(timeoutCtx.Err(), "timeout trying to deploy benchmark token contract. attempts=%d, timeout=%s, previous response was %+v", count, benchmarkDeploymentTimeout, response.String()))
-		}
-	}
 }
 
 func (c *contractClient) Transfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
