@@ -51,7 +51,7 @@ func newHarness(tb testing.TB) *networkHarnessBuilder {
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX}
+		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 	} else {
 		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 	}
