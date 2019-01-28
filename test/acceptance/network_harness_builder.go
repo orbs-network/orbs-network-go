@@ -261,10 +261,10 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 		stateTrackers = append(stateTrackers, stateHeightTracker)
 
 		return &inmemory.NodeDependencies{
-			BlockPersistence:                   tamperingBlockPersistence,
-			StatePersistence:                   dumpingStateStorage,
-			EtherConnection:                    sharedEthereumSimulator,
-			Compiler:                           sharedCompiler,
+			BlockPersistence: tamperingBlockPersistence,
+			StatePersistence: dumpingStateStorage,
+			EtherConnection:  sharedEthereumSimulator,
+			Compiler:         sharedCompiler,
 			TransactionPoolBlockHeightReporter: txPoolHeightTracker,
 			StateBlockHeightReporter:           stateHeightTracker,
 		}
@@ -291,7 +291,7 @@ func (b *networkHarnessBuilder) makeFormattingOutput(testId string) log.Output {
 		panic(err)
 	}
 
-	output = log.NewFormattingOutput(logFile, log.NewHumanReadableFormatter())
+	output = log.NewFormattingOutput(logFile, log.NewHumanReadableFormatter().ColorOff())
 	return output
 }
 
