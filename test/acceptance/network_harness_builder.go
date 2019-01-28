@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
+var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
 
 type networkHarnessBuilder struct {
 	tb                       testing.TB
@@ -50,16 +50,20 @@ func newHarness(tb testing.TB) *networkHarnessBuilder {
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
+		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX}
 	} else {
 		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 	}
 
-	return n.
+	harness := n.
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(4).
 		WithConsensusAlgos(algos...).
 		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+
+	tb.Logf("testId=%s", n.testId)
+
+	return harness
 }
 
 func (b *networkHarnessBuilder) WithLogFilters(filters ...log.Filter) *networkHarnessBuilder {
@@ -112,8 +116,8 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 
 	for _, consensusAlgo := range b.consensusAlgos {
 
-		restartableTest := func(ctx context.Context) {
-			test.WithContextWithTimeout(15*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+		restartableTest := func() {
+			test.WithContextWithTimeout(5*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 				networkCtx, cancelNetwork := context.WithCancel(ctx)
 				testId := b.testId + "-" + consensusAlgo.String()
 				logger, errorRecorder := b.makeLogger(testId)
@@ -156,11 +160,11 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 		switch runner := b.tb.(type) {
 		case *testing.T:
 			runner.Run(consensusAlgo.String(), func(t *testing.T) {
-				test.WithContextWithTimeout(15*time.Second, restartableTest)
+				restartableTest()
 			})
 		case *testing.B:
 			runner.Run(consensusAlgo.String(), func(t *testing.B) {
-				test.WithContextWithTimeout(15*time.Second, restartableTest)
+				restartableTest()
 			})
 		default:
 			panic("unexpected TB implementation")
@@ -281,22 +285,18 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 
 func (b *networkHarnessBuilder) makeFormattingOutput(testId string) log.Output {
 	var output log.Output
-	if os.Getenv("NO_LOG_STDOUT") == "true" {
-		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic(err)
-		}
-
-		output = log.NewFormattingOutput(logFile, log.NewJsonFormatter())
-	} else {
-		output = log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
+	logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
 	}
+
+	output = log.NewFormattingOutput(logFile, log.NewHumanReadableFormatter())
 	return output
 }
 
 func printTestIdOnFailure(tb testing.TB, testId string) {
 	if tb.Failed() {
-		tb.Error("FAIL search snippet: grep _test-id="+testId, "test.out")
+		tb.Errorf("FAIL search snippet: tail -500 _logs/acceptance/%s.log", testId)
 	}
 }
 
